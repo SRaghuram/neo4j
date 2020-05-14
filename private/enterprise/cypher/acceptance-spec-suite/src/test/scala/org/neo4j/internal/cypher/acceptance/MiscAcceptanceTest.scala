@@ -49,6 +49,33 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     result.toList should equal(List(Map("y" -> 1, "y3" -> 3), Map("y" -> 1, "y3" -> 4), Map("y" -> 2, "y3" -> 3), Map("y" -> 2, "y3" -> 4)))
   }
 
+  test("Should not fail when invalidating cached property with no node/rel column") {
+    val p = createLabeledNode(Map("id" -> 0), "Post")
+    val space = createNode()
+    relate(p, space, "IN_PART")
+    val a = createLabeledNode(Map("has_file" -> true, "uploaded" -> false, "has_thumb" -> true, "thumb_uploaded" -> false), "Attachment")
+    relate(a, p, "ATTACHED_TO")
+
+    val query =
+      """
+        |MATCH (p:Post {id: $post_id})-[p_rel:IN_PART]->(space)
+        |// This SetProperty will invalidate cached[a.uploaded],
+        |// even though a is only added in the next pipeline.
+        |// This is benign and we should ignore that and not fail.
+        |REMOVE p._lock
+        |WITH p, p_rel
+        |OPTIONAL MATCH (a:Attachment)-[:ATTACHED_TO]->(p)
+        |WHERE a.has_file AND (NOT a.uploaded OR (a.has_thumb AND NOT a.thumb_uploaded))
+        |WITH p, p_rel, count(a) as missing_count
+        |WHERE missing_count = 0
+        |SET p.completed = true
+        |WITH p, p_rel
+        |RETURN p""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("post_id" -> 0))
+    result.toList should be(empty)
+  }
+
   test("should be able to use long values for LIMIT in interpreted runtime") {
     val a = createNode()
     val b = createNode()

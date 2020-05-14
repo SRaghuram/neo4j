@@ -149,9 +149,9 @@ class Morsel(private[execution] final val longs: Array[Long],
                 setCachedPropertyAt(propertyRefSLot.offset, null)
               }
             case None =>
-              // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
-              require(false,
-                s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
+            // This case is possible to reach, when we allocate a cached property before a pipeline break and before the variable it is referencing.
+            // We will never evaluate that cached property in this row, and we could improve SlotAllocation to allocate it only on the next pipeline
+            // instead, but that is difficult. It is harmless if we get here, we will simply not do anything.
           }
       }
     }
@@ -169,9 +169,9 @@ class Morsel(private[execution] final val longs: Array[Long],
                 setCachedPropertyAt(propertyRefSLot.offset, null)
               }
             case None =>
-              // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
-              require(false,
-                s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
+            // This case is possible to reach, when we allocate a cached property before a pipeline break and before the variable it is referencing.
+            // We will never evaluate that cached property in this row, and we could improve SlotAllocation to allocate it only on the next pipeline
+            // instead, but that is difficult. It is harmless if we get here, we will simply not do anything.
           }
       }
     }
