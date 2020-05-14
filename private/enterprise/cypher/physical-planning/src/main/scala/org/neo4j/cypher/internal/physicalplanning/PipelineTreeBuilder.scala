@@ -197,7 +197,6 @@ object PipelineTreeBuilder {
                                  predicate: commands.expressions.Expression,
                                  id: BufferId,
                                  memoryTrackingOperatorId: Id,
-                                 producingPipelineId: PipelineId,
                                  bufferSlotConfiguration: SlotConfiguration) extends  BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
     override protected def variant: BufferVariant = ConditionalBufferVariant(onTrueBuffer.result, onFalseBuffer.result, predicate)
   }
@@ -367,7 +366,7 @@ object PipelineTreeBuilder {
                            memoryTrackingOperatorId: Id,
                            bufferSlotConfiguration: SlotConfiguration): ConditionalBufferDefiner = {
       val x = buffers.size
-      val buffer = new ConditionalBufferDefiner(onTrueBuffer, onFalseBuffer, expression, BufferId(x), memoryTrackingOperatorId, producingPipelineId, bufferSlotConfiguration)
+      val buffer = new ConditionalBufferDefiner(onTrueBuffer, onFalseBuffer, expression, BufferId(x), memoryTrackingOperatorId, bufferSlotConfiguration)
       buffers += buffer
       buffer
     }
@@ -479,9 +478,14 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToConditionalBuffer(predicate: Expression, pipeline: PipelineDefiner, applyBuffer: ApplyBufferDefiner, argumentSlotOffset: Int, currentPlan: LogicalPlan): ApplyBufferDefiner = {
+  private def outputToConditionalBuffer(predicate: Expression,
+                                        pipeline: PipelineDefiner,
+                                        applyBuffer: ApplyBufferDefiner,
+                                        currentPlan: LogicalPlan): ApplyBufferDefiner = {
     /*
      * The buffers will be set up as follows:
+     *   - when the predicate is `true` we will write directly to output
+     *   - when the predicate is `false` we will write to an `ApplyBuffer` that is later connected to output
      *
      *                         .--onTrue------------------------------------.
      *                        /                                              \
@@ -489,7 +493,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
      *                        \                                              /
      *                         `-onFalse-> ApplyBuffer ->  ...    --RHS-----`
      *
-   */
+     */
     val output = stateDefiner.newBuffer(pipeline.id, currentPlan.id, slotConfigurations(pipeline.headPlan.id))
     val conditionalSink = stateDefiner.newConditionalSink(output,
                                                           applyBuffer,
@@ -724,7 +728,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           applyBuffer
         } else {
           val expression = if (vars.size == 1) vars.head else Ors(vars.toSet)(InputPosition.NONE)
-          outputToConditionalBuffer(expression, lhs, applyBuffer, argumentSlotOffset, plan)
+          outputToConditionalBuffer(expression, lhs, applyBuffer, plan)
         }
 
       case _: plans.CartesianProduct =>
