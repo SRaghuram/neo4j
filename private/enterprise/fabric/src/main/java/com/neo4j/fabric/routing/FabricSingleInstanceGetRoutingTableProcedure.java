@@ -40,7 +40,7 @@ public class FabricSingleInstanceGetRoutingTableProcedure extends SingleInstance
         if ( fabricDatabaseManager.isFabricDatabase( namedDatabaseId.name() ) )
         {
             var fabricServers = fabricConfig.getFabricServers();
-            return new RoutingResult( fabricServers, fabricServers, fabricServers, fabricConfig.getRoutingTtl().toSeconds() );
+            return new RoutingResult( fabricServers, fabricServers, fabricServers, fabricConfig.getRoutingTtl().toMillis() );
         }
 
         return super.invoke( namedDatabaseId, routingContext );
