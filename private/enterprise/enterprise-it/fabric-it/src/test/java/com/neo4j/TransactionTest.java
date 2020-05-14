@@ -69,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -471,7 +472,7 @@ class TransactionTest
     {
         Arrays.stream( txs ).forEach( tx ->
         {
-            verify( tx ).rollback();
+            verify( tx, atLeastOnce() ).rollback();
             verify( tx, never() ).commit();
         } );
     }
