@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -37,15 +38,18 @@ class ConditionalSink(predicate: Expression,
     }
     val expressionState = queryState.queryStateForExpressionEvaluation(resources)
     if (morsel.hasData) {
+      val onTrueMorsel = FilteringMorsel(morsel)
+      val onFalseMorsel = FilteringMorsel(morsel)
       val readCursor = morsel.readCursor()
       while (readCursor.next()) {
-        val thisRow = morsel.view(readCursor.row, readCursor.row + 1)
         if (predicate.apply(readCursor, expressionState) eq Values.TRUE) {
-          onTrue.put(thisRow, resources)
+          onFalseMorsel.cancelRow(readCursor.row)
         } else {
-          onFalse.put(thisRow, resources)
+          onTrueMorsel.cancelRow(readCursor.row)
         }
       }
+      onTrue.put(onTrueMorsel, resources)
+      onFalse.put(onFalseMorsel, resources)
     }
   }
 
