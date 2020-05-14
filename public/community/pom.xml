@@ -83,6 +83,7 @@
     <module>freki-storage-engine</module>
     <module>push-to-cloud</module>
     <module>fabric</module>
+	<module>codec</module>
   </modules>
 
   <licenses>
