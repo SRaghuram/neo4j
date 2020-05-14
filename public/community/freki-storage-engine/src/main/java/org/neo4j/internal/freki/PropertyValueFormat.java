@@ -33,6 +33,7 @@ import java.time.temporal.TemporalAmount;
 import java.util.function.Consumer;
 
 import org.neo4j.hashing.HashFunction;
+import org.neo4j.internal.codec.string.ShortStringCodec;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -54,6 +55,10 @@ import org.neo4j.values.storable.ValueWriter;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.utils.TemporalValueWriterAdapter;
 
+import static org.neo4j.common.Primitive.ceil;
+import static org.neo4j.internal.codec.string.ShortStringCodec.codecById;
+import static org.neo4j.internal.codec.string.ShortStringCodec.lowestCodec;
+import static org.neo4j.internal.codec.string.ShortStringCodec.prepareEncode;
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 import static org.neo4j.values.storable.ValueWriter.ArrayType.DOUBLE;
 import static org.neo4j.values.storable.ValueWriter.ArrayType.INT;
@@ -107,6 +112,9 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static final byte INTERNAL_DURATION_HAS_DAYS = 0x20;
     private static final byte INTERNAL_DURATION_HAS_MONTHS = 0x40;
 
+    private static final byte INTERNAL_STRING_LONG = 0;
+    private static final byte INTERNAL_STRING_SHORT = 1;
+
     private static final short SPECIAL_TYPE_MASK = 0x80;
     private static final short SPECIAL_TYPE_POINTER = 0x20;
     private static final short SPECIAL_TYPE_ARRAY = 0x10;
@@ -119,6 +127,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static final int MAX_INLINED_STRING_SIZE = 20;
     private static final int MAX_INLINED_ARRAY_SIZE = 30;
+    private static final int MAX_INLINED_SHORTSTRING_LENGTH = 32;
 
     //Array state
     private boolean writingArray;
@@ -148,6 +157,8 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static byte createTypeByte( byte externalType, byte internalType )
     {
+        assert (externalType & 0xF) == externalType;
+        assert (internalType & 0x7) == internalType;
         return (byte) (externalType | (internalType << 4));
     }
 
@@ -184,7 +195,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         //TODO optimize array writing size (esp. byte and char)
         assert !writingArray;
         byte externalType = getExternalType( arrayType );
-        byte header = (byte) ( externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_ARRAY);
+        byte header = (byte) (externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_ARRAY);
         int worstCaseSize = getWorstCaseSize( INT ) + size * getWorstCaseSize( arrayType );
         if ( worstCaseSize > MAX_INLINED_ARRAY_SIZE )
         {
@@ -536,21 +547,94 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     public void writeString( String value )
     {
         beginWriteProperty( EXTERNAL_TYPE_STRING );
-        byte[] bytes = UTF8.encode( value );
-        int length = bytes.length;
-        if ( length > MAX_INLINED_STRING_SIZE )
+
+        int position = buffer.position();
+        ShortStringCodec shortStringCodec = tryEncodeShortString( value, buffer.position() + 2 );
+        if ( shortStringCodec != null )
         {
-            long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
-            writePointer( EXTERNAL_TYPE_STRING, pointer, false );
-            commands.accept( new FrekiCommand.BigPropertyValue( pointer, bytes ) );
+            int codecId = shortStringCodec.id();
+            assert (codecId & 0xF) == codecId;
+            // OK that worked, the encoder should have left 2 bytes for us to write this header
+            // [_cci,tttt][ccss,ssss]
+            // s: string length
+            // c: codec id
+            // i: internal string (short-string or normal)
+            // t: external type
+            buffer.put( position, createTypeByte( EXTERNAL_TYPE_STRING, (byte) (INTERNAL_STRING_SHORT | (codecId & 0x3) << 1) ) );
+            // 1B 6b length and 2b msb codec
+            int stringLength = value.length();
+            assert (stringLength & 0x3F) == stringLength;
+            buffer.put( position + 1, (byte) (stringLength | ((codecId & 0b1100) << 4)) );
         }
         else
         {
-            buffer.put( EXTERNAL_TYPE_STRING );
-            buffer.put( safeCastIntToUnsignedByte( bytes.length ) );
-            buffer.put( bytes );
+            byte[] bytes = UTF8.encode( value );
+            if ( bytes.length > MAX_INLINED_STRING_SIZE )
+            {
+                long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
+                writePointer( EXTERNAL_TYPE_STRING, pointer, false );
+                commands.accept( new FrekiCommand.BigPropertyValue( pointer, bytes ) );
+            }
+            else
+            {
+                buffer.put( createTypeByte( EXTERNAL_TYPE_STRING, INTERNAL_STRING_LONG ) );
+                buffer.put( safeCastIntToUnsignedByte( bytes.length ) );
+                buffer.put( bytes );
+            }
         }
         endWriteProperty();
+    }
+
+    private ShortStringCodec tryEncodeShortString( String string, int startPosition )
+    {
+        int stringLength = string.length();
+        if ( stringLength > MAX_INLINED_SHORTSTRING_LENGTH )
+        {
+            return null;
+        }
+
+        byte[] data = new byte[stringLength];
+        int compatibleCodecs = prepareEncode( string, data, stringLength );
+        // TODO for now don't support the EUROPEAN codec since it needs to go the route via char[] when reading, let's get byte[] route working first
+        compatibleCodecs &= ~ShortStringCodec.EUROPEAN.bitMask();
+        if ( compatibleCodecs == 0 )
+        {
+            return null;
+        }
+
+        ShortStringCodec codec = lowestCodec( compatibleCodecs );
+        buffer.position( startPosition );
+        long vehicle = 0;
+        int shift = 0;
+        int bitsPerCharacter = codec.bitsPerCharacter();
+        for ( int i = 0; i < stringLength; i++ )
+        {
+            long encodedCharacter = codec.encTranslate( data[i] );
+            vehicle |= encodedCharacter << shift;
+            shift += bitsPerCharacter;
+            if ( shift >= 64 )
+            {   // The vehicle is full, write it to the buffer
+                buffer.putLong( vehicle );
+                shift -= 64;
+                vehicle = encodedCharacter >>> (bitsPerCharacter - shift);
+            }
+        }
+        if ( shift > 0 )
+        {
+            int bytesToWrite = ceil( shift, 8 );
+            if ( bytesToWrite == 8 )
+            {
+                buffer.putLong( vehicle );
+            }
+            else
+            {
+                for ( int i = 0, writeShift = 0; i < bytesToWrite; i++, writeShift += 8 )
+                {
+                    buffer.put( (byte) (vehicle >>> writeShift) );
+                }
+            }
+        }
+        return codec;
     }
 
     private void writePointer( byte externalType, long pointer, boolean isArray )
@@ -564,12 +648,78 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         writeInteger( pointer );
     }
 
-    private static Value readString( ByteBuffer buffer )
+    private static Value readString( ByteBuffer buffer, byte internalTypeBits )
     {
-        int length = buffer.get() & 0xFF;
-        byte[] bytes = new byte[length];
-        buffer.get( bytes );
-        return Values.stringValue( UTF8.decode( bytes ) );
+        byte internalType = (byte) (internalTypeBits & 0x1);
+        if ( internalType == INTERNAL_STRING_SHORT )
+        {
+            byte nextHeaderByte = buffer.get();
+            ShortStringCodec codec = parseShortStringCode( internalTypeBits, nextHeaderByte );
+            assert codec != null;
+            int stringLength = parseShortStringLength( nextHeaderByte );
+            if ( stringLength == 0 )
+            {
+                return Values.EMPTY_STRING;
+            }
+
+            byte[] characters = new byte[stringLength];
+            int bitsPerCharacter = codec.bitsPerCharacter();
+            long mask = (1L << bitsPerCharacter) - 1;
+            int numBytes = ceil( stringLength * bitsPerCharacter, 8 );
+            int shift = 0;
+            long vehicle = readMoreShortStringBytes( buffer, numBytes );
+            numBytes -= 8;
+            for ( int i = 0; i < stringLength; i++ )
+            {
+                byte character = (byte) ((vehicle >>> shift) & mask);
+                shift += bitsPerCharacter;
+                if ( shift >= 64 )
+                {
+                    vehicle = readMoreShortStringBytes( buffer, numBytes );
+                    numBytes -= 8;
+                    shift -= 64;
+                    character |= (vehicle & ((1L << shift) - 1)) << (bitsPerCharacter - shift);
+                }
+                characters[i] = codec.decTranslate( character );
+            }
+            return Values.utf8Value( characters );
+        }
+        else
+        {
+            int length = buffer.get() & 0xFF;
+            byte[] bytes = new byte[length];
+            buffer.get( bytes );
+            return Values.utf8Value( bytes );
+        }
+    }
+
+    private static ShortStringCodec parseShortStringCode( byte internalTypeBits, byte nextHeaderByte )
+    {
+        ShortStringCodec codec = codecById( (internalTypeBits >>> 1) & 0x3 | ((nextHeaderByte & 0b1100_0000) >>> 4) );
+        assert codec != null;
+        return codec;
+    }
+
+    private static int parseShortStringLength( byte secondHeaderByte )
+    {
+        return secondHeaderByte & 0x3F;
+    }
+
+    private static long readMoreShortStringBytes( ByteBuffer buffer, int numBytesLeft )
+    {
+        if ( numBytesLeft >= 8 )
+        {   // Read whole long
+            return buffer.getLong();
+        }
+        else
+        {   // Read only number of bytes left
+            long vehicle = 0;
+            for ( int readShift = 0; numBytesLeft-- > 0; readShift += 8 )
+            {
+                vehicle |= (buffer.get() & 0xFFL) << readShift;
+            }
+            return vehicle;
+        }
     }
 
     @Override
@@ -670,7 +820,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case EXTERNAL_TYPE_LONG:
             return Values.longValue( readScalarValue( buffer, internalType( typeByte ) ) );
         case EXTERNAL_TYPE_STRING:
-            return readString( buffer );
+            return readString( buffer, internalType( typeByte ) );
         case EXTERNAL_TYPE_CHAR:
             return Values.charValue( buffer.getChar() );
         case EXTERNAL_TYPE_BOOL:
@@ -773,8 +923,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case EXTERNAL_TYPE_LONG:
             return sizeOfScalar( internalType( typeByte ) );
         case EXTERNAL_TYPE_STRING:
-            int propertyLength = buffer.get( buffer.position() ) & 0xFF;
-            return 1 + propertyLength; // length + data
+            return sizeOfString( internalType( typeByte ), buffer );
         case EXTERNAL_TYPE_BOOL:
             return 0; // (value is embedded)
         case EXTERNAL_TYPE_BYTE:
@@ -791,9 +940,25 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             return sizeOfLocalDateTime( typeByte, buffer );
         case EXTERNAL_TYPE_ZONED_DATE_TIME:
             return sizeOfDateTime( typeByte, buffer );
-
         default:
             throw new IllegalArgumentException( "" + externalType );
+        }
+    }
+
+    private static int sizeOfString( byte internalTypeBits, ByteBuffer buffer )
+    {
+        byte internalType = (byte) (internalTypeBits & 0x1);
+        if ( internalType == INTERNAL_STRING_SHORT )
+        {
+            byte nextHeaderByte = buffer.get();
+            ShortStringCodec codec = parseShortStringCode( internalTypeBits, nextHeaderByte );
+            int stringLength = parseShortStringLength( nextHeaderByte );
+            return 1 + ceil( stringLength * codec.bitsPerCharacter(), 8 );
+        }
+        else
+        {
+            int propertyLength = buffer.get( buffer.position() ) & 0xFF;
+            return 1 + propertyLength; // length + data
         }
     }
 
@@ -928,7 +1093,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case BOOLEAN:
             return 1;
         case STRING:
-            return MAX_INLINED_STRING_SIZE + 2;
+            return MAX_INLINED_SHORTSTRING_LENGTH + 2;
         case POINT:
             return 1 + getWorstCaseSize( INT ) + 3 * getWorstCaseSize( DOUBLE ) ;
         case ZONED_DATE_TIME:

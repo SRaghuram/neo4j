@@ -39,7 +39,7 @@ import org.neo4j.values.storable.DateValue;
 import org.neo4j.values.storable.DurationValue;
 import org.neo4j.values.storable.LocalDateTimeValue;
 import org.neo4j.values.storable.LocalTimeValue;
-import org.neo4j.values.storable.StringValue;
+import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.TimeValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueWriter;
@@ -180,15 +180,45 @@ class PropertyValueFormatTest
     void shouldWriteAndReadStrings()
     {
         //When
-        propertyValueFormat.writeString( "abc" );
-        propertyValueFormat.writeString( "" );
-        propertyValueFormat.writeString( "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ); //not long enough to be considered "big'!
+        String[] strings = new String[random.nextInt( 10, 20 )];
+        for ( int i = 0; i < strings.length; i++ )
+        {
+            strings[i] = random.nextString();
+        }
+        for ( String string : strings )
+        {
+            propertyValueFormat.writeString( string );
+        }
 
         //Then
-        assertEquals( Values.stringValue( "abc" ), readValue() );
-        assertEquals( Values.stringValue( "" ), readValue() );
-        assertEquals( "ABCDEFGHIJKLMNOPQRSTUVWXYZ", readValue().asObject() );
+        for ( String string : strings )
+        {
+            Value readValue = readValueEagerly();
+            assertEquals( Values.stringValue( string ), readValue );
+            assertEquals( string, readValue.asObject() );
+        }
+    }
 
+    @Test
+    void shouldWriteAndReadStringArrays()
+    {
+        // given
+        String[] array = new String[random.nextInt( 20 )];
+        for ( int i = 0; i < array.length; i++ )
+        {
+            array[i] = random.nextString();
+        }
+
+        // when
+        propertyValueFormat.beginArray( array.length, ValueWriter.ArrayType.STRING );
+        for ( String string : array )
+        {
+            propertyValueFormat.writeString( string );
+        }
+        propertyValueFormat.endArray();
+
+        // then
+        assertEquals( Values.stringArray( array ), readValueEagerly() );
     }
 
     @Test
@@ -579,7 +609,7 @@ class PropertyValueFormatTest
         propertyValueFormat.writeString( longString );
 
         Value value = readValue();
-        assertFalse( value instanceof StringValue ); //should be of internal type PropertyValueFormat.PointerValue
+        assertFalse( value instanceof TextValue ); //should be of internal type PropertyValueFormat.PointerValue
 
         Object actual = value.asObject();
         assertEquals( longString, actual ); //should be correct
@@ -635,5 +665,10 @@ class PropertyValueFormatTest
     private Value readValue()
     {
         return PropertyValueFormat.read( readBuffer, bigValueStore, PageCursorTracer.NULL );
+    }
+
+    private Value readValueEagerly()
+    {
+        return PropertyValueFormat.readEagerly( readBuffer, bigValueStore, PageCursorTracer.NULL );
     }
 }
