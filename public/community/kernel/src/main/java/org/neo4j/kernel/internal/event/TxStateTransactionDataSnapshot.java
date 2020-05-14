@@ -220,7 +220,7 @@ public class TxStateTransactionDataSnapshot implements TransactionData, AutoClos
         for ( RelationshipState relState : state.modifiedRelationships() )
         {
             Relationship relationship = relationship( relState.getId() );
-            Iterator<StorageProperty> added = relState.addedAndChangedProperties();
+            Iterator<StorageProperty> added = relState.addedAndChangedProperties().iterator();
             while ( added.hasNext() )
             {
                 StorageProperty property = added.next();
@@ -282,7 +282,7 @@ public class TxStateTransactionDataSnapshot implements TransactionData, AutoClos
         state.addedAndRemovedRelationships().getRemoved().each( relId ->
         {
             Relationship relationship = relationship( relId );
-            this.relationship.single( relId ).iterator();
+            this.relationship.single( relId );
             if ( this.relationship.next() )
             {
                 this.relationship.properties( properties );
