@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -15,15 +14,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.constructor
-import org.neo4j.codegen.api.IntermediateRepresentation.declare
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
-import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
-import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
@@ -52,7 +50,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCES
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -63,7 +61,6 @@ import org.neo4j.memory.MemoryTracker
 import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
@@ -231,7 +228,7 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
   private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName("perArgs"))
   private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[Agg]]]](codeGen.namer.nextVariableName("sink"))
   private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName("bufferId"))
-  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+  private val scopedMemoryTrackerField = field[ScopedMemoryTracker](codeGen.namer.nextVariableName("scopedMemoryTracker"))
 
   private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName("aggregators"), createAggregators(aggregators))
   private val argVar = variable[Long](codeGen.namer.nextVariableName("arg"), constant(-1L))
@@ -293,6 +290,11 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
     val currentArg = codeGen.namer.nextVariableName()
 
     block(
+      /*
+       * if (scopedMemoryTracker == null) {
+       *   scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+       * }
+       */
 
       /*
        * val currentArg = getFromLongSlot(argumentSlotOffset)
@@ -309,7 +311,7 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
       condition(notEqual(load(currentArg), load(argVar)))(
         block(
           assign(argVar, load(currentArg)),
-          assign(updatersVar, createUpdaters(aggregators, load(aggregatorsVar), loadField(memoryTrackerField))),
+          assign(updatersVar, createUpdaters(aggregators, load(aggregatorsVar), loadField(scopedMemoryTrackerField))),
           invokeSideEffect(loadField(perArgsField),
             method[ArrayBuffer[_], ArrayBuffer[_], Any]("$plus$eq"),
             newInstance(constructor[PerArgument[Agg], Long, Any], load(argVar), load(updatersVar)))
@@ -333,8 +335,20 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
   }
 
   override def genCreateState: IntermediateRepresentation = {
+    val memoryTrackerVarName = codeGen.namer.nextVariableName("memoryTracker")
     block(
-      setMemoryTracker(memoryTrackerField, id.x),
+      /*
+       * if (scopedMemoryTracker == null) {
+       *   val memoryTracker = stateFactory.newMemoryTracker(id.x)
+       *   scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+       * }
+       */
+      condition(isNull(loadField(scopedMemoryTrackerField)))(
+        block(
+          declareAndAssign(typeRefOf[MemoryTracker], memoryTrackerVarName, getMemoryTracker(id.x)),
+          setField(scopedMemoryTrackerField, newInstance(constructor[ScopedMemoryTracker, MemoryTracker], load(memoryTrackerVarName)))
+        )
+      ),
       setField(sinkField,
                invoke(EXECUTION_STATE,
                       method[ExecutionState, Sink[_], Int]("getSinkInt"),
@@ -353,41 +367,17 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
 
   override def genCloseOutput: IntermediateRepresentation = {
     /*
-     * Close updaters and reset prepared output (perArgsField) for the next output batch
+     * Reset scoped memory tracker and reset prepared output (perArgsField) for the next output batch
      * {
-     *   var i = 0
-     *   while (i < preAggregated.size) {
-     *     val updaters = preAggregated(i).value
-     *     updaters[0].close()
-     *     updaters[1].close()
-     *     ...
-     *     updaters[n-1].close()
-     *     i += 1
+     *   if (scopedMemoryTracker != null) {
+     *     scopedMemoryTracker.reset()
      *   }
      *   perArgs = new AggOut()
      * }
      */
-    val i = codeGen.namer.nextVariableName()
-    val iSize = codeGen.namer.nextVariableName()
-    val updaters = codeGen.namer.nextVariableName("updaters")
-
     block(
-      block(
-        declareAndAssign(typeRefOf[Int], i, constant(0)),
-        declareAndAssign(typeRefOf[Int], iSize, invoke(loadField(perArgsField), method[AggOut, Int]("size"))),
-        declare(typeRefOf[Array[Updater]], updaters),
-        loop(lessThan(load(i), load(iSize)))(block(
-          assign(updaters, cast[Array[Updater]](invoke(cast[PerArgument[Agg]](invoke(loadField(perArgsField),
-                                                                                     method[mutable.ResizableArray[Any], Any, Int]("apply"), load(i))),
-                                                       method[PerArgument[Any], Any]("value")))),
-          block(
-            compiledAggregationExpressions.indices.map(i => {
-              invokeSideEffect(arrayLoad(load(updaters), i), method[Updater, Unit]("close"))
-            }): _ *
-          ),
-          assign(i, add(load(i), constant(1)))
-        ))
-
+      condition(isNotNull(loadField(scopedMemoryTrackerField)))(
+        invokeSideEffect(loadField(scopedMemoryTrackerField), method[ScopedMemoryTracker, Unit]("reset")),
       ),
       setField(perArgsField, newInstance(constructor[AggOut])),
       inner.genCloseOutput
@@ -396,7 +386,7 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = Some(loadField(bufferIdField))
 
-  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField, memoryTrackerField)
+  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField, scopedMemoryTrackerField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, updatersVar)
 

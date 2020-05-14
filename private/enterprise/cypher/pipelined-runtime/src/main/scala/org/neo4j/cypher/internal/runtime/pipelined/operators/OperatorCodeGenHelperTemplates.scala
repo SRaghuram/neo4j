@@ -223,10 +223,11 @@ object OperatorCodeGenHelperTemplates {
   private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Long]("dbHits")
   val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
 
+  def getMemoryTracker(operatorId: Int): IntermediateRepresentation =
+    invoke(load("stateFactory"), method[StateFactory, MemoryTracker, Int]("newMemoryTracker"), constant(operatorId))
+
   def setMemoryTracker(memoryTrackerField: InstanceField, operatorId: Int): IntermediateRepresentation =
-    setField(memoryTrackerField,
-             invoke(load("stateFactory"),
-                    method[StateFactory, MemoryTracker, Int]("newMemoryTracker"), constant(operatorId)))
+    setField(memoryTrackerField, getMemoryTracker(operatorId))
 
   def peekState[STATE_TYPE](argumentStateMapId: ArgumentStateMapId)(implicit to: Manifest[STATE_TYPE]): IntermediateRepresentation =
     cast[STATE_TYPE](

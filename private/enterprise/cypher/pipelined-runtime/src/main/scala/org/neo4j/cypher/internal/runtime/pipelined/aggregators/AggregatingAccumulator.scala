@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -65,17 +64,15 @@ trait Aggregator {
  * Performs the initial parts of an aggregation that can be done
  * without synchronization.
  */
-trait Updater extends AutoCloseable {
+trait Updater {
   def update(value: AnyValue): Unit
-  override def close(): Unit = {}
 }
 
 /**
  * Performs the final parts of an aggregation that migth require
  * synchronization.
  */
-trait Reducer extends AutoCloseable {
+trait Reducer {
   def update(updater: Updater): Unit
   def result: AnyValue
-  override def close(): Unit = {}
 }

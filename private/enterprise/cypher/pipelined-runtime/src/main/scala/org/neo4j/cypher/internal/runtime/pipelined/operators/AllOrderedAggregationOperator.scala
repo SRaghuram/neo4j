@@ -41,7 +41,6 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
     val memoryTracker = new ScopedMemoryTracker(stateFactory.newMemoryTracker(id.x))
-    // TODO: Separate state for parallel without memory tracking
     new AllOrderedAggregationState(memoryTracker)
   }
 

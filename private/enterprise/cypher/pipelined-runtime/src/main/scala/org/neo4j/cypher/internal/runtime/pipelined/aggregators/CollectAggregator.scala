@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.eclipse.collections.api.block.procedure.Procedure
 import org.neo4j.memory.MemoryTracker
-import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
@@ -88,22 +87,18 @@ trait CollectDistinctReducer {
 }
 
 class OrderedDistinctStandardReducer(inner: DistinctInnerReducer, memoryTracker: MemoryTracker) extends DistinctReducer(inner) {
+  // NOTE: The owner is responsible for closing the given memory tracker in the right scope, so we do not need to use a ScopedMemoryTracker
+  //       or close the seenSet explicitly here.
   private val seenSet = new java.util.LinkedHashSet[AnyValue]() // TODO: Use a heap tracking ordered distinct set
-  private val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
 
   override protected def seen(e: AnyValue): Boolean = {
     val added = seenSet.add(e)
     if (added) {
-      scopedMemoryTracker.allocateHeap(e.estimatedHeapUsage())
+      memoryTracker.allocateHeap(e.estimatedHeapUsage())
     }
     added
   }
 
   override protected def forEachSeen(action: Procedure[AnyValue]): Unit =
     seenSet.forEach(action)
-
-  override def close(): Unit = {
-    scopedMemoryTracker.close()
-    super.close()
-  }
 }
