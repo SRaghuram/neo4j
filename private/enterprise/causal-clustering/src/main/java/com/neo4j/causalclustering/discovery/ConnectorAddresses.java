@@ -141,7 +141,8 @@ public class ConnectorAddresses
 
     public List<URI> publicUriList()
     {
-        return Stream.concat( Stream.of( defaultClientBoltAddress, defaultHttpAddress, defaultHttpsAddress ), excessConnectorUris.stream() )
+        return orderedConnectors()
+                     .filter( uri -> !Objects.equals( uri, defaultIntraClusterBoltAddress ) )
                      .map( ConnectorUri::toUri )
                      .collect( Collectors.toList() );
     }
@@ -150,7 +151,7 @@ public class ConnectorAddresses
      * N.B. the order of connectors in this method is important.
      * @return All connectors stored in this instance.
      */
-    private Stream<ConnectorUri> allConnectors()
+    private Stream<ConnectorUri> orderedConnectors()
     {
         var defaultConnectors = Stream.of( defaultClientBoltAddress,
                                            defaultIntraClusterBoltAddress,
@@ -188,7 +189,7 @@ public class ConnectorAddresses
     @Override
     public String toString()
     {
-        return allConnectors().map( ConnectorUri::toString ).collect( Collectors.joining( "," ) );
+        return orderedConnectors().map( ConnectorUri::toString ).collect( Collectors.joining( "," ) );
     }
 
     public enum Scheme
@@ -281,7 +282,7 @@ public class ConnectorAddresses
         @Override
         public void marshal( ConnectorAddresses connectorUris, WritableChannel channel ) throws IOException
         {
-            var allUris = connectorUris.allConnectors().collect( Collectors.toList() );
+            var allUris = connectorUris.orderedConnectors().collect( Collectors.toList() );
             channel.putInt( allUris.size() );
             for ( ConnectorUri uri : allUris )
             {
