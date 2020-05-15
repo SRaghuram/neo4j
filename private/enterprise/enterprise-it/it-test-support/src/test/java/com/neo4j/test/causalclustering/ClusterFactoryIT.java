@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SkipThreadLeakageGuard
 class ClusterFactoryIT
 {
+    @SkipThreadLeakageGuard
     @Nested
     @TestInstance( TestInstance.Lifecycle.PER_METHOD )
     class PerMethod extends BaseClusterFactoryTest
@@ -32,6 +33,7 @@ class ClusterFactoryIT
         }
     }
 
+    @SkipThreadLeakageGuard
     @Nested
     class PerClass extends BaseClusterFactoryTest
     {
@@ -42,6 +44,7 @@ class ClusterFactoryIT
         }
     }
 
+    @SkipThreadLeakageGuard
     @ClusterExtension
     class BaseClusterFactoryTest
     {
@@ -68,6 +71,7 @@ class ClusterFactoryIT
             cluster.shutdown();
         }
 
+        @SkipThreadLeakageGuard
         @Nested
         class NestedClassIsFine
         {
