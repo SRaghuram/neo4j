@@ -48,6 +48,8 @@ class ConditionalSink(predicate: Expression,
           onTrueMorsel.cancelRow(readCursor.row)
         }
       }
+      //NOTE: morsel has the slot configuration of the lhs, so if the lhs slot configuration is not a
+      // strict prefix of the rhs slot configuration things might break in horrible ways
       onTrue.put(onTrueMorsel, resources)
       onFalse.put(onFalseMorsel, resources)
     }

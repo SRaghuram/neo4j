@@ -85,6 +85,8 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     !slotAliases.contains(key)
   }
 
+  def getAliasesFor(key: String): Set[String] = slotAliases.get(key).map(_.toSet).getOrElse(Set.empty)
+
   def apply(key: String): Slot = slots.apply(VariableSlotKey(key))
 
   def nameOfSlot(offset: Int, longSlot: Boolean): Option[String] = slots.collectFirst {

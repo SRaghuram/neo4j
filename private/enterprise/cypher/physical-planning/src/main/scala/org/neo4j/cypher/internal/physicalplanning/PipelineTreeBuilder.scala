@@ -44,6 +44,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumul
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.UnionBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
 import org.neo4j.cypher.internal.runtime.interpreted.commands
@@ -763,10 +764,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
          *
          */
         val sink = argument.conditionalApplySink.getOrElse(throw new IllegalStateException("must have a conditional sink at this point"))
-        val output = stateDefiner.newBuffer(rhs.id, plan.id, slotConfigurations(rhs.headPlan.id))
+        val rhsSlotConfiguration = slotConfigurations(rhs.headPlan.id)
+        verifyLhsPrefixOfRhs(slotConfigurations(lhs.headPlan.id), rhsSlotConfiguration)
+        val output = stateDefiner.newBuffer(rhs.id, plan.id, rhsSlotConfiguration)
         sink.onTrueBuffer = output
         rhs.fuseOrInterpret(MorselBufferOutput(output.id, plan.id))
-        val pipeline = newPipeline(Argument()(SameId(plan.id)), output)
+        val pipeline: PipelineDefiner = newPipeline(Argument()(SameId(plan.id)), output)
         //this is weird, but used for getting the scheduler to do the right thing
         pipeline.lhs = rhs.id
         pipeline
@@ -807,31 +810,48 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   // HELPERS
+  //Check so that lhs slot configuration is a prefix of the rhs slot configuration
+  private def verifyLhsPrefixOfRhs(lhsSlotConfiguration: SlotConfiguration,
+                                   rhsSlotConfiguration: SlotConfiguration): Unit = {
+    lhsSlotConfiguration.foreachSlotAndAliases {
+      case SlotWithKeyAndAliases(k, s, as) =>
+        k match {
+          case SlotConfiguration.VariableSlotKey(name) =>
+            require(rhsSlotConfiguration.get(name).contains(s))
+            val rhsAliases = rhsSlotConfiguration.getAliasesFor(name)
+            as.foreach(a => require(rhsAliases.contains(a)))
+          case SlotConfiguration.CachedPropertySlotKey(property) =>
+            require(rhsSlotConfiguration.getCachedPropertySlot(property).contains(s))
+          case SlotConfiguration.ApplyPlanSlotKey(applyPlanId) =>
+            require(rhsSlotConfiguration.getArgumentSlot(applyPlanId).contains(s))
+        }
+    }
+  }
 
   /*
-    * Plan:
-    *             ProduceResults
-    *               |
-    *             Apply
-    *             /  \
-    *           LHS  Sort
-    *                |
-    *                Expand
-    *                |
-    *                ...
-    *                |
-    *                Scan
-    *
-    * Pipelines:
-    *  -LHS->  ApplyBuffer  -Scan->  Buffer -...->  Buffer  -Presort->  ArgumentStateMapBuffer  -Sort,ProduceResults->
-    *             ^                  |--------------------|
-    *             |                                  ^
-    *   reducersOnRHS += argumentStateDefinition     reducers += argumentStateDefinition.id
-    *
-    * Mark `argumentStateMapId` as a reducer in all buffers between `buffer` and `applyBuffer`. This has
-    * to be done so that reference counting of inflight work will work correctly, so that `buffer` knows
-    * when each argument is complete.
-    */
+      * Plan:
+      *             ProduceResults
+      *               |
+      *             Apply
+      *             /  \
+      *           LHS  Sort
+      *                |
+      *                Expand
+      *                |
+      *                ...
+      *                |
+      *                Scan
+      *
+      * Pipelines:
+      *  -LHS->  ApplyBuffer  -Scan->  Buffer -...->  Buffer  -Presort->  ArgumentStateMapBuffer  -Sort,ProduceResults->
+      *             ^                  |--------------------|
+      *             |                                  ^
+      *   reducersOnRHS += argumentStateDefinition     reducers += argumentStateDefinition.id
+      *
+      * Mark `argumentStateMapId` as a reducer in all buffers between `buffer` and `applyBuffer`. This has
+      * to be done so that reference counting of inflight work will work correctly, so that `buffer` knows
+      * when each argument is complete.
+      */
   private def markReducerInUpstreamBuffers(buffer: BufferDefiner,
                                            applyBuffer: ApplyBufferDefiner,
                                            argumentStateDefinition: ArgumentStateDefinition): Unit = {
