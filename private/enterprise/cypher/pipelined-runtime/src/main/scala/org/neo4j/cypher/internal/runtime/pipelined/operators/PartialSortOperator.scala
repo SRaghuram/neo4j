@@ -48,7 +48,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
   private class PartialSortState(val memoryTracker: MemoryTracker) extends OperatorState {
     var lastSeen: MorselRow = _
-    var resultsBuffer: ResultsBuffer = HeapTrackingAppendList.newAppendList(memoryTracker)
+    var resultsBuffer: ResultsBuffer = HeapTrackingAppendList.newAppendList(16, memoryTracker)
     var remainingResults: ResultsBufferAndIndex = _
     var currentMorsel: Morsel = _
 
@@ -142,7 +142,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
       taskState.remainingResults = new ResultsBufferAndIndex(buffer, 0)
       taskState.lastSeen = null
-      taskState.resultsBuffer = HeapTrackingAppendList.newAppendList(taskState.memoryTracker)
+      taskState.resultsBuffer = HeapTrackingAppendList.newAppendList(16, taskState.memoryTracker)
     }
   }
 }
