@@ -657,7 +657,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: ConditionalApply =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        breakingPolicy.invoke(lp, lhs, argument.slotConfiguration, applyPlans(lp.id))
+        breakingPolicy.invoke(lp, rhs, argument.slotConfiguration, applyPlans(lp.id))
 
       case LetSemiApply(_, _, name) =>
         lhs.newReference(name, false, CTBoolean)
