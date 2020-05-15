@@ -134,6 +134,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         //TODO what do we do about allowFastDegreeLookup?
         // Dense
+        ensureRelationshipsLocated();
         if ( data.isDense )
         {
             ByteBuffer buffer = readRelationshipTypes();
