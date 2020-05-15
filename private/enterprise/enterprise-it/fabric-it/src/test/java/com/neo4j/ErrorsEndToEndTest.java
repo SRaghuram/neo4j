@@ -293,6 +293,22 @@ class ErrorsEndToEndTest
         assertThat( notifications.get( 0 ).description() ).startsWith( "Binding relationships" );
     }
 
+    @Test
+    void testParserNotificationCaching()
+    {
+        driverUtils.inTx( clientDriver, tx ->
+                tx.run( "MATCH ()-[rs*]-() RETURN rs" ).list()
+        );
+
+        var notifications = driverUtils.inTx( clientDriver, tx ->
+                tx.run( "explain MATCH ()-[rs*]-() RETURN rs" ).consume().notifications()
+        );
+
+        assertThat( notifications.size() ).isEqualTo( 1 );
+        assertThat( notifications.get( 0 ).code() ).isEqualTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" );
+        assertThat( notifications.get( 0 ).description() ).startsWith( "Binding relationships" );
+    }
+
     private void verifyCleanUp()
     {
         verifyNoFabricTransactions();
