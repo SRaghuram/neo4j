@@ -38,6 +38,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
@@ -85,7 +87,10 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.io.ByteUnit.bytesToString;
+import static org.neo4j.kernel.api.exceptions.Status.Procedure.ProcedureCallFailed;
 import static org.neo4j.procedure.Mode.DBMS;
+import static org.neo4j.procedure.Mode.READ;
+import static org.neo4j.procedure.Mode.WRITE;
 
 @SuppressWarnings( {"unused", "WeakerAccess"} )
 public class EnterpriseBuiltInDbmsProcedures
@@ -110,6 +115,9 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Context
     public SystemGraphComponents systemGraphComponents;
+
+    @Context
+    public ProcedureCallContext callContext;
 
     @SystemProcedure
     @Description( "List all accepted network connections at this instance that are visible to the user." )
@@ -681,9 +689,14 @@ public class EnterpriseBuiltInDbmsProcedures
     @Internal
     @SystemProcedure
     @Description( "Report the current status of the system database sub-graph schema, providing details for each sub-graph component." )
-    @Procedure( name = "dbms.upgradeStatusDetails", mode = DBMS )
-    public Stream<SystemGraphComponentStatusResultDetails> systemSchemaVersionDetails()
+    @Procedure( name = "dbms.upgradeStatusDetails", mode = READ )
+    public Stream<SystemGraphComponentStatusResultDetails> systemSchemaVersionDetails() throws ProcedureException
     {
+        if ( !callContext.isSystemDatabase() )
+        {
+            throw new ProcedureException( ProcedureCallFailed,
+                    "This is an administration command and it should be executed against the system database: dbms.upgradeStatusDetails" );
+        }
         SystemGraphComponents versions = systemGraphComponents;
         ArrayList<SystemGraphComponentStatusResultDetails> results = new ArrayList<>();
         versions.forEach( version -> results.add( new SystemGraphComponentStatusResultDetails( version.component(), version.detect( transaction ) ) ) );
@@ -694,9 +707,14 @@ public class EnterpriseBuiltInDbmsProcedures
     @Admin
     @SystemProcedure
     @Description( "Report the current status of the system database sub-graph schema." )
-    @Procedure( name = "dbms.upgradeStatus", mode = DBMS )
-    public Stream<SystemGraphComponentStatusResult> systemSchemaVersion()
+    @Procedure( name = "dbms.upgradeStatus", mode = READ )
+    public Stream<SystemGraphComponentStatusResult> systemSchemaVersion() throws ProcedureException
     {
+        if ( !callContext.isSystemDatabase() )
+        {
+            throw new ProcedureException( ProcedureCallFailed,
+                    "This is an administration command and it should be executed against the system database: dbms.upgradeStatus" );
+        }
         return Stream.of( new SystemGraphComponentStatusResult( systemGraphComponents.detect( transaction ) ) );
     }
 
@@ -704,9 +722,14 @@ public class EnterpriseBuiltInDbmsProcedures
     @Internal
     @SystemProcedure
     @Description( "Upgrade the system database schema if it is not the current schema, providing upgrade status results for each sub-graph component." )
-    @Procedure( name = "dbms.upgradeDetails", mode = DBMS )
-    public Stream<SystemGraphComponentUpgradeResultDetails> upgradeSystemSchemaDetails()
+    @Procedure( name = "dbms.upgradeDetails", mode = WRITE )
+    public Stream<SystemGraphComponentUpgradeResultDetails> upgradeSystemSchemaDetails() throws ProcedureException
     {
+        if ( !callContext.isSystemDatabase() )
+        {
+            throw new ProcedureException( ProcedureCallFailed,
+                    "This is an administration command and it should be executed against the system database: dbms.upgradeDetails" );
+        }
         SystemGraphComponents versions = systemGraphComponents;
         SystemGraphComponent.Status status = versions.detect( transaction );
         ArrayList<SystemGraphComponentUpgradeResultDetails> results = new ArrayList<>();
@@ -753,9 +776,14 @@ public class EnterpriseBuiltInDbmsProcedures
     @Admin
     @SystemProcedure
     @Description( "Upgrade the system database schema if it is not the current schema." )
-    @Procedure( name = "dbms.upgrade", mode = DBMS )
-    public Stream<SystemGraphComponentUpgradeResult> upgradeSystemSchema()
+    @Procedure( name = "dbms.upgrade", mode = WRITE )
+    public Stream<SystemGraphComponentUpgradeResult> upgradeSystemSchema() throws ProcedureException
     {
+        if ( !callContext.isSystemDatabase() )
+        {
+            throw new ProcedureException( ProcedureCallFailed,
+                    "This is an administration command and it should be executed against the system database: dbms.upgrade" );
+        }
         SystemGraphComponents versions = systemGraphComponents;
         SystemGraphComponent.Status status = versions.detect( transaction );
         if ( status == REQUIRES_UPGRADE )

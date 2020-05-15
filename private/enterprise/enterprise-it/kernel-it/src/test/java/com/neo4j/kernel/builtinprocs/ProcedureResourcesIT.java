@@ -337,6 +337,13 @@ class ProcedureResourcesIT
         case "dbms.database.state":
             proc.withParam( "\"" + SYSTEM_DATABASE_NAME + "\"" );
             break;
+        case "dbms.upgradeStatusDetails":
+        case "dbms.upgradeStatus":
+        case "dbms.upgradeDetails":
+        case "dbms.upgrade":
+            // Must run against system database
+            proc.skip = true;
+            break;
         default:
         }
         return proc;

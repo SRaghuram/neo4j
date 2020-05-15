@@ -19,6 +19,8 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -87,6 +89,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
@@ -2249,21 +2252,44 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     //---------- system graph initialization/migration -----------
 
-    @Test
-    void shouldNotListSystemGraphComponentDetailsIfNotAdmin()
+    @ParameterizedTest
+    @ValueSource( strings = {"dbms.upgrade", "dbms.upgradeDetails", "dbms.upgradeStatus", "dbms.upgradeStatusDetails"} )
+    void shouldFailUpgradeProceduresIfNotAdminNotSystemDatabase( String procedure )
+    {
+        String query = String.format( "CALL %s", procedure );
+        setupFakeSystemComponents();
+        assertFail( noneSubject, query, ACCESS_DENIED );
+        assertFail( readSubject, query, PERMISSION_DENIED );
+        assertFail( writeSubject, query, PERMISSION_DENIED );
+        assertFail( schemaSubject, query, PERMISSION_DENIED );
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"dbms.upgrade", "dbms.upgradeDetails", "dbms.upgradeStatus", "dbms.upgradeStatusDetails"} )
+    void shouldFailUpgradeProceduresIfNotAdmin( String procedure )
+    {
+        String query = String.format( "CALL %s", procedure );
+        setupFakeSystemComponents();
+        assertFail( SYSTEM_DATABASE_NAME, noneSubject, query, PERMISSION_DENIED );
+        assertFail( SYSTEM_DATABASE_NAME, readSubject, query, PERMISSION_DENIED );
+        assertFail( SYSTEM_DATABASE_NAME, writeSubject, query, PERMISSION_DENIED );
+        assertFail( SYSTEM_DATABASE_NAME, schemaSubject, query, PERMISSION_DENIED );
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"dbms.upgrade", "dbms.upgradeDetails", "dbms.upgradeStatus", "dbms.upgradeStatusDetails"} )
+    void shouldFailUpgradeProceduresIfNotOnSystemDatabase( String procedure )
     {
         setupFakeSystemComponents();
-        assertFail( noneSubject, "CALL dbms.upgradeStatusDetails()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL dbms.upgradeStatusDetails()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.upgradeStatusDetails()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.upgradeStatusDetails()", PERMISSION_DENIED );
+        assertFail( DEFAULT_DATABASE_NAME, adminSubject, String.format( "CALL %s", procedure ),
+                String.format( "This is an administration command and it should be executed against the system database: %s", procedure ) );
     }
 
     @Test
     void shouldListSystemGraphComponentDetailsIfAdmin()
     {
         setupFakeSystemComponents();
-        assertSuccess( adminSubject, "CALL dbms.upgradeStatusDetails()", r ->
+        assertSuccess( adminSubject, SYSTEM_DATABASE_NAME, "CALL dbms.upgradeStatusDetails()", r ->
         {
             HashMap<String, String> statuses = new HashMap<>();
             while ( r.hasNext() )
@@ -2282,20 +2308,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void shouldNotUpgradeSystemGraphWithDetailsIfNotAdmin()
-    {
-        setupFakeSystemComponents();
-        assertFail( noneSubject, "CALL dbms.upgradeDetails()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL dbms.upgradeDetails()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.upgradeDetails()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.upgradeDetails()", PERMISSION_DENIED );
-    }
-
-    @Test
     void shouldUpgradeSystemGraphWithDetailsIfAdmin()
     {
         setupFakeSystemComponents();
-        assertSuccess( adminSubject,"CALL dbms.upgradeDetails()", r ->
+        assertSuccess( adminSubject, SYSTEM_DATABASE_NAME, "CALL dbms.upgradeDetails()", r ->
         {
             assertThat( "Expected at least one result", r.hasNext(), equalTo( true ) );
             HashMap<String,String> statuses = new HashMap<>();
@@ -2321,20 +2337,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void shouldNotListSystemGraphComponentsIfNotAdmin()
-    {
-        setupFakeSystemComponents();
-        assertFail( noneSubject, "CALL dbms.upgradeStatus()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
-    }
-
-    @Test
     void shouldListSystemGraphComponentsIfAdmin()
     {
         setupFakeSystemComponents();
-        assertSuccess( adminSubject, "CALL dbms.upgradeStatus()", r ->
+        assertSuccess( adminSubject, SYSTEM_DATABASE_NAME, "CALL dbms.upgradeStatus()", r ->
         {
             assertThat( "Expected one result", r.hasNext(), equalTo( true ) );
             Map<String,Object> row = r.next();
@@ -2350,20 +2356,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void shouldNotUpgradeSystemGraphIfNotAdmin()
-    {
-        setupFakeSystemComponents();
-        assertFail( noneSubject, "CALL dbms.upgrade()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
-    }
-
-    @Test
     void shouldUpgradeSystemGraphIfAdmin()
     {
         setupFakeSystemComponents();
-        assertSuccess( adminSubject,"CALL dbms.upgrade()", r ->
+        assertSuccess( adminSubject, SYSTEM_DATABASE_NAME, "CALL dbms.upgrade()", r ->
         {
             assertThat( "Expected one result", r.hasNext(), equalTo( true ) );
             Map<String,Object> row = r.next();
@@ -2573,6 +2569,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     private static Matcher<Map<String,Object>> listedQueryWithMetaData( OffsetDateTime startTime, String username, String query, Map<String,Object> metaData )
     {
         return allOf(
@@ -2585,8 +2582,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     private static Matcher<Map<String,Object>> listedTransactionWithMetaData( OffsetDateTime startTime, String username, String currentQuery,
-            Map<String,Object> metaData )
+                                                                              Map<String,Object> metaData )
     {
         return allOf(
                 hasCurrentQuery( currentQuery ),
