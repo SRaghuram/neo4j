@@ -85,6 +85,7 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
         case SET_LABEL:
         case REMOVE_LABEL:
         case SET_PROPERTY:
+        case MERGE:
 
         case GRAPH_ACTIONS:
             throw unsupportedAction();

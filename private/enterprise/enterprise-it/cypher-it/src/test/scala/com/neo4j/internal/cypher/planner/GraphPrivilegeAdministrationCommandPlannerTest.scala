@@ -600,5 +600,37 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     )
   }
 
+  test("Grant merge") {
+    // When
+    val plan = execute("EXPLAIN GRANT MERGE {*} ON GRAPH * TO role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlanForAllGraphs("GrantMerge", allResourceArg(), details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlanForAllGraphs("GrantMerge", allResourceArg(), details("NODES *"), "role",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke merge") {
+    // When
+    val plan = execute("EXPLAIN REVOKE GRANT MERGE {foo,bar} ON GRAPH * RELATIONSHIP baz FROM role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlanForAllGraphs("RevokeMerge(GRANTED)", resourceArg("bar"), details("RELATIONSHIP baz"), "role",
+          graphPrivilegePlanForAllGraphs("RevokeMerge(GRANTED)", resourceArg("foo"), details("RELATIONSHIP baz"), "role",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
   private def details(info: String): Details = Details(asPrettyString.raw(info))
 }

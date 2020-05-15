@@ -25,6 +25,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_ELEM
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DELETE_ELEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MERGE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
@@ -2034,5 +2035,181 @@ class StandardAccessModeTest
 
         assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( true );
         assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+    }
+
+    // MERGE
+    @Test
+    void grantMergeOnNodeShouldAllowReadTraverseCreateAndSetProp() throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, MERGE, new Resource.PropertyResource( "PROP1" ), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // READ
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
+
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+
+        // TRAVERSE
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( false );
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) B} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A, (int) B} ) ).isEqualTo( false );
+
+        // SET PROP
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void grantMergeOnRelShouldAllowReadTraverseCreateAndSetProp() throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, MERGE, new Resource.PropertyResource( "PROP1" ), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // READ
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
+
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+
+        // TRAVERSE
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( false );
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) B} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A, (int) B} ) ).isEqualTo( false );
+
+        // SET PROP
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void grantMergeAndDenyCreateShouldAllowOnlySettingProperty() throws Exception
+    {
+        var privilege2 = new ResourcePrivilege( GRANT, MERGE, new Resource.AllPropertiesResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var privilege1 = new ResourcePrivilege( DENY, CREATE_ELEMENT, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // READ
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
+
+        // TRAVERSE
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( false );
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) B} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A, (int) B} ) ).isEqualTo( false );
+
+        // SET PROP
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void grantMergeAndDenySetPropShouldAllowOnlyCreatingNode() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, MERGE, new Resource.AllPropertiesResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP2" ), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // READ
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
+
+        // TRAVERSE
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( false );
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) B} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A, (int) B} ) ).isEqualTo( false );
+
+        // SET PROP
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void grantMergeOnALlRelationshipsAndDenySetPropR1ShouldAllowOnlySetPropR2() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, MERGE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP2" ), new RelTypeSegment( "R2" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // READ
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( true );
+
+        // SET PROP
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
     }
  }

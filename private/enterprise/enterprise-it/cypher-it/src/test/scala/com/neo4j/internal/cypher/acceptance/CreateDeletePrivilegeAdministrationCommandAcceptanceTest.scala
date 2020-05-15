@@ -331,6 +331,24 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     } should have message "Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
+  test("should fail to create node with properties with create privilege but without set property privilege")
+  {
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Foo')")
+    execute("CALL db.createProperty('prop')")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "CREATE (:Foo{prop:'foo'})")
+    } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 0
+  }
+
   test("should fail create node with label without privilege")
   {
     setupUserWithCustomRole()

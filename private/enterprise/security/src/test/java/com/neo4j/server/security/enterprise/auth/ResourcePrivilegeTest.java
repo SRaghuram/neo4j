@@ -29,6 +29,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MERGE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
@@ -84,6 +85,11 @@ class ResourcePrivilegeTest
                 else if ( WRITE.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new GraphResource() );
+                }
+                else if ( MERGE.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new AllPropertiesResource() );
+                    assertOk( privilegeType, action, new PropertyResource( "foo" ) );
                 }
                 else if ( ADMIN.satisfies( action ) )
                 {
@@ -179,6 +185,14 @@ class ResourcePrivilegeTest
                 else if ( WRITE.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
+                }
+                else if ( MERGE.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new DatabaseResource() );
                     assertFail( privilegeType, action, new LabelResource( "foo" ) );
                     assertFail( privilegeType, action, new AllLabelsResource() );

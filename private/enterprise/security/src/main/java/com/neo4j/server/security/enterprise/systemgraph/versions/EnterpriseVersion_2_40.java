@@ -13,7 +13,6 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDataba
 import java.util.List;
 import java.util.Set;
 
-import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -26,7 +25,6 @@ import org.neo4j.logging.Log;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
-import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
@@ -302,6 +300,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
         case SET_LABEL:
         case REMOVE_LABEL:
         case SET_PROPERTY:
+        case MERGE:
 
         case GRAPH_ACTIONS:
             throw unsupportedAction();

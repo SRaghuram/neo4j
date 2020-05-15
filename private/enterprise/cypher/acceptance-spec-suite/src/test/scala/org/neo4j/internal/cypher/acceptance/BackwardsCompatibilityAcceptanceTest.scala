@@ -723,6 +723,71 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
   }
 
+  // ALL MERGE should not be supported in 4.0
+
+  test("grant merge is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 GRANT MERGE {*} ON GRAPH * TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 GRANT MERGE {*} ON GRAPH * TO role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("deny merge is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 DENY MERGE {*} ON GRAPH * TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 DENY MERGE {*} ON GRAPH * TO role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("revoke merge is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 REVOKE MERGE {*} ON GRAPH * FROM role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 REVOKE MERGE {*} ON GRAPH * FROM role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
   test("revoke all graph privileges is not supported in 3.5 or 4.0") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)

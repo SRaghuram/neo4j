@@ -243,13 +243,7 @@ class StandardAccessModeBuilder
             break;
 
         case MATCH:
-            anyRead.put( privilegeType, true );
-            if ( !(privilegeType.isDeny() && resource.type() == PROPERTY) )
-            {
-                // don't deny TRAVERSE for DENY MATCH {prop}
-                handleAllResourceQualifier( segment, privilegeType, "match", traverseAllLabels, traverseLabels, traverseAllRelTypes, traverseRelTypes );
-            }
-            handleReadPrivilege( resource, segment, privilegeType, "match" );
+            handleMatch( resource, segment, privilegeType );
             break;
 
         case WRITE:
@@ -279,6 +273,16 @@ class StandardAccessModeBuilder
         case SET_PROPERTY:
             handleSetPropertyPrivilege( resource, segment, privilegeType );
             break;
+
+        case MERGE:
+            if ( privilegeType.isGrant() )
+            {
+                handleMatch( resource, segment, privilegeType );
+                handleCreatePrivilege( segment, privilegeType );
+                handleSetPropertyPrivilege( resource, segment, privilegeType );
+            }
+            break;
+
         default:
             if ( TOKEN.satisfies( action ) )
             {
@@ -303,6 +307,17 @@ class StandardAccessModeBuilder
             }
         }
         return this;
+    }
+
+    private void handleMatch( Resource resource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType )
+    {
+        anyRead.put( privilegeType, true );
+        if ( !(privilegeType.isDeny() && resource.type() == PROPERTY) )
+        {
+            // don't deny TRAVERSE for DENY MATCH {prop}
+            handleAllResourceQualifier( segment, privilegeType, "match", traverseAllLabels, traverseLabels, traverseAllRelTypes, traverseRelTypes );
+        }
+        handleReadPrivilege( resource, segment, privilegeType, "match" );
     }
 
     private void handleCreatePrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType )

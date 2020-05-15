@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -124,4 +125,20 @@ class SecurityGraphUpdatingCompatibility_40_IT extends SecurityGraphCompatibilit
             }
         }
     }
+
+    @Test
+    void mergeCommandShouldFailOnOldGraph()
+    {
+        for ( String template : List.of( "GRANT %s TO reader", "REVOKE %s FROM reader" ) )
+        {
+            try ( Transaction tx = system.beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
+            {
+                String query = String.format( template, "MERGE {*} ON GRAPH *" );
+                var exception = assertThrows( UnsupportedOperationException.class, () -> tx.execute( query ), query );
+                assertThat( exception.getMessage() )
+                        .contains( "This operation is not supported while running in compatibility mode with version " + VERSION_40 );
+            }
+        }
+    }
+
 }
