@@ -221,7 +221,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       while (iterator.hasNext) {
         val entry = iterator.next()
         val reducers = reducerMap.getIfAbsentPutWithMemoryTracker(entry.getKey, scopedMemoryTracker => {
-          val reducers = aggregators.map(_.newStandardReducer(memoryTracker))
+          val reducers = aggregators.map(_.newStandardReducer(scopedMemoryTracker))
           scopedMemoryTracker.allocateHeap(entry.getKey.estimatedHeapUsage() + HeapEstimator.shallowSizeOfObjectArray(reducers.length))
           reducers
         })
