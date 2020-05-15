@@ -24,6 +24,7 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.eclipse.collections.api.list.primitive.MutableLongList;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
+import org.eclipse.collections.api.set.primitive.IntSet;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
@@ -1806,6 +1807,18 @@ class FrekiStorageEngineGraphWritesIT
             assertThat( degrees.incomingDegree( type ) ).isEqualTo( expectedDegrees.incomingDegree( type ) );
             assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
         }
+
+        // relationship types
+        IntSet relationshipTypes = IntSets.immutable.of( nodeCursor.relationshipTypes() );
+        IntSet expectedRelationshipTypes = buildExpectedRelationshipTypes( relationships );
+        assertThat( relationshipTypes ).isEqualTo( expectedRelationshipTypes );
+    }
+
+    private static IntSet buildExpectedRelationshipTypes( Set<RelationshipSpec> relationships )
+    {
+        MutableIntSet set = IntSets.mutable.empty();
+        relationships.forEach( rel -> set.add( rel.type ) );
+        return set;
     }
 
     private Set<RelationshipSpec> readRelationships( StoragePropertyCursor propertyCursor, StorageRelationshipTraversalCursor relationshipCursor )
