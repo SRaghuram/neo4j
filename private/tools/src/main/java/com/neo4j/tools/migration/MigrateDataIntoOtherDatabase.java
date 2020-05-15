@@ -13,10 +13,13 @@ import org.eclipse.collections.impl.factory.primitive.LongLongMaps;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -34,6 +37,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.Math.toIntExact;
+import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.CheckpointPolicy.CONTINUOUS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
@@ -50,7 +54,7 @@ public class MigrateDataIntoOtherDatabase
     public static void migrate( Path fromHome, Path toHome, boolean validate )
     {
         assert !(fromHome.equals( toHome ));
-        System.out.println( String.format( "Migrating %s to Freki store: %s", fromHome, toHome ) );
+        System.out.println( format( "Migrating %s to Freki store: %s", fromHome, toHome ) );
         long totalPageCacheMem = ConfiguringPageCacheFactory.defaultHeuristicPageCacheMemory();
         String pcMemory = String.valueOf( totalPageCacheMem / 10 );
         System.out.println( "Using a pagecache of size " + pcMemory );
@@ -180,7 +184,8 @@ public class MigrateDataIntoOtherDatabase
             toNode.getLabels().forEach( l -> toLabels.add( l.name() ) );
             if ( !fromLabels.equals( toLabels ) )
             {
-                throw new RuntimeException( "Broken labels " + toNode + toLabels + " should be " + fromNode + fromLabels );
+                throw new RuntimeException(
+                        "Broken labels " + toNode + toLabels + " should be " + fromNode + fromLabels + " diff " + setDiff( fromLabels, toLabels ) );
             }
         }
 
@@ -192,7 +197,8 @@ public class MigrateDataIntoOtherDatabase
             toNode.getAllProperties().forEach( ( s, o ) -> toProps.put( s, Values.of( o ) ) );
             if ( !fromProps.equals( toProps ) )
             {
-                throw new RuntimeException( "Broken properties " + toNode + toProps + " should be " + fromNode + fromProps );
+                throw new RuntimeException( "Broken properties " + toNode + toProps + " should be " + fromNode + fromProps +
+                        " diff " + mapDiff( fromProps, toProps ) );
             }
         }
 
@@ -201,10 +207,79 @@ public class MigrateDataIntoOtherDatabase
             if ( fromNode.getDegree() != toNode.getDegree() )
             {
                 throw new RuntimeException(
-                        "Broken relationships " + toNode + ", " + toNode.getDegree() + " should be " + fromNode + ", " + fromNode.getDegree() );
+                        "Broken relationships (degrees) " + toNode + ", " + toNode.getDegree() + " should be " + fromNode + ", " + fromNode.getDegree() +
+                                " diff " + degreesDiff( fromNode, toNode ) );
             }
         }
+    }
 
+    private static String degreesDiff( Node fromNode, Node toNode )
+    {
+        Set<String> fromTypes = new HashSet<>();
+        Set<String> toTypes = new HashSet<>();
+        fromNode.getRelationshipTypes().forEach( type -> fromTypes.add( type.name() ) );
+        toNode.getRelationshipTypes().forEach( type -> toTypes.add( type.name() ) );
+        if ( !fromTypes.equals( toTypes ) )
+        {
+            return "Relationship types differ: " + setDiff( fromTypes, toTypes );
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for ( String typeName : fromTypes )
+        {
+            RelationshipType type = RelationshipType.withName( typeName );
+            checkDegreeDiff( fromNode, toNode, builder, type, Direction.OUTGOING );
+            checkDegreeDiff( fromNode, toNode, builder, type, Direction.INCOMING );
+            checkDegreeDiff( fromNode, toNode, builder, type, Direction.BOTH );
+        }
+        return builder.toString();
+    }
+
+    private static void checkDegreeDiff( Node fromNode, Node toNode, StringBuilder builder, RelationshipType type, Direction direction )
+    {
+        int from = fromNode.getDegree( type, direction );
+        int to = toNode.getDegree( type, direction );
+        if ( from != to )
+        {
+            builder.append( format( "degree:%s,%s:%d vs %d", type.name(), direction.name(), from, to ) );
+        }
+    }
+
+    private static <T> String setDiff( Set<T> from, Set<T> to )
+    {
+        StringBuilder builder = new StringBuilder();
+        Set<T> combined = new HashSet<>( from );
+        combined.removeAll( to );
+        combined.forEach( label -> builder.append( format( "%n<%s", label ) ) );
+        combined = new HashSet<>( to );
+        combined.removeAll( from );
+        combined.forEach( label -> builder.append( format( "%n>%s", label ) ) );
+        return builder.toString();
+    }
+
+    private static <T> String mapDiff( Map<String,T> from, Map<String,T> to )
+    {
+        StringBuilder builder = new StringBuilder();
+        Set<String> allKeys = new HashSet<>( from.keySet() );
+        allKeys.addAll( to.keySet() );
+        for ( String key : allKeys )
+        {
+            T fromValue = from.get( key );
+            T toValue = to.get( key );
+            if ( toValue == null )
+            {
+                builder.append( format( "%n<%s=%s", key, fromValue ) );
+            }
+            else if ( fromValue == null )
+            {
+                builder.append( format( "%n>%s=%s", key, toValue ) );
+            }
+            else if ( !fromValue.equals( toValue ) )
+            {
+                builder.append( format( "%n!%s=%s vs %s", key, fromValue, toValue ) );
+            }
+        }
+        return builder.toString();
     }
 
     private static void copySchema( GraphDatabaseService to, Transaction fromTx )
