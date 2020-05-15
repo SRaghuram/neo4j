@@ -42,7 +42,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     val q = "MATCH (user:User) WHERE ($range[0] > user.id OR user.id > $range[1]) RETURN user"
     val p = Map("range" -> util.Arrays.asList(10, 20))
     val r = executeSingle(q, p)
-    r.toList should contain theSameElementsAs (nodes.take(10) ++ nodes.reverse.take(10)).map(u => Map("user" -> u))
+    r.toList should contain theSameElementsAs (nodes.take(10) ++ nodes.takeRight(10)).map(u => Map("user" -> u))
   }
 
   test("order by after projection") {
