@@ -22,7 +22,6 @@ package org.neo4j.internal.batchimport;
 import org.neo4j.internal.batchimport.cache.GatheringMemoryStatsVisitor;
 import org.neo4j.internal.batchimport.cache.MemoryStatsVisitor;
 import org.neo4j.internal.batchimport.input.Input;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
 
 import static org.neo4j.io.ByteUnit.gibiBytes;
 import static org.neo4j.kernel.impl.store.NoStoreHeader.NO_STORE_HEADER;
@@ -37,12 +36,12 @@ import static org.neo4j.kernel.impl.store.NoStoreHeader.NO_STORE_HEADER;
  */
 public class ImportMemoryCalculator
 {
-    public static long estimatedStoreSize( Input.Estimates estimates, RecordFormats recordFormats )
+    public static long estimatedStoreSize( Input.Estimates estimates, RecordSizes recordSizes )
     {
-        long nodeSize = estimates.numberOfNodes() * recordFormats.node().getRecordSize( NO_STORE_HEADER );
-        long relationshipSize = estimates.numberOfRelationships() * recordFormats.relationship().getRecordSize( NO_STORE_HEADER );
+        long nodeSize = estimates.numberOfNodes() * recordSizes.getNodeRecordSize();
+        long relationshipSize = estimates.numberOfRelationships() * recordSizes.getRelationshipRecordSize();
         long propertySize = estimates.sizeOfNodeProperties() + estimates.sizeOfRelationshipProperties();
-        long tempIdPropertySize = estimates.numberOfNodes() * recordFormats.property().getRecordSize( NO_STORE_HEADER );
+        long tempIdPropertySize = estimates.numberOfNodes() * recordSizes.getPropertyRecordSize();
 
         return defensivelyPadMemoryEstimate( nodeSize + relationshipSize + propertySize + tempIdPropertySize );
     }
@@ -64,12 +63,12 @@ public class ImportMemoryCalculator
      * for handling objects created and operating during the import.
      *
      * @param estimates input estimates.
-     * @param recordFormats {@link RecordFormats}, containing record sizes.
+     * @param recordSizes {@link RecordSizes}, containing record sizes.
      * @return an optimal minimal heap size to use for this import.
      */
-    public static long optimalMinimalHeapSize( Input.Estimates estimates, RecordFormats recordFormats )
+    public static long optimalMinimalHeapSize( Input.Estimates estimates, RecordSizes recordSizes )
     {
-        long estimatedStoreSize = estimatedStoreSize( estimates, recordFormats );
+        long estimatedStoreSize = estimatedStoreSize( estimates, recordSizes );
 
         return // working memory
                gibiBytes( 1 ) +

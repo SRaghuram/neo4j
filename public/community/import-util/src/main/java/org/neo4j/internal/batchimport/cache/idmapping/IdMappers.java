@@ -39,6 +39,8 @@ import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.memory.MemoryTracker;
 
+import java.util.function.LongFunction;
+
 import static org.neo4j.internal.batchimport.cache.idmapping.string.EncodingIdMapper.NO_MONITOR;
 import static org.neo4j.internal.batchimport.cache.idmapping.string.TrackerFactories.dynamic;
 
@@ -61,9 +63,10 @@ public class IdMappers
         }
 
         @Override
-        public void prepare( PropertyValueLookup inputIdLookup, Collector collector, ProgressListener progress )
+        public void prepare(PropertyValueLookup inputIdLookup, Collector collector, ProgressListener progress )
         {   // No need to prepare anything
         }
+
 
         @Override
         public long get( Object inputId, Group group )

@@ -29,7 +29,7 @@ import org.neo4j.io.pagecache.PageCursor;
 
 import static java.lang.String.format;
 
-class Record
+public class Record
 {
     /*
       Header 1B
@@ -39,7 +39,7 @@ class Record
       └└└└────── Unused (4b)
      */
     static int MASK_SIZE_EXP = 0x7;
-    static int FLAG_IN_USE = 0x8;
+    public static int FLAG_IN_USE = 0x8;
 
     static final int SIZE_BASE = 128;
     static final int HEADER_SIZE = 1;
@@ -71,7 +71,7 @@ class Record
         this.data = instantiateData ? ByteBuffer.wrap( new byte[dataLength] ) : null;
     }
 
-    static Record deletedRecord( int sizeExp, long id )
+    public static Record deletedRecord(int sizeExp, long id)
     {
         return new Record( sizeExpAsFlagsByte( sizeExp ), id, false );
     }
@@ -118,7 +118,7 @@ class Record
         }
     }
 
-    boolean hasFlag( int flag )
+    public boolean hasFlag(int flag)
     {
         return (flags & flag) == flag;
     }
@@ -128,7 +128,7 @@ class Record
         return (byte) sizeExp;
     }
 
-    byte sizeExp()
+    public byte sizeExp()
     {
         return sizeExp( flags );
     }
@@ -204,6 +204,7 @@ class Record
             cursor.getBytes( data.array(), 0, dataLength );
             data.position( dataLength );
             data.flip();
+            boolean retry = cursor.shouldRetry();
         }
         while ( cursor.shouldRetry() );
         cursor.checkAndClearBoundsFlag();

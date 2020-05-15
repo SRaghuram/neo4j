@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -45,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.io.compress.ZipUtils.zip;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.proc.ProcessUtil.getClassPath;
@@ -158,12 +159,12 @@ class RestartableImportIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             File databaseDirectory = new File( args[0] );
-            BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
-                    NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(),
-                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
-                   .doImport( input( Long.parseLong( args[1] ) ) );
-            // Create this file to communicate completion for real
+            BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(),
+                    null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
+                    //RecordFormatSelector.defaultFormat(),
+                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE, INSTANCE )
+                    .doImport( input( Long.parseLong( args[1] ) ) );
+            // Create this file to communicate completion for realz
             new File( databaseDirectory, COMPLETED ).createNewFile();
         }
         catch ( IllegalStateException e )

@@ -20,11 +20,10 @@
 package org.neo4j.importer;
 
 import org.junit.jupiter.api.Test;
+import org.neo4j.internal.batchimport.BaseImportLogic.Monitor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-
-import org.neo4j.internal.batchimport.ImportLogic;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.io.ByteUnit.bytesToString;
@@ -40,7 +39,7 @@ class PrintingImportLogicMonitorTest
     private final PrintStream out = new PrintStream( outBuffer );
     private final ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
     private final PrintStream err = new PrintStream( errBuffer );
-    private final ImportLogic.Monitor monitor = new PrintingImportLogicMonitor( out, err );
+    private final Monitor monitor = new PrintingImportLogicMonitor( out, err );
 
     @Test
     void mayExceedNodeIdCapacity()

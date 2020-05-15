@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.transaction.log.entry;
 
 import java.io.IOException;
 
+import org.neo4j.internal.freki.FrekiCommand;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -39,6 +40,7 @@ public class StorageCommandSerializer implements Visitor<StorageCommand,IOExcept
     @Override
     public boolean visit( StorageCommand command ) throws IOException
     {
+        //System.out.println(((FrekiCommand)command).toString());
         LogEntryWriter.writeLogEntryHeader( COMMAND, channel );
         command.serialize( channel );
         return false;

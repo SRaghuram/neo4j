@@ -44,6 +44,7 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.TokenStoreInterface;
 import org.neo4j.string.UTF8;
 import org.neo4j.token.api.NamedToken;
 
@@ -120,6 +121,10 @@ public class GBPTreeTokenStore implements Closeable
         return toIntExact( idGenerator.nextId( cursorTracer ) );
     }
 
+    public int getHighId()
+    {
+        return (int)idGenerator.getHighId();
+    }
     public void setHighId( int newHighId )
     {
         idGenerator.setHighId( newHighId );

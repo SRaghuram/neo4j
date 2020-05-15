@@ -28,13 +28,11 @@ import org.neo4j.internal.id.IdRangeIterator;
 import org.neo4j.internal.id.IdSequence;
 import org.neo4j.internal.id.IdValidator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 
 import static org.neo4j.internal.id.IdRangeIterator.VALUE_REPRESENTING_NULL;
 
 /**
- * Exposes batches of ids from a {@link RecordStore} as a {@link LongIterator}.
+ * Exposes batches of ids from a {@link org.neo4j.internal.id.IdGenerator} as a {@link LongIterator}.
  * It makes use of {@link IdSequence#nextIdBatch(int, PageCursorTracer)} (with default batch size the number of records per page)
  * and caches that batch, exhausting it in {@link #nextId(PageCursorTracer)} before getting next batch.
  */
@@ -44,12 +42,7 @@ public class BatchingIdGetter implements IdSequence
     private IdRangeIterator batch;
     private final int batchSize;
 
-    BatchingIdGetter( RecordStore<? extends AbstractBaseRecord> source )
-    {
-        this( source, source.getRecordsPerPage() );
-    }
-
-    BatchingIdGetter( RecordStore<? extends AbstractBaseRecord> source, int batchSize )
+    BatchingIdGetter( IdSequence source, int batchSize )
     {
         this.source = source;
         this.batchSize = batchSize;

@@ -98,7 +98,7 @@ public class CsvInputParser implements Closeable
                             doContinue = visitor.id( idValue, entry.group() );
                             if ( entry.name() != null )
                             {
-                                doContinue = visitor.property( entry.name(), idValue );
+                                doContinue = visitor.property( entry.name(), idValue, entry.extractor().getStringValue() );//visitor.property( entry.name(), idValue );
                             }
                             break;
                         case ACTUAL:

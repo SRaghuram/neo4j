@@ -38,6 +38,7 @@ public class RecordRelationshipScanCursor extends RecordRelationshipCursor imple
     private PageCursor pageCursor;
     private boolean open;
     private boolean batched;
+    public int NO_ID = org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 
     RecordRelationshipScanCursor( RelationshipStore relationshipStore, PageCursorTracer cursorTracer )
     {

@@ -39,8 +39,7 @@ import org.neo4j.storageengine.api.format.CapabilityType;
  * The record formats that a store version uses. Contains all formats for all different stores as well as
  * accessors for which {@link IndexCapabilities.LuceneCapability capabilities} a format has as to be able to compare between formats.
  */
-public interface RecordFormats
-{
+public interface RecordFormats {
     @Service
     interface Factory extends NamedService
     {

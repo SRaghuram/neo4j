@@ -176,7 +176,7 @@ public interface StorageEngineFactory
         return selectDefaultStorageEngine( allAvailableStorageEngines() );
     }
 
-    static Collection<StorageEngineFactory> allAvailableStorageEngines()
+    public static Collection<StorageEngineFactory> allAvailableStorageEngines()
     {
         return Services.loadAll( StorageEngineFactory.class );
     }
@@ -198,7 +198,7 @@ public interface StorageEngineFactory
         return storageEngineFactories.stream().filter( engine -> engine.getClass().getSimpleName().equals( "RecordStorageEngineFactory" ) ).findFirst().get();
     }
 
-    static StorageEngineFactory selectStorageEngine( String nameish )
+    public static StorageEngineFactory selectStorageEngine( String nameish )
     {
         Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
         Optional<StorageEngineFactory> first = storageEngineFactories.stream().filter(

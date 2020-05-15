@@ -19,36 +19,29 @@
  */
 package org.neo4j.internal.batchimport;
 
-import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.IntSet;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.internal.batchimport.cache.GatheringMemoryStatsVisitor;
 import org.neo4j.internal.batchimport.cache.MemoryStatsVisitor;
 import org.neo4j.internal.batchimport.cache.NodeLabelsCache;
 import org.neo4j.internal.batchimport.cache.NodeRelationshipCache;
 import org.neo4j.internal.batchimport.cache.NodeType;
-import org.neo4j.internal.batchimport.cache.NumberArrayFactory;
-import org.neo4j.internal.batchimport.cache.PageCacheArrayFactoryMonitor;
 import org.neo4j.internal.batchimport.cache.idmapping.IdMapper;
-import org.neo4j.internal.batchimport.cache.idmapping.IdMappers;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.EstimationSanityChecker;
 import org.neo4j.internal.batchimport.input.Input;
-import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
-import org.neo4j.internal.batchimport.staging.ExecutionSupervisors;
-import org.neo4j.internal.batchimport.staging.Stage;
+import org.neo4j.internal.batchimport.staging.*;
 import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -56,11 +49,12 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.BatchingStoreBase;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
+import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
@@ -70,10 +64,10 @@ import static java.lang.Long.max;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.function.Predicates.alwaysTrue;
-import static org.neo4j.internal.batchimport.cache.NumberArrayFactory.auto;
 import static org.neo4j.internal.helpers.Format.duration;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.io.IOUtils.closeAll;
+import static org.neo4j.kernel.impl.store.NoStoreHeader.NO_STORE_HEADER;
 
 /**
  * Contains all algorithms and logic for doing an import. It exposes all stages as methods so that
@@ -83,72 +77,15 @@ import static org.neo4j.io.IOUtils.closeAll;
  * To begin with the methods are fairly coarse-grained, but can and probably will be split up into smaller parts
  * to allow external implementors have greater control over the flow.
  */
-public class ImportLogic implements Closeable
+public class ImportLogic extends BaseImportLogic implements Closeable
 {
     private static final String IMPORT_COUNT_STORE_REBUILD_TAG = "importCountStoreRebuild";
+    private BatchingNeoStores neoStore;
+    private RecordFormats recordFormats;
 
-    public interface Monitor
-    {
-        void doubleRelationshipRecordUnitsEnabled();
-
-        void mayExceedNodeIdCapacity( long capacity, long estimatedCount );
-
-        void mayExceedRelationshipIdCapacity( long capacity, long estimatedCount );
-
-        void insufficientHeapSize( long optimalMinimalHeapSize, long heapSize );
-
-        void abundantHeapSize( long optimalMinimalHeapSize, long heapSize );
-
-        void insufficientAvailableMemory( long estimatedCacheSize, long optimalMinimalHeapSize, long availableMemory );
-    }
-
-    public static final Monitor NO_MONITOR = new Monitor()
-    {
-        @Override
-        public void mayExceedRelationshipIdCapacity( long capacity, long estimatedCount )
-        {   // no-op
-        }
-
-        @Override
-        public void mayExceedNodeIdCapacity( long capacity, long estimatedCount )
-        {   // no-op
-        }
-
-        @Override
-        public void doubleRelationshipRecordUnitsEnabled()
-        {   // no-op
-        }
-
-        @Override
-        public void insufficientHeapSize( long optimalMinimalHeapSize, long heapSize )
-        {   // no-op
-        }
-
-        @Override
-        public void abundantHeapSize( long optimalMinimalHeapSize, long heapSize )
-        {   // no-op
-        }
-
-        @Override
-        public void insufficientAvailableMemory( long estimatedCacheSize, long optimalMinimalHeapSize, long availableMemory )
-        {   // no-op
-        }
-    };
-
-    private final File databaseDirectory;
-    private final BatchingNeoStores neoStore;
-    private final Configuration config;
-    private final Config dbConfig;
-    private final Log log;
-    private final PageCacheTracer pageCacheTracer;
-    private final MemoryTracker memoryTracker;
-    private final ExecutionMonitor executionMonitor;
-    private final RecordFormats recordFormats;
     private final DataImporter.Monitor storeUpdateMonitor = new DataImporter.Monitor();
     private final long maxMemory;
     private final Dependencies dependencies = new Dependencies();
-    private final Monitor monitor;
-    private Input input;
     private boolean successful;
 
     // This map contains additional state that gets populated, created and used throughout the stages.
@@ -158,63 +95,51 @@ public class ImportLogic implements Closeable
     private final Map<Class<?>,Object> accessibleState = new HashMap<>();
 
     // components which may get assigned and unassigned in some methods
-    private NodeRelationshipCache nodeRelationshipCache;
     private NodeLabelsCache nodeLabelsCache;
     private long startTime;
-    private NumberArrayFactory numberArrayFactory;
-    private final Collector badCollector;
-    private IdMapper idMapper;
     private long peakMemoryUsage;
     private long availableMemoryForLinking;
 
     /**
      * @param databaseLayout directory which the db will be created in.
-     * @param neoStore {@link BatchingNeoStores} to import into.
      * @param config import-specific {@link Configuration}.
      * @param logService {@link LogService} to use.
      * @param executionMonitor {@link ExecutionMonitor} to follow progress as the import proceeds.
-     * @param recordFormats which {@link RecordFormats record format} to use for the created db.
      * @param badCollector {@link Collector} for bad entries.
      * @param monitor {@link Monitor} for some events.
      */
-    public ImportLogic( DatabaseLayout databaseLayout, BatchingNeoStores neoStore, Configuration config, Config dbConfig, LogService logService,
-            ExecutionMonitor executionMonitor, RecordFormats recordFormats, Collector badCollector, Monitor monitor,
-            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+
+    public ImportLogic( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, BatchingStoreBase neoStore,
+                        Configuration config, Config dbConfig, LogService logService,
+            ExecutionMonitor executionMonitor, Collector badCollector, Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
-        this.databaseDirectory = databaseLayout.databaseDirectory();
-        this.neoStore = neoStore;
-        this.config = config;
-        this.dbConfig = dbConfig;
-        this.recordFormats = recordFormats;
-        this.badCollector = badCollector;
-        this.monitor = monitor;
-        this.log = logService.getInternalLogProvider().getLog( getClass() );
-        this.pageCacheTracer = pageCacheTracer;
-        this.memoryTracker = memoryTracker;
-        this.executionMonitor = ExecutionSupervisors.withDynamicProcessorAssignment( executionMonitor, config );
+        super(fileSystem, databaseLayout, neoStore, badCollector, logService, executionMonitor, config, dbConfig, monitor, pageCacheTracer, memoryTracker );
+        this.neoStore = (BatchingNeoStores) neoStore;
+
         this.maxMemory = config.maxMemoryUsage();
+        this.recordFormats = RecordFormatSelector.selectForConfig(fileSystem, dbConfig);
+        if (executionMonitor instanceof DefaultHumanUnderstandableExecutionMonitor)
+            executionMonitor = ExecutionMonitors.defaultVisible();
+        this.executionMonitor = ExecutionSupervisors.withDynamicProcessorAssignment( executionMonitor, config );
     }
 
+    @Override
     public void initialize( Input input ) throws IOException
     {
         log.info( "Import starting" );
         startTime = currentTimeMillis();
-        this.input = input;
-        PageCacheArrayFactoryMonitor numberArrayFactoryMonitor = new PageCacheArrayFactoryMonitor();
-        numberArrayFactory = auto( neoStore.getPageCache(), pageCacheTracer, databaseDirectory, config.allowCacheAllocationOnHeap(),
-                numberArrayFactoryMonitor );
-        // Some temporary caches and indexes in the import
-        idMapper = instantiateIdMapper( input );
-        nodeRelationshipCache = new NodeRelationshipCache( numberArrayFactory, dbConfig.get( GraphDatabaseSettings.dense_node_threshold ), memoryTracker );
+        super.initialize( input, dependencies);
         Input.Estimates inputEstimates = input.calculateEstimates( neoStore.getPropertyStore().newValueEncodedSizeCalculator() );
 
         // Sanity checking against estimates
         new EstimationSanityChecker( recordFormats, monitor ).sanityCheck( inputEstimates );
-        new HeapSizeSanityChecker( monitor ).sanityCheck( inputEstimates, recordFormats, neoStore,
+        new HeapSizeSanityChecker( monitor ).sanityCheck( inputEstimates, new RecordSizes(recordFormats.node().getRecordSize(NO_STORE_HEADER),
+                        recordFormats.relationship().getRecordSize(NO_STORE_HEADER),
+                        recordFormats.property().getRecordSize(NO_STORE_HEADER)), neoStore,
                 nodeRelationshipCache.memoryEstimation( inputEstimates.numberOfNodes() ),
                 idMapper.memoryEstimation( inputEstimates.numberOfNodes() ) );
 
-        dependencies.satisfyDependencies( inputEstimates, idMapper, neoStore, nodeRelationshipCache, numberArrayFactoryMonitor );
+        dependencies.satisfyDependencies( inputEstimates );
 
         if ( neoStore.determineDoubleRelationshipRecordUnits( inputEstimates ) )
         {
@@ -224,7 +149,8 @@ public class ImportLogic implements Closeable
         executionMonitor.initialize( dependencies );
     }
 
-    private IdMapper instantiateIdMapper( Input input )
+
+    /*private IdMapper instantiateIdMapper( Input input )
     {
         switch ( input.idType() )
         {
@@ -238,6 +164,7 @@ public class ImportLogic implements Closeable
             throw new IllegalArgumentException( "Unsupported id type " + input.idType() );
         }
     }
+     */
 
     /**
      * Accesses state of a certain {@code type}. This is state that may be long- or short-lived and perhaps
@@ -276,30 +203,13 @@ public class ImportLogic implements Closeable
     {
         // Import nodes, properties, labels
         neoStore.startFlushingPageCache();
-        DataImporter.importNodes( config.maxNumberOfProcessors(), input, neoStore, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
-                pageCacheTracer, memoryTracker );
+        Supplier<BaseEntityImporter> importers = () -> new NodeImporter( neoStore, idMapper, inputIdLookup, storeUpdateMonitor, pageCacheTracer, memoryTracker  );
+        DataImporter.importNodes( config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
+                pageCacheTracer, memoryTracker  );
         neoStore.stopFlushingPageCache();
         updatePeakMemoryUsage();
     }
 
-    /**
-     * Prepares {@link IdMapper} to be queried for ID --> nodeId lookups. This is required for running {@link #importRelationships()}.
-     */
-    public void prepareIdMapper()
-    {
-        if ( idMapper.needsPreparation() )
-        {
-            MemoryUsageStatsProvider memoryUsageStats = new MemoryUsageStatsProvider( neoStore, idMapper );
-            PropertyValueLookup inputIdLookup = new NodeInputIdPropertyLookup( neoStore.getTemporaryPropertyStore() );
-            executeStage( new IdMapperPreparationStage( config, idMapper, inputIdLookup, badCollector, memoryUsageStats ) );
-            final LongIterator duplicateNodeIds = idMapper.leftOverDuplicateNodesIds();
-            if ( duplicateNodeIds.hasNext() )
-            {
-                executeStage( new DeleteDuplicateNodesStage( config, duplicateNodeIds, neoStore, storeUpdateMonitor, pageCacheTracer ) );
-            }
-            updatePeakMemoryUsage();
-        }
-    }
 
     /**
      * Uses {@link IdMapper} as lookup for ID --> nodeId and imports all relationships from {@link Input#relationships(Collector)}
@@ -312,9 +222,12 @@ public class ImportLogic implements Closeable
     {
         // Import relationships (unlinked), properties
         neoStore.startFlushingPageCache();
-        DataStatistics typeDistribution = DataImporter.importRelationships(
-                config.maxNumberOfProcessors(), input, neoStore, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
-                !badCollector.isCollectingBadRelationships(), pageCacheTracer, memoryTracker );
+        DataStatistics typeDistribution = new DataStatistics( storeUpdateMonitor, new DataStatistics.RelationshipTypeCount[0] );
+        Supplier<BaseEntityImporter> importers = () -> new RelationshipImporter( neoStore, idMapper, typeDistribution, storeUpdateMonitor,
+                badCollector, !badCollector.isCollectingBadRelationships(), neoStore.usesDoubleRelationshipRecordUnits(), pageCacheTracer, memoryTracker  );
+        DataImporter.importRelationships(
+                config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
+                !badCollector.isCollectingBadRelationships(), pageCacheTracer, memoryTracker  );
         neoStore.stopFlushingPageCache();
         updatePeakMemoryUsage();
         idMapper.close();
@@ -556,15 +469,16 @@ public class ImportLogic implements Closeable
         closeAll( nodeRelationshipCache, nodeLabelsCache, idMapper );
     }
 
-    private void updatePeakMemoryUsage()
+    public void updatePeakMemoryUsage()
     {
         peakMemoryUsage = max( peakMemoryUsage, totalMemoryUsageOf( nodeRelationshipCache, idMapper, neoStore ) );
     }
 
     public static BatchingNeoStores instantiateNeoStores( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout,
-            PageCache externalPageCache, PageCacheTracer cacheTracer, RecordFormats recordFormats, Configuration config,
+            PageCache externalPageCache, PageCacheTracer cacheTracer, Configuration config,
             LogService logService, AdditionalInitialIds additionalInitialIds, Config dbConfig, JobScheduler scheduler, MemoryTracker memoryTracker )
     {
+        RecordFormats recordFormats = RecordFormatSelector.selectForConfig(fileSystem, dbConfig);
         if ( externalPageCache == null )
         {
             return BatchingNeoStores.batchingNeoStores( fileSystem, databaseLayout, recordFormats, config, logService,
@@ -593,8 +507,14 @@ public class ImportLogic implements Closeable
         return Configuration.withBatchSize( source, store.getRecordsPerPage() * 10 );
     }
 
-    private void executeStage( Stage stage )
+    //private void executeStage( Stage stage )
+    //{
+    //    ExecutionSupervisors.superviseExecution( executionMonitor, stage );
+    //}
+    @Override
+    public void buildInternalStructures()
     {
-        ExecutionSupervisors.superviseExecution( executionMonitor, stage );
+        linkRelationshipsOfAllTypes();
+        defragmentRelationshipGroups();
     }
 }

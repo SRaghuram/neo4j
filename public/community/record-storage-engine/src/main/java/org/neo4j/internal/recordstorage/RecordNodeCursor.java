@@ -42,11 +42,13 @@ import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static java.lang.Math.min;
 import static org.neo4j.internal.recordstorage.RelationshipReferenceEncoding.encodeDense;
+import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 import static org.neo4j.storageengine.api.LongReference.longReference;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 
 public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
 {
+    public int NO_ID = org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
     private final NodeStore read;
     private final PageCursorTracer cursorTracer;
     private final RelationshipStore relationshipStore;
@@ -63,7 +65,7 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
 
     RecordNodeCursor( NodeStore read, RelationshipStore relationshipStore, RelationshipGroupStore groupStore, PageCursorTracer cursorTracer )
     {
-        super( NO_ID );
+        super( org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID );
         this.read = read;
         this.cursorTracer = cursorTracer;
         this.relationshipStore = relationshipStore;

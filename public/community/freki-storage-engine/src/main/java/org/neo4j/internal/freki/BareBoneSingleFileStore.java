@@ -37,7 +37,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 
-abstract class BareBoneSingleFileStore extends LifecycleAdapter implements SingleFileStore
+public abstract class BareBoneSingleFileStore extends LifecycleAdapter implements SingleFileStore
 {
     final File file;
     final PageCache pageCache;
@@ -47,7 +47,7 @@ abstract class BareBoneSingleFileStore extends LifecycleAdapter implements Singl
 
     protected PagedFile mappedFile;
 
-    BareBoneSingleFileStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists )
+    public BareBoneSingleFileStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists )
     {
         this.file = file;
         this.pageCache = pageCache;

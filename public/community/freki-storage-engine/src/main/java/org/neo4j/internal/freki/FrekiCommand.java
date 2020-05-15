@@ -56,7 +56,7 @@ import static java.lang.String.format;
 import static org.neo4j.token.api.TokenIdPrettyPrinter.label;
 import static org.neo4j.token.api.TokenIdPrettyPrinter.relationshipType;
 
-abstract class FrekiCommand implements StorageCommand
+abstract public class FrekiCommand implements StorageCommand
 {
     private final byte commandType;
 
@@ -73,11 +73,11 @@ abstract class FrekiCommand implements StorageCommand
 
     abstract boolean accept( Dispatcher applier ) throws IOException;
 
-    static class SparseNode extends FrekiCommand implements Iterable<RecordChange>
+    public static class SparseNode extends FrekiCommand implements Iterable<RecordChange>
     {
         static final byte TYPE = 1;
 
-        final long nodeId;
+        public final long nodeId;
         private RecordChange lowestChange;
 
         SparseNode( long nodeId )
@@ -232,12 +232,12 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    static class RecordChange
+    public static class RecordChange
     {
         private static final RecordChange DESERIALIZATION_HAS_NEXT_MARKER = new RecordChange( null, null );
 
-        final Record before;
-        final Record after;
+        final public Record before;
+        final public Record after;
         private RecordChange next;
 
         RecordChange( Record before, Record after )
@@ -251,17 +251,17 @@ abstract class FrekiCommand implements StorageCommand
             return after != null ? after : before;
         }
 
-        Mode mode()
+        public Mode mode()
         {
             return after != null ? before == null ? Mode.CREATE : Mode.UPDATE : Mode.DELETE;
         }
 
-        byte sizeExp()
+        public byte sizeExp()
         {
             return anyUsed().sizeExp();
         }
 
-        long recordId()
+        public long recordId()
         {
             return anyUsed().id;
         }
@@ -315,7 +315,7 @@ abstract class FrekiCommand implements StorageCommand
      * that it's recoverable because we're not allowed to remove anything not covered by the command because otherwise we
      * cannot recreated that data when doing reverse recovery.
      */
-    static class DenseNode extends FrekiCommand
+    public static class DenseNode extends FrekiCommand
     {
         static final byte TYPE = 2;
 
@@ -520,13 +520,13 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    static class BigPropertyValue extends FrekiCommand
+    public static class BigPropertyValue extends FrekiCommand
     {
         static final byte TYPE = 3;
 
-        final long pointer;
-        final byte[] bytes;
-        final int length;
+        public final long pointer;
+        public final byte[] bytes;
+        public final int length;
 
         BigPropertyValue( long pointer, byte[] bytes )
         {
@@ -685,7 +685,7 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    enum Mode //Don't change order, will break format
+    public enum Mode //Don't change order, will break format
     {
         CREATE,
         UPDATE,
@@ -879,14 +879,14 @@ abstract class FrekiCommand implements StorageCommand
         return UTF8.decode( nameBytes );
     }
 
-    static class NodeCount extends FrekiCommand
+    public static class NodeCount extends FrekiCommand
     {
         static final byte TYPE = 14;
 
-        final int labelId;
-        final long count;
+        public final int labelId;
+        public final long count;
 
-        NodeCount( int labelId, long count )
+        public NodeCount(int labelId, long count)
         {
             super( TYPE );
             this.labelId = labelId;

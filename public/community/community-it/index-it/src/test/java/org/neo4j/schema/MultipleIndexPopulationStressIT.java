@@ -86,7 +86,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.GeneratingInputIterator.EMPTY_ITERABLE;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.input.Input.knownEstimates;
 import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
@@ -310,11 +310,13 @@ class MultipleIndexPopulationStressIT
               JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            BatchImporter importer = new ParallelBatchImporter(
-                    layout, fileSystemAbstraction, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(),
-                    ExecutionMonitors.invisible(), EMPTY, config, recordFormats, NO_MONITOR, jobScheduler, Collector.EMPTY,
-                    TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
-            importer.doImport( input );
+
+            //BatchImporter importer = new ParallelBatchImporter(
+            //        layout, fileSystemAbstraction, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(),
+             //       ExecutionMonitors.invisible(), EMPTY, config, recordFormats, NO_MONITOR, jobScheduler, Collector.EMPTY,
+            //        TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+            //importer.doImport( input );
+
         }
     }
 

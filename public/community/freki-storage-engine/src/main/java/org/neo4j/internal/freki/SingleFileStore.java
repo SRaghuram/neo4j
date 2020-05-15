@@ -28,7 +28,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 
 public interface SingleFileStore extends Lifecycle, AutoCloseable
 {
-    PageCursor openWriteCursor( PageCursorTracer cursorTracer ) throws IOException;
+    public PageCursor openWriteCursor( PageCursorTracer cursorTracer ) throws IOException;
 
     PageCursor openReadCursor( PageCursorTracer cursorTracer ); // not having IOException declared is of great convenience for most call sites
 

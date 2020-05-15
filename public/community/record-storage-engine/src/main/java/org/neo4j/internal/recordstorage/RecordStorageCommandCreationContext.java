@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.recordstorage;
 
+import org.neo4j.internal.id.IdRange;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -71,6 +72,11 @@ class RecordStorageCommandCreationContext implements CommandCreationContext
     public long reserveNode()
     {
         return nextId( StoreType.NODE );
+    }
+
+    @Override
+    public IdRange reserveNodeBatch(int batchSize) {
+        return neoStores.getRecordStore( StoreType.NODE ).nextIdBatch(batchSize, cursorTracer);
     }
 
     @Override

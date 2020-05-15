@@ -23,8 +23,10 @@ import org.eclipse.collections.api.iterator.LongIterator;
 
 import org.neo4j.internal.batchimport.staging.LonelyProcessingStep;
 import org.neo4j.internal.batchimport.staging.StageControl;
+import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.impl.store.BatchingStoreBase;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
@@ -47,9 +49,19 @@ public class DeleteDuplicateNodesStep extends LonelyProcessingStep
     private long nodesRemoved;
     private long propertiesRemoved;
 
-    public DeleteDuplicateNodesStep( StageControl control, Configuration config, LongIterator nodeIds, NodeStore nodeStore,
-            PropertyStore propertyStore, DataImporter.Monitor storeMonitor, PageCacheTracer pageCacheTracer )
+    public DeleteDuplicateNodesStep( StageControl control, Configuration config, LongIterator nodeIds, BatchingStoreBase store,
+            DataImporter.Monitor storeMonitor, PageCacheTracer pageCacheTracer )
     {
+        super( control, "DEDUP", config );
+        this.nodeStore = ((BatchingNeoStores)store).getNodeStore();
+        this.propertyStore = ((BatchingNeoStores)store).getPropertyStore();
+        this.nodeIds = nodeIds;
+        this.storeMonitor = storeMonitor;
+        this.pageCacheTracer = pageCacheTracer;
+    }
+
+    public DeleteDuplicateNodesStep(StageControl control, Configuration config, LongIterator nodeIds,
+                                    NodeStore nodeStore, PropertyStore propertyStore, DataImporter.Monitor storeMonitor, PageCacheTracer pageCacheTracer) {
         super( control, "DEDUP", config );
         this.nodeStore = nodeStore;
         this.propertyStore = propertyStore;

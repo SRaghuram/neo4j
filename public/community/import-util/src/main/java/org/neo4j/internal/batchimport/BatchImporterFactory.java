@@ -19,23 +19,24 @@
  */
 package org.neo4j.internal.batchimport;
 
+import java.io.IOException;
+import java.util.Collection;
 import java.util.NoSuchElementException;
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.BaseImportLogic.Monitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.service.NamedService;
 import org.neo4j.service.Services;
-import org.neo4j.storageengine.api.LogFilesInitializer;
 
 @Service
 public abstract class BatchImporterFactory implements NamedService
@@ -46,11 +47,6 @@ public abstract class BatchImporterFactory implements NamedService
     {
         this.priority = priority;
     }
-
-    public abstract BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
-            PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor,
-            JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker );
 
     public static BatchImporterFactory withHighestPriority()
     {
@@ -67,5 +63,26 @@ public abstract class BatchImporterFactory implements NamedService
             throw new NoSuchElementException( "No batch importers found" );
         }
         return highestPrioritized;
+    }
+
+
+    public abstract BatchImporter instantiate(DatabaseLayout directoryStructure,
+                                              FileSystemAbstraction fileSystem,
+                                              PageCache externalPageCache,
+                                              PageCacheTracer pageCacheTracer,
+                                              Configuration config,
+                                              LogService logService,
+                                              ExecutionMonitor executionMonitor,
+                                              AdditionalInitialIds additionalInitialIds,
+                                              Config dbConfig,
+                                              Monitor monitor,
+                                              JobScheduler jobScheduler,
+                                              Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker
+    ) throws IOException;
+
+    public static Collection<BatchImporterFactory> allAvailableBatchImporters()
+    {
+        Collection<BatchImporterFactory> importers = Services.loadAll( BatchImporterFactory.class );
+        return importers;
     }
 }

@@ -34,10 +34,7 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
-import org.neo4j.kernel.impl.store.record.DynamicRecord;
-import org.neo4j.kernel.impl.store.record.Record;
-import org.neo4j.kernel.impl.store.record.RecordLoad;
-import org.neo4j.kernel.impl.store.record.TokenRecord;
+import org.neo4j.kernel.impl.store.record.*;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.token.api.NamedToken;
@@ -47,7 +44,7 @@ import static org.neo4j.kernel.impl.store.PropertyStore.decodeString;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 public abstract class TokenStore<RECORD extends TokenRecord>
-        extends CommonAbstractStore<RECORD,NoStoreHeader>
+        extends CommonAbstractStore<RECORD, NoStoreHeader>
 {
     public static final int NAME_STORE_BLOCK_SIZE = 30;
 
@@ -145,7 +142,7 @@ public abstract class TokenStore<RECORD extends TokenRecord>
         {
             for ( DynamicRecord keyRecord : record.getNameRecords() )
             {
-                nameStore.updateRecord( keyRecord, idUpdateListener, cursorTracer );
+                nameStore.updateRecord( (DynamicRecord)keyRecord, idUpdateListener, cursorTracer );
             }
         }
     }

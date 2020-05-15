@@ -151,6 +151,7 @@ public final class OffHeapPageLock
     public static boolean validateReadLock( long address, long stamp )
     {
         UnsafeUtil.loadFence();
+        long state = getState( address );
         return (getState( address ) & CHK_MASK) == stamp;
     }
 

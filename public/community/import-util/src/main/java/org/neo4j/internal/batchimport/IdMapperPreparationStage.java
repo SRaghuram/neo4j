@@ -25,6 +25,8 @@ import org.neo4j.internal.batchimport.staging.Stage;
 import org.neo4j.internal.batchimport.stats.StatsProvider;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 
+import java.util.function.LongFunction;
+
 /**
  * Performs {@link IdMapper#prepare(PropertyValueLookup, Collector, ProgressListener)}
  * embedded in a {@link Stage} as to take advantage of statistics and monitoring provided by that framework.

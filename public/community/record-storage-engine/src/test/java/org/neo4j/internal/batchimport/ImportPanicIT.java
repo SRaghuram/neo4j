@@ -60,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.csv.reader.Configuration.COMMAS;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
@@ -83,11 +84,14 @@ class ImportPanicIT
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            BatchImporter importer = new ParallelBatchImporter(
-                    databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL,
-                    Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
-                    Config.defaults(), StandardV3_4.RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
-                    LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE );
+            //BatchImporter importer = new ParallelBatchImporter(
+            //        databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL,
+            //        Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
+            //        Config.defaults(), StandardV3_4.RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
+            //        LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE );
+            BatchImporter importer = null;//new ParallelBatchImporter( databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL,
+                //Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
+                //Config.defaults(), StandardV3_4.RECORD_FORMATS, NO_MONITOR, jobScheduler, Collector.EMPTY, EmptyLogFilesInitializer.INSTANCE );
             Iterable<DataFactory> nodeData =
                 DataFactories.datas( DataFactories.data( InputEntityDecorators.NO_DECORATOR, fileAsCharReadable( nodeCsvFileWithBrokenEntries() ) ) );
             Input brokenCsvInput = new CsvInput(

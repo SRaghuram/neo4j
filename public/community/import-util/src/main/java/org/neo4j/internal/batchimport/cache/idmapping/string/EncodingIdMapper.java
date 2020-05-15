@@ -22,6 +22,7 @@ package org.neo4j.internal.batchimport.cache.idmapping.string;
 import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.LongFunction;
@@ -37,12 +38,14 @@ import org.neo4j.internal.batchimport.cache.LongBitsManipulator;
 import org.neo4j.internal.batchimport.cache.MemoryStatsVisitor;
 import org.neo4j.internal.batchimport.cache.NumberArrayFactory;
 import org.neo4j.internal.batchimport.cache.idmapping.IdMapper;
+import org.neo4j.internal.batchimport.cache.idmapping.reverseIdMap.NodeInputIdPropertyLookup;
 import org.neo4j.internal.batchimport.cache.idmapping.string.ParallelSort.Comparator;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.InputException;
 import org.neo4j.internal.batchimport.input.ReadableGroups;
 import org.neo4j.internal.helpers.progress.ProgressListener;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.memory.MemoryTracker;
 
@@ -213,11 +216,32 @@ public class EncodingIdMapper implements IdMapper
         return eId;
     }
 
+    public void numberOfZeroes()
+    {
+        long highId = candidateHighestSetIndex.get();
+        long startRange = -1;
+        int size = 0;
+        for (long i = 0; i < highId;i++) {
+            if (dataCache.get(i) == 0) {
+                size++;
+                if (startRange == -1)
+                    startRange = i;
+            } else if (size != 0)
+            {
+                System.out.println("Zero Range["+startRange+"::"+ (i-1) +"]["+ size + "]");
+                startRange = -1;
+                size = 0;
+            }
+        }
+
+    }
+
     @Override
     public boolean needsPreparation()
     {
         return true;
     }
+
 
     /**
      * There's an assumption that the progress listener supplied here can support multiple calls
@@ -511,6 +535,7 @@ public class EncodingIdMapper implements IdMapper
                     // Store this collision input id for matching later in get()
                     long collisionIndex = numberOfCollisions++;
                     Object id = inputIdLookup.lookupProperty( nodeId, cursorTracer );
+
                     long eIdFromInputId = encode( id );
                     long eIdWithoutCollisionBit = clearCollision( eId );
                     assert eIdFromInputId == eIdWithoutCollisionBit : format( "Encoding mismatch during building of " +
@@ -534,6 +559,7 @@ public class EncodingIdMapper implements IdMapper
         // We won't be needing these anymore
         collisionTrackerCache.close();
         collisionTrackerCache = null;
+        ((NodeInputIdPropertyLookup)inputIdLookup).close();
     }
 
     private void detectDuplicateInputIds( Radix radix, Collector collector, ProgressListener progress )

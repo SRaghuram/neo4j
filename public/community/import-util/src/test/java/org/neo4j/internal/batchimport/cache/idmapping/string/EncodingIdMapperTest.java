@@ -126,7 +126,7 @@ public class EncodingIdMapperTest
     {
         // GIVEN
         IdMapper idMapper = mapper( new StringEncoder(), Radix.STRING, EncodingIdMapper.NO_MONITOR );
-        idMapper.prepare( null, mock( Collector.class ), NONE );
+        idMapper.prepare((PropertyValueLookup) null, mock( Collector.class ), NONE );
 
         // WHEN
         long id = idMapper.get( "123", Group.GLOBAL );
@@ -141,7 +141,7 @@ public class EncodingIdMapperTest
         // GIVEN
         IdMapper idMapper = mapper( new StringEncoder(), Radix.STRING, EncodingIdMapper.NO_MONITOR );
         ProgressListener progress = mock( ProgressListener.class );
-        idMapper.prepare( null, mock( Collector.class ), progress );
+        idMapper.prepare((PropertyValueLookup) null, mock( Collector.class ), progress );
 
         // WHEN
         long id = idMapper.get( "123", Group.GLOBAL );
@@ -395,7 +395,7 @@ public class EncodingIdMapperTest
             mapper.put( i, i, groups.get( "" + i ) );
         }
         // null since this test should have been set up to not run into collisions
-        mapper.prepare( null, mock( Collector.class ), NONE );
+        mapper.prepare((PropertyValueLookup) null, mock( Collector.class ), NONE );
 
         // THEN
         for ( int i = 0; i < size; i++ )

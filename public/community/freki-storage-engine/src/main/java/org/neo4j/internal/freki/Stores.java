@@ -75,6 +75,7 @@ public class Stores extends MainStores
         super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
         this.memoryTracker = memoryTracker;
         GBPTreeMetaDataStore metaDataStore = null;
+
         GBPTreeCountsStore countsStore = null;
         GBPTreeSchemaStore schemaStore = null;
         GBPTreeTokenStore propertyKeyTokenStore = null;
@@ -161,7 +162,7 @@ public class Stores extends MainStores
     }
 
     @Override
-    void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer ) throws IOException
+    public void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer ) throws IOException
     {
         super.flushAndForce( limiter, cursorTracer );
         metaDataStore.flush( cursorTracer );

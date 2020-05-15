@@ -223,7 +223,7 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     @Override
     public long getHighId()
     {
-        return idGenerator.getHighId();
+        return idGenerator == null ? 0: idGenerator.getHighId();
     }
 
     @Override

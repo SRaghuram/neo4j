@@ -37,6 +37,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.MetaDataStoreInterface;
 import org.neo4j.storageengine.api.ExternalStoreId;
 import org.neo4j.storageengine.api.HighestTransactionId;
 import org.neo4j.storageengine.api.LogVersionRepository;
@@ -54,7 +55,7 @@ import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.imme
 import static org.neo4j.index.internal.gbptree.ValueMergers.overwrite;
 import static org.neo4j.util.Preconditions.checkState;
 
-public class GBPTreeMetaDataStore implements TransactionMetaDataStore
+public class GBPTreeMetaDataStore implements TransactionMetaDataStore, MetaDataStoreInterface
 {
     private static final byte ID_TIME = 0;
     private static final byte ID_RANDOM_NUMBER = 1;

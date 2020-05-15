@@ -91,8 +91,8 @@ import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 
 public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 {
@@ -930,7 +930,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         Config dbConfig = null == importerProperties ? Config.defaults() : Config.newBuilder().fromFile( importerProperties ).build();
         dbConfig.set( GraphDatabaseSettings.dense_node_threshold, 1 );
         Collector badCollector = Collector.EMPTY;
-        BatchImporter batchImporter = new ParallelBatchImporter(
+        BatchImporter batchImporter = null;
+        /*new ParallelBatchImporter(
                 Neo4jDb.layoutWithTxLogLocation( storeDir ),
                 new DefaultFileSystemAbstraction(),
                 null,
@@ -947,6 +948,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 TransactionLogInitializer.getLogFilesInitializer(),
                 INSTANCE
         );
+         */
 
         System.out.println( "Loading CSV files" );
         long startTime = System.currentTimeMillis();

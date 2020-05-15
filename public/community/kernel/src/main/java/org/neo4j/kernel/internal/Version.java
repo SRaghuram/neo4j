@@ -108,7 +108,7 @@ public class Version
         requireNonNull( version );
         this.artifactId = artifactId;
         this.title = artifactId;
-        this.version = version;
+        this.version = version == "dev" ? "4.1.0-alpha01" : version;
         this.releaseVersion = parseReleaseVersion( this.version );
     }
 

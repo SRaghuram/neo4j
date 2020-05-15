@@ -109,6 +109,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_RELATIONSHIP_TYPE;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.defaultFormat;
 import static org.neo4j.kernel.impl.util.AutoCreatingHashMap.nested;
 import static org.neo4j.kernel.impl.util.AutoCreatingHashMap.values;
@@ -142,10 +143,18 @@ class CsvInputBatchImportIT
                 .build();
         try ( JobScheduler scheduler = new ThreadPoolJobScheduler() )
         {
-            BatchImporter importer = new ParallelBatchImporter(
-                    databaseLayout, fileSystem, null, PageCacheTracer.NULL, smallBatchSizeConfig(), NullLogService.getInstance(), ExecutionMonitors.invisible(),
-                    EMPTY, dbConfig, defaultFormat(), ImportLogic.NO_MONITOR, scheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(),
-                    INSTANCE );
+
+            //BatchImporter importer = new ParallelBatchImporter(
+            //        databaseLayout, fileSystem, null, PageCacheTracer.NULL, smallBatchSizeConfig(), NullLogService.getInstance(), ExecutionMonitors.invisible(),
+            //        EMPTY, dbConfig, defaultFormat(), ImportLogic.NO_MONITOR, scheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(),
+            //        INSTANCE );
+
+            BatchImporter importer = null;
+                    //new ParallelBatchImporter( databaseLayout, fileSystem, null, PageCacheTracer.NULL,
+                    //        smallBatchSizeConfig(), NullLogService.getInstance(),
+                    //        ExecutionMonitors.invisible(), EMPTY, dbConfig, defaultFormat(), NO_MONITOR, scheduler, Collector.EMPTY,
+                    //        TransactionLogsInitializer.INSTANCE );
+
             List<InputEntity> nodeData = randomNodeData();
             List<InputEntity> relationshipData = randomRelationshipData( nodeData );
 

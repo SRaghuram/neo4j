@@ -31,14 +31,14 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static java.lang.Integer.min;
 
-class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBigValueStore
+public class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBigValueStore
 {
     private static final int LENGTH_SIZE = 4;
     private static final int HEADER_SIZE = Long.BYTES; //for now, only a long in the header
 
     private final AtomicLong nextPosition = new AtomicLong( HEADER_SIZE );
 
-    BigPropertyValueStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists )
+    public BigPropertyValueStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists )
     {
         super( file, pageCache, readOnly, createIfNotExists );
     }

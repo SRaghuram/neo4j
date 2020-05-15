@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -39,8 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
@@ -101,13 +102,13 @@ class RestartImportFromSpecificStatesTest
         return new SimpleRandomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
     }
 
-    private BatchImporter importer( ExecutionMonitor monitor )
+    private BatchImporter importer( ExecutionMonitor monitor ) throws IOException
     {
-        BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-        return factory.instantiate(
-                databaseLayout, fs, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
-                Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY,
-                TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, PageCacheTracer.NULL,
+                DEFAULT, NullLogService.getInstance(), monitor,
+              EMPTY, Config.defaults(),
+                //RecordFormatSelector.defaultFormat(),
+                NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE, INSTANCE );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException

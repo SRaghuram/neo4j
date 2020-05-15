@@ -27,11 +27,7 @@ import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -42,6 +38,7 @@ import org.neo4j.csv.reader.IllegalMultilineFieldException;
 import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.Configuration;
+import org.neo4j.internal.batchimport.LogFilesInitializer;
 import org.neo4j.internal.batchimport.cache.idmapping.string.DuplicateInputIdException;
 import org.neo4j.internal.batchimport.input.BadCollector;
 import org.neo4j.internal.batchimport.input.Collector;
@@ -51,8 +48,8 @@ import org.neo4j.internal.batchimport.input.InputException;
 import org.neo4j.internal.batchimport.input.MissingRelationshipDataException;
 import org.neo4j.internal.batchimport.input.csv.CsvInput;
 import org.neo4j.internal.batchimport.input.csv.DataFactory;
+import org.neo4j.internal.batchimport.staging.DefaultHumanUnderstandableExecutionMonitor;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
-import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.internal.batchimport.staging.SpectrumExecutionMonitor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -60,8 +57,6 @@ import org.neo4j.io.fs.FileSystemUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.os.OsBeanUtil;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.kernel.internal.Version;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -69,9 +64,11 @@ import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.exception.ExceptionUtils.indexOfThrowable;
+import static org.neo4j.configuration.GraphDatabaseSettings.storageEngineFactory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.input.Collectors.badCollector;
@@ -83,6 +80,7 @@ import static org.neo4j.internal.batchimport.input.InputEntityDecorators.default
 import static org.neo4j.internal.batchimport.input.csv.DataFactories.data;
 import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatNodeFileHeader;
 import static org.neo4j.internal.batchimport.input.csv.DataFactories.defaultFormatRelationshipFileHeader;
+import static org.neo4j.internal.batchimport.staging.BaseHumanUnderstandableExecutionMonitor.NO_MONITOR;
 import static org.neo4j.internal.helpers.Exceptions.throwIfUnchecked;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
@@ -170,10 +168,20 @@ class CsvImporter implements Importer
             LogProvider logProvider = Util.configuredLogProvider( databaseConfig, outputStream );
 
             ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
-                    SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
+                    SpectrumExecutionMonitor.DEFAULT_WIDTH ) : new DefaultHumanUnderstandableExecutionMonitor( NO_MONITOR );//ExecutionMonitors.defaultVisible();
 
-            BatchImporter importer = BatchImporterFactory.withHighestPriority().instantiate(
-                    databaseLayout,
+            Collection<BatchImporterFactory> batchImporters = BatchImporterFactory.allAvailableBatchImporters();
+            Collection<StorageEngineFactory> storageEngine = StorageEngineFactory.allAvailableStorageEngines();
+            BatchImporterFactory chosenOne = null;
+            for ( BatchImporterFactory candidate : batchImporters )
+            {
+                String engineFactoryName = candidate.toString().substring(0, candidate.toString().indexOf("@"));
+                String configuredEngineFactoryName = databaseConfig.get( storageEngineFactory );
+                System.out.println( engineFactoryName+ "--"+  configuredEngineFactoryName);
+                if (engineFactoryName.endsWith(configuredEngineFactoryName))
+                    chosenOne = candidate;
+            }
+            BatchImporter importer = chosenOne.instantiate( databaseLayout,//BatchImporterFactory.withHighestPriority().instantiate( databaseLayout,
                     fileSystem,
                     null, // no external page cache
                     pageCacheTracer,
@@ -182,11 +190,11 @@ class CsvImporter implements Importer
                     executionMonitor,
                     EMPTY,
                     databaseConfig,
-                    RecordFormatSelector.selectForConfig( databaseConfig, logProvider ),
+                    //RecordFormatSelector.selectForConfig( databaseConfig, logProvider ),
                     new PrintingImportLogicMonitor( stdOut, stdErr ),
                     jobScheduler,
                     badCollector,
-                    TransactionLogInitializer.getLogFilesInitializer(),
+                    LogFilesInitializer.NULL,
                     memoryTracker );
 
             printOverview( databaseLayout.databaseDirectory(), nodeFiles, relationshipFiles, importConfig, stdOut );
@@ -207,7 +215,7 @@ class CsvImporter implements Importer
             {
                 if ( numberOfBadEntries > 0 )
                 {
-                    stdOut.println( "There were bad entries which were skipped and logged into " + reportFile.getAbsolutePath() );
+                    stdOut.println( "\nThere were bad entries which were skipped and logged into " + reportFile.getAbsolutePath() );
                 }
             }
 

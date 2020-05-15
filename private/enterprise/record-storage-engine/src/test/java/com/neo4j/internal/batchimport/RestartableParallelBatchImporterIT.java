@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -50,7 +51,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.staging.ExecutionMonitors.invisible;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
@@ -269,12 +270,13 @@ class RestartableParallelBatchImporterIT
         }
     }
 
-    private BatchImporter importer( ExecutionMonitor monitor )
+    private BatchImporter importer( ExecutionMonitor monitor ) throws IOException
     {
-        BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-        return factory.instantiate(
-                databaseLayout, fs, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
-                Config.defaults( preallocate_logical_logs, false ), RecordFormatSelector.defaultFormat(), NO_MONITOR,
-                jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, PageCacheTracer.NULL,
+                DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
+                Config.defaults( preallocate_logical_logs, false ),
+                //RecordFormatSelector.defaultFormat(),
+                NO_MONITOR, jobScheduler, Collector.EMPTY,
+                TransactionLogsInitializer.INSTANCE, INSTANCE );
     }
 }

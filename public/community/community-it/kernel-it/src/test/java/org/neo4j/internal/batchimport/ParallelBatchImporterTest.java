@@ -95,6 +95,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.input.Input.knownEstimates;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.helpers.collection.Iterables.stream;
@@ -181,9 +182,15 @@ public class ParallelBatchImporterTest
         JobScheduler jobScheduler = new ThreadPoolJobScheduler();
         // This will have statistically half the nodes be considered dense
         Config dbConfig = Config.defaults( GraphDatabaseSettings.dense_node_threshold, RELATIONSHIPS_PER_NODE * 2 );
-        final BatchImporter inserter = new ParallelBatchImporter(
-                databaseLayout, fs, null, pageCacheTracer, config, NullLogService.getInstance(), monitor, EMPTY, dbConfig, getFormat(),
-                ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+
+        //final BatchImporter inserter = new ParallelBatchImporter(
+         //       databaseLayout, fs, null, pageCacheTracer, config, NullLogService.getInstance(), monitor, EMPTY, dbConfig, //getFormat(),
+        //        ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+
+        final BatchImporter inserter = null;//new ParallelBatchImporter( databaseLayout,
+            //fs, null, pageCacheTracer, config, NullLogService.getInstance(),
+            //monitor, EMPTY, dbConfig, getFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
+
         LongAdder propertyCount = new LongAdder();
         LongAdder relationshipCount = new LongAdder();
         try

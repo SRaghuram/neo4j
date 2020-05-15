@@ -19,8 +19,8 @@ import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.DataStatistics;
 import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.internal.batchimport.ImportLogic.Monitor;
-import org.neo4j.storageengine.api.LogFilesInitializer;
+import org.neo4j.internal.batchimport.BaseImportLogic.Monitor;
+import org.neo4j.internal.batchimport.LogFilesInitializer;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -77,7 +77,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final Configuration config;
     private final LogService logService;
     private final Config dbConfig;
-    private final RecordFormats recordFormats;
+    //private final RecordFormats recordFormats;
     private final ExecutionMonitor executionMonitor;
     private final AdditionalInitialIds additionalInitialIds;
     private final RelationshipTypeDistributionStorage dataStatisticsStorage;
@@ -89,8 +89,10 @@ public class RestartableParallelBatchImporter implements BatchImporter
 
     public RestartableParallelBatchImporter( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, Monitor monitor, JobScheduler jobScheduler,
-            Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker )
+            AdditionalInitialIds additionalInitialIds, Config dbConfig,
+                                             //RecordFormats recordFormats,
+                                             Monitor monitor, JobScheduler jobScheduler,
+            Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker  )
     {
         this.externalPageCache = externalPageCache;
         this.databaseLayout = databaseLayout;
@@ -99,7 +101,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.config = config;
         this.logService = logService;
         this.dbConfig = dbConfig;
-        this.recordFormats = recordFormats;
+        //this.recordFormats = recordFormats;
         this.executionMonitor = executionMonitor;
         this.additionalInitialIds = additionalInitialIds;
         this.monitor = monitor;
@@ -114,10 +116,10 @@ public class RestartableParallelBatchImporter implements BatchImporter
     @Override
     public void doImport( Input input ) throws IOException
     {
-        try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseLayout, externalPageCache, pageCacheTracer, recordFormats,
-                      config, logService, additionalInitialIds, dbConfig, jobScheduler, memoryTracker );
-              ImportLogic logic = new ImportLogic( databaseLayout, store, config, dbConfig, logService,
-                      executionMonitor, recordFormats, badCollector, monitor, pageCacheTracer, memoryTracker ) )
+        try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseLayout,
+                externalPageCache, pageCacheTracer, config, logService, additionalInitialIds, dbConfig, jobScheduler, memoryTracker  );
+              ImportLogic logic = new ImportLogic( fileSystem, databaseLayout, store, config, dbConfig, logService,
+                      executionMonitor, badCollector, monitor, pageCacheTracer, memoryTracker  ) )
         {
             StateStorage stateStore = new StateStorage( fileSystem, new File( databaseLayout.databaseDirectory(), FILE_NAME_STATE ), memoryTracker );
 
@@ -189,7 +191,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
             void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.buildCountsStore();
-                logFilesInitializer.initializeLogFiles( databaseLayout, store.getNeoStores().getMetaDataStore(), fileSystem );
+                logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store, fileSystem );
             }
         } );
 

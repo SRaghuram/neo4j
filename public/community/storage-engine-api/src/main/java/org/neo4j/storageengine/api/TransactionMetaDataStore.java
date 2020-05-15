@@ -19,6 +19,8 @@
  */
 package org.neo4j.storageengine.api;
 
+import org.neo4j.kernel.impl.store.MetaDataStoreInterface;
+
 import java.io.Closeable;
 
 /**
@@ -26,6 +28,6 @@ import java.io.Closeable;
  * you know the MetaDataStore has all this information in it. In the end I believe this abstraction should be extracted from storage
  * into kernel so that it owns it altogether.
  */
-public interface TransactionMetaDataStore extends TransactionIdStore, LogVersionRepository, StoreIdProvider, Closeable
+public interface TransactionMetaDataStore extends TransactionIdStore, MetaDataStoreInterface, LogVersionRepository, StoreIdProvider, Closeable
 {
 }

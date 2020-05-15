@@ -878,7 +878,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             else if ( isArray )
             {
                 size += calculatePropertyValueSizeIncludingTypeHeader( buffer );
-                int length = (int) read( buffer ).asObject();
+                int length = ((Long)read( buffer ).asObject()).intValue();
                 size += calculateSizeOfArray( buffer, typeByte, length );
             }
 

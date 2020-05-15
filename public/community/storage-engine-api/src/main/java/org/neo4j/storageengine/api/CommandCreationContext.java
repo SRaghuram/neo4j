@@ -19,6 +19,8 @@
  */
 package org.neo4j.storageengine.api;
 
+import org.neo4j.internal.id.IdRange;
+
 /**
  * A context which {@link StorageEngine} hands out to clients and which gets passed back in
  * to calls about creating commands. One of its purposes is to reserve and release ids. E.g. internal nodes and relationship references
@@ -34,6 +36,7 @@ public interface CommandCreationContext extends AutoCloseable
      * @return a reserved node id for future use.
      */
     long reserveNode();
+    IdRange reserveNodeBatch(int batchSize);
 
     /**
      * Reserves a relationship id for future use to store a relationship. The reason for it being exposed here is that

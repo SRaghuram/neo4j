@@ -18,7 +18,8 @@ import org.neo4j.internal.batchimport.AdditionalInitialIds;
 import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.ImportLogic;
+import org.neo4j.internal.batchimport.BaseImportLogic.Monitor;
+import org.neo4j.internal.batchimport.LogFilesInitializer;
 import org.neo4j.internal.batchimport.StandardBatchImporterFactory;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -40,7 +41,6 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.storageengine.api.format.CapabilityType;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -54,8 +54,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.STORE_VERSION;
 
 @PageCacheExtension
 @Neo4jLayoutExtension
@@ -172,22 +172,19 @@ class HighLimitStoreMigrationTest
         }
 
         @Override
-        public BatchImporter instantiate(
-                DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
-                PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-                AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler,
-                Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker )
-        {
-            this.configuration = config;
-            return delegate
-                    .instantiate( directoryStructure, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
-                            additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer, memoryTracker );
-        }
-
-        @Override
         public String getName()
         {
             return "TrackingBatchImporterFactory";
+        }
+
+        @Override
+        public BatchImporter instantiate(DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache, PageCacheTracer pageCacheTracer,
+                Configuration config, LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, Monitor monitor,
+                JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker) throws IOException {
+            this.configuration = config;
+            return delegate
+                    .instantiate( directoryStructure, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
+                            additionalInitialIds, dbConfig, monitor, jobScheduler, badCollector, logFilesInitializer , memoryTracker);
         }
     }
 }

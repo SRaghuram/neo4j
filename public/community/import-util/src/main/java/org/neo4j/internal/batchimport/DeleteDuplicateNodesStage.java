@@ -24,9 +24,9 @@ import org.eclipse.collections.api.iterator.LongIterator;
 import org.neo4j.internal.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.Stage;
-import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.impl.store.BatchingStoreBase;
 
 /**
  * After {@link IdMapper#prepare(PropertyValueLookup, Collector, ProgressListener)} any duplicate input ids have been
@@ -35,11 +35,11 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
  */
 public class DeleteDuplicateNodesStage extends Stage
 {
-    public DeleteDuplicateNodesStage( Configuration config, LongIterator duplicateNodeIds,
-            BatchingNeoStores neoStore, DataImporter.Monitor storeMonitor, PageCacheTracer pageCacheTracer )
+    public DeleteDuplicateNodesStage(Configuration config, LongIterator duplicateNodeIds,
+                                     BatchingStoreBase neoStore, DataImporter.Monitor storeMonitor, PageCacheTracer pageCacheTracer )
     {
         super( "DEDUP", null, config, 0 );
-        add( new DeleteDuplicateNodesStep( control(), config, duplicateNodeIds, neoStore.getNodeStore(), neoStore.getPropertyStore(),
+        add( neoStore.createDeleteDuplicateNodesStep( control(), config, duplicateNodeIds, neoStore,
                 storeMonitor, pageCacheTracer ) );
     }
 }

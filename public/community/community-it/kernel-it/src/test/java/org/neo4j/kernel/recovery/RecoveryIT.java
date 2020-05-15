@@ -94,8 +94,8 @@ import static org.neo4j.internal.kernel.api.IndexQuery.fulltextSearch;
 import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unconstrained;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.database.DatabaseTracers.EMPTY;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP;
 import static org.neo4j.kernel.impl.store.MetaDataStore.getRecord;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 

@@ -19,54 +19,21 @@
  */
 package org.neo4j.internal.batchimport.staging;
 
-import static org.neo4j.internal.batchimport.staging.HumanUnderstandableExecutionMonitor.NO_MONITOR;
+import static org.neo4j.internal.batchimport.staging.BaseHumanUnderstandableExecutionMonitor.NO_MONITOR;
 
 /**
  * Common {@link ExecutionMonitor} implementations.
  */
-public class ExecutionMonitors
+public class ExecutionMonitors extends BaseExecutionMonitors
 {
     private ExecutionMonitors()
     {
+        super();
         throw new AssertionError( "No instances allowed" );
     }
 
     public static ExecutionMonitor defaultVisible()
     {
-        return new HumanUnderstandableExecutionMonitor( NO_MONITOR );
-    }
-
-    private static final ExecutionMonitor INVISIBLE = new ExecutionMonitor()
-    {
-        @Override
-        public void start( StageExecution execution )
-        {   // Do nothing
-        }
-
-        @Override
-        public void end( StageExecution execution, long totalTimeMillis )
-        {   // Do nothing
-        }
-
-        @Override
-        public long nextCheckTime()
-        {
-            return Long.MAX_VALUE;
-        }
-
-        @Override
-        public void check( StageExecution execution )
-        {   // Do nothing
-        }
-
-        @Override
-        public void done( boolean successful, long totalTimeMillis, String additionalInformation )
-        {   // Do nothing
-        }
-    };
-
-    public static ExecutionMonitor invisible()
-    {
-        return INVISIBLE;
+        return new HumanUnderstandableExecutionMonitor(NO_MONITOR);
     }
 }

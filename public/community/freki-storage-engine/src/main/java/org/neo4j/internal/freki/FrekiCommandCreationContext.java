@@ -25,6 +25,7 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -42,7 +43,7 @@ import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecord
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.util.Preconditions.checkState;
 
-class FrekiCommandCreationContext implements CommandCreationContext
+public class FrekiCommandCreationContext implements CommandCreationContext
 {
     private final MainStores stores;
     private final IdGenerator nodes;
@@ -54,7 +55,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
     private final MemoryTracker memoryTracker; //TODO we should probably track some memory
     private MutableLongObjectMap<MutableInt> sourceNodeNextRelationshipIds = LongObjectMaps.mutable.empty();
 
-    FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    public FrekiCommandCreationContext(MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker)
     {
         this.stores = stores;
         nodes = idGeneratorFactory.get( IdType.NODE );
@@ -70,6 +71,11 @@ class FrekiCommandCreationContext implements CommandCreationContext
     public long reserveNode()
     {
         return nodes.nextId( cursorTracer );
+    }
+
+    @Override
+    public IdRange reserveNodeBatch(int batchSize) {
+        return nodes.nextIdBatch(batchSize, cursorTracer);
     }
 
     @Override

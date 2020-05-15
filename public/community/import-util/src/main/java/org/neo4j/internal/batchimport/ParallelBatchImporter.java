@@ -25,16 +25,18 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
-import org.neo4j.internal.batchimport.store.BatchingNeoStores;
+import org.neo4j.internal.batchimport.BaseImportLogic.Monitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.BatchingStoreBase;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.LogFilesInitializer;
+
+import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 /**
  * {@link BatchImporter} which tries to exercise as much of the available resources to gain performance.
@@ -55,19 +57,21 @@ public class ParallelBatchImporter implements BatchImporter
     private final Configuration config;
     private final LogService logService;
     private final Config dbConfig;
-    private final RecordFormats recordFormats;
     private final ExecutionMonitor executionMonitor;
     private final AdditionalInitialIds additionalInitialIds;
-    private final ImportLogic.Monitor monitor;
+    private final Monitor monitor;
     private final JobScheduler jobScheduler;
     private final Collector badCollector;
+    private BaseImportLogic importLogic;
+    private BatchingStoreBase store;
     private final LogFilesInitializer logFilesInitializer;
     private final MemoryTracker memoryTracker;
 
     public ParallelBatchImporter( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor,
-            JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker )
+            AdditionalInitialIds additionalInitialIds, Config dbConfig,
+            BaseImportLogic importLogic, BatchingStoreBase store,
+            Monitor monitor, JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker)
     {
         this.externalPageCache = externalPageCache;
         this.databaseLayout = databaseLayout;
@@ -76,12 +80,13 @@ public class ParallelBatchImporter implements BatchImporter
         this.config = config;
         this.logService = logService;
         this.dbConfig = dbConfig;
-        this.recordFormats = recordFormats;
         this.executionMonitor = executionMonitor;
         this.additionalInitialIds = additionalInitialIds;
         this.monitor = monitor;
         this.jobScheduler = jobScheduler;
         this.badCollector = badCollector;
+        this.importLogic = importLogic;
+        this.store = store;
         this.logFilesInitializer = logFilesInitializer;
         this.memoryTracker = memoryTracker;
     }
@@ -89,24 +94,17 @@ public class ParallelBatchImporter implements BatchImporter
     @Override
     public void doImport( Input input ) throws IOException
     {
-        try ( BatchingNeoStores store = ImportLogic.instantiateNeoStores( fileSystem, databaseLayout, externalPageCache, pageCacheTracer, recordFormats,
-                      config, logService, additionalInitialIds, dbConfig, jobScheduler, memoryTracker );
-              ImportLogic logic = new ImportLogic( databaseLayout, store, config, dbConfig, logService,
-                      executionMonitor, recordFormats, badCollector, monitor, pageCacheTracer, memoryTracker ) )
-        {
             store.createNew();
-            logic.initialize( input );
-
-            logic.importNodes();
-            logic.prepareIdMapper();
-            logic.importRelationships();
-            logic.calculateNodeDegrees();
-            logic.linkRelationshipsOfAllTypes();
-            logic.defragmentRelationshipGroups();
-            logic.buildCountsStore();
-            logFilesInitializer.initializeLogFiles( databaseLayout, store.getNeoStores().getMetaDataStore(), fileSystem );
-
-            logic.success();
-        }
+            importLogic.initialize( input );
+            importLogic.importNodes();
+            importLogic.prepareIdMapper();
+            importLogic.importRelationships();
+            importLogic.calculateNodeDegrees();
+            importLogic.buildInternalStructures();
+            importLogic.buildCountsStore();
+            logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store, fileSystem );
+            importLogic.success();
+            store.close();
+            importLogic.close();
     }
 }

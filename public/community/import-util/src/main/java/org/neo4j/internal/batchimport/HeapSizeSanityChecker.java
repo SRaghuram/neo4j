@@ -24,40 +24,40 @@ import java.util.function.LongSupplier;
 import org.neo4j.internal.batchimport.cache.MemoryStatsVisitor;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.io.os.OsBeanUtil;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.internal.batchimport.BaseImportLogic.Monitor;
 
 import static org.neo4j.io.os.OsBeanUtil.VALUE_UNAVAILABLE;
 
 /**
  * Sanity checking of {@link Input.Estimates} against heap size and free memory.
- * Registers warnings onto a {@link ImportLogic.Monitor}.
+ * Registers warnings onto a {@link Monitor}.
  */
 class HeapSizeSanityChecker
 {
-    private final ImportLogic.Monitor monitor;
+    private final Monitor monitor;
     private final LongSupplier freeMemoryLookup;
     private final LongSupplier actualHeapSizeLookup;
 
-    HeapSizeSanityChecker( ImportLogic.Monitor monitor )
+    HeapSizeSanityChecker( Monitor monitor )
     {
         this( monitor, OsBeanUtil::getFreePhysicalMemory, Runtime.getRuntime()::maxMemory );
     }
 
-    HeapSizeSanityChecker( ImportLogic.Monitor monitor, LongSupplier freeMemoryLookup, LongSupplier actualHeapSizeLookup )
+    HeapSizeSanityChecker( Monitor monitor, LongSupplier freeMemoryLookup, LongSupplier actualHeapSizeLookup )
     {
         this.monitor = monitor;
         this.freeMemoryLookup = freeMemoryLookup;
         this.actualHeapSizeLookup = actualHeapSizeLookup;
     }
 
-    void sanityCheck( Input.Estimates inputEstimates, RecordFormats recordFormats, MemoryStatsVisitor.Visitable baseMemory,
+    void sanityCheck( Input.Estimates inputEstimates, RecordSizes recordSizes, MemoryStatsVisitor.Visitable baseMemory,
             MemoryStatsVisitor.Visitable... memoryVisitables )
     {
         // At this point in time the store hasn't started so it won't show up in free memory reported from OS,
         // i.e. we have to include it here in the calculations.
         long estimatedCacheSize = ImportMemoryCalculator.estimatedCacheSize( baseMemory, memoryVisitables );
         long freeMemory = freeMemoryLookup.getAsLong();
-        long optimalMinimalHeapSize = ImportMemoryCalculator.optimalMinimalHeapSize( inputEstimates, recordFormats );
+        long optimalMinimalHeapSize = ImportMemoryCalculator.optimalMinimalHeapSize( inputEstimates, recordSizes );
         long actualHeapSize = actualHeapSizeLookup.getAsLong();
         boolean freeMemoryIsKnown = freeMemory != VALUE_UNAVAILABLE;
 

@@ -43,8 +43,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
@@ -74,12 +74,20 @@ class CheckPointingLogRotationStressTesting
               JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             Config dbConfig = Config.defaults();
-            new ParallelBatchImporter(
-                    DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL,
-                    DEFAULT, NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
-                    RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler,
-                    Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
-                    .doImport( new NodeCountInputs( nodeCount ) );
+
+            //new ParallelBatchImporter(
+            //        DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL,
+            //        DEFAULT, NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
+            //        RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler,
+            //        Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
+            //        .doImport( new NodeCountInputs( nodeCount ) );
+
+           // new ParallelBatchImporter( DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL, DEFAULT,
+            //        NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
+            //        RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY,
+            //        TransactionLogsInitializer.INSTANCE )
+            //        .doImport( new NodeCountInputs( nodeCount ) );
+
         }
 
         System.out.println( "2/6\tStarting database..." );

@@ -27,6 +27,8 @@ import org.neo4j.internal.batchimport.staging.Step;
 import org.neo4j.internal.batchimport.stats.StatsProvider;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 
+import java.util.function.LongFunction;
+
 /**
  * Preparation of an {@link IdMapper}, {@link IdMapper#prepare(PropertyValueLookup, Collector, ProgressListener)}
  * under running as a normal {@link Step} so that normal execution monitoring can be applied.
@@ -38,9 +40,9 @@ public class IdMapperPreparationStep extends LonelyProcessingStep
     private final PropertyValueLookup allIds;
     private final Collector collector;
 
-    public IdMapperPreparationStep( StageControl control, Configuration config,
-            IdMapper idMapper, PropertyValueLookup allIds, Collector collector,
-            StatsProvider... additionalStatsProviders )
+    public IdMapperPreparationStep(StageControl control, Configuration config,
+                                   IdMapper idMapper, PropertyValueLookup allIds, Collector collector,
+                                   StatsProvider... additionalStatsProviders )
     {
         super( control, "" /*named later in the progress listener*/, config, additionalStatsProviders );
         this.idMapper = idMapper;

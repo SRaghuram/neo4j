@@ -63,7 +63,7 @@ import static org.neo4j.internal.freki.StreamVByte.SINGLE_VLONG_MAX_SIZE;
  * Contains all logic about making graph data changes to a Freki store, everything from loading and modifying data to serializing
  * and overflowing into larger records or dense store.
  */
-class GraphUpdates
+public class GraphUpdates
 {
     private static final int WORST_CASE_HEADER_AND_STUFF_SIZE = Header.WORST_CASE_SIZE + DUAL_VLONG_MAX_SIZE;
     private final Collection<StorageCommand> bigValueCommands;
@@ -97,7 +97,7 @@ class GraphUpdates
         this.bigValueCommandConsumer = bigValueCommandConsumer != null ? bigValueCommandConsumer : bigValueCommands::add;
     }
 
-    NodeUpdates getOrLoad( long nodeId )
+    public NodeUpdates getOrLoad( long nodeId )
     {
         return mutations.getIfAbsentPut( nodeId, () ->
         {
@@ -107,13 +107,13 @@ class GraphUpdates
         } );
     }
 
-    void create( long nodeId )
+    public void create( long nodeId )
     {
         NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCommandConsumer, cursorTracer );
         mutations.put( nodeId, updates );
     }
 
-    void extractUpdates( Consumer<StorageCommand> commands ) throws ConstraintViolationTransactionFailureException
+    public void extractUpdates( Consumer<StorageCommand> commands ) throws ConstraintViolationTransactionFailureException
     {
         List<StorageCommand> otherCommands = new ArrayList<>();
         IntermediateBuffer[] intermediateBuffers = new IntermediateBuffer[NUM_BUFFERS];
@@ -155,7 +155,7 @@ class GraphUpdates
         abstract void delete();
     }
 
-    static class NodeUpdates extends NodeDataModifier
+    public static class NodeUpdates extends NodeDataModifier
     {
         private final long nodeId;
         private final MainStores stores;

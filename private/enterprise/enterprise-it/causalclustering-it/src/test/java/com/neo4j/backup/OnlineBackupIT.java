@@ -51,8 +51,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.RANDOM_NUMBER;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.TIME;
 
 @TestDirectoryExtension
 @ExtendWith( {RandomExtension.class, SuppressOutputExtension.class} )

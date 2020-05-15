@@ -81,7 +81,7 @@ class NodeImporterTest
             // when
             int numberOfLabels = 50;
             long nodeId = 0;
-            try ( NodeImporter importer = new NodeImporter( stores, idMapper, new DataImporter.Monitor(), NULL, INSTANCE ) )
+            try ( NodeImporter importer = new NodeImporter( stores, idMapper, null, new DataImporter.Monitor(), NULL, INSTANCE ) )
             {
                 importer.id( nodeId );
                 String[] labels = new String[numberOfLabels];
@@ -115,7 +115,7 @@ class NodeImporterTest
             int numberOfLabels = 50;
             long nodeId = 0;
             var cacheTracer = new DefaultPageCacheTracer();
-            try ( NodeImporter importer = new NodeImporter( stores, IdMappers.actual(), new DataImporter.Monitor(), cacheTracer, INSTANCE ) )
+            try ( NodeImporter importer = new NodeImporter( stores, IdMappers.actual(), null, new DataImporter.Monitor(), cacheTracer, INSTANCE ) )
             {
                 importer.id( nodeId );
                 String[] labels = new String[numberOfLabels];

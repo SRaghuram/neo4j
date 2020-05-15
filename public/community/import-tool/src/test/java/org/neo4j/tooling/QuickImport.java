@@ -55,7 +55,7 @@ import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.SettingValueParsers.parseLongWithUnit;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.calculateMaxMemoryFromPercent;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.staging.ExecutionMonitors.defaultVisible;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
@@ -164,10 +164,15 @@ public class QuickImport
             {
                 System.out.println( "Seed " + randomSeed );
                 final JobScheduler jobScheduler = life.add( createScheduler() );
-                consumer = BatchImporterFactory.withHighestPriority().instantiate(
-                        DatabaseLayout.ofFlat( dir ), fileSystem, null, PageCacheTracer.NULL, importConfig, new SimpleLogService( logging, logging ),
-                        defaultVisible(), EMPTY, dbConfig, RecordFormatSelector.selectForConfig( dbConfig, logging ), NO_MONITOR, jobScheduler,
-                        Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+                consumer = BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( dir ), fileSystem, null,
+                        PageCacheTracer.NULL,
+                        importConfig,
+                        new SimpleLogService( logging, logging ), defaultVisible(), EMPTY, dbConfig,
+                        //RecordFormatSelector.selectForConfig( dbConfig, logging ),
+                        NO_MONITOR, jobScheduler, Collector.EMPTY,
+                        null,//TransactionLogsInitializer.INSTANCE,
+                        INSTANCE );
+
             }
             consumer.doImport( input );
         }

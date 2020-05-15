@@ -35,7 +35,7 @@ import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.DataGeneratorInput;
 import org.neo4j.internal.batchimport.input.IdType;
 import org.neo4j.internal.batchimport.input.Input;
-import org.neo4j.internal.batchimport.staging.HumanUnderstandableExecutionMonitor.ImportStage;
+import org.neo4j.internal.batchimport.staging.BaseHumanUnderstandableExecutionMonitor.ImportStage;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -59,6 +59,7 @@ import static org.neo4j.internal.batchimport.input.DataGeneratorInput.bareboneNo
 import static org.neo4j.internal.batchimport.input.DataGeneratorInput.bareboneRelationshipHeader;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_RECORD_FORMATS;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 
 @PageCacheExtension
 @Neo4jLayoutExtension
@@ -92,16 +93,19 @@ class HumanUnderstandableExecutionMonitorIT
         // when
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            new ParallelBatchImporter( databaseLayout, fileSystem, pageCache, NULL, Configuration.DEFAULT, NullLogService.getInstance(), monitor,
-                    EMPTY, defaults(), LATEST_RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, LogFilesInitializer.NULL,
-                    EmptyMemoryTracker.INSTANCE ).doImport( input );
+            //new ParallelBatchImporter( databaseLayout, fileSystem, pageCache, NULL, Configuration.DEFAULT, NullLogService.getInstance(), monitor,
+            //        EMPTY, defaults(), LATEST_RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, LogFilesInitializer.NULL,
+            //        EmptyMemoryTracker.INSTANCE ).doImport( input );
+            //new ParallelBatchImporter( databaseLayout, fileSystem, pageCache, NULL, Configuration.DEFAULT, NullLogService.getInstance(), monitor,
+            //        EMPTY, defaults(), LATEST_RECORD_FORMATS, NO_MONITOR, jobScheduler, Collector.EMPTY, EmptyLogFilesInitializer.INSTANCE )
+            //        .doImport( input );
 
             // then
             progress.assertAllProgressReachedEnd();
         }
     }
 
-    private static class CapturingMonitor implements HumanUnderstandableExecutionMonitor.Monitor
+    private static class CapturingMonitor implements BaseHumanUnderstandableExecutionMonitor.Monitor
     {
         final EnumMap<ImportStage,AtomicInteger> progress = new EnumMap<>( ImportStage.class );
 
@@ -126,5 +130,6 @@ class HumanUnderstandableExecutionMonitorIT
             Assertions.assertEquals( ImportStage.values().length, progress.size() );
             progress.values().forEach( p -> assertEquals( 100, p.get() ) );
         }
+
     }
 }

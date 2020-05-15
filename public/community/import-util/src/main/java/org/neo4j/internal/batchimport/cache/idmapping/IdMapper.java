@@ -28,6 +28,8 @@ import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 
+import java.util.function.LongFunction;
+
 /**
  * Maps input node ids as specified by data read into {@link InputEntityVisitor} into actual node ids.
  */
@@ -63,7 +65,7 @@ public interface IdMapper extends MemoryStatsVisitor.Visitable, AutoCloseable
      * @param collector {@link Collector} for bad entries, such as duplicate node ids.
      * @param progress reports preparation progress.
      */
-    void prepare( PropertyValueLookup inputIdLookup, Collector collector, ProgressListener progress );
+    void prepare(PropertyValueLookup inputIdLookup, Collector collector, ProgressListener progress );
 
     /**
      * Returns an actual node id representing {@code inputId}.

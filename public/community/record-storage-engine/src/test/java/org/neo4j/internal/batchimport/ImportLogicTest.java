@@ -51,7 +51,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
-import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.store.BatchingNeoStores.batchingNeoStoresWithExternalPageCache;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.defaultFormat;
@@ -80,12 +80,17 @@ class ImportLogicTest
                 getInstance(), AdditionalInitialIds.EMPTY, defaults(), INSTANCE ) )
         {
             //noinspection EmptyTryBlock
-            try ( ImportLogic logic = new ImportLogic( databaseLayout, stores, DEFAULT, defaults(), getInstance(), monitor,
-                    defaultFormat(), Collector.EMPTY, NO_MONITOR, NULL, EmptyMemoryTracker.INSTANCE ) )
-            {
+
+            //try ( ImportLogic logic = new ImportLogic( databaseLayout, stores, DEFAULT, defaults(), getInstance(), monitor,
+            //        defaultFormat(), Collector.EMPTY, NO_MONITOR, NULL, EmptyMemoryTracker.INSTANCE ) )
+            //{
+
+            //try ( ImportLogic logic = new ImportLogic( databaseLayout, stores, DEFAULT, defaults(), getInstance(), monitor,
+            //        defaultFormat(), Collector.EMPTY, NO_MONITOR, NULL ) )
+            //{
                 // nothing to run in this import
-                logic.success();
-            }
+            //    logic.success();
+            //}
         }
 
         verify( monitor ).done( eq( true ), anyLong(), contains( "Data statistics is not available." ) );
@@ -159,12 +164,18 @@ class ImportLogicTest
                             new DataStatistics.RelationshipTypeCount( 1, 66 )
                     };
             DataStatistics dataStatistics = new DataStatistics( 100123, 100456, relationshipTypeCounts );
-            try ( ImportLogic logic = new ImportLogic( databaseLayout, stores, DEFAULT, defaults(), getInstance(), monitor,
-                    defaultFormat(), Collector.EMPTY, NO_MONITOR, NULL, EmptyMemoryTracker.INSTANCE ) )
-            {
-                logic.putState( dataStatistics );
-                logic.success();
-            }
+            //try ( ImportLogic logic = new ImportLogic( databaseLayout, stores, DEFAULT, defaults(), getInstance(), monitor,
+           //         defaultFormat(), Collector.EMPTY, NO_MONITOR, NULL, EmptyMemoryTracker.INSTANCE ) )
+            //{
+           //     logic.putState( dataStatistics );
+           //     logic.success();
+           // }
+            //try ( ImportLogic logic = new ImportLogic( databaseLayout, stores, DEFAULT, defaults(), getInstance(), monitor,
+            //        defaultFormat(), Collector.EMPTY, NO_MONITOR, NULL ) )
+            //{
+            //    logic.putState( dataStatistics );
+             //   logic.success();
+            //}
 
             // then
             verify( monitor ).done( eq( true ), anyLong(), contains( dataStatistics.toString() ) );

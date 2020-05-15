@@ -360,6 +360,7 @@ public class Extractors
 
     private abstract static class AbstractSingleValueExtractor<T> extends AbstractExtractor<T>
     {
+        String stringValue;
         AbstractSingleValueExtractor( String toString )
         {
             super( toString, null );
@@ -378,13 +379,20 @@ public class Extractors
                 clear();
                 return false;
             }
-            return extract0( data, offset, length, optionalData );
+            boolean returnVal =  extract0( data, offset, length, optionalData );
+            stringValue = new String(data, offset, length);
+            return returnVal;
         }
 
         @Override
         public final boolean extract( char[] data, int offset, int length, boolean hadQuotes )
         {
             return extract( data, offset, length, hadQuotes, null );
+        }
+        @Override
+        public Object getStringValue()
+        {
+            return stringValue;
         }
 
         protected boolean nullValue( int length, boolean hadQuotes )
@@ -777,11 +785,18 @@ public class Extractors
     {
         protected final char arrayDelimiter;
         protected T value;
+        String[] stringValue;
 
         ArrayExtractor( char arrayDelimiter, Class<?> componentType )
         {
             super( componentType.getSimpleName() + "[]" );
             this.arrayDelimiter = arrayDelimiter;
+        }
+
+        @Override
+        public Object getStringValue()
+        {
+            return stringValue;
         }
 
         @Override
@@ -859,13 +874,16 @@ public class Extractors
         {
             int numberOfValues = numberOfValues( data, offset, length );
             value = numberOfValues > 0 ? new String[numberOfValues] : EMPTY;
+            stringValue = numberOfValues > 0 ? new String[numberOfValues] : null;
             for ( int arrayIndex = 0, charIndex = 0; arrayIndex < numberOfValues; arrayIndex++, charIndex++ )
             {
                 int numberOfChars = charsToNextDelimiter( data, offset + charIndex, length - charIndex );
                 value[arrayIndex] = new String( data, offset + charIndex, numberOfChars );
+                stringValue[arrayIndex] = new String( data, offset + charIndex, numberOfChars );
                 if ( trimStrings )
                 {
                     value[arrayIndex] = value[arrayIndex].trim();
+                    stringValue[arrayIndex] = stringValue[arrayIndex].trim();
                 }
                 charIndex += numberOfChars;
             }

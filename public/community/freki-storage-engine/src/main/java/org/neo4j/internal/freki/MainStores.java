@@ -43,7 +43,7 @@ import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.IOUtils.closeAllSilently;
 
-class MainStores extends Life
+public class MainStores extends Life
 {
     public final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
@@ -52,7 +52,7 @@ class MainStores extends Life
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
     private final Record[] deletedReferenceRecords;
 
-    MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
+    public MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
             boolean createStoreIfNotExists ) throws IOException
     {
@@ -142,7 +142,7 @@ class MainStores extends Life
         idGeneratorsToRegisterOnTheWorkSync.forEach( idGenerator -> visitor.accept( idGenerator.getKey().get( idGenerator.getValue() ) ) );
     }
 
-    SimpleStore mainStore( int sizeExp )
+    public SimpleStore mainStore( int sizeExp )
     {
         return sizeExp >= mainStores.length ? null : mainStores[sizeExp];
     }
@@ -195,7 +195,7 @@ class MainStores extends Life
         return mainStores.length;
     }
 
-    void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer ) throws IOException
+    public void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer ) throws IOException
     {
         for ( SimpleStore mainStore : mainStores )
         {

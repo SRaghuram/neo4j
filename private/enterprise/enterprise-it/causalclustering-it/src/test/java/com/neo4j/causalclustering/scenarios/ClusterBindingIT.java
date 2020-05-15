@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.RANDOM_NUMBER;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
