@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -45,22 +46,14 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
     DatabaseUpdates updatedDatabases( TransactionData transactionData )
     {
         Set<NamedDatabaseId> changedDatabases;
-        Set<NamedDatabaseId> touchedDatabases;
         Set<NamedDatabaseId> droppedDatabases;
 
-        var updatedNodeIds  = extractChangedAndTouchedNodes( transactionData );
+        var updatedNodeIds  = extractUpdatedNodes( transactionData );
         var changedNodes = updatedNodeIds.changedNodes;
-        var touchedNodes = updatedNodeIds.onlyTouchedNodes;
         var droppedNodes = updatedNodeIds.deletedDatabaseNodes;
 
         try ( var tx = systemDatabase.get().beginTx() )
         {
-            touchedDatabases = touchedNodes.stream()
-                                               .map( tx::getNodeById )
-                                               .filter( n -> n.hasLabel( DATABASE_LABEL ) || n.hasLabel( DELETED_DATABASE_LABEL ) )
-                                               .map( this::getDatabaseId )
-                                               .collect( Collectors.toSet() );
-
             changedDatabases = changedNodes.stream()
                                                .map( tx::getNodeById )
                                                .filter( n -> n.hasLabel( DATABASE_LABEL ) || n.hasLabel( DELETED_DATABASE_LABEL ) )
@@ -76,10 +69,10 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
             tx.commit();
         }
 
-        return new DatabaseUpdates( changedDatabases, droppedDatabases, touchedDatabases );
+        return new DatabaseUpdates( changedDatabases, droppedDatabases );
     }
 
-    private UpdatedNodeIds extractChangedAndTouchedNodes( TransactionData transactionData )
+    private UpdatedNodeIds extractUpdatedNodes( TransactionData transactionData )
     {
         var propertiesByNode = Iterables.stream( transactionData.assignedNodeProperties() )
                                         .collect( Collectors.groupingBy( PropertyEntry::entity ) );
@@ -88,31 +81,12 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
                                                .map( e -> e.node().getId() )
                                                .collect( Collectors.toSet() );
 
-        var touchedNodes = new HashSet<Long>();
-        var changedNodes = new HashSet<Long>();
+        var changedNodes = propertiesByNode.keySet().stream()
+                        .map( Node::getId )
+                        .filter( Predicate.not( newDeletedDatabaseNodes::contains ) )
+                        .collect( Collectors.toSet() );
 
-        for ( var entry : propertiesByNode.entrySet() )
-        {
-            var id = entry.getKey().getId();
-
-            if ( onlyUpdateTimestampTouched( entry ) && !newDeletedDatabaseNodes.contains( id ) )
-            {
-                touchedNodes.add( id );
-            }
-            else
-            {
-                changedNodes.add( id );
-            }
-        }
-
-        changedNodes.addAll( newDeletedDatabaseNodes );
-        return new UpdatedNodeIds( touchedNodes, newDeletedDatabaseNodes, changedNodes );
-    }
-
-    private boolean onlyUpdateTimestampTouched( Map.Entry<Node,List<PropertyEntry<Node>>> txDataEntry )
-    {
-        var properties = txDataEntry.getValue();
-        return properties.size() == 1 && properties.get( 0 ).key().equals( UPDATED_AT_PROPERTY );
+        return new UpdatedNodeIds( newDeletedDatabaseNodes, changedNodes );
     }
 
     Map<String,EnterpriseDatabaseState> getDatabaseStates()
@@ -205,13 +179,11 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
 
     private static class UpdatedNodeIds
     {
-        private final Set<Long> onlyTouchedNodes;
         private final Set<Long> deletedDatabaseNodes;
         private final Set<Long> changedNodes;
 
-        private UpdatedNodeIds( Set<Long> onlyTouchedNodes, Set<Long> deletedDatabaseNodes, Set<Long> changedNodes )
+        private UpdatedNodeIds( Set<Long> deletedDatabaseNodes, Set<Long> changedNodes )
         {
-            this.onlyTouchedNodes = onlyTouchedNodes;
             this.deletedDatabaseNodes = deletedDatabaseNodes;
             this.changedNodes = changedNodes;
         }

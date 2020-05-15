@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.dmbs.database.events;
+package com.neo4j.dbms.database.events;
 
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.apache.commons.lang3.mutable.MutableInt;

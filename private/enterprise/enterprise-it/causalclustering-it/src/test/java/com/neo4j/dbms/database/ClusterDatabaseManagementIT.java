@@ -283,36 +283,6 @@ class ClusterDatabaseManagementIT
     }
 
     @Test
-    void shouldDropKeepDataAndRecreateDatabaseWithSameStore() throws Exception
-    {
-        // given
-        var label = Label.label( "label" );
-        var cluster = startCluster();
-        createDatabase( "foo", cluster );
-        assertDatabaseEventuallyStarted( "foo", cluster );
-
-        cluster.coreTx( "foo", ( db, tx ) ->
-        {
-            tx.createNode( label );
-            tx.commit();
-        } );
-
-        // when
-        dropDatabaseDumpData( "foo", cluster );
-
-        // then
-        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
-
-        // when
-        createDatabase( "foo", cluster );
-
-        // then
-        assertDatabaseEventuallyStarted( "foo", cluster );
-        Callable<Boolean> allMembersHaveNode = () -> haveNodeCount( cluster, "foo", label ).stream().allMatch( l -> l == 1 );
-        assertEventually( allMembersHaveNode, equalityCondition( true ), 90, SECONDS );
-    }
-
-    @Test
     void shouldKeepDroppedStateBetweenMemberRestarts() throws Exception
     {
         // given
@@ -333,33 +303,6 @@ class ClusterDatabaseManagementIT
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
-    }
-
-    @Test
-    void shouldKeepDroppedStateBetweenClusterRestarts() throws Exception
-    {
-        // given
-        var cluster = startCluster();
-
-        createDatabase( "foo", cluster );
-        createDatabase( "bar", cluster );
-
-        assertDatabaseEventuallyStarted( "foo", cluster );
-        assertDatabaseEventuallyStarted( "bar", cluster );
-
-        dropDatabase( "foo", cluster );
-        dropDatabase( "bar", cluster );
-
-        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
-        assertDatabaseEventuallyDoesNotExist( "bar", cluster );
-
-        // when
-        restartCluster( cluster );
-
-        // then
-
-        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
-        assertDatabaseEventuallyDoesNotExist( "bar", cluster );
     }
 
     @Test
@@ -476,11 +419,6 @@ class ClusterDatabaseManagementIT
         }
 
         assertDatabaseEventuallyDoesNotExist( databaseName, cluster );
-    }
-
-    private static List<Long> haveNodeCount( Cluster cluster, String databaseName, Label label )
-    {
-        return cluster.coreMembers().stream().map( member -> hasNodeCount( member, databaseName, label ) ).collect( Collectors.toList() );
     }
 
     private static long hasNodeCount( CoreClusterMember member, String databaseName, Label label )

@@ -13,13 +13,17 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -123,17 +127,46 @@ class MultiDatabaseManagerTest
     }
 
     @Test
-    void shouldNotDropOnDatabaseIfKeepData() throws Exception
+    void shouldAttemptToDumpDataIfDropDumped() throws Exception
     {
         // given
-        initDatabaseManager();
+        var databaseManager = new StubMultiDatabaseManager();
+        var dropDumper = mock( RuntimeDatabaseDumper.class );
+        databaseManager.setRuntimeDatabaseDumper( dropDumper );
+        var neo = databaseManager.createDatabase( neoId );
+        var custom = databaseManager.createDatabase( customId );
+        databaseManager.start();
 
         // when
-        databaseManager.dropDatabaseDumpData( neoId );
+        databaseManager.dropDatabase( neoId );
         databaseManager.dropDatabaseDumpData( customId );
 
         // then
+        verify( dropDumper ).dump( custom );
+        verify( dropDumper, never() ).dump( neo );
+    }
+
+    @Test
+    void shouldNotDropDatabaseIfDumpFails() throws Exception
+    {
+        // given
+        var databaseManager = new StubMultiDatabaseManager();
+        var dropDumper = mock( RuntimeDatabaseDumper.class );
+        databaseManager.setRuntimeDatabaseDumper( dropDumper );
+        var neo = databaseManager.createDatabase( neoId );
+        var custom = databaseManager.createDatabase( customId );
+        databaseManager.start();
+
+        doThrow( new DatabaseManagementException( "Some IO error" ) ).when( dropDumper ).dump( custom );
+
+        // when
+        databaseManager.dropDatabase( neoId );
+
+        // then
         verify( neo.database() ).drop();
+
+        // when/then
+        assertThrows( DatabaseManagementException.class, () -> databaseManager.dropDatabaseDumpData( customId ) );
         verify( custom.database(), never() ).drop();
     }
 }

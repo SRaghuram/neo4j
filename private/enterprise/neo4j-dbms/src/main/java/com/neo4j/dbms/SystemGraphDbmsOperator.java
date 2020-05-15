@@ -60,7 +60,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
         }
         else
         {
-            request = ReconcilerRequest.targets( updatedDatabases.touched() )
+            request = ReconcilerRequest.targets( updatedDatabases.changed() )
                                        .priorityTargets( updatedDatabases.dropped() )
                                        .build();
         }

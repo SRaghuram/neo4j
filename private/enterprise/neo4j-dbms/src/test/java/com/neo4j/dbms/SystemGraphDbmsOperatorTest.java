@@ -30,14 +30,14 @@ class SystemGraphDbmsOperatorTest
 {
 
     @Test
-    void touchedDatabasesShouldBeExplicitInReconcilerRequest()
+    void explicitlyChangedDatabasesShouldBeTargetsInReconcilerRequest()
     {
         // given
-        var touchedDb = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
-        var databaseUpdates = new DatabaseUpdates( Set.of(), Set.of(), Set.of( touchedDb ) );
+        var updatedDb = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        var databaseUpdates = new DatabaseUpdates( Set.of( updatedDb ), Set.of() );
         var systemGraphDbStates = Map.of(
                 SYSTEM_DATABASE_NAME, new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, EnterpriseOperatorState.STARTED ),
-                "foo", new EnterpriseDatabaseState( touchedDb, EnterpriseOperatorState.STARTED )
+                "foo", new EnterpriseDatabaseState( updatedDb, EnterpriseOperatorState.STARTED )
         );
         var dbmsModel = new StubEnterpriseSystemGraphDbmsModel( databaseUpdates, systemGraphDbStates );
         var transactionTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
@@ -52,7 +52,7 @@ class SystemGraphDbmsOperatorTest
         operator.transactionCommitted( 1L, mock( TransactionData.class ) );
 
         // then
-        var expectedCall = Pair.of( systemGraphDbStates, ReconcilerRequest.targets( Set.of( touchedDb ) ).build() );
+        var expectedCall = Pair.of( systemGraphDbStates, ReconcilerRequest.targets( Set.of( updatedDb ) ).build() );
         assertThat( connector.triggerCalls() ).contains( expectedCall );
     }
 
@@ -60,11 +60,11 @@ class SystemGraphDbmsOperatorTest
     void droppedDatabasesShouldBePriorityInReconcilerRequest()
     {
         // given
-        var touchedDb = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
-        var databaseUpdates = new DatabaseUpdates( Set.of(), Set.of( touchedDb ), Set.of() );
+        var droppedDb = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        var databaseUpdates = new DatabaseUpdates( Set.of(), Set.of( droppedDb ) );
         var systemGraphDbStates = Map.of(
                 SYSTEM_DATABASE_NAME, new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, EnterpriseOperatorState.STARTED ),
-                "foo", new EnterpriseDatabaseState( touchedDb, EnterpriseOperatorState.DROPPED )
+                "foo", new EnterpriseDatabaseState( droppedDb, EnterpriseOperatorState.DROPPED )
         );
         var dbmsModel = new StubEnterpriseSystemGraphDbmsModel( databaseUpdates, systemGraphDbStates );
         var transactionTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
@@ -79,7 +79,7 @@ class SystemGraphDbmsOperatorTest
         operator.transactionCommitted( 1L, mock( TransactionData.class ) );
 
         // then
-        var expectedCall = Pair.of( systemGraphDbStates, ReconcilerRequest.priorityTargets( Set.of( touchedDb ) ).build() );
+        var expectedCall = Pair.of( systemGraphDbStates, ReconcilerRequest.priorityTargets( Set.of( droppedDb ) ).build() );
         assertThat( connector.triggerCalls() ).contains( expectedCall );
     }
 

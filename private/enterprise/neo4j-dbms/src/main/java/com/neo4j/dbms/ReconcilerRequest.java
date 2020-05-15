@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 
+import static java.util.function.Function.identity;
+
 /**
  * Describes a request to perform a single reconciliation attempt.
  *
@@ -247,9 +249,13 @@ public final class ReconcilerRequest
         public ReconcilerRequest build()
         {
             var targets = normalTargets.stream()
-                                       .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestPriority.NORMAL ) );
+                                       .map( NamedDatabaseId::name )
+                                       .distinct()
+                                       .collect( Collectors.toMap( identity(), ignored -> RequestPriority.NORMAL ) );
             var prioTargets = priorityTargets.stream()
-                                             .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestPriority.HIGH ) );
+                                             .map( NamedDatabaseId::name )
+                                             .distinct()
+                                             .collect( Collectors.toMap( identity(), ignored -> RequestPriority.HIGH ) );
 
             targets.putAll( prioTargets );
             return new ReconcilerRequest( targets, panickedDatabase, causeOfPanic );

@@ -15,6 +15,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.when;
 public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseContext>
 {
     private Map<NamedDatabaseId, Consumer<Database>> onContextCreationActions = new HashMap<>();
+    private RuntimeDatabaseDumper runtimeDatabaseDumper;
 
     public StubMultiDatabaseManager()
     {
@@ -49,6 +51,17 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
     protected DatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         return mockDatabaseContext( namedDatabaseId );
+    }
+
+    public void setRuntimeDatabaseDumper( RuntimeDatabaseDumper runtimeDatabaseDumper )
+    {
+        this.runtimeDatabaseDumper = runtimeDatabaseDumper;
+    }
+
+    @Override
+    protected RuntimeDatabaseDumper dropDumpJob()
+    {
+        return runtimeDatabaseDumper;
     }
 
     public GlobalModule globalModule()
@@ -89,6 +102,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         when( module.getExternalDependencyResolver() ).thenReturn( new Dependencies() );
         when( module.getJobScheduler() ).thenReturn( jobScheduler );
         when( module.getTransactionEventListeners() ).thenReturn( new GlobalTransactionEventListeners() );
+        when( module.getFileSystem() ).thenReturn( new EphemeralFileSystemAbstraction() );
         dependencies.satisfyDependency( new DatabaseOperationCounts.Counter() );
         return module;
     }

@@ -5,23 +5,13 @@
  */
 package com.neo4j.dbms.database;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Clock;
-import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
-import java.util.function.Predicate;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseLimitReachedException;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.archive.CompressionFormat;
-import org.neo4j.dbms.archive.Dumper;
 import org.neo4j.dbms.database.AbstractDatabaseManager;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
@@ -29,20 +19,17 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.util.Id;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.maxNumberOfDatabases;
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.database_dumps_root_path;
-import static org.neo4j.dbms.archive.CompressionFormat.selectCompressionFormat;
 
 public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends AbstractDatabaseManager<DB>
 {
     private final long maximumNumberOfDatabases;
     private volatile boolean databaseManagerStarted;
     private DatabaseOperationCounts.Counter operationCounts;
+    private final RuntimeDatabaseDumper runtimeDatabaseDumper;
 
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition )
     {
@@ -54,6 +41,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         super( globalModule, edition, manageDatabasesOnStartAndStop );
         operationCounts = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounts.Counter.class );
         maximumNumberOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
+        runtimeDatabaseDumper = new RuntimeDatabaseDumper( globalModule.getGlobalClock(), globalModule.getGlobalConfig(), globalModule.getFileSystem() );
     }
 
     @Override
@@ -150,6 +138,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         {
             databaseManagerStarted = true;
             super.start();
+            runtimeDatabaseDumper.start();
         }
     }
 
@@ -160,6 +149,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         {
             super.stop();
             databaseManagerStarted = false;
+            runtimeDatabaseDumper.stop();
         }
     }
 
@@ -169,6 +159,11 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         databaseMap.clear();
     }
 
+    protected RuntimeDatabaseDumper dropDumpJob()
+    {
+        return runtimeDatabaseDumper;
+    }
+
     protected void dropDatabase( NamedDatabaseId namedDatabaseId, DB context, boolean dumpData )
     {
         try
@@ -176,38 +171,17 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             log.info( "Drop '%s' database.", namedDatabaseId.name() );
             if ( dumpData )
             {
-                var dbLayout = context.databaseFacade().databaseLayout();
-                var databaseDirectory = dbLayout.databaseDirectory().toPath();
-                var txDirectory = dbLayout.getTransactionLogsDirectory().toPath();
-                var lockFile = dbLayout.databaseLockFile().toPath();
-                var dumper = new Dumper();
-                Predicate<Path> isLockFile = path -> Objects.equals( path.getFileName().toString(), lockFile.getFileName().toString() );
-                var out = databaseDumpLocation( namedDatabaseId, globalModule.getGlobalClock() );
-                dumper.dump( databaseDirectory, txDirectory, out, selectCompressionFormat(), isLockFile );
+                dropDumpJob().dump( context );
             }
             Database database = context.database();
             database.drop();
             databaseIdRepository().invalidate( namedDatabaseId );
             databaseMap.remove( namedDatabaseId );
         }
-        catch ( IOException e )
-        {
-            throw new DatabaseManagementException( format( "An error occurred! Unable to dump database with name `%s` whilst dropping it.",
-                                                           namedDatabaseId.name() ), e );
-        }
         catch ( Throwable t )
         {
             throw new DatabaseManagementException( format( "An error occurred! Unable to drop database with name `%s`.", namedDatabaseId.name() ), t );
         }
-    }
-
-    protected Path databaseDumpLocation( NamedDatabaseId databaseId, Clock clock )
-    {
-        var dumpsRoot = config.get( database_dumps_root_path );
-        var shortDatabaseId = new Id( databaseId.databaseId().uuid() ).toString();
-        var epochSeconds = Instant.now( clock ).getEpochSecond();
-        var dumpDirName = String.format( "%s-%s-%s.dump", databaseId.name(), shortDatabaseId, epochSeconds );
-        return dumpsRoot.resolve( dumpDirName );
     }
 
     private void requireStarted( NamedDatabaseId namedDatabaseId )

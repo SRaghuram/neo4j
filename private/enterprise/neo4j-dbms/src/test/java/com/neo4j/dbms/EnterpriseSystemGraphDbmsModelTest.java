@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -70,9 +71,8 @@ class EnterpriseSystemGraphDbmsModelTest
     private DatabaseUpdates mergeUpdates( DatabaseUpdates left, DatabaseUpdates right )
     {
         var changed = Stream.concat( left.changed().stream(), right.changed().stream() ).collect( Collectors.toSet() );
-        var touched = Stream.concat( left.touched().stream(), right.touched().stream() ).collect( Collectors.toSet() );
         var dropped = Stream.concat( left.dropped().stream(), right.dropped().stream() ).collect( Collectors.toSet() );
-        return new DatabaseUpdates( changed, dropped, touched );
+        return new DatabaseUpdates( changed, dropped );
     }
 
     @Test
@@ -105,7 +105,6 @@ class EnterpriseSystemGraphDbmsModelTest
         }
 
         // then
-        assertThat( updatedDatabases.get().changed() ).containsAll( expectedDeleted.keySet() );
         assertThat( updatedDatabases.get().dropped() ).containsAll( expectedDeleted.keySet() );
     }
 
@@ -137,25 +136,31 @@ class EnterpriseSystemGraphDbmsModelTest
     }
 
     @Test
-    void shouldDetectDatabasesOnlyTouchedInMultiUpdateTransactions()
+    void shouldDetectTouchedAndChangedDatabasesInMultiUpdateTransactions()
     {
         // given
-        var aState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        var state = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        NamedDatabaseId a;
+        // when
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( tx, "A", true, aState );
+            a = makeDatabaseNode( tx, "A", true, state );
             tx.commit();
         }
 
-        var aName = new NormalizedDatabaseName( "A" ).name();
+        // then
+        var changed = updatedDatabases.get().changed();
+        assertEquals( Set.of( a ), changed );
         updatedDatabases.set( DatabaseUpdates.EMPTY );
 
         // when
-        var bState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        NamedDatabaseId b;
+        NamedDatabaseId c;
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( tx, "B", true, bState );
-            var aNode = tx.findNode( DATABASE_LABEL, DATABASE_NAME_PROPERTY, aName );
+            b = makeDeletedDatabaseNode( tx, "B", state );
+            c = makeDatabaseNode( tx, "C", true, state );
+            var aNode = tx.findNode( DATABASE_LABEL, DATABASE_NAME_PROPERTY, a.name() );
             if ( aNode != null )
             {
                 aNode.setProperty( UPDATED_AT_PROPERTY, Instant.now().toString() );
@@ -164,47 +169,34 @@ class EnterpriseSystemGraphDbmsModelTest
         }
 
         // then
-        var touched = updatedDatabases.get().touched();
-        var changed = updatedDatabases.get().changed();
-        assertEquals( aState.keySet(), touched );
-        assertThat( touched ).hasSize( 1 );
-        assertEquals( bState.keySet(), changed );
-        assertThat( changed ).hasSize( 1 );
+        changed = updatedDatabases.get().changed();
+        var droppped = updatedDatabases.get().dropped();
+        assertEquals( Set.of( a, c ), changed );
+        assertEquals( Set.of( b ), droppped );
     }
 
     @Test
-    void shouldDetectDatabasesOnlyTouched()
+    void shouldDetectTouchedAndChangedDatabases()
     {
         // given
-        var aState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
-        try ( var tx = db.beginTx() )
-        {
-            makeDatabaseNode( tx, "A", true, aState );
-            tx.commit();
-        }
-
-        var aName = new NormalizedDatabaseName( "A" ).name();
-        updatedDatabases.set( DatabaseUpdates.EMPTY );
-
+        var state = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        NamedDatabaseId a;
         // when
-        var bState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( tx, "B", true, bState );
+            a = makeDatabaseNode( tx, "A", true, state );
             tx.commit();
         }
 
         // then
-        var touched = updatedDatabases.get().touched();
         var changed = updatedDatabases.get().changed();
-        assertThat( touched ).hasSize( 0 );
-        assertEquals( bState.keySet(), changed );
-        assertThat( changed ).hasSize( 1 );
+        assertEquals( Set.of( a ), changed );
+        updatedDatabases.set( DatabaseUpdates.EMPTY );
 
         // when
         try ( var tx = db.beginTx() )
         {
-            var aNode = tx.findNode( DATABASE_LABEL, DATABASE_NAME_PROPERTY, aName );
+            var aNode = tx.findNode( DATABASE_LABEL, DATABASE_NAME_PROPERTY, a.name() );
             if ( aNode != null )
             {
                 aNode.setProperty( UPDATED_AT_PROPERTY, Instant.now().toString() );
@@ -213,12 +205,11 @@ class EnterpriseSystemGraphDbmsModelTest
         }
 
         // then
-        touched = updatedDatabases.get().touched();
-        assertEquals( aState.keySet(), touched );
-        assertThat( touched ).hasSize( 1 );
+        changed = updatedDatabases.get().changed();
+        assertEquals( Set.of( a ), changed );
     }
 
-    private void makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<NamedDatabaseId,EnterpriseDatabaseState> expected )
+    private NamedDatabaseId makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<NamedDatabaseId,EnterpriseDatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DATABASE_LABEL );
@@ -227,9 +218,10 @@ class EnterpriseSystemGraphDbmsModelTest
         node.setProperty( DATABASE_UUID_PROPERTY, uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
         expected.put( id, online ? new EnterpriseDatabaseState( id, STARTED ) : new EnterpriseDatabaseState( id, STOPPED ) );
+        return id;
     }
 
-    private void makeDeletedDatabaseNode( Transaction tx, String databaseName, HashMap<NamedDatabaseId,EnterpriseDatabaseState> expected )
+    private NamedDatabaseId makeDeletedDatabaseNode( Transaction tx, String databaseName, HashMap<NamedDatabaseId,EnterpriseDatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DELETED_DATABASE_LABEL );
@@ -237,5 +229,6 @@ class EnterpriseSystemGraphDbmsModelTest
         node.setProperty( DATABASE_UUID_PROPERTY, uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
         expected.put( id, new EnterpriseDatabaseState( id, DROPPED ) );
+        return id;
     }
 }

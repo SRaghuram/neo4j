@@ -283,7 +283,7 @@ class DbmsReconcilerModuleTest
     void shouldCatchAsFailure( Throwable failure )
     {
         // given
-        var databaseManager = mock( MultiDatabaseManager.class );
+        MultiDatabaseManager databaseManager = mock( MultiDatabaseManager.class );
 
         var foo = idRepository.getRaw( "foo" );
         doThrow( failure ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
@@ -409,7 +409,7 @@ class DbmsReconcilerModuleTest
         var startOperator = new LocalDbmsOperator( idRepository );
         startOperator.startDatabase( fooId.name() );
         var startException = assertThrows( Exception.class,
-                () -> reconcilerModule.reconciler.reconcile( List.of( startOperator ), ReconcilerRequest.priority( fooId ) ).awaitAll(),
+                () -> reconcilerModule.reconciler.reconcile( List.of( startOperator ), ReconcilerRequest.priorityTarget( fooId ).build() ).awaitAll(),
                 "dirty to not dropped not allowed" );
         // then DIRTY state DB should not able to start
         assertTrue( startException.getMessage().contains( "unsupported state transition" ) );
@@ -506,6 +506,6 @@ class DbmsReconcilerModuleTest
     {
         var dropOperator = new LocalDbmsOperator( idRepository );
         dropOperator.dropDatabase( fooId.name() );
-        reconcilerModule.reconciler.reconcile( List.of( dropOperator ), ReconcilerRequest.priority( fooId ) ).awaitAll();
+        reconcilerModule.reconciler.reconcile( List.of( dropOperator ), ReconcilerRequest.priorityTarget( fooId ).build() ).awaitAll();
     }
 }
