@@ -209,10 +209,9 @@ class EagerizationAcceptanceTest
     val query = "MATCH (a), (b) CALL user.mkRel(a, b) YIELD relId WITH * MATCH ()-[rel]->() WHERE id(rel) = relId RETURN rel.foo"
 
     // Correct! Eagerization happens as part of query context operation
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.ProcedureCallWrite, query,
       executeBefore = tx => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
-
     result.toSet should equal(Set(Map("rel.foo" -> 0), Map("rel.foo" -> 1), Map("rel.foo" -> 2), Map("rel.foo" -> 3)))
   }
 
@@ -246,7 +245,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (a), (b) CALL user.mkRel(a, b) MATCH (a)-[rel]->(b) RETURN rel.foo"
 
     // Correct! Eagerization happens as part of query context operation
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+    val result = executeWith(Configs.ProcedureCallWrite, query,
       executeBefore = tx => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 

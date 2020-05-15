@@ -15,7 +15,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should return result") {
     registerTestProcedures()
 
-    val result = executeWith(Configs.ProcedureCall,
+    val result = executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.stream123() YIELD count, name RETURN count, name ORDER BY count")
 
     result.toList should equal(List(
@@ -30,7 +30,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
-    val result = executeWith(Configs.ProcedureCall,
+    val result = executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.aNodeWithLabel( 'Cat' ) YIELD node RETURN node")
 
     result.size should equal(1)
@@ -41,7 +41,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
-    val result = executeWith(Configs.ProcedureCall,
+    val result = executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.recurseN( 3 ) YIELD node RETURN node")
 
     result.size should equal(1)
@@ -53,7 +53,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
     executeSingle("UNWIND [1,2] AS i CREATE (a:Mouse)")
 
-    val result = executeWith(Configs.ProcedureCall,
+    val result = executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.findNodesWithLabel( 'Cat' ) YIELD node RETURN node")
 
     result.size should equal(3)
@@ -64,7 +64,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     executeSingle("CREATE (c:Cat) WITH c UNWIND [1,2,3] AS i CREATE (c)-[:HUNTS]->(m:Mouse)")
 
-    val result = executeWith(Configs.ProcedureCall,
+    val result = executeWith(Configs.ProcedureCallRead,
       "MATCH (c:Cat) CALL org.neo4j.expandNode( id( c ) ) YIELD node AS n RETURN n")
 
     result.size should equal(3)
@@ -73,7 +73,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should create node with loop using Core API") {
     registerTestProcedures()
 
-    executeWith(Configs.ProcedureCall, "CALL org.neo4j.createNodeWithLoop( 'Node', 'Rel' ) YIELD node RETURN count(node)")
+    executeWith(Configs.ProcedureCallWrite, "CALL org.neo4j.createNodeWithLoop( 'Node', 'Rel' ) YIELD node RETURN count(node)")
 
     val result = executeSingle("MATCH (n)-->(n) RETURN n")
     result.size should equal(1)
@@ -116,7 +116,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     executeSingle("MATCH (c:Person) WHERE c.name in ['Clint Eastwood', 'Gene Hackman'] SET c:Western")
 
     // When
-    val result = executeWith(Configs.ProcedureCall,
+    val result = executeWith(Configs.ProcedureCallRead,
       """MATCH (k:Person {name:'Keanu Reeves'})
         |CALL org.neo4j.movieTraversal(k) YIELD path RETURN last(nodes(path)).name AS name""".stripMargin)
 
@@ -138,7 +138,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
-    val result = executeWith(Configs.ProcedureCall,
+    val result = executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.aNodeWithLabel", params = Map("label" -> "Cat"))
 
     result.size should equal(1)
@@ -147,11 +147,11 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should call procedure with internal types") {
     registerTestProcedures()
 
-    executeWith(Configs.ProcedureCall,
+    executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.internalTypes()").toList should equal(List(Map("textValue" -> "Dog", "mapValue" -> Map("key" -> 1337))))
-    executeWith(Configs.ProcedureCall,
+    executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.internalTypes('Cat')").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 1337))))
-    executeWith(Configs.ProcedureCall,
+    executeWith(Configs.ProcedureCallRead,
       "CALL org.neo4j.internalTypes('Cat', {key: 42})").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 42))))
   }
 

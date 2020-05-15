@@ -83,5 +83,6 @@ object Configs {
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val ProcedureCall         : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
+  val ProcedureCallRead     : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
+  val ProcedureCallWrite    : TestConfiguration = InterpretedRuntime + SlottedRuntime
 }
