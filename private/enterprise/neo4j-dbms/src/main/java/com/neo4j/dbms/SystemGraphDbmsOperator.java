@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbms;
 
-import java.util.HashSet;
 import java.util.Map;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
@@ -45,8 +44,18 @@ class SystemGraphDbmsOperator extends DbmsOperator
 
     private void reconcile( long txId, TransactionData transactionData, boolean asPartOfStoreCopy )
     {
-        var updatedDatabases = extractUpdatedDatabases( transactionData );
-        updateDesiredStates(); // TODO: Handle exceptions from this!
+        DatabaseUpdates updatedDatabases;
+        try
+        {
+            updatedDatabases = extractUpdatedDatabases( transactionData );
+            updateDesiredStates();
+        }
+        catch ( Exception e )
+        {
+            log.error( "Reconciliation failed due to an issue with the system database.", e );
+            return;
+        }
+
         if ( asPartOfStoreCopy )
         {
             reconciledTxTracker.disable();
