@@ -29,7 +29,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
     ).foreach {
       case (grantOrDeny, grantOrDenyCommand, grantedOrDenied) =>
 
-        // Tests for granting and denying write privileges
+        // Tests for granting and denying set property privileges
 
         test(s"should $grantOrDeny set property privilege to custom role for all databases and a specific property") {
           // GIVEN
@@ -128,7 +128,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
           execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
         }
 
-        // Tests for revoke grant and revoke deny write privileges
+        // Tests for revoke grant and revoke deny set property privilege
 
         test(s"should revoke correct $grantOrDeny set property privilege different databases") {
           // GIVEN

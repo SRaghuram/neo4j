@@ -175,7 +175,7 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
     } should have message "Permission denied."
   }
 
-  test("should not be allowed to graph commands when denied all graph privileges") {
+  test("should not be allowed to access or change the graph via commands when denied all graph privileges") {
     // GIVEN
     setupUserWithCustomAdminRole()
     selectDatabase(DEFAULT_DATABASE_NAME)

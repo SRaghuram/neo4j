@@ -37,7 +37,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ).foreach {
       case (grantOrDeny, grantOrDenyCommand, grantedOrDenied) =>
 
-        // Tests for granting and denying write privileges
+        // Tests for granting and denying label privileges
 
         test(s"should $grantOrDeny $verb label privilege to custom role for all databases and specific label") {
           // GIVEN
@@ -117,7 +117,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
         }
 
-        // Tests for revoke grant and revoke deny write privileges
+        // Tests for revoke grant and revoke deny label privileges
 
         test(s"should revoke correct $grantOrDeny $verb label privilege different databases") {
           // GIVEN

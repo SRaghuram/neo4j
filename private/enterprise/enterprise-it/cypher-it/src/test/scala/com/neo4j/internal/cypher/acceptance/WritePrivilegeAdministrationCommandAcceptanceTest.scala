@@ -38,7 +38,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // Tests for granting and denying write privileges
 
-      test(s"should $grantOrDeny write privilege to custom role for all databases and all elements") {
+      test(s"should $grantOrDeny write privilege for all graphs") {
         // GIVEN
         execute("CREATE ROLE custom")
 
@@ -52,7 +52,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
       }
 
-      test(s"should $grantOrDeny write privilege to custom role for a specific database and all elements") {
+      test(s"should $grantOrDeny write privilege for specific graph") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -67,14 +67,14 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
       }
 
-      test(s"should $grantOrDeny write privilege to custom role for multiple databases and all elements") {
+      test(s"should $grantOrDeny write privilege for multiple graphs using parameter") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
         execute("CREATE DATABASE bar")
 
         // WHEN
-        execute(s"$grantOrDenyCommand WRITE ON GRAPH foo, bar TO custom")
+        execute(s"$grantOrDenyCommand WRITE ON GRAPH foo, $$db TO custom", Map("db" -> "bar"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -82,20 +82,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           grantedOrDenied(write).role("custom").database("foo").relationship("*").map,
           grantedOrDenied(write).role("custom").database("bar").node("*").map,
           grantedOrDenied(write).role("custom").database("bar").relationship("*").map
-        ))
-      }
-
-      test(s"should $grantOrDeny write privilege to custom role for specific database and all elements using parameter") {
-        // GIVEN
-        execute("CREATE ROLE custom")
-
-        // WHEN
-        execute(s"$grantOrDenyCommand WRITE ON GRAPH $$db TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(write).database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
-          grantedOrDenied(write).database(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
         ))
       }
 
@@ -326,7 +312,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute("GRANT WRITE ON GRAPH * To custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
     execute("REVOKE DENY WRITE ON GRAPH * FROM $role", Map("role" -> "custom"))
 
     // THEN
@@ -1395,10 +1381,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   test("should create nodes when granted WRITE privilege to custom role for a specific database") {
     // GIVEN
     execute("CREATE DATABASE foo")
-    selectDatabase("foo")
-    execute("CREATE (:B {name:'b'})")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A {name:'a'})")
+    setupTokens("foo")
+    setupTokens()
 
     setupUserWithCustomRole()
 
@@ -1410,23 +1394,21 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       row.get("dummy") should be(1)
     }) should be(1)
 
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
 
     the[AuthorizationViolationException] thrownBy {
-      executeOn("foo", "joe", "soap", "CREATE (n:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Create node with labels 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+      executeOn("foo", "joe", "soap", "CREATE (n:A {name: 'a'}) RETURN 1 AS dummy")
+    } should have message "Create node with labels 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
+    execute("MATCH (n) RETURN n.name").toSet should have size 0
   }
 
   test("should not be able to create nodes when denied WRITE privilege to custom role for a specific database") {
     // GIVEN
     execute("CREATE DATABASE foo")
-    selectDatabase("foo")
-    execute("CREATE (:B {name:'b'})")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A {name:'a'})")
+    setupTokens("foo")
+    setupTokens()
 
     setupUserWithCustomRole()
 
@@ -1439,18 +1421,18 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       row.get("dummy") should be(1)
     }) should be(1)
 
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
 
     the[AuthorizationViolationException] thrownBy {
-      executeOn("foo", "joe", "soap", "CREATE (:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Create node with labels 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+      executeOn("foo", "joe", "soap", "CREATE (:A {name: 'a'}) RETURN 1 AS dummy")
+    } should have message "Create node with labels 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
+    execute("MATCH (n) RETURN n.name").toSet should have size 0
   }
 
-  private def setupTokens(): Unit = {
-    selectDatabase(DEFAULT_DATABASE_NAME)
+  private def setupTokens(database :String = DEFAULT_DATABASE_NAME): Unit = {
+    selectDatabase(database)
     execute("CALL db.createLabel('A')")
     execute("CALL db.createRelationshipType('R')")
     execute("CALL db.createProperty('name')")
