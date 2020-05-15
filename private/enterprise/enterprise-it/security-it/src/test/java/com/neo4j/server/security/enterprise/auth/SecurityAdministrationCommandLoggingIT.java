@@ -245,9 +245,9 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 4 );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * ELEMENTS * TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * NODES A, B TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS C, D TO foo" ) ) );
     }
 
     @Test
@@ -266,12 +266,12 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 7 );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT MATCH {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "GRANT READ {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "GRANT READ {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "GRANT READ {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT MATCH {*} ON GRAPH * ELEMENTS * TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * NODES A, B TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D TO foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "GRANT READ {*} ON GRAPH * ELEMENTS * TO foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "GRANT READ {bar, baz} ON GRAPH * NODES A, B TO foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "GRANT READ {bar, baz} ON GRAPH * RELATIONSHIPS C, D TO foo" ) ) );
     }
 
     @Test
@@ -301,9 +301,9 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 4 );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * ELEMENTS * TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * NODES A, B TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C, D TO foo" ) ) );
     }
 
     @Test
@@ -322,12 +322,12 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 7 );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY MATCH {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "DENY READ {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "DENY READ {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "DENY READ {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY MATCH {*} ON GRAPH * ELEMENTS * TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * NODES A, B TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D TO foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "DENY READ {*} ON GRAPH * ELEMENTS * TO foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "DENY READ {bar, baz} ON GRAPH * NODES A, B TO foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "DENY READ {bar, baz} ON GRAPH * RELATIONSHIPS C, D TO foo" ) ) );
     }
 
     @Test
@@ -360,9 +360,9 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 7 );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) FROM foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * NODES A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * RELATIONSHIPS C, D FROM foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * NODES A, B FROM foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * ELEMENTS * FROM foo" ) ) );
     }
 
     @Test
@@ -381,9 +381,9 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 7 );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE READ {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * RELATIONSHIPS A, B FROM foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * NODES A, B FROM foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE READ {*} ON GRAPH * ELEMENTS * FROM foo" ) ) );
     }
 
     @Test
@@ -402,9 +402,9 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 7 );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE MATCH {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * RELATIONSHIPS A, B FROM foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * NODES A, B FROM foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE MATCH {*} ON GRAPH * ELEMENTS * FROM foo" ) ) );
     }
 
     @Test
