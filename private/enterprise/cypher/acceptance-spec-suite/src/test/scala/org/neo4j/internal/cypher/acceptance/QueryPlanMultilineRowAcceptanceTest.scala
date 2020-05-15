@@ -7,20 +7,30 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
-class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
-                                        with CypherComparisonSupport {
+class QueryPlanMultilineRowAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
+                                          with CypherComparisonSupport {
+  private val NUMBER_HEADER_LINES = 3
 
-  val shouldCompact = ComparePlansWithAssertion(_.toString.split("\\n").exists(line => line.contains("Create") && line.contains("...")) should be(true))
-  val shouldNotCompact = ComparePlansWithAssertion(_.toString.split("\\n").exists(line => line.contains("Create") && line.contains("...")) should be(false))
+  private def hasMultilineRow(internalPlanDescription: InternalPlanDescription): Boolean = {
+    val numberOperators = internalPlanDescription.flatten.length
+    val tableRows = NUMBER_HEADER_LINES + numberOperators * 2
+
+    // Only count rows that forms the operator table, i.e. rows that starts with '+' or '|'
+    internalPlanDescription.toString.linesIterator.count(line => line.startsWith("+") || line.startsWith("|")) > tableRows
+  }
+
+  private val shouldSplit = ComparePlansWithAssertion(hasMultilineRow(_) should be(true))
+  private val shouldNotSplit = ComparePlansWithAssertion(hasMultilineRow(_) should be(false))
 
   implicit val windowsSafe: WindowsStringSafe.type = WindowsStringSafe
 
-  test("Compact very long query containing consecutive update operations") {
+  test("Split very long query containing consecutive update operations") {
     val query =
       """CREATE (TheMatrix:Movie {title:'The Matrix', released:2001, tagline:'Welcome to the Real World3'})
         |CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
@@ -531,11 +541,11 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
 
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = shouldCompact)
+      planComparisonStrategy = shouldSplit)
     assertStats(result, nodesCreated = 171, relationshipsCreated = 253, propertiesWritten = 564, labelsAdded = 171)
   }
 
-  test("Compact smaller, but still long and compactable query"){
+  test("Split smaller, but still long and compactable query"){
     val query = """CREATE (TheMatrix:Movie {title:'The Matrix', released:2001, tagline:'Welcome to the Real World3'})
                   |CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
                   |CREATE (Carrie:Person {name:'Carrie-Anne Moss', born:1967})
@@ -554,18 +564,18 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
                   |  (JoelS)-[:PRODUCED]->(TheMatrix)
                   |""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldCompact)
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldSplit)
     assertStats(result, nodesCreated = 8, relationshipsCreated = 7, propertiesWritten = 21, labelsAdded = 8)
   }
 
-  test("Don't compact complex query") {
+  test("Don't split complex query") {
     val query = "EXPLAIN LOAD CSV WITH HEADERS FROM $csv_filename AS line MERGE (u1:User {login: line.user1}) MERGE " +
       "(u2:User {login: line.user2}) CREATE (u1)-[:FRIEND]->(u2)"
 
-    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldNotCompact, params = Map("csv_filename" -> "x"))
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldNotSplit, params = Map("csv_filename" -> "x"))
   }
 
-  test("Don't compact query with consecutive expands due to presence of values in 'other' column") {
+  test("Don't split query with consecutive expands due to presence of values in 'other' column") {
     val a = createLabeledNode(Map("name"->"Keanu Reeves"), "Actor")
     val b = createLabeledNode(Map("name"->"Craig"), "Actor")
     val c = createLabeledNode(Map("name"->"Olivia"), "Actor")
@@ -578,6 +588,6 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
     relate(c,b)
     relate(d,b)
     val query = "MATCH (n:Actor {name:'Keanu Reeves'})-->()-->(b) RETURN b"
-    executeWith(Configs.All, query, planComparisonStrategy = shouldNotCompact)
+    executeWith(Configs.All, query, planComparisonStrategy = shouldNotSplit)
   }
 }
