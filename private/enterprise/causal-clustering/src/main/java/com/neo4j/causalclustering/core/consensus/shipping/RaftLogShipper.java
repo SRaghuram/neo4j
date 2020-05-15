@@ -317,6 +317,12 @@ public class RaftLogShipper
 
     private void scheduleTimeout( long deltaMillis )
     {
+        // if we have never matched before keep a tight loop - we've either just started up or are trying to bootstrap a new db
+        if ( matchIndex < 0 )
+        {
+            deltaMillis = 500;
+        }
+
         timeoutAbsoluteMillis = clock.millis() + deltaMillis;
 
         if ( timer == null )

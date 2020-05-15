@@ -7,15 +7,18 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -23,9 +26,13 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver.advertisedSocketAddressComparator;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.internal.helpers.collection.Iterables.last;
@@ -45,6 +52,52 @@ class ClusterFormationIT
     {
         executor.shutdownNow();
         assertTrue( executor.awaitTermination( 30, SECONDS ), () -> "Executor " + executor + " did not shutdown in time" );
+    }
+
+    @Test
+    void shouldBeAbleToWriteQuickly() throws Exception
+    {
+        // given
+        var cluster = clusterFactory.createCluster(
+                clusterConfig()
+                        .withNumberOfCoreMembers( 3 )
+                        .withNumberOfReadReplicas( 1 )
+                        .withSharedCoreParam( CausalClusteringSettings.log_shipping_retry_timeout, "20s" )
+        );
+        cluster.start();
+
+        var logShippingTimeout = cluster.randomCoreMember( false ).get().config().get( CausalClusteringSettings.log_shipping_retry_timeout );
+        assert logShippingTimeout.toSeconds() == 20; // if the log shipping timeout is less than about 10 seconds then this test will not be reliable
+
+        // then
+        var leader = cluster.awaitLeader();
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
+
+        var state = leader.resolveDependency( "neo4j", RaftMachine.class ).state();
+        assertEquals( 3, state.votingMembers().size() );
+
+        // when
+        var s = StopWatch.createStarted();
+        var createNode = executor.submit(
+                () -> cluster.coreTx( ( db, tx ) ->
+                                      {
+                                          tx.execute( "CREATE ()" );
+                                          tx.commit();
+                                          s.stop();
+                                      } )
+        );
+
+        // then
+        // performing the very first write should complete within the log shipping timeout
+        try
+        {
+            createNode.get( logShippingTimeout.toMillis(), MILLISECONDS );
+        }
+        catch ( TimeoutException e )
+        {
+            fail( String.format( "Creating a node should not take so long!", e.getMessage() ) );
+        }
+        assertThat( s.getTime( MILLISECONDS ) ).isLessThan( logShippingTimeout.dividedBy( 2 ).toMillis() );
     }
 
     @Test
