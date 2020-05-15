@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
@@ -32,46 +31,27 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
                                    longsToCopy: Array[(Int, Int)],
                                    refsToCopy: Array[(Int, Int)],
                                    cachedPropertiesToCopy: Array[(Int, Int)])
-                                  (val id: Id = Id.INVALID_ID) extends PipeWithSource(left) {
+                                  (val id: Id = Id.INVALID_ID) extends AbstractHashJoinPipe[LongArray](left, right) {
   private val width: Int = lhsOffsets.length
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
-
-    if (input.isEmpty)
-      return Iterator.empty
-
-    val rhsIterator = right.createResults(state)
-
-    if (rhsIterator.isEmpty)
-      return Iterator.empty
-
-    val table = buildProbeTable(input, state)
-
-    // This will only happen if all the lhs-values evaluate to null, which is probably rare.
-    // But, it's cheap to check and will save us from exhausting the rhs, so it's probably worth it
-    if (table.isEmpty)
-      return Iterator.empty
-
-    probeInput(rhsIterator, state, table)
-  }
-
-  private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
+  override def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
     val table = ProbeTable.createProbeTable[LongArray, CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
 
     for (current <- lhsInput) {
       val key = new Array[Long](width)
       fillKeyArray(current, key, lhsOffsets)
 
-      if (key(0) != -1)
+      if (key(0) != -1) {
         table.put(Values.longArray(key), current)
+      }
     }
 
     table
   }
 
-  private def probeInput(rhsInput: Iterator[CypherRow],
-                         queryState: QueryState,
-                         probeTable: ProbeTable[LongArray, CypherRow]): Iterator[CypherRow] =
+  override def probeInput(rhsInput: Iterator[CypherRow],
+                          queryState: QueryState,
+                          probeTable: ProbeTable[LongArray, CypherRow]): Iterator[CypherRow] =
     new PrefetchingIterator[CypherRow] {
       private val key = new Array[Long](width)
       private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
@@ -105,7 +85,6 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
         None
       }
     }
-
 }
 
 object NodeHashJoinSlottedPipe {
