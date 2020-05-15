@@ -21,7 +21,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.fabric.stream.QuerySubject;
 import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.fabric.stream.StatementResults;
 import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.impl.query.QueryExecution;
@@ -77,7 +79,8 @@ class Cypher2RxStreamTest
             return null;
         } ).when( queryExecution).request( anyLong() );
 
-        Flux<Record> records = StatementResults.create( querySubscriber -> queryExecution ).records();
+        StatementResult statementResult = StatementResults.connectVia( querySubscriber -> queryExecution, new QuerySubject.BasicQuerySubject() );
+        Flux<Record> records = statementResult.records();
         var subscriber = new ConcurrentSubscriber();
         records.subscribeWith( subscriber);
         secondRequestReference.set( subscriber::secondRequest );

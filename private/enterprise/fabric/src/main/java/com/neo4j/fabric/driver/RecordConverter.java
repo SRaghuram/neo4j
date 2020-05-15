@@ -22,6 +22,7 @@ import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Path;
 import org.neo4j.driver.types.Point;
 import org.neo4j.driver.types.Relationship;
+import org.neo4j.fabric.stream.SourceTagging;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
@@ -53,31 +54,19 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 class RecordConverter
 {
 
-    private static final int ID_MAX_BITS = 50;
-    private static final long TAG_MAX_VALUE = 0x3FFF;
-
     private final boolean hasSourceTag;
     private final long sourceTagValue;
 
     RecordConverter()
     {
-        this.hasSourceTag = true;
+        this.hasSourceTag = false;
         this.sourceTagValue = 0;
     }
 
     RecordConverter( long sourceTag )
     {
-        if ( sourceTag < 0 || TAG_MAX_VALUE < sourceTag )
-        {
-            throw new IllegalArgumentException( "Source tags must be in range 0-16383. Got: " + sourceTag );
-        }
         this.hasSourceTag = true;
-        this.sourceTagValue = shiftToMsb( sourceTag );
-    }
-
-    private static long shiftToMsb( long value )
-    {
-        return value << ID_MAX_BITS;
+        this.sourceTagValue = SourceTagging.makeSourceTag( sourceTag );
     }
 
     AnyValue convertValue( Value driverValue )
@@ -205,7 +194,7 @@ class RecordConverter
     {
         if ( hasSourceTag )
         {
-            return driverValue | sourceTagValue;
+            return SourceTagging.tagId( driverValue, sourceTagValue );
         }
         else
         {
