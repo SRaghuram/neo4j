@@ -93,6 +93,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.WriteProcedureCallTestBase
 
 object SlottedSpecSuite {
   val SIZE_HINT = 200
@@ -174,6 +175,7 @@ class SlottedExpressionTest extends ExpressionTestBase(ENTERPRISE.DEFAULT, Slott
                             with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                             with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
 class SlottedProcedureCallTest extends ProcedureCallTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+                               with WriteProcedureCallTestBase[EnterpriseRuntimeContext]
 class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedUnionTest extends UnionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
