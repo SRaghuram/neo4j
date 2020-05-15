@@ -17,22 +17,16 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.MorselArgumentStateBufferOutput
 import org.neo4j.cypher.internal.physicalplanning.MorselBufferOutput
 import org.neo4j.cypher.internal.physicalplanning.NoOutput
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy.OPERATOR_FUSION_DISABLED
 import org.neo4j.cypher.internal.physicalplanning.OutputDefinition
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
@@ -122,6 +116,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescripti
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeSlotsToCopy
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
@@ -616,29 +611,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case _ =>
         throw new CantCompileQueryException(s"$runtimeName does not yet support the plans including `$plan`, use another runtime.")
     }
-  }
-
-  private def computeSlotsToCopy(rhsSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, slots: SlotConfiguration): (Array[(Int, Int)], Array[(Int, Int)], Array[(Int, Int)]) = {
-    val copyLongsFromRHS = Array.newBuilder[(Int,Int)]
-    val copyRefsFromRHS = Array.newBuilder[(Int,Int)]
-    val copyCachedPropertiesFromRHS = Array.newBuilder[(Int,Int)]
-
-    // When executing the HashJoin, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
-    // part of the join comparison
-    rhsSlots.foreachSlotAndAliasesOrdered({
-      case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), _) if offset >= argumentSize.nLongs =>
-        copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-      case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), _) if offset >= argumentSize.nReferences =>
-        copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-      case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, already added by lhs
-      case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) => // do nothing, already added by lhs
-      case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), refSlot, _) =>
-        val offset = refSlot.offset
-        if (offset >= argumentSize.nReferences)
-          copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
-    })
-
-    (copyLongsFromRHS.result(), copyRefsFromRHS.result(), copyCachedPropertiesFromRHS.result())
   }
 
   def createMiddleOperators(middlePlans: Seq[LogicalPlan], headOperator: Operator): Array[MiddleOperator] = {

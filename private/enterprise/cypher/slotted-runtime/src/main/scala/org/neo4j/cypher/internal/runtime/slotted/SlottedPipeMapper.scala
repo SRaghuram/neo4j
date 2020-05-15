@@ -121,6 +121,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.TopNPipe
 import org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeSlotsToCopy
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
@@ -605,29 +606,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
     (nodePropsToCache, relPropsToCache)
   }
 
-  private def computeSlotsToCopy(rhsSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, slots: SlotConfiguration): (Array[(Int, Int)], Array[(Int, Int)], Array[(Int, Int)]) = {
-    val copyLongsFromRHS: mutable.Builder[(Int, Int), ArrayBuffer[(Int, Int)]] = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-    val copyRefsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-    val copyCachedPropertiesFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-
-    // When executing, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
-    // part of the join comparison
-    rhsSlots.foreachSlotAndAliasesOrdered({
-      case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), _) if offset >= argumentSize.nLongs =>
-        copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-      case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), _) if offset >= argumentSize.nReferences =>
-        copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-      case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, already added by lhs
-      case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), _, _) =>
-        val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
-        if (offset >= argumentSize.nReferences) {
-          copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
-        }
-    })
-
-    (copyLongsFromRHS.result().toArray, copyRefsFromRHS.result().toArray, copyCachedPropertiesFromRHS.result().toArray)
-  }
-
   private def chooseDistinctPipe(groupingExpressions: Map[String, internal.expressions.Expression],
                                  orderToLeverage: Seq[internal.expressions.Expression],
                                  slots: SlotConfiguration,
@@ -786,6 +764,30 @@ class SlottedPipeMapper(fallback: PipeMapper,
 }
 
 object SlottedPipeMapper {
+
+  def computeSlotsToCopy(rhsSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, slots: SlotConfiguration): (Array[(Int, Int)], Array[(Int, Int)], Array[(Int, Int)]) = {
+    val copyLongsFromRHS: mutable.Builder[(Int, Int), ArrayBuffer[(Int, Int)]] = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+    val copyRefsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+    val copyCachedPropertiesFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+
+    // When executing, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
+    // part of the join comparison
+    rhsSlots.foreachSlotAndAliasesOrdered({
+      case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), _) if offset >= argumentSize.nLongs =>
+        copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
+      case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), _) if offset >= argumentSize.nReferences =>
+        copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
+      case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, already added by lhs
+      case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) => // do nothing, already added by lhs
+      case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), _, _) =>
+        val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
+        if (offset >= argumentSize.nReferences) {
+          copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
+        }
+    })
+
+    (copyLongsFromRHS.result().toArray, copyRefsFromRHS.result().toArray, copyCachedPropertiesFromRHS.result().toArray)
+  }
 
   /**
    * We use these objects to figure out:
