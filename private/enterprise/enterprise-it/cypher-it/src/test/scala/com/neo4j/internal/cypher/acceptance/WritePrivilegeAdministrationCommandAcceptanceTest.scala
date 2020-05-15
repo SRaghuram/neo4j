@@ -414,71 +414,346 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
 
-  test("should create node when granted WRITE privilege to custom role for all databases and all labels") {
+  test("should not create node without WRITE privilege") {
     // GIVEN
     setupUserWithCustomRole()
 
-    // WHEN
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a'})")
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "CREATE()")
+      // THEN
+    } should have message "Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // THEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 as dummy")
-    }
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * TO custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
-      row.get("dummy") should be(1)
-    }) should be(1)
-
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+    execute("MATCH (n) RETURN n").toSet should have size 0
   }
 
-  test("should not be able to create node when denied WRITE privilege to custom role for all databases") {
+  test("should create node when granted WRITE privilege") {
     // GIVEN
     setupUserWithCustomRole()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a'})")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    setupTokens()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * TO custom")
+    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'a'})")
 
     // THEN
-    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
-      row.get("dummy") should be(1)
-    }) should be(1)
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a")))
+  }
 
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+  test("should not create node when denied WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
     execute("DENY WRITE ON GRAPH * TO custom")
-
-    // THEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'c'}) RETURN 1 as dummy")
-    }
-
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
 
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "CREATE()")
+      // THEN
+    } should have message "Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
     // THEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'd'}) RETURN 1 as dummy")
-    }
-
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
-
+    execute("MATCH (n) RETURN n").toSet should have size 0
   }
+
+  test("should not create relationship without WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    setupTokens()
+    execute("CREATE (:A),(:B)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
+      // THEN
+    } should have message "Create relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 0
+  }
+
+  test("should create relationship when GRANTED WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    setupTokens()
+    execute("CREATE (:A),(:B)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
+  }
+
+  test("should not create relationship when denied WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    setupTokens()
+    execute("CREATE (:A),(:B)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
+      // THEN
+    } should have message "Create relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 0
+  }
+
+  test("should not delete node without WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (a:A) DELETE a")
+      // THEN
+    } should have message "Delete node with labels 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 1
+  }
+
+  test("should delete node when granted WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (a:A) DELETE a")
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 0
+  }
+
+  test("should not delete node when denied WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("DENY WRITE ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (a:A) DELETE a")
+      // THEN
+    } should have message "Delete node with labels 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 1
+  }
+
+    test("should not delete relationship without WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:R]->()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
+      // THEN
+    } should have message "Delete relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
+  }
+
+  test("should delete relationship when granted WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:R]->()")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 0
+  }
+
+  test("should not delete relationship when denied WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("DENY WRITE ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:R]->()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
+      // THEN
+    } should have message "Delete relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
+  }
+
+  test("should not set and remove label without WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    setupTokens()
+    execute("CREATE (:B)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:B) SET n:A")
+      // THEN
+    } should have message "Set label for label 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
+      // THEN
+    } should have message "Remove label for label 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List("B"))))
+  }
+
+  test("should set and remove label when granted WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    setupTokens()
+    execute("CREATE (:B)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n:B) SET n:A")
+    executeOnDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
+
+    // THEN
+    execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List("A"))))
+  }
+
+  test("should not set and remove label when denied WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    setupTokens()
+    execute("CREATE (:B)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:B) SET n:A")
+      // THEN
+    } should have message "Set label for label 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
+      // THEN
+    } should have message "Remove label for label 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List("B"))))
+  }
+
+   test("should not set and remove property without WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a', prop: 'b'})")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
+      // THEN
+    } should have message "Set property for property 'name' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
+      // THEN
+    } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN properties(n) as props").toSet should be(Set(Map("props" -> Map("name" -> "a", "prop" -> "b"))))
+  }
+
+  test("should set and remove property when granted WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a', prop: 'b'})")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
+    executeOnDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
+
+    // THEN
+    execute("MATCH (n) RETURN properties(n) as props").toSet should be(Set(Map("props" -> Map("name" -> "b"))))
+  }
+
+  test("should not set and remove property when denied WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a', prop: 'b'})")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
+      // THEN
+    } should have message "Set property for property 'name' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
+      // THEN
+    } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN properties(n) as props").toSet should be(Set(Map("props" -> Map("name" -> "a", "prop" -> "b"))))
+  }
+
+  // Enforcement tests for mix of read and write
 
   Seq("interpreted", "slotted").foreach { runtime =>
     test(s"should read you own writes on nodes with WRITE and ACCESS privilege with $runtime") {
@@ -1047,60 +1322,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }
   }
 
-  test("should delete node when granted WRITE privilege to custom role for all databases and all labels") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
-
-    // WHEN
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a'})")
-
-    // THEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n: A) WITH n, n.name as name DETACH DELETE n RETURN name")
-    }
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * TO custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", "MATCH (n: A) WITH n, n.name as name DETACH DELETE n RETURN name", resultHandler = (row, _) => {
-      row.get("name") should be("a")
-    }) should be(1)
-
-    execute("MATCH (n) RETURN n.name").toSet should be(Set.empty)
-  }
-
-  test("should set and remove property when granted WRITE privilege to custom role for all databases and all labels") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
-
-    // WHEN
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a', prop: 'b'})")
-
-    // THEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
-    }
-
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
-    }
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * TO custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b' REMOVE n.prop") should be(0)
-
-    execute("MATCH (n) RETURN properties(n) as props").toSet should be(Set(Map("props" -> Map("name" -> "b"))))
-  }
-
   test("should not create new tokens, indexes or constraints when granted WRITE privilege") {
     // GIVEN
     setupUserWithCustomRole()
@@ -1228,20 +1449,11 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
   }
 
-  test("should be able to set and remove a label with just WRITE privilege") {
-    setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * TO custom")
-    execute("GRANT WRITE ON GRAPH * TO custom")
-
+  private def setupTokens(): Unit = {
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CALL db.createLabel('Label')")
-    execute("CREATE ({name:'Bob'})")
-
-    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
-    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set(Map("n.name" -> "Bob")))
-
-    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
-    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set.empty)
+    execute("CALL db.createLabel('A')")
+    execute("CALL db.createRelationshipType('R')")
+    execute("CALL db.createProperty('name')")
   }
 
 }

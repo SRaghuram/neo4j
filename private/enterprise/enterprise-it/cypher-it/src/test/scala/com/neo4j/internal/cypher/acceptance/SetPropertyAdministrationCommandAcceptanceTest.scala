@@ -422,6 +422,26 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
     execute("MATCH (n{prop:'value'}) RETURN n").toSet should be(empty)
   }
 
+  test("denying all writes prevents setting property") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET PROPERTY {prop} ON GRAPH * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE (:A)-[:R]->(:B)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
+      // THEN
+    } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    execute("MATCH (n{prop:'value'}) RETURN n").toSet should be(empty)
+  }
+
   test("deny set property should override general write permission") {
     // GIVEN
     setupUserWithCustomRole()

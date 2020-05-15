@@ -170,10 +170,10 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           // GIVEN
           execute("CREATE ROLE custom")
           execute("CREATE DATABASE foo")
-          execute(s"$grantOrDenyCommand WRITE ON GRAPH foo TO custom")
+          execute(s"$grantOrDenyCommand $verb LABEL * ON GRAPH foo TO custom")
 
           // WHEN
-          execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH $$db FROM custom", Map("db" -> "foo"))
+          execute(s"REVOKE $grantOrDenyCommand $verb LABEL * ON GRAPH $$db FROM custom", Map("db" -> "foo"))
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -431,6 +431,30 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
       // THEN
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List())))
+  }
+
+    test("deny set label should override general write permission") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT WRITE ON GRAPH * TO custom")
+    execute(s"DENY SET LABEL Label ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()")
+    execute("CALL db.createLabel('Label')")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      // THEN
+    } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List())))
   }
 
   test("denying all writes prevents removing labels") {
@@ -448,6 +472,29 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
       // THEN
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List("Label"))))
+  }
+
+  test("deny remove label should override general write permission") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT WRITE ON GRAPH * TO custom")
+    execute(s"DENY REMOVE LABEL Label ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      // THEN
+    } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List("Label"))))
   }
 
   test("setting a label that already exists will succeed if SET LABEL permission was granted") {

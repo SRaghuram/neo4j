@@ -576,4 +576,166 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
       tx.execute("CREATE (:A)")
     })
   }
+
+  // Mix of create/delete and write privileges
+
+  test("denying all writes prevents create node") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON GRAPH * NODES * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "CREATE (:Label)")
+      // THEN
+    } should have message "Create node with labels 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 0
+  }
+
+  test("deny create node should override general write permission") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("DENY CREATE ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "CREATE (:Label)")
+      // THEN
+    } should have message "Create node with labels 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 0
+  }
+
+  test("denying all writes prevents create relationship") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT CREATE ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A),(:B)")
+    execute("CALL db.createRelationshipType('R')")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (a:A), (b:B) CREATE (a)-[:R]->(b)")
+      // THEN
+    } should have message "Create relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 0
+  }
+
+  test("deny create relationship should override general write permission") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("DENY CREATE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A),(:B)")
+    execute("CALL db.createRelationshipType('R')")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (a:A), (b:B) CREATE (a)-[:R]->(b)")
+      // THEN
+    } should have message "Create relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 0
+  }
+
+  test("denying all writes prevents delete node") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT DELETE ON GRAPH * NODES * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) DELETE n")
+      // THEN
+    } should have message "Delete node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 1
+  }
+
+  test("deny delete node should override general write permission") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("DENY DELETE ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) DELETE n")
+      // THEN
+    } should have message "Delete node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n) RETURN n").toSet should have size 1
+  }
+
+  test("denying all writes prevents delete relationship") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT DELETE ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:R]->()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH ()-[r:R]->() DELETE r")
+      // THEN
+    } should have message "Delete relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
+  }
+
+  test("deny delete relationship should override general write permission") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("DENY DELETE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:R]->()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH ()-[r:R]->() DELETE r")
+      // THEN
+    } should have message "Delete relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
+  }
 }
