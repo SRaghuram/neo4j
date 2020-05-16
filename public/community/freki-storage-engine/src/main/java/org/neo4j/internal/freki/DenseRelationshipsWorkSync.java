@@ -51,7 +51,7 @@ public class DenseRelationshipsWorkSync
             commands.add( node );
         }
 
-        AsyncApply applyAsync( PageCacheTracer cacheTracer )
+        public AsyncApply applyAsync( PageCacheTracer cacheTracer )
         {
             return workSync.applyAsync( new DenseRelationshipsWork( commands, cacheTracer ) );
         }

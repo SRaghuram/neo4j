@@ -88,7 +88,8 @@ public class FrekiNodeImporter extends FrekiEntityImporter{
             labelsCursor = 0;
             hasLabelField = false;
 
-            super.endOfEntity( commandCreator );
+            commandCreator.close();
+            super.endOfEntity();
         } catch (Exception ke)
         {
             System.out.println("CommandCrreator error-"+ke.getMessage());

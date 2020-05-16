@@ -87,6 +87,10 @@ public class GraphUpdates
         this( stores, new ArrayList<>(), null, cursorTracer, memoryTracker );
     }
 
+    IntermediateBuffer[] intermediateBuffers = new IntermediateBuffer[NUM_BUFFERS];
+    ByteBuffer smallBuffer;
+    ByteBuffer maxBuffer;
+    ByteBuffer recordPointersBuffer;
     GraphUpdates( MainStores stores, Collection<StorageCommand> bigValueCommands,
             Consumer<StorageCommand> bigValueCommandConsumer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
@@ -95,10 +99,37 @@ public class GraphUpdates
         this.bigValueCommands = bigValueCommands;
         this.memoryTracker = memoryTracker;
         this.bigValueCommandConsumer = bigValueCommandConsumer != null ? bigValueCommandConsumer : bigValueCommands::add;
+
+
+        int x8Size = stores.largestMainStore().recordDataSize();
+        int x8EffectiveSize = x8Size - WORST_CASE_HEADER_AND_STUFF_SIZE;
+        intermediateBuffers[PROPERTIES] = new IntermediateBuffer( x8EffectiveSize );
+        intermediateBuffers[RELATIONSHIPS] = new IntermediateBuffer( x8EffectiveSize );
+        intermediateBuffers[DEGREES] = new IntermediateBuffer( x8EffectiveSize );
+        intermediateBuffers[RELATIONSHIPS_OFFSETS] = new IntermediateBuffer( x8EffectiveSize );
+        intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] = new IntermediateBuffer( SINGLE_VLONG_MAX_SIZE );
+        recordPointersBuffer = ByteBuffer.wrap( new byte[DUAL_VLONG_MAX_SIZE] );
+        intermediateBuffers[LABELS] = new IntermediateBuffer( x8EffectiveSize );
+
+        smallBuffer = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
+        maxBuffer = ByteBuffer.wrap( new byte[x8Size] );
+    }
+
+    private boolean createOnly = false;
+    public void setOnlyCreateMode(boolean creatOnly)
+    {
+        this.createOnly = creatOnly;
     }
 
     public NodeUpdates getOrLoad( long nodeId )
     {
+        if (createOnly)
+        {
+            NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCommandConsumer, cursorTracer );
+            updates.load();
+            mutations.put( nodeId, updates );
+            return updates;
+        }
         return mutations.getIfAbsentPut( nodeId, () ->
         {
             NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCommandConsumer, cursorTracer );
@@ -116,6 +147,7 @@ public class GraphUpdates
     public void extractUpdates( Consumer<StorageCommand> commands ) throws ConstraintViolationTransactionFailureException
     {
         List<StorageCommand> otherCommands = new ArrayList<>();
+        /*
         IntermediateBuffer[] intermediateBuffers = new IntermediateBuffer[NUM_BUFFERS];
         int x8Size = stores.largestMainStore().recordDataSize();
         int x8EffectiveSize = x8Size - WORST_CASE_HEADER_AND_STUFF_SIZE;
@@ -129,6 +161,7 @@ public class GraphUpdates
 
         ByteBuffer smallBuffer = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
         ByteBuffer maxBuffer = ByteBuffer.wrap( new byte[x8Size] );
+        */
         Header x1Header = new Header();
         Header xLHeader = new Header();
         for ( NodeUpdates mutation : mutations )
@@ -137,6 +170,11 @@ public class GraphUpdates
         }
         bigValueCommands.forEach( commands );
         otherCommands.forEach( commands );
+        if (createOnly) {
+            mutations.clear();
+            bigValueCommands.clear();
+            otherCommands.clear();
+        }
     }
 
     private abstract static class NodeDataModifier

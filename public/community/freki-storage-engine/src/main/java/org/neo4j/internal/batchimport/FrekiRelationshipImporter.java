@@ -11,6 +11,7 @@ import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.MissingRelationshipDataException;
 import org.neo4j.internal.batchimport.input.csv.Type;
 import org.neo4j.internal.freki.*;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.BatchingStoreBase;
 import org.neo4j.memory.MemoryTracker;
@@ -96,9 +97,31 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
         return true;
     }
 
+    long myCount = 0;
+    static long checkCount = 0;
+    static synchronized boolean checkForGC(long count)
+    {
+        if (checkCount < count)
+        {
+            checkCount = count;
+            return true;
+        }
+        return false;
+    }
     @Override
     public void endOfEntity()
     {
+        if (myCount++ % 300000 == 0) {
+            if (checkForGC( myCount )) {
+                System.out.print("|");
+                System.gc();
+                try {
+                    frekiBatchStores.stores.flushAndForce(IOLimiter.UNLIMITED, cursorTracer);
+                } catch (IOException io) {
+
+                }
+            }
+        }
         if (startNodeId == NO_ID || endNodeId == NO_ID)
             badCollector.collectBadRelationship( startId, group( startIdGroup ).name(), type, endId, group( endIdGroup ).name(),
                                 1 == IdMapper.ID_NOT_FOUND ? startId : endId );
@@ -109,9 +132,10 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
                 }
                 try
                 {
-                    CommandCreator commandCreator = new CommandCreator(commands, frekiBatchStores.getStores() , null, cursorTracer, memoryTracker);
+                    CommandCreator commandCreator = new CommandCreator(commands, frekiBatchStores.getStores() , null, cursorTracer, memoryTracker, true);
                     commandCreator.visitCreatedRelationship(relationshipId, typeId, startNodeId, endNodeId, propsAdd);
-                    super.endOfEntity( commandCreator );
+                    commandCreator.close();
+                    super.endOfEntity();
                 } catch (UnsupportedOperationException ue) {
                     System.out.print("1");
                     badCollector.collectBadRelationship(startId, group(startIdGroup).name(), type, endId, group(endIdGroup).name(),

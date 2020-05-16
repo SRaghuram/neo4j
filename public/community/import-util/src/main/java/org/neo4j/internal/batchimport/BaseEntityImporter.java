@@ -23,12 +23,14 @@ public abstract class BaseEntityImporter implements InputEntityVisitor
     protected long propertyId;
     BatchingStoreBase baseNeoStore;
     protected TokenHolders tokenHolders;
+    protected PageCacheTracer pageCacheTracer;
 
     public BaseEntityImporter(BatchingStoreBase baseNeoStore, IdMapper idMapper, PropertyValueLookup inputIdLookup, DataImporter.Monitor monitor, PageCacheTracer pageCacheTracer)
     {
         this.baseNeoStore = baseNeoStore;
         this.idMapper = idMapper;
         this.inputIdLookup = inputIdLookup;
+        this.pageCacheTracer = pageCacheTracer;
         this.cursorTracer = pageCacheTracer.createPageCursorTracer( ENTITY_IMPORTER_TAG );
         this.monitor = monitor;
         this.tokenHolders = StoreTokens.getTokenHolders(baseNeoStore, cursorTracer);

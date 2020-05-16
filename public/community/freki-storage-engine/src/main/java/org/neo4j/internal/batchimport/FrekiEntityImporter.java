@@ -40,7 +40,6 @@ public class FrekiEntityImporter extends BaseEntityImporter{
     protected FrekiBatchStores frekiBatchStores;
     MemoryTracker memoryTracker;
 
-
     public FrekiEntityImporter(BatchingStoreBase basicNeoStore, IdMapper idMapper, PropertyValueLookup inputIdLookup,
                                DataImporter.Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker) {
         super(basicNeoStore, idMapper, inputIdLookup, monitor, pageCacheTracer);
@@ -86,23 +85,11 @@ public class FrekiEntityImporter extends BaseEntityImporter{
         return true;
     }
 
-    public void endOfEntity(CommandCreator commandCreator)
+    public void endOfEntity()
     {
         try {
-            //graphUpdates.extractUpdates(commands::add);
-            commandCreator.close();
             for (StorageCommand command : commands) {
                 if (command instanceof FrekiCommand.SparseNode) {
-                    //FrekiCommand.RecordChange change : node
-                    /*Iterator<FrekiCommand.RecordChange> recordChanges = ((FrekiCommand.SparseNode) command).iterator();
-                    while (recordChanges.hasNext()) {
-                        FrekiCommand.RecordChange recordChange = recordChanges.next();
-                        int sizeExp = recordChange.sizeExp();
-                        SimpleStore store = frekiBatchStores.stores.mainStore(sizeExp);
-                        try (PageCursor pageCursor = store.openWriteCursor(cursorTracer)) {
-                            store.write(pageCursor, recordChange.after, IGNORE, cursorTracer);
-                        }
-                    }*/
                     for ( FrekiCommand.RecordChange change : (FrekiCommand.SparseNode)command )
                     {
                         int sizeExp = change.sizeExp();
@@ -131,12 +118,14 @@ public class FrekiEntityImporter extends BaseEntityImporter{
                 else
                     System.out.println("Unknown command:["+command.toString()+"]");
             }
+            if (denseRelationshipUpdates != null)
+            {
+                denseRelationshipUpdates.applyAsync( pageCacheTracer );
+                denseRelationshipUpdates = null;
+            }
         } catch (IOException io)
         {
             throw new UnderlyingStorageException( io.getMessage());
-        }catch (KernelException ko)
-        {
-            throw new UnderlyingStorageException( ko.getMessage());
         }
     }
     @Override

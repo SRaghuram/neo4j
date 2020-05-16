@@ -53,13 +53,20 @@ public class CommandCreator implements TxStateVisitor
     private final GraphUpdates graphUpdates;
 
     public CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer,
-            MemoryTracker memoryTracker )
+                           MemoryTracker memoryTracker )
+    {
+        this( commands, stores, constraintSemantics, cursorTracer, memoryTracker, false);
+    }
+    public CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker, boolean createOnly )
     {
         this.commands = commands;
         this.stores = stores;
         this.constraintSemantics = constraintSemantics;
         this.cursorTracer = cursorTracer;
         this.graphUpdates = new GraphUpdates( stores, cursorTracer, memoryTracker );
+        if (createOnly)
+            graphUpdates.setOnlyCreateMode( createOnly );
     }
 
     @Override
