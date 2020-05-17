@@ -132,6 +132,7 @@ mkdir -p %{buildroot}/%{neo4jhome}/certificates
 mkdir -p %{buildroot}/%{neo4jhome}/plugins
 mkdir -p %{buildroot}/%{neo4jhome}/data/databases
 mkdir -p %{buildroot}/%{neo4jhome}/data/dbms
+mkdir -p %{buildroot}/%{neo4jhome}/data/dumps
 mkdir -p %{buildroot}/%{neo4jhome}/data/transactions
 mkdir -p %{buildroot}/%{neo4jhome}/import
 mkdir -p %{buildroot}/%{_sysconfdir}/neo4j
@@ -169,6 +170,7 @@ install -m 0644 manpages/* %{buildroot}/%{_mandir}/man1
 %dir %{neo4jhome}/import
 %dir %{neo4jhome}/data/databases
 %dir %{neo4jhome}/data/dbms
+%dir %{neo4jhome}/data/dumps
 %attr(-,neo4j,neo4j) %dir %{_localstatedir}/run/neo4j
 
 %{_datadir}/neo4j
