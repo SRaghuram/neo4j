@@ -615,6 +615,40 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     measureExpandInto(100, "optional-expand-into-big", logicalQuery)
   }
 
+  test("measure shortest paths") {
+    val testName = "shortest-paths"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    val chainCount = 6
+    val chainDepth = 6
+    val (start, end) = given {
+      linkedChainGraph(chainCount, chainDepth)
+    }
+
+    // We need to restart the transaction after constructing the graph or we will track all the memory usage from it
+    runtimeTestSupport.restartTx()
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("path")
+      .shortestPath("(x)-[r*]->(y)", pathName = Some("path"), all = true)
+      .input(Seq("x", "y"))
+      .build()
+
+    val inputArray = Array(Array[Any](start, end), Array[Any](start, end), Array[Any](start, end))
+
+    val rows = 3
+    val heapDumpInterval = 1
+    val input = finiteCyclicInputWithPeriodicHeapDump(inputArray, rows, heapDumpInterval, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
   test("measure partial top - ordered column has one value") {
     val testName = "partial-top-one"
     val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
