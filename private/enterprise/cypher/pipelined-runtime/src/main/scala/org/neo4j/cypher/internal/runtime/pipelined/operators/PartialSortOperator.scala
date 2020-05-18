@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.Comparator
 
-import org.neo4j.collection.trackable.HeapTrackingAppendList
+import org.neo4j.collection.trackable.HeapTrackingArrayList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -33,7 +33,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           suffixComparator: Comparator[MorselRow])
                          (val id: Id = Id.INVALID_ID) extends Operator {
 
-  private type ResultsBuffer = HeapTrackingAppendList[MorselRow]
+  private type ResultsBuffer = HeapTrackingArrayList[MorselRow]
   private class ResultsBufferAndIndex(val buffer: ResultsBuffer, var currentIndex: Int)
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -48,7 +48,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
   private class PartialSortState(val memoryTracker: MemoryTracker) extends OperatorState {
     var lastSeen: MorselRow = _
-    var resultsBuffer: ResultsBuffer = HeapTrackingAppendList.newAppendList(16, memoryTracker)
+    var resultsBuffer: ResultsBuffer = HeapTrackingArrayList.newArrayList(16, memoryTracker)
     var remainingResults: ResultsBufferAndIndex = _
     var currentMorsel: Morsel = _
 
@@ -142,7 +142,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
       taskState.remainingResults = new ResultsBufferAndIndex(buffer, 0)
       taskState.lastSeen = null
-      taskState.resultsBuffer = HeapTrackingAppendList.newAppendList(16, taskState.memoryTracker)
+      taskState.resultsBuffer = HeapTrackingArrayList.newArrayList(16, taskState.memoryTracker)
     }
   }
 }
