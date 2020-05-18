@@ -113,6 +113,11 @@ abstract class FrekiCursorsTest
 
         long store()
         {
+            return store( NO_STORE_MONITOR );
+        }
+
+        long store( StoreMonitor monitor )
+        {
             try
             {
                 graphUpdates.extractUpdates( command ->
@@ -121,11 +126,15 @@ abstract class FrekiCursorsTest
                     {
                         if ( command instanceof FrekiCommand.SparseNode )
                         {
-                            writeSparseNode( (FrekiCommand.SparseNode) command, stores, null, NULL );
+                            FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
+                            monitor.sparseNode( sparseNode );
+                            writeSparseNode( sparseNode, stores, null, NULL );
                         }
                         else if ( command instanceof FrekiCommand.DenseNode )
                         {
-                            writeDenseNode( singletonList( (FrekiCommand.DenseNode) command ), stores.denseStore, NULL );
+                            FrekiCommand.DenseNode denseNode = (FrekiCommand.DenseNode) command;
+                            monitor.denseNode( denseNode );
+                            writeDenseNode( singletonList( denseNode ), stores.denseStore, NULL );
                         }
                     }
                     catch ( IOException e )
@@ -282,4 +291,19 @@ abstract class FrekiCursorsTest
 
         abstract void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor, RelationshipSelection selection );
     }
+
+    interface StoreMonitor
+    {
+        default void sparseNode( FrekiCommand.SparseNode node )
+        {
+        }
+
+        default void denseNode( FrekiCommand.DenseNode node )
+        {
+        }
+    }
+
+    private static final StoreMonitor NO_STORE_MONITOR = new StoreMonitor()
+    {
+    };
 }

@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.commons.lang3.tuple.Triple;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.multimap.MutableMultimap;
@@ -909,6 +910,66 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
                 }
             }
         }
+    }
+
+    @Test
+    void shouldReuseRecordsWhenRewritingASingleXL()
+    {
+        // given
+        MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
+        int nextKey = 0;
+        long startingLargeXHighId = largeStore.getHighId();
+        for ( int i = 0; i < 20; i++ )
+        {
+            properties.put( nextKey++, stringValue( "Some string " + i ) );
+        }
+        long nodeId = node().properties( properties ).store();
+        assertThat( largeStore.getHighId() ).isEqualTo( startingLargeXHighId + 1 );
+
+        // when
+        existingNode( nodeId ).property( nextKey, intValue( 101010 ) ).store();
+        assertThat( largeStore.getHighId() ).isEqualTo( startingLargeXHighId + 1 );
+    }
+
+    @Test
+    void shouldReuseRecordsWhenRewritingChainXL()
+    {
+        // given
+        MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
+        int nextKey = 0;
+        long startingLargeXHighId = largeStore.getHighId();
+        for ( int i = 0; i < 100; i++ )
+        {
+            properties.put( nextKey++, stringValue( "Some string " + i ) );
+        }
+        MutableLong lastX8Id = new MutableLong();
+        long nodeId = node().properties( properties ).store( new StoreMonitor()
+        {
+            @Override
+            public void sparseNode( FrekiCommand.SparseNode node )
+            {
+                FrekiCommand.RecordChange change = node.change( largeStore.recordSizeExponential() );
+                while ( change != null )
+                {
+                    lastX8Id.setValue( change.recordId() );
+                    change = change.next();
+                }
+            }
+        } );
+        assertThat( largeStore.getHighId() ).isEqualTo( startingLargeXHighId + 2 );
+
+        // when
+        existingNode( nodeId ).property( nextKey, intValue( 101010 ) ).store( new StoreMonitor()
+        {
+            @Override
+            public void sparseNode( FrekiCommand.SparseNode node )
+            {
+                FrekiCommand.RecordChange change = node.change( largeStore.recordSizeExponential() );
+                assertThat( change.recordId() ).isEqualTo( lastX8Id.longValue() );
+                assertThat( change.next() ).isNull();
+            }
+        } );
+        assertThat( largeStore.getHighId() ).isEqualTo( startingLargeXHighId + 2 );
     }
 
     private Iterable<RelationshipSelection> somePermutationsOfRelationshipSelection( int type )
