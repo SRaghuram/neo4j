@@ -38,6 +38,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
@@ -49,7 +50,7 @@ class SecurityAdministrationCommandLoggingIT
     private DatabaseManagementService managementService;
     private GraphDatabaseFacade database;
     private File logFilename;
-    private StubLoginContext adminContext = new StubLoginContext( "fakeAdmin", AccessMode.Static.FULL );
+    private final StubLoginContext adminContext = new StubLoginContext( "fakeAdmin", AccessMode.Static.FULL );
 
     @Inject
     protected TestDirectory testDirectory;
@@ -425,7 +426,7 @@ class SecurityAdministrationCommandLoggingIT
     /**
      * Get all lines from the security log file, ignoring system setup lines
      */
-    private List<String> readLinesInSecurityLog( int expected ) throws IOException
+    private List<String> readLinesInSecurityLog( int shouldEndWithAtLeast ) throws IOException
     {
         FileSystemAbstraction fs = testDirectory.getFileSystem();
         List<String> logLines = new ArrayList<>();
@@ -447,8 +448,8 @@ class SecurityAdministrationCommandLoggingIT
                 }
             }
         }
-        assertThat( String.join( "\n\t", logLines ), logLines, hasSize( expected ) );
-        return logLines;
+        assertThat( String.join( "\n\t", logLines ), logLines, hasSize( greaterThanOrEqualTo( shouldEndWithAtLeast ) ) );
+        return logLines.subList( logLines.size() - shouldEndWithAtLeast, logLines.size() );
     }
 
     private void execute( LoginContext loginContext, String query )
