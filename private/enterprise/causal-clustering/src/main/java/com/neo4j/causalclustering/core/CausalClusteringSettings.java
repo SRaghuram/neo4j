@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.core.consensus.leader_transfer.SelectionStrategies;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheFactory;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
@@ -30,6 +31,7 @@ import org.neo4j.logging.Level;
 import static com.neo4j.causalclustering.core.CausalClusterSettingConstraints.validateInitialDiscoveryMembers;
 import static com.neo4j.causalclustering.core.CausalClusterSettingConstraints.validateMiddlewareConfig;
 import static com.neo4j.causalclustering.core.ServerGroupName.SERVER_GROUP_NAME;
+import static com.neo4j.causalclustering.core.consensus.leader_transfer.SelectionStrategies.NO_BALANCING;
 import static com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader.hasPlugin;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
@@ -85,6 +87,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
             "The window should be significantly larger than typical communication delays to make conflicts unlikely." )
     public static final Setting<DurationRange> failure_resolution_window =
             newBuilder( "causal_clustering.failure_resolution_window", DURATION_RANGE, DurationRange.fromSeconds( 3, 6 ) ).build();
+
+    @Description( "Whether or not the cluster should attempt to automatically ensure each cluster member holds the leader role for an equal number of " +
+                  "databases. Note that if a `leadership_priority_group` is specified for a given database, it will be ignored by this automatic process." )
+    public static final Setting<SelectionStrategies> leader_balancing =
+            newBuilder( "causal_clustering.leadership_balancing", ofEnum( SelectionStrategies.class ), NO_BALANCING ).build();
 
     @Internal
     @Description( "The time limit within which a leadership transfer request should be completed, otherwise the leader will resume accepting writes." )

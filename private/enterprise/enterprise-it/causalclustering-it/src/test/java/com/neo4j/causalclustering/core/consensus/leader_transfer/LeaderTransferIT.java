@@ -9,16 +9,19 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.ServerGroupName;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.IntFunction;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.test.extension.Inject;
@@ -26,9 +29,12 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
+@TestInstance( PER_METHOD )
 class LeaderTransferIT
 {
     private static final String databaseFoo = "dbfoo";
@@ -40,15 +46,13 @@ class LeaderTransferIT
 
     @Inject
     private ClusterFactory clusterFactory;
-    private Cluster cluster;
 
-    @BeforeAll
-    void setUp() throws ExecutionException, InterruptedException
+    Cluster setUpCluster() throws ExecutionException, InterruptedException
     {
-        cluster = clusterFactory.createCluster(
+        var cluster = clusterFactory.createCluster(
                 clusterConfig()
                         .withSharedCoreParam( new LeadershipPriorityGroupSetting( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).setting(), "prio" )
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ).setting(), "prio" )
+                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).setting(), "prio" )
                         .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseFoo ).setting(), priFoo )
                         .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseBar ).setting(), prioBar )
                         .withNumberOfCoreMembers( 3 )
@@ -69,11 +73,13 @@ class LeaderTransferIT
                         .withSharedCoreParam( CausalClusteringSettings.leader_transfer_interval, "5s" ) );
 
         cluster.start();
+        return cluster;
     }
 
     @Test
-    void shouldTransferLeadershipOfInitialDbsToNewMember() throws TimeoutException
+    void shouldTransferLeadershipOfInitialDbsToNewMember() throws Exception
     {
+        var cluster = setUpCluster();
         cluster.awaitLeader();
         var additionalCore = cluster.addCoreMemberWithId( 3 );
         additionalCore.config().set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) );
@@ -81,12 +87,13 @@ class LeaderTransferIT
         additionalCore.start();
 
         assertLeaderIsOnCorrectMember( cluster, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, additionalCore );
-        assertLeaderIsOnCorrectMember( cluster, GraphDatabaseSettings.SYSTEM_DATABASE_NAME, additionalCore );
+        assertLeaderIsOnCorrectMember( cluster, SYSTEM_DATABASE_NAME, additionalCore );
     }
 
     @Test
     void shouldTransferLeadershipToPrioritisedMemberWhenDatabaseHasBeenCreated() throws Exception
     {
+        var cluster = setUpCluster();
         createDatabase( databaseFoo, cluster );
         createDatabase( databaseBar, cluster );
 
@@ -97,9 +104,58 @@ class LeaderTransferIT
         assertLeaderIsOnCorrectMember( cluster, databaseFoo, cluster.getCoreMemberById( FOO_MEMBER_ID ) );
     }
 
+    @Test
+    void shouldEventuallyBalanceLeadershipsToNewMembers() throws Exception
+    {
+        // given
+        var systemDbLeader = 0;
+        var config = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).setting(), "prio" )
+                .withSharedCoreParam( CausalClusteringSettings.leader_transfer_interval, "5s" )
+                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" )
+                .withInstanceCoreParam( CausalClusteringSettings.server_groups, id -> id == systemDbLeader ? "prio" : "" );
+        var cluster = clusterFactory.createCluster( config );
+        cluster.start();
+
+        assertLeaderIsOnCorrectMember( cluster, SYSTEM_DATABASE_NAME, cluster.getCoreMemberById( systemDbLeader ) );
+
+        var dbNames = IntStream.iterate( 0, i -> i + 1 )
+                               .mapToObj( idx -> "database-" + idx )
+                               .limit( 6 )
+                               .collect( Collectors.toList() );
+
+        for ( String dbName : dbNames )
+        {
+            createDatabase( dbName, cluster );
+        }
+
+        for ( String dbName : dbNames )
+        {
+            assertDatabaseEventuallyStarted( dbName, cluster );
+        }
+
+        // when
+        var newMember = cluster.addCoreMemberWithId( 3 );
+        newMember.start();
+
+        Predicate<Boolean> identity = bool -> bool;
+        // then
+        assertEventually( "New member has leaderships", () -> hasAnyLeaderships( cluster, newMember, dbNames ),
+                          identity, 3, TimeUnit.MINUTES );
+    }
+
     private static void assertLeaderIsOnCorrectMember( Cluster cluster, String database, CoreClusterMember desiredLeader )
     {
         assertEventually( "leader is on correct member " + desiredLeader, () -> cluster.awaitLeader( database ),
                 coreClusterMember -> coreClusterMember.id().equals( desiredLeader.id() ), 1, TimeUnit.MINUTES );
+    }
+
+    private static boolean hasAnyLeaderships( Cluster cluster, CoreClusterMember member, List<String> dbNames )
+    {
+        return dbNames.stream()
+                      .map( dbName -> cluster.getMemberWithAnyRole( dbName, Role.LEADER ) )
+                      .anyMatch( m -> Objects.equals( member, m ) );
     }
 }

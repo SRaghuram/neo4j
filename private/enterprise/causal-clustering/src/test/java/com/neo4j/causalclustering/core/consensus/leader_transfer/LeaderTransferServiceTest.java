@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -72,9 +73,10 @@ class LeaderTransferServiceTest
         var life = new LifeSupport();
         var databaseManager = new StubClusteredDatabaseManager();
         var messageHandler = new TransferLeaderTest.TrackingMessageHandler();
+        var leaderService = new StubLeaderService( Map.of() );
         var leaderTransferService =
                 new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myself, leaderMemberBackoff,
-                                           NullLogProvider.nullLogProvider(), clock );
+                                           NullLogProvider.nullLogProvider(), clock, leaderService );
 
         // when
         life.add( leaderTransferService );
@@ -94,12 +96,13 @@ class LeaderTransferServiceTest
         var life = new LifeSupport();
         var databaseManager = new StubClusteredDatabaseManager();
         var raftMembership = new TransferLeaderTest.StubRaftMembershipResolver( myself, core1 );
-        databaseWithLeader( databaseManager, myself, "foo", raftMembership );
+        var fooDb = databaseWithLeader( databaseManager, myself, "foo", raftMembership );
         var messageHandler = new TransferLeaderTest.TrackingMessageHandler();
+        var leaderService = new StubLeaderService( Map.of( fooDb, myself ) );
 
         var leaderTransferService =
                 new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myself, leaderMemberBackoff,
-                                           NullLogProvider.nullLogProvider(), clock );
+                                           NullLogProvider.nullLogProvider(), clock, leaderService );
 
         // when
         life.add( leaderTransferService );

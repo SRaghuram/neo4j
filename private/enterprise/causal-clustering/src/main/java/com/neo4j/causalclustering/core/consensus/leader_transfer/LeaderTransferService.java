@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
+import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Clock;
@@ -27,6 +28,8 @@ import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.VisibleForTesting;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_balancing;
+
 public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferHandler
 {
     private final TransferLeaderJob transferLeaderJob;
@@ -39,7 +42,8 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     public LeaderTransferService( JobScheduler jobScheduler, Config config, Duration leaderTransferInterval,
                                   DatabaseManager<ClusteredDatabaseContext> databaseManager,
                                   Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-                                  MemberId myself, Duration leaderMemberBackoff, LogProvider logProvider, Clock clock )
+                                  MemberId myself, Duration leaderMemberBackoff, LogProvider logProvider, Clock clock,
+                                  LeaderService leaderService )
     {
         this.databasePenalties = new DatabasePenalties( leaderMemberBackoff, clock );
         this.jobScheduler = jobScheduler;
@@ -51,8 +55,11 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
                                .orElse( RaftMembership.EMPTY );
 
         var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myself );
+
+        var nonPriorityStrategy = pickSelectionStrategy( config, databaseManager, leaderService, myself );
+
         this.transferLeaderJob = new TransferLeaderJob( config, messageHandler, myself,
-                                                        databasePenalties, SelectionStrategy.NO_OP, membershipResolver, leadershipsResolver );
+                                                        databasePenalties, nonPriorityStrategy, membershipResolver, leadershipsResolver );
         this.transferLeaderOnShutdown = new TransferLeaderOnShutdown(
                 config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver, logProvider );
     }
@@ -99,6 +106,20 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         catch ( ExecutionException | InterruptedException e )
         {
             throw new RuntimeException( e );
+        }
+    }
+
+    private SelectionStrategy pickSelectionStrategy( Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
+                                                     LeaderService leaderService, MemberId myself )
+    {
+        var strategyChoice = config.get( leader_balancing );
+        switch ( strategyChoice )
+        {
+        case EQUAL_BALANCING:
+            return new RandomEvenStrategy( () -> databaseManager.registeredDatabases().keySet(), leaderService, myself );
+        case NO_BALANCING:
+        default:
+            return SelectionStrategy.NO_OP;
         }
     }
 }

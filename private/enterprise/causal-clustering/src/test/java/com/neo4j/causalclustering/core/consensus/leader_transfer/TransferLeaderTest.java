@@ -103,7 +103,7 @@ class TransferLeaderTest
     }
 
     @Test
-    void shouldNotTransferIfPriorityGroupsIsEmpty()
+    void shouldNotTransferIfPriorityGroupsIsEmptyAndStrategyIsNoOp()
     {
         // Priority group does not exist
         var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "" ) ).build();
@@ -150,7 +150,7 @@ class TransferLeaderTest
     }
 
     @Test
-    void shouldHandleMoreThanOneDatbaseInPro()
+    void shouldHandleMoreThanOneDatbaseInPrio()
     {
         var databaseOne = DatabaseIdFactory.from( "one", randomUUID() );
         var databaseIds = Set.of( databaseOne, DatabaseIdFactory.from( "two", randomUUID() ) );

@@ -318,7 +318,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferBackoff = globalConfig.get( CausalClusteringSettings.leader_transfer_member_backoff );
 
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
-                raftMessageDispatcher, myIdentity, leaderTransferBackoff, logProvider, globalModule.getGlobalClock() );
+                raftMessageDispatcher, myIdentity, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService );
 
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
                 leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker );
