@@ -7,6 +7,8 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
+import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -25,7 +27,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -35,11 +39,16 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.kernel.impl.security.User;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -47,11 +56,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
 
 @ClusterExtension
 @TestDirectoryExtension
 class CustomSecurityInitializationIT
 {
+    private static final String AUTH_FILENAME = "auth";
+    private static final String ROLES_FILENAME = "roles";
     private static final String INIT_FILENAME = "initFile";
     @Inject
     private ClusterFactory clusterFactory;
@@ -60,6 +72,7 @@ class CustomSecurityInitializationIT
 
     private DatabaseManagementService dbms;
     private Cluster cluster;
+    private final LogProvider logProvider = NullLogProvider.getInstance();
 
     @BeforeEach
     void setup() throws IOException
@@ -97,6 +110,30 @@ class CustomSecurityInitializationIT
             Result result = tx.execute( "SHOW ROLES" );
             assertTrue( result.stream().anyMatch( row -> row.get( "role" ).equals( "testRole" ) ) );
             result.close();
+        }
+    }
+
+    @Test
+    void shouldDoCustomInitializationStandaloneWithAuthRoleMigration() throws IOException
+    {
+        TreeSet<String> users = new TreeSet<>();
+        users.add( "neo4j" );
+        writeTestAuthFile( getAuthFile( directory.homeDir() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
+        writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j");
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+                //.impermanent()
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .build();
+        GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
+        try ( Transaction tx = db.beginTx() )
+        {
+            ArrayList<String> roleUsers = new ArrayList<>();
+            Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
+            result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
+            result.close();
+            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
         }
     }
 
@@ -232,6 +269,35 @@ class CustomSecurityInitializationIT
 
     @Test
     @Timeout( value = 10, unit = TimeUnit.MINUTES )
+    void shouldDoCustomInitializationClusteredWithAuthRoleMigration() throws Exception
+    {
+        TreeSet<String> users = new TreeSet<>();
+        users.add( "neo4j" );
+        var clusterConfig = ClusterConfig.clusterConfig()
+                .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
+                .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
+                .withNumberOfCoreMembers( 3 );
+        cluster = clusterFactory.createCluster( clusterConfig );
+        for ( ClusterMember member : cluster.coreMembers() )
+        {
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            org.apache.commons.io.FileUtils.forceMkdir( home );
+            writeTestAuthFile( getAuthFile( home ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
+            writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
+            writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j");
+        }
+        cluster.start();
+        cluster.systemTx( ( db, tx ) -> {
+            ArrayList<String> roleUsers = new ArrayList<>();
+            Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
+            result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
+            result.close();
+            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
+        } );
+    }
+
+    @Test
+    @Timeout( value = 10, unit = TimeUnit.MINUTES )
     void shouldLogInitializationClustered() throws Exception
     {
         var clusterConfig = ClusterConfig.clusterConfig()
@@ -276,13 +342,60 @@ class CustomSecurityInitializationIT
         return homeDir.toPath().resolve( "scripts" ).resolve( INIT_FILENAME );
     }
 
+    private Path getAuthFile( File homeDir )
+    {
+        return homeDir.toPath().resolve( "data" ).resolve( "dbms" ).resolve( AUTH_FILENAME );
+    }
+
+    private Path getRoleFile( File homeDir )
+    {
+        return homeDir.toPath().resolve( "data" ).resolve( "dbms" ).resolve( ROLES_FILENAME );
+    }
+
     private boolean isFileNotFoundException( Throwable e )
     {
         return e != null && (e instanceof FileNotFoundException || isFileNotFoundException( e.getCause() ));
     }
 
+    private void safeCreateUser( FileUserRepository userRepository, User user )
+    {
+        try
+        {
+            userRepository.create( user );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private void safeCreateRole( FileRoleRepository roleRepository, RoleRecord role )
+    {
+        try
+        {
+            roleRepository.create( role );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private void writeTestAuthFile( Path path, User... users )
+    {
+        FileUserRepository userRepository = new FileUserRepository( directory.getFileSystem(), path.toFile(), logProvider );
+        Arrays.stream( users ).forEach( user -> safeCreateUser( userRepository, user ) );
+    }
+
+    private void writeTestRolesFile( Path path, RoleRecord... roles )
+    {
+        FileRoleRepository roleRepository = new FileRoleRepository( directory.getFileSystem(), path.toFile(), logProvider );
+        Arrays.stream( roles ).forEach( role -> safeCreateRole( roleRepository, role ) );
+    }
+
     private void writeTestInitializationFile( Path initFile, String... lines ) throws IOException
     {
+        //noinspection ResultOfMethodCallIgnored
         initFile.getParent().toFile().mkdirs();
         File file = initFile.toFile();
         BufferedWriter writer = new BufferedWriter( new FileWriter( file ) );
@@ -317,7 +430,7 @@ class CustomSecurityInitializationIT
 
     private static class TestResultVisitor implements Result.ResultVisitor<RuntimeException>
     {
-        private List<Result.ResultRow> results = new ArrayList<>();
+        private final List<Result.ResultRow> results = new ArrayList<>();
 
         @Override
         public boolean visit( Result.ResultRow row )

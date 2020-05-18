@@ -9,6 +9,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDataba
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import com.neo4j.server.security.enterprise.systemgraph.CustomSecurityInitializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,12 +29,14 @@ import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurit
 public class EnterpriseVersion_0_35 extends KnownEnterpriseSecurityComponentVersion
 {
     private final RoleRepository roleRepository;
+    private CustomSecurityInitializer customSecurityInitializer;
     public static final int VERSION = 0;
 
-    public EnterpriseVersion_0_35( Log log, RoleRepository roleRepository )
+    public EnterpriseVersion_0_35( Log log, RoleRepository roleRepository, CustomSecurityInitializer customSecurityInitializer )
     {
         super( VERSION, "Neo4j 3.5", log );
         this.roleRepository = roleRepository;
+        this.customSecurityInitializer = customSecurityInitializer;
     }
 
     @Override
@@ -98,6 +101,7 @@ public class EnterpriseVersion_0_35 extends KnownEnterpriseSecurityComponentVers
         }
         doMigrateRoles( tx, roleRepository, latest );
         setVersionProperty( tx, latest.version );
+        customSecurityInitializer.initialize( tx );
     }
 
     private void doMigrateRoles( Transaction tx, RoleRepository roleRepository, KnownEnterpriseSecurityComponentVersion latest ) throws Exception

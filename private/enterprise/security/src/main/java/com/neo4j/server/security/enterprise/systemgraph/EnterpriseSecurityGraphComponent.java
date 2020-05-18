@@ -19,24 +19,17 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersi
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseComponentVersion;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
@@ -49,19 +42,19 @@ import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphComponent
 {
-    private final Log log;
     private final UserRepository defaultAdminRepository;
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
             new KnownSystemComponentVersions<>( new NoEnterpriseComponentVersion() );
+    private final CustomSecurityInitializer customSecurityInitializer;
     public static final int LATEST_VERSION = 4;
     public static final String COMPONENT = "security-privileges";
 
     public EnterpriseSecurityGraphComponent( Log log, RoleRepository migrationRoleRepository, UserRepository defaultAdminRepository, Config config )
     {
         super( config );
-        this.log = log;
         this.defaultAdminRepository = defaultAdminRepository;
-        knownSecurityComponentVersions.add( new EnterpriseVersion_0_35( log, migrationRoleRepository ) );
+        this.customSecurityInitializer = new CustomSecurityInitializer( config, log );
+        knownSecurityComponentVersions.add( new EnterpriseVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_1_36( log, config ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_2_40( log ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_3_41d1( log ) );
@@ -145,10 +138,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         Map<String,Set<String>> admins = new HashMap<>();
         admins.put( PredefinedRoles.ADMIN, Set.of( decideOnAdminUsername( tx ) ) );
         latest.initializePrivileges( tx, PredefinedRoles.roles, admins );
-        if ( config.isExplicitlySet( GraphDatabaseSettings.system_init_file ) )
-        {
-            doCustomSecurityInitialization( tx );
-        }
+        customSecurityInitializer.initialize( tx );
     }
 
     /**
@@ -198,61 +188,6 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         {
             throw latestComponent.logAndCreateException(
                     "No roles defined, and cannot determine which user should be admin. " + "Please use `neo4j-admin set-default-admin` to select an admin. " );
-        }
-    }
-
-    private void doCustomSecurityInitialization( Transaction tx ) throws IOException
-    {
-        // this is first startup and custom initialization specified
-        File initFile = config.get( GraphDatabaseSettings.system_init_file ).toFile();
-        BufferedReader reader = new BufferedReader( new FileReader( initFile ) );
-        String[] commands = reader.lines().filter( line -> !line.matches( "^\\s*//" ) ).collect( Collectors.joining( "\n" ) ).split( ";\\s*\n" );
-        reader.close();
-        for ( String command : commands )
-        {
-            if ( commandIsValid( command ) )
-            {
-                log.info( "Executing security initialization command: " + command );
-                Result result = tx.execute( command );
-                result.accept( new LoggingResultVisitor( result.columns() ) );
-                result.close();
-            }
-            else
-            {
-                log.warn( "Ignoring invalid security initialization command: " + command );
-            }
-        }
-    }
-
-    private boolean commandIsValid( String command )
-    {
-        return !command.matches( "^\\s*.*//" ) // Ignore comments
-                && command.replaceAll( "\n", " " ).matches( "^\\s*\\w+.*" ); // Ignore blank lines
-    }
-
-    private class LoggingResultVisitor implements Result.ResultVisitor<RuntimeException>
-    {
-        private final List<String> columns;
-
-        private LoggingResultVisitor( List<String> columns )
-        {
-            this.columns = columns;
-        }
-
-        @Override
-        public boolean visit( Result.ResultRow row )
-        {
-            StringBuilder sb = new StringBuilder();
-            for ( String column : columns )
-            {
-                if ( sb.length() > 0 )
-                {
-                    sb.append( ", " );
-                }
-                sb.append( column ).append( ":" ).append( row.get( column ).toString() );
-            }
-            log.info( "Result: " + sb.toString() );
-            return true;
         }
     }
 }
