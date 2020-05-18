@@ -938,4 +938,56 @@ trait FullSupportMemoryManagementProfilingBase [CONTEXT <: RuntimeContext] {
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
   }
+
+  test("measure left outer hash join") {
+    val testName = "leftOuterHashJoin"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    var nodes = given { nodeGraph(DEFAULT_INPUT_LIMIT.toInt) }
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .leftOuterHashJoin("x")
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    var data = nodes.map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    data = null
+
+    runPeakMemoryUsageProfiling(logicalQuery, shuffledData, heapDumpFileNamePrefix)
+  }
+
+  test("measure right outer hash join") {
+    val testName = "rightOuterHashJoin"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    var nodes = given { nodeGraph(DEFAULT_INPUT_LIMIT.toInt) }
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .rightOuterHashJoin("x")
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    var data = nodes.map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    data = null
+
+    runPeakMemoryUsageProfiling(logicalQuery, shuffledData, heapDumpFileNamePrefix)
+  }
 }
