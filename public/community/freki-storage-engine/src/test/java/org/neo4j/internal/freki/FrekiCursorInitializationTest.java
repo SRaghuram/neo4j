@@ -45,7 +45,7 @@ class FrekiCursorInitializationTest extends FrekiCursorsTest
 
         // when
         var cursor = cursorFactory.allocateNodeCursor( NULL );
-        cursor.single( node.id );
+        cursor.single( node );
         assertThat( cursor.next() ).isTrue();
         assertThat( cursor.next() ).isFalse();
 

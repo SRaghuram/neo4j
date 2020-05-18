@@ -24,7 +24,6 @@ import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -77,7 +76,7 @@ import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
  * OBSERVE For the time being this tree is per database, for simplicity. But in the end we'd really want to have one tree per node,
  * i.e. completely node-centric trees.
  */
-class DenseRelationshipStore extends LifecycleAdapter implements Closeable
+class DenseRelationshipStore extends LifecycleAdapter implements SimpleDenseRelationshipStore
 {
     private static final int MAX_ENTRY_VALUE_SIZE = 256;
 
@@ -94,7 +93,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 tracer, Sets.immutable.empty() );
     }
 
-    MutableIntObjectMap<PropertyUpdate> loadRelationshipProperties( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing,
+    @Override
+    public MutableIntObjectMap<PropertyUpdate> loadRelationshipProperties( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing,
             BiFunction<Integer,ByteBuffer,PropertyUpdate> update, PageCursorTracer cursorTracer )
     {
         try
@@ -125,7 +125,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
+    @Override
+    public ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
     {
         // If type is defined (i.e. NOT -1) then we can seek by direction too, otherwise we'll have to filter on direction
         DenseKey from = layout.newKey().initialize( nodeId,
@@ -149,7 +150,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, long neighbourNodeId,
+    @Override
+    public ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, long neighbourNodeId,
             PageCursorTracer cursorTracer )
     {
         if ( direction == Direction.BOTH )
@@ -183,7 +185,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    RelationshipData getRelationship( long nodeId, int type, Direction direction, long otherNodeId, long internalId, PageCursorTracer cursorTracer )
+    @Override
+    public RelationshipData getRelationship( long nodeId, int type, Direction direction, long otherNodeId, long internalId, PageCursorTracer cursorTracer )
     {
         DenseKey key = layout.newKey().initialize( nodeId, type, direction, otherNodeId, internalId );
         try ( RelationshipIterator iterator = new RelationshipIterator( tree.seek( key, key, cursorTracer ), d -> true, bigPropertyValueStore, cursorTracer ) )
@@ -263,7 +266,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         };
     }
 
-    Updater newUpdater( PageCursorTracer cursorTracer ) throws IOException
+    @Override
+    public Updater newUpdater( PageCursorTracer cursorTracer ) throws IOException
     {
         Writer<DenseKey,DenseValue> writer = tree.writer( cursorTracer );
         return new Updater()
@@ -295,7 +299,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         };
     }
 
-    void checkpoint( IOLimiter ioLimiter, PageCursorTracer cursorTracer )
+    @Override
+    public void checkpoint( IOLimiter ioLimiter, PageCursorTracer cursorTracer )
     {
         tree.checkpoint( ioLimiter, cursorTracer );
     }
@@ -312,7 +317,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         tree.close();
     }
 
-    Stats gatherStats( PageCursorTracer cursorTracer )
+    @Override
+    public Stats gatherStats( PageCursorTracer cursorTracer )
     {
         Stats stats = new Stats( tree.sizeInBytes() );
         DenseKey from = new DenseKey();
@@ -351,14 +357,6 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             throw new UncheckedIOException( e );
         }
         return stats;
-    }
-
-    interface Updater extends Closeable
-    {
-        void insertRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> properties,
-                Function<PropertyUpdate,ByteBuffer> version );
-
-        void deleteRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing );
     }
 
     private static class DenseLayout extends Layout.Adapter<DenseKey,DenseValue>
@@ -641,23 +639,6 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    interface RelationshipData
-    {
-        long internalId();
-
-        long originNodeId();
-
-        long neighbourNodeId();
-
-        int type();
-
-        RelationshipDirection direction();
-
-        Iterator<StorageProperty> properties();
-
-        boolean hasProperties();
-    }
-
     private static class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
     {
         private final SimpleBigValueStore bigPropertyValueStore;
@@ -760,51 +741,4 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             throw new UnsupportedOperationException();
         }
     };
-
-    static class Stats
-    {
-        private final long totalTreeByteSize;
-        private long numberOfNodes;
-        private long numberOfRelationships;
-        private long effectiveRelationshipsByteSize;
-        private long effectiveByteSize;
-
-        Stats( long totalTreeByteSize )
-        {
-            this.totalTreeByteSize = totalTreeByteSize;
-        }
-
-        private void consume( int nodeNumberOfRelationships, int nodeByteSize, int nodeRelationshipsByteSize )
-        {
-            this.numberOfNodes++;
-            this.numberOfRelationships += nodeNumberOfRelationships;
-            this.effectiveRelationshipsByteSize += nodeRelationshipsByteSize;
-            this.effectiveByteSize += nodeByteSize;
-        }
-
-        long numberOfRelationships()
-        {
-            return numberOfRelationships;
-        }
-
-        long numberOfNodes()
-        {
-            return numberOfNodes;
-        }
-
-        long effectiveRelationshipsByteSize()
-        {
-            return effectiveRelationshipsByteSize;
-        }
-
-        long effectiveByteSize()
-        {
-            return effectiveByteSize;
-        }
-
-        long totalTreeByteSize()
-        {
-            return totalTreeByteSize;
-        }
-    }
 }

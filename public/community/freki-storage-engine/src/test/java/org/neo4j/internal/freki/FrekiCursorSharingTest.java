@@ -147,7 +147,7 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         assertNextProperty( firstPropertyCursor, 1, value1v1 );
 
         // when
-        nodeCursor.single( otherNode.id );
+        nodeCursor.single( otherNode );
         assertThat( nodeCursor.next() ).isTrue();
         var secondPropertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
         nodeCursor.properties( secondPropertyCursor );
@@ -239,7 +239,7 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         assertThat( propertyCursor.next() ).isFalse();
 
         // when
-        nodeCursor.single( otherNode.id );
+        nodeCursor.single( otherNode );
         assertThat( nodeCursor.next() ).isTrue();
         nodeCursor.properties( propertyCursor );
         assertNextProperty( propertyCursor, 1, value1v2 );

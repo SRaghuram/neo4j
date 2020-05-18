@@ -45,6 +45,7 @@ import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.util.concurrent.AsyncApply;
@@ -131,6 +132,16 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.SparseNode node ) throws IOException
     {
+        writeSparseNode( node, stores, idUpdates, cursorTracer );
+        if ( indexUpdates != null )
+        {
+            checkExtractIndexUpdates( node );
+        }
+    }
+
+    static void writeSparseNode( FrekiCommand.SparseNode node, MainStores stores, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer )
+            throws IOException
+    {
         for ( FrekiCommand.RecordChange change : node )
         {
             int sizeExp = change.sizeExp();
@@ -139,13 +150,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             {
                 boolean updated = change.mode() == Mode.UPDATE;
                 Record afterRecord = change.after != null ? change.after : deletedRecord( sizeExp, change.recordId() );
-                store.write( cursor, afterRecord, idUpdates == null || updated ? IGNORE : idUpdates, cursorTracer );
+                store.write( cursor, afterRecord, idUpdateListener == null || updated ? IGNORE : idUpdateListener, cursorTracer );
             }
-        }
-
-        if ( indexUpdates != null )
-        {
-            checkExtractIndexUpdates( node );
         }
     }
 
@@ -263,6 +269,23 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             denseRelationshipUpdates = denseRelationshipsWorkSync.newBatch();
         }
         denseRelationshipUpdates.add( node );
+    }
+
+    static void writeDenseNode( List<FrekiCommand.DenseNode> nodes, SimpleDenseRelationshipStore store, PageCursorTracer cursorTracer ) throws IOException
+    {
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( cursorTracer ) )
+        {
+            for ( FrekiCommand.DenseNode node : nodes )
+            {
+                node.relationshipUpdates.forEachKeyValue( ( type, typedRelationships ) ->
+                {
+                    typedRelationships.deleted.forEach( relationship ->
+                            updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing ) );
+                    typedRelationships.inserted.forEach( relationship -> updater.insertRelationship( relationship.internalId, node.nodeId, type,
+                            relationship.otherNodeId, relationship.outgoing, relationship.propertyUpdates, u -> u.after ) );
+                } );
+            }
+        }
     }
 
     @Override

@@ -49,7 +49,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,7 +64,6 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.DefaultIdController;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
-import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexConfigCompleter;
@@ -97,7 +95,6 @@ import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
-import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -1960,81 +1957,6 @@ class FrekiStorageEngineGraphWritesIT
         public Iterator<StorageCommand> iterator()
         {
             return commands.iterator();
-        }
-    }
-
-    private static class RelationshipSpec
-    {
-        private final long id;
-        private final long startNodeId;
-        private final int type;
-        private final long endNodeId;
-        private final Set<StorageProperty> properties;
-
-        RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties, CommandCreationContext commandCreationContext )
-        {
-            this( startNodeId, type, endNodeId, properties, commandCreationContext.reserveRelationship( startNodeId ) );
-        }
-
-        RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties, long id )
-        {
-            this.startNodeId = startNodeId;
-            this.type = type;
-            this.endNodeId = endNodeId;
-            this.properties = properties;
-            this.id = id;
-        }
-
-        RelationshipDirection direction( long fromPovOfNodeId )
-        {
-            return startNodeId == fromPovOfNodeId ? endNodeId == fromPovOfNodeId ? RelationshipDirection.LOOP : RelationshipDirection.OUTGOING
-                                                  : RelationshipDirection.INCOMING;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "RelationshipSpec{" + "startNodeId=" + startNodeId + ", type=" + type + ", endNodeId=" + endNodeId + ", properties=" + properties + ", id=" +
-                    id + '}';
-        }
-
-        @Override
-        public boolean equals( Object o )
-        {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            RelationshipSpec that = (RelationshipSpec) o;
-            return startNodeId == that.startNodeId && type == that.type && endNodeId == that.endNodeId && Objects.equals( properties, that.properties ) &&
-                    id == that.id;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash( id, startNodeId, type, endNodeId, properties );
-        }
-
-        void create( TxStateVisitor target )
-        {
-            try
-            {
-                target.visitCreatedRelationship( id, type, startNodeId, endNodeId, properties );
-            }
-            catch ( ConstraintValidationException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        long neighbourNode( long fromNodeIdPov )
-        {
-            return startNodeId == fromNodeIdPov ? endNodeId : startNodeId;
         }
     }
 

@@ -30,9 +30,9 @@ import org.neo4j.util.concurrent.WorkSync;
 
 class DenseRelationshipsWorkSync
 {
-    private WorkSync<DenseRelationshipStore,DenseRelationshipsWork> workSync;
+    private WorkSync<SimpleDenseRelationshipStore,DenseRelationshipsWork> workSync;
 
-    DenseRelationshipsWorkSync( DenseRelationshipStore store )
+    DenseRelationshipsWorkSync( SimpleDenseRelationshipStore store )
     {
         workSync = new WorkSync<>( store );
     }
@@ -57,7 +57,7 @@ class DenseRelationshipsWorkSync
         }
     }
 
-    private static class DenseRelationshipsWork implements Work<DenseRelationshipStore,DenseRelationshipsWork>
+    private static class DenseRelationshipsWork implements Work<SimpleDenseRelationshipStore,DenseRelationshipsWork>
     {
         private final List<FrekiCommand.DenseNode> commands;
         private PageCacheTracer tracer;
@@ -76,23 +76,11 @@ class DenseRelationshipsWorkSync
         }
 
         @Override
-        public void apply( DenseRelationshipStore store ) throws Exception
+        public void apply( SimpleDenseRelationshipStore store ) throws Exception
         {
             try ( PageCursorTracer cursorTracer = tracer.createPageCursorTracer( "Dense relationships" ) )
             {
-                try ( DenseRelationshipStore.Updater updater = store.newUpdater( cursorTracer ) )
-                {
-                    for ( FrekiCommand.DenseNode node : commands )
-                    {
-                        node.relationshipUpdates.forEachKeyValue( ( type, typedRelationships ) ->
-                        {
-                            typedRelationships.deleted.forEach( relationship ->
-                                    updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing ) );
-                            typedRelationships.inserted.forEach( relationship -> updater.insertRelationship( relationship.internalId, node.nodeId, type,
-                                    relationship.otherNodeId, relationship.outgoing, relationship.propertyUpdates, u -> u.after ) );
-                        } );
-                    }
-                }
+                FrekiTransactionApplier.writeDenseNode( commands, store, cursorTracer );
             }
         }
     }

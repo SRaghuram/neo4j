@@ -48,7 +48,7 @@ class MainStores extends Life
     public final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
     public final SimpleBigValueStore bigPropertyValueStore;
-    public final DenseRelationshipStore denseStore;
+    public final SimpleDenseRelationshipStore denseStore;
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
     private final Record[] deletedReferenceRecords;
 
@@ -58,7 +58,7 @@ class MainStores extends Life
     {
         SimpleStore[] mainStores = new SimpleStore[4];
         BigPropertyValueStore bigPropertyValueStore = null;
-        DenseRelationshipStore denseStore = null;
+        SimpleDenseRelationshipStore denseStore = null;
         boolean success = false;
         try
         {
@@ -97,7 +97,7 @@ class MainStores extends Life
         }
     }
 
-    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, DenseRelationshipStore denseStore )
+    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, SimpleDenseRelationshipStore denseStore )
     {
         this.mainStores = mainStores;
         this.mainStore = mainStores[0];

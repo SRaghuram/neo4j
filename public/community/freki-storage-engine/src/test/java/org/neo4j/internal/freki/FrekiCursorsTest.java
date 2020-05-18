@@ -19,7 +19,6 @@
  */
 package org.neo4j.internal.freki;
 
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
@@ -35,8 +34,6 @@ import java.util.stream.IntStream;
 
 import org.neo4j.internal.freki.GraphUpdates.NodeUpdates;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -46,7 +43,6 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
-import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -55,9 +51,13 @@ import org.neo4j.values.storable.Value;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.internal.freki.FrekiTransactionApplier.writeDenseNode;
+import static org.neo4j.internal.freki.FrekiTransactionApplier.writeSparseNode;
 import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
 import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @ExtendWith( {RandomExtension.class, EphemeralFileSystemExtension.class} )
 abstract class FrekiCursorsTest
@@ -67,7 +67,9 @@ abstract class FrekiCursorsTest
 
     InMemoryTestStore store = new InMemoryTestStore( 0 );
     InMemoryTestStore largeStore = new InMemoryTestStore( 3 );
-    MainStores stores = new MainStores( new SimpleStore[]{store, null, null, largeStore}, new InMemoryBigValueTestStore(), null );
+    InMemoryBigValueTestStore bigPropertyValueStore = new InMemoryBigValueTestStore();
+    InMemoryDenseRelationshipTestStore denseStore = new InMemoryDenseRelationshipTestStore( bigPropertyValueStore );
+    MainStores stores = new MainStores( new SimpleStore[]{store, null, null, largeStore}, bigPropertyValueStore, denseStore );
     SingleThreadedCursorAccessPatternTracer accessPatternTracer = new SingleThreadedCursorAccessPatternTracer();
     FrekiCursorFactory cursorFactory = new FrekiCursorFactory( stores, accessPatternTracer );
 
@@ -78,21 +80,30 @@ abstract class FrekiCursorsTest
 
     Node node()
     {
-        return new Node( store.nextId( PageCursorTracer.NULL ) );
+        return new Node( store.nextId( NULL ) );
+    }
+
+    Node existingNode( long id )
+    {
+        return new Node( id );
     }
 
     class Node
     {
         private final NodeUpdates updates;
-        private long nextInternalId = 1;
         private final GraphUpdates graphUpdates;
+        private final FrekiRelationshipIdGenerator relationshipIdGenerator;
 
         Node( long id )
         {
-            graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL,
+            graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), NULL,
                     EmptyMemoryTracker.INSTANCE );
-            graphUpdates.create( id );
+            if ( !store.exists( null, id ) )
+            {
+                graphUpdates.create( id );
+            }
             updates = graphUpdates.getOrLoad( id );
+            relationshipIdGenerator = new FrekiRelationshipIdGenerator( stores, NULL, EmptyMemoryTracker.INSTANCE );
         }
 
         long id()
@@ -100,32 +111,29 @@ abstract class FrekiCursorsTest
             return updates.nodeId();
         }
 
-        Record store()
+        long store()
         {
             try
             {
-                MutableObject<Record> x1 = new MutableObject<>();
                 graphUpdates.extractUpdates( command ->
                 {
-                    for ( FrekiCommand.RecordChange change : (FrekiCommand.SparseNode) command )
+                    try
                     {
-                        Record record = change.after;
-                        SimpleStore store = stores.mainStore( record.sizeExp() );
-                        try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                        if ( command instanceof FrekiCommand.SparseNode )
                         {
-                            store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+                            writeSparseNode( (FrekiCommand.SparseNode) command, stores, null, NULL );
                         }
-                        catch ( IOException e )
+                        else if ( command instanceof FrekiCommand.DenseNode )
                         {
-                            throw new UncheckedIOException( e );
-                        }
-                        if ( record.sizeExp() == 0 )
-                        {
-                            x1.setValue( record );
+                            writeDenseNode( singletonList( (FrekiCommand.DenseNode) command ), stores.denseStore, NULL );
                         }
                     }
+                    catch ( IOException e )
+                    {
+                        throw new UncheckedIOException( e );
+                    }
                 } );
-                return x1.getValue();
+                return updates.nodeId();
             }
             catch ( ConstraintViolationTransactionFailureException e )
             {
@@ -135,9 +143,9 @@ abstract class FrekiCursorsTest
 
         FrekiNodeCursor storeAndPlaceNodeCursorAt()
         {
-            Record record = store();
-            FrekiNodeCursor nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
-            nodeCursor.single( record.id );
+            long id = store();
+            FrekiNodeCursor nodeCursor = cursorFactory.allocateNodeCursor( NULL );
+            nodeCursor.single( id );
             assertTrue( nodeCursor.next() );
             return nodeCursor;
         }
@@ -191,7 +199,7 @@ abstract class FrekiCursorsTest
 
         private long createRelationship( int type, Node otherNode, IntObjectMap<Value> properties )
         {
-            long internalId = nextInternalId++;
+            long internalId = relationshipIdGenerator.reserveInternalRelationshipId( id() );
             Collection<StorageProperty> addedProperties = convertPropertiesMap( properties );
             updates.createRelationship( internalId, otherNode.id(), type, true, addedProperties );
             if ( id() != otherNode.id() )

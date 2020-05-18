@@ -784,7 +784,7 @@ class GraphUpdates
     {
         // meta
         private final SparseRecordAndData sparse;
-        private final DenseRelationshipStore store;
+        private final SimpleDenseRelationshipStore store;
         private final SimpleBigValueStore bigValueStore;
         private final Consumer<StorageCommand> bigValueConsumer;
         private final PageCursorTracer cursorTracer;
@@ -794,7 +794,7 @@ class GraphUpdates
         // TODO it feels like we've simply moving tx-state data from one form to another and that's probably true and can probably be improved on later
         private final MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
 
-        DenseRecordAndData( SparseRecordAndData sparse, DenseRelationshipStore store, SimpleBigValueStore bigValueStore,
+        DenseRecordAndData( SparseRecordAndData sparse, SimpleDenseRelationshipStore store, SimpleBigValueStore bigValueStore,
                 Consumer<StorageCommand> bigValueConsumer, PageCursorTracer cursorTracer )
         {
             this.sparse = sparse;

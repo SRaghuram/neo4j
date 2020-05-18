@@ -132,6 +132,11 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
         return format( "TestStore[x%d,highId:%d]", recordXFactor( sizeExp ), nextId.get() );
     }
 
+    void setHighId( long highId )
+    {
+        this.nextId.set( highId );
+    }
+
     // Basically this isn't used, it's just something to call close()
     static PageCursor NO_PAGE_CURSOR = new ByteArrayPageCursor( new byte[0] );
 }

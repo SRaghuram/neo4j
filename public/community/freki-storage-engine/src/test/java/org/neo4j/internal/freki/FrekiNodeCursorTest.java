@@ -144,7 +144,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         var createdNodeIds = LongSets.mutable.empty();
         for ( var i = 0; i < 20; i++ )
         {
-            createdNodeIds.add( node().store().id );
+            createdNodeIds.add( node().store() );
         }
 
         // when
@@ -170,8 +170,8 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
             properties.put( 0, intValue( i ) );
             properties.put( 1, stringValue( "name_" + i ) );
-            Record nodeRecord = node().properties( properties ).store();
-            expectedProperties.put( nodeRecord.id, properties );
+            var node = node().properties( properties ).store();
+            expectedProperties.put( node, properties );
         }
 
         // when
@@ -232,15 +232,15 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         var createdNodeIdsBatch2 = LongSets.mutable.empty();
         for ( var i = 0; i < 7; i++ )
         {
-            createdNodeIdsBatch0.add( node().store().id );
+            createdNodeIdsBatch0.add( node().store() );
         }
         for ( var i = 7; i < 14; i++ )
         {
-            createdNodeIdsBatch1.add( node().store().id );
+            createdNodeIdsBatch1.add( node().store() );
         }
         for ( var i = 14; i < 20; i++ )
         {
-            createdNodeIdsBatch2.add( node().store().id );
+            createdNodeIdsBatch2.add( node().store() );
         }
 
         // when
@@ -268,7 +268,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
     void shouldNotBatchScanOutOfRange()
     {
         // given
-        long id = node().store().id;
+        long id = node().store();
         FrekiNodeCursor cursor = cursorFactory.allocateNodeCursor( NULL );
         FrekiNodeScan scan = new FrekiNodeScan();
 
@@ -400,7 +400,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Node node = node();
         node.relationship( type, otherNode );
         FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
-        Record otherNodeRecord = otherNode.store();
+        var otherNodeId = otherNode.store();
 
         // when
         try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
@@ -411,7 +411,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             assertTrue( relationshipCursor.next() );
             assertEquals( type, relationshipCursor.type() );
             assertEquals( cursor.entityReference(), relationshipCursor.sourceNodeReference() );
-            assertEquals( otherNodeRecord.id, relationshipCursor.targetNodeReference() );
+            assertEquals( otherNodeId, relationshipCursor.targetNodeReference() );
             assertFalse( relationshipCursor.next() );
         }
     }
@@ -428,8 +428,6 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         node1.relationship( type, node2 );
         node3.relationship( type, node1 );
         FrekiNodeCursor cursor = node1.storeAndPlaceNodeCursorAt();
-        Record node2Record = node2.store();
-        Record node3Record = node3.store();
 
         // when
         MutableLongSet otherNodes;
@@ -446,7 +444,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
                 otherNodes.add( relationshipCursor.neighbourNodeReference() );
             }
         }
-        assertEquals( LongSets.mutable.of( node2Record.id, node3Record.id ), otherNodes );
+        assertEquals( LongSets.mutable.of( node2.id(), node3.id() ), otherNodes );
     }
 
     @ParameterizedTest
@@ -462,8 +460,8 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         node1.relationship( type1, node2 );
         node1.relationship( type2, node3 );
         FrekiNodeCursor cursor = node1.storeAndPlaceNodeCursorAt();
-        Record node2Record = node2.store();
-        Record node3Record = node3.store();
+        node2.store();
+        node3.store();
 
         // when
         try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
@@ -473,11 +471,11 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             // then
             assertTrue( relationshipCursor.next() );
             assertEquals( type1, relationshipCursor.type() );
-            assertEquals( node2Record.id, relationshipCursor.neighbourNodeReference() );
+            assertEquals( node2.id(), relationshipCursor.neighbourNodeReference() );
 
             assertTrue( relationshipCursor.next() );
             assertEquals( type2, relationshipCursor.type() );
-            assertEquals( node3Record.id, relationshipCursor.neighbourNodeReference() );
+            assertEquals( node3.id(), relationshipCursor.neighbourNodeReference() );
 
             assertFalse( relationshipCursor.next() );
         }
@@ -500,10 +498,10 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         node1.relationship( type2, node4 );
         node5.relationship( type2, node1 );
         FrekiNodeCursor cursor = node1.storeAndPlaceNodeCursorAt();
-        Record node2Record = node2.store();
-        Record node3Record = node3.store();
-        Record node4Record = node4.store();
-        Record node5Record = node5.store();
+        node2.store();
+        node3.store();
+        node4.store();
+        node5.store();
 
         // when
         MutableIntObjectMap<MutableLongSet> otherNodes;
@@ -519,8 +517,8 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             }
         }
         MutableIntObjectMap<MutableLongSet> expectedOtherNodes = IntObjectMaps.mutable.empty();
-        expectedOtherNodes.put( type1, LongSets.mutable.of( node2Record.id, node3Record.id ) );
-        expectedOtherNodes.put( type2, LongSets.mutable.of( node4Record.id, node5Record.id ) );
+        expectedOtherNodes.put( type1, LongSets.mutable.of( node2.id(), node3.id() ) );
+        expectedOtherNodes.put( type2, LongSets.mutable.of( node4.id(), node5.id() ) );
         assertEquals( expectedOtherNodes, otherNodes );
     }
 
@@ -632,7 +630,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         node.relationship( type, otherNode, properties );
         node.relationship( type, thirdNode );
         FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
-        Record otherNodeRecord = otherNode.store();
+        otherNode.store();
         thirdNode.store();
         int numRelationships;
         try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
@@ -645,7 +643,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             while ( relationshipCursor.next() )
             {
                 propertyConnector.connect( relationshipCursor, propertyCursor );
-                assertEquals( relationshipCursor.neighbourNodeReference() == otherNodeRecord.id ? properties : IntObjectMaps.mutable.empty(),
+                assertEquals( relationshipCursor.neighbourNodeReference() == otherNode.id() ? properties : IntObjectMaps.mutable.empty(),
                         readProperties( propertyCursor ) );
                 numRelationships++;
             }
@@ -1085,12 +1083,10 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             private MutableIntObjectMap<Value> properties;
             private MutableLongSet relationships;
             private MutableIntObjectMap<MutableIntObjectMap<Value>> relationshipProperties;
-            private int createdNodeIdCounter;
 
             private void init()
             {
-                createdNodeIdCounter = 0;
-                node = new Node( createdNodeIdCounter++ );
+                node = node();
                 labels = new int[numLabels];
                 relationships = LongSets.mutable.empty();
                 properties = IntObjectMaps.mutable.empty();
@@ -1158,7 +1154,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             {
                 for ( int i = 0; i < num; i++ )
                 {
-                    Node otherNode = new Node( createdNodeIdCounter++ );
+                    Node otherNode = node();
                     Node sourceNode = outgoing ? node : otherNode;
                     Node targetNode = outgoing ? otherNode : node;
 
