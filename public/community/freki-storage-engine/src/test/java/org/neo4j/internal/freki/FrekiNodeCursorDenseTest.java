@@ -28,7 +28,6 @@ import java.util.Set;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.storageengine.util.SingleDegree;
-import org.neo4j.test.rule.RandomRule;
 
 import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +38,6 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 class FrekiNodeCursorDenseTest extends FrekiCursorsTest
 {
-    @RandomRule.Seed( 1589789400946L )
     @Test
     void shouldGetDegreesFromDenseNodeWithHighIds()
     {
@@ -49,7 +47,7 @@ class FrekiNodeCursorDenseTest extends FrekiCursorsTest
         var node = node().labels( 1, 2, 3 ).property( 0, stringValue( "Dude" ) );
         var nodeId = node.id();
         node.store();
-        var numTypes = 25;
+        var numTypes = 250;
         var expectedDegrees = new EagerDegrees();
         Set<RelationshipSpec> expectedRelationships = new HashSet<>();
 

@@ -310,7 +310,7 @@ class GraphUpdates
             intermediateBuffers[RELATIONSHIPS].flip();
             intermediateBuffers[RELATIONSHIPS_OFFSETS].flip();
             intermediateBuffers[DEGREES].flip();
-            int relsSize = intermediateBuffers[RELATIONSHIPS].limit() + intermediateBuffers[RELATIONSHIPS_OFFSETS].limit();
+            int relsSize = intermediateBuffers[RELATIONSHIPS].currentSize() + intermediateBuffers[RELATIONSHIPS_OFFSETS].currentSize();
             isDense |= relsSize > intermediateBuffers[RELATIONSHIPS].capacity();
             if ( isDense )
             {
@@ -331,8 +331,8 @@ class GraphUpdates
             int miscSize = 0;
             x1Header.clearMarks();
             x1Header.mark( Header.OFFSET_END, true );
-            x1Header.mark( Header.FLAG_LABELS, intermediateBuffers[LABELS].totalSize() > 0 );
-            x1Header.mark( Header.OFFSET_PROPERTIES, intermediateBuffers[PROPERTIES].totalSize() > 0 );
+            x1Header.mark( Header.FLAG_LABELS, intermediateBuffers[LABELS].currentSize() > 0 );
+            x1Header.mark( Header.OFFSET_PROPERTIES, intermediateBuffers[PROPERTIES].currentSize() > 0 );
             if ( isDense )
             {
                 x1Header.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, true );
@@ -340,7 +340,7 @@ class GraphUpdates
                 x1Header.mark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID, true );
                 sparse.data.serializeNextInternalRelationshipId( intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].add() );
                 intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
-                miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].totalSize();
+                miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].currentSize();
             }
             else if ( relsSize > 0 )
             {
@@ -348,9 +348,15 @@ class GraphUpdates
                 x1Header.mark( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, true );
             }
 
+            boolean anyBufferIsSplit = false;
+            for ( int i = 0; i < intermediateBuffers.length && !anyBufferIsSplit; i++ )
+            {
+                anyBufferIsSplit = intermediateBuffers[i].isSplit();
+            }
+
             FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId );
-            if ( x1Header.spaceNeeded() + intermediateBuffers[LABELS].totalSize() + intermediateBuffers[PROPERTIES].totalSize() +
-                    Math.max( relsSize, intermediateBuffers[DEGREES].totalSize() ) + miscSize <= stores.mainStore.recordDataSize() )
+            if ( !anyBufferIsSplit && x1Header.spaceNeeded() + intermediateBuffers[LABELS].currentSize() + intermediateBuffers[PROPERTIES].currentSize() +
+                    Math.max( relsSize, intermediateBuffers[DEGREES].currentSize() ) + miscSize <= stores.mainStore.recordDataSize() )
             {
                 //WE FIT IN x1
                 serializeParts( smallBuffer, intermediateBuffers, recordPointersBuffer, x1Header );
@@ -393,12 +399,13 @@ class GraphUpdates
             xLHeader.setReference( x1Header );
 
             //split chain header into individual headers
-            boolean canFitInSingleXL = (xLHeader.hasMark( Header.FLAG_LABELS ) ? intermediateBuffers[LABELS].totalSize() : 0) +
-                    (xLHeader.hasMark( Header.OFFSET_PROPERTIES ) ? intermediateBuffers[PROPERTIES].totalSize() : 0) +
+            boolean canFitInSingleXL = !anyBufferIsSplit &&
+                    (xLHeader.hasMark( Header.FLAG_LABELS ) ? intermediateBuffers[LABELS].currentSize() : 0) +
+                    (xLHeader.hasMark( Header.OFFSET_PROPERTIES ) ? intermediateBuffers[PROPERTIES].currentSize() : 0) +
                     (xLHeader.hasMark( Header.OFFSET_RELATIONSHIPS ) ? relsSize : 0) +
-                    (xLHeader.hasMark( Header.OFFSET_DEGREES ) ? intermediateBuffers[DEGREES].totalSize() : 0) +
+                    (xLHeader.hasMark( Header.OFFSET_DEGREES ) ? intermediateBuffers[DEGREES].currentSize() : 0) +
                     (xLHeader.hasMark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) ?
-                            intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].totalSize() : 0) + xLHeader.spaceNeeded() +
+                        intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].currentSize() : 0) + xLHeader.spaceNeeded() +
                     DUAL_VLONG_MAX_SIZE <= stores.largestMainStore().recordDataSize();
 
             long forwardPointer = NULL;
