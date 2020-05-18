@@ -39,6 +39,8 @@ import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.driver.internal.InternalBookmark;
+import org.neo4j.fabric.bolt.FabricBookmark;
+import org.neo4j.fabric.bolt.FabricBookmarkParser;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -156,7 +158,7 @@ class BookmarkIT
         db = createDbms();
         driver = driverFactory.graphDatabaseDriver( boltAddress( db ) );
 
-        var unreachableSystemDbBookmark = systemDatabaseBookmark( lastCommittedSystemDatabaseTxId() + 9999 );
+        var unreachableSystemDbBookmark = bumpedSystemDbBookmark( 9999 );
 
         var error = assertThrows( TransientException.class,
                 () -> createDatabase( "bar", unreachableSystemDbBookmark ) );
@@ -173,7 +175,7 @@ class BookmarkIT
         executor = newSingleThreadExecutor( daemon( "thread-" + testInfo.getDisplayName() ) );
 
         var txCount = 5;
-        var systemDbBookmark = systemDatabaseBookmark( lastCommittedSystemDatabaseTxId() + txCount );
+        var systemDbBookmark = bumpedSystemDbBookmark( txCount );
 
         var future = executor.submit( () -> createDatabase( "foo", systemDbBookmark ) );
 
@@ -239,6 +241,38 @@ class BookmarkIT
         return InternalBookmark.parse( new BookmarkWithDatabaseId( txId, databaseId ).toString() );
     }
 
+    private Bookmark bumpedSystemDbBookmark( long txIdDelta )
+    {
+        try {
+            return bumpedSystemDbBookmarkFabric( txIdDelta );
+        }
+        catch ( Exception e )
+        {
+            return systemDatabaseBookmark( lastCommittedSystemDatabaseTxId() + txIdDelta );
+        }
+    }
+
+    private Bookmark bumpedSystemDbBookmarkFabric( long txIdDelta )
+    {
+        Bookmark bookmark = showDatabases( null );
+        var parser = new FabricBookmarkParser();
+        var fabricBookmarks = bookmark.values().stream()
+                                      .map( parser::parse )
+                                      .map( fabricBookmark ->
+                                            {
+                                                FabricBookmark.InternalGraphState systemDbState = fabricBookmark.getInternalGraphStates().get( 0 );
+                                                FabricBookmark.InternalGraphState systemDbStateNew =
+                                                        new FabricBookmark.InternalGraphState( systemDbState.getGraphUuid(),
+                                                                                               systemDbState.getTransactionId() + txIdDelta );
+                                                FabricBookmark fabricBookmarkNew =
+                                                        new FabricBookmark( List.of( systemDbStateNew ), fabricBookmark.getExternalGraphStates() );
+                                                return fabricBookmarkNew.serialize();
+                                            } )
+                                      .collect( toSet() );
+
+        return InternalBookmark.parse( fabricBookmarks );
+    }
+
     private void createDatabase( String databaseName )
     {
         createDatabase( databaseName, null );
@@ -254,6 +288,20 @@ class BookmarkIT
         try ( var session = driver.session( sessionConfig ) )
         {
             session.run( "CREATE DATABASE " + databaseName ).consume();
+        }
+    }
+
+    private Bookmark showDatabases( Bookmark systemDatabaseBookmark )
+    {
+        var sessionConfig = SessionConfig.builder()
+                                         .withDatabase( SYSTEM_DATABASE_NAME )
+                                         .withBookmarks( systemDatabaseBookmark == null ? List.of() : List.of( systemDatabaseBookmark ) )
+                                         .build();
+
+        try ( var session = driver.session( sessionConfig ) )
+        {
+            session.run( "SHOW DATABASES" ).consume();
+            return session.lastBookmark();
         }
     }
 
