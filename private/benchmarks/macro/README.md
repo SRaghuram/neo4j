@@ -26,6 +26,29 @@ Make sure to use the #.#-enterprise-datasets.
 
 In `ConvenientLocalExecutionIT` there are configuration options for the workloads.
 
+Running in batch infra
+---------------------
+
+If you want to run all benchmarks from your branch or specific build in batch infrastructure you can do so, with a little
+bit of help from two scripts.
+
+What you need is:
+
+* neo4j-dev AWS account with batch and S3 service permissions
+* AWS CLI installed on your machine
+* bash
+
+First you need to build your product and prepare workspace with all benchmarking artifacts:
+
+    ./prepare-macro-workspace.sh --workspace-dir [workspace-dir]
+
+Once you have workspace, next you need to schedule run of all benchmarks, with:
+
+    ./schedule-all-macro-benchmarks.sh --workspace-dir [workspace-dir] --branch-owner [branch-owner] --neo4j-branch [neo4j-branch] --neo4j-version [neo4j-version]
+    
+It will take sometime to schedule all runs, once it is done, you can either exit or watch for progress. Even if you exit,
+benchmarks will be still scheduled for run, which you can check in AWS Batch dashboard.
+
 Adding new queries
 --------------
 Under `macro/src/resources/workloads/` there is one folder per workload that can be run.
