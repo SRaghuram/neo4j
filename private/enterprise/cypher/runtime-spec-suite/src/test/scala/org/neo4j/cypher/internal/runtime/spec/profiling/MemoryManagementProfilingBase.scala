@@ -15,6 +15,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.CommunityRuntimeContext
+import org.neo4j.cypher.internal.CommunityRuntimeContextManager
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.EnterpriseRuntimeContextManager
@@ -49,6 +50,7 @@ import org.neo4j.memory.HeapDumper
 import org.neo4j.memory.HeapDumpingMemoryTracker
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.scheduler.JobScheduler
+import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.VirtualValues
@@ -135,7 +137,23 @@ object MemoryManagementProfilingBase {
     MetricsSettings.metricsEnabled -> java.lang.Boolean.FALSE
   )
 
-  val COMMUNITY_PROFILING: Edition[CommunityRuntimeContext] = COMMUNITY.EDITION
+  private val communityProfilingEdition = new Edition[CommunityRuntimeContext](
+    () => new TestDatabaseManagementServiceBuilder(),
+    (runtimeConfig, _, _, logProvider) => {
+      val augmentedRuntimeConfig = runtimeConfig.copy(memoryTrackingController = memoryTrackingController)
+
+      CommunityRuntimeContextManager(
+        logProvider.getLog("test"),
+        augmentedRuntimeConfig
+      )
+    },
+    GraphDatabaseSettings.cypher_hints_error -> TRUE,
+    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(-1),
+    GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED,
+    MetricsSettings.metricsEnabled -> java.lang.Boolean.FALSE
+  )
+
+  val COMMUNITY_PROFILING: Edition[CommunityRuntimeContext] = communityProfilingEdition
   val ENTERPRISE_PROFILING: Edition[EnterpriseRuntimeContext] = enterpriseProfilingEdition
 }
 
@@ -712,7 +730,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     try {
       MemoryManagementProfilingBase.setMemoryTrackingDecorator(memoryTrackerDecorator)
 
-      // Do the second run. If everything is detereministic this should trigger the heap dump
+      // Do the second run. If everything is deterministic this should trigger the heap dump
       val result2 = profileNonRecording(logicalQuery, runtime, inputStream2)
       consumeNonRecording(result2)
 
