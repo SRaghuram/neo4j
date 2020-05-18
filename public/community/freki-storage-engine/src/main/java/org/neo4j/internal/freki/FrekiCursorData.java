@@ -29,7 +29,6 @@ import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
-import static org.neo4j.internal.freki.MutableNodeData.backwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 
@@ -47,7 +46,6 @@ class FrekiCursorData
     boolean x1Loaded;
     long xLChainStartPointer = NULL;
     long xLChainNextLinkPointer = NULL;
-    long x1Pointer = NULL;
     boolean isDense;
     boolean xLChainLoaded;
 
@@ -95,7 +93,6 @@ class FrekiCursorData
         assignDataOffsets( buffer );
         assert header.hasMark( OFFSET_RECORD_POINTER );
         long[] pointers = readRecordPointers( buffer );
-        x1Pointer = backwardPointer( pointers, true );
         xLChainNextLinkPointer = forwardPointer( pointers, true );
         xLChainLoaded = xLChainNextLinkPointer == NULL;
     }
@@ -169,7 +166,6 @@ class FrekiCursorData
         x1Loaded = false;
         xLChainStartPointer = NULL;
         xLChainNextLinkPointer = NULL;
-        x1Pointer = NULL;
         isDense = false;
         xLChainLoaded = false;
         labelOffset = 0;

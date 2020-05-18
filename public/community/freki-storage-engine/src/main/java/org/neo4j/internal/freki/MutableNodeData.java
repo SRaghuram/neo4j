@@ -493,11 +493,6 @@ class MutableNodeData
         return forwardPointer;
     }
 
-    long getLastLoadedBackwardPointer()
-    {
-        return backwardPointer;
-    }
-
     boolean serializeMainData( IntermediateBuffer[] intermediateBuffers, SimpleBigValueStore bigPropertyValueStore,
             Consumer<StorageCommand> bigValueCommandConsumer )
     {

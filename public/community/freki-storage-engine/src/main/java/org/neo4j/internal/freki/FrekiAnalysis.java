@@ -48,6 +48,9 @@ import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.Header.FLAG_LABELS;
+import static org.neo4j.internal.freki.Header.OFFSET_DEGREES;
+import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordSize;
@@ -294,12 +297,11 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public void dumpStats()
     {
-        // Get the stats
+        // Sparse store stats
         System.out.println( "Calculating main store stats ..." );
         var storeStats = gatherStoreStats();
-
         var totalNumDenseNodes = of( storeStats ).mapToLong( s -> s.numDenseNodes ).sum();
-        printPercents( "Distribution of nodes", storeStats, ( stats, stat ) ->
+        printPercents( "  Record sizes distribution", storeStats, ( stats, stat ) ->
         {
             long numRecords = stat == stats[0]
                     // For x1 we're interested in nodes that are ONLY in x1
@@ -307,8 +309,13 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                     : stat.usedRecords;
             return (double) numRecords / stats[0].usedRecords;
         }, true );
-        System.out.printf( " (DE: %.2f%%)%n", percent( totalNumDenseNodes, storeStats[0].usedRecords ) );
-        printPercents( "Record occupancy i.e. on average how much of the record is actual useful data", storeStats, ( stats, stat ) ->
+        System.out.printf( "   (DE: %.2f%%)%n", percent( totalNumDenseNodes, storeStats[0].usedRecords ) );
+        printPercents( "  Record chains distribution", storeStats, ( stats, stat ) ->
+        {
+            long numChainRecords = stream( stats ).mapToLong( s -> s.chainRecords ).sum();
+            return (double) numChainRecords / stat.usedRecords;
+        }, false );
+        printPercents( "  Record occupancy i.e. on average how much of the record is actual useful data", storeStats, ( stats, stat ) ->
                 (double) stat.bytesOccupiedInUsedRecords / (stat.bytesOccupiedInUsedRecords + stat.bytesVacantInUsedRecords), false );
 
         var totalOccupied = of( storeStats ).mapToLong( s -> s.bytesOccupiedInUsedRecords ).sum();
@@ -317,13 +324,14 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         var totalPossibleOccupied = of( storeStats ).mapToLong( s -> s.usedRecords * recordSize( s.sizeExp ) ).sum();
         var total = of( storeStats ).mapToLong( s -> (s.usedRecords + s.unusedRecords) * recordSize( s.sizeExp ) ).sum();
 
-        System.out.printf( "Total occupied bytes in used records %s (%.2f%%)%n", bytesToString( totalOccupied ),
-                percent( totalOccupied, totalPossibleOccupied ) );
-        System.out.printf( "Total vacant bytes in used records %s (%.2f%%)%n", bytesToString( totalVacantInUsedRecords ),
-                percent( totalVacantInUsedRecords, totalPossibleOccupied ) );
-        System.out.printf( "Total occupied bytes %s (%.2f%%)%n", bytesToString( totalOccupied ), percent( totalOccupied, total ) );
-        System.out.printf( "Total vacant bytes %s (%.2f%%)%n", bytesToString( totalVacant ), percent( totalVacant, total ) );
+        System.out.printf( "  Total occupied/vacant bytes in used records %s/%s (%.2f%%/%.2f%%)%n",
+                bytesToString( totalOccupied ), bytesToString( totalVacantInUsedRecords ),
+                percent( totalOccupied, totalPossibleOccupied ), percent( totalVacantInUsedRecords, totalPossibleOccupied ) );
+        System.out.printf( "  Total occupied/vacant bytes %s/%s (%.2f%%/%.2f%%)%n",
+                bytesToString( totalOccupied ), bytesToString( totalVacant ),
+                percent( totalOccupied, total ), percent( totalVacant, total ) );
 
+        // Dense store stats
         System.out.println();
         System.out.println( "Calculating dense store stats ..." );
         DenseRelationshipStore.Stats denseStats = stores.denseStore.gatherStats( PageCursorTracer.NULL );
@@ -331,9 +339,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         System.out.printf( "  Effective dense store data size: %s%n", bytesToString( denseStats.effectiveByteSize() ) );
         System.out.printf( "  Number of dense nodes: %d%n", denseStats.numberOfNodes() );
         System.out.printf( "  Avg number of relationships per dense node: %.2f%n", (double) denseStats.numberOfRelationships() / denseStats.numberOfNodes() );
-        System.out.printf( "  Avg effective data size per dense node: %.2f%n", (double) denseStats.effectiveByteSize() / denseStats.numberOfNodes() );
-        System.out.printf( "  Avg effective relationship size per dense node: %.2f%n",
-                (double) denseStats.effectiveRelationshipsByteSize() / denseStats.numberOfNodes() );
+        System.out.printf( "  Avg effective size per dense node: %.2f%n", (double) denseStats.effectiveByteSize() / denseStats.numberOfNodes() );
         System.out.printf( "  Avg effective size per relationship: %.2f%n",
                 (double) denseStats.effectiveRelationshipsByteSize() / denseStats.numberOfRelationships() );
         System.out.printf( "  Avg total size per dense node: %.2f%n", (double) denseStats.totalTreeByteSize() / denseStats.numberOfNodes() );
@@ -351,7 +357,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     {
         System.out.println( title + ":" );
         double cumulativePercent = 0;
-        String format = "  x%d: %.2f%%" + (includeCumulative ? " = %.2f" : "") + "%n";
+        String format = "    x%d: %.2f%%" + (includeCumulative ? " = %.2f" : "") + "%n";
         for ( StoreStats stat : stats )
         {
             double percent = calculator.apply( stats, stat ) * 100d;
@@ -378,6 +384,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                     var highId = store.getHighId();
                     var record = store.newRecord();
                     var recordDataSize = store.recordDataSize();
+                    var header = new Header();
                     try ( var cursor = store.openReadCursor( PageCursorTracer.NULL ) )
                     {
                         for ( var id = 0; id < highId; id++ )
@@ -388,7 +395,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                 var data = new MutableNodeData( id, stores.bigPropertyValueStore, PageCursorTracer.NULL );
                                 try
                                 {
-                                    data.deserialize( record );
+                                    header = data.deserialize( record );
                                 }
                                 catch ( Exception e )
                                 {
@@ -396,12 +403,16 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                             recordXFactor( store.recordSizeExponential() ) );
                                     throw e;
                                 }
-                                var buffer = record.data();
-                                stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();
-                                stats.bytesVacantInUsedRecords += recordDataSize - buffer.position();
-                                if ( data.isDense() )
+                                int endOffset = header.getOffset( Header.OFFSET_END );
+                                stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + endOffset;
+                                stats.bytesVacantInUsedRecords += recordDataSize - endOffset;
+                                if ( header.hasMark( Header.FLAG_HAS_DENSE_RELATIONSHIPS ) )
                                 {
                                     stats.numDenseNodes++;
+                                }
+                                if ( isSplit( header, FLAG_LABELS ) || isSplit( header, OFFSET_PROPERTIES ) || isSplit( header, OFFSET_DEGREES ) )
+                                {
+                                    stats.chainRecords++;
                                 }
                             }
                             else
@@ -415,6 +426,11 @@ public class FrekiAnalysis extends Life implements AutoCloseable
             }
         }
         return runTasksInParallel( storeDistributionTasks ).stream().toArray( StoreStats[]::new );
+    }
+
+    private static boolean isSplit( Header header, int slot )
+    {
+        return header.hasMark( slot ) && header.hasReferenceMark( slot );
     }
 
     private <T> List<T> runTasksInParallel( Collection<Callable<T>> storeDistributionTasks )
@@ -486,6 +502,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         private long bytesOccupiedInUsedRecords;
         private long bytesVacantInUsedRecords;
         private long numDenseNodes;
+        private long chainRecords;
 
         StoreStats( int sizeExp )
         {

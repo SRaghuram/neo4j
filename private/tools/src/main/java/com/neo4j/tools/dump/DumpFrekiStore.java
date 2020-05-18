@@ -25,6 +25,11 @@ public class DumpFrekiStore
     public static void main( String[] arguments ) throws IOException
     {
         var args = Args.parse( arguments );
+        if ( args.orphans().isEmpty() )
+        {
+            System.err.println( "Missing database directory" );
+            System.exit( 1 );
+        }
         var databaseLayout = DatabaseLayout.ofFlat( new File( args.orphans().get( 0 ) ) );
         var fs = new DefaultFileSystemAbstraction();
         var scheduler = JobSchedulerFactory.createScheduler();
