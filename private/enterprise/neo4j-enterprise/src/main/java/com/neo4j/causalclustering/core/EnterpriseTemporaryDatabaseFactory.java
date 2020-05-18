@@ -17,6 +17,7 @@ import java.io.File;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
@@ -73,5 +74,12 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
         }
         // Log security initialization to outer dbms log file
         managementServiceBuilder.setConfig( SecuritySettings.security_log_filename, originalConfig.get( SecuritySettings.security_log_filename ) );
+        // auth, roles and auth.ini files
+        managementServiceBuilder.setConfig( DatabaseManagementSystemSettings.auth_store_directory,
+                originalConfig.get( DatabaseManagementSystemSettings.auth_store_directory ) );
+        if ( originalConfig.isExplicitlySet( GraphDatabaseSettings.auth_store ) )
+        {
+            managementServiceBuilder.setConfig( GraphDatabaseSettings.auth_store, originalConfig.get( GraphDatabaseSettings.auth_store ) );
+        }
     }
 }
