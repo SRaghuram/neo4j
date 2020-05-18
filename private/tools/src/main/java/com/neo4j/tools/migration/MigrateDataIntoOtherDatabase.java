@@ -78,59 +78,12 @@ public class MigrateDataIntoOtherDatabase
         {
             GraphDatabaseService fromDb = fromDbms.database( DEFAULT_DATABASE_NAME );
             GraphDatabaseService toDb = toDbms.database( DEFAULT_DATABASE_NAME );
-            tryCopyTheBadNode( fromDb, toDb );
             copyDatabase( fromDb, toDb, validate );
         }
         finally
         {
             fromDbms.shutdown();
             toDbms.shutdown();
-        }
-    }
-
-    private static void tryCopyTheBadNode( GraphDatabaseService fromDb, GraphDatabaseService toDb )
-    {
-        long nodeId = 283249719;
-        System.out.println( "Trying to copy a particularly bad node " + nodeId );
-        try ( Transaction fromTx = fromDb.beginTx() )
-        {
-            Node fromNode = fromTx.getNodeById( nodeId );
-            long toNodeId;
-            try ( Transaction toTx = toDb.beginTx() )
-            {
-                toNodeId = copyNodeData( fromNode, toTx ).getId();
-                toTx.commit();
-            }
-
-            MutableLongLongMap idMap = LongLongMaps.mutable.empty();
-            idMap.put( nodeId, toNodeId );
-            try ( Transaction toTx = toDb.beginTx() )
-            {
-                for ( Relationship fromRelationship : fromNode.getRelationships() )
-                {
-                    long toStartNodeId = idMap.getIfAbsentPut( fromRelationship.getStartNodeId(), () -> toTx.createNode().getId() );
-                    long toEndNodeId = idMap.getIfAbsentPut( fromRelationship.getEndNodeId(), () -> toTx.createNode().getId() );
-                    Relationship toRelationship =
-                            toTx.getNodeById( toStartNodeId ).createRelationshipTo( toTx.getNodeById( toEndNodeId ), fromRelationship.getType() );
-                    fromRelationship.getAllProperties().forEach( toRelationship::setProperty );
-                }
-                toTx.commit();
-            }
-
-            try ( Transaction toTx = toDb.beginTx() )
-            {
-                compareNodes( fromNode, toTx.getNodeById( toNodeId ), true, true, true );
-            }
-            System.out.println( "Bad node seems to work when importing in isolation, cleaning up..." );
-
-            // Clean up
-            try ( Transaction toTx = toDb.beginTx() )
-            {
-                Node toNode = toTx.getNodeById( toNodeId );
-                toNode.getRelationships().forEach( Relationship::delete );
-                idMap.forEachValue( otherNodeId -> toTx.getNodeById( otherNodeId ).delete() );
-                toTx.commit();
-            }
         }
     }
 
