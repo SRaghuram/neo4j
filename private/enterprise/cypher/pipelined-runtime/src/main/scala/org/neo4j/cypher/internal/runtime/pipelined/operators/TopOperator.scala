@@ -9,7 +9,7 @@ import java.util
 import java.util.Comparator
 import java.util.concurrent.ConcurrentHashMap
 
-import org.neo4j.cypher.internal.DefaultComparatorTopTable
+import org.neo4j.cypher.internal.collection.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId

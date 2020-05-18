@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.codegen;
 
 import java.util.Comparator;
 
-import org.neo4j.cypher.internal.DefaultComparatorTopTable;
+import org.neo4j.cypher.internal.collection.DefaultComparatorTopTable;
 
 /**
  * The default implementation of a Top N table used by the generated code.

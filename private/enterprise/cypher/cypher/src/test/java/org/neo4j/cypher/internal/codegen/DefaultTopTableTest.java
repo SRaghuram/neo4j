@@ -23,7 +23,7 @@ class DefaultTopTableTest
     @Test
     void shouldHandleAddingMoreValuesThanCapacity()
     {
-        DefaultTopTable table = new DefaultTopTable( 7 );
+        DefaultTopTable table = new DefaultTopTable<>( 7 );
         for ( Long i : TEST_VALUES )
         {
             table.add( i );
@@ -45,7 +45,7 @@ class DefaultTopTableTest
     @Test
     void shouldHandleWhenNotCompletelyFilledToCapacity()
     {
-        DefaultTopTable table = new DefaultTopTable( 20 );
+        DefaultTopTable table = new DefaultTopTable<>( 20 );
         for ( Long i : TEST_VALUES )
         {
             table.add( i );
@@ -67,7 +67,7 @@ class DefaultTopTableTest
     @Test
     void shouldHandleWhenEmpty()
     {
-        DefaultTopTable table = new DefaultTopTable( 10 );
+        DefaultTopTable table = new DefaultTopTable<>( 10 );
 
         table.sort();
 
@@ -79,19 +79,19 @@ class DefaultTopTableTest
     @Test
     void shouldThrowOnInitializeToZeroCapacity()
     {
-        assertThrows( IllegalArgumentException.class, () -> new DefaultTopTable( 0 ) );
+        assertThrows( IllegalArgumentException.class, () -> new DefaultTopTable<>( 0 ) );
     }
 
     @Test
     void shouldThrowOnInitializeToNegativeCapacity()
     {
-        assertThrows( IllegalArgumentException.class, () -> new DefaultTopTable( -1 ) );
+        assertThrows( IllegalArgumentException.class, () -> new DefaultTopTable<>( -1 ) );
     }
 
     @Test
     void shouldThrowOnSortNotCalledBeforeIterator()
     {
-        DefaultTopTable table = new DefaultTopTable( 5 );
+        DefaultTopTable table = new DefaultTopTable<>( 5 );
         for ( Long i : TEST_VALUES )
         {
             table.add( i );

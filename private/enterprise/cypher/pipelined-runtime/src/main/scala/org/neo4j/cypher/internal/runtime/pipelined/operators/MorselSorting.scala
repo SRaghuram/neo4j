@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 
 object MorselSorting {
 
+  // TODO: Use optimized comparator from slotted
   def createComparator(orderBy: Seq[ColumnOrder]): Comparator[MorselRow] =
     orderBy
       .map(MorselSorting.createMorselComparator)

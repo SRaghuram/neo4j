@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.Comparator
-import java.util.PriorityQueue
 
+import org.neo4j.cypher.internal.collection.DefaultComparatorSortTable
 import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
@@ -64,13 +64,13 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
     AssertMacros.checkOnlyWhenAssertionsAreEnabled(accumulators.size == 1)
     private val accumulator = accumulators.head
-    private var sortedInputPerArgument: PriorityQueue[MorselReadCursor] = _
+    private var sortedInputPerArgument: DefaultComparatorSortTable[MorselReadCursor] = _
 
     override def operate(outputMorsel: Morsel,
                          state: PipelinedQueryState,
                          resources: QueryResources): Unit = {
       if (sortedInputPerArgument == null) {
-        sortedInputPerArgument = new PriorityQueue[MorselReadCursor](comparator)
+        sortedInputPerArgument = new DefaultComparatorSortTable(comparator, accumulators.size)
         accumulator.foreach { morsel =>
           if (morsel.hasData) {
             sortedInputPerArgument.add(morsel.readCursor(onFirstRow = true))
@@ -80,13 +80,15 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
       while (outputCursor.onValidRow && canContinue) {
-        val nextRow: MorselReadCursor = sortedInputPerArgument.poll()
+        val nextRow: MorselReadCursor = sortedInputPerArgument.peek()
         outputCursor.copyFrom(nextRow)
         nextRow.next()
         outputCursor.next()
-        // If there is more data in this Morsel, we'll re-insert it into the sortedInputs
+        // If there is more data in this Morsel, we will siftDown based on the new row
         if (nextRow.onValidRow()) {
-          sortedInputPerArgument.add(nextRow)
+          sortedInputPerArgument.siftDown(nextRow)
+        } else {
+          sortedInputPerArgument.poll() // Otherwise we remove it
         }
       }
 
