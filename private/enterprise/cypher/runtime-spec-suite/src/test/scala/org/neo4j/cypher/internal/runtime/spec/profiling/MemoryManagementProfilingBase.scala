@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.PipelinedRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.Descending
 import org.neo4j.cypher.internal.runtime.CUSTOM_MEMORY_TRACKING_CONTROLLER
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerDecorator
@@ -55,6 +56,7 @@ import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.VirtualValues
 
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Random
 
 object MemoryManagementProfilingBase {
@@ -668,6 +670,48 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
     val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](i, i)
     runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
+  test("measure top - all distinct") {
+    val testName = "top-distinct"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .top(Seq(Ascending("x")), DEFAULT_INPUT_LIMIT)
+      .input(variables = Seq("x"))
+      .build()
+
+    val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](i)
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
+  test("measure top - worst case") {
+    val testName = "top-worst-case"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y")
+      .top(Seq(Descending("x")), DEFAULT_INPUT_LIMIT / 2)
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (x <- 0L until DEFAULT_INPUT_LIMIT) yield {
+      // First half of the rows has no y column. This half will get evicted.
+      // Second half of the rows has a large y value. This half will get retained.
+      val y = if (x < DEFAULT_INPUT_LIMIT / 2) null else Seq.fill(1000)(0).asJava
+      Array[Any](x, y)
+    }
+
+    // not using runPeakMemoryUsageProfiling, since the peak is currently very mis-estimated to be at the middle and not at the end.
+    val input = finiteCyclicInputWithPeriodicHeapDump(inputRows.toArray, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
   }
 
   test("value hash join") {
