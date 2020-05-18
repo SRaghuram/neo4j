@@ -845,6 +845,34 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     runPeakMemoryUsageProfiling(logicalQuery, shuffledData, heapDumpFileNamePrefix)
   }
 
+  test("measure ordered distinct - ordered column has one value") {
+    val testName = "ordered-distinct-one"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .orderedDistinct(Seq("x"), "x AS x", "y AS y")
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](1, DEFAULT_INPUT_LIMIT - i)
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
+  test("measure ordered distinct - ordered column has distinct values") {
+    val testName = "ordered-distinct-distinct"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .orderedDistinct(Seq("x"), "x AS x", "y AS y")
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](i, i)
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
   /**
    * Convenience method when you have an Array of input data
    */
