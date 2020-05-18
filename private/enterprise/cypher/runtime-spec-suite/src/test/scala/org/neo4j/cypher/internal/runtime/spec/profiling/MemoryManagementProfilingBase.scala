@@ -670,6 +670,33 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
   }
 
+  test("value hash join") {
+    val testName = "valuehashjoin"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    var nodes = given { nodePropertyGraph(DEFAULT_INPUT_LIMIT.toInt, { case i: Int => Map("prop" -> i)}) }
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("xp", "yp")
+      .projection("x.prop AS xp", "y.prop AS yp")
+      .valueHashJoin("x.prop = y.prop")
+      .|.allNodeScan("y")
+      .input(nodes = Seq("x"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    var data = nodes.map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    data = null
+
+    runPeakMemoryUsageProfiling(logicalQuery, shuffledData, heapDumpFileNamePrefix)
+  }
+
   /**
    * Convenience method when you have an Array of input data
    */
