@@ -11,6 +11,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
@@ -43,8 +44,9 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
     public Mono<RemoteBookmark> commit()
     {
         return Mono.from( rxTransaction.commit() )
-                .then( Mono.fromSupplier( () -> convertBookmark( rxSession.lastBookmark() ) ) )
-                .doFinally( s -> rxSession.close() );
+                   .onErrorMap( Neo4jException.class, Utils::translateError )
+                   .then( Mono.fromSupplier( () -> convertBookmark( rxSession.lastBookmark() ) ) )
+                   .doFinally( s -> rxSession.close() );
     }
 
     @Override

@@ -6,11 +6,9 @@
 package com.neo4j;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import com.neo4j.test.driver.DriverExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,61 +17,63 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
+import org.neo4j.bolt.v41.messaging.RoutingContext;
 import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Record;
-import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
-import org.neo4j.driver.Value;
+import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
+import static com.neo4j.ResultSummaryTestUtils.plan;
+import static com.neo4j.ResultSummaryTestUtils.stats;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.connectors.BoltConnector.connector_routing_enabled;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 @TestDirectoryExtension
 @ExtendWith( FabricEverywhereExtension.class )
 @ExtendWith( SuppressOutputExtension.class )
+@ExtendWith( MockedRoutingContextExtension.class )
 @ClusterExtension
-@DriverExtension
-class CypherInClusterTest
+class CypherInClusterTest extends ClusterTestSupport
 {
+    @Inject
+    protected static RoutingContext routingContext;
+
     @Inject
     private static ClusterFactory clusterFactory;
 
-    private static Cluster cluster;
+    protected static Cluster cluster;
 
-    private static Map<Integer,Driver> coreDrivers = new HashMap<>();
+    protected static Map<Integer,Driver> coreDrivers = new HashMap<>();
 
-    private static Driver fooLeaderDriver;
-    private static Driver fooFollowerDriver;
-
-    private static Driver readReplicaDriver;
-
-    private final List<Bookmark> bookmarks = new ArrayList<>();
+    protected static Driver readReplicaDriver;
 
     @BeforeAll
     static void beforeAll() throws Exception
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
-                .withNumberOfCoreMembers( 2 )
-                .withNumberOfReadReplicas( 1 );
+                                                   .withNumberOfCoreMembers( 3 )
+                                                   .withSharedCoreParam( connector_routing_enabled, "true" )
+                                                   .withNumberOfReadReplicas( 1 )
+                                                   .withSharedReadReplicaParam( connector_routing_enabled, "true" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 
-        var readReplica = cluster.findAnyReadReplica();
-        readReplicaDriver = driver( readReplica.directURI() );
+        readReplicaDriver = getReadReplicaDriver( cluster );
 
         cluster.coreMembers().forEach( core -> coreDrivers.put( core.serverId(), driver( core.directURI() ) ) );
 
@@ -85,120 +85,175 @@ class CypherInClusterTest
             session.run( "CREATE DATABASE foo" ).consume();
         }
 
-        var fooLeader = cluster.awaitLeader( "foo" );
-        awaitDbAvailable( "foo" );
-
-        fooLeaderDriver = coreDrivers.get( fooLeader.serverId() );
-        var fooFollower = getFollower( fooLeader );
-        fooFollowerDriver = coreDrivers.get( fooFollower.serverId() );
-
+        awaitDbAvailable( cluster, "foo" );
     }
 
     @BeforeEach
-    void beforeEach()
+    void beforeEach() throws TimeoutException
     {
-        bookmarks.clear();
-
-        run( fooLeaderDriver, "foo", AccessMode.WRITE, session ->
-        {
-            session.run( "MATCH (n) DETACH DELETE n" );
-            session.run( "CREATE (:Person {name: 'Anna', uid: 0, age: 30})" ).consume();
-            session.run( "CREATE (:Person {name: 'Bob',  uid: 1, age: 40})" ).consume();
-            return null;
-        } );
+        super.beforeEach( routingContext, cluster, new ArrayList<>( coreDrivers.values() ), readReplicaDriver );
     }
 
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> coreDrivers.get( 0 ).close(),
-                () -> coreDrivers.get( 1 ).close(),
-                () -> readReplicaDriver.close(),
-                () -> cluster.shutdown()
-        ).parallelStream().forEach( Runnable::run );
+        Stream.<Runnable>concat(
+                coreDrivers.values().stream().map( driver -> driver::close ),
+                Stream.of( cluster::shutdown, readReplicaDriver::close )
+        ).parallel()
+         .forEach( Runnable::run );
     }
 
     @Test
-    void testBasicInteraction()
+    void testWriteOnLeader()
+    {
+        doTestWriteOnClusterMember( fooLeaderDriver );
+    }
+
+    @Test
+    void testWriteOnFollower()
+    {
+        doTestWriteOnClusterMember( fooFollowerDriver );
+    }
+
+    @Test
+    void testWriteOnReadReplica()
+    {
+        doTestWriteOnClusterMember( readReplicaDriver );
+    }
+
+    @Test
+    void testWriteOnFollowerWithRoutingDisabled()
+    {
+        when( routingContext.isServerRoutingEnabled() ).thenReturn( false );
+        var createQuery = joinAsLines(
+                "USE foo",
+                "CREATE (:Person {name: 'Carrie',  uid: 2, age: 50})" );
+        assertThatExceptionOfType( ClientException.class )
+                .isThrownBy( () -> run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( createQuery ).list() ) )
+                .withMessage( "No write operations are allowed directly on this database." +
+                        " Writes must pass through the leader." +
+                        " The role of this server is: FOLLOWER" );
+    }
+
+    @Test
+    void testWriteWithNoLeader() throws Exception
+    {
+        var fooLeader = cluster.awaitLeader( "foo" );
+        cluster.removeCoreMember( fooLeader );
+        try
+        {
+            assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( "foo" ) );
+            doWriteWithNoLeader( fooFollowerDriver );
+            doWriteWithNoLeader( readReplicaDriver );
+        }
+        finally
+        {
+            cluster.newCoreMember().start();
+            cluster.awaitLeader( "foo" );
+        }
+    }
+
+    @Test
+    void testResultSummaryCountersWithRouting()
+    {
+        var query = joinAsLines(
+                "USE foo",
+                "CREATE (n:Person {name: 'John Doe'})",
+                "SET n:Friend"
+        );
+
+        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( query ).consume() );
+
+        var counters = resultSummary.counters();
+        assertNotNull( counters );
+        assertTrue( counters.containsUpdates() );
+        assertFalse( counters.containsSystemUpdates() );
+        assertEquals( 1, counters.nodesCreated() );
+        assertEquals( 0, counters.nodesDeleted() );
+        assertEquals( 0, counters.relationshipsCreated() );
+        assertEquals( 0, counters.relationshipsDeleted() );
+        assertEquals( 1, counters.propertiesSet() );
+        assertEquals( 2, counters.labelsAdded() );
+        assertEquals( 0, counters.labelsRemoved() );
+        assertEquals( 0, counters.indexesAdded() );
+        assertEquals( 0, counters.indexesRemoved() );
+        assertEquals( 0, counters.constraintsAdded() );
+        assertEquals( 0, counters.constraintsRemoved() );
+        assertEquals( 0, counters.systemUpdates() );
+    }
+
+    @Test
+    void testProfileRoutedQuery()
+    {
+        var query = joinAsLines(
+                "PROFILE USE foo",
+                "CREATE (n:Person {name: 'John Doe'})",
+                "SET n:Friend",
+                "RETURN n"
+        );
+
+        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( query ).consume() );
+
+        assertTrue( resultSummary.hasProfile() );
+        var profiledPlan = resultSummary.profile();
+
+        var expectedPlan =
+                plan( "RemoteExecution@graph(0)",
+                        plan( "ProduceResults@foo",
+                                plan( "SetLabels@foo",
+                                        plan( "Create@foo" )
+                                )
+                        )
+                );
+
+        expectedPlan.assertPlan( profiledPlan );
+
+        var expectedStats =
+                stats( 1, false,
+                        stats( 1, false,
+                                stats( 1, true,
+                                        stats( 1, true )
+                                )
+                        )
+                );
+
+        expectedStats.assertStats( profiledPlan );
+    }
+
+    @Test
+    void testExplainRoutedQuery()
+    {
+        var query = joinAsLines(
+                "EXPLAIN USE foo",
+                "CREATE (n:Person {name: 'John Doe'})",
+                "SET n:Friend",
+                "RETURN n"
+        );
+
+        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( query ).consume() );
+
+        assertTrue( resultSummary.hasPlan() );
+        assertFalse( resultSummary.hasProfile() );
+        var profiledPlan = resultSummary.plan();
+
+        var expectedPlan =
+                plan( "ProduceResults@foo",
+                        plan( "SetLabels@foo",
+                                plan( "Create@foo" )
+                        )
+                );
+
+        expectedPlan.assertPlan( profiledPlan );
+    }
+
+    private void doWriteWithNoLeader( Driver driver )
     {
         var createQuery = joinAsLines(
                 "USE foo",
                 "CREATE (:Person {name: 'Carrie',  uid: 2, age: 50})" );
-        run( fooLeaderDriver, "neo4j", AccessMode.WRITE, session -> {
-            session.run( createQuery ).consume();
-            return null;
-        });
-
-        var matchQueryWithoutUSe = joinAsLines(
-                "MATCH (person:Person )",
-                "RETURN person.name AS name"
-        );
-
-        var neo4jResult = run( fooLeaderDriver, "neo4j", AccessMode.READ, session -> session.run( matchQueryWithoutUSe ).list() );
-
-        // we should get nothing when asking neo4j database
-        assertEquals( List.of(), neo4jResult );
-
-        var matchQueryWithUse = joinAsLines(
-                "USE foo",
-                "MATCH (person:Person )",
-                "RETURN person.name AS name"
-        );
-
-        var fooFollowerResult = run( fooFollowerDriver, "neo4j", AccessMode.READ, session -> session.run( matchQueryWithUse ).list() );
-        assertEquals( List.of( "Anna", "Bob", "Carrie"), getNames( fooFollowerResult ) );
-
-        var fooReadReplicaResult = run( readReplicaDriver, "neo4j", AccessMode.READ, session -> session.run( matchQueryWithUse ).list() );
-        assertEquals( List.of( "Anna", "Bob", "Carrie"), getNames( fooReadReplicaResult ) );
-
-    }
-
-    private static void awaitDbAvailable( String databaseName )
-    {
-        boolean availableEverywhere = cluster.allMembers().stream()
-                .allMatch(  member -> member.managementService().database( databaseName ).isAvailable( 60_000 ) );
-        assertTrue( availableEverywhere );
-    }
-
-    private List<String> getNames( List<Record> records )
-    {
-        return  records.stream()
-                .map( record -> record.get( "name" ) )
-                .map( Value::asString )
-                .sorted()
-                .collect( Collectors.toList());
-    }
-
-    private <T> T run( Driver driver, String databaseName, AccessMode mode, Function<Session,T> workload )
-    {
-        try ( var session = driver.session( SessionConfig.builder()
-                .withDatabase( databaseName )
-                .withDefaultAccessMode( mode )
-                .withBookmarks( bookmarks ).build() ) )
-        {
-            T value = workload.apply( session );
-            bookmarks.add( session.lastBookmark() );
-            return value;
-        }
-    }
-
-    static CoreClusterMember getFollower( CoreClusterMember leader )
-    {
-        return cluster.coreMembers().stream()
-                .filter( member -> member.serverId() != leader.serverId() )
-                .findAny()
-                .get();
-    }
-
-    static Driver driver( String uri )
-    {
-        return GraphDatabase.driver(
-                uri,
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
+        assertThatExceptionOfType( TransientException.class )
+                .isThrownBy( () -> run( driver, "neo4j", AccessMode.WRITE, session -> session.run( createQuery ).list() ) )
+                .withMessage( "Unable to get bolt address of LEADER for database foo" );
     }
 }

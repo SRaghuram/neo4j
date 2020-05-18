@@ -12,10 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
@@ -24,14 +22,14 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.summary.Plan;
-import org.neo4j.driver.summary.ProfiledPlan;
 import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.api.exceptions.Status;
 
+import static com.neo4j.ResultSummaryTestUtils.plan;
+import static com.neo4j.ResultSummaryTestUtils.stats;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -438,60 +436,5 @@ class ResultSummaryEndToEndTest
             assertEquals( expectedNumberOfRecords, result.list().size() );
             return result.consume();
         } );
-    }
-
-    private ProfileStats stats( int numRecords, boolean hasDbHits, ProfileStats... children )
-    {
-        return new ProfileStats( numRecords, hasDbHits, Arrays.asList( children ) );
-    }
-
-    private static class ProfileStats
-    {
-        private final int numRecords;
-        private final boolean hasDbHits;
-        private final List<ProfileStats> children;
-
-        ProfileStats( int numRecords, boolean hasDbHits, List<ProfileStats> children )
-        {
-            this.numRecords = numRecords;
-            this.hasDbHits = hasDbHits;
-            this.children = children;
-        }
-
-        void assertStats( ProfiledPlan profiledPlan )
-        {
-            assertEquals( numRecords, profiledPlan.records() );
-            assertEquals( hasDbHits, profiledPlan.dbHits() > 0 );
-
-            assertEquals( children.size(), profiledPlan.children().size() );
-
-            IntStream.range( 0, children.size() ).forEach( i -> children.get( i ).assertStats( profiledPlan.children().get( i ) ) );
-        }
-    }
-
-    private ExpectedPlan plan( String operatorType, ExpectedPlan... children )
-    {
-        return new ExpectedPlan( operatorType, Arrays.asList( children ) );
-    }
-
-    private static class ExpectedPlan
-    {
-
-        private final String operatorType;
-        private final List<ExpectedPlan> children;
-
-        ExpectedPlan( String operatorType, List<ExpectedPlan> children )
-        {
-            this.operatorType = operatorType;
-            this.children = children;
-        }
-
-        void assertPlan( Plan driverPlan )
-        {
-            assertEquals( operatorType, driverPlan.operatorType() );
-            assertEquals( children.size(), driverPlan.children().size() );
-
-            IntStream.range( 0, children.size() ).forEach( i -> children.get( i ).assertPlan( driverPlan.children().get( i ) ) );
-        }
     }
 }

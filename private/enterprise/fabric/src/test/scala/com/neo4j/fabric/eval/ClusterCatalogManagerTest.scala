@@ -110,50 +110,106 @@ class ClusterCatalogManagerTest extends FabricTest {
 
       val catalog = manager.currentCatalog()
 
-      "and writable required" in {
+      "and writable required" - {
 
         val writable = true
+        
+        "and can route" in {
+          
+          val canRoute = true
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Local(3, intAUuid, "inta"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Local(4, intBUuid, "intb"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
+
+        "and cannot route" in {
+
+          val canRoute = false
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
       }
 
-      "and writable not required" in {
+      "and writable not required" - {
 
         val writable = false
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+        "and can route" in {
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+          val canRoute = true
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
+
+        "and cannot route" in {
+
+          val canRoute = false
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
       }
     }
 
@@ -166,50 +222,106 @@ class ClusterCatalogManagerTest extends FabricTest {
       ))
       val catalog = manager.currentCatalog()
 
-      "and writable required" in {
+      "and writable required" - {
 
         val writable = true
+        
+        "and can route" in {
+          
+          val canRoute = true
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Remote.Internal(3, intAUuid, remoteUri("bolt", remoteAddress), "inta"))
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.Internal(3, intAUuid, remoteUri("bolt", remoteAddress), "inta"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Remote.Internal(4, intBUuid, remoteUri("bolt", remoteAddress), "intb"))
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.Internal(4, intBUuid, remoteUri("bolt", remoteAddress), "intb"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
+
+        "and cannot route" in {
+
+          val canRoute = false
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
       }
 
-      "and writable not required" in {
+      "and writable not required" - {
 
         val writable = false
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+        "and can route" in {
+          
+          val canRoute = true
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
-        manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Local(3, intAUuid, "inta"))
 
-        manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
+
+        "and cannot route" in {
+          
+          val canRoute = false
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, canRoute)
+            .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute)
+            .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intB")), writable, canRoute)
+            .shouldEqual(new Location.Local(4, intBUuid, "intb"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
+            .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
       }
     }
   }

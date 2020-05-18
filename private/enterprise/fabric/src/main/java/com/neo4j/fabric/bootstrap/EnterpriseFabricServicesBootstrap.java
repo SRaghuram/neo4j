@@ -7,7 +7,9 @@ package com.neo4j.fabric.bootstrap;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.fabric.auth.ClusterCredentialsProvider;
 import com.neo4j.fabric.auth.CredentialsProvider;
+import com.neo4j.fabric.auth.ExternalCredentialsProvider;
 import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import com.neo4j.fabric.config.FabricEnterpriseSettings;
 import com.neo4j.fabric.driver.ClusterDriverConfigFactory;
@@ -54,7 +56,7 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
     @Override
     protected FabricRemoteExecutor bootstrapRemoteStack()
     {
-        var credentialsProvider = register( new CredentialsProvider(), CredentialsProvider.class );
+        var credentialsProvider = register( createCredentialsProvider(), CredentialsProvider.class );
 
         var fabricConfig = resolve( FabricEnterpriseConfig.class );
         var config = resolve( Config.class );
@@ -83,6 +85,8 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
 
     protected abstract DriverConfigFactory createDriverConfigFactory( FabricEnterpriseConfig fabricConfig, Config serverConfig,
             SslPolicyLoader sslPolicyLoader );
+
+    protected abstract CredentialsProvider createCredentialsProvider();
 
     protected abstract void validateFabricSettings( Config config );
 
@@ -129,6 +133,12 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         protected DriverConfigFactory createDriverConfigFactory( FabricEnterpriseConfig fabricConfig, Config serverConfig, SslPolicyLoader sslPolicyLoader )
         {
             return new ExternalDriverConfigFactory( fabricConfig, serverConfig, sslPolicyLoader );
+        }
+
+        @Override
+        protected CredentialsProvider createCredentialsProvider()
+        {
+            return new ExternalCredentialsProvider();
         }
 
         @Override
@@ -201,7 +211,13 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         @Override
         protected DriverConfigFactory createDriverConfigFactory( FabricEnterpriseConfig fabricConfig, Config serverConfig, SslPolicyLoader sslPolicyLoader )
         {
-            return new ClusterDriverConfigFactory();
+            return new ClusterDriverConfigFactory( fabricConfig, serverConfig, sslPolicyLoader );
+        }
+
+        @Override
+        protected CredentialsProvider createCredentialsProvider()
+        {
+            return new ClusterCredentialsProvider();
         }
 
         @Override

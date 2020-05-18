@@ -25,16 +25,16 @@ class ClusterCatalogManager(
   fabricConfig: FabricEnterpriseConfig,
 ) extends EnterpriseSingleCatalogManager(databaseLookup, databaseManagementService, fabricConfig) {
 
-  override def locationOf(graph: Catalog.Graph, requireWritable: Boolean): Location = (graph, requireWritable) match {
+  override def locationOf(graph: Catalog.Graph, requireWritable: Boolean, canRoute: Boolean): Location = (graph, requireWritable, canRoute) match {
 
-    case (Catalog.InternalGraph(id, uuid, _, databaseName), true) =>
+    case (Catalog.InternalGraph(id, uuid, _, databaseName), true, true) =>
       determineLeader(databaseName) match {
         case LeaderIsLocal           => new Location.Local(id, uuid, databaseName.name())
         case LeaderIsRemote(address) => new Location.Remote.Internal(id, uuid, internalRemoteUri(address), databaseName.name())
       }
 
     case _ =>
-      super.locationOf(graph, requireWritable)
+      super.locationOf(graph, requireWritable, canRoute)
   }
 
   private def internalRemoteUri(socketAddress: SocketAddress): Location.RemoteUri =
@@ -50,18 +50,21 @@ class ClusterCatalogManager(
     leaderLookup.leaderId(dbId) match {
       case Some(`myId`) => LeaderIsLocal
       case Some(_)      => LeaderIsRemote(leaderBoltAddress(dbId))
-      case None         => routingFailed("Unable to get bolt address for database {}", databaseName.name())
+      case None         => noLeaderAddress( databaseName.name())
     }
   }
 
   private def databaseId(databaseName: NormalizedDatabaseName) =
     databaseLookup.databaseId(databaseName)
-      .getOrElse(routingFailed("Unable to get database id for database {}", databaseName.name()))
+      .getOrElse(routingFailed("Unable to get database id for database %s", databaseName.name()))
 
   private def leaderBoltAddress(databaseId: NamedDatabaseId) =
     leaderLookup.leaderBoltAddress(databaseId)
-      .getOrElse(routingFailed("Unable to get bolt address of LEADER for database {}", databaseId.name()))
+      .getOrElse(noLeaderAddress( databaseId.name()))
 
+  private def noLeaderAddress(dbName: String): Nothing =
+    routingFailed("Unable to get bolt address of LEADER for database %s", dbName)
+  
   private def routingFailed(msg: String, dbName: String): Nothing =
     throw new FabricException(Status.Fabric.Routing, msg, dbName)
 }

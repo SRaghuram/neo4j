@@ -69,7 +69,7 @@ import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
 @TestDirectoryExtension
-class DriverSslTest
+abstract class AbstractDriverSslTest
 {
 //    {
 //        // for debugging
@@ -169,6 +169,12 @@ class DriverSslTest
         assertFalse( server.connectionEstablished.get() );
     }
 
+    abstract Map<String,String> getSettingValues( String hostname, SslDir sslResource, String policyBaseDir, boolean verifyHostname );
+
+    abstract DriverConfigFactory getConfigFactory( FabricEnterpriseConfig fabricConfig, Config serverConfig, SslPolicyLoader sslPolicyLoader );
+
+    abstract boolean requiresPrivateKey();
+
     private <T extends Exception> void testHostnameVerification( SslDir sslResource, String host, Class<T> errorCause, String errorMessage )
     {
         testConnection( sslResource, host, errorCause, errorMessage, true );
@@ -186,22 +192,12 @@ class DriverSslTest
 
     private <T extends Exception> void testConnection( SslDir sslResource, String host, Class<T> errorCause, String errorMessage, boolean verifyHostname )
     {
-
-        var graph0Uri = "bolt://" + host + ":" + server.port();
-        var properties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", graph0Uri,
-                "dbms.ssl.policy.fabric.enabled", "true",
-                "dbms.ssl.policy.fabric.base_directory", testDirectory.directory( "client" ).getAbsolutePath(),
-                "dbms.ssl.policy.fabric.private_key", sslResource.privateKey.toString(),
-                "dbms.ssl.policy.fabric.public_certificate", sslResource.publicCertificate.toString(),
-                "dbms.ssl.policy.fabric.trusted_dir", sslResource.trustedDirectory.toString(),
-                "dbms.ssl.policy.fabric.revoked_dir", sslResource.revokedDirectory.toString(),
-                "dbms.ssl.policy.fabric.verify_hostname", Boolean.toString( verifyHostname )
-        );
+        var policyBaseDir = testDirectory.directory( "client" ).getAbsolutePath();
+        var uri = "bolt://" + host + ":" + server.port();
+        var properties = getSettingValues( uri, sslResource, policyBaseDir, verifyHostname );
         var config = Config.newBuilder()
-                .setRaw( properties )
-                .build();
+                           .setRaw( properties )
+                           .build();
 
         var fabricConfig = FabricEnterpriseConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
@@ -209,10 +205,10 @@ class DriverSslTest
         var jobScheduler = mock( JobScheduler.class );
         var credentialsProvider = mock( CredentialsProvider.class );
 
-        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
+        var driverConfigFactory = getConfigFactory( fabricConfig, config, sslLoader );
         driverPool = new DriverPool( jobScheduler, driverConfigFactory, fabricConfig, Clock.systemUTC(), credentialsProvider );
         driverPool.start();
-        var driver = driverPool.getDriver( new Location.Remote.External( 0, null, createUri( graph0Uri ), null ), null );
+        var driver = driverPool.getDriver( new Location.Remote.External( 0, null, createUri( uri ), null ), null );
 
         var transactionInfo = mock( FabricTransactionInfo.class );
         when( transactionInfo.getTxTimeout() ).thenReturn( Duration.ZERO );
@@ -251,11 +247,23 @@ class DriverSslTest
         return new SslDir( keyFile, certFile, trustedDir, directory.resolve( "revoked" ) );
     }
 
-    private SslDir trust( SslDir sslDir, Path directory ) throws IOException
+    private SslDir trust( SslDir sslDir, Path directory ) throws IOException, GeneralSecurityException, OperatorCreationException
     {
         var trustedDir = directory.resolve( "trusted" );
         Files.createDirectories(trustedDir);
         Files.copy(sslDir.publicCertificate, trustedDir.resolve( "server.crt" ));
+
+        // some policies just need a private key
+        // (they just refuse to load without one)
+        // even though it is unimportant for the given test
+        if ( requiresPrivateKey() )
+        {
+            SelfSignedCertificateFactory certFactory = new SelfSignedCertificateFactory();
+
+            var certFile = directory.resolve( "public.crt" );
+            var keyFile = directory.resolve( "private.key" );
+            certFactory.createSelfSignedCertificate( certFile.toFile(), keyFile.toFile(), "localhost" );
+        }
 
         return new SslDir( directory.resolve( "private.key" ), directory.resolve( "public.crt" ), trustedDir, directory.resolve( "revoked" ) );
     }
@@ -289,7 +297,7 @@ class DriverSslTest
         return server;
     }
 
-    private static class Server
+    protected static class Server
     {
 
         private final AtomicBoolean connectionEstablished = new AtomicBoolean( false );
@@ -386,7 +394,7 @@ class DriverSslTest
         }
     }
 
-    private static final class SslDir
+    protected static final class SslDir
     {
         private final Path privateKey;
         private final Path publicCertificate;
@@ -399,6 +407,26 @@ class DriverSslTest
             this.publicCertificate = publicCertificate;
             this.trustedDirectory = trustedDirectory;
             this.revokedDirectory = revokedDirectory;
+        }
+
+        protected Path getPrivateKey()
+        {
+            return privateKey;
+        }
+
+        protected Path getPublicCertificate()
+        {
+            return publicCertificate;
+        }
+
+        protected Path getTrustedDirectory()
+        {
+            return trustedDirectory;
+        }
+
+        protected Path getRevokedDirectory()
+        {
+            return revokedDirectory;
         }
     }
 }

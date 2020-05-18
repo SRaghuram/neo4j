@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.eval
 
+import com.neo4j.causalclustering.discovery.ConnectorAddresses
 import com.neo4j.causalclustering.discovery.RoleInfo
 import com.neo4j.causalclustering.discovery.TopologyService
 import com.neo4j.causalclustering.identity.MemberId
@@ -37,7 +38,7 @@ object LeaderLookup {
       leaderService.getLeaderId(databaseId).asScala
 
     def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress] =
-      leaderService.getLeaderBoltAddress(databaseId).asScala
+      LeaderLookup.leaderBoltAddress(topologyService, leaderId(databaseId), databaseId)
   }
 
   class ReadReplica(
@@ -52,10 +53,24 @@ object LeaderLookup {
         .find(memberId => topologyService.lookupRole(databaseId, memberId) == RoleInfo.LEADER)
 
     def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress] =
-      for {
-        leader <- leaderId(databaseId)
-        members = topologyService.coreTopologyForDatabase(databaseId).members().asScala
-        leaderInfo <- members.get(leader)
-      } yield leaderInfo.connectors().clientBoltAddress()
+      LeaderLookup.leaderBoltAddress(topologyService, leaderId(databaseId), databaseId)
+  }
+
+  private def leaderBoltAddress(topologyService: TopologyService, leaderId: Option[MemberId], databaseId: NamedDatabaseId): Option[SocketAddress] = {
+    for {
+      leader <- leaderId
+      members = topologyService.coreTopologyForDatabase(databaseId).members().asScala
+      leaderInfo <- members.get(leader)
+      address <- getAddress(leaderInfo.connectors())
+    } yield address
+  }
+
+  private def getAddress(connectors: ConnectorAddresses): Option[SocketAddress] = {
+    val address = connectors.intraClusterBoltAddress()
+    if (address.isPresent) {
+      Some(address.get())
+    } else {
+      None
+    }
   }
 }

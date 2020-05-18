@@ -101,22 +101,22 @@ class SingleCatalogManagerTest extends FabricTest {
     val catalog = manager.currentCatalog()
 
     def resolveAll(writable: Boolean) = {
-      manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
+      manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, true)
         .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
-      manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
+      manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable, true)
         .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
-      manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
+      manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable, true)
         .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
-      manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
+      manager.locationOf(catalog.resolve(CatalogName("intA")), writable, true)
         .shouldEqual(new Location.Local(3, intAUuid, "inta"))
 
-      manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
+      manager.locationOf(catalog.resolve(CatalogName("intB")), writable,  true)
         .shouldEqual(new Location.Local(4, intBUuid, "intb"))
 
-      manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
+      manager.locationOf(catalog.resolve(CatalogName("mega")), writable, true)
         .shouldEqual(new Location.Local(5, megaUuid, "mega"))
     }
 
@@ -134,10 +134,10 @@ class SingleCatalogManagerTest extends FabricTest {
     val manager = managerWithoutFabricDatabase
     val catalog = manager.currentCatalog()
 
-    manager.locationOf(catalog.resolve(CatalogName("intA")), false)
+    manager.locationOf(catalog.resolve(CatalogName("intA")), false, true)
       .shouldEqual(new Location.Local(0, intAUuid, "inta"))
 
-    manager.locationOf(catalog.resolve(CatalogName("intB")), false)
+    manager.locationOf(catalog.resolve(CatalogName("intB")), false, true)
       .shouldEqual(new Location.Local(1, intBUuid, "intb"))
   }
 

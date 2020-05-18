@@ -5,23 +5,12 @@
  */
 package com.neo4j.fabric.auth;
 
-import org.neo4j.driver.AuthToken;
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
-public class CredentialsProvider
+import org.neo4j.driver.AuthToken;
+
+public interface CredentialsProvider
 {
 
-    public AuthToken credentialsFor( AuthSubject subject )
-    {
-        Credentials credentials = FabricAuthManagerWrapper.getCredentials( subject );
-        if ( credentials.getProvided() )
-        {
-            return AuthTokens.basic( credentials.getUsername(), new String( credentials.getPassword() ) );
-        }
-        else
-        {
-            return AuthTokens.none();
-        }
-    }
+    AuthToken credentialsFor( EnterpriseLoginContext loginContext );
 }

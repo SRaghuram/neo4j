@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.fabric.executor.Location;
@@ -42,9 +43,10 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
     @Override
     public Mono<RemoteBookmark> commit()
     {
-        return Mono.fromFuture( asyncTransaction.commitAsync().toCompletableFuture())
-                .then( Mono.fromSupplier( () -> convertBookmark( asyncSession.lastBookmark() ) ) )
-                .doFinally( s -> asyncSession.closeAsync() );
+        return Mono.fromFuture( asyncTransaction.commitAsync().toCompletableFuture() )
+                   .onErrorMap( Neo4jException.class, Utils::translateError )
+                   .then( Mono.fromSupplier( () -> convertBookmark( asyncSession.lastBookmark() ) ) )
+                   .doFinally( s -> asyncSession.closeAsync() );
     }
 
     @Override

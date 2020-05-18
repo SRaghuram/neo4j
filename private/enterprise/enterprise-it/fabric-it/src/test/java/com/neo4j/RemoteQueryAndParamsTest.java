@@ -165,7 +165,7 @@ class RemoteQueryAndParamsTest
         }
 
         @Override
-        public Location locationOf( Catalog.Graph graph, boolean requireWritable )
+        public Location locationOf( Catalog.Graph graph, boolean requireWritable, boolean canRoute )
         {
             if ( graph instanceof Catalog.InternalGraph )
             {

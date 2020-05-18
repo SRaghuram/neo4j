@@ -23,8 +23,8 @@ import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
 public class InClusterAuthManager extends EnterpriseAuthManager
 {
-    private static final String SCHEME = "in-cluster-token";
-    private static final String ROLES_KEY = "roles";
+    public static final String SCHEME = "in-cluster-token";
+    public static final String ROLES_KEY = "roles";
 
     private final SystemGraphRealm systemGraphRealm;
 

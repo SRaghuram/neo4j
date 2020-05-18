@@ -8,6 +8,7 @@ package com.neo4j.fabric.executor;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -126,7 +127,8 @@ public class FabricRemoteExecutorImpl implements FabricRemoteExecutor
 
         private PooledDriver getDriver( Location.Remote location )
         {
-            return usedDrivers.computeIfAbsent( location.getGraphId(), gid -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
+            var loginContext = (EnterpriseLoginContext) transactionInfo.getLoginContext();
+            return usedDrivers.computeIfAbsent( location.getGraphId(), gid -> driverPool.getDriver( location, loginContext ) );
         }
 
         private Mono<StatementResult> runInTx( Mono<FabricDriverTransaction> tx, String query, MapValue params )

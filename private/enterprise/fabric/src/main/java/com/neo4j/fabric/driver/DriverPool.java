@@ -7,6 +7,7 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricEnterpriseConfig;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,7 +27,6 @@ import org.neo4j.driver.internal.cluster.RoutingSettings;
 import org.neo4j.driver.internal.retry.RetrySettings;
 import org.neo4j.driver.internal.shaded.io.netty.channel.EventLoopGroup;
 import org.neo4j.fabric.executor.Location;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -61,10 +61,10 @@ public class DriverPool extends LifecycleAdapter
         eventLoopGroup = EventLoopGroupFactory.newEventLoopGroup( eventLoopCount );
     }
 
-    public PooledDriver getDriver( Location.Remote location, AuthSubject subject )
+    public PooledDriver getDriver( Location.Remote location, EnterpriseLoginContext loginContext )
     {
 
-        var authToken = credentialsProvider.credentialsFor( subject );
+        var authToken = credentialsProvider.credentialsFor( loginContext );
         Key key = new Key( location.getUri(), authToken );
         return driversInUse.compute( key, ( k, presentValue ) ->
         {

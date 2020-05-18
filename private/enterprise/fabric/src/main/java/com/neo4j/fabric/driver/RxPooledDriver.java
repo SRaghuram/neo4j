@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
@@ -62,7 +63,9 @@ class RxPooledDriver extends PooledDriver
 
         var driverTransaction = getDriverTransaction( session, transactionInfo );
 
-        return driverTransaction.map( tx ->  new FabricDriverRxTransaction( tx, session, location ));
+        return driverTransaction
+                .onErrorMap( Neo4jException.class, Utils::translateError )
+                .map( tx ->  new FabricDriverRxTransaction( tx, session, location ));
     }
 
     private Mono<RxTransaction> getDriverTransaction( RxSession session, FabricTransactionInfo transactionInfo )

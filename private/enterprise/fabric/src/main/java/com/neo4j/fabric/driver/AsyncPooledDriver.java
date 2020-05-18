@@ -19,6 +19,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.fabric.stream.Record;
@@ -63,7 +64,9 @@ public class AsyncPooledDriver extends PooledDriver
 
         var driverTransaction = getDriverTransaction( session, transactionInfo );
 
-        return Mono.fromFuture( driverTransaction.toCompletableFuture() ).map( tx ->  new FabricDriverAsyncTransaction( tx, session, location ));
+        return Mono.fromFuture( driverTransaction.toCompletableFuture() )
+                   .onErrorMap( Neo4jException.class, Utils::translateError )
+                   .map( tx ->  new FabricDriverAsyncTransaction( tx, session, location ));
     }
 
     private CompletionStage<AsyncTransaction> getDriverTransaction( AsyncSession session, FabricTransactionInfo transactionInfo )

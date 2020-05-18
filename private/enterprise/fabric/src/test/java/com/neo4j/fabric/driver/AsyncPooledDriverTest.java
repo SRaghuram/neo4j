@@ -58,7 +58,7 @@ class AsyncPooledDriverTest
     private final AsyncTransaction asyncTransaction = mock( AsyncTransaction.class );
 
     private final Location.Remote location = new Location.Remote.External( 0, null, null, null );
-    private final FabricTransactionInfo transactionInfo = new FabricTransactionInfo( null, null, null, null, false, Duration.ZERO, null );
+    private final FabricTransactionInfo transactionInfo = new FabricTransactionInfo( null, null, null, null, false, Duration.ZERO, null, null );
 
     @BeforeEach
     void setUp()

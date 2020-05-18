@@ -6,7 +6,11 @@
 package com.neo4j.fabric.driver;
 
 import org.neo4j.driver.Bookmark;
+import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.kernel.api.exceptions.Status;
 
 public class Utils
 {
@@ -28,5 +32,31 @@ public class Utils
 
         String serialisedBookmark = bookmark.values().stream().findAny().get();
         return new RemoteBookmark( serialisedBookmark );
+    }
+
+    static FabricException translateError( Neo4jException driverException )
+    {
+        // only user errors ( typically wrongly written query ) keep the original status code
+        // server errors get a special status to distinguish them from error occurring on the local server
+        if ( driverException instanceof ClientException )
+        {
+            var serverCode = Status.Code.all().stream().filter( code -> code.code().serialize().equals( driverException.code() ) ).findAny();
+
+            if ( serverCode.isEmpty() )
+            {
+                return genericRemoteFailure( driverException );
+            }
+
+            return new FabricException( serverCode.get(), driverException.getMessage(), driverException );
+        }
+
+        return genericRemoteFailure( driverException );
+    }
+
+    private static FabricException genericRemoteFailure( Neo4jException driverException )
+    {
+        return new FabricException( Status.Fabric.RemoteExecutionFailed,
+                String.format( "Remote execution failed with code %s and message '%s'", driverException.code(), driverException.getMessage() ),
+                driverException );
     }
 }

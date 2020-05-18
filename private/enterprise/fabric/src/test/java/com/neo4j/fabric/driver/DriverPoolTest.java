@@ -7,6 +7,7 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricEnterpriseConfig;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,8 +53,8 @@ class DriverPoolTest
     private final Location.Remote s2 = new Location.Remote.External( 2, null, createUri( shard1.boltURI().toString() ), "db1" );
 
     private final CredentialsProvider credentialsProvider = Mockito.mock( CredentialsProvider.class );
-    private final AuthSubject as1 = mock( AuthSubject.class );
-    private final AuthSubject as2 = mock( AuthSubject.class );
+    private final EnterpriseLoginContext lc1 = mock( EnterpriseLoginContext.class );
+    private final EnterpriseLoginContext lc2 = mock( EnterpriseLoginContext.class );
 
     private final AuthToken at1 = AuthTokens.basic( "u1", "p" );
     private final AuthToken at2 = AuthTokens.basic( "u2", "p" );
@@ -86,8 +87,8 @@ class DriverPoolTest
 
         var remoteGraphDriver = new FabricEnterpriseConfig.GlobalDriverConfig( idleTimeout, ofMinutes( 1 ), 1, driverConfig );
         when( fabricConfig.getGlobalDriverConfig() ).thenReturn( remoteGraphDriver );
-        when( credentialsProvider.credentialsFor( as1 ) ).thenReturn( at1 );
-        when( credentialsProvider.credentialsFor( as2 ) ).thenReturn( at2 );
+        when( credentialsProvider.credentialsFor( lc1 ) ).thenReturn( at1 );
+        when( credentialsProvider.credentialsFor( lc2 ) ).thenReturn( at2 );
 
         var database = mock( FabricEnterpriseConfig.Database.class );
         when( fabricConfig.getDatabase() ).thenReturn( database );
@@ -102,10 +103,10 @@ class DriverPoolTest
     {
         driverPool.start();
 
-        PooledDriver d1 = driverPool.getDriver( s1, as1 );
-        PooledDriver d2 = driverPool.getDriver( s1, as1 );
-        PooledDriver d3 = driverPool.getDriver( s2, as1 );
-        PooledDriver d4 = driverPool.getDriver( s2, as2 );
+        PooledDriver d1 = driverPool.getDriver( s1, lc1 );
+        PooledDriver d2 = driverPool.getDriver( s1, lc1 );
+        PooledDriver d3 = driverPool.getDriver( s2, lc1 );
+        PooledDriver d4 = driverPool.getDriver( s2, lc2 );
 
         assertSame( d1, d2 );
         assertNotSame( d2, d3 );
@@ -124,9 +125,9 @@ class DriverPoolTest
 
         Runnable idleDriverCheck = argumentCaptor.getValue();
 
-        PooledDriver d1 = driverPool.getDriver( s1, as1 );
-        driverPool.getDriver( s1, as1 );
-        driverPool.getDriver( s1, as1 );
+        PooledDriver d1 = driverPool.getDriver( s1, lc1 );
+        driverPool.getDriver( s1, lc1 );
+        driverPool.getDriver( s1, lc1 );
         assertEquals( 3, d1.getReferenceCounter().get() );
 
         d1.release();
@@ -138,7 +139,7 @@ class DriverPoolTest
         d1.setLastUsedTimestamp( Clock.systemUTC().instant().minus( idleTimeout.plusMinutes( 1 ) ) );
         idleDriverCheck.run();
 
-        PooledDriver d2 = driverPool.getDriver( s1, as1 );
+        PooledDriver d2 = driverPool.getDriver( s1, lc1 );
 
         assertNotSame( d1, d2 );
         assertEquals( 0, d1.getReferenceCounter().get() );

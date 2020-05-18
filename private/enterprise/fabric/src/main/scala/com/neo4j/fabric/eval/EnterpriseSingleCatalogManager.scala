@@ -51,11 +51,11 @@ class EnterpriseSingleCatalogManager(
     graph <- graphs.toSeq
   } yield ExternalGraph(graph.getId, Option(graph.getName).map(_.name) , new UUID(graph.getId, 0))
 
-  override def locationOf(graph: Catalog.Graph, requireWritable: Boolean): Location = graph match {
+  override def locationOf(graph: Catalog.Graph, requireWritable: Boolean, canRoute: Boolean): Location = graph match {
     case Catalog.ExternalGraph(id, _, uuid) =>
       val graph = graphsById(id)
       new Remote.External(id, uuid, externalRemoteUri(graph.getUri), Option(graph.getDatabase).orNull)
-    case _ => super.locationOf(graph, requireWritable )
+    case _ => super.locationOf(graph, requireWritable, canRoute)
   }
 
   private def externalRemoteUri(configUri: FabricEnterpriseConfig.RemoteUri): Location.RemoteUri =

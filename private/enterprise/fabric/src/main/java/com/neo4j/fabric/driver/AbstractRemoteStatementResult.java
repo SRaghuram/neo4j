@@ -116,30 +116,4 @@ abstract class AbstractRemoteStatementResult implements StatementResult
         return new FabricSecondaryException( translatedException.status(), translatedException.getMessage(), translatedException.getCause(),
                 primaryException.get() );
     }
-
-    private FabricException translateError( Neo4jException driverException )
-    {
-        // only user errors ( typically wrongly written query ) keep the original status code
-        // server errors get a special status to distinguish them from error occurring on the local server
-        if ( driverException instanceof ClientException )
-        {
-            var serverCode = Status.Code.all().stream().filter( code -> code.code().serialize().equals( driverException.code() ) ).findAny();
-
-            if ( serverCode.isEmpty() )
-            {
-                return genericRemoteFailure( driverException );
-            }
-
-            return new FabricException( serverCode.get(), driverException.getMessage(), driverException );
-        }
-
-        return genericRemoteFailure( driverException );
-    }
-
-    private FabricException genericRemoteFailure( Neo4jException driverException )
-    {
-        return new FabricException( Status.Fabric.RemoteExecutionFailed,
-                String.format( "Remote execution failed with code %s and message '%s'", driverException.code(), driverException.getMessage() ),
-                driverException );
-    }
 }
