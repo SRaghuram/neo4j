@@ -42,6 +42,7 @@ import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilin
 import org.neo4j.cypher.internal.runtime.spec.tests.InputStreams
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
+import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapDumper
@@ -525,6 +526,73 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     val inputArray = Array(Array[Any](center), Array[Any](center))
 
     runPeakMemoryUsageProfiling(logicalQuery, inputArray, heapDumpFileNamePrefix)
+  }
+
+  private def measureExpandInto(multiplier: Int, testName: String, logicalQuery: LogicalQuery): Unit = {
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    val n = 100
+    val nodes = given {
+      val (aNodes,bNodes) = bipartiteGraph(n, "A", "B", "OUT")
+      val r2 = RelationshipType.withName("IN")
+      for {a <- aNodes
+           b <- bNodes
+           _ <- 0 until multiplier} {
+        b.createRelationshipTo(a, r2)
+      }
+      aNodes
+    }
+
+    // We need to restart the transaction after constructing the graph or we will track all the memory usage from it
+    runtimeTestSupport.restartTx()
+
+    val inputNodes = nodes.map(n => Array[Any](n)).toArray
+
+    runPeakMemoryUsageProfiling(logicalQuery, inputNodes, heapDumpFileNamePrefix)
+  }
+
+  test("measure expand-into small") {
+    val logicalQuery: LogicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("r", "b")
+      .expandInto("(a)<-[r:IN]-(b)")
+      .expand("(a)-[:OUT]->(b)")
+      .input(nodes = Seq("a"))
+      .build()
+
+    measureExpandInto(1, "expand-into-small", logicalQuery)
+  }
+
+  test("measure expand-into big") {
+    val logicalQuery: LogicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("r", "b")
+      .expandInto("(a)<-[r:IN]-(b)")
+      .expand("(a)-[:OUT]->(b)")
+      .input(nodes = Seq("a"))
+      .build()
+
+    measureExpandInto(100, "expand-into-big", logicalQuery)
+  }
+
+  test("measure optional expand-into small") {
+    val logicalQuery: LogicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("r", "b")
+      .optionalExpandInto("(a)<-[r:IN]-(b)")
+      .expand("(a)-[:OUT]->(b)")
+      .input(nodes = Seq("a"))
+      .build()
+
+    measureExpandInto(1, "optional-expand-into-small", logicalQuery)
+  }
+
+  test("measure optional expand-into big") {
+    val logicalQuery: LogicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("r", "b")
+      .optionalExpandInto("(a)<-[r:IN]-(b)")
+      .expand("(a)-[:OUT]->(b)")
+      .input(nodes = Seq("a"))
+      .build()
+
+    measureExpandInto(100, "optional-expand-into-big", logicalQuery)
   }
 
   test("measure partial top - ordered column has one value") {
