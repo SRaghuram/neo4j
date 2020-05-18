@@ -719,4 +719,110 @@ trait FullSupportMemoryManagementProfilingBase [CONTEXT <: RuntimeContext] {
 
     runPeakMemoryUsageProfiling(logicalQuery, data, heapDumpFileNamePrefix)
   }
+
+  test("measure aggregation percentileCont without grouping") {
+    val testName = "agg_percentile_cont"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .aggregation(Seq.empty, Seq("percentileCont(x,0.50) AS y"))
+      .input(variables = Seq("x"))
+      .build()
+
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val random = new Random(seed = 1337)
+    val data: Array[Array[Any]] = (0 until n).map { i => Array[Any](random.nextInt(10000)) }.toArray
+
+    // when
+    val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure aggregation percentileCont with grouping") {
+    val testName = "agg_percentile_cont_grouping"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y", "z")
+      .aggregation(Seq("y AS y"), Seq("percentileCont(x,0.20) AS z"))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val random = new Random(seed = 1337)
+    val data: Array[Array[Any]] = (0 until n).map { i => Array[Any](random.nextInt(10000), Math.round(i/30)) }.toArray
+
+    // when
+    val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure aggregation percentileDisc without grouping") {
+    val testName = "agg_percentile_disc"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .aggregation(Seq.empty, Seq("percentileDisc(x,0.20) AS y"))
+      .input(variables = Seq("x"))
+      .build()
+
+
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val random = new Random(seed = 1337)
+    val data: Array[Array[Any]] = (0 until n).map { i => Array[Any](random.nextInt(10000)) }.toArray
+
+    // when
+    val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure aggregation percentileDisc with grouping") {
+    val testName = "agg_percentile_disc_grouping"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y", "z")
+      .aggregation(Seq("y AS y"), Seq("percentileDisc(x,0.20) AS z"))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val random = new Random(seed = 1337)
+    val data: Array[Array[Any]] = (0 until n).map { i => Array[Any](random.nextInt(10000), Math.round(i/30)) }.toArray
+
+    // when
+    val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
 }
