@@ -243,7 +243,8 @@ class BookmarkIT
 
     private Bookmark bumpedSystemDbBookmark( long txIdDelta )
     {
-        try {
+        try
+        {
             return bumpedSystemDbBookmarkFabric( txIdDelta );
         }
         catch ( Exception e )
