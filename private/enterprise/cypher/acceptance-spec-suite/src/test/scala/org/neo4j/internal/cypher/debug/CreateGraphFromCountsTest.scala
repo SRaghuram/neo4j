@@ -23,7 +23,8 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
       List(
         Map(
           "name" -> "constraint_952bbd70",
-          "description" -> "Constraint( id=2, name='constraint_952bbd70', type='UNIQUENESS', schema=(:User {name}), ownedIndex=1 )")
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name) IS UNIQUE",
+          "details" -> "Constraint( id=2, name='constraint_952bbd70', type='UNIQUENESS', schema=(:User {name}), ownedIndex=1 )")
       )
     )
 
@@ -53,7 +54,8 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
       List(
         Map(
           "name" -> "constraint_24564d05",
-          "description" -> "Constraint( id=2, name='constraint_24564d05', type='NODE KEY', schema=(:User {name, surname}), ownedIndex=1 )")
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name, user.surname) IS NODE KEY",
+          "details" -> "Constraint( id=2, name='constraint_24564d05', type='NODE KEY', schema=(:User {name, surname}), ownedIndex=1 )")
       )
     )
   }
@@ -68,7 +70,8 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
       List(
         Map(
           "name" -> "constraint_89c8c370",
-          "description" -> "Constraint( id=1, name='constraint_89c8c370', type='NODE PROPERTY EXISTENCE', schema=(:User {name}) )")
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT exists(user.name)",
+          "details" -> "Constraint( id=1, name='constraint_89c8c370', type='NODE PROPERTY EXISTENCE', schema=(:User {name}) )")
       )
     )
   }
@@ -83,7 +86,8 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
       List(
         Map(
           "name" -> "constraint_36048d74",
-          "description" -> "Constraint( id=1, name='constraint_36048d74', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:User {name}]- )")
+          "description" -> "CONSTRAINT ON ()-[ user:User ]-() ASSERT exists(user.name)",
+          "details" -> "Constraint( id=1, name='constraint_36048d74', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:User {name}]- )")
       )
     )
   }

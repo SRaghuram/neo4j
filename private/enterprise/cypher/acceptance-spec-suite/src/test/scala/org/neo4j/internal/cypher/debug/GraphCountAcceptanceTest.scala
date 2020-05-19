@@ -170,7 +170,8 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
       List(
         Map(
           "name" -> "constraint_3a8336b6",
-          "description" -> "Constraint( id=6, name='constraint_3a8336b6', type='UNIQUENESS', schema=(:User {email}), ownedIndex=1 )")
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.email) IS UNIQUE",
+          "details" -> "Constraint( id=6, name='constraint_3a8336b6', type='UNIQUENESS', schema=(:User {email}), ownedIndex=1 )")
       )
     )
 
