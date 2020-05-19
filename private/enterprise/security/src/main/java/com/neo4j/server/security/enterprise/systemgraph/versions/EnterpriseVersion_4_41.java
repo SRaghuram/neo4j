@@ -22,11 +22,11 @@ import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurit
 /**
  * Version 4 of the security model is identical to version 3, but with the Version node now existing and containing the correct version information.
  */
-public class EnterpriseVersion_4_41d2 extends SupportedEnterpriseVersion
+public class EnterpriseVersion_4_41 extends SupportedEnterpriseVersion
 {
-    public EnterpriseVersion_4_41d2( Log log )
+    public EnterpriseVersion_4_41( Log log )
     {
-        super( LATEST_VERSION, "Neo4j 4.1.0-Drop02", log, true );
+        super( LATEST_VERSION, "Neo4j 4.1", log, true );
     }
 
     @Override

@@ -24,7 +24,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {
     @ParameterizedTest
-    @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41D2} )
+    @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41} )
     void shouldAuthenticate( String version ) throws Exception
     {
         initEnterprise( version );
@@ -52,7 +52,7 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
     }
 
     @ParameterizedTest
-    @ValueSource( strings = {VERSION_40, VERSION_41D1, VERSION_41D2} )
+    @ValueSource( strings = {VERSION_40, VERSION_41D1, VERSION_41} )
     void shouldAuthorize( String version ) throws Exception
     {
         initEnterprise( version );

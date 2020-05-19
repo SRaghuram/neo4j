@@ -14,7 +14,7 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersi
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_1_36;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_2_40;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_3_41d1;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_4_41d2;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_4_41;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_Future;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseComponentVersion;
@@ -58,7 +58,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         knownSecurityComponentVersions.add( new EnterpriseVersion_1_36( log, config ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_2_40( log ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_3_41d1( log ) );
-        knownSecurityComponentVersions.add( new EnterpriseVersion_4_41d2( log ) );
+        knownSecurityComponentVersions.add( new EnterpriseVersion_4_41( log ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
     }
 

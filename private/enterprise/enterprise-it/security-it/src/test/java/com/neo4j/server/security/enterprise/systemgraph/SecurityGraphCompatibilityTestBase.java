@@ -52,7 +52,7 @@ abstract class SecurityGraphCompatibilityTestBase
     static final String VERSION_36 = "Neo4j 3.6";
     static final String VERSION_40 = "Neo4j 4.0";
     static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
-    static final String VERSION_41D2 = "Neo4j 4.1.0-Drop02";
+    static final String VERSION_41 = "Neo4j 4.1";
 
     private DatabaseManagementService dbms;
     private EnterpriseSecurityGraphComponent enterpriseComponent;

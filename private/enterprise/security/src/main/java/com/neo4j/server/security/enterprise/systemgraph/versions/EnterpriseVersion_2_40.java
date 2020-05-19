@@ -50,8 +50,8 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     @Override
     public boolean detected( Transaction tx )
     {
-        return nodesWithLabelExist( tx, EnterpriseVersion_3_41d1.DATABASE_ALL_LABEL ) &&
-               !nodesWithLabelExist( tx, EnterpriseVersion_3_41d1.DATABASE_DEFAULT_LABEL ) &&
+        return nodesWithLabelExist( tx, DATABASE_ALL_LABEL ) &&
+               !nodesWithLabelExist( tx, DATABASE_DEFAULT_LABEL ) &&
                componentNotInVersionNode( tx );
     }
 
@@ -80,13 +80,13 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     public void setUpDefaultPrivileges( Transaction tx )
     {
         // Check for DatabaseAll node to see if the default privileges were already setup
-        if ( nodesWithLabelExist( tx, EnterpriseVersion_3_41d1.DATABASE_ALL_LABEL ) )
+        if ( nodesWithLabelExist( tx, DATABASE_ALL_LABEL ) )
         {
             return;
         }
 
         // Create a DatabaseAll node
-        Node allDb = tx.createNode( EnterpriseVersion_3_41d1.DATABASE_ALL_LABEL );
+        Node allDb = tx.createNode( DATABASE_ALL_LABEL );
         allDb.setProperty( "name", "*" );
 
         // Create initial qualifier nodes
@@ -196,7 +196,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     {
         assert latest.version == LATEST_VERSION;
         log.info( String.format( "Upgrading security model from %s by restructuring privileges", this.description ) );
-        // Upgrade from 4.0.x to 4.1.0-Drop02, which means add the Version node, change global writes and split schema into index and constraint
+        // Upgrade from 4.0.x to 4.1.x, which means add the Version node, change global writes and split schema into index and constraint
         setVersionProperty( tx, latest.version );
         upgradeWriteFromAllPropertiesToGraphResource( tx );
         upgradeFromSchemaPrivilegeToIndexAndContraintPrivileges( tx );

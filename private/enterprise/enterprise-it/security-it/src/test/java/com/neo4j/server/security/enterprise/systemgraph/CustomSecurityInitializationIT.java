@@ -18,6 +18,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -95,26 +97,30 @@ class CustomSecurityInitializationIT
         }
     }
 
-    @Test
-    void shouldDoCustomInitializationStandalone() throws IOException
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldDoCustomInitializationStandalone( String authEnabled ) throws IOException
     {
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
-                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
             Result result = tx.execute( "SHOW ROLES" );
-            assertTrue( result.stream().anyMatch( row -> row.get( "role" ).equals( "testRole" ) ) );
+            List<String> roles = result.stream().map( row -> (String) row.get( "role" ) ).collect( Collectors.toList() );
+            assertThat( "Should see both default and custom roles", roles,
+                    containsInAnyOrder( "testRole", "admin", "architect", "publisher", "editor", "reader", "PUBLIC" ) );
             result.close();
         }
     }
 
-    @Test
-    void shouldDoCustomInitializationStandaloneWithAuthRoleMigration() throws IOException
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldDoCustomInitializationStandaloneWithAuthRoleMigration( String authEnabled ) throws IOException
     {
         TreeSet<String> users = new TreeSet<>();
         users.add( "neo4j" );
@@ -123,7 +129,7 @@ class CustomSecurityInitializationIT
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j");
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 //.impermanent()
-                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
@@ -137,22 +143,25 @@ class CustomSecurityInitializationIT
         }
     }
 
-    @Test
-    void shouldNotDoAuthMigrationWhenFailingCustomInitializationStandalone() throws IOException
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldNotDoAuthMigrationWhenFailingCustomInitializationStandalone( String authEnabled ) throws IOException
     {
         TreeSet<String> users = new TreeSet<>();
         users.add( "neo4j" );
         writeTestAuthFile( getAuthFile( directory.homeDir() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
         writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
-        TestEnterpriseDatabaseManagementServiceBuilder builder =
-                new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() ).setConfig( GraphDatabaseSettings.auth_enabled,
-                        Boolean.TRUE ).setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) ).setConfig(
-                        GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE );
+        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
+                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE );
         assertThrows( Exception.class, () -> dbms = builder.build() );
 
+        // change the role name to be migrated to be show that migration happens now
+        writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom2" ).withUsers( users ).build() );
         // Then if we fix the init file
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "//INVALID CYPHER" );
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole2", "GRANT ROLE testRole2 TO neo4j", "//INVALID CYPHER" );
         dbms = builder.build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -161,16 +170,17 @@ class CustomSecurityInitializationIT
             Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
             result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
             result.close();
-            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
+            assertThat( roleUsers, containsInAnyOrder( "custom2-neo4j", "testRole2-neo4j" ) );
         }
     }
 
-    @Test
-    void shouldLogInitializationStandalone() throws IOException
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldLogInitializationStandalone( String authEnabled ) throws IOException
     {
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
                 .build();
@@ -183,7 +193,6 @@ class CustomSecurityInitializationIT
         try ( var stringStream = Files.lines( neo4jLog ) )
         {
             var lines = stringStream.collect( Collectors.toList() );
-            lines.forEach( System.out::println );
             assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
         }
     }
@@ -205,8 +214,9 @@ class CustomSecurityInitializationIT
         }
     }
 
-    @Test
-    void shouldNotDoCustomInitializationOnSecondStartupStandalone() throws IOException
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldNotDoCustomInitializationOnSecondStartupStandalone( String authEnabled ) throws IOException
     {
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
@@ -216,7 +226,7 @@ class CustomSecurityInitializationIT
 
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
@@ -228,39 +238,42 @@ class CustomSecurityInitializationIT
         }
     }
 
-    @Test
-    void shouldFailOnMissingCustomInitializationStandalone()
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldFailOnMissingCustomInitializationStandalone( String authEnabled )
     {
         TestEnterpriseDatabaseManagementServiceBuilder builder =
                 new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                         .impermanent()
-                        .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                        .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                         .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) );
         Exception exception = assertThrows( Exception.class, () -> dbms = builder.build() );
 
         assertTrue( isFileNotFoundException( exception ) );
     }
 
-    @Test
-    void shouldFailOnComplexCustomInitializationWithSyntaxErrorStandalone() throws IOException
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldFailOnComplexCustomInitializationWithSyntaxErrorStandalone( String authEnabled ) throws IOException
     {
         writeComplexInitialization( getInitFile( directory.homeDir() ), "(name, email)", "User, Person" );
         TestEnterpriseDatabaseManagementServiceBuilder builder =
                 new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                         .impermanent()
-                        .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                        .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                         .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) );
         Exception exception = assertThrows( Exception.class, () -> dbms = builder.build() );
         assertThat( exception.getCause().getMessage(), containsString( "Invalid input '('" ) );
     }
 
-    @Test
-    void shouldDoMoreComplexCustomInitializationStandalone() throws IOException
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
+    void shouldDoMoreComplexCustomInitializationStandalone( String authEnabled ) throws IOException
     {
         writeComplexInitialization( getInitFile( directory.homeDir() ), "{name, email}", "User, Person" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
-                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
@@ -272,14 +285,15 @@ class CustomSecurityInitializationIT
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource( strings = {"true", "false"} )
     @Timeout( value = 10, unit = TimeUnit.MINUTES )
-    void shouldDoCustomInitializationClustered() throws Exception
+    void shouldDoCustomInitializationClustered( String authEnabled ) throws Exception
     {
         var clusterConfig = ClusterConfig.clusterConfig()
-                                         .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
-                                         .withNumberOfCoreMembers( 3 );
+                .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, authEnabled )
+                .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
+                .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
@@ -290,8 +304,10 @@ class CustomSecurityInitializationIT
         cluster.start();
         cluster.systemTx( ( db, tx ) -> {
             Result result = tx.execute( "SHOW ROLES" );
-            assertTrue( result.stream().anyMatch( row -> row.get( "role" ).equals( "testRole" ) ), "Expect to find new role" );
+            List<String> roles = result.stream().map( row -> (String) row.get( "role" ) ).collect( Collectors.toList() );
             result.close();
+            assertThat( "Should see both default and custom roles", roles,
+                    containsInAnyOrder( "testRole", "admin", "architect", "publisher", "editor", "reader", "PUBLIC" ) );
         } );
     }
 
@@ -343,11 +359,13 @@ class CustomSecurityInitializationIT
         }
         assertThrows( Exception.class, () -> cluster.start() );
 
-        // When fixing the broken init file, things should now work
         for ( ClusterMember member : cluster.coreMembers() )
         {
             File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
-            writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j" );
+            // change the role name to be migrated to be show that migration happens now
+            writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom2" ).withUsers( users ).build() );
+            // When fixing the broken init file, things should now work
+            writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole2", "GRANT ROLE testRole2 TO neo4j" );
         }
         cluster.start();
         cluster.systemTx( ( db, tx ) ->
@@ -356,7 +374,7 @@ class CustomSecurityInitializationIT
             Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
             result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
             result.close();
-            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
+            assertThat( roleUsers, containsInAnyOrder( "custom2-neo4j", "testRole2-neo4j" ) );
         } );
     }
 
