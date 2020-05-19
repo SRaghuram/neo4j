@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.fabric.bolt.FabricBookmark;
 import org.neo4j.fabric.bolt.FabricBookmarkParser;
-import org.neo4j.fabric.bookmark.FabricOnlyBookmarkManager;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManagerImpl;
 import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-class FabricOnlyBookmarkManagerTest
+class TransactionBookmarkManagerTest
 {
     private final UUID external1Uuid = UUID.randomUUID();
     private final UUID external2Uuid = UUID.randomUUID();
@@ -51,7 +51,7 @@ class FabricOnlyBookmarkManagerTest
     private final Location.Local local2 = new Location.Local( 7, local2Uuid, null );
 
     private final LocalGraphTransactionIdTracker transactionIdTracker = mock( LocalGraphTransactionIdTracker.class );
-    private final TransactionBookmarkManager bookmarkManager = new FabricOnlyBookmarkManager( transactionIdTracker );
+    private final TransactionBookmarkManager bookmarkManager = new TransactionBookmarkManagerImpl( transactionIdTracker, true );
 
     @Test
     void testBookmarkHandling()
@@ -140,7 +140,7 @@ class FabricOnlyBookmarkManagerTest
 
         var transactionIdTracker = mock( TransactionIdTracker.class );
         var localGraphTransactionIdTracker = new LocalGraphTransactionIdTracker( transactionIdTracker, null, Duration.ofSeconds( 1 ) );
-        var bookmarkManager = new FabricOnlyBookmarkManager( localGraphTransactionIdTracker );
+        var bookmarkManager = new TransactionBookmarkManagerImpl( localGraphTransactionIdTracker, true );
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
         verify( transactionIdTracker ).awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, 1002L, Duration.ofSeconds( 1 ) );

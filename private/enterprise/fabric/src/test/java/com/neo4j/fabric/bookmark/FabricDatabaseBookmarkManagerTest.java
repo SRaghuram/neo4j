@@ -7,6 +7,7 @@ package com.neo4j.fabric.bookmark;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -14,30 +15,36 @@ import java.util.stream.Collectors;
 
 import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.Bookmark;
+import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.fabric.bolt.FabricBookmark;
 import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
-import org.neo4j.fabric.bookmark.MixedModeBookmarkManager;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManagerImpl;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.fabric.TestUtils.createUri;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-class MixedModeBookmarkManagerTest
+class FabricDatabaseBookmarkManagerTest
 {
     private final UUID location1Uuid = UUID.randomUUID();
     private final UUID location2Uuid = UUID.randomUUID();
     private final Location.Remote.External location1 = new Location.Remote.External( 1, location1Uuid, createUri( "bolt://somewhere:1001" ), null );
     private final Location.Remote.External location2 = new Location.Remote.External( 2, location2Uuid, createUri( "bolt://somewhere:1002" ), null );
 
-    private final LocalGraphTransactionIdTracker transactionIdTracker = mock(LocalGraphTransactionIdTracker.class);
-    private final TransactionBookmarkManager bookmarkManager = new MixedModeBookmarkManager( transactionIdTracker );
+    private final TransactionIdTracker transactionIdTracker = mock( TransactionIdTracker.class );
+    private final LocalGraphTransactionIdTracker localGraphTransactionIdTracker =
+            new LocalGraphTransactionIdTracker( transactionIdTracker, null, Duration.ofSeconds( 1 ) );
+    private final TransactionBookmarkManager bookmarkManager = new TransactionBookmarkManagerImpl( localGraphTransactionIdTracker, false );
 
     @Test
     void testBasicRemoteBookmarkHandling()
@@ -96,7 +103,8 @@ class MixedModeBookmarkManagerTest
         var b2 = new SystemDbBookmark( 1234 );
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
-        verify( transactionIdTracker ).awaitSystemGraphUpToDate( 1234 );
+        verify( transactionIdTracker ).awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, 1234L, Duration.ofSeconds( 1 ) );
+        verify( transactionIdTracker, times( 1 ) ).awaitUpToDate( any(), anyLong(), any() );
 
         assertThat( getBookmarksForGraph( location1 ) ).contains( "BB-1" );
     }

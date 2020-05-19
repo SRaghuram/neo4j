@@ -36,7 +36,7 @@ import org.neo4j.driver.SessionConfig;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.fabric.bolt.FabricBookmark;
 import org.neo4j.fabric.bolt.FabricBookmarkParser;
-import org.neo4j.fabric.bookmark.FabricOnlyBookmarkManager;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManagerImpl;
 import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
@@ -60,14 +60,14 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 @ExtendWith( FabricEverywhereExtension.class )
-class FabricOnlyBookmarkEndToEndTest
+class TransactionBookmarkManagerEndToEndTest
 {
     private static Driver clientDriver;
     private static TestServer testServer;
     private static TestBoltServer remote1;
 
     private static LocalGraphTransactionIdTracker localGraphTransactionIdTracker = mock(LocalGraphTransactionIdTracker.class);
-    private static FabricOnlyBookmarkManager bookmarkManager = new FabricOnlyBookmarkManager( localGraphTransactionIdTracker );
+    private static TransactionBookmarkManagerImpl bookmarkManager = new TransactionBookmarkManagerImpl( localGraphTransactionIdTracker, true );
     private static TransactionBookmarkManagerFactory transactionBookmarkManagerFactory = mock(TransactionBookmarkManagerFactory.class);
 
     @BeforeAll
