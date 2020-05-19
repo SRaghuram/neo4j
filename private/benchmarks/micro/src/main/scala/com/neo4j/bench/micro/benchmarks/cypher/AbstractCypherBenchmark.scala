@@ -307,7 +307,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
         threadExecutingTheQuery.getId,
         threadExecutingTheQuery.getName,
         Clocks.nanoClock(),
-        CpuClock.CPU_CLOCK),
+        CpuClock.CPU_CLOCK,
+        true),
       transactionFactory) {
 
       override def close(): Unit = ()

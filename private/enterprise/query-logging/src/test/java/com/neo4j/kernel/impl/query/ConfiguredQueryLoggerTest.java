@@ -194,7 +194,7 @@ class ConfiguredQueryLoggerTest
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
         assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
-                .containsMessages( format( "%d ms: -1 B - %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
+                .containsMessages( format( "%d ms: 0 B - %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
                     "{ages: " +
                     "[41, 42, 43]}" ) );
     }
@@ -431,7 +431,7 @@ class ConfiguredQueryLoggerTest
 
         // then
         assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
-                                 .containsMessages( format( "%d ms: -1 B - %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
+                                 .containsMessages( format( "%d ms: 0 B - %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
                                                             outputQuery,
                                                             paramsString ) );    }
 
@@ -669,7 +669,8 @@ class ConfiguredQueryLoggerTest
                 thread.getId(),
                 thread.getName(),
                 clock,
-                cpuClock );
+                cpuClock,
+                true );
     }
 
     private static class ObfuscatorFactory extends CypherQueryObfuscatorFactory

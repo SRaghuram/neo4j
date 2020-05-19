@@ -274,6 +274,7 @@ class QueryLoggerIT
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 2, logLines.size() );
         assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
+        assertThat( logLines.get( 0 ), containsString( " 0 B -" ) );
     }
 
     @Test
