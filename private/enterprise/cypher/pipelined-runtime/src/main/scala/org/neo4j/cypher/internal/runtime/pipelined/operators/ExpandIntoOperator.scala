@@ -193,6 +193,13 @@ class ExpandIntoTask(inputMorsel: Morsel,
     relationships = null
   }
 
+  override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
+    if (expandInto != null) {
+      expandInto.close()
+    }
+    super.closeInput(operatorCloser)
+  }
+
   protected def kernelDirection(dir: SemanticDirection): Direction = dir match {
     case SemanticDirection.OUTGOING => Direction.OUTGOING
     case SemanticDirection.INCOMING => Direction.INCOMING
@@ -343,6 +350,12 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       },
       setField(relationshipsField, constant(null))
     )
+  }
+
+  override def genCloseInput: IntermediateRepresentation = {
+    condition(isNotNull(loadField(expandIntoField))) {
+      invokeSideEffect(loadField(expandIntoField), method[CachingExpandInto, Unit]("close"))
+    }
   }
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {

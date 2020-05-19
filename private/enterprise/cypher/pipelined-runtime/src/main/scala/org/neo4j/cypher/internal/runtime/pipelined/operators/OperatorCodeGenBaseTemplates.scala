@@ -289,6 +289,12 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
 
   override final def close(): Unit = compiledCloseOutput()
 
+  override final def closeInput(operatorCloser: OperatorCloser): Unit = {
+    compiledCloseInput()
+    // Specifying the concrete super class here, since the extending generated Java class does otherwise not get it right.
+    super[ContinuableOperatorTaskWithMorsel].closeInput(operatorCloser)
+  }
+
   /**
    * Generated code that initializes the profile events.
    */
@@ -315,6 +321,13 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    */
   @throws[Exception]
   def compiledCloseOutput(): Unit
+
+  /**
+   * Generated code that closes additional resources associated with the input.
+   * The actual input (i.e. a Morsel) will be closed by ContinuableOperatorTaskWithMorsel.
+   */
+  @throws[Exception]
+  def compiledCloseInput(): Unit
 
   /**
     * Generated code that performs the initialization necessary for performing [[PreparedOutput.produce()]].
@@ -523,6 +536,14 @@ trait OperatorTaskTemplate {
    * }}}
    */
   def genCloseCursors: IntermediateRepresentation
+
+  /**
+   * Responsible for generating [[CompiledTask]] method:
+   * {{{
+   *     def compiledCloseInput(): Unit
+   * }}}
+   */
+  def genCloseInput: IntermediateRepresentation = inner.genCloseOutput
 }
 
 object OperatorTaskTemplate {
@@ -540,6 +561,7 @@ object OperatorTaskTemplate {
     override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
     override def genCanContinue: Option[IntermediateRepresentation] = None
     override def genCloseCursors: IntermediateRepresentation = noop()
+    override def genCloseInput: IntermediateRepresentation = noop()
     override def genOutputBuffer: Option[IntermediateRepresentation] = None
     override def genInit: IntermediateRepresentation = noop()
   }
@@ -671,6 +693,12 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
           returnType = typeRefOf[Unit],
           parameters = Seq.empty,
           body = genCloseOutput,
+          genLocalVariables = () => Seq.empty,
+          throws = Some(typeRefOf[Exception])),
+        MethodDeclaration("compiledCloseInput",
+          returnType = typeRefOf[Unit],
+          parameters = Seq.empty,
+          body = genCloseInput,
           genLocalVariables = () => Seq.empty,
           throws = Some(typeRefOf[Exception])),
         MethodDeclaration("compiledCreateState",
@@ -877,6 +905,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override protected def genProduce: IntermediateRepresentation = noop()
 
   override def genCloseOutput: IntermediateRepresentation = noop()
+
+  override def genCloseInput: IntermediateRepresentation = noop()
 
   override def genCreateState: IntermediateRepresentation = noop()
 
