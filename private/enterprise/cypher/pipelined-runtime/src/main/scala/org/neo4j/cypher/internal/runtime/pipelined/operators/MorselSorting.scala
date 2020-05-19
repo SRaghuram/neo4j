@@ -10,19 +10,17 @@ import java.util.Comparator
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContextOrdering
 
 object MorselSorting {
 
-  // TODO: Use optimized comparator from slotted
-  def createComparator(orderBy: Seq[ColumnOrder]): Comparator[MorselRow] =
-    orderBy
-      .map(MorselSorting.createMorselComparator)
-      .reduce((a: Comparator[MorselRow], b: Comparator[MorselRow]) => a.thenComparing(b))
+  def createComparator(orderBy: Seq[ColumnOrder]): Comparator[ReadableRow] =
+    SlottedExecutionContextOrdering.asComparator(orderBy)
 
   def compareMorselIndexesByColumnOrder(row: MorselReadCursor)(order: ColumnOrder): Comparator[Integer] = order.slot match {
     case LongSlot(offset, true, _) =>
@@ -92,27 +90,4 @@ object MorselSorting {
     // Copy from output morsel back to input morsel
     morsel.compactRowsFrom(tempMorsel)
   }
-
-  def createMorselComparator(order: ColumnOrder): Comparator[MorselRow] = order.slot match {
-    case LongSlot(offset, true, _) =>
-      (m1: MorselRow, m2: MorselRow) => {
-        val aVal = m1.getLongAt(offset)
-        val bVal = m2.getLongAt(offset)
-        order.compareNullableLongs(aVal, bVal)
-      }
-    case LongSlot(offset, false, _) =>
-      (m1: MorselRow, m2: MorselRow) => {
-        val aVal = m1.getLongAt(offset)
-        val bVal = m2.getLongAt(offset)
-        order.compareLongs(aVal, bVal)
-      }
-    case RefSlot(offset, _, _) =>
-      (m1: MorselRow, m2: MorselRow) => {
-        val aVal = m1.getRefAt(offset)
-        val bVal = m2.getRefAt(offset)
-        order.compareValues(aVal, bVal)
-      }
-
-  }
-
 }

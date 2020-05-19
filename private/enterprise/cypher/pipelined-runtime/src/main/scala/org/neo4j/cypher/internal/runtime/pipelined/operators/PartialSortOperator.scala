@@ -9,6 +9,7 @@ import java.util.Comparator
 
 import org.neo4j.collection.trackable.HeapTrackingArrayList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -29,8 +30,8 @@ import org.neo4j.memory.ScopedMemoryTracker
 
 class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           val workIdentity: WorkIdentity,
-                          prefixComparator: Comparator[MorselRow],
-                          suffixComparator: Comparator[MorselRow])
+                          prefixComparator: Comparator[ReadableRow],
+                          suffixComparator: Comparator[ReadableRow])
                          (val id: Id = Id.INVALID_ID) extends Operator {
 
   private type ResultsBuffer = HeapTrackingArrayList[MorselRow]

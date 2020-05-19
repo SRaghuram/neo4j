@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
@@ -48,7 +49,7 @@ case class TopOperator(workIdentity: WorkIdentity,
 
   override def toString: String = "TopMerge"
 
-  private val comparator: Comparator[MorselRow] = MorselSorting.createComparator(orderBy)
+  private val comparator: Comparator[ReadableRow] = MorselSorting.createComparator(orderBy)
 
   def mapper(argumentSlotOffset: Int, outputBufferId: BufferId): TopMapperOperator =
     new TopMapperOperator(argumentSlotOffset, outputBufferId)
@@ -165,7 +166,7 @@ case class TopOperator(workIdentity: WorkIdentity,
 
 object TopOperator {
 
-  class Factory(memoryTracker: MemoryTracker, comparator: Comparator[MorselRow], limit: Long) extends ArgumentStateFactory[TopTable] {
+  class Factory(memoryTracker: MemoryTracker, comparator: Comparator[ReadableRow], limit: Long) extends ArgumentStateFactory[TopTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): TopTable =
       if (limit <= 0) {
         ZeroTable(argumentRowId, argumentRowIdsForReducers)
@@ -219,7 +220,7 @@ object TopOperator {
   class StandardTopTable(override val argumentRowId: Long,
                          override val argumentRowIdsForReducers: Array[Long],
                          memoryTracker: MemoryTracker,
-                         comparator: Comparator[MorselRow],
+                         comparator: Comparator[ReadableRow],
                          limit: Long) extends TopTable {
 
     private val topTable = new DefaultComparatorTopTable(comparator, limit, memoryTracker)
@@ -251,16 +252,16 @@ object TopOperator {
 
     override protected def getTopRows: util.Iterator[MorselRow] = {
       topTable.sort()
-      topTable.iterator()
+      topTable.iterator().asInstanceOf[util.Iterator[MorselRow]]
     }
   }
 
   class ConcurrentTopTable(override val argumentRowId: Long,
                            override val argumentRowIdsForReducers: Array[Long],
-                           comparator: Comparator[MorselRow],
+                           comparator: Comparator[ReadableRow],
                            limit: Long) extends TopTable {
 
-    private val topTableByThread = new ConcurrentHashMap[Long, DefaultComparatorTopTable[MorselRow]]
+    private val topTableByThread = new ConcurrentHashMap[Long, DefaultComparatorTopTable[ReadableRow]]
 
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val threadId = Thread.currentThread().getId
@@ -284,7 +285,7 @@ object TopOperator {
           topTable.unorderedIterator().forEachRemaining(mergedTopTable.add)
         }
         mergedTopTable.sort()
-        mergedTopTable.iterator()
+        mergedTopTable.iterator().asInstanceOf[util.Iterator[MorselRow]]
       }
     }
   }

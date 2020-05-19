@@ -10,6 +10,7 @@ import java.util.Comparator
 import org.neo4j.cypher.internal.collection.DefaultComparatorSortTable
 import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -30,7 +31,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
  */
 class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         val workIdentity: WorkIdentity,
-                        comparator: Comparator[MorselRow])
+                        comparator: Comparator[ReadableRow])
                        (val id: Id = Id.INVALID_ID)
   extends Operator
   with ReduceOperatorState[Morsel, ArgumentStateBuffer] {

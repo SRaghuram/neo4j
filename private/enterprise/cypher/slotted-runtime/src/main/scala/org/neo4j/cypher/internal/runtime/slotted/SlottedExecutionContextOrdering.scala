@@ -11,14 +11,15 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.values.AnyValue
 import org.neo4j.values.AnyValues
 
 object SlottedExecutionContextOrdering {
-  def comparator(order: ColumnOrder): scala.Ordering[CypherRow] = order.slot match {
+  def comparator(order: ColumnOrder): scala.Ordering[ReadableRow] = order.slot match {
     case LongSlot(offset, true, _) =>
-      new scala.Ordering[CypherRow] {
-        override def compare(a: CypherRow, b: CypherRow): Int = {
+      new scala.Ordering[ReadableRow] {
+        override def compare(a: ReadableRow, b: ReadableRow): Int = {
           val aVal = a.getLongAt(offset)
           val bVal = b.getLongAt(offset)
           order.compareNullableLongs(aVal, bVal)
@@ -26,8 +27,8 @@ object SlottedExecutionContextOrdering {
       }
 
     case LongSlot(offset, false, _) =>
-      new scala.Ordering[CypherRow] {
-        override def compare(a: CypherRow, b: CypherRow): Int = {
+      new scala.Ordering[ReadableRow] {
+        override def compare(a: ReadableRow, b: ReadableRow): Int = {
           val aVal = a.getLongAt(offset)
           val bVal = b.getLongAt(offset)
           order.compareLongs(aVal, bVal)
@@ -35,8 +36,8 @@ object SlottedExecutionContextOrdering {
       }
 
     case RefSlot(offset, _, _) =>
-      new scala.Ordering[CypherRow] {
-        override def compare(a: CypherRow, b: CypherRow): Int = {
+      new scala.Ordering[ReadableRow] {
+        override def compare(a: ReadableRow, b: ReadableRow): Int = {
           val aVal = a.getRefAt(offset)
           val bVal = b.getRefAt(offset)
           order.compareValues(aVal, bVal)
@@ -44,7 +45,7 @@ object SlottedExecutionContextOrdering {
       }
   }
 
-  def asComparator(orderBy: Seq[ColumnOrder]): Comparator[CypherRow] = {
+  def asComparator(orderBy: Seq[ColumnOrder]): Comparator[ReadableRow] = {
     val comparators = orderBy.map(SlottedExecutionContextOrdering.comparator)
 
     // For size 1 and 2 the overhead of doing the foreach is measurable
@@ -65,8 +66,8 @@ object SlottedExecutionContextOrdering {
     }
 
     // For larger ORDER BY the overhead is negligible
-    new Comparator[CypherRow] {
-      override def compare(a: CypherRow, b: CypherRow): Int = {
+    new Comparator[ReadableRow] {
+      override def compare(a: ReadableRow, b: ReadableRow): Int = {
         for (comparator <- comparators) {
           val i = comparator.compare(a, b)
           if (i != 0) {

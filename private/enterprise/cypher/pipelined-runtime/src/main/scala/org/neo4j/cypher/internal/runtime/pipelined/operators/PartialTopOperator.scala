@@ -11,6 +11,7 @@ import java.util.Comparator
 
 import org.neo4j.cypher.internal.collection.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
@@ -62,8 +63,8 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
                          workCancellerAsmId: ArgumentStateMapId,
                          argumentSlotOffset: Int,
                          val workIdentity: WorkIdentity,
-                         prefixComparator: Comparator[MorselRow],
-                         suffixComparator: Comparator[MorselRow],
+                         prefixComparator: Comparator[ReadableRow],
+                         suffixComparator: Comparator[ReadableRow],
                          limitExpression: Expression,
                          id: Id) extends Operator {
 
@@ -85,7 +86,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
 
     var remainingLimit: Int = limit
     var lastSeen: MorselRow = _
-    var topTable: DefaultComparatorTopTable[MorselRow] = _
+    var topTable: DefaultComparatorTopTable[ReadableRow] = _
     var resultsIterator: util.Iterator[MorselRow] = Collections.emptyIterator()
 
     private var activeMemoryTracker: ScopedMemoryTracker = _
@@ -104,7 +105,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
     def addRow(row: MorselRow): Unit = {
       if (topTable == null) {
         activeMemoryTracker = new ScopedMemoryTracker(memoryTracker)
-        topTable = new DefaultComparatorTopTable[MorselRow](suffixComparator, remainingLimit, activeMemoryTracker)
+        topTable = new DefaultComparatorTopTable[ReadableRow](suffixComparator, remainingLimit, activeMemoryTracker)
       }
 
       lastSeen = row
@@ -117,7 +118,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
 
     def computeResults(): Unit = {
       topTable.sort()
-      resultsIterator = topTable.iterator()
+      resultsIterator = topTable.iterator().asInstanceOf[util.Iterator[MorselRow]]
       resultsMemoryTracker = activeMemoryTracker
 
       topTable = null
