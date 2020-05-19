@@ -8,8 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.kernel.impl.util.collection.DistinctSet
 import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -87,22 +89,24 @@ class CollectConcurrentReducer(preserveNulls: Boolean) extends Reducer {
 class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends DirectStandardReducer {
   // NOTE: The owner is responsible for closing the given memory tracker in the right scope, so we do not need to use a ScopedMemoryTracker
   //       or close the seenSet explicitly here.
-  private val seenSet = new java.util.LinkedHashSet[AnyValue]() // TODO: Use a heap tracking ordered distinct set
+  private val seenSet = HeapTrackingCollections.newSet[AnyValue](memoryTracker)
+  private val collection = ListValueBuilder.newListBuilder()
 
   // Reducer
   override def newUpdater(): Updater = this
   override def result: AnyValue = {
-    val collection = ListValueBuilder.newListBuilder()
-    seenSet.forEach(value => collection.add(value))
     collection.build()
   }
 
   // Updater
   override def add(value: AnyValue): Unit = {
     if (!(value eq Values.NO_VALUE)) {
-      val added = seenSet.add(value)
-      if (added) {
-        memoryTracker.allocateHeap(value.estimatedHeapUsage())
+      val isUnique = seenSet.add(value)
+      if (isUnique) {
+        // Since we are not using a heap-tracking collection, we low-bound
+        // estimate the container size to numElement * reference_bytes
+        memoryTracker.allocateHeap(value.estimatedHeapUsage() + HeapEstimator.OBJECT_REFERENCE_BYTES)
+        collection.add(value)
       }
     }
   }
