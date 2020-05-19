@@ -25,8 +25,8 @@ import static picocli.CommandLine.Command;
 
 @Command(
         name = "unbind",
-        header = "Removes cluster state data for the specified database.",
-        description = "Removes cluster state data for the specified database, so that the instance can rebind to a new or recovered cluster."
+        header = "Removes all cluster state.",
+        description = "Removes all cluster state, so that the instance can rebind to a cluster."
 )
 class UnbindFromClusterCommand extends AbstractCommand
 {

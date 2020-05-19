@@ -5,6 +5,8 @@
  */
 package com.neo4j.restore;
 
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -12,6 +14,7 @@ import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.CannotWriteException;
 import org.neo4j.commandline.dbms.LockChecker;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
@@ -27,6 +30,7 @@ public class RestoreDatabaseCommand
     private final FileSystemAbstraction fs;
     private final File fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
+    private final File raftGroupDirectory;
     private final boolean forceOverwrite;
 
     public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String databaseName, boolean forceOverwrite )
@@ -35,6 +39,7 @@ public class RestoreDatabaseCommand
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
         this.targetDatabaseLayout = buildTargetDatabaseLayout( databaseName, config );
+        this.raftGroupDirectory = getRaftGroupDirectory( databaseName, config );
     }
 
     public void execute() throws IOException
@@ -59,6 +64,17 @@ public class RestoreDatabaseCommand
             throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(),
                     targetDatabaseLayout.databaseDirectory() ) );
         }
+
+        if ( fs.fileExists( raftGroupDirectory ) )
+        {
+            throw new IllegalArgumentException( format(
+                    "Database with name [%s] already exists locally. " +
+                    "Please run `DROP DATABASE %s` against the system database. " +
+                    "If the database already is dropped, then you need to unbind the local instance using `neo4j-admin unbind`. " +
+                    "Note that unbind requires stopping the instance, and affects all databases.",
+                    targetDatabaseLayout.getDatabaseName(), targetDatabaseLayout.getDatabaseName() ) );
+        }
+
         fs.mkdirs( targetDatabaseLayout.databaseDirectory() );
 
         try ( var ignored = LockChecker.checkDatabaseLock( targetDatabaseLayout ) )
@@ -130,5 +146,10 @@ public class RestoreDatabaseCommand
     private static DatabaseLayout buildTargetDatabaseLayout( String databaseName, Config config )
     {
         return Neo4jLayout.of( config ).databaseLayout( databaseName );
+    }
+
+    private File getRaftGroupDirectory( String databaseName, Config config )
+    {
+        return ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).raftGroupDir( databaseName );
     }
 }

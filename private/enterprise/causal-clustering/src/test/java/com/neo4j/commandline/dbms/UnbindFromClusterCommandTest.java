@@ -79,7 +79,7 @@ class UnbindFromClusterCommandTest
             CommandLine.usage( command, new PrintStream( out ) );
         }
         assertThat( baos.toString().trim(), equalTo( String.format(
-                "Removes cluster state data for the specified database.%n" +
+                "Removes all cluster state.%n" +
                 "%n" +
                 "USAGE%n" +
                 "%n" +
@@ -87,8 +87,7 @@ class UnbindFromClusterCommandTest
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
-                "Removes cluster state data for the specified database, so that the instance can%n" +
-                "rebind to a new or recovered cluster.%n" +
+                "Removes all cluster state, so that the instance can rebind to a cluster.%n" +
                 "%n" +
                 "OPTIONS%n" +
                 "%n" +

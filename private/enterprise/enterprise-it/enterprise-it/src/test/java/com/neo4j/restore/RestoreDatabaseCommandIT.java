@@ -5,6 +5,7 @@
  */
 package com.neo4j.restore;
 
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -14,6 +15,7 @@ import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -61,7 +63,7 @@ class RestoreDatabaseCommandIT
     {
         var databaseName =  "new" ;
         Neo4jLayout testStore = neo4jLayout;
-        Config config = configWith( testStore.databasesDirectory().getAbsolutePath() );
+        Config config = configWith( testStore );
 
         File fromPath = new File( directory.absolutePath(), "old" );
 
@@ -84,12 +86,12 @@ class RestoreDatabaseCommandIT
     }
 
     @Test
-    void shouldNotCopyOverAndExistingDatabase() throws Exception
+    void shouldNotCopyOverAnExistingDatabase()
     {
         // given
         var databaseName =  "new" ;
         Neo4jLayout testStore = neo4jLayout;
-        Config config = configWith( testStore.databasesDirectory().getAbsolutePath() );
+        Config config = configWith( testStore );
 
         File fromPath = new File( directory.absolutePath(), "old" );
         DatabaseLayout toLayout = testStore.databaseLayout( databaseName );
@@ -103,11 +105,11 @@ class RestoreDatabaseCommandIT
     }
 
     @Test
-    void shouldThrowExceptionIfBackupDirectoryDoesNotExist() throws Exception
+    void shouldThrowExceptionIfBackupDirectoryDoesNotExist()
     {
         // given
         var databaseName =  "new" ;
-        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+        Config config = configWith( neo4jLayout );
 
         File fromPath = new File( directory.absolutePath(), "old" );
         DatabaseLayout toLayout = neo4jLayout.databaseLayout( databaseName );
@@ -124,7 +126,7 @@ class RestoreDatabaseCommandIT
     {
         // given
         var databaseName =  "new" ;
-        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+        Config config = configWith( neo4jLayout );
 
         File fromPath = new File( directory.absolutePath(), "old" );
         assertTrue( fromPath.mkdirs() );
@@ -138,7 +140,7 @@ class RestoreDatabaseCommandIT
     void failOnInvalidDatabaseName()
     {
         var databaseName =  "__any_" ;
-        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+        Config config = configWith( neo4jLayout );
 
         File fromPath = new File( directory.absolutePath(), "old" );
         assertTrue( fromPath.mkdirs() );
@@ -154,8 +156,7 @@ class RestoreDatabaseCommandIT
 
         DatabaseLayout fromLayout = fromStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout toLayout = toStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
-        Config config =
-                configWith( toStoreLayout.databasesDirectory().getAbsolutePath(), toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
+        Config config = configWith( toStoreLayout );
         int fromNodeCount = 10;
         int toNodeCount = 20;
 
@@ -230,16 +231,14 @@ class RestoreDatabaseCommandIT
         String databaseName = "target-database";
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
         File fromPath = directory.directory( "database-to-restore" );
-        File targetDatabaseDirectory = directory.directory( databaseName );
-        File targetTransactionLogDirectory = directory.directory( databaseName );
 
-        Config config = configWith( targetDatabaseDirectory.getParent(), targetTransactionLogDirectory.getParent() );
+        Config config = configWith( neo4jLayout );
 
         createDbAt( fromPath, 10 );
 
         new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true ).execute();
 
-        verify( fs, never() ).deleteRecursively( targetTransactionLogDirectory );
+        verify( fs, never() ).deleteRecursively( neo4jLayout.transactionLogsRootDirectory() );
     }
 
     @Test
@@ -248,28 +247,42 @@ class RestoreDatabaseCommandIT
         String databaseName = "target-database";
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
         File fromPath = directory.directory( "database-to-restore" );
-        File targetDatabaseDirectory = directory.directory( databaseName );
-        File targetTransactionLogDirectory = directory.directory( "different-tx-log-root-directory", databaseName );
 
-        Config config = configWith( targetDatabaseDirectory.getParent(), targetTransactionLogDirectory.getParent() );
+        Config config = configWith( neo4jLayout );
 
         createDbAt( fromPath, 10 );
 
         new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true ).execute();
 
-        verify( fs ).deleteRecursively( targetTransactionLogDirectory );
+        verify( fs ).deleteRecursively( neo4jLayout.databaseLayout( databaseName ).getTransactionLogsDirectory() );
     }
 
-    private static Config configWith( String dataDirectory )
+    @Test
+    void failIfHasClusterStateForDatabase() throws IOException
     {
-        return Config.defaults( databases_root_path, Path.of( dataDirectory ).toAbsolutePath() );
+        var databaseName =  "new" ;
+        Neo4jLayout testStore = neo4jLayout;
+        Config config = configWith( testStore );
+
+        File fromPath = new File( directory.absolutePath(), "old" );
+
+        createDbAt( fromPath, 10 );
+        createRaftGroupDirectoryFor( config, databaseName );
+
+        IllegalArgumentException illegalArgumentException = assertThrows(
+                IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, true ).execute() );
+
+        assertThat( illegalArgumentException.getMessage() ).isEqualTo(
+                "Database with name [new] already exists locally. " +
+                "Please run `DROP DATABASE new` against the system database. " +
+                "If the database already is dropped, then you need to unbind the local instance using `neo4j-admin unbind`. " +
+                "Note that unbind requires stopping the instance, and affects all databases."
+        );
     }
 
-    private static Config configWith( String dataDirectory, String transactionDir )
+    private static Config configWith( Neo4jLayout layout )
     {
-        return Config.newBuilder()
-                .set( databases_root_path, Path.of( dataDirectory ).toAbsolutePath() )
-                .set( transaction_logs_root_path, Path.of( transactionDir ).toAbsolutePath() ).build();
+        return Config.defaults( neo4j_home, layout.homeDirectory().toPath() );
     }
 
     private void createDbAt( File fromPath, int nodesToCreate )
@@ -308,5 +321,11 @@ class RestoreDatabaseCommandIT
             }
             tx.commit();
         }
+    }
+
+    private void createRaftGroupDirectoryFor( Config config, String databaseName ) throws IOException
+    {
+        File raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).raftGroupDir( databaseName );
+        fileSystem.mkdirs( raftGroupDir );
     }
 }

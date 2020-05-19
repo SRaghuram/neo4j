@@ -130,12 +130,13 @@ class ClusteredSystemDatabaseBackupRestoreIT
         cluster.shutdown();
 
         // when
+        unbindCluster( cluster, fs );
+
         for ( Config config : memberConfigs )
         {
             runRestore( fs, backupLocation, config );
         }
 
-        unbindCluster( cluster, fs );
         cluster.start();
 
         //then
