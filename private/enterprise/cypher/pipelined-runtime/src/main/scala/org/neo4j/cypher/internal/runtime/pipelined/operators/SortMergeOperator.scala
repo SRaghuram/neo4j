@@ -97,5 +97,11 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     }
 
     override def canContinue: Boolean = !sortedInputPerArgument.isEmpty
+
+    override def closeInput(operatorCloser: OperatorCloser): Unit = {
+      super.closeInput(operatorCloser)
+      sortedInputPerArgument.close()
+      sortedInputPerArgument = null;
+    }
   }
 }
