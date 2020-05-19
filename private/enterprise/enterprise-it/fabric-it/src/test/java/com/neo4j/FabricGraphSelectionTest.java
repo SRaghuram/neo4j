@@ -30,7 +30,7 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.server.security.auth.AuthProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,7 +75,7 @@ class FabricGraphSelectionTest
 
         testServer.start();
 
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class );
+        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
         globalProceduresRegistry
                 .registerFunction( ProxyFunctions.class );
         globalProceduresRegistry

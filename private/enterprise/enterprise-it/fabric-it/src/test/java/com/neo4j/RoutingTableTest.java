@@ -27,7 +27,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,7 +65,7 @@ class RoutingTableTest
         );
         testServer.getRuntimeConfig().setDynamic( FabricEnterpriseSettings.fabricServersSetting, newRoutingTable, "RoutingTableTest" );
 
-        testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
+        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
                 .registerFunction( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(

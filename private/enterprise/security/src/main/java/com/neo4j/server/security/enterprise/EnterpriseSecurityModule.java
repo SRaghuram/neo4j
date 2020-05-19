@@ -38,8 +38,8 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
-import org.neo4j.common.DependencySatisfier;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
@@ -71,10 +71,9 @@ public class EnterpriseSecurityModule extends SecurityModule
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
     private final Config config;
-    private final GlobalProcedures globalProcedures;
     private final Log log;
     private final EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent;
-    private final DependencySatisfier dependencySatisfier;
+    private final Dependencies dependencies;
     private final GlobalTransactionEventListeners transactionEventListeners;
     private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
@@ -85,15 +84,13 @@ public class EnterpriseSecurityModule extends SecurityModule
     public EnterpriseSecurityModule( LogProvider logProvider,
                                      SecurityLog securityLog,
                                      Config config,
-                                     GlobalProcedures procedures,
-                                     DependencySatisfier dependencySatisfier,
+                                     Dependencies dependencies,
                                      GlobalTransactionEventListeners transactionEventListeners,
                                      EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent )
     {
         this.securityLog = securityLog;
         this.config = config;
-        this.globalProcedures = procedures;
-        this.dependencySatisfier = dependencySatisfier;
+        this.dependencies = dependencies;
         this.transactionEventListeners = transactionEventListeners;
         this.log = logProvider.getLog( getClass() );
         this.enterpriseSecurityGraphComponent = enterpriseSecurityGraphComponent;
@@ -103,10 +100,9 @@ public class EnterpriseSecurityModule extends SecurityModule
     public void setup()
     {
         this.secureHasher = new SecureHasher();
-        org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencySatisfier;
         Supplier<GraphDatabaseService> systemSupplier = () ->
         {
-            DatabaseManager<?> databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
+            DatabaseManager<?> databaseManager = dependencies.resolveDependency( DatabaseManager.class );
             return databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow(
                     () -> new RuntimeException( "No database called `" + SYSTEM_DATABASE_NAME + "` was found." ) ).databaseFacade();
         };
@@ -115,13 +111,13 @@ public class EnterpriseSecurityModule extends SecurityModule
                               config.get( GraphDatabaseSettings.mode ) == GraphDatabaseSettings.Mode.READ_REPLICA;
 
         authManager = newAuthManager( securityLog, systemSupplier );
-        dependencySatisfier.satisfyDependency( authManager );
+        dependencies.satisfyDependency( authManager );
 
         AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
 
         if ( isClustered )
         {
-            var replicatedDatabaseEventService = platformDependencies.resolveDependency( ReplicatedDatabaseEventService.class );
+            var replicatedDatabaseEventService = dependencies.resolveDependency( ReplicatedDatabaseEventService.class );
             replicatedDatabaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, databaseEventListener );
         }
         else
@@ -130,6 +126,8 @@ public class EnterpriseSecurityModule extends SecurityModule
         }
 
         // Register procedures
+
+        var globalProcedures = dependencies.resolveDependency( GlobalProcedures.class );
         globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
         globalProcedures.registerComponent( EnterpriseAuthManager.class, ctx -> authManager, false );
         globalProcedures.registerComponent( EnterpriseSecurityContext.class, ctx -> asEnterpriseEdition( ctx.securityContext() ), true );

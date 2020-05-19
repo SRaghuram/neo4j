@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.neo4j.bolt.messaging.ResponseMessage;
 import org.neo4j.bolt.security.auth.AuthenticationException;
@@ -68,9 +67,9 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     private final TransportTestUtil util = new TransportTestUtil();
     private final Factory<TransportConnection> connectionFactory = SocketConnection::new;
     private final Neo4jWithSocket server;
-    private Map<String,BoltSubject> subjects = new HashMap<>();
-    private FileSystemAbstraction fileSystem;
-    private EnterpriseAuthManager authManager;
+    private final Map<String,BoltSubject> subjects = new HashMap<>();
+    private final FileSystemAbstraction fileSystem;
+    private final EnterpriseAuthManager authManager;
 
     BoltInteraction( Map<Setting<?>,String> config )
     {
@@ -348,7 +347,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     static class BoltResult implements ResourceIterator<Map<String,Object>>
     {
         private int index;
-        private List<Map<String,Object>> data;
+        private final List<Map<String,Object>> data;
 
         BoltResult( List<Map<String,Object>> data )
         {

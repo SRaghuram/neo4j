@@ -19,7 +19,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.WorkerManager;
 import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.CallableExecutor;
@@ -69,7 +68,7 @@ public interface AbstractEnterpriseEditionModule
         return enterpriseComponent;
     }
 
-    default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
+    default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule )
     {
         Config config = globalModule.getGlobalConfig();
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
@@ -83,7 +82,6 @@ public interface AbstractEnterpriseEditionModule
             EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
                     userLogProvider,
                     securityLog, config,
-                    globalProcedures,
                     globalModule.getGlobalDependencies(),
                     globalModule.getTransactionEventListeners(),
                     securityComponent

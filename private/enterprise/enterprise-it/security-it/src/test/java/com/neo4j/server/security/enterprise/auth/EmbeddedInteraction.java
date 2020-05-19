@@ -43,7 +43,8 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
 
     EmbeddedInteraction( Map<Setting<?>, String> config, TestDirectory testDirectory )
     {
-        DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).impermanent();
+        DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+                .impermanent();
         init( builder, config );
     }
 

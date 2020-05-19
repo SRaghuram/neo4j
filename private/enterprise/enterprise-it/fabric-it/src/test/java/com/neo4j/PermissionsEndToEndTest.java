@@ -23,7 +23,7 @@ import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,7 +58,7 @@ class PermissionsEndToEndTest
 
         testServer.start();
 
-        testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
+        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
                 .registerFunction( ProxyFunctions.class );
 
         try ( var initDriver = createDriver( "neo4j", "neo4j" ) )

@@ -220,7 +220,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, globalProcedures ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule ) );
     }
 
     @Override

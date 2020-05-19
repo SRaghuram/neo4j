@@ -10,13 +10,13 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import java.io.File;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.kernel.impl.newapi.ReadTestSupport;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 public class EnterpriseReadTestSupport extends ReadTestSupport
 {
     @Override
-    protected DatabaseManagementServiceBuilder newManagementServiceBuilder( File storeDir )
+    protected TestDatabaseManagementServiceBuilder newManagementServiceBuilder( File storeDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( storeDir )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true )

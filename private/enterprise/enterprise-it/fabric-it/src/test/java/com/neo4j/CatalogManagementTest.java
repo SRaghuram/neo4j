@@ -24,7 +24,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
@@ -63,7 +63,7 @@ class CatalogManagementTest
 
         testServer.start();
 
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class );
+        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
         globalProceduresRegistry
                 .registerFunction( ProxyFunctions.class );
         globalProceduresRegistry

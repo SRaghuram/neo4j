@@ -45,10 +45,10 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -102,7 +102,7 @@ class TransactionIntegrationTest
 
         testServer.start();
 
-        testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
+        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
                 .registerFunction( ProxyFunctions.class );
 
         var localDbms = testServer.getDependencies().resolveDependency( DatabaseManagementService.class );

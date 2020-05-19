@@ -13,7 +13,6 @@ import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.DatabaseEventListener;
 import org.neo4j.graphdb.event.TransactionEventListener;
@@ -43,16 +42,8 @@ public class ClusterDatabaseManagementService implements DatabaseManagementServi
         {
             return false;
         }
-        RaftMachine raft;
-        try
-        {
-            raft = dbAPI.getDependencyResolver().resolveDependency( RaftMachine.class );
-        }
-        catch ( IllegalArgumentException | UnsatisfiedDependencyException e )
-        {
-            return false;
-        }
-        return raft.isLeader();
+        var resolver = dbAPI.getDependencyResolver();
+        return resolver.containsDependency( RaftMachine.class ) && resolver.resolveDependency( RaftMachine.class ).isLeader();
     }
 
     @Override

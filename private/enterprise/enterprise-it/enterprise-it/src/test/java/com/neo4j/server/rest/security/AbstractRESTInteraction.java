@@ -29,7 +29,6 @@ import javax.ws.rs.core.HttpHeaders;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
@@ -50,7 +49,6 @@ import org.neo4j.test.server.HTTP.Response;
 
 import static io.netty.channel.local.LocalAddress.ANY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
@@ -61,7 +59,6 @@ import static org.neo4j.test.server.HTTP.withBasicAuth;
 
 abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase implements NeoInteractionLevel<RESTSubject>
 {
-    private final ConnectorPortRegister connectorPortRegister;
     private final EnterpriseAuthManager authManager;
 
     abstract String commitPath( String database );
@@ -92,7 +89,6 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
         GraphDatabaseFacade systemDatabase = getSystemGraph();
         DependencyResolver dependencyResolver = systemDatabase.getDependencyResolver();
         authManager = dependencyResolver.resolveDependency( EnterpriseAuthManager.class );
-        connectorPortRegister = dependencyResolver.resolveDependency( ConnectorPortRegister.class );
     }
 
     @Override

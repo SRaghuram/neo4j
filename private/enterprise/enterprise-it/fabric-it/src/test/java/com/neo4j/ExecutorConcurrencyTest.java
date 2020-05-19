@@ -33,7 +33,7 @@ import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.fabric.stream.summary.EmptySummary;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.values.storable.Values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -81,7 +81,7 @@ class ExecutorConcurrencyTest
 
         testServer.start();
 
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class );
+        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
         globalProceduresRegistry
                 .registerFunction( ProxyFunctions.class );
         globalProceduresRegistry

@@ -117,6 +117,12 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
+    public TestEnterpriseDatabaseManagementServiceBuilder useLazyProcedures( boolean useLazyProcedures )
+    {
+        return (TestEnterpriseDatabaseManagementServiceBuilder) super.useLazyProcedures( useLazyProcedures );
+    }
+
+    @Override
     public TestEnterpriseDatabaseManagementServiceBuilder setFileSystem( FileSystemAbstraction fileSystem )
     {
         return (TestEnterpriseDatabaseManagementServiceBuilder) super.setFileSystem( fileSystem );

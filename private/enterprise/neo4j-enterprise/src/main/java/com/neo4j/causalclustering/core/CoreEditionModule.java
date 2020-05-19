@@ -393,7 +393,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, globalProcedures ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule ) );
     }
 
     @Override

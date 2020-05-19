@@ -62,7 +62,6 @@ import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponent
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -105,7 +104,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
     private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
-    private AuthManager inClusterAuthManager;
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -274,7 +272,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, globalProcedures ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule ) );
     }
 
     @Override

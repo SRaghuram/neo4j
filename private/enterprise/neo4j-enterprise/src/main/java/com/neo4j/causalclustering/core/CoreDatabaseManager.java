@@ -29,6 +29,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
@@ -102,7 +103,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     {
         Config config = globalModule.getGlobalConfig();
         var coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
-        var globalProcedures = edition.getGlobalProcedures();
+        var globalProcedures = parentDependencies.resolveDependency( GlobalProcedures.class );
         return new ModularDatabaseCreationContext( namedDatabaseId, globalModule, parentDependencies, parentMonitors,
                 coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig, kernelComponents.leaseService() );
     }

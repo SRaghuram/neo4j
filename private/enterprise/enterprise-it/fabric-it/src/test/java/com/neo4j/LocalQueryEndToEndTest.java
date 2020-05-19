@@ -25,7 +25,7 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
@@ -63,7 +63,7 @@ class LocalQueryEndToEndTest
 
         testServer.start();
 
-        testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
+        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
                 .registerFunction( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(

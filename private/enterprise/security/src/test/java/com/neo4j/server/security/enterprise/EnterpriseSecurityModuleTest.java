@@ -9,7 +9,6 @@ import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -40,7 +39,6 @@ import static com.neo4j.server.security.enterprise.EnterpriseSecurityModule.merg
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -70,7 +68,8 @@ class EnterpriseSecurityModuleTest
         Log mockLog = mock( Log.class );
         mockProcedures = mock( GlobalProcedures.class );
         mockEventListeners = mock( GlobalTransactionEventListeners.class );
-        mockDependencies = mock( Dependencies.class );
+        mockDependencies = new Dependencies();
+        mockDependencies.satisfyDependency( mockProcedures );
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
@@ -90,16 +89,13 @@ class EnterpriseSecurityModuleTest
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        when( mockDependencies.resolveTypeDependencies( any() ) ).thenReturn( null );
-        when( mockDependencies.satisfyDependency( any() ) ).thenAnswer( i -> i.getArguments()[0] );
-
         doThrow( new ProcedureException( Status.Procedure.ProcedureRegistrationFailed, "Injected error" ) )
                 .when( mockProcedures ).registerProcedure( SecurityProcedures.class, true, null );
 
         var securityModule = createModule( logProvider, Config.defaults() );
 
         // When
-        RuntimeException runtimeException = Assertions.assertThrows( RuntimeException.class, securityModule::setup );
+        RuntimeException runtimeException = assertThrows( RuntimeException.class, securityModule::setup );
 
         // Then
         String errorMessage = "Failed to register security procedures: Injected error";
@@ -317,7 +313,6 @@ class EnterpriseSecurityModuleTest
 
     private EnterpriseSecurityModule createModule( LogProvider logProvider, Config config )
     {
-        return new EnterpriseSecurityModule( logProvider, mockSecurityLog, config, mockProcedures, mockDependencies, mockEventListeners,
-                mockSecurityComponent );
+        return new EnterpriseSecurityModule( logProvider, mockSecurityLog, config, mockDependencies, mockEventListeners, mockSecurityComponent );
     }
 }

@@ -26,7 +26,7 @@ import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,7 +51,7 @@ class BoltLocalResultStreamTest
 
         testServer.start();
 
-        testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
+        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
                 .registerFunction( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
