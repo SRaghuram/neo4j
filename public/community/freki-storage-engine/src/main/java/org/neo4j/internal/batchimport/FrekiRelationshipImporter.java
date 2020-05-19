@@ -34,6 +34,7 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
     private String type = null;
     private int typeId;
     protected Collector badCollector;
+    private long relationshipCount;
     public FrekiRelationshipImporter(BatchingStoreBase basicNeoStore, IdMapper idMapper, DataStatistics typeDistribution, DataImporter.Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, Collector badCollector) {
         super(basicNeoStore, idMapper, null, monitor, pageCacheTracer,  memoryTracker);
         this.badCollector = badCollector;
@@ -54,7 +55,10 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
         startNodeId = getNodeId( id, group );
         try {
             FrekiCommandCreationContext commandCreationContext = new FrekiCommandCreationContext(frekiBatchStores.stores, baseNeoStore.getIdGeneratorFactory(), cursorTracer, memoryTracker);
-            relationshipId = commandCreationContext.reserveRelationship(startNodeId);
+            synchronized (baseNeoStore )
+            {
+                relationshipId = commandCreationContext.reserveRelationship(startNodeId);
+            }
         } catch (NullPointerException ne)
         {
             System.out.print("4");
@@ -97,31 +101,9 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
         return true;
     }
 
-    long myCount = 0;
-    static long checkCount = 0;
-    static synchronized boolean checkForGC(long count)
-    {
-        if (checkCount < count)
-        {
-            checkCount = count;
-            return true;
-        }
-        return false;
-    }
     @Override
     public void endOfEntity()
     {
-        if (myCount++ % 300000 == 0) {
-            if (checkForGC( myCount )) {
-                System.out.print("|");
-                System.gc();
-                try {
-                    frekiBatchStores.stores.flushAndForce(IOLimiter.UNLIMITED, cursorTracer);
-                } catch (IOException io) {
-
-                }
-            }
-        }
         if (startNodeId == NO_ID || endNodeId == NO_ID)
             badCollector.collectBadRelationship( startId, group( startIdGroup ).name(), type, endId, group( endIdGroup ).name(),
                                 1 == IdMapper.ID_NOT_FOUND ? startId : endId );
@@ -132,8 +114,11 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
                 }
                 try
                 {
+                    commands.clear();
                     CommandCreator commandCreator = new CommandCreator(commands, frekiBatchStores.getStores() , null, cursorTracer, memoryTracker, true);
                     commandCreator.visitCreatedRelationship(relationshipId, typeId, startNodeId, endNodeId, propsAdd);
+                    relationshipCount++;
+                    typeCounts.increment( typeId );
                     commandCreator.close();
                     super.endOfEntity();
                 } catch (UnsupportedOperationException ue) {
@@ -161,5 +146,13 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
     private Group group( Group group )
     {
         return group != null ? group : Group.GLOBAL;
+    }
+    @Override
+    public void close()
+    {
+        super.close();
+        typeCounts.close();
+        monitor.relationshipsImported( relationshipCount );
+        cursorTracer.close();
     }
 }

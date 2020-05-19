@@ -13,6 +13,7 @@ public interface TokenStoreInterface {
     public int getOrCreateId( String stringValue );
     public long[] getOrCreateIds( String[] stringValues, int cursor );
     public void flush( PageCursorTracer cursorTracer );
+    public int getHighId();
     //public List<NamedToken> loadTokens(PageCursorTracer cursorTracer ) throws IOException;
     //public NamedToken loadToken( int id, PageCursorTracer cursorTracer ) throws IOException;
     //public void setHighId( int newHighId );

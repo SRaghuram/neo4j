@@ -50,6 +50,14 @@ public class DenseRelationshipsWorkSync
         {
             commands.add( node );
         }
+        public long size ()
+        {
+            return commands.size();
+        }
+        public void clear()
+        {
+            commands.clear();
+        }
 
         public AsyncApply applyAsync( PageCacheTracer cacheTracer )
         {

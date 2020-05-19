@@ -30,7 +30,6 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class FrekiEntityImporter extends BaseEntityImporter{
     protected final IdMapper idMapper;
-    DataImporter.Monitor monitor;
     //protected FrekiCommandCreationContext commandCreationContext;
     protected Collection<StorageCommand> commands = new ArrayList<>();
     protected Set<StorageProperty> propsAdd = null;
@@ -45,7 +44,6 @@ public class FrekiEntityImporter extends BaseEntityImporter{
         super(basicNeoStore, idMapper, inputIdLookup, monitor, pageCacheTracer);
         frekiBatchStores = (FrekiBatchStores) basicNeoStore;
         this.idMapper = idMapper;
-        this.monitor = monitor;
         this.memoryTracker = memoryTracker;
         //commandCreationContext = new FrekiCommandCreationContext(frekiBatchStores.stores, basicNeoStore.getIdGeneratorFactory(), cursorTracer);
         this.denseRelationshipsWorkSync = new DenseRelationshipsWorkSync( frekiBatchStores.stores.denseStore );
@@ -63,7 +61,9 @@ public class FrekiEntityImporter extends BaseEntityImporter{
 
     }
     @Override
-    public boolean property( String key, Object value){ return property( key, value, null); }
+    public boolean property( String key, Object value){
+        return property( key, value, null);
+    }
 
     @Override
     public boolean property( String key, Object value, Object strValue )
@@ -75,6 +75,7 @@ public class FrekiEntityImporter extends BaseEntityImporter{
     public boolean property( int propertyKeyId, Object value )
     {
         //save value of property here
+        super.property(propertyKeyId, value);
         propsAdd = asSet( new PropertyKeyValue( propertyKeyId, stringValue((String)value)) );
         return true;
     }
@@ -82,6 +83,7 @@ public class FrekiEntityImporter extends BaseEntityImporter{
     @Override
     public boolean propertyId( long nextProp )
     {
+        super.propertyId( nextProp );
         return true;
     }
 
@@ -110,11 +112,6 @@ public class FrekiEntityImporter extends BaseEntityImporter{
                     }
                     denseRelationshipUpdates.add(((FrekiCommand.DenseNode) command));
                 }
-                else if (command instanceof  FrekiCommand.NodeCount)
-                {
-                    frekiBatchStores.stores.countsStore.apply(100, cursorTracer).
-                            incrementNodeCount( ((FrekiCommand.NodeCount)command).labelId, ((FrekiCommand.NodeCount)command).count );
-                }
                 else
                     System.out.println("Unknown command:["+command.toString()+"]");
             }
@@ -127,6 +124,7 @@ public class FrekiEntityImporter extends BaseEntityImporter{
         {
             throw new UnderlyingStorageException( io.getMessage());
         }
+        super.endOfEntity();
     }
     @Override
     public void close()

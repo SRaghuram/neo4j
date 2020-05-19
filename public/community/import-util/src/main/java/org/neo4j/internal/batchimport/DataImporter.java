@@ -177,7 +177,7 @@ public class DataImporter
 
     static void importNodes(int numRunners, Input input, BatchingStoreInterface stores, Supplier<BaseEntityImporter> importers,
                             IdMapper idMapper, Collector badCollector,
-                            ExecutionMonitor executionMonitor, Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
+                            ExecutionMonitor executionMonitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
     {
         importData( NODE_IMPORT_NAME, numRunners, input.nodes( badCollector ), stores, importers, executionMonitor,
                 new MemoryUsageStatsProvider( stores, idMapper ) );
@@ -187,7 +187,7 @@ public class DataImporter
     static void importRelationships( int numRunners, Input input, BatchingStoreInterface stores,
                                                Supplier<BaseEntityImporter> importers, IdMapper idMapper,
                                                Collector badCollector, ExecutionMonitor executionMonitor,
-            Monitor monitor, boolean validateRelationshipData, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker  ) throws IOException
+            boolean validateRelationshipData, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker  ) throws IOException
     {
         importData( RELATIONSHIP_IMPORT_NAME, numRunners, input.relationships( badCollector ), stores, importers, executionMonitor,
                 new MemoryUsageStatsProvider( stores, idMapper ) );

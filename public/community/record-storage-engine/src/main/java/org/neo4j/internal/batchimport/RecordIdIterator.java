@@ -34,12 +34,8 @@ import static org.neo4j.collection.PrimitiveLongCollections.range;
  * going backwards with a batch size of 40 then ids are returned like this: 80-99, 40-79, 0-39.
  * This to get higher mechanical sympathy.
  */
-public interface RecordIdIterator
+public interface RecordIdIterator extends IdIterator
 {
-    /**
-     * @return next batch of ids as {@link LongIterator}, or {@code null} if there are no more ids to return.
-     */
-    LongIterator nextBatch();
 
     static RecordIdIterator backwards( long lowIncluded, long highExcluded, Configuration config )
     {

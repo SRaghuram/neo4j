@@ -28,6 +28,7 @@ public class FrekiNodeImporter extends FrekiEntityImporter{
     private int labelsCursor;
     private String[] labels = new String[10];
     private long nodeId = NO_ID;
+    private long nodeCount;
 
     public FrekiNodeImporter(BatchingStoreBase basicNeoStore, IdMapper idMapper, PropertyValueLookup inputIdLookup, DataImporter.Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker) {
         super(basicNeoStore, idMapper, inputIdLookup, monitor, pageCacheTracer, memoryTracker);
@@ -68,11 +69,11 @@ public class FrekiNodeImporter extends FrekiEntityImporter{
     @Override
     public void endOfEntity()
     {
-        commands.clear();
         try {
+            commands.clear();
             CommandCreator commandCreator = new CommandCreator(commands, ((FrekiBatchStores)baseNeoStore).stores, null, cursorTracer, memoryTracker);
-            commands.add(new FrekiCommand.NodeCount(ANY_LABEL, (long) 1));
             commandCreator.visitCreatedNode(nodeId);
+            nodeCount++;
             //add properties
             commandCreator.visitNodePropertyChanges(nodeId, propsAdd, emptyList(), IntSets.immutable.empty());
             // Compose the labels
@@ -82,22 +83,21 @@ public class FrekiNodeImporter extends FrekiEntityImporter{
                 MutableLongSet addedLabels = LongSets.mutable.empty();
                 LongStream.of(labelIds).forEach(addedLabels::add);
                 commandCreator.visitNodeLabelChanges(nodeId, addedLabels, LongSets.immutable.empty());
-                for (long labelId : labelIds)
-                    commands.add(new FrekiCommand.NodeCount((int) labelId, (long) 1));
             }
             labelsCursor = 0;
             hasLabelField = false;
-
             commandCreator.close();
             super.endOfEntity();
         } catch (Exception ke)
         {
-            System.out.println("CommandCrreator error-"+ke.getMessage());
+            System.out.println("CommandCreator error-"+ke.getMessage());
         }
     }
     @Override
     public void close()
     {
         super.close();
+        monitor.nodesImported( nodeCount );
+        cursorTracer.close();
     }
 }

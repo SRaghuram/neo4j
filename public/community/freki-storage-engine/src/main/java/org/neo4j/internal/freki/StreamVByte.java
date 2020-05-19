@@ -167,8 +167,8 @@ class StreamVByte
         int value;
         if ( code == 0 )
         {
-            if (dataOffset >= bytes.length)
-                System.out.println("Errr");
+            //if (dataOffset >= bytes.length)
+             //   System.out.println("Errr");
             value = bytes[dataOffset] & 0xFF;
         }
         else if ( code == 1 )

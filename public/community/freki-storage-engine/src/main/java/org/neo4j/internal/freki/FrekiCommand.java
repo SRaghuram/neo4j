@@ -923,7 +923,7 @@ abstract public class FrekiCommand implements StorageCommand
         }
     }
 
-    static class RelationshipCount extends FrekiCommand
+    public static class RelationshipCount extends FrekiCommand
     {
         static final byte TYPE = 15;
 

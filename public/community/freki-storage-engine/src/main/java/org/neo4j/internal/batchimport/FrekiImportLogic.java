@@ -26,8 +26,6 @@ import java.util.function.Supplier;
 import static java.lang.System.currentTimeMillis;
 
 public class FrekiImportLogic extends BaseImportLogic implements Closeable {
-    private final Dependencies dependencies = new Dependencies();
-    private long startTime;
     private final Map<Class<?>,Object> accessibleState = new HashMap<>();
     public FrekiImportLogic(FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, BatchingStoreBase neoStore, Collector badCollector, LogService logService,
                             ExecutionMonitor executionMonitor, Configuration config, Config dbConfig, Monitor monitor,
@@ -41,9 +39,8 @@ public class FrekiImportLogic extends BaseImportLogic implements Closeable {
     @Override
     public void initialize(Input input) throws IOException {
         log.info( "Import starting" );
-        startTime = currentTimeMillis();
         Input.Estimates inputEstimates = input.calculateEstimates(new FrekiRecordSizeCalculator());
-        super.initialize( input, dependencies);
+        super.initialize( input );
         dependencies.satisfyDependency( inputEstimates );
         executionMonitor.initialize( dependencies );
     }
@@ -54,29 +51,21 @@ public class FrekiImportLogic extends BaseImportLogic implements Closeable {
                 (new FrekiNodeImporter( basicNeoStore, idMapper, inputIdLookup, storeUpdateMonitor, pageCacheTracer, memoryTracker));
         DataImporter.importNodes( config.maxNumberOfProcessors(),
                 input, basicNeoStore, importers, idMapper, badCollector,
-                executionMonitor, storeUpdateMonitor, pageCacheTracer, memoryTracker );
+                executionMonitor, pageCacheTracer, memoryTracker );
         ((FrekiBatchStores)basicNeoStore).flushAndForce( pageCacheTracer.createPageCursorTracer("flush"));
     }
 
     @Override
     public void importRelationships() throws IOException {
-        //basicNeoStore.startFlushingPageCache();
         DataStatistics typeDistribution = new DataStatistics( storeUpdateMonitor, new DataStatistics.RelationshipTypeCount[0] );
         Supplier<BaseEntityImporter> importers = () -> new FrekiRelationshipImporter( basicNeoStore, idMapper, typeDistribution, storeUpdateMonitor,
                 pageCacheTracer, memoryTracker, badCollector);
         DataImporter.importRelationships(
              config.maxNumberOfProcessors(),
-                input, basicNeoStore, importers, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
+                input, basicNeoStore, importers, idMapper, badCollector, executionMonitor,
                 true, pageCacheTracer, memoryTracker  );
-        //basicNeoStore.stopFlushingPageCache();
         updatePeakMemoryUsage();
         putState( typeDistribution );
-    }
-
-    public <T> void putState( T state )
-    {
-        accessibleState.put( state.getClass(), state );
-        dependencies.satisfyDependency( state );
     }
 
     @Override
@@ -99,7 +88,6 @@ public class FrekiImportLogic extends BaseImportLogic implements Closeable {
 
     }
 
-    boolean successful;
     @Override
     public void success() {
         basicNeoStore. success();
@@ -108,6 +96,6 @@ public class FrekiImportLogic extends BaseImportLogic implements Closeable {
 
     @Override
     public void close() throws IOException {
-
+        super.close();
     }
 }

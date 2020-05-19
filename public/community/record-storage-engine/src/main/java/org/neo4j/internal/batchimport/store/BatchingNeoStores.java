@@ -409,7 +409,7 @@ public class BatchingNeoStores extends BatchingStoreBase implements AutoCloseabl
         return neoStores.getRelationshipGroupStore();
     }
 
-    public void buildCountsStore( CountsBuilder builder, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    /*public void buildCountsStore( CountsBuilder builder, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         try ( GBPTreeCountsStore countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), fileSystem,
                 RecoveryCleanupWorkCollector.immediate(), builder, false, cacheTracer, GBPTreeCountsStore.NO_MONITOR ) )
@@ -421,7 +421,7 @@ public class BatchingNeoStores extends BatchingStoreBase implements AutoCloseabl
         {
             throw new UncheckedIOException( e );
         }
-    }
+    }*/
 
     @Override
     public StoreId getStoreId() {

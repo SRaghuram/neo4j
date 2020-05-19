@@ -79,25 +79,14 @@ import static org.neo4j.kernel.impl.store.NoStoreHeader.NO_STORE_HEADER;
  */
 public class ImportLogic extends BaseImportLogic implements Closeable
 {
-    private static final String IMPORT_COUNT_STORE_REBUILD_TAG = "importCountStoreRebuild";
     private BatchingNeoStores neoStore;
     private RecordFormats recordFormats;
 
-    private final DataImporter.Monitor storeUpdateMonitor = new DataImporter.Monitor();
+    //private final DataImporter.Monitor storeUpdateMonitor = new DataImporter.Monitor();
     private final long maxMemory;
-    private final Dependencies dependencies = new Dependencies();
-    private boolean successful;
-
-    // This map contains additional state that gets populated, created and used throughout the stages.
-    // The reason that this is a map is to allow for a uniform way of accessing and loading this stage
-    // from the outside. Currently these things live here:
-    //   - RelationshipTypeDistribution
-    private final Map<Class<?>,Object> accessibleState = new HashMap<>();
 
     // components which may get assigned and unassigned in some methods
-    private NodeLabelsCache nodeLabelsCache;
-    private long startTime;
-    private long peakMemoryUsage;
+
     private long availableMemoryForLinking;
 
     /**
@@ -128,7 +117,7 @@ public class ImportLogic extends BaseImportLogic implements Closeable
     {
         log.info( "Import starting" );
         startTime = currentTimeMillis();
-        super.initialize( input, dependencies);
+        super.initialize( input );
         Input.Estimates inputEstimates = input.calculateEstimates( neoStore.getPropertyStore().newValueEncodedSizeCalculator() );
 
         // Sanity checking against estimates
@@ -164,7 +153,7 @@ public class ImportLogic extends BaseImportLogic implements Closeable
             throw new IllegalArgumentException( "Unsupported id type " + input.idType() );
         }
     }
-     */
+
 
     /**
      * Accesses state of a certain {@code type}. This is state that may be long- or short-lived and perhaps
@@ -173,7 +162,7 @@ public class ImportLogic extends BaseImportLogic implements Closeable
      * @param type {@link Class} of the state to get.
      * @return the state of the given type.
      * @throws IllegalStateException if the state of the given {@code type} isn't available.
-     */
+
     public <T> T getState( Class<T> type )
     {
         return type.cast( accessibleState.get( type ) );
@@ -185,13 +174,13 @@ public class ImportLogic extends BaseImportLogic implements Closeable
      * @param state state instance to set.
      * @see #getState(Class)
      * @throws IllegalStateException if state of this type has already been defined.
-     */
+
     public <T> void putState( T state )
     {
         accessibleState.put( state.getClass(), state );
         dependencies.satisfyDependency( state );
     }
-
+*/
     /**
      * Imports nodes w/ their properties and labels from {@link Input#nodes(Collector)}. This will as a side-effect populate the {@link IdMapper},
      * to later be used for looking up ID --> nodeId in {@link #importRelationships()}. After a completed node import,
@@ -204,7 +193,7 @@ public class ImportLogic extends BaseImportLogic implements Closeable
         // Import nodes, properties, labels
         neoStore.startFlushingPageCache();
         Supplier<BaseEntityImporter> importers = () -> new NodeImporter( neoStore, idMapper, inputIdLookup, storeUpdateMonitor, pageCacheTracer, memoryTracker  );
-        DataImporter.importNodes( config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
+        DataImporter.importNodes( config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor,
                 pageCacheTracer, memoryTracker  );
         neoStore.stopFlushingPageCache();
         updatePeakMemoryUsage();
@@ -226,7 +215,7 @@ public class ImportLogic extends BaseImportLogic implements Closeable
         Supplier<BaseEntityImporter> importers = () -> new RelationshipImporter( neoStore, idMapper, typeDistribution, storeUpdateMonitor,
                 badCollector, !badCollector.isCollectingBadRelationships(), neoStore.usesDoubleRelationshipRecordUnits(), pageCacheTracer, memoryTracker  );
         DataImporter.importRelationships(
-                config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
+                config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor,
                 !badCollector.isCollectingBadRelationships(), pageCacheTracer, memoryTracker  );
         neoStore.stopFlushingPageCache();
         updatePeakMemoryUsage();
@@ -459,6 +448,8 @@ public class ImportLogic extends BaseImportLogic implements Closeable
     @Override
     public void close() throws IOException
     {
+        super.close();
+        /*
         // We're done, do some final logging about it
         long totalTimeMillis = currentTimeMillis() - startTime;
         DataStatistics state = getState( DataStatistics.class );
@@ -467,6 +458,7 @@ public class ImportLogic extends BaseImportLogic implements Closeable
                 bytesToString( peakMemoryUsage ) ) );
         log.info( "Import completed successfully, took " + duration( totalTimeMillis ) + ". " + additionalInformation );
         closeAll( nodeRelationshipCache, nodeLabelsCache, idMapper );
+         */
     }
 
     public void updatePeakMemoryUsage()

@@ -20,18 +20,18 @@
 package org.neo4j.internal.batchimport.staging;
 
 import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.RecordIdIterator;
+import org.neo4j.internal.batchimport.IdIterator;
 
 /**
  * Releases batches of record ids to be read, potentially in parallel, by downstream batches.
  */
 public class BatchFeedStep extends PullingProducerStep
 {
-    private final RecordIdIterator ids;
+    private final IdIterator ids;
     private final int recordSize;
     private volatile long count;
 
-    public BatchFeedStep( StageControl control, Configuration config, RecordIdIterator ids, int recordSize )
+    public BatchFeedStep( StageControl control, Configuration config, IdIterator ids, int recordSize )
     {
         super( control, config );
         this.ids = ids;
