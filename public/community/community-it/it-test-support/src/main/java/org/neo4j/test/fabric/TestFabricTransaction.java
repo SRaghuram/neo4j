@@ -3,11 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.test.fabric;
+package org.neo4j.test.fabric;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.bolt.dbapi.BoltTransaction;
@@ -35,7 +34,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
-import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.kernel.impl.util.ValueUtils;
 
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;

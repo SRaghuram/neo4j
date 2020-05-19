@@ -3,11 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.test.fabric;
-
-import org.neo4j.fabric.bolt.BoltFabricDatabaseService;
-import org.neo4j.fabric.executor.FabricExecutor;
-import org.neo4j.fabric.transaction.FabricTransaction;
+package org.neo4j.test.fabric;
 
 import java.time.Duration;
 import java.util.List;
@@ -22,6 +18,9 @@ import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.v41.messaging.RoutingContext;
 import org.neo4j.configuration.Config;
+import org.neo4j.fabric.bolt.BoltFabricDatabaseService;
+import org.neo4j.fabric.executor.FabricExecutor;
+import org.neo4j.fabric.transaction.FabricTransaction;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
