@@ -42,8 +42,8 @@ import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
 import org.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import org.neo4j.fabric.config.FabricConfig;
 import org.neo4j.fabric.executor.FabricExecutor;
-import org.neo4j.fabric.stream.FabricExecutionStatementResult;
 import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.fabric.stream.summary.EmptySummary;
 import org.neo4j.fabric.transaction.FabricTransaction;
 import org.neo4j.fabric.transaction.TransactionManager;
@@ -77,7 +77,7 @@ class BoltAdapterTest
     private static FabricConfig fabricConfig;
     private static DriverUtils driverUtils;
     private final ResultPublisher publisher = new ResultPublisher();
-    private final FabricExecutionStatementResult statementResult = mock( FabricExecutionStatementResult.class );
+    private final StatementResult statementResult = mock( StatementResult.class );
     private final CountDownLatch transactionLatch = new CountDownLatch( 1 );
     private final FabricTransaction fabricTransaction = mock( FabricTransaction.class );
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -125,7 +125,7 @@ class BoltAdapterTest
         when( statementResult.columns() ).thenReturn( Flux.just( "c1", "c2" ) );
         when( statementResult.records() ).thenReturn( Flux.from( publisher ) );
         when( statementResult.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
-        when( statementResult.queryExecutionType() ).thenReturn( Mono.just( QueryExecutionType.query( QueryExecutionType.QueryType.READ_WRITE ) ) );
+        when( statementResult.executionType() ).thenReturn( Mono.just( QueryExecutionType.query( QueryExecutionType.QueryType.READ_WRITE ) ) );
 
         when( fabricExecutor.run( any(), any(), any() ) ).thenReturn( statementResult );
 

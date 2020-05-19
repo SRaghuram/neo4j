@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.stream.StatementResults;
+import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.impl.query.QueryExecution;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,6 +56,7 @@ class Cypher2RxStreamTest
         var queryExecution = mock(QueryExecution.class);
 
         when( queryExecution.fieldNames() ).thenReturn( new String[] { "a" } );
+        when( queryExecution.executionType() ).thenReturn( QueryExecutionType.query( QueryExecutionType.QueryType.READ_ONLY ) );
 
         AtomicReference<Runnable> secondRequestReference = new AtomicReference<>();
         doAnswer( invocationOnMock ->

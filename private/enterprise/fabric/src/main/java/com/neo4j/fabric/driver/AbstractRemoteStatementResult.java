@@ -20,6 +20,7 @@ import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.fabric.stream.summary.Summary;
+import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.api.exceptions.Status;
 
 abstract class AbstractRemoteStatementResult implements StatementResult
@@ -27,6 +28,7 @@ abstract class AbstractRemoteStatementResult implements StatementResult
 
     private final Flux<String> columns;
     private final Mono<ResultSummary> summary;
+    private final Mono<QueryExecutionType> executionType;
     private final RecordConverter recordConverter;
     private final Runnable completionListener;
     private final AtomicReference<FabricException> primaryException;
@@ -49,6 +51,9 @@ abstract class AbstractRemoteStatementResult implements StatementResult
     {
         this.columns = columns;
         this.summary = summary;
+        // TODO: This is totally wrong, but real value is required before summary is available.
+        // Either we do analysis in fabric and send in here, or we make sure value is not needed until after execution
+        this.executionType = Mono.just( QueryExecutionType.query( QueryExecutionType.QueryType.READ_WRITE ) );
         recordConverter = new RecordConverter( sourceTag );
         this.completionListener = completionListener;
         this.primaryException = primaryException;
@@ -73,6 +78,12 @@ abstract class AbstractRemoteStatementResult implements StatementResult
     {
         return summary.onErrorMap( Neo4jException.class, this::handleError )
             .map( ResultSummaryWrapper::new );
+    }
+
+    @Override
+    public Mono<QueryExecutionType> executionType()
+    {
+        return executionType;
     }
 
     protected abstract Flux<Record> doGetRecords();
