@@ -100,8 +100,10 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
     override def closeInput(operatorCloser: OperatorCloser): Unit = {
       super.closeInput(operatorCloser)
-      sortedInputPerArgument.close()
-      sortedInputPerArgument = null;
+      if (sortedInputPerArgument != null) {
+        sortedInputPerArgument.close()
+        sortedInputPerArgument = null;
+      }
     }
   }
 }
