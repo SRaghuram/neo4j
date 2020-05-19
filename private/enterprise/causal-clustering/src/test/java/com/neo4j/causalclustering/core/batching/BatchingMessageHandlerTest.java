@@ -18,12 +18,14 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +36,7 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.test.OnDemandJobScheduler;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.AppendEntries;
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.Heartbeat;
@@ -41,6 +44,7 @@ import static com.neo4j.causalclustering.core.consensus.RaftMessages.NewEntry;
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.CompletableFuture.runAsync;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -391,7 +395,7 @@ class BatchingMessageHandlerTest
         batchHandler.handle( wrap( message ) );
 
         // then
-        inOrder.verify( jobScheduler ).disable();
+        inOrder.verify( jobScheduler ).stopAndFlush();
         // and - not offered because we are stopped
         inOrder.verifyNoMoreInteractions();
     }
@@ -436,7 +440,91 @@ class BatchingMessageHandlerTest
         batchHandler.stop();
 
         // then
-        Mockito.verify( jobScheduler ).disable();
+        Mockito.verify( jobScheduler ).stopAndFlush();
+    }
+
+    @Test
+    void shouldFlushQueue() throws Throwable
+    {
+        var handler = new LifecycleMessageHandler<InboundRaftMessageContainer<?>>()
+        {
+
+            Exception lastError;
+            InboundRaftMessageContainer<?> lastMessage;
+            final CountDownLatch countDownLatch = new CountDownLatch( 1 );
+
+            @Override
+            public void handle( InboundRaftMessageContainer<?> message )
+            {
+                try
+                {
+                    countDownLatch.await();
+                    lastMessage = message;
+                }
+                catch ( InterruptedException e )
+                {
+                    lastError = e;
+                }
+            }
+
+            @Override
+            public void start( RaftId raftId ) throws Exception
+            {
+            }
+
+            @Override
+            public void stop() throws Exception
+            {
+            }
+        };
+
+        RaftId raftId = RaftIdFactory.random();
+        var jobScheduler = new ThreadPoolJobScheduler( executor );
+        var scheduler = new LimitingScheduler( jobScheduler, Group.RAFT_BATCH_HANDLER, NullLogProvider.getInstance().getLog( this.getClass() ),
+                new ReoccurringJobQueue<>() );
+
+        // given
+        BatchingMessageHandler batchHandler = new BatchingMessageHandler( handler, IN_QUEUE_CONFIG, BATCH_CONFIG, scheduler, NullLogProvider.getInstance() );
+
+        NewEntry.Request message1 = new NewEntry.Request( null, content( "dummy1" ) );
+        NewEntry.Request message2 = new NewEntry.Request( null, content( "dummy2" ) );
+        NewEntry.Request message3 = new NewEntry.Request( null, content( "dummy3" ) );
+
+        batchHandler.handle( wrap( message1 ) );
+        batchHandler.handle( wrap( message2 ) );
+        batchHandler.handle( wrap( message3 ) );
+
+        // when
+        batchHandler.start( raftId );
+        var stopFuture = runAsync( () -> tryOrFailAtRuntime( batchHandler::stop ) );
+        Thread.sleep( 500 );
+
+        // Then
+        assertThat( stopFuture ).isNotDone();
+        assertThat( handler.lastMessage ).isNull();
+        assertThat( handler.lastError ).isNull();
+
+        // when
+        handler.countDownLatch.countDown();
+
+        // then
+        assertThat( stopFuture ).succeedsWithin( 1, TimeUnit.MINUTES );
+        assertThat( handler.lastError ).isNull();
+        assertThat( handler.lastMessage ).isNotNull();
+
+        assertThat( ((NewEntry.BatchRequest)handler.lastMessage.message()).contents() ).endsWith( new ReplicatedString( "dummy3" ) );
+    }
+
+    private void tryOrFailAtRuntime( Executable fn )
+    {
+        try
+        {
+            fn.execute();
+        }
+        catch ( Throwable e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     private InboundRaftMessageContainer<?> wrap( RaftMessage message )

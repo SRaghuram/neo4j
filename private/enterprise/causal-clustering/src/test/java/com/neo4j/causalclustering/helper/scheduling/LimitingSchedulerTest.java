@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.logging.NullLog;
@@ -22,9 +23,12 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.assertion.Assert.assertEventuallyThrows;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
 class LimitingSchedulerTest
@@ -37,7 +41,7 @@ class LimitingSchedulerTest
     @AfterEach
     void shutdown()
     {
-        scheduler.disable();
+        scheduler.stopAndFlush();
         executorService.shutdown();
     }
 
@@ -55,7 +59,7 @@ class LimitingSchedulerTest
     }
 
     @Test
-    void shouldClearQueueOnDisable()
+    void shouldNotClearQueueOnDisable()
     {
         // given
         AtomicInteger integer = new AtomicInteger();
@@ -69,18 +73,21 @@ class LimitingSchedulerTest
         assertEquals( 1, jobsQueue.queue.size() );
 
         // when
-        runAsync( scheduler::disable );
+        var disableFuture = runAsync( scheduler::stopAndFlush );
 
         // then
-        assertEventually( jobsQueue.queue::isEmpty, TRUE, 1, MINUTES );
-
+        assertDoesNotThrow( () -> Thread.sleep( 1000 ) );
+        assertThat( disableFuture ).isNotDone();
         // and
         countDownLatch.countDown();
-        assertEquals( 0, integer.get() );
+        assertEventually( jobsQueue.queue::isEmpty, TRUE, 1, MINUTES );
+        assertThat( disableFuture ).succeedsWithin( 1, MINUTES );
+
+        assertEquals( 1, integer.get() );
     }
 
     @Test
-    void shouldNotAllowSchedulingOfJobsAfterBeingDisabled()
+    void shouldNotAllowSchedulingOfJobsAfterBeingDisabled() throws InterruptedException
     {
         // given
         AtomicInteger integer = new AtomicInteger();
@@ -88,19 +95,29 @@ class LimitingSchedulerTest
 
         // when
         scheduler.offerJob( () -> waitOnLatch( countDownLatch ) );
-        scheduler.offerJob( () -> integer.set( 1 ) );
+        scheduler.offerJob( () -> integer.set( 2 ) );
 
         // and
-        runAsync( scheduler::disable );
+        var disableFuture = runAsync( scheduler::stopAndFlush );
 
-        // when queue has been cleared we know that we are disabled
+        // then once disabled offered rows should throw exception (even if jobs are still processing)
+        assertEventuallyThrows( "A stopped scheduler should throw if items are submitted to it", IllegalStateException.class,
+                                () -> scheduler.offerJob( () -> integer.set( 3 ) ), 1, MINUTES );
+
+        // once jobs complete
+        countDownLatch.countDown();
+
+        // then queue clears
         assertEventually( jobsQueue.queue::isEmpty, TRUE, 1, MINUTES );
 
-        // then any offered should throw exception
-        assertThrows( IllegalStateException.class, () -> scheduler.offerJob( () -> integer.set( 2 ) ) );
+        // and the disabled() function completes
+        assertThat( disableFuture ).succeedsWithin( 1, TimeUnit.SECONDS );
 
-        countDownLatch.countDown();
-        assertEquals( 0, integer.get() );
+        // then any offered should throw exception
+        assertThrows( IllegalStateException.class, () -> scheduler.offerJob( () -> integer.set( 4 ) ) );
+
+        // integer is set to either 2 or 3
+        assertThat( integer.get() ).isGreaterThan( 1 ).isLessThan( 4 );
     }
 
     @Test
@@ -219,6 +236,12 @@ class LimitingSchedulerTest
         public void clear()
         {
             queue.clear();
+        }
+
+        @Override
+        public boolean isEmpty()
+        {
+            return queue.isEmpty();
         }
     }
 }

@@ -14,7 +14,9 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
@@ -39,7 +41,7 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
 
     private volatile boolean stopped;
     private volatile BoundedPriorityQueue.Result lastResult = OK;
-    private AtomicLong droppedCount = new AtomicLong();
+    private final AtomicLong droppedCount = new AtomicLong();
 
     BatchingMessageHandler( LifecycleMessageHandler<InboundRaftMessageContainer<?>> handler,
             BoundedPriorityQueue.Config inQueueConfig, BatchingConfig batchConfig, LimitingScheduler scheduler,
@@ -76,9 +78,11 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     @Override
     public void stop() throws Exception
     {
+        // Prevent anything more from being added to the queue
         stopped = true;
+        scheduler.stopAndFlush();
         handler.stop();
-        scheduler.disable();
+        logAnythingRemainingInQueue();
     }
 
     @Override
@@ -95,6 +99,29 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
         if ( result == OK )
         {
             scheduler.offerJob( this );
+        }
+    }
+
+    private void logAnythingRemainingInQueue()
+    {
+        int remainingMessageCount = inQueue.count();
+        if ( remainingMessageCount > 0 )
+        {
+            // It's possible that yet more things get added to the queue while we are doing this
+            // but we deliberately limit this to the size of the message queue when invoked so that this can't block forever
+            var unprocessedMessages = new ArrayList<InboundRaftMessageContainer<?>>( remainingMessageCount );
+            for ( int i = 0; i < remainingMessageCount; i++ )
+            {
+                var nextMessage = inQueue.poll();
+                if ( nextMessage.isEmpty() )
+                {
+                    break;
+                }
+                unprocessedMessages.add( nextMessage.get() );
+            }
+
+            log.info( "Unprocessed messages remain in the BatchingMessageHandler after stop: [%s]",
+                      unprocessedMessages.stream().map( InboundRaftMessageContainer::toString ).collect( Collectors.joining( "," ) ) );
         }
     }
 

@@ -12,4 +12,6 @@ public interface JobsQueue<E>
     void offer( E element );
 
     void clear();
+
+    boolean isEmpty();
 }

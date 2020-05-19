@@ -31,4 +31,10 @@ public class SingleElementJobsQueue<E> implements JobsQueue<E>
     {
         next = null;
     }
+
+    @Override
+    public boolean isEmpty()
+    {
+        return next == null;
+    }
 }

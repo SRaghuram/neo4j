@@ -44,22 +44,28 @@ public class LimitingScheduler
      *
      * @throws IllegalStateException if the scheduler is disabled.
      */
-    public synchronized void offerJob( Runnable runnable )
+    public void offerJob( Runnable runnable )
+    {
+        // exit without taking a lock if we're already disabled
+        throwIfDisabled();
+        synchronized ( this )
+        {
+            throwIfDisabled();
+            jobsQueue.offer( runnable );
+            trySchedule();
+        }
+    }
+
+    private void throwIfDisabled()
     {
         if ( !enabled )
         {
             throw new IllegalStateException( "Not allowing jobs to be scheduled when disabled" );
         }
-        jobsQueue.offer( runnable );
-        trySchedule();
     }
 
     private synchronized void trySchedule()
     {
-        if ( !enabled )
-        {
-            return;
-        }
         if ( job != null )
         {
             return;
@@ -77,18 +83,61 @@ public class LimitingScheduler
     }
 
     /**
-     * Aborts any offered jobs that are not running and waits for currently running jobs to complete.
+     * Prevents adding new jobs and waits for currently running and queued jobs to complete.
      */
-    public void disable()
+    public void stopAndFlush()
     {
-        enabled = false;
-        abortJob();
-        waitTermination( jobHandle );
+        // use synchronized setDisabled method so that we know that all in progress offerJob() calls have completed before we disable
+        // that allows us to be sure that no items are going to join the queue after this point
+        setDisabled();
+
+        try
+        {
+            flush();
+        }
+        finally
+        {
+            abortJob();
+            waitTermination( jobHandle );
+        }
     }
 
-    public void enable()
+    /**
+     * Synchronized call to jobsQueue.isEmpty because jobsQueue implementation is not thread safe on its own
+     */
+    private synchronized boolean isEmpty()
     {
-        enabled = true;
+        if ( enabled )
+        {
+            throw new IllegalStateException( "Checking if the queue is empty while the scheduler is enabled is not supported" );
+        }
+        return jobsQueue.isEmpty();
+    }
+
+    /**
+     * Waits until all jobs are complete. Does not block concurrent addition of jobs!
+     */
+    private void flush()
+    {
+        while ( !isEmpty() )
+        {
+            // n.b we use a synchronized method to get the latest jobHandle to avoid races with trySchedule on other threads
+            waitTermination( getJobHandle() );
+            // the queue should be self-scheduling but we do this anyway to keep moving and to avoid being a busy-loop
+            trySchedule();
+        }
+        // Wait on the last scheduled job to finish
+        waitTermination( getJobHandle() );
+    }
+
+    private synchronized JobHandle<?> getJobHandle()
+    {
+        return jobHandle;
+    }
+
+    private synchronized void setDisabled()
+    {
+        enabled = false;
     }
 
     private synchronized void abortJob()
@@ -124,6 +173,7 @@ public class LimitingScheduler
             finally
             {
                 job = null;
+                // It's not necessary to check if we are enabled here since we are expected to always flush our whole queue
                 trySchedule();
             }
         }

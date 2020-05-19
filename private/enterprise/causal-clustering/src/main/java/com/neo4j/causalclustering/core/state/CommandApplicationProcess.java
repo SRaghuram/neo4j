@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.helper.scheduling.SingleElementJobsQueue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -48,7 +49,8 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     private final RaftLogAppliedIndexMonitor appliedIndexMonitor;
     private final CommandBatcher batcher;
     private final DatabasePanicker panicker;
-    private final LimitingScheduler scheduler;
+    private final Supplier<LimitingScheduler> schedulerSupplier;
+    private LimitingScheduler scheduler;
     private final StatUtil.StatContext batchStat;
 
     private long lastFlushed = NOTHING;
@@ -71,7 +73,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         this.appliedIndexMonitor = monitors.newMonitor( RaftLogAppliedIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
         this.panicker = panicker;
-        this.scheduler = new LimitingScheduler( scheduler, Group.CORE_STATE_APPLIER, log, new SingleElementJobsQueue<>() );
+        this.schedulerSupplier = () -> new LimitingScheduler( scheduler, Group.CORE_STATE_APPLIER, log, new SingleElementJobsQueue<>() );
         this.batchStat = StatUtil.create( "BatchSize", log, 4096, true );
     }
 
@@ -300,7 +302,8 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         if ( pauseCount == 1 )
         {
-            scheduler.disable();
+            scheduler.stopAndFlush();
+            scheduler = null;
         }
     }
 
@@ -316,7 +319,8 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         if ( pauseCount == 0 )
         {
-            scheduler.enable();
+            assert scheduler == null;
+            scheduler = schedulerSupplier.get();
             scheduleJob();
         }
     }

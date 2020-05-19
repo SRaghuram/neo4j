@@ -37,4 +37,10 @@ public class ReoccurringJobQueue<T> implements JobsQueue<T>
     {
         queuedJobs = 0;
     }
+
+    @Override
+    public boolean isEmpty()
+    {
+        return queuedJobs == 0;
+    }
 }
