@@ -36,8 +36,8 @@ import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_advertised_address;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_listen_address;
-import static org.neo4j.configuration.SettingConstraints.greaterThanOrEqual;
 import static org.neo4j.configuration.SettingConstraints.ifCluster;
+import static org.neo4j.configuration.SettingConstraints.lessThanOrEqual;
 import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingConstraints.range;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
@@ -168,7 +168,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Integer> minimum_core_cluster_size_at_runtime =
             newBuilder( "causal_clustering.minimum_core_cluster_size_at_runtime", INT, 3 )
                     .addConstraint( min( 2 ) )
-                    .addConstraint( ifCluster( greaterThanOrEqual( minimum_core_cluster_size_at_formation ) ) ).build();
+                    .addConstraint( ifCluster( lessThanOrEqual( minimum_core_cluster_size_at_formation ) ) ).build();
 
     public static final int DEFAULT_DISCOVERY_PORT = 5000;
     public static final int DEFAULT_TRANSACTION_PORT = 6000;

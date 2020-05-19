@@ -5,15 +5,18 @@
  */
 package com.neo4j.server.rest;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.server.configuration.ServerSettings;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
@@ -42,7 +45,10 @@ class EnterpriseDiscoverableURIsTest
     void shouldExposeCausalClusteringManagementApiOnCore()
     {
         // Given
-        var config = Config.defaults( GraphDatabaseSettings.mode, CORE );
+        var config = Config.newBuilder()
+                .set( GraphDatabaseSettings.mode, CORE )
+                .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
+                .build();
 
         // When
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
@@ -55,7 +61,10 @@ class EnterpriseDiscoverableURIsTest
     void shouldExposeCausalClusteringManagementApiOnReadReplica()
     {
         // Given
-        var config = Config.defaults( GraphDatabaseSettings.mode, READ_REPLICA );
+        var config = Config.newBuilder()
+                .set( GraphDatabaseSettings.mode, READ_REPLICA )
+                .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
+                .build();
 
         // When
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
@@ -70,6 +79,7 @@ class EnterpriseDiscoverableURIsTest
         // Given
         var config = Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, CORE )
+                .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
                 .set( ServerSettings.db_api_path, URI.create( "/a/new/core/db/path" ) )
                 .build();
 
@@ -86,6 +96,7 @@ class EnterpriseDiscoverableURIsTest
         // Given
         var config = Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, READ_REPLICA )
+                .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
                 .set( ServerSettings.db_api_path, URI.create( "/a/new/read_replica/db/path" ) )
                 .build();
 

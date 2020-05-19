@@ -6,7 +6,6 @@
 package com.neo4j.dbms.api;
 
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 import java.io.File;
 import java.util.function.Function;
@@ -14,6 +13,7 @@ import java.util.function.Function;
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.facade.ExternalDependencies;
@@ -55,8 +55,8 @@ public class EnterpriseDatabaseManagementServiceBuilder extends DatabaseManageme
     @Override
     protected DatabaseInfo getDatabaseInfo( Config config )
     {
-        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
-        if ( mode == EnterpriseEditionSettings.Mode.SINGLE )
+        GraphDatabaseSettings.Mode mode = config.get( GraphDatabaseSettings.mode );
+        if ( mode == GraphDatabaseSettings.Mode.SINGLE )
         {
             return DatabaseInfo.ENTERPRISE;
         }
@@ -66,8 +66,8 @@ public class EnterpriseDatabaseManagementServiceBuilder extends DatabaseManageme
     @Override
     protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
     {
-        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
-        if ( mode == EnterpriseEditionSettings.Mode.SINGLE )
+        GraphDatabaseSettings.Mode mode = config.get( GraphDatabaseSettings.mode );
+        if ( mode == GraphDatabaseSettings.Mode.SINGLE )
         {
             return EnterpriseEditionModule::new;
         }

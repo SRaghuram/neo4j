@@ -8,7 +8,6 @@ package com.neo4j.enterprise.embedded;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.dbms.api.ClusterDatabaseManagementService;
 import com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -37,8 +37,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode.CORE;
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode.READ_REPLICA;
 import static java.time.Duration.ofMinutes;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -47,6 +45,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.READ_REPLICA;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -290,7 +290,7 @@ class EmbeddedClusterIT
 
             var builder = new ClusterDatabaseManagementServiceBuilder( homeDir );
 
-            builder.setConfig( EnterpriseEditionSettings.mode, CORE );
+            builder.setConfig( GraphDatabaseSettings.mode, CORE );
 
             builder.setConfig( CausalClusteringSettings.initial_discovery_members, coreDiscoveryAddresses );
 
@@ -317,7 +317,7 @@ class EmbeddedClusterIT
 
             var builder = new ClusterDatabaseManagementServiceBuilder( homeDir );
 
-            builder.setConfig( EnterpriseEditionSettings.mode, READ_REPLICA );
+            builder.setConfig( GraphDatabaseSettings.mode, READ_REPLICA );
 
             builder.setConfig( CausalClusteringSettings.initial_discovery_members, coreDiscoveryAddresses );
 

@@ -366,7 +366,8 @@ class ClusterDatabaseManagementIT
         //    recreated database without the missing member.
         var modifiedConfig = clusterConfig
                 .withNumberOfCoreMembers( 4 )
-                .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" );
+                .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
+                .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "3" );
         var cluster = startCluster( modifiedConfig );
 
         createDatabase( databaseName, cluster );

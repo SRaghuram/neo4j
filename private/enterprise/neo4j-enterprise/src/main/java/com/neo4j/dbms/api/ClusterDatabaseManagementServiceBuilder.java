@@ -8,7 +8,6 @@ package com.neo4j.dbms.api;
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 import java.io.File;
 import java.util.function.Function;
@@ -48,7 +47,7 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
     @Override
     protected DatabaseInfo getDatabaseInfo( Config config )
     {
-        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
+        GraphDatabaseSettings.Mode mode = config.get( GraphDatabaseSettings.mode );
         switch ( mode )
         {
         case CORE:
@@ -63,7 +62,7 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
     @Override
     protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
     {
-        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
+        GraphDatabaseSettings.Mode mode = config.get( GraphDatabaseSettings.mode );
         switch ( mode )
         {
         case CORE:
