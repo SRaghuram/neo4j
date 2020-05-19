@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.function.ToLongFunction
 
 import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
@@ -102,7 +103,6 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     singletonIndexedSeq(new ExpandIntoTask(inputMorsel.nextCopy,
                                   workIdentity,
-                                  id,
                                   fromSlot,
                                   relOffset,
                                   toSlot,
@@ -113,7 +113,6 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
 
 class ExpandIntoTask(inputMorsel: Morsel,
                      val workIdentity: WorkIdentity,
-                     id: Id,
                      fromSlot: Slot,
                      relOffset: Int,
                      toSlot: Slot,
@@ -188,8 +187,10 @@ class ExpandIntoTask(inputMorsel: Morsel,
     pools.relationshipTraversalCursorPool.free(traversalCursor)
     nodeCursor = null
     traversalCursor = null
+    if (relationships != null) {
+      relationships.close()
+    }
     relationships = null
-    expandInto = null
   }
 
   protected def kernelDirection(dir: SemanticDirection): Direction = dir match {
@@ -214,7 +215,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
   private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("traversal"))
-  protected val relationshipsField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("relationships"))
+  protected val relationshipsField: InstanceField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("relationships"))
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName("type"),
     if (types.isEmpty && missingTypes.isEmpty) constant(null)
     else arrayOf[Int](types.map(constant):_*)
@@ -325,6 +326,9 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *     pools.relationshipTraversalCursorPool.free(traversalCursor)
    *     nodeCursor = null
    *     traversalCursor = null
+   *     if (relationships != null) {
+   *       relationships.close()
+   *     }
    *     relationships = null
    * }}}
    */
@@ -334,8 +338,10 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       freeCursor[RelationshipTraversalCursor](loadField(traversalCursorField), TraversalCursorPool),
       setField(nodeCursorField, constant(null)),
       setField(traversalCursorField, constant(null)),
-      setField(relationshipsField, constant(null)),
-      setField(expandIntoField, constant(null))
+      condition(isNotNull(loadField(relationshipsField))) {
+        invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit]("close"))
+      },
+      setField(relationshipsField, constant(null))
     )
   }
 
