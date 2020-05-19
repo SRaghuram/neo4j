@@ -138,6 +138,34 @@ class CustomSecurityInitializationIT
     }
 
     @Test
+    void shouldNotDoAuthMigrationWhenFailingCustomInitializationStandalone() throws IOException
+    {
+        TreeSet<String> users = new TreeSet<>();
+        users.add( "neo4j" );
+        writeTestAuthFile( getAuthFile( directory.homeDir() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
+        writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
+        TestEnterpriseDatabaseManagementServiceBuilder builder =
+                new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() ).setConfig( GraphDatabaseSettings.auth_enabled,
+                        Boolean.TRUE ).setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) ).setConfig(
+                        GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE );
+        assertThrows( Exception.class, () -> dbms = builder.build() );
+
+        // Then if we fix the init file
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "//INVALID CYPHER" );
+        dbms = builder.build();
+        GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
+        try ( Transaction tx = db.beginTx() )
+        {
+            ArrayList<String> roleUsers = new ArrayList<>();
+            Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
+            result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
+            result.close();
+            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
+        }
+    }
+
+    @Test
     void shouldLogInitializationStandalone() throws IOException
     {
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
@@ -155,7 +183,7 @@ class CustomSecurityInitializationIT
         try ( var stringStream = Files.lines( neo4jLog ) )
         {
             var lines = stringStream.collect( Collectors.toList() );
-            System.out.println( lines );
+            lines.forEach( System.out::println );
             assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
         }
     }
@@ -288,6 +316,42 @@ class CustomSecurityInitializationIT
         }
         cluster.start();
         cluster.systemTx( ( db, tx ) -> {
+            ArrayList<String> roleUsers = new ArrayList<>();
+            Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
+            result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
+            result.close();
+            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
+        } );
+    }
+
+    @Disabled
+    @Timeout( value = 10, unit = TimeUnit.MINUTES )
+    void shouldFailCustomInitializationClusteredWithAuthRoleMigration() throws Exception
+    {
+        TreeSet<String> users = new TreeSet<>();
+        users.add( "neo4j" );
+        var clusterConfig = ClusterConfig.clusterConfig().withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" ).withSharedCoreParam(
+                GraphDatabaseSettings.system_init_file, INIT_FILENAME ).withNumberOfCoreMembers( 3 );
+        cluster = clusterFactory.createCluster( clusterConfig );
+        for ( ClusterMember member : cluster.coreMembers() )
+        {
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            org.apache.commons.io.FileUtils.forceMkdir( home );
+            writeTestAuthFile( getAuthFile( home ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
+            writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
+            writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
+        }
+        assertThrows( Exception.class, () -> cluster.start() );
+
+        // When fixing the broken init file, things should now work
+        for ( ClusterMember member : cluster.coreMembers() )
+        {
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j" );
+        }
+        cluster.start();
+        cluster.systemTx( ( db, tx ) ->
+        {
             ArrayList<String> roleUsers = new ArrayList<>();
             Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
             result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );

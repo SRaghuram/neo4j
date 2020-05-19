@@ -195,6 +195,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
         assert latest.version == LATEST_VERSION;
+        log.info( String.format( "Upgrading security model from %s by restructuring privileges", this.description ) );
         // Upgrade from 4.0.x to 4.1.0-Drop02, which means add the Version node, change global writes and split schema into index and constraint
         setVersionProperty( tx, latest.version );
         upgradeWriteFromAllPropertiesToGraphResource( tx );

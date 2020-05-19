@@ -89,6 +89,7 @@ public class EnterpriseVersion_0_35 extends KnownEnterpriseSecurityComponentVers
     {
         assert latest.version == LATEST_VERSION;
         roleRepository.start();
+        log.info( String.format( "Upgrading security model from %s roles file with %d roles", this.description, roleRepository.numberOfRoles() ) );
         if ( roleRepository.getRoleByName( PredefinedRoles.PUBLIC ) != null )
         {
             throw logAndCreateException( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists. " +

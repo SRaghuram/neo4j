@@ -66,6 +66,7 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
         assert latest.version == LATEST_VERSION;
+        log.info( String.format( "Upgrading security model from %s by adding version information", this.description ) );
         // Upgrade from 4.1.0-Drop01 to 4.1.0-Drop02, which means add the Version node
         setVersionProperty( tx, latest.version );
     }

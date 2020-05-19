@@ -93,6 +93,8 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
 
     public void initializePrivileges( Transaction tx, List<String> roles, Map<String,Set<String>> roleUsers ) throws InvalidArgumentsException
     {
+        log.info( String.format( "Initializing security model with %d roles", roles.size() ) );
+
         // Create default privileges
         setUpDefaultPrivileges( tx );
 

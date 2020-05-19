@@ -101,6 +101,7 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
         createPublicRoleFromUpgrade( tx );
         setVersionProperty( tx, latest.version );
         List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
+        log.info( String.format( "Upgrading security model from %s with %d roles", this.description, roles.size() ) );
         latest.setUpDefaultPrivileges( tx );
         List<String> rolesToSetup = new ArrayList<>();
         Map<String,Set<String>> rolesUsers = new HashMap<>();
