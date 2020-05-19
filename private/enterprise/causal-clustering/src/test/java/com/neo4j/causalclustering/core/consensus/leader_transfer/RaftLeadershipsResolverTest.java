@@ -97,7 +97,7 @@ class RaftLeadershipsResolverTest
         return dbId;
     }
 
-    private static class StubLeaderLocator implements LeaderLocator
+    static class StubLeaderLocator implements LeaderLocator
     {
         private final LeaderInfo leaderInfo;
 

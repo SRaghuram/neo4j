@@ -110,6 +110,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( config.availabilityGuard );
         when( db.getDatabaseHealth() ).thenReturn( config.health );
         when( db.isStarted() ).thenReturn( config.databaseStarted );
+        when( db.getDependencyResolver() ).thenReturn( config.dependencies );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
                 config.logProvider, config.catchupComponentsFactory, config.leaderLocator );

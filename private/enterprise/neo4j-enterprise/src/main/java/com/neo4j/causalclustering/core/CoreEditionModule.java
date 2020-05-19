@@ -317,10 +317,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferInterval = globalConfig.get( CausalClusteringSettings.leader_transfer_interval );
         var leaderTransferBackoff = globalConfig.get( CausalClusteringSettings.leader_transfer_member_backoff );
 
-        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), leaderTransferInterval,
-                globalConfig, databaseManager, raftMessageDispatcher, myIdentity, leaderTransferBackoff, globalModule.getGlobalClock() );
-
-        globalLife.add( leaderTransferService );
+        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
+                raftMessageDispatcher, myIdentity, leaderTransferBackoff, logProvider, globalModule.getGlobalClock() );
 
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
                 leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker );
@@ -342,8 +340,13 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalLife.add( raftServer );
 
         createCoreServers( globalLife, databaseManager, fileSystem );
-        //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
-        globalModule.getGlobalLife().add( reconcilerModule );
+
+        // Reconciler module starts actual databases, which depend on all of the above components at runtime.
+        globalLife.add( reconcilerModule );
+
+        // LeaderTransferService is not required by databases to function. It monitors the databases running on this machine.
+        globalLife.add( leaderTransferService );
+
     }
 
     private void addThroughputMonitorService()

@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -48,13 +46,13 @@ class TransferLeaderTest
         // Priority group exist and I am not in it
         var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        TransferLeader transferLeader = new TransferLeader( config, messageHandler, myself, databasePenalties, new RandomStrategy(),
-                raftMembershipResolver, () -> myLeaderships );
+        TransferLeaderJob transferLeaderJob = new TransferLeaderJob( config, messageHandler, myself, databasePenalties, new RandomStrategy(),
+                                                                     raftMembershipResolver, () -> myLeaderships );
         // I am leader
         myLeaderships.add( databaseId1 );
 
         // when
-        transferLeader.run();
+        transferLeaderJob.run();
 
         // then
         assertEquals( messageHandler.proposals.size(), 1 );
@@ -72,12 +70,12 @@ class TransferLeaderTest
 
         // I am not leader for any database
         List<NamedDatabaseId> myLeaderships = List.of();
-        TransferLeader transferLeader =
-                new TransferLeader( config, messageHandler, myself, databasePenalties,
-                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+        TransferLeaderJob transferLeaderJob =
+                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
 
         // when
-        transferLeader.run();
+        transferLeaderJob.run();
 
         // then
         assertTrue( messageHandler.proposals.isEmpty() );
@@ -91,14 +89,14 @@ class TransferLeaderTest
                 .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        TransferLeader transferLeader =
-                new TransferLeader( config, messageHandler, myself, databasePenalties,
-                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+        TransferLeaderJob transferLeaderJob =
+                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
         // I am leader
         myLeaderships.add( databaseId1 );
 
         // when
-        transferLeader.run();
+        transferLeaderJob.run();
 
         // then
         assertTrue( messageHandler.proposals.isEmpty() );
@@ -111,14 +109,14 @@ class TransferLeaderTest
         var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "" ) ).build();
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        TransferLeader transferLeader =
-                new TransferLeader( config, messageHandler, myself, databasePenalties,
-                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+        TransferLeaderJob transferLeaderJob =
+                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
         // I am leader
         myLeaderships.add( databaseId1 );
 
         // when
-        transferLeader.run();
+        transferLeaderJob.run();
 
         // then
         assertTrue( messageHandler.proposals.isEmpty() );
@@ -141,10 +139,10 @@ class TransferLeaderTest
         };
 
         var myLeaderships = List.of( databaseId1, databaseId2 );
-        TransferLeader transferLeader =
-                new TransferLeader( config, messageHandler, myself, databasePenalties, mockSelectionStrategy, raftMembershipResolver, () -> myLeaderships );
+        TransferLeaderJob transferLeaderJob =
+                new TransferLeaderJob( config, messageHandler, myself, databasePenalties, mockSelectionStrategy, raftMembershipResolver, () -> myLeaderships );
         // when
-        transferLeader.run();
+        transferLeaderJob.run();
 
         // then
         assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId2, Set.of( transferee ) ) );
@@ -164,12 +162,12 @@ class TransferLeaderTest
         var config = builder.build();
 
         var myLeaderships = new ArrayList<>( databaseIds );
-        TransferLeader transferLeader =
-                new TransferLeader( config, messageHandler, myself, databasePenalties,
-                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+        TransferLeaderJob transferLeaderJob =
+                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
 
         // when
-        transferLeader.run();
+        transferLeaderJob.run();
 
         // then we should propose new leader for 'one'
         assertEquals( messageHandler.proposals.size(), 1 );
@@ -179,7 +177,7 @@ class TransferLeaderTest
         assertEquals( propose.message().priorityGroups(), ServerGroupName.setOf( "one" ) );
     }
 
-    private static class StubRaftMembershipResolver implements RaftMembershipResolver
+    static class StubRaftMembershipResolver implements RaftMembershipResolver
     {
         private final Set<MemberId> votingMembers;
 
@@ -222,9 +220,10 @@ class TransferLeaderTest
         }
     }
 
-    private static class TrackingMessageHandler implements Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>
+    static class TrackingMessageHandler implements Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>
     {
-        private final ArrayList<RaftMessages.InboundRaftMessageContainer<RaftMessages.LeadershipTransfer.Proposal>> proposals = new ArrayList<>();
+        final ArrayList<RaftMessages.InboundRaftMessageContainer<RaftMessages.LeadershipTransfer.Proposal>> proposals = new ArrayList<>();
+        final ArrayList<RaftMessages.InboundRaftMessageContainer<?>> others = new ArrayList<>();
 
         @Override
         public void handle( RaftMessages.InboundRaftMessageContainer<?> message )
@@ -235,6 +234,7 @@ class TransferLeaderTest
             }
             else
             {
+                others.add( message );
                 throw new IllegalArgumentException( "Unexpected message type " + message );
             }
         }
