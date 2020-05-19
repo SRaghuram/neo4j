@@ -534,4 +534,23 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         "poppy",
         "xavier"))
   }
+
+  test("should be able to call kill query when there are open transactions without executing query") {
+    //given, an empty transaction
+    val transaction = graphOps.beginTx()
+
+    try {
+      //when
+      val result = executeWith(Configs.ProcedureCallRead, "CALL dbms.killQuery('query-418218')")
+
+      //then
+      result.toList should equal(
+        List(
+          Map("queryId" -> "query-418218",
+              "username" -> "n/a",
+              "message" -> "No Query found with this id")))
+    } finally {
+      transaction.close()
+    }
+  }
 }
