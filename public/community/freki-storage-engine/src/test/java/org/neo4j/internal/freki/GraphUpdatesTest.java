@@ -26,7 +26,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
@@ -137,10 +136,13 @@ class GraphUpdatesTest
                     @Override
                     public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
                     {
-                        assertThat( value.pointer ).isNotNegative();
+                        for ( Record record : value.records )
+                        {
+                            assertThat( record.id ).isNotNegative();
+                        }
                         try ( PageCursor cursor = bigValueStore.openWriteCursor( PageCursorTracer.NULL ) )
                         {
-                            bigValueStore.write( cursor, ByteBuffer.wrap( value.bytes ), value.pointer );
+                            bigValueStore.write( cursor, value.records );
                         }
                     }
                 } );

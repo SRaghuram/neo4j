@@ -30,6 +30,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAmount;
+import java.util.List;
 import java.util.function.Consumer;
 
 import org.neo4j.hashing.HashFunction;
@@ -229,9 +230,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             bigArray = false;
             ByteBuffer arrayBuffer = buffer;
             buffer = outputBuffer; // restore buffer
-            long pointer = bigPropertyValueStore.allocateSpace( arrayBuffer.position() );
+            arrayBuffer.flip();
+            List<Record> records = bigPropertyValueStore.allocate( arrayBuffer, PageCursorTracer.NULL );
+            long pointer = records.get( 0 ).id;
             writeInteger( pointer );
-            commands.accept( new FrekiCommand.BigPropertyValue( pointer, arrayBuffer.array(), arrayBuffer.position() ) );
+            commands.accept( new FrekiCommand.BigPropertyValue( records ) );
         }
     }
 
@@ -571,9 +574,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             byte[] bytes = UTF8.encode( value );
             if ( bytes.length > MAX_INLINED_STRING_SIZE )
             {
-                long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
+                List<Record> records = bigPropertyValueStore.allocate( ByteBuffer.wrap( bytes ), PageCursorTracer.NULL );
+                long pointer = records.get( 0 ).id;
                 writePointer( EXTERNAL_TYPE_STRING, pointer, false );
-                commands.accept( new FrekiCommand.BigPropertyValue( pointer, bytes ) );
+                commands.accept( new FrekiCommand.BigPropertyValue( records ) );
             }
             else
             {
@@ -1181,10 +1185,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             ByteBuffer buffer;
             try ( PageCursor cursor = bigPropertyValueStore.openReadCursor( tracer ) )
             {
-                int length = bigPropertyValueStore.length( cursor, pointer ); // this is not optimal, as read() re-reads the length.
-                buffer = ByteBuffer.wrap( new byte[length] );
-                bigPropertyValueStore.read( cursor, buffer, pointer );
-                buffer.position( 0 );
+                buffer = bigPropertyValueStore.read( cursor, length -> ByteBuffer.wrap( new byte[length] ), pointer );
             }
             catch ( IOException e )
             {

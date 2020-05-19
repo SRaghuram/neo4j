@@ -20,7 +20,6 @@
 package org.neo4j.internal.freki;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -257,7 +256,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     {
         try ( PageCursor cursor = stores.bigPropertyValueStore.openWriteCursor( cursorTracer ) )
         {
-            stores.bigPropertyValueStore.write( cursor, ByteBuffer.wrap( value.bytes, 0, value.length ), value.pointer );
+            stores.bigPropertyValueStore.write( cursor, value.records );
         }
     }
 

@@ -800,7 +800,7 @@ class FrekiStorageEngineGraphWritesIT
     {
         // given a node with a property that has a big value
         long nodeId = commandCreationContext.reserveNode();
-        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         createAndApplyTransaction( target ->
         {
             target.visitCreatedNode( nodeId );
@@ -811,7 +811,7 @@ class FrekiStorageEngineGraphWritesIT
                 target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
             }
         } );
-        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
 
         // when
@@ -821,7 +821,7 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // then
-        assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+        assertThat( storageEngine.stores().bigPropertyValueStore.getHighId() ).isEqualTo( bigValuePosition );
     }
 
     @Test
@@ -841,7 +841,7 @@ class FrekiStorageEngineGraphWritesIT
         // given a node with a property that has a big value
         long nodeId = commandCreationContext.reserveNode();
         long otherNodeId = commandCreationContext.reserveNode();
-        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         String value = random.nextAlphaNumericString( 100, 100 );
         RelationshipSpec relationship =
                 new RelationshipSpec( nodeId, 0, otherNodeId, asSet( new PropertyKeyValue( 0, stringValue( value ) ) ), commandCreationContext );
@@ -855,7 +855,7 @@ class FrekiStorageEngineGraphWritesIT
                 target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
             }
         } );
-        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
 
         // when
@@ -866,7 +866,7 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // then
-        assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+        assertThat( storageEngine.stores().bigPropertyValueStore.getHighId() ).isEqualTo( bigValuePosition );
     }
 
     @Test
@@ -1217,6 +1217,7 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+    @RandomRule.Seed( 1 )
     @Test
     void shouldChangeRelationshipProperties() throws Exception
     {

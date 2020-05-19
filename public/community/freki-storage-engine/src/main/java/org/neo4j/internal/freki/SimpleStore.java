@@ -43,8 +43,4 @@ public interface SimpleStore extends SingleFileStore
     boolean read( PageCursor cursor, Record record, long id );
 
     long nextId( PageCursorTracer cursorTracer );
-
-    boolean exists( PageCursor cursor, long id );
-
-    long getHighId();
 }

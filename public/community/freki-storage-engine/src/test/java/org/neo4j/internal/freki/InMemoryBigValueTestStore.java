@@ -25,8 +25,11 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
 
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCursor;
@@ -34,6 +37,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.StorageCommand;
 
+import static java.util.Collections.singletonList;
 import static org.neo4j.internal.freki.InMemoryTestStore.NO_PAGE_CURSOR;
 
 class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigValueStore
@@ -45,7 +49,7 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
             FrekiCommand.BigPropertyValue valueCommand = (FrekiCommand.BigPropertyValue) command;
             try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
-                store.write( cursor, ByteBuffer.wrap( valueCommand.bytes ), valueCommand.pointer );
+                store.write( cursor, valueCommand.records );
             }
             catch ( IOException e )
             {
@@ -54,7 +58,7 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
         };
     }
 
-    private final AtomicLong position = new AtomicLong();
+    private final AtomicLong highId = new AtomicLong();
     private final MutableLongObjectMap<byte[]> data = LongObjectMaps.mutable.empty();
 
     @Override
@@ -64,18 +68,23 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     }
 
     @Override
-    public long allocateSpace( int length )
+    public List<Record> allocate( ByteBuffer data, PageCursorTracer cursorTracer )
     {
-        return this.position.getAndAdd( length );
+        return singletonList( new Record( (byte) Record.FLAG_IN_USE, highId.getAndIncrement(), data ) );
     }
 
     @Override
-    public void write( PageCursor cursor, ByteBuffer data, long position )
+    public void write( PageCursor cursor, Iterable<Record> records )
     {
+        Iterator<Record> iterator = records.iterator();
+        assert iterator.hasNext();
+        Record single = iterator.next();
+        assert !iterator.hasNext();
+        ByteBuffer data = single.data();
         int length = data.remaining();
         byte[] dataCopy = new byte[length];
         System.arraycopy( data.array(), data.position(), dataCopy, 0, length );
-        this.data.put( position, dataCopy );
+        this.data.put( single.id, dataCopy );
     }
 
     @Override
@@ -85,27 +94,16 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     }
 
     @Override
-    public boolean read( PageCursor cursor, ByteBuffer data, long position )
+    public ByteBuffer read( PageCursor cursor, IntFunction<ByteBuffer> bufferCreator, long id )
     {
-        byte[] bytes = this.data.get( position );
+        byte[] bytes = this.data.get( id );
         if ( bytes == null )
         {
-            return false;
+            return null;
         }
+        ByteBuffer data = bufferCreator.apply( bytes.length );
         System.arraycopy( bytes, 0, data.array(), data.position(), bytes.length );
-        data.position( data.position() + bytes.length );
-        return true;
-    }
-
-    @Override
-    public int length( PageCursor cursor, long position )
-    {
-        byte[] bytes = this.data.get( position );
-        if ( bytes != null )
-        {
-            return bytes.length;
-        }
-        return -1;
+        return data;
     }
 
     @Override
@@ -114,8 +112,14 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     }
 
     @Override
-    public long position()
+    public boolean exists( PageCursor cursor, long id )
     {
-        return position.get();
+        return data.containsKey( id );
+    }
+
+    @Override
+    public long getHighId()
+    {
+        return highId.get();
     }
 }

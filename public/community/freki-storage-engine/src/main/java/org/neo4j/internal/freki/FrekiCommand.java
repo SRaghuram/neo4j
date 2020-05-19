@@ -26,9 +26,10 @@ import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -524,21 +525,12 @@ abstract class FrekiCommand implements StorageCommand
     {
         static final byte TYPE = 3;
 
-        final long pointer;
-        final byte[] bytes;
-        final int length;
+        final List<Record> records;
 
-        BigPropertyValue( long pointer, byte[] bytes )
-        {
-            this( pointer, bytes, bytes.length );
-        }
-
-        BigPropertyValue( long pointer, byte[] bytes, int length )
+        BigPropertyValue( List<Record> records )
         {
             super( TYPE );
-            this.pointer = pointer;
-            this.bytes = bytes;
-            this.length = length;
+            this.records = records;
         }
 
         @Override
@@ -552,27 +544,34 @@ abstract class FrekiCommand implements StorageCommand
         public void serialize( WritableChannel channel ) throws IOException
         {
             super.serialize( channel );
-            byte header = (byte) (longSizeCode( pointer ) | intSizeCode( length ) << 2);
-            channel.put( header );
-            putCompactLong( channel, pointer );
-            putCompactInt( channel, length );
-            channel.put( bytes, length );
+            channel.put( (byte) intSizeCode( records.size() ) );
+            putCompactInt( channel, records.size() );
+            for ( Record record : records )
+            {
+                channel.put( (byte) longSizeCode( record.id ) );
+                putCompactLong( channel, record.id );
+                record.serialize( channel );
+            }
         }
 
         static BigPropertyValue deserialize( ReadableChannel channel ) throws IOException
         {
             byte header = channel.get();
-            long pointer = getCompactLong( channel, header & 0x3 );
-            int length = getCompactInt( channel, (header >>> 2) & 0x3 );
-            byte[] data = new byte[length];
-            channel.get( data, data.length );
-            return new BigPropertyValue( pointer, data );
+            int numRecords = getCompactInt( channel, header & 0x3 );
+            List<Record> records = new ArrayList<>();
+            for ( int i = 0; i < numRecords; i++ )
+            {
+                byte idHeader = channel.get();
+                long id = getCompactLong( channel, idHeader & 0x3 );
+                records.add( Record.deserialize( channel, id ) );
+            }
+            return new BigPropertyValue( records );
         }
 
         @Override
         public String toString()
         {
-            return "BigValue{" + "pointer=" + pointer + ", length=" + length + ", bytes=" + Arrays.toString( bytes ) + '}';
+            return "BigValue{" + records + '}';
         }
     }
 

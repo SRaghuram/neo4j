@@ -34,8 +34,8 @@ class Record
     /*
       Header 1B
      [____,____]
-      │││| |└└└─ SizeExp (3b)
-      │││| └──── InUse (1b)
+      ││││ │└└└─ SizeExp (3b)
+      ││││ └──── InUse (1b)
       └└└└────── Unused (4b)
      */
     static int MASK_SIZE_EXP = 0x7;
@@ -59,21 +59,20 @@ class Record
 
     Record( int sizeExp, long id )
     {
-        this( sizeExpAsFlagsByte( sizeExp ), id, true );
+        this( sizeExpAsFlagsByte( sizeExp ), id, ByteBuffer.wrap( new byte[recordDataSize( sizeExp )] ) );
     }
 
-    private Record( byte flags, long id, boolean instantiateData )
+    Record( byte flags, long id, ByteBuffer buffer )
     {
         this.flags = flags;
         this.id = id;
         this.dataLength = recordDataSize( sizeExp() );
-        // for instantiatedData == false this is a record which will never be used as anything other than deleting a record
-        this.data = instantiateData ? ByteBuffer.wrap( new byte[dataLength] ) : null;
+        this.data = buffer;
     }
 
     static Record deletedRecord( int sizeExp, long id )
     {
-        return new Record( sizeExpAsFlagsByte( sizeExp ), id, false );
+        return new Record( sizeExpAsFlagsByte( sizeExp ), id, null );
     }
 
     static int recordSize( int sizeExp )
@@ -153,18 +152,16 @@ class Record
     static Record deserialize( ReadableChannel channel, long id ) throws IOException
     {
         byte flags = channel.get();
-        Record record = new Record( flags, id );
-        if ( record.hasFlag( FLAG_IN_USE ) )
+        if ( (flags & FLAG_IN_USE) != 0 )
         {
             short length = channel.getShort();
-            assert length <= recordDataSize( record.sizeExp() ); // if incorrect, fail here instead of OOM
-            channel.get( record.data( 0 ).array(), length );
-            record.data.position( length ).flip();
+            ByteBuffer buffer = ByteBuffer.wrap( new byte[length] );
+            channel.get( buffer.array(), length );
+            buffer.position( length ).flip();
+            return new Record( flags, id, buffer );
         }
-        return record;
+        return new Record( (byte) 0, id, null );
     }
-
-    // === UNIFY THESE SOMEHOW LATER ===
 
     void serialize( PageCursor cursor )
     {

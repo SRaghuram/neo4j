@@ -27,6 +27,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
@@ -43,6 +45,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.token.api.NamedToken;
 
 import static java.lang.Integer.max;
+import static java.util.Arrays.copyOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.freki.FrekiCommand.MODES;
 import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
@@ -136,19 +139,33 @@ public class FrekiCommandSerializationTest
     void shouldReadAndWriteBigValue() throws IOException
     {
         // given
-        long pointer = randomLargeId();
-        byte[] data = new byte[random.nextInt( 20, 400 )];
-        random.nextBytes( data );
-        FrekiCommand.BigPropertyValue command = new FrekiCommand.BigPropertyValue( pointer, data );
+        List<Record> records = new ArrayList<>();
+        int numRecords = random.nextInt( 1, 3 );
+        for ( int i = 0; i < numRecords; i++ )
+        {
+            byte[] data = new byte[random.nextInt( 20, 400 )];
+            random.nextBytes( data );
+            records.add( new Record( (byte) FLAG_IN_USE, randomLargeId(), ByteBuffer.wrap( data ) ) );
+        }
+        FrekiCommand.BigPropertyValue command = new FrekiCommand.BigPropertyValue( records );
 
         // when
-        InMemoryClosableChannel channel = new InMemoryClosableChannel( 1_000 );
+        InMemoryClosableChannel channel = new InMemoryClosableChannel( 2_000 );
         command.serialize( channel );
 
         // then
         FrekiCommand.BigPropertyValue readCommand = readCommand( channel, FrekiCommand.BigPropertyValue.class );
-        assertThat( readCommand.pointer ).isEqualTo( pointer );
-        assertThat( readCommand.bytes ).isEqualTo( data );
+        assertThat( readCommand.records.size() ).isEqualTo( numRecords );
+        for ( int i = 0; i < numRecords; i++ )
+        {
+            Record readRecord = readCommand.records.get( i );
+            Record record = records.get( i );
+            assertThat( readRecord.flags ).isEqualTo( record.flags );
+            assertThat( readRecord.id ).isEqualTo( record.id );
+            int length = readRecord.data().limit();
+            assertThat( length ).isEqualTo( record.data().limit() );
+            assertThat( copyOf( readRecord.data().array(), length ) ).isEqualTo( copyOf( record.data().array(), length ) );
+        }
     }
 
     @Test
