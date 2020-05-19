@@ -5,20 +5,13 @@
  */
 package com.neo4j.bench.micro;
 
-import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.List;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.jmh.api.config.BenchmarkConfigurationException;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import com.neo4j.bench.model.model.BenchmarkTool;
 import com.neo4j.bench.model.model.Project;
@@ -29,6 +22,15 @@ import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -37,8 +39,8 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @TestDirectoryExtension
@@ -51,7 +53,7 @@ class RunExportCommandIT
     @Test
     void shouldThrowExceptionWhenNoBenchmarkIsEnabled()
     {
-        var e = assertThrows( RuntimeException.class, () ->
+        var exception = assertThrows( BenchmarkConfigurationException.class, () ->
         {
             // Create empty Neo4j configuration file
             File neo4jConfigFile = temporaryFolder.file( "neo4j.conf" );
@@ -91,10 +93,11 @@ class RunExportCommandIT
                     ErrorReporter.ErrorPolicy.FAIL,
                     Jvm.defaultJvm(),
                     "Trinity",
-                    List.of() );
+                    Lists.newArrayList( ProfilerType.JFR ) );
             Main.main( commandArgs.toArray( new String[0] ) );
         } );
-        assertThat( e.getMessage(), containsString( "Validation Failed" ) );
+        assertEquals( "Validation Failed\n" +
+                      "\tNo benchmarks were configured!", exception.getMessage() );
     }
 
     @Test

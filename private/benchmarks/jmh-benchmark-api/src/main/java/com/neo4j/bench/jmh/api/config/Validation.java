@@ -66,7 +66,7 @@ public class Validation
     {
         if ( !validation.isValid() )
         {
-            throw new RuntimeException( validation.report() );
+            throw new BenchmarkConfigurationException( validation.report() );
         }
     }
 
@@ -207,7 +207,7 @@ public class Validation
                 sb.append( "\tMissing annotation '" + ParamValues.class.getSimpleName() + "':\n" );
                 appendErrors( sb, missingParameterValueErrs );
             }
-            if ( !validationErrors.contains( NO_BENCHMARKS_FOUND ) )
+            if ( validationErrors.contains( NO_BENCHMARKS_FOUND ) )
             {
                 sb.append( "\tNo benchmarks were configured!" );
             }
