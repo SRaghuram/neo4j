@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.expressions.Ors
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Anti
-import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Limit
@@ -51,7 +50,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.util.attribution.SameId
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -769,7 +767,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val output = stateDefiner.newBuffer(rhs.id, plan.id, rhsSlotConfiguration)
         sink.onTrueBuffer = output
         rhs.fuseOrInterpret(MorselBufferOutput(output.id, plan.id))
-        val pipeline: PipelineDefiner = newPipeline(Argument()(SameId(plan.id)), output)
+        val pipeline: PipelineDefiner = newPipeline(plan, output)
         //this is weird, but used for getting the scheduler to do the right thing
         pipeline.lhs = rhs.id
         pipeline

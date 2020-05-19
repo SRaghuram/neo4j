@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -60,6 +61,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.AntiOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalApplyOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
@@ -428,6 +430,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             cachedPropertiesToCopy)(id)
         }
 
+      case conditional: ConditionalApply =>
+        new ConditionalApplyOperator(WorkIdentity.fromPlan(plan),
+          physicalPlan.argumentSizes(id),
+          physicalPlan.slotConfigurations.get(conditional.right.id).size())
+
       case joinPlan: plans.ValueHashJoin =>
 
         val slotConfigs = physicalPlan.slotConfigurations
@@ -564,7 +571,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         }
 
         val (orderedGroupingColumns, unorderedGroupingColumns) = partitionGroupingExpressions(converters, groupingExpressions, orderToLeverage, id)
-        if (unorderedGroupingColumns.isEmpty)
+        if (unorderedGroupingColumns.isEmpty) {
           new AllOrderedAggregationOperator(
             argumentStateMapId,
             argumentSlotOffset,
@@ -574,7 +581,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             outputSlots.result(),
             physicalPlan.argumentSizes(id)
           )(id)
-        else
+        } else {
           new OrderedAggregationOperator(
             argumentStateMapId,
             argumentSlotOffset,
@@ -585,8 +592,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             outputSlots.result(),
             physicalPlan.argumentSizes(id)
           )(id)
-
-      case plan: plans.ProduceResult => createProduceResults(plan)
+        }case plan: plans.ProduceResult => createProduceResults(plan)
 
       case _: plans.Argument =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan),
