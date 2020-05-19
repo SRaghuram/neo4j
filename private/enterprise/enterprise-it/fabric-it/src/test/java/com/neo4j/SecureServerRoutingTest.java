@@ -159,7 +159,10 @@ class SecureServerRoutingTest extends ClusterTestSupport
     @BeforeEach
     void beforeEach() throws TimeoutException
     {
+        // some tests revoke admin role from myUser,
+        // so it is granted before each test
         runAdminCommand( "GRANT ROLE admin TO myUser" );
+
         runAdminCommand( "CREATE ROLE myRole" );
         runAdminCommand( "GRANT ROLE myRole TO myUser" );
         super.beforeEach( routingContext, cluster, new ArrayList<>( coreDrivers.values() ), readReplicaDriver );
@@ -168,6 +171,8 @@ class SecureServerRoutingTest extends ClusterTestSupport
     @AfterEach
     void afterEach()
     {
+        // some tests modify the privileges of this role
+        // the easiest clean up is to drop it
         runAdminCommand( "DROP ROLE myRole" );
     }
 

@@ -15,7 +15,7 @@ import org.neo4j.driver.internal.security.SecurityPlan;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
-public class ClusterDriverConfigFactory extends AbstractDriverConfigFactory implements DriverConfigFactory
+public class ClusterDriverConfigFactory extends AbstractDriverConfigFactory
 {
     private FabricEnterpriseConfig fabricConfig;
 

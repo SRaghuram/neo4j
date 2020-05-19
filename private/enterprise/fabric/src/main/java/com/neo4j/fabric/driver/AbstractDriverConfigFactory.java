@@ -29,7 +29,7 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
 
-public abstract class AbstractDriverConfigFactory
+public abstract class AbstractDriverConfigFactory implements DriverConfigFactory
 {
     private final Level serverLogLevel;
     private final SSLContext sslContext;

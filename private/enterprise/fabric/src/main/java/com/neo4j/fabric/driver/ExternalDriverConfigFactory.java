@@ -18,7 +18,7 @@ import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
-public class ExternalDriverConfigFactory extends AbstractDriverConfigFactory implements DriverConfigFactory
+public class ExternalDriverConfigFactory extends AbstractDriverConfigFactory
 {
     private final FabricEnterpriseConfig fabricConfig;
     private final Map<Long,FabricEnterpriseConfig.GraphDriverConfig> graphDriverConfigs;
