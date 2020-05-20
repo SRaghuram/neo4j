@@ -35,7 +35,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Random;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -293,40 +292,45 @@ public class RunCommand implements Runnable
             if ( !store.isFreki() )
             {
                 System.out.println( "Record store detected, migrating to freki." );
-                Path tmpFrekiStoreDir = null;
+                Path frekiStoreDir = null;
                 try
                 {
                     //tmpdir is apparently not big enough, trying current working dir
-                    tmpFrekiStoreDir = Path.of( "freki_tmp" + Long.toUnsignedString( new Random().nextLong() ) ).toAbsolutePath();
-                    String[] args = {
-                            getJavaExecutable().toString(),
-                            "-cp", getClassPath(),
-                            MigrateDataIntoOtherDatabase.class.getName(),
-                            storeDir.toPath().toAbsolutePath().toString(),
-                            tmpFrekiStoreDir.toAbsolutePath().toString()
-                    };
-                    int exitCode = new ProcessBuilder( args )
-                            .inheritIO()
-                            .start()
-                            .waitFor();
-                    if ( exitCode != 0 )
+                    frekiStoreDir = Path.of( "freki_store" ).toAbsolutePath();
+                    if ( !frekiStoreDir.toFile().exists() )
                     {
-                        throw new RuntimeException( "Migration failed with code: " + exitCode );
+                        System.out.println( "Migration started" );
+                        String[] args = {
+                                getJavaExecutable().toString(),
+                                "-cp", getClassPath(),
+                                MigrateDataIntoOtherDatabase.class.getName(),
+                                storeDir.toPath().toAbsolutePath().toString(),
+                                frekiStoreDir.toAbsolutePath().toString()
+                        };
+                        int exitCode = new ProcessBuilder( args )
+                                .inheritIO()
+                                .start()
+                                .waitFor();
+                        if ( exitCode != 0 )
+                        {
+                            throw new RuntimeException( "Migration failed with code: " + exitCode );
+                        }
+                    }
+                    else
+                    {
+                        System.out.println( "Cached migration found" );
                     }
                     org.neo4j.io.fs.FileUtils.deleteRecursively( storeDir );
-                    org.neo4j.io.fs.FileUtils.moveFile( tmpFrekiStoreDir.toFile(), storeDir );
+                    org.neo4j.io.fs.FileUtils.copyFile( frekiStoreDir.toFile(), storeDir );
                     System.out.println( "Successful migration to Freki." );
                 }
-                catch ( InterruptedException e )
+                catch ( Throwable t )
                 {
-                    throw new RuntimeException( "Unexpected interruption during migration", e );
-                }
-                finally
-                {
-                    if ( tmpFrekiStoreDir != null )
+                    if ( frekiStoreDir != null )
                     {
-                        org.neo4j.io.fs.FileUtils.deleteRecursively( tmpFrekiStoreDir.toFile() );
+                        org.neo4j.io.fs.FileUtils.deleteRecursively( frekiStoreDir.toFile() );
                     }
+                    throw new RuntimeException( "Unexpected failure during migration", t );
                 }
             }
             else
