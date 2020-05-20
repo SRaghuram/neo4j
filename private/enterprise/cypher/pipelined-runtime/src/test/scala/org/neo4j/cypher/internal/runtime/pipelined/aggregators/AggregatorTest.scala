@@ -22,7 +22,7 @@ trait AggregatorTest {
   private def runAggregator(reducer: Reducer, values: Seq[AnyValue]): AnyValue = {
     val upperBound = Math.max(2, values.size / 10)
     val groups = values.grouped(random.nextInt(1, upperBound))
-    val updaters = (0 until 3).map(_ => reducer.newUpdater())
+    val updaters = (0 until random.nextInt(2, 5)).map(_ => reducer.newUpdater())
     var i = 0
     for (group <- groups) {
       val updater = updaters(i)
