@@ -265,14 +265,9 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   private def includeRollUpApply(rhs: PlanMatcher = includeSomewhere.aPlan) = {
-    (includeSomewhere.aPlan("RollUpApply").withRHS(rhs) or
-     includeSomewhere.aPlan("Apply")
-       .withRHS(aPlan("Optional")
-         .withLHS(aPlan("Apply")
+    includeSomewhere.aPlan("RollUpApply").withRHS(rhs) or
+     includeSomewhere.aPlan("ConditionalApply")
            .withRHS(aPlan("EagerAggregation").withLHS(rhs))
-         )
-       )
-      )
   }
 
   test("pattern comprehension built on a null yields null") {
