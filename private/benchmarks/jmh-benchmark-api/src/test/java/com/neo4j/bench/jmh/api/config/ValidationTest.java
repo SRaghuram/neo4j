@@ -128,6 +128,8 @@ public class ValidationTest
 
         assertFalse( validation.isValid() );
 
+        validation.noBenchmarksFound();
+
         String report = validation.report();
         assertThat( report, equalTo(
                 "Validation Failed\n" +
