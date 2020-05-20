@@ -54,7 +54,7 @@ abstract class SecurityGraphCompatibilityTestBase
     static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
     static final String VERSION_41 = "Neo4j 4.1";
 
-    private DatabaseManagementService dbms;
+    protected DatabaseManagementService dbms;
     private EnterpriseSecurityGraphComponent enterpriseComponent;
 
     GraphDatabaseAPI system;
