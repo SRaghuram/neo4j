@@ -26,7 +26,7 @@ import org.neo4j.values.AnyValue
 // ============ Interface ============
 
 /**
- * The AggregatedRow builds and outputs all the aggregates for one aggregation output row.
+ * The [[AggregatedRow]] builds and outputs all the aggregates for one aggregation output row.
  */
 trait AggregatedRow {
   def updaters(workerId: Int): AggregatedRowUpdaters
@@ -34,7 +34,7 @@ trait AggregatedRow {
 }
 
 /**
- * The UpdaterRow holds all the aggregators for one aggregation output row.
+ * The [[AggregatedRowUpdaters]] holds all the aggregators for one aggregation output row.
  */
 trait AggregatedRowUpdaters {
   def updater(index: Int): Updater
@@ -162,16 +162,16 @@ class ConcurrentAggregationMap(override val argumentRowId: Long,
 
 class ConcurrentAggregators(reducers: Array[Reducer], numberOfWorkers: Int) extends AggregatedRow {
 
-  private val updates = (0 until numberOfWorkers).map(_ => new ConcurrentUpdate(reducers.map(_.newUpdater()))).toArray
+  private val _updaters = (0 until numberOfWorkers).map(_ => new ConcurrentUpdaters(reducers.map(_.newUpdater()))).toArray
 
-  override def updaters(workerId: Int): AggregatedRowUpdaters = updates(workerId)
+  override def updaters(workerId: Int): AggregatedRowUpdaters = _updaters(workerId)
   override def result(n: Int): AnyValue = reducers(n).result
   def applyUpdates(workerId: Int): Unit = {
-    updates(workerId).applyUpdates()
+    _updaters(workerId).applyUpdates()
   }
 }
 
-class ConcurrentUpdate(updaters: Array[Updater]) extends AggregatedRowUpdaters {
+class ConcurrentUpdaters(updaters: Array[Updater]) extends AggregatedRowUpdaters {
   override def updater(n: Int): Updater = updaters(n)
   def applyUpdates(): Unit = {
     updaters.foreach(_.applyUpdates())

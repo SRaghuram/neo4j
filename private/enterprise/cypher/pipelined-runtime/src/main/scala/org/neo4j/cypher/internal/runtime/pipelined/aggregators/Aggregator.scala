@@ -77,9 +77,18 @@ trait Reducer {
  * to minimize object creation and unnecessary work doubling between the updater and reducer.
  */
 trait StandardReducer extends Reducer with Updater {
+
+  /**
+   * See [[DirectStandardReducer]].
+   */
   def isDirect: Boolean = false
 }
 
+/**
+ * A DirectStandardReducer updates the reducer directly in [[Updater.add()]], and does nothing on
+ * [[Updater.applyUpdates()]]. This means that it is safe to not call [[Updater.applyUpdates()]] and
+ * still get the same result.
+ */
 trait DirectStandardReducer extends StandardReducer {
   override final def isDirect: Boolean = true
   override final def applyUpdates(): Unit = {}
