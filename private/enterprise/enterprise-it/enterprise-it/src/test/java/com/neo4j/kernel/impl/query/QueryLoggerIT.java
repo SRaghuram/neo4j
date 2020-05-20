@@ -36,6 +36,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
@@ -367,12 +368,25 @@ class QueryLoggerIT
                        .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
         buildDatabase();
 
-        // "This is an administration command and it should be executed against the system database: CREATE USER"
-        assertThrows( QueryExecutionException.class, () -> executeQuery( "CREATE USER testUser SET PASSWORD 'hello'" ) );
-        databaseManagementService.shutdown();
+        if ( FabricDatabaseManager.fabricByDefault() )
+        {
+            executeQuery( "CREATE USER testUser SET PASSWORD 'hello'" );
+            assertThrows( QueryExecutionException.class, () -> executeQuery( "CREATE USER testUser SET PASSWORD 'hello'" ) );
+            databaseManagementService.shutdown();
 
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines.get( 0 ), containsString( "CREATE USER testUser SET PASSWORD '******'" ) );
+            List<String> logLines = readAllLines( logFilename );
+            logLines.forEach( line -> assertThat( line, containsString( "CREATE USER testUser SET PASSWORD '******'" ) ) );
+        }
+        else
+        {
+            // "This is an administration command and it should be executed against the system database: CREATE USER"
+            assertThrows( QueryExecutionException.class, () -> executeQuery( "CREATE USER testUser SET PASSWORD 'hello'" ) );
+            databaseManagementService.shutdown();
+
+            List<String> logLines = readAllLines( logFilename );
+            assertThat( logLines.get( 0 ), containsString( "CREATE USER testUser SET PASSWORD '******'" ) );
+        }
+
     }
 
     @Test
