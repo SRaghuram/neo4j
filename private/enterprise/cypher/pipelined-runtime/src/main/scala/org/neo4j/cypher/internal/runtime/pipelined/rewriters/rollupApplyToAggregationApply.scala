@@ -5,17 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
-import org.neo4j.cypher.internal.expressions.Ands
-import org.neo4j.cypher.internal.expressions.IsNull
-import org.neo4j.cypher.internal.expressions.Not
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Apply
-import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.RollUpApply
-import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.physicalplanning.ast.CollectAll
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
@@ -42,13 +37,9 @@ import org.neo4j.cypher.internal.util.bottomUp
   *
   * or (if it has nullable variables)
   *
-  *    Apply
-  *      Optional
-  *      Apply
-  *        Aggregation
-  *        RHS
-  *      Selection
-  *      Argument
+  *    ConditionalApply
+  *      Aggregation
+  *      RHS
   *    LHS
  */
 case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
@@ -64,24 +55,7 @@ case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
       if (nullableVariables.isEmpty) {
         Apply(lhs, aggregation)(SameId(o.id))
       } else {
-        val argument = Argument()(idGen)
-        val noNullVariables =
-          Ands(nullableVariables.map(v => Not(IsNull(Variable(v)(NONE))(NONE))(NONE)))(NONE)
-        val selection = Selection(noNullVariables, argument)(idGen)
-        val innerApply = Apply(selection, aggregation)(idGen)
-        val optional = Optional(innerApply, lhs.availableSymbols)(idGen)
-        val outerApply = Apply(lhs, optional)(SameId(o.id))
-
-        cardinalities.copy(lhs.id, argument.id)
-        cardinalities.copy(lhs.id, selection.id)
-        cardinalities.copy(lhs.id, innerApply.id)
-        cardinalities.copy(lhs.id, optional.id)
-
-        providedOrders.copy(lhs.id, argument.id)
-        providedOrders.copy(lhs.id, selection.id)
-        providedOrders.copy(lhs.id, innerApply.id)
-        providedOrders.copy(lhs.id, optional.id)
-        outerApply
+        ConditionalApply(lhs, aggregation, nullableVariables.toSeq)(SameId(o.id))
       }
   })
 
