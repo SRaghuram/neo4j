@@ -146,6 +146,9 @@ object OperatorCodeGenHelperTemplates {
       )
     )
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
+  val INPUT_MORSEL_FIELD: InstanceField =
+    field[Morsel]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
+
   val SHOULD_BREAK: LocalVariable = variable[Boolean]("shouldBreak", constant(false))
   val NO_MEMORY_TRACKER: GetStatic = getStatic[EmptyMemoryTracker, MemoryTracker]("INSTANCE")
 

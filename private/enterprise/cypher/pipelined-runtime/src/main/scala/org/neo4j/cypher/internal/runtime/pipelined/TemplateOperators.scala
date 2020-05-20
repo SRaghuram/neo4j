@@ -51,6 +51,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate
@@ -609,6 +610,15 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 rhsSlots,
                 SlottedPipeMapper.computeUnionSlotMappings(lhsSlots, slots),
                 SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(ctx.expressionCompiler.asInstanceOf[UnionOperatorExpressionCompiler])
+
+        case plan@plans.ConditionalApply(_, rhs, _) if isHeadOperator =>
+          ctx: TemplateContext =>
+            new ConditionalOperatorTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.argumentSizes(plan.id),
+              ctx.slotConfigurations(rhs.id).size(),
+            )(ctx.expressionCompiler)
 
         case _ => None
       }
