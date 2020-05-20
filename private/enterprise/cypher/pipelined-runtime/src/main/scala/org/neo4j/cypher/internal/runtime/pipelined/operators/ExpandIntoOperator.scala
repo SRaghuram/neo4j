@@ -189,8 +189,8 @@ class ExpandIntoTask(inputMorsel: Morsel,
     traversalCursor = null
     if (relationships != null) {
       relationships.close()
+      relationships = null
     }
-    relationships = null
   }
 
   override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
@@ -335,8 +335,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *     traversalCursor = null
    *     if (relationships != null) {
    *       relationships.close()
+   *       relationships = null
    *     }
-   *     relationships = null
    * }}}
    */
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
@@ -345,10 +345,10 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       freeCursor[RelationshipTraversalCursor](loadField(traversalCursorField), TraversalCursorPool),
       setField(nodeCursorField, constant(null)),
       setField(traversalCursorField, constant(null)),
-      condition(isNotNull(loadField(relationshipsField))) {
-        invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit]("close"))
-      },
-      setField(relationshipsField, constant(null))
+      condition(isNotNull(loadField(relationshipsField))) {block(
+        invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit]("close")),
+        setField(relationshipsField, constant(null))
+      )}
     )
   }
 
