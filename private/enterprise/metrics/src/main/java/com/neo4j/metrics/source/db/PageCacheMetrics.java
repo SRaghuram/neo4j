@@ -38,6 +38,10 @@ public class PageCacheMetrics extends LifecycleAdapter
     private static final String PC_HIT_RATIO_TEMPLATE = name( PAGE_CACHE_PREFIX, "hit_ratio" );
     @Documented( "The ratio of number of used pages to total number of available pages." )
     private static final String PC_USAGE_RATIO_TEMPLATE = name( PAGE_CACHE_PREFIX, "usage_ratio" );
+    @Documented( "The total number of bytes read by the page cache." )
+    private static final String PC_BYTES_READ_TEMPLATE = name( PAGE_CACHE_PREFIX, "bytes_read" );
+    @Documented( "The total number of bytes written by the page cache." )
+    private static final String PC_BYTES_WRITTEN_TEMPLATE = name( PAGE_CACHE_PREFIX, "bytes_written" );
 
     private final String pcEvictionExceptions;
     private final String pcFlushes;
@@ -48,6 +52,8 @@ public class PageCacheMetrics extends LifecycleAdapter
     private final String pcHits;
     private final String pcHitRatio;
     private final String pcUsageRatio;
+    private final String pcBytesRead;
+    private final String pcBytesWritten;
 
     private final MetricRegistry registry;
     private final PageCacheCounters pageCacheCounters;
@@ -65,6 +71,8 @@ public class PageCacheMetrics extends LifecycleAdapter
         this.pcHits = name( metricsPrefix, PC_HITS_TEMPLATE );
         this.pcHitRatio = name( metricsPrefix, PC_HIT_RATIO_TEMPLATE );
         this.pcUsageRatio = name( metricsPrefix, PC_USAGE_RATIO_TEMPLATE );
+        this.pcBytesRead = name( metricsPrefix, PC_BYTES_READ_TEMPLATE );
+        this.pcBytesWritten = name( metricsPrefix, PC_BYTES_WRITTEN_TEMPLATE );
     }
 
     @Override
@@ -79,6 +87,8 @@ public class PageCacheMetrics extends LifecycleAdapter
         registry.register( pcEvictionExceptions, new MetricsCounter( pageCacheCounters::evictionExceptions ) );
         registry.register( pcHitRatio, new PageCacheHitRatioGauge( pageCacheCounters ) );
         registry.register( pcUsageRatio, (Gauge<Double>) pageCacheCounters::usageRatio );
+        registry.register( pcBytesRead, new MetricsCounter( pageCacheCounters::bytesRead ) );
+        registry.register( pcBytesWritten, new MetricsCounter( pageCacheCounters::bytesWritten ) );
     }
 
     @Override
@@ -93,5 +103,7 @@ public class PageCacheMetrics extends LifecycleAdapter
         registry.remove( pcEvictionExceptions );
         registry.remove( pcHitRatio );
         registry.remove( pcUsageRatio );
+        registry.remove( pcBytesRead );
+        registry.remove( pcBytesWritten );
     }
 }
