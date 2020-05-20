@@ -17,8 +17,8 @@ public interface Database extends AutoCloseable, HasPid
      *
      * @param query Cypher query string
      * @param parameters Cypher query parameters
-     * @param inTx specifies if query execution should be wrapped in a new transaction
+     * @param executeInTx specifies if query execution should be wrapped in a new transaction
      * @return row count
      */
-    int execute( String query, Map<String,Object> parameters, boolean inTx, boolean shouldRollback );
+    int execute( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback );
 }

@@ -121,16 +121,15 @@ public class ServerDatabase implements Database
     }
 
     @Override
-    public int execute( String query, Map<String,Object> parameters, boolean inTx, boolean shouldRollback )
+    public int execute( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
     {
-        if ( !inTx )
+        if ( !executeInTx )
         {
-            return session.writeTransaction( tx -> getRowCount( tx, query, parameters ) );
+            return getRowCount( session.run( query, parameters ) );
         }
         try ( Transaction tx = session.beginTransaction() )
         {
-            int rowCount = getRowCount( tx, query, parameters );
-
+            int rowCount = getRowCount( tx.run( query, parameters ) );
             if ( shouldRollback )
             {
                 tx.rollback();
@@ -143,9 +142,8 @@ public class ServerDatabase implements Database
         }
     }
 
-    private Integer getRowCount( Transaction tx, String query, Map<String,Object> parameters )
+    private int getRowCount( Result result )
     {
-        Result result = tx.run( query, parameters );
         int rowCount = 0;
         while ( result.hasNext() )
         {

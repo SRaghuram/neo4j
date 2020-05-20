@@ -188,9 +188,9 @@ public class EmbeddedDatabase implements Database
     }
 
     @Override
-    public int execute( String query, Map<String,Object> parameters, boolean inTx, boolean shouldRollback )
+    public int execute( String query, Map<String,Object> parameters, boolean executeInTx, boolean shouldRollback )
     {
-        return inTx
+        return executeInTx
                ? executeInTx( query, parameters, shouldRollback )
                : execute( db, query, parameters );
     }
