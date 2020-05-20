@@ -21,10 +21,12 @@ package org.neo4j.internal.freki;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntFunction;
+import java.util.function.LongConsumer;
 
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
@@ -32,8 +34,11 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.util.Preconditions;
 
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.INT_ENCODER;
 import static org.neo4j.internal.freki.StreamVByte.LONG_ENCODER;
 import static org.neo4j.internal.freki.StreamVByte.decodeIntValue;
@@ -56,14 +61,14 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
     private static final int HEADER_MARK_LAST = 0b1;
     private static final int HEADER_MARK_FIRST = 0b10;
 
-    BigPropertyValueStore( File file, PageCache pageCache, IdGeneratorFactory idGeneratorFactory, boolean readOnly, boolean createIfNotExists,
+    BigPropertyValueStore( File file, PageCache pageCache, IdGeneratorFactory idGeneratorFactory, IdType idType, boolean readOnly, boolean createIfNotExists,
             PageCacheTracer pageCacheTracer )
     {
-        super( file, pageCache, idGeneratorFactory, IdType.STRING_BLOCK, readOnly, createIfNotExists, RECORD_SIZE, pageCacheTracer );
+        super( file, pageCache, idGeneratorFactory, idType, readOnly, createIfNotExists, RECORD_SIZE, pageCacheTracer );
     }
 
     @Override
-    public void write( PageCursor cursor, Iterable<Record> records ) throws IOException
+    public void write( PageCursor cursor, Iterable<Record> records, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException
     {
         for ( Record record : records )
         {
@@ -74,6 +79,8 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
             cursor.setOffset( offset );
             record.serialize( cursor );
             cursor.checkAndClearBoundsFlag();
+            // Assumption, all writes for used records are creations and for unused records are deletions
+            idUpdateListener.markId( idGenerator, id, record.hasFlag( FLAG_IN_USE ), cursorTracer );
         }
     }
 
@@ -84,7 +91,7 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
         ByteBuffer buffer = null;
         while ( buffer == null || buffer.hasRemaining() )
         {
-            Preconditions.checkState( nextId != -1, "Unexpected end of chain, chain started at %d", startId );
+            Preconditions.checkState( nextId != NULL, "Unexpected end of chain, chain started at %d", startId );
             long page = idPage( nextId );
             int offset = idOffset( nextId );
             goToPage( cursor, page );
@@ -93,25 +100,20 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
             byte header;
             int totalLength;
             int recordDataLength;
-            boolean isFirst;
-            boolean isLast;
             do
             {
                 cursor.setOffset( offset );
                 header = cursor.getByte();
-                isFirst = hasMark( header, HEADER_MARK_FIRST );
-                isLast = hasMark( header, HEADER_MARK_LAST );
-                totalLength = isFirst ? isLast ? cursor.getByte() & 0xFF : decodeIntValue( cursor, (header >>> 4) & 0x3 ) : -1;
-                int nextIdSizeCode = (header >>> 6) & 0x3;
-                nextId = isLast ? -1 : decodeLongValue( cursor, nextIdSizeCode );
-                recordDataLength = isLast ? isFirst ? totalLength : cursor.getByte() & 0xFF : RECORD_SIZE - (cursor.getOffset() - offset);
+                totalLength = readTotalLength( cursor, header );
+                nextId = readNextId( cursor, header );
+                recordDataLength = isLast( header ) ? isFirst( header ) ? totalLength : cursor.getByte() & 0xFF : RECORD_SIZE - (cursor.getOffset() - offset);
             }
             while ( cursor.shouldRetry() );
             cursor.checkAndClearBoundsFlag();
             cursor.checkAndClearCursorException();
 
             // Read data for this record
-            if ( isFirst )
+            if ( isFirst( header ) )
             {
                 Preconditions.checkState( buffer == null, "%d is marked as being first in chain, but should not be, chain started at %d", nextId, startId );
                 buffer = ByteBuffer.wrap( new byte[totalLength] );
@@ -131,9 +133,24 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
         return buffer.flip();
     }
 
-    private static boolean hasMark( byte header, int mark )
+    private long readNextId( PageCursor cursor, byte header )
     {
-        return (header & mark) != 0;
+        return isLast( header ) ? NULL : decodeLongValue( cursor, (header >>> 6) & 0x3 );
+    }
+
+    private int readTotalLength( PageCursor cursor, byte header )
+    {
+        return isFirst( header ) ? isLast( header ) ? cursor.getByte() & 0xFF : decodeIntValue( cursor, (header >>> 4) & 0x3 ) : -1;
+    }
+
+    private static boolean isFirst( byte header )
+    {
+        return (header & HEADER_MARK_FIRST) != 0;
+    }
+
+    private static boolean isLast( byte header )
+    {
+        return (header & HEADER_MARK_LAST) != 0;
     }
 
     private void goToPage( PageCursor cursor, long page ) throws IOException
@@ -158,7 +175,7 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
         while ( data.hasRemaining() )
         {
             long recordId = nextId;
-            byte header = (byte) ((isFirst ? HEADER_MARK_FIRST : 0) | Record.FLAG_IN_USE);
+            byte header = (byte) ((isFirst ? HEADER_MARK_FIRST : 0) | FLAG_IN_USE);
             ByteBuffer buffer;
             if ( data.remaining() + LAST_RECORD_LENGTH_SIZE <= RECORD_DATA_SIZE )
             {
@@ -190,6 +207,35 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
             isFirst = false;
         }
         return records;
+    }
+
+    @Override
+    public void visitRecordChainIds( PageCursor cursor, long id, LongConsumer chainVisitor )
+    {
+        try
+        {
+            while ( id != NULL )
+            {
+                chainVisitor.accept( id );
+                long page = idPage( id );
+                int offset = idOffset( id );
+                goToPage( cursor, page );
+                do
+                {
+                    cursor.setOffset( offset );
+                    byte header = cursor.getByte();
+                    readTotalLength( cursor, header ); // just get it out of the way, so that we can read nextId
+                    id = readNextId( cursor, header );
+                }
+                while ( cursor.shouldRetry() );
+                cursor.checkAndClearBoundsFlag();
+                cursor.checkAndClearCursorException();
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     private byte vByteEncode( StreamVByte.Encoder encoder, long value, ByteBuffer buffer )

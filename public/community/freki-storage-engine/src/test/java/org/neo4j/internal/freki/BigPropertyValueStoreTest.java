@@ -20,7 +20,9 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.iterator.MutableLongIterator;
+import org.eclipse.collections.api.list.primitive.MutableLongList;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
+import org.eclipse.collections.impl.factory.primitive.LongLists;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,18 +30,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -192,6 +197,48 @@ class BigPropertyValueStoreTest
         assertTrue( thirdPropertyPointer >= secondPropertyPointer, "Pointers are not overlapping" );
     }
 
+    @Test
+    void shouldDeleteValues() throws IOException
+    {
+        try ( Lifespan life = new Lifespan() )
+        {
+            // given
+            BigPropertyValueStore store = instantiateStore( life, false );
+            byte[][] datas = new byte[10][];
+            long[] firstIds = new long[datas.length];
+            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+            {
+                for ( int i = 0; i < datas.length; i++ )
+                {
+                    byte[] data = datas[i] = randomData( random.random() );
+                    firstIds[i] = allocateAndWrite( cursor, store, data );
+                }
+            }
+
+            // when
+            int indexToRemove = random.nextInt( datas.length );
+            List<Record> records = new ArrayList<>();
+            try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
+            {
+                store.visitRecordChainIds( cursor, firstIds[indexToRemove], chainId -> records.add( new Record( (byte) 0, chainId, null ) ) );
+            }
+            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+            {
+                store.write( cursor, records, IdUpdateListener.DIRECT, PageCursorTracer.NULL );
+            }
+
+            // then
+            try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
+            {
+                for ( int i = 0; i < firstIds.length; i++ )
+                {
+                    boolean expectedToExist = i != indexToRemove;
+                    assertThat( store.exists( cursor, firstIds[i] ) ).isEqualTo( expectedToExist );
+                }
+            }
+        }
+    }
+
     private long writeDataAndShutDown( byte[] data ) throws IOException
     {
         try ( Lifespan life = new Lifespan() )
@@ -214,8 +261,19 @@ class BigPropertyValueStoreTest
     private long allocateAndWrite( PageCursor cursor, BigPropertyValueStore store, byte[] data ) throws IOException
     {
         List<Record> records = store.allocate( wrap( data ), PageCursorTracer.NULL );
-        store.write( cursor, records );
-        return records.get( 0 ).id;
+        long id = records.get( 0 ).id;
+        assertThat( store.exists( cursor, id ) ).isFalse();
+        store.write( cursor, records, IdUpdateListener.DIRECT, PageCursorTracer.NULL );
+        assertThat( store.exists( cursor, id ) ).isTrue();
+        // Do an additional test of visitRecordChainIds while we have all the records anyway
+        MutableLongList chainIds = LongLists.mutable.empty();
+        store.visitRecordChainIds( cursor, id, chainIds::add );
+        assertThat( chainIds.size() ).isEqualTo( records.size() );
+        for ( int i = 0; i < records.size(); i++ )
+        {
+            assertThat( chainIds.get( i ) ).isEqualTo( records.get( i ).id );
+        }
+        return id;
     }
 
     private byte[] readDataAndShutDown( long pointer ) throws IOException
@@ -255,7 +313,8 @@ class BigPropertyValueStoreTest
 
     private BigPropertyValueStore instantiateStore( Lifespan life, boolean readOnly )
     {
-        BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, idGeneratorFactory, readOnly, true, NULL );
+        BigPropertyValueStore store =
+                new BigPropertyValueStore( directory.file( "dude" ), pageCache, idGeneratorFactory, IdType.STRING_BLOCK, readOnly, true, NULL );
         life.add( store );
         return store;
     }

@@ -76,9 +76,9 @@ class MainStores extends Life
                         IdType.NODE, false, createStoreIfNotExists, i, pageCacheTracer );
                 idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( separateIdGeneratorFactory, IdType.NODE ) );
             }
-            bigPropertyValueStore =
-                    new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, idGeneratorFactory, false, createStoreIfNotExists,
-                            pageCacheTracer );
+            bigPropertyValueStore = new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, idGeneratorFactory, IdType.STRING_BLOCK, false,
+                    createStoreIfNotExists, pageCacheTracer );
+            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.STRING_BLOCK ) );
             denseStore = new DenseRelationshipStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
                     bigPropertyValueStore );
             success = true;

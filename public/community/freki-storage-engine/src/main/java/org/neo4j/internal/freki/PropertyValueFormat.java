@@ -37,7 +37,6 @@ import org.neo4j.hashing.HashFunction;
 import org.neo4j.internal.codec.string.ShortStringCodec;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.ValueMapper;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
@@ -121,7 +120,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static final short SPECIAL_TYPE_ARRAY = 0x10;
 
     private final SimpleBigValueStore bigPropertyValueStore;
-    private final Consumer<StorageCommand> commands;
+    private final Consumer<FrekiCommand.BigPropertyValue> commands;
     private final ByteBuffer outputBuffer; //Actual output-buffer
 
     private ByteBuffer buffer; //current write buffer
@@ -138,7 +137,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     //Nested properties
     private int nestedPropertyCount;
 
-    PropertyValueFormat( SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commands, ByteBuffer buffer )
+    PropertyValueFormat( SimpleBigValueStore bigPropertyValueStore, Consumer<FrekiCommand.BigPropertyValue> commands, ByteBuffer buffer )
     {
         this.bigPropertyValueStore = bigPropertyValueStore;
         this.commands = commands;
@@ -780,6 +779,12 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         return value instanceof PointerValue ? ((PointerValue) value).bigValue() : value;
     }
 
+    static boolean isPointerValue( ByteBuffer buffer )
+    {
+        byte typeByte = buffer.get( buffer.position() );
+        return (typeByte & SPECIAL_TYPE_MASK) != 0 && (typeByte & SPECIAL_TYPE_POINTER) != 0;
+    }
+
     private static Value readArray( byte externalType, int length, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
         if ( externalType == EXTERNAL_TYPE_BYTE )
@@ -1156,7 +1161,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         }
     }
 
-    private static class PointerValue extends Value
+    static class PointerValue extends Value
     {
         private final SimpleBigValueStore bigPropertyValueStore;
         private final PageCursorTracer tracer;
@@ -1173,6 +1178,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             this.pointer = pointer;
             this.bigPropertyValueStore = bigPropertyValueStore;
             this.tracer = tracer;
+        }
+
+        long pointer()
+        {
+            return pointer;
         }
 
         private Value bigValue()

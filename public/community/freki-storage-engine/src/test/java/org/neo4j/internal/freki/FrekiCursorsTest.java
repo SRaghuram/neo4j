@@ -26,8 +26,6 @@ import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.stream.IntStream;
@@ -51,11 +49,8 @@ import org.neo4j.values.storable.Value;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
-import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.internal.freki.FrekiTransactionApplier.writeDenseNode;
-import static org.neo4j.internal.freki.FrekiTransactionApplier.writeSparseNode;
-import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
+import static org.neo4j.internal.freki.MinimalTestFrekiTransactionApplier.NO_MONITOR;
 import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
@@ -96,8 +91,7 @@ abstract class FrekiCursorsTest
 
         Node( long id )
         {
-            graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), NULL,
-                    EmptyMemoryTracker.INSTANCE );
+            graphUpdates = new GraphUpdates( stores, NULL, EmptyMemoryTracker.INSTANCE );
             if ( !store.exists( null, id ) )
             {
                 graphUpdates.create( id );
@@ -113,35 +107,14 @@ abstract class FrekiCursorsTest
 
         long store()
         {
-            return store( NO_STORE_MONITOR );
+            return store( NO_MONITOR );
         }
 
-        long store( StoreMonitor monitor )
+        long store( FrekiCommand.Dispatcher monitor )
         {
             try
             {
-                graphUpdates.extractUpdates( command ->
-                {
-                    try
-                    {
-                        if ( command instanceof FrekiCommand.SparseNode )
-                        {
-                            FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
-                            monitor.sparseNode( sparseNode );
-                            writeSparseNode( sparseNode, stores, null, NULL );
-                        }
-                        else if ( command instanceof FrekiCommand.DenseNode )
-                        {
-                            FrekiCommand.DenseNode denseNode = (FrekiCommand.DenseNode) command;
-                            monitor.denseNode( denseNode );
-                            writeDenseNode( singletonList( denseNode ), stores.denseStore, NULL );
-                        }
-                    }
-                    catch ( IOException e )
-                    {
-                        throw new UncheckedIOException( e );
-                    }
-                } );
+                graphUpdates.extractUpdates( new MinimalTestFrekiTransactionApplier( stores, monitor ) );
                 return updates.nodeId();
             }
             catch ( ConstraintViolationTransactionFailureException e )
@@ -291,19 +264,4 @@ abstract class FrekiCursorsTest
 
         abstract void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor, RelationshipSelection selection );
     }
-
-    interface StoreMonitor
-    {
-        default void sparseNode( FrekiCommand.SparseNode node )
-        {
-        }
-
-        default void denseNode( FrekiCommand.DenseNode node )
-        {
-        }
-    }
-
-    private static final StoreMonitor NO_STORE_MONITOR = new StoreMonitor()
-    {
-    };
 }

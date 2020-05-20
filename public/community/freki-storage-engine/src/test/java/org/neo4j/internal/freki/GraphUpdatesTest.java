@@ -19,30 +19,32 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.neo4j.internal.freki.Record.deletedRecord;
-import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
+import static org.neo4j.internal.freki.MinimalTestFrekiTransactionApplier.NO_MONITOR;
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.values.storable.Values.intValue;
+import static org.neo4j.values.storable.Values.stringValue;
 
 @ExtendWith( RandomExtension.class )
 class GraphUpdatesTest
@@ -60,9 +62,9 @@ class GraphUpdatesTest
     {
         long nodeId = 0;
         {
-            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+            GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
             updates.create( nodeId );
-            extractAndApplyUpdates( updates );
+            extractAndApplyUpdates( updates, NO_MONITOR );
         }
 
         int maxPropertyKeys = 20;
@@ -74,7 +76,7 @@ class GraphUpdatesTest
         BitSet existing = new BitSet();
         for ( int i = 0; i < 1_000; i++ )
         {
-            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+            GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
             int numChanges = random.nextInt( 1, 10 );
             GraphUpdates.NodeUpdates nodeUpdates = updates.getOrLoad( nodeId );
             List<StorageProperty> added = new ArrayList<>();
@@ -101,8 +103,119 @@ class GraphUpdatesTest
                 }
             }
             nodeUpdates.updateNodeProperties( added, changed, removed );
-            extractAndApplyUpdates( updates );
+            extractAndApplyUpdates( updates, NO_MONITOR );
         }
+    }
+
+    @Test
+    void shouldDeleteOverwrittenNodePropertyBigValueRecords() throws ConstraintViolationTransactionFailureException
+    {
+        // given
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        int key = 0;
+        updates.create( nodeId );
+        GraphUpdates.NodeUpdates node = updates.getOrLoad( nodeId );
+        node.updateNodeProperties( singletonList( new PropertyKeyValue( key, random.nextAlphaNumericTextValue( 100, 100 ) ) ),
+                emptyList(), IntSets.immutable.empty() );
+        BigValueCounter monitor = new BigValueCounter();
+        extractAndApplyUpdates( updates, monitor );
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( 0 );
+
+        // when
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        node = updates.getOrLoad( nodeId );
+        node.updateNodeProperties( emptyList(), singletonList( new PropertyKeyValue( key, stringValue( "abc" ) ) ), IntSets.immutable.empty() );
+        extractAndApplyUpdates( updates, monitor );
+
+        // then
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( monitor.numCreated.intValue() );
+    }
+
+    @Test
+    void shouldDeleteDeletedNodeBigValueRecords() throws ConstraintViolationTransactionFailureException
+    {
+        // given
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        int key = 0;
+        updates.create( nodeId );
+        GraphUpdates.NodeUpdates node = updates.getOrLoad( nodeId );
+        node.updateNodeProperties( singletonList( new PropertyKeyValue( key, random.nextAlphaNumericTextValue( 100, 100 ) ) ),
+                emptyList(), IntSets.immutable.empty() );
+        BigValueCounter monitor = new BigValueCounter();
+        extractAndApplyUpdates( updates, monitor );
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( 0 );
+
+        // when
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        node = updates.getOrLoad( nodeId );
+        node.delete();
+        extractAndApplyUpdates( updates, monitor );
+
+        // then
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( monitor.numCreated.intValue() );
+    }
+
+    @Test
+    void shouldDeleteOverwrittenRelationshipPropertyBigValueRecords() throws ConstraintViolationTransactionFailureException
+    {
+        // given
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        int key = 0;
+        int type = 0;
+        updates.create( nodeId );
+        GraphUpdates.NodeUpdates node = updates.getOrLoad( nodeId );
+        long internalId = 1;
+        node.createRelationship( internalId, nodeId, type, true, singletonList( new PropertyKeyValue( key, random.nextAlphaNumericTextValue( 100, 100 ) ) ) );
+        BigValueCounter monitor = new BigValueCounter();
+        extractAndApplyUpdates( updates, monitor );
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( 0 );
+
+        // when
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        node = updates.getOrLoad( nodeId );
+        node.updateRelationshipProperties( internalId, type, nodeId, true, emptyList(), singletonList( new PropertyKeyValue( key, intValue( 10 ) ) ),
+                IntSets.immutable.empty() );
+        extractAndApplyUpdates( updates, monitor );
+
+        // then
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( monitor.numCreated.intValue() );
+    }
+
+    @Test
+    void shouldDeleteDeletedRelationshipBigValueRecords() throws ConstraintViolationTransactionFailureException
+    {
+        // given
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        int key = 0;
+        int type = 0;
+        updates.create( nodeId );
+        GraphUpdates.NodeUpdates node = updates.getOrLoad( nodeId );
+        long internalId = 1;
+        node.createRelationship( internalId, nodeId, type, true, singletonList( new PropertyKeyValue( key, random.nextAlphaNumericTextValue( 100, 100 ) ) ) );
+        BigValueCounter monitor = new BigValueCounter();
+        extractAndApplyUpdates( updates, monitor );
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( 0 );
+
+        // when
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        node = updates.getOrLoad( nodeId );
+        node.deleteRelationship( internalId, type, nodeId, true );
+        extractAndApplyUpdates( updates, monitor );
+
+        // then
+        assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
+        assertThat( monitor.numDeleted.intValue() ).isEqualTo( monitor.numCreated.intValue() );
     }
 
     private StorageProperty randomPropertyValue( int propertyKey )
@@ -110,47 +223,23 @@ class GraphUpdatesTest
         return new PropertyKeyValue( propertyKey, random.nextValue() );
     }
 
-    private void extractAndApplyUpdates( GraphUpdates updates ) throws ConstraintViolationTransactionFailureException
+    private void extractAndApplyUpdates( GraphUpdates updates, FrekiCommand.Dispatcher monitor ) throws ConstraintViolationTransactionFailureException
     {
-        updates.extractUpdates( command ->
-        {
-            try
-            {
-                ((FrekiCommand) command).accept( new FrekiCommand.Dispatcher.Adapter()
-                {
-                    @Override
-                    public void handle( FrekiCommand.SparseNode node ) throws IOException
-                    {
-                        for ( FrekiCommand.RecordChange change : node )
-                        {
-                            Record record = change.after;
-                            byte sizeExp = change.sizeExp();
-                            SimpleStore store = mainStores.mainStore( sizeExp );
-                            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
-                            {
-                                store.write( cursor, record != null ? record : deletedRecord( sizeExp, change.recordId() ), IGNORE, PageCursorTracer.NULL );
-                            }
-                        }
-                    }
+        updates.extractUpdates( new MinimalTestFrekiTransactionApplier( mainStores, monitor ) );
+    }
 
-                    @Override
-                    public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
-                    {
-                        for ( Record record : value.records )
-                        {
-                            assertThat( record.id ).isNotNegative();
-                        }
-                        try ( PageCursor cursor = bigValueStore.openWriteCursor( PageCursorTracer.NULL ) )
-                        {
-                            bigValueStore.write( cursor, value.records );
-                        }
-                    }
-                } );
-            }
-            catch ( IOException e )
+    private static class BigValueCounter extends FrekiCommand.Dispatcher.Adapter
+    {
+        final MutableInt numCreated = new MutableInt();
+        final MutableInt numDeleted = new MutableInt();
+
+        @Override
+        public void handle( FrekiCommand.BigPropertyValue value )
+        {
+            for ( Record record : value.records )
             {
-                throw new UncheckedIOException( e );
+                (record.hasFlag( FLAG_IN_USE ) ? numCreated : numDeleted).increment();
             }
-        } );
+        }
     }
 }

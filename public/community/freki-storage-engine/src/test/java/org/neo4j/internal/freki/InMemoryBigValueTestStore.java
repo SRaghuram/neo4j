@@ -30,26 +30,27 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
+import java.util.function.LongConsumer;
 
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.util.Collections.singletonList;
 import static org.neo4j.internal.freki.InMemoryTestStore.NO_PAGE_CURSOR;
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 
 class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigValueStore
 {
-    static Consumer<StorageCommand> applyToStoreImmediately( SimpleBigValueStore store )
+    static Consumer<FrekiCommand.BigPropertyValue> applyToStoreImmediately( SimpleBigValueStore store )
     {
         return command ->
         {
-            FrekiCommand.BigPropertyValue valueCommand = (FrekiCommand.BigPropertyValue) command;
             try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
-                store.write( cursor, valueCommand.records );
+                store.write( cursor, command.records, IdUpdateListener.DIRECT, PageCursorTracer.NULL );
             }
             catch ( IOException e )
             {
@@ -70,21 +71,30 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     @Override
     public List<Record> allocate( ByteBuffer data, PageCursorTracer cursorTracer )
     {
-        return singletonList( new Record( (byte) Record.FLAG_IN_USE, highId.getAndIncrement(), data ) );
+        return singletonList( new Record( (byte) FLAG_IN_USE, highId.getAndIncrement(), data ) );
     }
 
     @Override
-    public void write( PageCursor cursor, Iterable<Record> records )
+    public void write( PageCursor cursor, Iterable<Record> records, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer )
     {
         Iterator<Record> iterator = records.iterator();
         assert iterator.hasNext();
         Record single = iterator.next();
         assert !iterator.hasNext();
-        ByteBuffer data = single.data();
-        int length = data.remaining();
-        byte[] dataCopy = new byte[length];
-        System.arraycopy( data.array(), data.position(), dataCopy, 0, length );
-        this.data.put( single.id, dataCopy );
+        if ( single.hasFlag( FLAG_IN_USE ) )
+        {
+            ByteBuffer data = single.data();
+            int length = data.remaining();
+            byte[] dataCopy = new byte[length];
+            System.arraycopy( data.array(), data.position(), dataCopy, 0, length );
+            assert !this.data.containsKey( single.id );
+            this.data.put( single.id, dataCopy );
+        }
+        else
+        {
+            assert this.data.containsKey( single.id );
+            this.data.remove( single.id );
+        }
     }
 
     @Override
@@ -115,6 +125,12 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     public boolean exists( PageCursor cursor, long id )
     {
         return data.containsKey( id );
+    }
+
+    @Override
+    public void visitRecordChainIds( PageCursor cursor, long id, LongConsumer chainVisitor )
+    {
+        chainVisitor.accept( id );
     }
 
     @Override

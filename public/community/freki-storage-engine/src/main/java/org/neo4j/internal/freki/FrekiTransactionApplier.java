@@ -254,9 +254,15 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
     {
-        try ( PageCursor cursor = stores.bigPropertyValueStore.openWriteCursor( cursorTracer ) )
+        writeBigValue( value, stores.bigPropertyValueStore, idUpdates, cursorTracer );
+    }
+
+    static void writeBigValue( FrekiCommand.BigPropertyValue value, SimpleBigValueStore bigPropertyValueStore, IdUpdateListener idUpdateListener,
+            PageCursorTracer cursorTracer ) throws IOException
+    {
+        try ( PageCursor cursor = bigPropertyValueStore.openWriteCursor( cursorTracer ) )
         {
-            stores.bigPropertyValueStore.write( cursor, value.records );
+            bigPropertyValueStore.write( cursor, value.records, idUpdateListener != null ? idUpdateListener : IGNORE, cursorTracer );
         }
     }
 

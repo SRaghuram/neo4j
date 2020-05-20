@@ -411,7 +411,7 @@ class FrekiStorageEngineGraphWritesIT
         {
             target.visitCreatedNode( nodeId );
             target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
-        }, target -> target.visitNodePropertyChanges( nodeId, emptyList(), singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+        }, target -> target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ), emptyList(),
                 IntSets.immutable.empty() ), index -> asSet( IndexEntryUpdate.add( nodeId, index, afterValue ) ) );
     }
 

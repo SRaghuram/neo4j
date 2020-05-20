@@ -943,10 +943,10 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             properties.put( nextKey++, stringValue( "Some string " + i ) );
         }
         MutableLong lastX8Id = new MutableLong();
-        long nodeId = node().properties( properties ).store( new StoreMonitor()
+        long nodeId = node().properties( properties ).store( new FrekiCommand.Dispatcher.Adapter()
         {
             @Override
-            public void sparseNode( FrekiCommand.SparseNode node )
+            public void handle( FrekiCommand.SparseNode node )
             {
                 FrekiCommand.RecordChange change = node.change( largeStore.recordSizeExponential() );
                 while ( change != null )
@@ -959,10 +959,10 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         assertThat( largeStore.getHighId() ).isEqualTo( startingLargeXHighId + 2 );
 
         // when
-        existingNode( nodeId ).property( nextKey, intValue( 101010 ) ).store( new StoreMonitor()
+        existingNode( nodeId ).property( nextKey, intValue( 101010 ) ).store( new FrekiCommand.Dispatcher.Adapter()
         {
             @Override
-            public void sparseNode( FrekiCommand.SparseNode node )
+            public void handle( FrekiCommand.SparseNode node )
             {
                 FrekiCommand.RecordChange change = node.change( largeStore.recordSizeExponential() );
                 assertThat( change.recordId() ).isEqualTo( lastX8Id.longValue() );

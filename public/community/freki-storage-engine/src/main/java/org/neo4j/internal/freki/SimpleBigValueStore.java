@@ -23,15 +23,17 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.IntFunction;
+import java.util.function.LongConsumer;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 interface SimpleBigValueStore extends SingleFileStore
 {
     List<Record> allocate( ByteBuffer data, PageCursorTracer cursorTracer );
 
-    void write( PageCursor cursor, Iterable<Record> records ) throws IOException;
+    void write( PageCursor cursor, Iterable<Record> records, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException;
 
     default ByteBuffer read( PageCursor cursor, long id ) throws IOException
     {
@@ -39,6 +41,8 @@ interface SimpleBigValueStore extends SingleFileStore
     }
 
     ByteBuffer read( PageCursor cursor, IntFunction<ByteBuffer> bufferCreator, long id ) throws IOException;
+
+    void visitRecordChainIds( PageCursor cursor, long id, LongConsumer chainVisitor );
 
     long getHighId();
 }
