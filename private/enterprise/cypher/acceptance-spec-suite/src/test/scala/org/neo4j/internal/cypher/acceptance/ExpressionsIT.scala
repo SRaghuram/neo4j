@@ -2093,6 +2093,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
+  test("single in list with predicate that needs coercing") {
+    //When
+    val bar = ExpressionVariable(0, "bar")
+
+    // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "b")
+    val compiled = compile(singleInList(bar, listOfString("a", "aa", "aaa"), listOfInt(1, 2, 3)))
+
+    //Then
+    evaluate(compiled, 1) should equal(booleanValue(false))
+  }
 
   test("none in list function basic") {
     //When
@@ -2189,6 +2199,17 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(Values.TRUE)
   }
 
+  test("none in list with predicate that needs coercing") {
+    //When
+    val bar = ExpressionVariable(0, "bar")
+
+    // none(bar IN ["a", "aa", "aaa"] WHERE [1,2,3]")
+    val compiled = compile(noneInList(bar, listOfString("a", "aa", "aaa"), listOfInt(1, 2, 3)))
+
+    //Then
+    evaluate(compiled, 1) should equal(booleanValue(false))
+  }
+
   test("any in list function basic") {
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2281,6 +2302,17 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //Then
     evaluate(compiled, 1) should equal(NO_VALUE)
+  }
+
+  test("any in list with predicate that needs coercing") {
+    //When
+    val bar = ExpressionVariable(0, "bar")
+
+    // any(bar IN ["a", "aa", "aaa"] WHERE [1, 2, 3])
+    val compiled = compile(anyInList(bar, listOfString("a", "aa", "aaa"), listOfInt(1, 2, 3)))
+
+    //Then
+    evaluate(compiled, 1) should equal(booleanValue(true))
   }
 
   test("all in list function basic") {
@@ -2377,6 +2409,17 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
+  test("all in list with predicate that needs coercing") {
+    //When
+    val bar = ExpressionVariable(0, "bar")
+
+    // all(bar IN ["a", "aa", "aaa"] WHERE [1, 2, 3])
+    val compiled = compile(allInList(bar, listOfString("a", "aa", "aaa"), listOfInt(1, 2, 3)))
+
+    //Then
+    evaluate(compiled, 1) should equal(booleanValue(true))
+  }
+
   test("filter basic") {
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aa"]
     val bar = ExpressionVariable(0, "bar")
@@ -2458,6 +2501,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //Then
     evaluate(compiled, 1) should equal(EMPTY_LIST)
   }
+
+  test("filter with predicate that needs coercing") {
+    //When, [bar IN ["a", "aa", "aaa"] WHERE [1, 2, 3]]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"), Some(listOfInt(1, 2, 3)), None))
+
+    //Then
+    evaluate(compiled, 1) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
+  }
+
 
   test("nested list expressions basic") {
 

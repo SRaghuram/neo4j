@@ -517,6 +517,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val isNull = namer.nextVariableName()
         val isMatch = namer.nextVariableName()
         val result = namer.nextVariableName()
+        val coercedPredicate = if (isPredicate(scope.innerPredicate.get)) inner else coerceToPredicate(inner)
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], result, block(
           // ListValue list = [evaluate collection expression];
           // int matches = 0;
@@ -547,7 +548,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               //     matches = matches + 1;
               // }
               declare[Value](isMatch),
-              assign(isMatch, nullCheckIfRequired(inner)),
+              assign(isMatch, nullCheckIfRequired(coercedPredicate)),
               condition(equal(load(isMatch), trueValue))(
                 assign(matches, add(load(matches), constant(1)))
               ),
@@ -604,6 +605,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val isMatch = namer.nextVariableName()
         val isNull = namer.nextVariableName()
         val result = namer.nextVariableName()
+        val coercedPredicate = if (isPredicate(scope.innerPredicate.get)) inner else coerceToPredicate(inner)
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], result, block(
           // ListValue list = [evaluate collection expression];
           // Value isMatch = Values.NO_VALUE;
@@ -632,7 +634,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               // expressionVariables[innerVarOffset] = currentValue;
               setExpressionVariable(innerVariable, load(currentValue)),
               // isMatch = [result from inner expression]
-              assign(isMatch, nullCheckIfRequired(inner)),
+              assign(isMatch, nullCheckIfRequired(coercedPredicate)),
               // if (isMatch == Values.NO_VALUE)
               // {
               //     isNull=true;
@@ -685,6 +687,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val isMatch = namer.nextVariableName()
         val isNull = namer.nextVariableName()
         val result = namer.nextVariableName()
+        val coercedPredicate = if (isPredicate(scope.innerPredicate.get)) inner else coerceToPredicate(inner)
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], result, block(
           // ListValue list = [evaluate collection expression];
           // Value isMatch = Values.FALSE;
@@ -710,7 +713,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               // expressionVariables[innerVarOffset] = currentValue;
               setExpressionVariable(innerVariable, load(currentValue)),
               // isMatch = [result from inner expression]
-              assign(isMatch, nullCheckIfRequired(inner)),
+              assign(isMatch, nullCheckIfRequired(coercedPredicate)),
               // if (isMatch == Values.NO_VALUE)
               // {
               //     isNull=true;
@@ -756,6 +759,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
         val isMatch = namer.nextVariableName()
+        val coercedPredicate = if (isPredicate(scope.innerPredicate.get)) inner else coerceToPredicate(inner)
         val lazySet = oneTime(block(
           // ListValue list = [evaluate collection expression];
           // Value isMatch = Values.TRUE;
@@ -778,7 +782,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               // expressionVariables[innerVarOffset] = currentValue;
               setExpressionVariable(innerVariable, load(currentValue)),
               // isMatch = [result from inner expression]
-              assign(isMatch, nullCheckIfRequired(inner))
+              assign(isMatch, nullCheckIfRequired(coercedPredicate))
             ): _*)
           }
         ))
@@ -2231,7 +2235,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   //==================================================================================================
 
   private def coerceToPredicate(e: IntermediateExpression) = IntermediateExpression(
-    invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), e.ir), e.fields, e.variables, e.nullChecks)
+    invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), e.ir), e.fields, e.variables, e.nullChecks, requireNullCheck = false)
 
   /**
     * Ok AND and ANDS are complicated.  At the core we try to find a single `FALSE` if we find one there is no need to look
