@@ -26,7 +26,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.MemoryTracker
-import org.neo4j.memory.ScopedMemoryTracker
 
 class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           val workIdentity: WorkIdentity,
@@ -54,7 +53,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
     var currentMorselHeapUsage: Long = 0
 
     // Memory for morsels is released in one go after all output rows for completed chunk have been written
-    var morselMemoryTracker: ScopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+    var morselMemoryTracker: MemoryTracker = memoryTracker.getScopedMemoryTracker
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,

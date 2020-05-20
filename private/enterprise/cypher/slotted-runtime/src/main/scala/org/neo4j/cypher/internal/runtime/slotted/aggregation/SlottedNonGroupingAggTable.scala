@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.memory.ScopedMemoryTracker
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Slotted variant of [[NonGroupingAggTable]]
@@ -29,7 +29,7 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
     (a.toArray, b.toArray)
   }
   private val aggregationFunctions = new Array[AggregationFunction](aggregationExpressions.length)
-  private val scopedMemoryTracker: ScopedMemoryTracker = new ScopedMemoryTracker(state.memoryTracker.memoryTrackerForOperator(operatorId.x))
+  private val scopedMemoryTracker: MemoryTracker = state.memoryTracker.memoryTrackerForOperator(operatorId.x).getScopedMemoryTracker
 
   override def clear(): Unit = {
     scopedMemoryTracker.reset()

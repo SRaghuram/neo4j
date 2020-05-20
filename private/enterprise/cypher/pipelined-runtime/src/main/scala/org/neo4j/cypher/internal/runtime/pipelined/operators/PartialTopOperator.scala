@@ -33,7 +33,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.helpers.ArrayUtil
 import org.neo4j.memory.MemoryTracker
-import org.neo4j.memory.ScopedMemoryTracker
 
 class PartialTopWorkCanceller(override val argumentRowId: Long, limit: Int) extends WorkCanceller {
 
@@ -89,8 +88,8 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
     var topTable: DefaultComparatorTopTable[ReadableRow] = _
     var resultsIterator: util.Iterator[MorselRow] = Collections.emptyIterator()
 
-    private var activeMemoryTracker: ScopedMemoryTracker = _
-    private var resultsMemoryTracker: ScopedMemoryTracker = _
+    private var activeMemoryTracker: MemoryTracker = _
+    private var resultsMemoryTracker: MemoryTracker = _
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
@@ -104,7 +103,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
 
     def addRow(row: MorselRow): Unit = {
       if (topTable == null) {
-        activeMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+        activeMemoryTracker = memoryTracker.getScopedMemoryTracker
         topTable = new DefaultComparatorTopTable[ReadableRow](suffixComparator, remainingLimit, activeMemoryTracker)
       }
 

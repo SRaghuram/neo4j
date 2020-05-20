@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptySt
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.memory.ScopedMemoryTracker
+import org.neo4j.memory.MemoryTracker
 
 class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                     argumentSlotOffset: Int,
@@ -40,7 +40,7 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    val memoryTracker = new ScopedMemoryTracker(stateFactory.newMemoryTracker(id.x))
+    val memoryTracker = stateFactory.newMemoryTracker(id.x).getScopedMemoryTracker
     new AllOrderedAggregationState(memoryTracker)
   }
 
@@ -48,8 +48,8 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   private class AllOrderedAggregationState(var lastSeenGrouping: orderedGroupings.KeyType,
                                            val aggregationFunctions: Array[AggregationFunction],
-                                           val scopedMemoryTracker: ScopedMemoryTracker) extends OperatorState {
-    def this(memoryTracker: ScopedMemoryTracker) =
+                                           val scopedMemoryTracker: MemoryTracker) extends OperatorState {
+    def this(memoryTracker: MemoryTracker) =
       this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(memoryTracker)), memoryTracker)
 
 
