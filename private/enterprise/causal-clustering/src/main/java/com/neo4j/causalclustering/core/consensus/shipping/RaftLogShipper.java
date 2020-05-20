@@ -321,7 +321,7 @@ public class RaftLogShipper
 
         if ( timer == null )
         {
-            timer = timerService.create( RESEND, Group.RAFT_TIMER, timeout -> onScheduledTimeoutExpiry() );
+            timer = timerService.create( RESEND, Group.RAFT_HANDLER, timeout -> onScheduledTimeoutExpiry() );
         }
 
         timer.set( TimeoutFactory.fixedTimeout( deltaMillis, MILLISECONDS ) );

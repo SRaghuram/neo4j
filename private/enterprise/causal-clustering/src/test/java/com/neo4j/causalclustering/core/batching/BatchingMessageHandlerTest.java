@@ -106,7 +106,7 @@ class BatchingMessageHandlerTest
     {
         // given
         var scheduler = new OnDemandJobScheduler();
-        var limitingScheduler = new LimitingScheduler( scheduler, Group.RAFT_BATCH_HANDLER, NullLog.getInstance(), new ReoccurringJobQueue<>() );
+        var limitingScheduler = new LimitingScheduler( scheduler, Group.RAFT_HANDLER, NullLog.getInstance(), new ReoccurringJobQueue<>() );
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                                                                           BATCH_CONFIG, limitingScheduler, NullLogProvider.getInstance() );
         ReplicatedString content = new ReplicatedString( "dummy" );

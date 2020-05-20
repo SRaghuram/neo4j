@@ -58,10 +58,10 @@ class LeaderAvailabilityTimers
                 .addTimeout( ElectionTimerMode.ACTIVE_ELECTION, resolutionTimeout )
                 .addTimeout( ElectionTimerMode.FAILURE_DETECTION, detectionTimeout );
 
-        this.electionTimer = timerService.create( RaftMachine.Timeouts.ELECTION, Group.RAFT_TIMER, renewing( electionAction ) );
+        this.electionTimer = timerService.create( RaftMachine.Timeouts.ELECTION, Group.RAFT_HANDLER, renewing( electionAction ) );
         this.electionTimer.set( electionTimeout );
 
-        this.heartbeatTimer = timerService.create( RaftMachine.Timeouts.HEARTBEAT, Group.RAFT_TIMER, renewing( heartbeatAction ) );
+        this.heartbeatTimer = timerService.create( RaftMachine.Timeouts.HEARTBEAT, Group.RAFT_HANDLER, renewing( heartbeatAction ) );
         this.heartbeatTimer.set( fixedTimeout( raftTimersConfig.heartbeatIntervalInMillis(), MILLISECONDS ) );
 
         lastElectionRenewalMillis = clock.millis();

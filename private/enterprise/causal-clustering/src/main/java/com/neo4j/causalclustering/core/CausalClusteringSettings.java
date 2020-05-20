@@ -256,16 +256,12 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Path> kubernetes_ca_crt =
             pathUnixAbsolute( "causal_clustering.kubernetes.ca_crt", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" );
 
-    @Description( "Limits amount of global threads shared by raft groups for batching outbound messages." )
-    public static Setting<Integer> raft_batching_outbound_parallelism = newBuilder( "causal_clustering.raft_batching_outbound_parallelism", INT, 16 )
+    @Description( "Limits amount of global threads shared by raft groups for handling bathing of messages and timeout events." )
+    public static Setting<Integer> raft_handler_parallelism = newBuilder( "causal_clustering.raft_handler_parallelism", INT, 16 )
             .addConstraint( min( 1 ) ).build();
 
-    @Description( "Limits amount of global threads shared by raft groups for applying committed raft messages." )
-    public static Setting<Integer> raft_applier_parallelism = newBuilder( "causal_clustering.raft_applier_parallelism", INT, 16 )
-            .addConstraint( min( 1 ) ).build();
-
-    @Description( "Limits about of global threads shared by raft groups for handling timeouts." )
-    public static Setting<Integer> raft_timer_parallelism = newBuilder( "causal_clustering.raft_timer_parallelism", INT, 8 )
+    @Description( "Limits amount of global threads for applying commands." )
+    public static Setting<Integer> command_applier_parallelism = newBuilder( "causal_clustering.command_applier_parallelism", INT, 16 )
             .addConstraint( min( 1 ) ).build();
 
     /**

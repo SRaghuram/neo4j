@@ -31,7 +31,7 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 class TimerServiceTest
 {
-    private final Group group = Group.RAFT_TIMER;
+    private final Group group = Group.RAFT_HANDLER;
 
     private final TimeoutHandler handlerA = mock( TimeoutHandler.class );
     private final TimeoutHandler handlerB = mock( TimeoutHandler.class );

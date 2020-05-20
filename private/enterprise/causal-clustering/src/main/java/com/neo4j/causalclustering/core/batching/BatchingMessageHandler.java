@@ -64,7 +64,7 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
                                               config.get( CausalClusteringSettings.raft_in_queue_max_batch_bytes ) );
 
         return delegate -> new BatchingMessageHandler( delegate, inQueueConfig, batchConfig,
-                                                       new LimitingScheduler( jobScheduler, Group.RAFT_BATCH_HANDLER,
+                                                       new LimitingScheduler( jobScheduler, Group.RAFT_HANDLER,
                                                                               logProvider.getLog( BatchingMessageHandler.class ),
                                                                               new ReoccurringJobQueue<>() ), logProvider );
     }

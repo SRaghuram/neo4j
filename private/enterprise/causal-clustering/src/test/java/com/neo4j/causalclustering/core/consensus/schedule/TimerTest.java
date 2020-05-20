@@ -43,7 +43,7 @@ class TimerTest
             done.await();
         };
 
-        Timer timer = new Timer( () -> "test", scheduler, getInstance(), Group.RAFT_TIMER, handler );
+        Timer timer = new Timer( () -> "test", scheduler, getInstance(), Group.RAFT_HANDLER, handler );
         timer.set( new FixedTimeout( 0, SECONDS ) );
         invoked.await();
 
