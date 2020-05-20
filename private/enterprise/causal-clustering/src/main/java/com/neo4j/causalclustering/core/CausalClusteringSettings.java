@@ -33,6 +33,8 @@ import static com.neo4j.causalclustering.core.CausalClusterSettingConstraints.va
 import static com.neo4j.causalclustering.core.ServerGroupName.SERVER_GROUP_NAME;
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.SelectionStrategies.NO_BALANCING;
 import static com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader.hasPlugin;
+import static java.lang.Math.min;
+import static java.lang.Runtime.getRuntime;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
@@ -257,12 +259,14 @@ public class CausalClusteringSettings implements SettingsDeclaration
             pathUnixAbsolute( "causal_clustering.kubernetes.ca_crt", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" );
 
     @Description( "Limits amount of global threads shared by raft groups for handling bathing of messages and timeout events." )
-    public static Setting<Integer> raft_handler_parallelism = newBuilder( "causal_clustering.raft_handler_parallelism", INT, 16 )
-            .addConstraint( min( 1 ) ).build();
+    public static Setting<Integer> raft_handler_parallelism =
+            newBuilder( "causal_clustering.raft_handler_parallelism", INT, min( getRuntime().availableProcessors() * 2, 8 ) )
+                    .addConstraint( min( 1 ) ).build();
 
     @Description( "Limits amount of global threads for applying commands." )
-    public static Setting<Integer> command_applier_parallelism = newBuilder( "causal_clustering.command_applier_parallelism", INT, 16 )
-            .addConstraint( min( 1 ) ).build();
+    public static Setting<Integer> command_applier_parallelism =
+            newBuilder( "causal_clustering.command_applier_parallelism", INT, min( getRuntime().availableProcessors() * 2, 8 ) )
+                    .addConstraint( min( 1 ) ).build();
 
     /**
      * Creates absolute path on the first filesystem root. This will be `/` on Unix but arbitrary on Windows. If filesystem roots cannot be listed then `//`
