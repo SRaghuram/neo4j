@@ -321,7 +321,7 @@ public class RunCommand implements Runnable
                         System.out.println( "Cached migration found" );
                     }
                     org.neo4j.io.fs.FileUtils.deleteRecursively( storeDir );
-                    org.neo4j.io.fs.FileUtils.copyFile( frekiStoreDir.toFile(), storeDir );
+                    org.neo4j.io.fs.FileUtils.copyRecursively( frekiStoreDir.toFile(), storeDir );
                     System.out.println( "Successful migration to Freki." );
                 }
                 catch ( Throwable t )
