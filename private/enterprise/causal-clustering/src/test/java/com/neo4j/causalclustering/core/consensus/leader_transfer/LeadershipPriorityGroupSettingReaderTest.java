@@ -15,6 +15,8 @@ import org.neo4j.configuration.Config;
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeadershipPriorityGroupSetting.READER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class LeadershipPriorityGroupSettingReaderTest
 {
@@ -39,5 +41,24 @@ class LeadershipPriorityGroupSettingReaderTest
         assertEquals( read.get( "one" ), new ServerGroupName( "1" ) );
         assertEquals( read.get( "two" ), new ServerGroupName( "2" ) );
         assertEquals( read.get( "three" ), new ServerGroupName( "3" ) );
+    }
+
+    @Test
+    void shouldCorrectlyValidateGroupSettings()
+    {
+        // given
+        var fooDbSetting = new LeadershipPriorityGroupSetting( "foo" );
+        var barDbSetting = new LeadershipPriorityGroupSetting( "bar" );
+        var bazDbSetting = new LeadershipPriorityGroupSetting( "baz" );
+
+        var groupA = "A";
+        var groupB = "B";
+
+        var setting = Map.of(
+                fooDbSetting.setting().name(), groupA,
+                barDbSetting.setting().name(), "," + groupB,
+                bazDbSetting.setting().name(), groupA + "," + groupB );
+        // when/then
+        assertThrows( IllegalArgumentException.class, () -> Config.newBuilder().setRaw( setting ).build() );
     }
 }

@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.SettingValueParser;
 
+import static java.lang.String.format;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
 
 @PublicApi
@@ -56,7 +57,18 @@ public class ServerGroupName implements CharSequence, Comparable<ServerGroupName
         @Override
         public ServerGroupName parse( String value )
         {
-            return new ServerGroupName( STRING.parse( value ) );
+            var parsed = new ServerGroupName( STRING.parse( value ) );
+            validate( parsed );
+            return parsed;
+        }
+
+        @Override
+        public void validate( ServerGroupName value )
+        {
+            if ( value.getRaw().contains( "," ) )
+            {
+                throw new IllegalArgumentException( format( "Server group name %s is invalid, due to the inclusion of \",\".", value.getRaw() ) );
+            }
         }
 
         @Override

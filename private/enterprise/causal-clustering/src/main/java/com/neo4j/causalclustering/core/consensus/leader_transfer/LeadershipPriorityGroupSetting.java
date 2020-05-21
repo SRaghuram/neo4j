@@ -27,8 +27,8 @@ public class LeadershipPriorityGroupSetting extends GroupSetting
 
     private static final String PREFIX = "causal_clustering.leadership_priority_group";
 
-    @Description( "A list of group names where leadership should be prioritised. This does not guarantee leadership on these groups at all times, but" +
-                  " the cluster will attempt to transfer leadership to these groups when possible." )
+    @Description( "The name of a server_group whose members should be prioritized as leaders for the given database. This does not guarantee that members " +
+                  "of this group will be leader at all times, but the cluster will attempt to transfer leadership to such a member when possible." )
     private final Setting<ServerGroupName> leadership_priority_group = getBuilder( SERVER_GROUP_NAME, ServerGroupName.EMPTY ).build();
 
     public LeadershipPriorityGroupSetting( String databaseName )
