@@ -6,6 +6,8 @@
 package com.neo4j.bench.client;
 
 import com.neo4j.bench.client.queries.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -18,6 +20,9 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class QueryRetrier
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( QueryRetrier.class );
+
     static final int DEFAULT_RETRY_COUNT = 10;
     public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes( 5 );
 
@@ -59,7 +64,7 @@ public class QueryRetrier
             }
             catch ( Throwable e )
             {
-                System.err.println( format( "Error executing callable %s\n%s", supplier, stackTraceFor( e ) ) );
+                LOG.debug( format( "Error executing callable %s\n%s", supplier, stackTraceFor( e ) ) );
                 backOff( retry++ );
                 lastException = e;
             }
@@ -76,7 +81,7 @@ public class QueryRetrier
 
             // add 10 to 'retry' so minimum sleep duration is 1 second
             long milliseconds = Math.round( Math.pow( 2, retry + 10 ) );
-            System.out.println( format( "Will retry after %s seconds", MILLISECONDS.toSeconds( milliseconds ) ) );
+            LOG.debug( format( "Will retry after %s seconds", MILLISECONDS.toSeconds( milliseconds ) ) );
             Thread.sleep( milliseconds );
         }
         catch ( InterruptedException e )
@@ -95,10 +100,10 @@ public class QueryRetrier
                 try
                 {
                     RESULT result = client.execute( query );
-                    query.nonFatalError().ifPresent( System.err::println );
+                    query.nonFatalError().ifPresent( LOG::debug );
                     if ( verbose )
                     {
-                        System.out.println( "Query successfully executed: " + toString() );
+                        LOG.debug( "Query successfully executed: " + toString() );
                     }
                     return result;
                 }

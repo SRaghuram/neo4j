@@ -10,6 +10,8 @@ import com.github.rvesse.airline.annotations.Command;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,13 +23,15 @@ import static java.util.stream.Collectors.toSet;
 @Command( name = "benchmarks", description = "creates a benchmark configuration file limited to specified benchmarks" )
 public class ConfigBenchmarksCommand extends ConfigCommandBase
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ConfigBenchmarksCommand.class );
+
     @Arguments()
     public List<String> benchmarks = new ArrayList<>();
 
     @Override
     public void run()
     {
-        System.out.println( "\n-- Creating Config --\n" +
+        LOG.debug( "\n-- Creating Config --\n" +
                             format( "\tBenchmarks:     %s\n", benchmarks ) +
                             baseOptionString() );
 

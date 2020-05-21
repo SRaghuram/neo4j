@@ -9,6 +9,8 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.model.process.JvmArgs;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -28,16 +30,19 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @TestDirectoryExtension
 public class ProcessTest
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ProcessTest.class );
+
     @Inject
     public TestDirectory temporaryFolder;
 
     public static class JustForMain
     {
+
         public static void main( String[] args ) throws InterruptedException
         {
             Duration sleepMs = Duration.ofSeconds( 5 );
             Thread.sleep( sleepMs.toMillis() );
-            System.out.println( "Hello Work" );
+            LOG.debug( "Hello Work" );
         }
     }
 

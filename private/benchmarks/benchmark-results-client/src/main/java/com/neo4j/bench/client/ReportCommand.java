@@ -15,6 +15,8 @@ import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.model.util.JsonUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -25,6 +27,8 @@ import static java.util.stream.Collectors.joining;
 @Command( name = "report" )
 public class ReportCommand implements Runnable
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( ReportCommand.class );
 
     public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
@@ -77,7 +81,7 @@ public class ReportCommand implements Runnable
             }
             SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport );
             new QueryRetrier( true, QueryRetrier.DEFAULT_TIMEOUT ).execute( client, submitTestRun );
-            System.out.println( "Successfully reported results" );
+            LOG.debug( "Successfully reported results" );
             if ( errorReportingPolicy.equals( ErrorReportingPolicy.REPORT_THEN_FAIL ) )
             {
                 assertNoErrors( testRunReport );

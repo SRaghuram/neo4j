@@ -24,6 +24,8 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.TimeValue;
 import org.openjdk.jmh.runner.options.VerboseMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -36,6 +38,7 @@ import static java.time.temporal.ChronoUnit.MILLIS;
 
 class BenchmarksRunner extends Runner
 {
+    private static final Logger LOG = LoggerFactory.getLogger( BenchmarksRunner.class );
     private static final String PARAM_NEO4J_CONFIG = "baseNeo4jConfig";
 
     private final Neo4jConfig baseNeo4jConfig;
@@ -76,11 +79,11 @@ class BenchmarksRunner extends Runner
     {
         // Run every benchmark once to create stores -- triggers store generation in benchmark setups
         // Ensures generation does not occur in benchmark setup later, which would, for example, pollute the heap
-        System.out.println( "\n\n" );
-        System.out.println( "-----------------------------------------------------------------------------------" );
-        System.out.println( "------------------------------  STORE GENERATION  ---------------------------------" );
-        System.out.println( "-----------------------------------------------------------------------------------" );
-        System.out.println( "\n\n" );
+        LOG.debug( "\n\n" );
+        LOG.debug( "-----------------------------------------------------------------------------------" );
+        LOG.debug( "------------------------------  STORE GENERATION  ---------------------------------" );
+        LOG.debug( "-----------------------------------------------------------------------------------" );
+        LOG.debug( "\n\n" );
 
         long storeGenerationStart = System.currentTimeMillis();
 
@@ -136,8 +139,8 @@ class BenchmarksRunner extends Runner
             long storeGenerationFinish = System.currentTimeMillis();
             Duration storeGenerationDuration = Duration.of( storeGenerationFinish - storeGenerationStart, MILLIS );
             // Print details of storage directory
-            System.out.println( "\nStore generation took: " + durationToString( storeGenerationDuration ) + "\n" );
-            System.out.println( stores.details() );
+            LOG.debug( "\nStore generation took: " + durationToString( storeGenerationDuration ) + "\n" );
+            LOG.debug( stores.details() );
         }
     }
 

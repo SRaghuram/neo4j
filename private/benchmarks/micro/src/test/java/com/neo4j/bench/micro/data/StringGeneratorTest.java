@@ -8,6 +8,8 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.SplittableRandom;
@@ -39,6 +41,8 @@ import static java.lang.String.format;
 
 public class StringGeneratorTest
 {
+    private static final Logger LOG = LoggerFactory.getLogger( StringGeneratorTest.class );
+
     private static final int REPETITIONS = 100_000;
     private static final long MAX_RANDOM_GENERATION_DURATION = TimeUnit.SECONDS.toMillis( 10 );
     private static final long MAX_ASCENDING_GENERATION_DURATION = TimeUnit.SECONDS.toMillis( 10 );
@@ -123,7 +127,7 @@ public class StringGeneratorTest
         }
         long duration = System.currentTimeMillis() - start;
         int toleratedRepetitions = (int) (0.001 * REPETITIONS);
-        System.out.println( format( "%s: Tolerated Repetitions = %s , Observed Repetitions = %s, Duration = %s (ms)",
+        LOG.debug( format( "%s: Tolerated Repetitions = %s , Observed Repetitions = %s, Duration = %s (ms)",
                                     stringGeneratorFactory, toleratedRepetitions, repeatedValueCount, duration ) );
         assertThat( "less than 0.01% value repetitions", repeatedValueCount, lessThan( toleratedRepetitions ) );
         assertThat( duration, lessThan( MAX_RANDOM_GENERATION_DURATION ) );
@@ -157,7 +161,7 @@ public class StringGeneratorTest
             previous = current;
         }
         long duration = System.currentTimeMillis() - start;
-        System.out.println( format( "%s: Duration = %s (ms)", stringGeneratorFactory, duration ) );
+        LOG.debug( format( "%s: Duration = %s (ms)", stringGeneratorFactory, duration ) );
         assertThat( duration, lessThan( MAX_ASCENDING_GENERATION_DURATION ) );
     }
 
@@ -177,7 +181,7 @@ public class StringGeneratorTest
             assertThat( value1, Matchers.equalTo( value2 ) );
         }
         long duration = System.currentTimeMillis() - start;
-        System.out.println( format( "Duration = %s (ms)", duration ) );
+        LOG.debug( format( "Duration = %s (ms)", duration ) );
         assertThat( duration, lessThan( toleratedDuration ) );
     }
 }

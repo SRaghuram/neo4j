@@ -32,6 +32,8 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.reporter.ResultsReporter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -50,6 +52,8 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 @Command( name = "run-export", description = "runs benchmarks and exports results as JSON" )
 public class RunReportCommand extends BaseRunReportCommand
 {
+    private static final Logger LOG = LoggerFactory.getLogger( RunReportCommand.class );
+
     @Option(
             type = OptionType.COMMAND,
             name = {"--aws-endpoint-url"},
@@ -119,7 +123,7 @@ public class RunReportCommand extends BaseRunReportCommand
 
         try
         {
-            System.out.println( "Deleting: " + runReportParams.storesDir().getAbsolutePath() );
+            LOG.debug( "Deleting: " + runReportParams.storesDir().getAbsolutePath() );
             FileUtils.deleteDirectory( runReportParams.storesDir().toPath() );
         }
         catch ( IOException e )
@@ -163,7 +167,7 @@ public class RunReportCommand extends BaseRunReportCommand
 
         if ( !runReportParams.storesDir().exists() )
         {
-            System.out.println( "Creating stores directory: " + runReportParams.storesDir().getAbsolutePath() );
+            LOG.debug( "Creating stores directory: " + runReportParams.storesDir().getAbsolutePath() );
             tryMkDir( runReportParams.storesDir().toPath() );
         }
 

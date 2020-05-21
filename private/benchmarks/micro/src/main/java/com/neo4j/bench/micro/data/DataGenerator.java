@@ -9,6 +9,8 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.RNGState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -49,6 +51,8 @@ import static java.util.stream.Collectors.joining;
 
 public class DataGenerator
 {
+    private static final Logger LOG = LoggerFactory.getLogger( DataGenerator.class );
+
     public enum PropertyLocality
     {
         // all properties for an element (node/relationship) are NOT written at the same time, e.g.:
@@ -266,7 +270,7 @@ public class DataGenerator
             throw new UncheckedIOException( "failed to generate data", e );
         }
         Instant finishTime = Instant.now();
-        System.out.println( "Generated store in: " + durationToString( Duration.between( startTime, finishTime ) ) );
+        LOG.debug( "Generated store in: " + durationToString( Duration.between( startTime, finishTime ) ) );
     }
 
     private long[] innerBatchFirstPhase( Store store, Path neo4jConfig, Path tempOutputDir )
@@ -284,49 +288,49 @@ public class DataGenerator
                                   .build();
             inserter = BatchInserters.inserter( DatabaseLayout.of( config ), config );
 
-            System.out.printf( "Creating Nodes... " );
+            LOG.debug( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
             long[] nodeIds = createNodesBatch( inserter );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             startTime = Instant.now();
-            System.out.printf( "Creating Relationships... " );
+            LOG.debug( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
                     .of( createRelationshipTypeIndexFiles( tempOutputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
             IntFileReader relationshipIds = createRelationshipsBatch( inserter, nodeIds, relationshipTypeIndexes, tempOutputDir );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Temporary Node Property Files... " );
+            LOG.debug( "Creating Temporary Node Property Files... " );
             startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
                     .of( createNodePropertyIndexFiles( tempOutputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Node Properties... " );
+            LOG.debug( "Creating Node Properties... " );
             startTime = Instant.now();
             createNodePropertiesBatch( inserter, nodeIds, nodePropertyIndexes );
             deleteIntFileReaderFiles( nodePropertyIndexes );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Temporary Relationship Property Files... " );
+            LOG.debug( "Creating Temporary Relationship Property Files... " );
             startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
                     .of( createRelationshipPropertyIndexFiles( tempOutputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Relationship Properties... " );
+            LOG.debug( "Creating Relationship Properties... " );
             startTime = Instant.now();
             createRelationshipPropertiesBatch( inserter, relationshipIds, relationshipPropertyIndexes );
             deleteIntFileReaderFiles( relationshipPropertyIndexes );
             deleteIntFileReaderFile( relationshipIds );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             return nodeIds;
         }
@@ -354,49 +358,49 @@ public class DataGenerator
 
             db = ManagedStore.newDb( store, neo4jConfig );
 
-            System.out.printf( "Creating Nodes... " );
+            LOG.debug( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
             long[] nodeIds = createNodesTx( db );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             startTime = Instant.now();
-            System.out.printf( "Creating Relationships... " );
+            LOG.debug( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
                     .of( createRelationshipTypeIndexFiles( tempOutputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
             IntFileReader relationshipIds = createRelationshipsTx( db, nodeIds, relationshipTypeIndexes, tempOutputDir );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Temporary Node Property Files... " );
+            LOG.debug( "Creating Temporary Node Property Files... " );
             startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
                     .of( createNodePropertyIndexFiles( tempOutputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Node Properties... " );
+            LOG.debug( "Creating Node Properties... " );
             startTime = Instant.now();
             createNodePropertiesTx( db, nodeIds, nodePropertyIndexes );
             deleteIntFileReaderFiles( nodePropertyIndexes );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Temporary Relationship Property Files... " );
+            LOG.debug( "Creating Temporary Relationship Property Files... " );
             startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
                     .of( createRelationshipPropertyIndexFiles( tempOutputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Relationship Properties... " );
+            LOG.debug( "Creating Relationship Properties... " );
             startTime = Instant.now();
             createRelationshipPropertiesTx( db, relationshipIds, relationshipPropertyIndexes );
             deleteIntFileReaderFiles( relationshipPropertyIndexes );
             deleteIntFileReaderFile( relationshipIds );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             return nodeIds;
         }
@@ -422,44 +426,44 @@ public class DataGenerator
         {
             db = ManagedStore.newDb( store, neo4jConfig );
 
-            System.out.printf( "Creating Temporary Node Label Files... " );
+            LOG.debug( "Creating Temporary Node Label Files... " );
             Instant startTime = Instant.now();
             IntFileReader[] nodeLabelIndexes = Stream
                     .of( createNodeLabelIndexFiles( tempOutputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Node Labels... " );
+            LOG.debug( "Creating Node Labels... " );
             startTime = Instant.now();
             createNodeLabels( db, nodeIds, nodeLabelIndexes );
             deleteIntFileReaderFiles( nodeLabelIndexes );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Mandatory Node Constraints... " );
+            LOG.debug( "Creating Mandatory Node Constraints... " );
             startTime = Instant.now();
             createMandatoryNodeConstraints( db );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Mandatory Relationship Constraints... " );
+            LOG.debug( "Creating Mandatory Relationship Constraints... " );
             startTime = Instant.now();
             createMandatoryRelationshipConstraints( db );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Uniqueness Constraints... " );
+            LOG.debug( "Creating Uniqueness Constraints... " );
             startTime = Instant.now();
             createUniquenessConstraints( db );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Creating Schema Indexes... " );
+            LOG.debug( "Creating Schema Indexes... " );
             startTime = Instant.now();
             createSchemaIndexes( db );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            System.out.printf( "Waiting For Indexes... " );
+            LOG.debug( "Waiting For Indexes... " );
             startTime = Instant.now();
             waitForSchemaIndexes( db );
-            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
+            LOG.debug( durationToString( Duration.between( startTime, Instant.now() ) ) );
         }
         catch ( Exception e )
         {

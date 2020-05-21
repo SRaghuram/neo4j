@@ -10,6 +10,8 @@ import com.ldbc.driver.util.Tuple2;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcIndexer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -29,6 +31,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public abstract class QueryGraphMaker
 {
+    private static final Logger LOG = LoggerFactory.getLogger( QueryGraphMaker.class );
+
     public abstract String queryString();
 
     public abstract Map<String,Object> params();
@@ -57,9 +61,8 @@ public abstract class QueryGraphMaker
             Neo4jSchema neo4jSchema,
             File configDir ) throws Exception
     {
-        System.out.println();
-        System.out.println( MapUtils.prettyPrint( queryGraphMaker.params() ) );
-        System.out.println( queryGraphMaker.queryString() );
+        LOG.debug( MapUtils.prettyPrint( queryGraphMaker.params() ) );
+        LOG.debug( queryGraphMaker.queryString() );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig( configDir ) );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         createDbFromCypherQuery(
@@ -84,7 +87,7 @@ public abstract class QueryGraphMaker
         }
         catch ( Exception e )
         {
-            e.printStackTrace();
+            LOG.error( "fatal error", e );
             throw e;
         }
 
@@ -92,14 +95,14 @@ public abstract class QueryGraphMaker
         {
             for ( String createIndexQuery : createIndexQueries( neo4jSchema ) )
             {
-                System.out.println( createIndexQuery );
+                LOG.debug( createIndexQuery );
                 tx.execute( createIndexQuery );
             }
             tx.commit();
         }
         catch ( Exception e )
         {
-            e.printStackTrace();
+            LOG.error( "fatal error", e );
             throw e;
         }
     }

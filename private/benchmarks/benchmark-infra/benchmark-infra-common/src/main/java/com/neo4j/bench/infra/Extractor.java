@@ -47,7 +47,7 @@ public class Extractor
                     continue;
                 }
                 File f = dir.resolve( entry.getName() ).toFile();
-                System.out.println( f );
+                LOG.debug( f.toString() );
                 if ( entry.isDirectory() )
                 {
                     mkDirs( f );

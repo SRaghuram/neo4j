@@ -31,6 +31,8 @@ import com.neo4j.bench.ldbc.importer.PlaceIsPartOfPlaceNullReplacer;
 import com.neo4j.bench.ldbc.importer.PostHasCreatorAtTimeRelationshipTypeDecorator;
 import com.neo4j.bench.ldbc.importer.PostIsLocatedInAtTimeRelationshipTypeDecorator;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -97,6 +99,7 @@ import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 {
+    private static final Logger LOG = LoggerFactory.getLogger( LdbcSnbImporterParallelDense1.class );
 
     @Override
     public void load(
@@ -114,15 +117,15 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
             throw new DbException( format( "Invalid Timestamp Resolution: %s", timestampResolution.name() ) );
         }
 
-        System.out.println( format( "Source CSV Dir:        %s", csvDataDir ) );
-        System.out.println( format( "Target DB Dir:         %s", storeDir ) );
-        System.out.println( format( "Source Date Format:    %s", fromCsvFormat.name() ) );
-        System.out.println( format( "Target Date Format:    %s", toNeo4JFormat.name() ) );
-        System.out.println( format( "Timestamp Resolution:  %s", timestampResolution.name() ) );
-        System.out.println( format( "With Unique:           %s", withUnique ) );
-        System.out.println( format( "With Mandatory:        %s", withMandatory ) );
+        LOG.debug( format( "Source CSV Dir:        %s", csvDataDir ) );
+        LOG.debug( format( "Target DB Dir:         %s", storeDir ) );
+        LOG.debug( format( "Source Date Format:    %s", fromCsvFormat.name() ) );
+        LOG.debug( format( "Target Date Format:    %s", toNeo4JFormat.name() ) );
+        LOG.debug( format( "Timestamp Resolution:  %s", timestampResolution.name() ) );
+        LOG.debug( format( "With Unique:           %s", withUnique ) );
+        LOG.debug( format( "With Mandatory:        %s", withMandatory ) );
 
-        System.out.println( format( "Clear DB directory: %s", storeDir ) );
+        LOG.debug( format( "Clear DB directory: %s", storeDir ) );
         FileUtils.deleteDirectory( storeDir );
 
         TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache =
@@ -949,7 +952,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 INSTANCE
         );
 
-        System.out.println( "Loading CSV files" );
+        LOG.debug( "Loading CSV files" );
         long startTime = System.currentTimeMillis();
 
         batchImporter.doImport( input );
@@ -957,13 +960,13 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         lifeSupport.shutdown();
 
         long runtime = System.currentTimeMillis() - startTime;
-        System.out.println( String.format(
+        LOG.debug( String.format(
                 "Data imported in: %d min, %d sec",
                 TimeUnit.MILLISECONDS.toMinutes( runtime ),
                 TimeUnit.MILLISECONDS.toSeconds( runtime )
                 - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
-        System.out.println( "Creating Indexes & Constraints" );
+        LOG.debug( "Creating Indexes & Constraints" );
         startTime = System.currentTimeMillis();
 
         DatabaseManagementService managementService = Neo4jDb.newDb( storeDir, importerProperties );
@@ -975,14 +978,14 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         indexer.createTransactional( db );
 
         runtime = System.currentTimeMillis() - startTime;
-        System.out.println( String.format(
+        LOG.debug( String.format(
                 "Indexes built in: %d min, %d sec",
                 TimeUnit.MILLISECONDS.toMinutes( runtime ),
                 TimeUnit.MILLISECONDS.toSeconds( runtime )
                 - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
-        System.out.printf( "Shutting down..." );
+        LOG.debug( "Shutting down..." );
         managementService.shutdown();
-        System.out.println( "Done" );
+        LOG.debug( "Done" );
     }
 }

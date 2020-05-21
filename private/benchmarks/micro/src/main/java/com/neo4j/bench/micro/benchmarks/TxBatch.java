@@ -5,11 +5,16 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 
 public class TxBatch
 {
+    private static final Logger LOG = LoggerFactory.getLogger( TxBatch.class );
+
     private final GraphDatabaseService db;
     private final int txBatchSize;
     private int txSize;
@@ -67,7 +72,7 @@ public class TxBatch
         }
         catch ( Throwable e )
         {
-            e.printStackTrace();
+            LOG.error("fatal error",e);
             throw new RuntimeException( "Unable to commit transaction", e );
         }
         finally
@@ -78,7 +83,7 @@ public class TxBatch
             }
             catch ( Throwable e )
             {
-                e.printStackTrace();
+                LOG.error("fatal error",e);
                 throw new RuntimeException( "Unable to close transaction", e );
             }
         }

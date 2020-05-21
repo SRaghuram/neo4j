@@ -11,6 +11,8 @@ import com.neo4j.bench.model.process.JvmArgs;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -23,6 +25,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class JpsPidTest
 {
+    private static final Logger LOG = LoggerFactory.getLogger( JpsPidTest.class );
+
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -32,7 +36,7 @@ public class JpsPidTest
         {
             Duration sleepMs = Duration.ofSeconds( 5 );
             Thread.sleep( sleepMs.toMillis() );
-            System.out.println( "Hello Work" );
+            LOG.debug( "Hello Work" );
         }
     }
 
@@ -51,7 +55,7 @@ public class JpsPidTest
     }
 
     @Test
-    public void shouldFindPidWithJPSAndPgrepAndPS() throws Exception
+    public void shouldFindPidWithJPSAndPgrepAndPS()
     {
         Jvm jvm = Jvm.defaultJvm();
         JvmArgs jvmArgs = JvmArgs.from(  "-Xmx4g" );

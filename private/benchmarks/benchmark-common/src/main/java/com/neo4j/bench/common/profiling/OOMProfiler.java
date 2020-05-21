@@ -6,15 +6,17 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.ImmutableSet;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
-import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.model.profiling.RecordingType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,6 +33,8 @@ import static java.lang.String.format;
 
 public class OOMProfiler implements ExternalProfiler
 {
+    private static final Logger LOG = LoggerFactory.getLogger( OOMProfiler.class );
+
     @Override
     public List<String> invokeArgs(
             ForkDirectory forkDirectory,
@@ -115,7 +119,7 @@ public class OOMProfiler implements ExternalProfiler
             }
             else if ( allHeapDumps.size() == 0 )
             {
-                System.out.println( "no heap dump recorded" );
+                LOG.debug( "no heap dump recorded" );
             }
             else
             {
@@ -133,7 +137,7 @@ public class OOMProfiler implements ExternalProfiler
         Path oomDirectory = getOOMDirectory( forkDirectory );
         try
         {
-            System.out.println( format( "creating OOM directory at %s", oomDirectory ) );
+            LOG.debug( format( "creating OOM directory at %s", oomDirectory ) );
             Files.createDirectories( oomDirectory );
         }
         catch ( IOException e )

@@ -36,6 +36,8 @@ import com.neo4j.bench.ldbc.importer.Scenario;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +58,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @TestDirectoryExtension
 class IntegrationValidationTest
 {
+    private static final Logger LOG = LoggerFactory.getLogger( IntegrationValidationTest.class );
+
     @Inject
     private TestDirectory temporaryFolder;
 
@@ -358,7 +362,7 @@ class IntegrationValidationTest
                 )
         );
 
-        System.out.println( configuration.toPropertiesString() );
+        LOG.debug( configuration.toPropertiesString() );
 
         LoggingServiceFactory loggingServiceFactory = new Log4jLoggingServiceFactory( false );
         ControlService controlService = new LocalControlService(
@@ -402,7 +406,7 @@ class IntegrationValidationTest
 
         FileUtils.deleteQuietly( validationParameterCreationConfigurationFile );
         validationParameterCreationConfigurationFile.createNewFile();
-        System.out.println( format(
+        LOG.debug( format(
                 "Writing configuration file to: %s",
                 validationParameterCreationConfigurationFile.getAbsolutePath()
         ) );

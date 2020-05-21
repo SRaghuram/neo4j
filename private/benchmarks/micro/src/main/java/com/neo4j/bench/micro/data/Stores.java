@@ -19,6 +19,8 @@ import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -54,6 +56,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAM
 
 public class Stores
 {
+    private static final Logger LOG = LoggerFactory.getLogger( Stores.class );
+
     private static final String DB_DIR_NAME = "graph.db";
     private static final String CONFIG_FILENAME = "data_gen_config.json";
     private static final String TEMP_STORE_COPY_MARKER_FILENAME = "this_is_a_temporary_store.tmp";
@@ -127,7 +131,7 @@ public class Stores
 
             if ( config.isReusable() )
             {
-                System.out.println( "Reusing store...\n" +
+                LOG.debug( "Reusing store...\n" +
                                     "  > Benchmark group: " + group.name() + "\n" +
                                     "  > Benchmark:       " + benchmark.name() + "\n" +
                                     "  > Store:           " + topLevelDir.toAbsolutePath() + "\n" +
@@ -158,15 +162,14 @@ public class Stores
         Path topLevelStoreDir = randomTopLevelStoreDir();
         tryMkDir( topLevelStoreDir );
 
-        System.out.println( "Generating store in: " + topLevelStoreDir.toAbsolutePath() );
-        System.out.println( config );
+        LOG.debug( "Generating store in: " + topLevelStoreDir.toAbsolutePath() );
+        LOG.debug( config.toString() );
 
         // will create an empty database directory under top level
         new EnterpriseDatabaseManagementServiceBuilder( topLevelStoreDir )
                 .setConfigRaw( config.neo4jConfig().toMap() )
                 .build()
                 .shutdown();
-
         try
         {
             new DataGenerator( config ).generate( Neo4jStore.createFrom( topLevelStoreDir ), neo4jConfigFile );
@@ -178,7 +181,7 @@ public class Stores
         {
             try
             {
-                System.out.println( "Deleting failed store: " + topLevelStoreDir.toFile().getAbsolutePath() );
+                LOG.debug( "Deleting failed store: " + topLevelStoreDir.toFile().getAbsolutePath() );
                 FileUtils.deleteDirectory( topLevelStoreDir );
             }
             catch ( IOException ioe )
@@ -189,11 +192,11 @@ public class Stores
         }
         StoreAndConfig storeAndConfig = new StoreAndConfig( topLevelStoreDir, neo4jConfigFile );
 
-        System.out.println( "Executing store augmentation step..." );
+        LOG.debug( "Executing store augmentation step..." );
         Instant augmentStart = Instant.now();
         augmenterizer.augment( threads, storeAndConfig );
         Duration augmentDuration = Duration.between( augmentStart, Instant.now() );
-        System.out.println( "Store augmentation step took: " + durationToString( augmentDuration ) );
+        LOG.debug( "Store augmentation step took: " + durationToString( augmentDuration ) );
 
         config.serialize( topLevelStoreDir.resolve( CONFIG_FILENAME ) );
         return storeAndConfig;
@@ -204,13 +207,13 @@ public class Stores
             Benchmark benchmark,
             StoreAndConfig storeAndConfig )
     {
-        System.out.println( "Reusing copy of store...\n" +
+        LOG.debug( "Reusing copy of store...\n" +
                             "  > Benchmark group: " + benchmarkGroup.name() + "\n" +
                             "  > Benchmark:       " + benchmark.name() + "\n" +
                             "  > Original store:  " + storeAndConfig.store().topLevelDirectory().toAbsolutePath() + "\n" +
                             "  > Config:          " + storeAndConfig.config().toAbsolutePath() );
         Path newTopLevelDir = getCopyOf( storeAndConfig.store().topLevelDirectory() );
-        System.out.println( "Copied: " + bytesToString( storeAndConfig.store().bytes() ) + "\n" +
+        LOG.debug( "Copied: " + bytesToString( storeAndConfig.store().bytes() ) + "\n" +
                             "  > Store copy:      " + newTopLevelDir.toAbsolutePath() );
         return new StoreAndConfig( newTopLevelDir, storeAndConfig.config() );
     }
@@ -253,7 +256,7 @@ public class Stores
         {
             try
             {
-                System.out.println( "Deleting: " + temporaryStore.toAbsolutePath() );
+                LOG.debug( "Deleting: " + temporaryStore.toAbsolutePath() );
                 FileUtils.deleteDirectory( temporaryStore );
             }
             catch ( IOException e )

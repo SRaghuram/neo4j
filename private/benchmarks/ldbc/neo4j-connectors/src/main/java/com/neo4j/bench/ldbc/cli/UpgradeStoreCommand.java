@@ -17,6 +17,8 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcIndexer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,19 +42,21 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
         description = "Used to simplify the task of upgrading stores to new version/store format" )
 public class UpgradeStoreCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( UpgradeStoreCommand.class );
+
     public static final String CMD_ORIGINAL_DB = "--original-db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_ORIGINAL_DB},
-            description = "Neo4j database that needs to be upgraded. E.g., db_sf001_p006_regular_utc_36ce/graph.db/",
-            title = "Original Neo4j DB " )
+             name = {CMD_ORIGINAL_DB},
+             description = "Neo4j database that needs to be upgraded. E.g., db_sf001_p006_regular_utc_36ce/graph.db/",
+             title = "Original Neo4j DB " )
     @Required
     private File originalDbDir;
 
     public static final String CMD_UPGRADED_DB = "--upgraded-db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_UPGRADED_DB},
-            description = "Neo4j database to copy into working directory. E.g., db_sf001_p006_regular_utc_40ce/graph.db/",
-            title = "Upgraded Neo4j database" )
+             name = {CMD_UPGRADED_DB},
+             description = "Neo4j database to copy into working directory. E.g., db_sf001_p006_regular_utc_40ce/graph.db/",
+             title = "Upgraded Neo4j database" )
     @Required
     private File upgradedDbDir;
 
@@ -75,7 +79,7 @@ public class UpgradeStoreCommand implements Runnable
     {
         String recordFormat = recordFormatOrFail( neo4jConfigFile );
 
-        System.out.println( "Store upgrade..." );
+        LOG.debug( "Store upgrade..." );
         Store originalStore = AutoDetectStore.createFrom( originalDbDir.toPath() );
         originalStore.assertDirectoryIsNeoStore();
         Store upgradedStore = originalStore.makeCopyAt( upgradedDbDir.toPath() );
@@ -89,13 +93,13 @@ public class UpgradeStoreCommand implements Runnable
         {
             try
             {
-                System.out.println( "Starting store and recreating Indexes..." );
+                LOG.debug( "Starting store and recreating Indexes..." );
                 Neo4jSchema neo4jSchema = discoverSchema( upgradedStore.topLevelDirectory().toFile(), neo4jConfigFile, null );
                 DatabaseManagementService managementService = Neo4jDb.newDb( upgradedStore.topLevelDirectory().toFile(), neo4jConfigFile );
                 GraphDatabaseService db = managementService.database( upgradedStore.graphDbDirectory().getFileName().toString() );
                 LdbcIndexer ldbcIndexer = new LdbcIndexer( neo4jSchema, true, false, true );
                 ldbcIndexer.createTransactional( db );
-                System.out.println( "Shutting down store..." );
+                LOG.debug( "Shutting down store..." );
                 managementService.shutdown();
             }
             catch ( DbException e )
@@ -105,12 +109,12 @@ public class UpgradeStoreCommand implements Runnable
         }
         else
         {
-            System.out.println( "Starting store..." );
+            LOG.debug( "Starting store..." );
             DatabaseManagementService managementService = Neo4jDb.newDb( upgradedStore.topLevelDirectory().toFile(), neo4jConfigFile );
-            System.out.println( "Shutting down store..." );
+            LOG.debug( "Shutting down store..." );
             managementService.shutdown();
         }
-        System.out.println( "Store upgrade complete" );
+        LOG.debug( "Store upgrade complete" );
     }
 
     private static String recordFormatOrFail( File neo4jConfigFile )

@@ -8,6 +8,8 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -33,6 +35,8 @@ import static java.lang.Math.round;
 @TestDirectoryExtension
 public class SpatialBitmapIT
 {
+    private static final Logger LOG = LoggerFactory.getLogger( SpatialBitmapIT.class );
+
     @Inject
     public TestDirectory temporaryFolder;
 
@@ -98,7 +102,7 @@ public class SpatialBitmapIT
         }
         while ( !fun.wrapped() );
         Path path = temporaryFolder.absolutePath().toPath().resolve( filename );
-        System.out.println( "Writing image to: " + path.toFile().getAbsolutePath() );
+        LOG.debug( "Writing image to: " + path.toFile().getAbsolutePath() );
         spatialBitmap.writeTo( path );
     }
 }

@@ -13,6 +13,8 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,6 +29,9 @@ import static java.util.stream.Collectors.toSet;
 
 abstract class SecondaryRecordingCreator
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( SecondaryRecordingCreator.class );
+
     static final SecondaryRecordingCreator NONE = new None();
     private static final String FLAME_GRAPH_DIR = "FLAMEGRAPH_DIR";
     private static final String JFR_FLAMEGRAPH_DIR = "JFR_FLAMEGRAPH";
@@ -133,7 +138,7 @@ abstract class SecondaryRecordingCreator
             }
             catch ( Exception e )
             {
-                System.out.println( format( "Unable to collapse stacks for memory allocation from JFR recording %s", jfrRecording ) );
+                LOG.debug( format( "Unable to collapse stacks for memory allocation from JFR recording %s", jfrRecording ) );
             }
         }
     }

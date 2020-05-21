@@ -95,6 +95,8 @@ import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate5Embe
 import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate6EmbeddedCypher;
 import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate7EmbeddedCypher;
 import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate8EmbeddedCypher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.List;
@@ -107,6 +109,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
 {
+    private static final Logger LOG = LoggerFactory.getLogger( SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest.class );
 
     private <OPERATION_RESULT, OPERATION extends Operation<OPERATION_RESULT>> OPERATION_RESULT executeQuery(
             OPERATION operation,
@@ -114,8 +117,8 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
             Neo4jConnectionState connection ) throws DbException
     {
         // TODO uncomment to print query
-        System.out.println( operation.toString() );
-        System.out.println( query.getClass().getSimpleName() + "\n" );
+        LOG.debug( operation.toString() );
+        LOG.debug( query.getClass().getSimpleName() + "\n" );
         OPERATION_RESULT results;
         try ( Transaction tx = connection.beginTx() )
         {
@@ -139,8 +142,8 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
             Neo4jConnectionState connection ) throws DbException
     {
         // TODO uncomment to print query
-        System.out.println( operation.toString() );
-        System.out.println( query.getClass().getSimpleName() + "\n" );
+        LOG.debug( operation.toString() );
+        LOG.debug( query.getClass().getSimpleName() + "\n" );
         try ( Transaction tx = connection.beginTx() )
         {
             query.execute( connection, operation );

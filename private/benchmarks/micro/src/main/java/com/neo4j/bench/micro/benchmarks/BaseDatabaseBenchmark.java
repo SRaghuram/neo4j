@@ -26,6 +26,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.Blackhole;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.Iterator;
@@ -60,6 +62,8 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 @State( Scope.Benchmark )
 public abstract class BaseDatabaseBenchmark extends BaseBenchmark
 {
+    private static final Logger LOG = LoggerFactory.getLogger( BaseDatabaseBenchmark.class );
+
     @Param( {} )
     public String baseNeo4jConfig;
 
@@ -100,7 +104,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
                                              .mergeWith( baseBenchmarkGeneratorConfig.neo4jConfig() );
 
         Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
-        System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
+        LOG.debug( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
 
         Augmenterizer augmenterizer = augmentDataGeneration();
@@ -128,7 +132,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
         }
         else
         {
-            System.out.println( "Database will not be started!" );
+            LOG.debug( "Database will not be started!" );
         }
     }
 

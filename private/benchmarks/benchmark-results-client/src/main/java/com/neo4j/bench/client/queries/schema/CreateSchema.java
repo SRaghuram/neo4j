@@ -7,6 +7,8 @@ package com.neo4j.bench.client.queries.schema;
 
 import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.common.util.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
@@ -15,6 +17,9 @@ import org.neo4j.driver.Session;
 
 public class CreateSchema implements Query<Void>
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( CreateSchema.class );
+
     private static final String CREATE_SCHEMA = Resources.fileToString( "/queries/schema/create.cypher" );
 
     @Override
@@ -24,7 +29,7 @@ public class CreateSchema implements Query<Void>
         {
             if ( !cypher.isEmpty() && !cypher.contains( "//" ) )
             {
-                System.out.println( cypher );
+                LOG.debug( cypher );
                 try ( Session session = driver.session() )
                 {
                     session.run( cypher );

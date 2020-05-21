@@ -6,6 +6,8 @@
 package com.neo4j.bench.common.process;
 
 import com.neo4j.bench.common.util.Jvm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -22,6 +24,8 @@ import static java.util.stream.Collectors.toList;
 
 public abstract class PidStrategy
 {
+    private static final Logger LOG = LoggerFactory.getLogger( PidStrategy.class );
+
     public PidStrategy tryFindFor( Jvm jvm, Instant start, Duration timeout, String processName )
     {
         try
@@ -50,9 +54,9 @@ public abstract class PidStrategy
         String output = inputStreamToString( pidFinderProcess.getInputStream() );
         if ( resultCode != 0 )
         {
-            System.out.println( "Bad things happened when invoking '" + this.getClass() + "'\n" +
-                                "Code   : " + resultCode + "\n" +
-                                "Output : " + output );
+            LOG.debug( "Bad things happened when invoking '" + this.getClass() + "'\n" +
+                       "Code   : " + resultCode + "\n" +
+                       "Output : " + output );
         }
 
         return fromProcessOutput( output, processName );

@@ -7,8 +7,6 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.model.options.Edition;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
@@ -17,6 +15,10 @@ import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -33,6 +35,9 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( DatabaseLauncher.class );
+
     /**
      * Only use profilers that are both not-external.
      * Some profilers implement both internal & external interfaces, those are not safe to use when the client is not in a separate fork.
@@ -60,7 +65,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                         "Profilers that depend on 'JVM Args' and/or 'Process Invoke Args' might not work in non-forking mode\n" +
                                         "The follow profilers will not be used on the client (load generating) process: " + externalProfilers + "\n" +
                                         "-------------------------------------------------------------------------------------------------\n";
-                System.out.println( warningMessage );
+                LOG.debug( warningMessage );
             }
             return nonExternalProfilerTypes;
         }
@@ -197,7 +202,6 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                 // do nothing
             }
         }
-
     }
 
     public static class ServerLauncher extends DatabaseLauncher<ServerDatabase>
@@ -270,5 +274,4 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                     .set( "-Xms2g" );
         }
     }
-
 }

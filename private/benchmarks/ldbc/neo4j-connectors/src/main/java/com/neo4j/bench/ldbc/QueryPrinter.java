@@ -11,6 +11,8 @@ import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveCypherQueries;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -22,6 +24,8 @@ import static java.lang.String.format;
 
 public class QueryPrinter
 {
+    private static final Logger LOG = LoggerFactory.getLogger( QueryPrinter.class );
+
     public static void main( String[] args ) throws IOException, DbException
     {
         if ( args.length != 1 )
@@ -49,7 +53,7 @@ public class QueryPrinter
             FileUtils.forceDelete( file );
             file.createNewFile();
         }
-        System.out.println( "Writing query strings to: " + file.getAbsolutePath() );
+        LOG.debug( "Writing query strings to: " + file.getAbsolutePath() );
         BufferedWriter writer = new BufferedWriter( new FileWriter( file ) );
         writer.write( "QUERY 1" );
         writer.newLine();

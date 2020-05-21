@@ -20,6 +20,8 @@ import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,6 +47,7 @@ import static java.util.stream.Collectors.toSet;
 
 public class ProfilerRunner
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ProfilerRunner.class );
     private static final Duration CHECK_ALIVE_TIMEOUT = Duration.of( 5, MINUTES );
 
     public static void profile(
@@ -71,40 +74,40 @@ public class ProfilerRunner
             waitForWarmupToBegin( jvm, start, forkDirectory, processName );
             internalProfilers.forEach( internalProfiler ->
                                        {
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupBegin..." );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onWarmupBegin..." );
                                            internalProfiler.onWarmupBegin( jvm,
                                                                            forkDirectory,
                                                                            pid,
                                                                            benchmarkGroup,
                                                                            benchmark,
                                                                            Parameters.NONE );
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupBegin - DONE" );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onWarmupBegin - DONE" );
                                        } );
 
             waitForWarmupToComplete( jvm, start, forkDirectory, processName );
             internalProfilers.forEach( internalProfiler ->
                                        {
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupFinished..." );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onWarmupFinished..." );
                                            internalProfiler.onWarmupFinished( jvm,
                                                                               forkDirectory,
                                                                               pid,
                                                                               benchmarkGroup,
                                                                               benchmark,
                                                                               Parameters.NONE );
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onWarmupFinished - DONE" );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onWarmupFinished - DONE" );
                                        } );
 
             waitForMeasurementToBegin( jvm, start, forkDirectory, processName );
             internalProfilers.forEach( internalProfiler ->
                                        {
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementBegin..." );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onMeasurementBegin..." );
                                            internalProfiler.onMeasurementBegin( jvm,
                                                                                 forkDirectory,
                                                                                 pid,
                                                                                 benchmarkGroup,
                                                                                 benchmark,
                                                                                 Parameters.NONE );
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementBegin - DONE" );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onMeasurementBegin - DONE" );
                                        } );
 
             waitForMeasurementToComplete( jvm, start, forkDirectory, processName );
@@ -112,14 +115,14 @@ public class ProfilerRunner
             assertProcessAlive( process );
             internalProfilers.forEach( internalProfiler ->
                                        {
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementFinished..." );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onMeasurementFinished..." );
                                            internalProfiler.onMeasurementFinished( jvm,
                                                                                    forkDirectory,
                                                                                    pid,
                                                                                    benchmarkGroup,
                                                                                    benchmark,
                                                                                    Parameters.NONE );
-                                           System.out.println( internalProfiler.getClass().getSimpleName() + ".onMeasurementFinished - DONE" );
+                                           LOG.debug( internalProfiler.getClass().getSimpleName() + ".onMeasurementFinished - DONE" );
                                        } );
             // Race condition here
             assertProcessAlive( process );
@@ -149,9 +152,9 @@ public class ProfilerRunner
     {
         externalProfilers.forEach( externalProfiler ->
                                    {
-                                       System.out.println( "Before Process (START):  " + externalProfiler.description() );
+                                       LOG.debug( "Before Process (START):  " + externalProfiler.description() );
                                        externalProfiler.beforeProcess( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
-                                       System.out.println( "Before Process (FINISH): " + externalProfiler.description() );
+                                       LOG.debug( "Before Process (FINISH): " + externalProfiler.description() );
                                    } );
     }
 
@@ -163,9 +166,9 @@ public class ProfilerRunner
     {
         externalProfilers.forEach( externalProfiler ->
                                    {
-                                       System.out.println( "After Process (START):  " + externalProfiler.description() );
+                                       LOG.debug( "After Process (START):  " + externalProfiler.description() );
                                        externalProfiler.afterProcess( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
-                                       System.out.println( "After Process (FINISH): " + externalProfiler.description() );
+                                       LOG.debug( "After Process (FINISH): " + externalProfiler.description() );
                                    } );
 
         for ( ExternalProfiler externalProfiler : externalProfilers )
@@ -253,7 +256,7 @@ public class ProfilerRunner
             start = checkTimeoutAndMaybeReset( jvm, start, processName );
             phase = ResultsDirectory.phase( resultsDir );
         }
-        System.out.println( soFar( start ) + " - Fork status: " + phase );
+        LOG.debug( soFar( start ) + " - Fork status: " + phase );
     }
 
     private static void assertProcessAlive( Process process )
@@ -293,7 +296,7 @@ public class ProfilerRunner
             boolean processIsAlive = jpsPid.pid().isPresent();
             if ( processIsAlive )
             {
-                System.out.println( "Process `" + processName + "` is still alive" );
+                LOG.debug( "Process `" + processName + "` is still alive" );
                 return now();
             }
             else

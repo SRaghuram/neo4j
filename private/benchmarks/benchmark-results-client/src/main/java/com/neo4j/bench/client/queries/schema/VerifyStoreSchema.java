@@ -8,6 +8,9 @@ package com.neo4j.bench.client.queries.schema;
 import com.neo4j.bench.client.queries.Query;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -23,6 +26,9 @@ import static org.neo4j.driver.AccessMode.READ;
 
 public class VerifyStoreSchema implements Query<Void>
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( VerifyStoreSchema.class );
+
     public VerifyStoreSchema()
     {
     }
@@ -30,11 +36,11 @@ public class VerifyStoreSchema implements Query<Void>
     @Override
     public Void execute( Driver driver )
     {
-        System.out.println( "Verifying store schema..." );
+        LOG.debug( "Verifying store schema..." );
         Instant start = Instant.now();
         verifyStoreSchema( driver );
         Duration duration = Duration.between( start, Instant.now() );
-        System.out.println( format( "Verified in %s", BenchmarkUtil.durationToString( duration ) ) );
+        LOG.debug( format( "Verified in %s", BenchmarkUtil.durationToString( duration ) ) );
         return null;
     }
 

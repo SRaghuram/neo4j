@@ -15,6 +15,8 @@ import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
@@ -42,6 +44,8 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 
 public class EmbeddedDatabase implements Database
 {
+    private static final Logger LOG = LoggerFactory.getLogger( EmbeddedDatabase.class );
+
     private final Store store;
     private final DatabaseManagementService managementService;
     private final GraphDatabaseService db;
@@ -55,7 +59,7 @@ public class EmbeddedDatabase implements Database
 
     public static void recreateSchema( Store store, Edition edition, Neo4jConfig neo4jConfig, Schema schema )
     {
-        System.out.println( "Dropping schema..." );
+        LOG.debug( "Dropping schema..." );
         try ( EmbeddedDatabase db = EmbeddedDatabase.startWith( store, edition, neo4jConfig ) )
         {
             db.dropSchema();
@@ -68,15 +72,15 @@ public class EmbeddedDatabase implements Database
             }
         }
 
-        System.out.println( "Deleting index directory and transaction logs..." );
+        LOG.debug( "Deleting index directory and transaction logs..." );
         store.removeIndexDir();
         store.removeTxLogs();
 
-        System.out.println( "Recreating schema..." );
+        LOG.debug( "Recreating schema..." );
         try ( EmbeddedDatabase db = EmbeddedDatabase.startWith( store, edition, neo4jConfig ) )
         {
             db.createSchema( schema );
-            System.out.println( "Verifying recreated schema..." );
+            LOG.debug( "Verifying recreated schema..." );
             EmbeddedDatabase.verifySchema( db, schema );
         }
     }
@@ -102,6 +106,7 @@ public class EmbeddedDatabase implements Database
         //if the output contains superseded we know that there is a new store format that we should upgrade to.
         return output.contains( "superseded" );
     }
+
     public static void verifySchema( Store store, Edition edition, Path neo4jConfigFile, Schema expectedSchema )
     {
         Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
@@ -225,7 +230,8 @@ public class EmbeddedDatabase implements Database
     private int execute( GraphDatabaseService db, String query, Map<String,Object> parameters )
     {
         resultVisitor.reset();
-        return db.executeTransactionally( query, parameters, result -> {
+        return db.executeTransactionally( query, parameters, result ->
+        {
             result.accept( resultVisitor );
             return resultVisitor.count();
         } );
@@ -244,20 +250,20 @@ public class EmbeddedDatabase implements Database
             List<Schema.SchemaEntry> entries = new ArrayList<>();
 
             schema
-              .getConstraints()
-              .forEach( constraint -> entries.add( constraintEntryFor( constraint ) ) );
+                    .getConstraints()
+                    .forEach( constraint -> entries.add( constraintEntryFor( constraint ) ) );
             schema
-              .getIndexes()
-              .forEach( index ->
-                        {
-                            for ( Label label : index.getLabels() )
-                            {
-                                if ( !index.isConstraintIndex() )
-                                {
-                                    entries.add( new Schema.IndexSchemaEntry( label, Lists.newArrayList( index.getPropertyKeys() ) ) );
-                                }
-                            }
-                        } );
+                    .getIndexes()
+                    .forEach( index ->
+                              {
+                                  for ( Label label : index.getLabels() )
+                                  {
+                                      if ( !index.isConstraintIndex() )
+                                      {
+                                          entries.add( new Schema.IndexSchemaEntry( label, Lists.newArrayList( index.getPropertyKeys() ) ) );
+                                      }
+                                  }
+                              } );
 
             return new Schema( entries );
         }

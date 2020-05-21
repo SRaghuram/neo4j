@@ -15,9 +15,11 @@ import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
-import org.apache.commons.lang3.StringUtils;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,6 +61,9 @@ import static java.lang.String.format;
 
 public abstract class BaseRunWorkloadCommand implements Runnable
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( BaseRunWorkloadCommand.class );
+
     @Option( type = OptionType.COMMAND,
              name = {CMD_WORKLOAD},
              description = "Name of workload to run",
@@ -254,7 +259,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         }
         catch ( SecurityException | IOException e )
         {
-            System.out.println( format( "failed to initialize java.util.logging\n %s", e ) );
+            LOG.debug( format( "failed to initialize java.util.logging\n %s", e ) );
         }
 
         Deployment deployment = Deployment.parse( deploymentMode );

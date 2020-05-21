@@ -26,12 +26,17 @@ import com.neo4j.bench.macro.execution.process.ForkRunner;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Main
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( Main.class );
+
     public static void main( String[] args )
     {
         CliBuilder<Runnable> builder = Cli.<Runnable>builder( "bench" )
@@ -86,7 +91,7 @@ public class Main
                               results.rowMetrics(),
                               options.neo4jConfig() );
 
-            System.out.println( verboseMetricsPrinter.toPrettyString( queryResults ) );
+            LOG.debug( verboseMetricsPrinter.toPrettyString( queryResults ) );
         }
     }
 }

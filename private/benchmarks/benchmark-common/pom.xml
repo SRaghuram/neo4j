@@ -59,6 +59,10 @@
             <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.hamcrest</groupId>
@@ -109,6 +113,12 @@
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.25</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -134,7 +144,7 @@
     <profiles>
         <profile>
             <properties>
-				<benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+                <benchmarks.deploy.skip>false</benchmarks.deploy.skip>
             </properties>
             <id>benchmarksDeploy</id>
         </profile>

@@ -12,6 +12,8 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
@@ -26,11 +28,13 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
         description = "Reports which LDBC schema variant is in the store" )
 public class InspectCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( InspectCommand.class );
+
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Target Neo4j database directory",
-            title = "DB Directory" )
+             name = {CMD_DB},
+             description = "Target Neo4j database directory",
+             title = "DB Directory" )
     @Required
     private File storeDir;
 
@@ -44,22 +48,22 @@ public class InspectCommand implements Runnable
     @Override
     public void run()
     {
-        System.out.println( format( "Target Neo4j Directory             : %s",
-                                    (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
-        System.out.println( format( "Database Configuration File        : %s",
-                                    (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
+        LOG.debug( format( "Target Neo4j Directory             : %s",
+                           (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
+        LOG.debug( format( "Database Configuration File        : %s",
+                           (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
 
-        System.out.println( "*** Neo4j DB Properties ***" );
-        System.out.println( Neo4jDb.configToString( dbConfigurationFile ) );
-        System.out.println( "************************" );
+        LOG.debug( "*** Neo4j DB Properties ***" );
+        LOG.debug( Neo4jDb.configToString( dbConfigurationFile ) );
+        LOG.debug( "************************" );
 
         try
         {
-            System.out.println( "Starting database..." );
+            LOG.debug( "Starting database..." );
             DatabaseManagementService managementService = Neo4jDb.newDb( storeDir, dbConfigurationFile );
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
-            System.out.println( metadataProxy.toString() );
+            LOG.debug( metadataProxy.toString() );
             managementService.shutdown();
         }
         catch ( Exception e )

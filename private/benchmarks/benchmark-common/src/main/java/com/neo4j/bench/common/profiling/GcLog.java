@@ -12,6 +12,8 @@ import com.tagtraum.perf.gcviewer.model.AbstractGCEvent;
 import com.tagtraum.perf.gcviewer.model.GCModel;
 import com.tagtraum.perf.gcviewer.model.GCResource;
 import com.tagtraum.perf.gcviewer.model.GcResourceFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
@@ -39,6 +41,7 @@ import static com.neo4j.bench.common.profiling.GcLog.EventType.GC_PAUSE;
 
 public class GcLog
 {
+    private static final Logger LOG = LoggerFactory.getLogger( GcLog.class );
 
     enum EventType
     {
@@ -79,11 +82,11 @@ public class GcLog
     private static void calculateTotals( GcLog gcLog )
     {
         Arrays.stream( EventType.values() )
-                .forEach( eventType -> gcLog.counts.put( eventType, gcLog.calculateCountFor( eventType ) ) );
+              .forEach( eventType -> gcLog.counts.put( eventType, gcLog.calculateCountFor( eventType ) ) );
         Arrays.stream( EventType.values() ).forEach(
                 eventType -> gcLog.totalMillis.put( eventType, gcLog.calculateTotalFor( eventType ).toMillis() ) );
         Arrays.stream( EventType.values() )
-                .forEach( eventType -> gcLog.percentages.put( eventType, gcLog.calculatePercentageFor( eventType ) ) );
+              .forEach( eventType -> gcLog.percentages.put( eventType, gcLog.calculatePercentageFor( eventType ) ) );
     }
 
     private static GCModel readGcModel( Path gcLogFile ) throws IOException
@@ -137,9 +140,9 @@ public class GcLog
     private Duration calculateTotalFor( EventType eventType )
     {
         return events.stream()
-                .filter( event -> event.eventType.equals( eventType ) )
-                .map( GcLogEvent::value )
-                .reduce( Duration.ZERO, Duration::plus );
+                     .filter( event -> event.eventType.equals( eventType ) )
+                     .map( GcLogEvent::value )
+                     .reduce( Duration.ZERO, Duration::plus );
     }
 
     private long calculateCountFor( EventType eventType )
@@ -150,13 +153,13 @@ public class GcLog
     private double calculatePercentageFor( EventType eventType )
     {
         Duration total = Arrays.stream( EventType.values() )
-                .map( this::calculateTotalFor )
-                .reduce( Duration.ZERO, Duration::plus );
+                               .map( this::calculateTotalFor )
+                               .reduce( Duration.ZERO, Duration::plus );
         Duration totalForEvent = calculateTotalFor( eventType );
         return (double) totalForEvent.toNanos() / total.toNanos();
     }
 
-    private void parse( AbstractGCEvent<?> gcEvent, Map<EventType, Duration> cumulative )
+    private void parse( AbstractGCEvent<?> gcEvent, Map<EventType,Duration> cumulative )
     {
         if ( isApplicationStopped( gcEvent ) )
         {
@@ -179,7 +182,7 @@ public class GcLog
             // ignore unparsable GC event,
             // this may happend when
             // IO operations (logging) interleave
-            System.out.println( "Failed to parse event: " + gcEvent.toString() );
+            LOG.debug( "Failed to parse event: " + gcEvent.toString() );
             unparsableEvents++;
             return;
         }
@@ -209,10 +212,10 @@ public class GcLog
         sb.append( "=========================================\n" );
         sb.append( "Event counts:\n" );
         Arrays.stream( EventType.values() )
-                .forEach( eventType -> sb.append( "\t* " + eventType + " = " + countFor( eventType ) + "\n" ) );
+              .forEach( eventType -> sb.append( "\t* " + eventType + " = " + countFor( eventType ) + "\n" ) );
         sb.append( "Event totals:\n" );
         Arrays.stream( EventType.values() )
-                .forEach( eventType -> sb.append( "\t* " + eventType + " = " + totalFor( eventType ) + "\n" ) );
+              .forEach( eventType -> sb.append( "\t* " + eventType + " = " + totalFor( eventType ) + "\n" ) );
         sb.append( "Event percentages:\n" );
         DecimalFormat format = new DecimalFormat( "##0.00" );
         Arrays.stream( EventType.values() ).forEach( eventType -> sb
@@ -264,7 +267,7 @@ public class GcLog
         }
 
         GcLogEvent( LocalDateTime wallClockTime, Duration processTime, EventType eventType, Duration value,
-                Duration cumulativeValue )
+                    Duration cumulativeValue )
         {
             this.wallClockTimeMilli = Date.from( wallClockTime.atZone( UTC ).toInstant() ).getTime();
             this.processTimeNano = processTime.toNanos();

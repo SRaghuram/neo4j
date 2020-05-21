@@ -9,6 +9,8 @@ import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -42,6 +44,8 @@ import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
 {
+    private static final Logger LOG = LoggerFactory.getLogger( AbstractGBPTreeBenchmark.class );
+
     private static final String INDEX_FILE = "gbptree";
     private static final long SEED = 42L;
 
@@ -116,7 +120,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
             @Override
             public String augmentKey( FullBenchmarkName benchmarkName )
             {
-                System.out.println( "KEY: " + benchmarkName.name() );
+                LOG.debug( "KEY: " + benchmarkName.name() );
                 return benchmarkName.name();
             }
         };

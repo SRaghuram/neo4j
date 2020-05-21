@@ -20,6 +20,8 @@ import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.options.Edition;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +44,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-import static java.nio.file.Files.createTempDirectory;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -52,6 +53,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestDirectoryExtension
 class PlannerDescriptionIT
 {
+    private static final Logger LOG = LoggerFactory.getLogger( PlannerDescriptionIT.class );
+
     @Inject
     private TestDirectory temporaryFolder;
 
@@ -62,11 +65,11 @@ class PlannerDescriptionIT
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
-                System.out.println( "Verifying plan extraction on workload: " + workload.name() );
+                LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
                 Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
                 Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
                 try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload,
-                                                                                createTempDirectory( temporaryFolder.absolutePath().toPath(),
+                                                                                Files.createTempDirectory( temporaryFolder.absolutePath().toPath(),
                                                                                                      "store" ), /* store */
                                                                                 neo4jConfigFile ) )
                 {

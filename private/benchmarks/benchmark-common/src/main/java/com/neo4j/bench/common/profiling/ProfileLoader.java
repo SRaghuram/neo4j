@@ -10,6 +10,8 @@ import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
 import com.neo4j.bench.model.profiling.RecordingType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -29,6 +31,8 @@ import static java.lang.String.format;
 
 public class ProfileLoader
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ProfileLoader.class );
+
     public static Map<BenchmarkGroupBenchmark,ProfilerRecordings> searchProfiles(
             Path profilesDir,
             String s3Prefix,
@@ -98,7 +102,7 @@ public class ProfileLoader
 
         if ( errors.isEmpty() || ignoreUnrecognizedFiles )
         {
-            errors.forEach( System.out::println );
+            errors.forEach( LOG::debug );
             return benchmarkProfiles;
         }
         else

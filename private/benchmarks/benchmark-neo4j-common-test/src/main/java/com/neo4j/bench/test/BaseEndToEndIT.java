@@ -26,6 +26,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -74,6 +76,7 @@ import static org.neo4j.driver.AccessMode.READ;
 
 public abstract class BaseEndToEndIT
 {
+    private static final Logger LOG = LoggerFactory.getLogger( BaseEndToEndIT.class );
 
     public interface AssertOnRecordings
     {
@@ -239,7 +242,7 @@ public abstract class BaseEndToEndIT
             @Override
             public void handle( String line )
             {
-                System.out.println( format( "=> %s", line ) );
+                LOG.debug( format( "=> %s", line ) );
             }
         } );
         ExecutorService tailerExecutor = Executors.newSingleThreadExecutor();
@@ -269,7 +272,7 @@ public abstract class BaseEndToEndIT
             }
             catch ( Exception e )
             {
-                System.out.println( format( "cannot stop logs tailer\n%s", e ) );
+                LOG.debug( format( "cannot stop logs tailer\n%s", e ) );
             }
         }
     }
@@ -330,7 +333,7 @@ public abstract class BaseEndToEndIT
         try ( Stream<Path> files = Files.list( recordingsBasePath ) )
         {
             List<Path> recordingDirs = files
-                    .peek( file -> System.out.println( file.toAbsolutePath() ) )
+                    .peek( file -> LOG.debug( file.toAbsolutePath().toString() ) )
                     .filter( Files::isDirectory )
                     .collect( toList() );
 
@@ -349,10 +352,10 @@ public abstract class BaseEndToEndIT
                 assertThat( recordingsBasePath.resolve( testRunId + ".tar.gz" ).toFile(), anExistingFile() );
 
                 // Print out all files, to assist with debugging
-                System.out.println( format( "Files in '%s':", recordingDir.toAbsolutePath() ) );
+                LOG.debug( format( "Files in '%s':", recordingDir.toAbsolutePath() ) );
                 try ( Stream<Path> recordingFiles = Files.list( recordingDir ) )
                 {
-                    recordingFiles.forEach( file -> System.out.println( file.toAbsolutePath() ) );
+                    recordingFiles.forEach( file -> LOG.debug( file.toAbsolutePath().toString() ) );
                 }
 
                 recordingsAssertion.assertOnRecordings( recordingDir, profilers, resources );

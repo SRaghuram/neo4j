@@ -7,6 +7,8 @@ package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -41,6 +43,7 @@ import static java.lang.String.format;
 
 public class NumberGeneratorTest
 {
+    private static final Logger LOG = LoggerFactory.getLogger( NumberGeneratorTest.class );
     private static final int REPETITIONS = 1_000_000;
     private static final long MAX_TOLERATED_DURATION = TimeUnit.SECONDS.toMillis( 5 );
 
@@ -141,7 +144,7 @@ public class NumberGeneratorTest
         }
         long duration = System.currentTimeMillis() - start;
         int toleratedRepetitions = (int) (0.001 * REPETITIONS);
-        System.out.println( format( "Tolerated Repetitions = %s , Observed Repetitions = %s, Duration = %s (ms)",
+        LOG.debug( format( "Tolerated Repetitions = %s , Observed Repetitions = %s, Duration = %s (ms)",
                                     toleratedRepetitions, repeatedValueCount, duration ) );
         assertThat( "less than 0.01% value repetitions", repeatedValueCount, lessThan( toleratedRepetitions ) );
         assertThat( duration, lessThan( MAX_TOLERATED_DURATION ) );
@@ -165,7 +168,7 @@ public class NumberGeneratorTest
             previous = current;
         }
         long duration = System.currentTimeMillis() - start;
-        System.out.println( format( "Duration = %s (ms)", duration ) );
+        LOG.debug( format( "Duration = %s (ms)", duration ) );
         assertThat( duration, lessThan( MAX_TOLERATED_DURATION ) );
     }
 
@@ -185,7 +188,7 @@ public class NumberGeneratorTest
             assertThat( value1, equalTo( value2 ) );
         }
         long duration = System.currentTimeMillis() - start;
-        System.out.println( format( "Duration = %s (ms)", duration ) );
+        LOG.debug( format( "Duration = %s (ms)", duration ) );
         assertThat( duration, lessThan( MAX_TOLERATED_DURATION ) );
     }
 
@@ -201,7 +204,7 @@ public class NumberGeneratorTest
             int stride = 1 + rng.nextInt( max - 1 );
             int offset = 0;
             boolean sliding = true;
-            System.out.println( format(
+            LOG.debug( format(
                     "Max = %s, Stride = %s, Offset = %s, Sliding = %s",
                     max, stride, offset, sliding ) );
             ValueGeneratorFun<Long> values = stridingLong( stride, max, offset, sliding ).create();
@@ -210,7 +213,7 @@ public class NumberGeneratorTest
             int minIdCount = idCounts.values().stream().mapToInt( value -> value ).min().getAsInt();
             int maxIdCount = idCounts.values().stream().mapToInt( value -> value ).max().getAsInt();
             long actualMax = idCounts.keySet().stream().mapToLong( Long::longValue ).max().getAsLong();
-            System.out.println( format(
+            LOG.debug( format(
                     "Unique IDs = %s, Min ID Count = %s, Max ID Count = %s, Actual Max = %s",
                     uniqueIds, minIdCount, maxIdCount, actualMax ) );
             assertThat( (int) uniqueIds, equalTo( max ) );

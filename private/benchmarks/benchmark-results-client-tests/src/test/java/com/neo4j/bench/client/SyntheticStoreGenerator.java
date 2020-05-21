@@ -34,6 +34,8 @@ import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.options.Edition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
 import java.time.Duration;
@@ -66,6 +68,8 @@ import static java.util.stream.Collectors.toMap;
 
 public class SyntheticStoreGenerator
 {
+    private static final Logger LOG = LoggerFactory.getLogger( SyntheticStoreGenerator.class );
+
     private static final RichRandom RNG = new RichRandom( 42 );
     private static final double TEST_RUN_ANNOTATION_PROBABILITY = 0.5;
     private static final double METRICS_ANNOTATION_PROBABILITY = 0.5;
@@ -427,8 +431,8 @@ public class SyntheticStoreGenerator
                 {
                     long now = System.currentTimeMillis();
                     double opsPerMs = (count - runningCount) / (double) (now - runningClock);
-                    System.out.println( format( "Submitted %s / %s results : %s result/s",
-                                                count, totalTestRunsToCreate, THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
+                    LOG.debug( format( "Submitted %s / %s results : %s result/s",
+                                       count, totalTestRunsToCreate, THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
                     runningClock = now;
                     runningCount = count;
                 }
@@ -438,10 +442,10 @@ public class SyntheticStoreGenerator
         {
             long durationMs = System.currentTimeMillis() - startClock;
             double opsPerMs = generationResult.testRuns() / (double) durationMs;
-            System.out.println( format( "------\nSubmitted: %s results\nDuration: %s\nThroughput: %s result/s\n------",
-                                        generationResult.testRuns(),
-                                        BenchmarkUtil.durationToString( Duration.of( durationMs, ChronoUnit.MILLIS ) ),
-                                        THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
+            LOG.debug( format( "------\nSubmitted: %s results\nDuration: %s\nThroughput: %s result/s\n------",
+                               generationResult.testRuns(),
+                               BenchmarkUtil.durationToString( Duration.of( durationMs, ChronoUnit.MILLIS ) ),
+                               THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
         }
         return generationResult;
     }

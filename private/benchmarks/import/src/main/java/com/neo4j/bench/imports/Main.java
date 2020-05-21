@@ -32,6 +32,8 @@ import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.options.Edition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,6 +61,8 @@ import static java.util.stream.Collectors.joining;
 @Command( name = "import-benchmarks", description = "benchmarks for import performance" )
 public class Main
 {
+    private static final Logger LOG = LoggerFactory.getLogger( Main.class );
+
     private static final String[] sizes = {"100m", "1bn", "10bn", "100bn"};
     private static final String forceBlockBasedSize = "100bn";
     private static final String IMPORT_OWNER = "neo-technology";
@@ -293,7 +297,7 @@ public class Main
             long time = System.currentTimeMillis() - startTime;
             Metrics runMetrics = new Metrics( TimeUnit.MILLISECONDS, time, time, time, 1, time, time, time, time, time, time, time );
 
-            metrics.add( group, benchmark, runMetrics, null /*no auxiliary metrics*/,  neo4jConfig );
+            metrics.add( group, benchmark, runMetrics, null /*no auxiliary metrics*/, neo4jConfig );
         }
         return exitCode;
     }
@@ -330,7 +334,7 @@ public class Main
                     new TestRunReport( testRun, new BenchmarkConfig(), Sets.newHashSet( neo4j ), neo4jConfig, Environment.current(), metrics, tool, java,
                                        Lists.newArrayList() );
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
-            System.out.println( "Test run reported: " + report );
+            LOG.debug( "Test run reported: " + report );
 
             new QueryRetrier( true ).execute( client, submitTestRun );
         }

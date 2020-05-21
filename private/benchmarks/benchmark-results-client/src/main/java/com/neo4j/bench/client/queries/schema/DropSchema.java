@@ -7,6 +7,8 @@ package com.neo4j.bench.client.queries.schema;
 
 import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.common.util.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
@@ -15,6 +17,9 @@ import org.neo4j.driver.Session;
 
 public class DropSchema implements Query<Void>
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( DropSchema.class );
+
     private static final String DROP_SCHEMA = Resources.fileToString( "/queries/schema/drop.cypher" );
 
     @Override
@@ -24,14 +29,14 @@ public class DropSchema implements Query<Void>
         {
             if ( !cypher.isEmpty() && !cypher.contains( "//" ) )
             {
-                System.out.println( cypher );
+                LOG.debug( cypher );
                 try ( Session session = driver.session() )
                 {
                     session.run( cypher );
                 }
                 catch ( Exception e )
                 {
-                    System.out.println( "Error executing statement: " + cypher + ": " + e.getMessage() );
+                    LOG.debug( "Error executing statement: " + cypher + ": " + e.getMessage() );
                 }
             }
         }

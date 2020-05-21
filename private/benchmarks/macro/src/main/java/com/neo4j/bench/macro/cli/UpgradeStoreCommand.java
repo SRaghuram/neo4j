@@ -18,6 +18,8 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Workload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -31,6 +33,8 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 @Command( name = "upgrade-store", description = "Upgrades a Neo4j store, including rebuilding of indexes." )
 public class UpgradeStoreCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( UpgradeStoreCommand.class );
+
     private static final String CMD_ORIGINAL_DB = "--original-db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_ORIGINAL_DB},
@@ -64,7 +68,7 @@ public class UpgradeStoreCommand implements Runnable
     @Override
     public void run()
     {
-        System.out.println( format( "Upgrading store for workload `%s`\n" +
+        LOG.debug( format( "Upgrading store for workload `%s`\n" +
                                     "In: `%s`\n",
                                     workloadName,
                                     originalDbDir.getAbsolutePath() ) );
@@ -90,11 +94,11 @@ public class UpgradeStoreCommand implements Runnable
                                   .writeToFile( neo4jConfigPath );
             }
 
-            System.out.println( "Checking schema..." );
+            LOG.debug( "Checking schema..." );
             EmbeddedDatabase.verifySchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
-            System.out.println( "Recreating schema..." );
+            LOG.debug( "Recreating schema..." );
             EmbeddedDatabase.recreateSchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
-            System.out.println( "Upgrade complete" );
+            LOG.debug( "Upgrade complete" );
         }
     }
 }

@@ -7,6 +7,7 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.macro.cli.BaseRunWorkloadCommand;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.options.Edition;
@@ -27,6 +28,8 @@ import com.neo4j.bench.macro.Main;
 import com.neo4j.bench.macro.cli.ExportPlanCommand;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -39,6 +42,9 @@ import static java.util.Collections.singletonList;
 
 public class ForkRunner
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( ForkRunner.class );
+
     private static final Neo4jConfig NO_NEO4J_CONFIG = Neo4jConfig.empty();
 
     public static BenchmarkDirectory runForksFor( DatabaseLauncher<?> launcher,
@@ -76,7 +82,7 @@ public class ForkRunner
                                                   doFork,
                                                   jvmArgs,
                                                   resources );
-                System.out.println( profilerFork );
+                LOG.debug( profilerFork.toString() );
                 runFork( query, unit, metricsPrinter, profilerFork );
             }
 
@@ -111,7 +117,7 @@ public class ForkRunner
                                        jvmArgs,
                                        doFork );
                 }
-                System.out.println( measurementFork );
+                LOG.debug( measurementFork.toString() );
                 runFork( query, unit, metricsPrinter, measurementFork );
             }
 
@@ -131,7 +137,7 @@ public class ForkRunner
         Results results = fork.run().convertUnit( unit );
         BenchmarkGroupBenchmarkMetrics justForPrinting = new BenchmarkGroupBenchmarkMetrics();
         justForPrinting.add( query.benchmarkGroup(), query.benchmark(), results.metrics(), results.rowMetrics(), NO_NEO4J_CONFIG );
-        System.out.println( metricsPrinter.toPrettyString( justForPrinting ) );
+        LOG.debug( metricsPrinter.toPrettyString( justForPrinting ) );
     }
 
     private static RunnableFork fork( DatabaseLauncher<?> launcher,

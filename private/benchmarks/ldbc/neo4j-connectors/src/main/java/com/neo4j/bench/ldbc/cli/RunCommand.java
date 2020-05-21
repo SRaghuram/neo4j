@@ -18,14 +18,16 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
-import com.neo4j.bench.common.options.Planner;
-import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.time.Duration;
@@ -48,15 +50,16 @@ import static java.time.Instant.now;
         description = "Executes an LDBC workload against a Neo4j store" )
 public class RunCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( RunCommand.class );
     // ===================================================
     // ================ Tool Configuration ===============
     // ===================================================
 
     public static final String CMD_LDBC_CONFIG = "--ldbc-config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_LDBC_CONFIG},
-            description = "LDBC driver configuration file - see:  neo4j-connectors/src/main/resources/ldbc/",
-            title = "LDBC Config" )
+             name = {CMD_LDBC_CONFIG},
+             description = "LDBC driver configuration file - see:  neo4j-connectors/src/main/resources/ldbc/",
+             title = "LDBC Config" )
     @Required
     private File ldbcConfigFile;
 
@@ -153,24 +156,24 @@ public class RunCommand implements Runnable
     @Override
     public void run()
     {
-        System.out.println( format( "Neo4j Directory             : %s",
-                                    (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
-        System.out.println( format( "Write Queries Directory     : %s",
-                                    (null == writeParams) ? null : writeParams.getAbsolutePath() ) );
-        System.out.println( format( "Read Queries Directory      : %s",
-                                    (null == readParams) ? null : readParams.getAbsolutePath() ) );
-        System.out.println( format( "Results Directory           : %s",
-                                    (null == resultsDir) ? null : resultsDir.getAbsolutePath() ) );
-        System.out.println( format( "Warmup Count                : %s", warmupCount ) );
-        System.out.println( format( "Run Count                   : %s", runCount ) );
-        System.out.println( format( "Neo4j API                   : %s", neo4jApi ) );
-        System.out.println( format( "Cypher Planner              : %s", planner ) );
-        System.out.println( format( "Cypher Runtime              : %s", runtime ) );
-        System.out.println( format( "LDBC Configuration          : %s",
-                                    (null == ldbcConfigFile) ? null : ldbcConfigFile.getAbsolutePath() ) );
-        System.out.println( format( "Neo4j Configuration         : %s",
-                                    (null == neo4jConfig) ? null : neo4jConfig.getAbsolutePath() ) );
-        System.out.println( format( "Read Threads                : %s", readThreads ) );
+        LOG.debug( format( "Neo4j Directory             : %s",
+                           (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
+        LOG.debug( format( "Write Queries Directory     : %s",
+                           (null == writeParams) ? null : writeParams.getAbsolutePath() ) );
+        LOG.debug( format( "Read Queries Directory      : %s",
+                           (null == readParams) ? null : readParams.getAbsolutePath() ) );
+        LOG.debug( format( "Results Directory           : %s",
+                           (null == resultsDir) ? null : resultsDir.getAbsolutePath() ) );
+        LOG.debug( format( "Warmup Count                : %s", warmupCount ) );
+        LOG.debug( format( "Run Count                   : %s", runCount ) );
+        LOG.debug( format( "Neo4j API                   : %s", neo4jApi ) );
+        LOG.debug( format( "Cypher Planner              : %s", planner ) );
+        LOG.debug( format( "Cypher Runtime              : %s", runtime ) );
+        LOG.debug( format( "LDBC Configuration          : %s",
+                           (null == ldbcConfigFile) ? null : ldbcConfigFile.getAbsolutePath() ) );
+        LOG.debug( format( "Neo4j Configuration         : %s",
+                           (null == neo4jConfig) ? null : neo4jConfig.getAbsolutePath() ) );
+        LOG.debug( format( "Read Threads                : %s", readThreads ) );
 
         try
         {
@@ -181,7 +184,7 @@ public class RunCommand implements Runnable
             {
                 throw new RuntimeException( "Parameter not set: " + CMD_NEO4J_API );
             }
-            System.out.println( format( "Neo4j Connector (inferred)  : %s", neo4jConnector ) );
+            LOG.debug( format( "Neo4j Connector (inferred)  : %s", neo4jConnector ) );
 
             if ( null != writeParams )
             {
@@ -203,14 +206,14 @@ public class RunCommand implements Runnable
             {
                 File writeParamsConfig = new File( writeParams, "updateStream.properties" );
                 FileUtils.assertFileExists( writeParamsConfig );
-                System.out.println( format( "Write Threads (inferred)    : %s",
-                                            LdbcSnbInteractiveWorkloadConfiguration.forumUpdateFilesInDirectory( writeParams ).size() ) );
+                LOG.debug( format( "Write Threads (inferred)    : %s",
+                                   LdbcSnbInteractiveWorkloadConfiguration.forumUpdateFilesInDirectory( writeParams ).size() ) );
                 ldbcConfig = ldbcConfig.applyArgs( loadPropertiesToMap( writeParamsConfig ) );
             }
 
-            System.out.println( "*** Neo4j DB Properties ***" );
-            System.out.println( Neo4jDb.configToString( neo4jConfig ) );
-            System.out.println( "************************" );
+            LOG.debug( "*** Neo4j DB Properties ***" );
+            LOG.debug( Neo4jDb.configToString( neo4jConfig ) );
+            LOG.debug( "************************" );
 
             if ( null != readThreads )
             {
@@ -262,17 +265,17 @@ public class RunCommand implements Runnable
                 Duration waitForFileTimeout = Duration.of( 10, ChronoUnit.MINUTES );
                 while ( !waitForFile.exists() )
                 {
-                    System.out.println( "Fork waiting on parent to finish profiling. Has waited: " + between( waitForFileStart, now() ) );
+                    LOG.debug( "Fork waiting on parent to finish profiling. Has waited: " + between( waitForFileStart, now() ) );
                     Thread.sleep( 5000 );
                     ProfilerRunner.checkTimeout( waitForFileStart, waitForFileTimeout );
                 }
                 FileUtils.assertFileExists( waitForFile );
             }
-            System.out.println( "Forked process complete!" );
+            LOG.debug( "Forked process complete!" );
         }
         catch ( Exception e )
         {
-            e.printStackTrace();
+            LOG.error( "fatal error", e );
             System.exit( 1 );
         }
     }

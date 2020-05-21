@@ -7,6 +7,8 @@ package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -43,6 +45,7 @@ import static org.hamcrest.Matchers.lessThan;
 
 public class ArrayGeneratorTest
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ArrayGeneratorTest.class );
     // TODO add uniqueness test for ascending+sliding once it is implemented
 
     private static final int ITERATIONS = 100_000;
@@ -131,7 +134,7 @@ public class ArrayGeneratorTest
         }
         long duration = System.currentTimeMillis() - start;
         int toleratedRepetitions = (int) (0.001 * measurements);
-        System.out.println( format( "%s: Tolerated Repetitions = (%s/%s) , Observed = (%s,%s), Duration = %s (ms)",
+        LOG.debug( format( "%s: Tolerated Repetitions = (%s/%s) , Observed = (%s,%s), Duration = %s (ms)",
                 arrayGenerator, toleratedRepetitions, measurements, repeatedValueCount, measurements, duration ) );
         assertThat( "less than 0.01% value repetitions", repeatedValueCount, lessThan( toleratedRepetitions ) );
         assertThat( duration, lessThan( MAX_TOLERATED_RANDOM_GENERATION_DURATION ) );
@@ -162,7 +165,7 @@ public class ArrayGeneratorTest
             previous = current;
         }
         long duration = System.currentTimeMillis() - start;
-        System.out.println( format( "%s: Duration = %s (ms)", arrayGenerator, duration ) );
+        LOG.debug( format( "%s: Duration = %s (ms)", arrayGenerator, duration ) );
         assertThat( duration, lessThan( MAX_TOLERATED_ASCENDING_GENERATION_DURATION ) );
     }
 
@@ -181,7 +184,7 @@ public class ArrayGeneratorTest
             assertThat( value1, equalTo( value2 ) );
         }
         long duration = System.currentTimeMillis() - start;
-        System.out.println( format( "Duration = %s (ms)", duration ) );
+        LOG.debug( format( "Duration = %s (ms)", duration ) );
         assertThat( duration, lessThan( MAX_TOLERATED_ASCENDING_GENERATION_DURATION ) );
     }
 }

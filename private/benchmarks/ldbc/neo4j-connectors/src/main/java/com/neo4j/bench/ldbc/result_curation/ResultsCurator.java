@@ -12,6 +12,8 @@ import com.ldbc.driver.runtime.metrics.OperationMetricsSnapshot;
 import com.ldbc.driver.runtime.metrics.WorkloadResultsSnapshot;
 import com.neo4j.bench.ldbc.Retries;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -34,6 +36,8 @@ import static java.lang.String.format;
 
 public class ResultsCurator
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ResultsCurator.class );
+
     private static final DecimalFormat DOUBLE_FORMAT = new DecimalFormat( "###,###,###,###,##0.00" );
     private static final DecimalFormat INTEGER_FORMAT = new DecimalFormat( "###,###,###,###,##0" );
     private static final SimpleDateFormat DATE_TIME_FORMAT = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" );
@@ -101,7 +105,7 @@ public class ResultsCurator
     public static void main( String[] args ) throws IOException
     {
         File resultsDir = getDirectoryOrExit( args );
-        System.out.println( format( "Curating results for: %s", resultsDir.getAbsolutePath() ) );
+        LOG.debug( format( "Curating results for: %s", resultsDir.getAbsolutePath() ) );
 
         // TODO make available via CLI
         calculateStatsForCoreScalingTest( resultsDir );
@@ -899,7 +903,7 @@ public class ResultsCurator
     {
         if ( args.length != 1 )
         {
-            System.out.println( format( "Expected 1 parameter (path), found %s: %s",
+            LOG.debug( format( "Expected 1 parameter (path), found %s: %s",
                                         args.length,
                                         Arrays.toString( args )
                                       ) );
@@ -908,12 +912,12 @@ public class ResultsCurator
         File parentResultsDir = new File( args[0] );
         if ( !parentResultsDir.exists() )
         {
-            System.out.println( format( "Directory does not exist: %s", parentResultsDir.getAbsolutePath() ) );
+            LOG.debug( format( "Directory does not exist: %s", parentResultsDir.getAbsolutePath() ) );
             System.exit( -1 );
         }
         if ( !parentResultsDir.isDirectory() )
         {
-            System.out.println( format( "Not a directory: %s", parentResultsDir.getAbsolutePath() ) );
+            LOG.debug( format( "Not a directory: %s", parentResultsDir.getAbsolutePath() ) );
             System.exit( -1 );
         }
         return parentResultsDir;

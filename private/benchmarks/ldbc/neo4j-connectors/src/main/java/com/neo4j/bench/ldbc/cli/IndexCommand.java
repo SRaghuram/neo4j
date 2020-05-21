@@ -14,6 +14,8 @@ import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcIndexer;
 import com.neo4j.bench.ldbc.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
@@ -29,11 +31,13 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
         description = "(Re)indexes a Neo4j store with the necessary indexes for LDBC benchmark" )
 public class IndexCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( IndexCommand.class );
+
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Target Neo4j database directory",
-            title = "DB Directory" )
+             name = {CMD_DB},
+             description = "Target Neo4j database directory",
+             title = "DB Directory" )
     @Required
     private File storeDir;
 
@@ -75,60 +79,60 @@ public class IndexCommand implements Runnable
     @Override
     public void run()
     {
-        System.out.println( format( "Target Neo4j Directory             : %s",
-                                    (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
-        System.out.println( format( "Create Unique Constraints          : %s",
-                                    withUnique ) );
-        System.out.println( format( "Create Mandatory Constraints       : %s",
-                                    withMandatory ) );
-        System.out.println( format( "Drop Existing Indexes/Constraints  : %s",
-                                    dropFirst ) );
-        System.out.println( format( "Database Configuration File        : %s",
-                                    (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
-        System.out.println( format( "Target Neo4j Schema                : %s",
-                                    neo4jSchemaString ) );
+        LOG.debug( format( "Target Neo4j Directory             : %s",
+                           (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
+        LOG.debug( format( "Create Unique Constraints          : %s",
+                           withUnique ) );
+        LOG.debug( format( "Create Mandatory Constraints       : %s",
+                           withMandatory ) );
+        LOG.debug( format( "Drop Existing Indexes/Constraints  : %s",
+                           dropFirst ) );
+        LOG.debug( format( "Database Configuration File        : %s",
+                           (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
+        LOG.debug( format( "Target Neo4j Schema                : %s",
+                           neo4jSchemaString ) );
 
-        System.out.println( "*** Neo4j DB Properties ***" );
-        System.out.println( Neo4jDb.configToString( dbConfigurationFile ) );
-        System.out.println( "************************" );
+        LOG.debug( "*** Neo4j DB Properties ***" );
+        LOG.debug( Neo4jDb.configToString( dbConfigurationFile ) );
+        LOG.debug( "************************" );
 
         try
         {
-            System.out.println( "Starting database..." );
+            LOG.debug( "Starting database..." );
             DatabaseManagementService managementService = Neo4jDb.newDb( storeDir, dbConfigurationFile );
 
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
-            System.out.println( metadataProxy.toString() );
+            LOG.debug( metadataProxy.toString() );
 
             Neo4jSchema neo4jSchema;
             if ( null == neo4jSchemaString )
             {
-                System.out.println( "No Neo4j Schema provided, attempting to read schema from store" );
+                LOG.debug( "No Neo4j Schema provided, attempting to read schema from store" );
                 neo4jSchema = metadataProxy.neo4jSchema();
-                System.out.println( format( "Found: %s", neo4jSchema.name() ) );
+                LOG.debug( format( "Found: %s", neo4jSchema.name() ) );
             }
             else
             {
                 neo4jSchema = Neo4jSchema.valueOf( neo4jSchemaString );
             }
 
-            System.out.println( "Creating Indexes & Constraints" );
+            LOG.debug( "Creating Indexes & Constraints" );
             long startTime = System.currentTimeMillis();
 
             LdbcIndexer indexer = new LdbcIndexer( neo4jSchema, withUnique, withMandatory, dropFirst );
             indexer.createTransactional( db );
 
             long runtime = System.currentTimeMillis() - startTime;
-            System.out.println( format(
+            LOG.debug( format(
                     "Indexes built in: %d min, %d sec",
                     TimeUnit.MILLISECONDS.toMinutes( runtime ),
                     TimeUnit.MILLISECONDS.toSeconds( runtime )
                     - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
-            System.out.printf( "Shutting down database..." );
+            LOG.debug( "Shutting down database..." );
             managementService.shutdown();
-            System.out.println( "Done" );
+            LOG.debug( "Done" );
         }
         catch ( Exception e )
         {

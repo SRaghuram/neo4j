@@ -95,6 +95,8 @@ import com.neo4j.bench.ldbc.interactive.remote_cypher_regular.Neo4jUpdate5Remote
 import com.neo4j.bench.ldbc.interactive.remote_cypher_regular.Neo4jUpdate6RemoteCypher;
 import com.neo4j.bench.ldbc.interactive.remote_cypher_regular.Neo4jUpdate7RemoteCypher;
 import com.neo4j.bench.ldbc.interactive.remote_cypher_regular.Neo4jUpdate8RemoteCypher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -112,14 +114,16 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
 {
+    private static final Logger LOG = LoggerFactory.getLogger( SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest.class );
+
     private <OPERATION_RESULT, OPERATION extends Operation<OPERATION_RESULT>> OPERATION_RESULT executeQuery(
             OPERATION operation,
             Neo4jQuery<OPERATION,OPERATION_RESULT,Neo4jConnectionState> query,
             Neo4jConnectionState connectionState ) throws DbException
     {
         // TODO uncomment to print query
-        System.out.println( operation.toString() );
-        System.out.println( query.getClass().getSimpleName() + "\n" );
+        LOG.debug( operation.toString() );
+        LOG.debug( query.getClass().getSimpleName() + "\n" );
         OPERATION_RESULT results;
         results = query.execute( connectionState, operation );
         return results;
@@ -131,8 +135,8 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
             Neo4jConnectionState connectionState ) throws DbException
     {
         // TODO uncomment to print query
-        System.out.println( operation.toString() );
-        System.out.println( query.getClass().getSimpleName() + "\n" );
+        LOG.debug( operation.toString() );
+        LOG.debug( query.getClass().getSimpleName() + "\n" );
         try ( Transaction tx = connectionState.beginTx() )
         {
             query.execute( connectionState, operation );

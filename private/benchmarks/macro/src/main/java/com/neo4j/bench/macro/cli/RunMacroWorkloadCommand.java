@@ -43,6 +43,8 @@ import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.reporter.ResultsReporter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -70,6 +72,9 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 @Command( name = "run-workload", description = "runs all queries for a single workload" )
 public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( RunMacroWorkloadCommand.class );
+
     @Option( type = OptionType.COMMAND,
              name = {CMD_DB_PATH},
              description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
@@ -203,7 +208,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             Workload workload = Workload.fromName( params.workloadName(), resources, neo4jDeployment.deployment() );
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir.toPath(), workload.benchmarkGroup() );
 
-            System.out.println( params );
+            LOG.debug( params.toString() );
 
             assertQueryNames( params, workload );
 
@@ -219,18 +224,18 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             }
             Neo4jConfig neo4jConfig = neo4jConfigBuilder.build();
 
-            System.out.println( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
+            LOG.debug( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
 
-            System.out.println( "Verifying store..." );
+            LOG.debug( "Verifying store..." );
             try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
             {
                 EmbeddedDatabase.verifySchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
                 if ( params.isRecreateSchema() )
                 {
-                    System.out.println( "Preparing to recreate schema..." );
+                    LOG.debug( "Preparing to recreate schema..." );
                     EmbeddedDatabase.recreateSchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
                 }
-                System.out.println( "Store verified\n" );
+                LOG.debug( "Store verified\n" );
                 EmbeddedDatabase.verifyStoreFormat( store );
             }
 
@@ -292,7 +297,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                 }
                 catch ( ForkFailureException e )
                 {
-                    System.err.println( format( "\n" +
+                    LOG.error( format( "\n" +
                                                 "***************************************\n" +
                                                 "Benchmark Execution Failed!\n" +
                                                 "Benchmark: %s\n" +
@@ -341,10 +346,10 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     errorReporter.errors() );
 
             BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
-            System.out.println( verboseMetricsPrinter.toPrettyString( allResults, errorReporter.errors() ) );
+            LOG.debug( verboseMetricsPrinter.toPrettyString( allResults, errorReporter.errors() ) );
 
             Path profilerRecordingsOutputFile = workDir.toPath().resolve( profilerRecordingsOutputDir.toPath() );
-            System.out.println( "Copying profiler recordings to: " + profilerRecordingsOutputFile.toAbsolutePath() );
+            LOG.debug( "Copying profiler recordings to: " + profilerRecordingsOutputFile.toAbsolutePath() );
             groupDir.copyProfilerRecordings( profilerRecordingsOutputFile );
             return testRunReport;
         }
@@ -358,7 +363,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         }
         catch ( StackOverflowError stackOverflowError )
         {
-            System.out.println( "Stack overflow while exporting plan, plan will not be exported" );
+            LOG.debug( "Stack overflow while exporting plan, plan will not be exported" );
             return Optional.empty();
         }
     }

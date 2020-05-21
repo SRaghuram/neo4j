@@ -26,6 +26,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 import org.openjdk.jmh.runner.options.TimeValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -51,6 +53,8 @@ import static org.hamcrest.Matchers.equalTo;
 @ResourceLock( Resources.SYSTEM_OUT )
 class InteractiveRunIT extends AnnotationsFixture
 {
+    private static final Logger LOG = LoggerFactory.getLogger( InteractiveRunIT.class );
+
     @Inject
     private TestDirectory temporaryFolder;
 
@@ -220,7 +224,7 @@ class InteractiveRunIT extends AnnotationsFixture
             List<String> pathNames = paths
                     .filter( Files::isDirectory )
                     .filter( Stores::isTopLevelDir )
-                    .peek( p -> System.out.println( "DB : " + p ) )
+                    .peek( p -> LOG.debug( "DB : " + p ) )
                     .map( Path::toString )
                     .collect( toList() );
             assertThat( "Found: " + pathNames, pathNames.size(), equalTo( expectedStoreCount ) );

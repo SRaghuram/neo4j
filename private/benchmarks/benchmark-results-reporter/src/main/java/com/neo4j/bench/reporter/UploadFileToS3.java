@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.reporter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -16,6 +19,9 @@ import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class UploadFileToS3
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( UploadFileToS3.class );
+
     public static URI execute( AmazonS3Upload amazonS3Upload, String bucketName, String keyPrefix, Path file )
     {
         try
@@ -24,7 +30,7 @@ public class UploadFileToS3
                                            bucketName,
                                            removeEnd( removeStart( keyPrefix, "/" ), "/" ),
                                            file.getFileName() ) );
-            System.out.println( format( "uploading file %s to %s", file, fileURI ) );
+            LOG.debug( format( "uploading file %s to %s", file, fileURI ) );
             amazonS3Upload.uploadFile( file, fileURI );
             return fileURI;
         }

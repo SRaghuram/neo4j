@@ -15,6 +15,8 @@ import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -28,6 +30,8 @@ import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class ResultsReporter
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( ResultsReporter.class );
 
     private final File profilesDir;
     private final TestRunReport testRunReport;
@@ -67,16 +71,16 @@ public class ResultsReporter
         try
         {
             Path testRunReportFile = workDir.toPath().resolve( "test-result.json" );
-            System.out.println( "Exporting results as JSON to: " + testRunReportFile.toAbsolutePath() );
+            LOG.debug( "Exporting results as JSON to: " + testRunReportFile.toAbsolutePath() );
             JsonUtil.serializeJson( testRunReportFile, testRunReport );
 
             String testRunId = testRunReport.testRun().id();
-            System.out.println( format( "reporting test run with id %s", testRunId ) );
+            LOG.debug( format( "reporting test run with id %s", testRunId ) );
 
             String archiveName = profilesDir.getName() + ".tar.gz";
             Path testRunArchive = workDir.toPath().resolve( archiveName );
             String s3ArchivePath = appendIfMissing( s3Bucket, "/" ) + archiveName;
-            System.out.println( format( "add profiles for test run:\n" +
+            LOG.debug( format( "add profiles for test run:\n" +
                                         "id=%s\n" +
                                         "testRunReportFile=%s\n" +
                                         "s3Bucket=%s\n" +
@@ -93,7 +97,7 @@ public class ResultsReporter
 
             TestRunReport testRunReportWithProfiles = JsonUtil.deserializeJson( testRunReportFile, TestRunReport.class );
 
-            System.out.println( format( "creating .tar.gz archive '%s' of profiles directory '%s'", testRunArchive, profilesDir ) );
+            LOG.debug( format( "creating .tar.gz archive '%s' of profiles directory '%s'", testRunArchive, profilesDir ) );
             TarGzArchive.compress( testRunArchive, profilesDir.toPath() );
 
             try ( AmazonS3Upload amazonS3Upload = AmazonS3Upload.create( awsRegion, awsEndpointURL ) )
@@ -102,11 +106,10 @@ public class ResultsReporter
                 String bucketName = s3BucketURI.getAuthority();
 
                 String keyPrefix = appendIfMissing( removeStart( s3BucketURI.getPath(), "/" ), "/" );
-                System.out.println( format( "uploading profilers directory '%s' to '%s/%s'", profilesDir, bucketName, keyPrefix ) );
+                LOG.debug( format( "uploading profilers directory '%s' to '%s/%s'", profilesDir, bucketName, keyPrefix ) );
 
                 UploadDirectoryToS3.execute( amazonS3Upload, bucketName, keyPrefix, profilesDir );
-                System.out
-                        .println( format( "uploading profilers archive '%s' directory '%s' to '%s/%s'", testRunArchive, profilesDir, bucketName, keyPrefix ) );
+                LOG.debug( format( "uploading profilers archive '%s' directory '%s' to '%s/%s'", testRunArchive, profilesDir, bucketName, keyPrefix ) );
 
                 UploadFileToS3.execute( amazonS3Upload, bucketName, keyPrefix, testRunArchive );
                 testRunReportWithProfiles.testRun().setArchive( appendIfMissing( s3Bucket, "/" ) + archiveName );
@@ -120,7 +123,7 @@ public class ResultsReporter
                 }
                 SubmitTestRun submitTestRun = new SubmitTestRun( testRunReportWithProfiles );
                 new QueryRetrier( true, QueryRetrier.DEFAULT_TIMEOUT ).execute( client, submitTestRun );
-                System.out.println( "Successfully reported results" );
+                LOG.debug( "Successfully reported results" );
                 if ( errorReportingPolicy.equals( ErrorReportingPolicy.REPORT_THEN_FAIL ) )
                 {
                     assertNoErrors( testRunReportWithProfiles );

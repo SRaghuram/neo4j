@@ -18,6 +18,8 @@ import com.neo4j.bench.client.queries.report.MacroComparison;
 import com.neo4j.bench.client.queries.report.MicroComparison;
 import com.neo4j.bench.client.queries.report.MicroCoverage;
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +32,9 @@ import java.util.List;
 @Command( name = "compare-versions" )
 public class CompareVersionsCommand implements Runnable
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( CompareVersionsCommand.class );
+
     static final String MICRO_COMPARISON_FILENAME = "micro_comparison.csv";
     static final String MICRO_COVERAGE_FILENAME = "micro_coverage.csv";
     static final String LDBC_COMPARISON_FILENAME = "ldbc_comparison.csv";
@@ -96,7 +101,7 @@ public class CompareVersionsCommand implements Runnable
         BenchmarkUtil.assertDirectoryExists( outputDir.toPath() );
         try ( StoreClient client = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultsStorePassword ) )
         {
-            System.out.println( "Writing results to: " + outputDir.getAbsolutePath() );
+            LOG.debug( "Writing results to: " + outputDir.getAbsolutePath() );
 
             toCsv( outputDir.toPath().resolve( MICRO_COMPARISON_FILENAME ),
                    client,

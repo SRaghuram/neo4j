@@ -6,8 +6,11 @@
 package com.neo4j.bench.imports;
 
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -32,11 +35,13 @@ import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 public class CreateIndex
 {
+    private static final Logger LOG = LoggerFactory.getLogger( CreateIndex.class );
+
     private void run( String storeDirString, String dbName, List<String> indexPatterns )
     {
-        DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( Path.of( storeDirString ) )
-                .setConfig( neo4j_home, Path.of( storeDirString ) )
-                .setConfig( databases_root_path, Path.of( storeDirString, DEFAULT_DATA_DIR_NAME, DEFAULT_DATABASES_ROOT_DIR_NAME ) )
+        DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( Paths.get( storeDirString ).toFile() )
+                .setConfig( neo4j_home, Paths.get( storeDirString ) )
+                .setConfig( databases_root_path, Paths.get( storeDirString, DEFAULT_DATA_DIR_NAME, DEFAULT_DATABASES_ROOT_DIR_NAME ) )
                 .build();
         managementService.createDatabase( dbName );
         GraphDatabaseService db = managementService.database( dbName );
@@ -60,10 +65,10 @@ public class CreateIndex
                 }
                 tx.commit();
             }
-            System.out.println( "Creating indexes:" );
+            LOG.debug( "Creating indexes:" );
             for ( IndexDefinition index : indexes.keySet() )
             {
-                System.out.println( "  " + index );
+                LOG.debug( "  " + index );
             }
             try ( Transaction tx = db.beginTx() )
             {
@@ -99,7 +104,7 @@ public class CreateIndex
                 while ( true );
                 tx.commit();
             }
-            System.out.println( "Index creation finished:" );
+            LOG.debug( "Index creation finished:" );
             reportIndexStatus( db, indexes, "  " );
         }
         finally
@@ -116,7 +121,7 @@ public class CreateIndex
             for ( IndexDefinition index : indexes.keySet() )
             {
                 Schema.IndexState state = schema.getIndexState( index );
-                System.out.println( format( "%s%s %s", indent, index.toString(), state ) );
+                LOG.debug( format( "%s%s %s", indent, index.toString(), state ) );
             }
             tx.commit();
         }
@@ -126,7 +131,7 @@ public class CreateIndex
     {
         if ( prevComplete < currentComplete )
         {
-            System.out.println( format( "%s%s %d%%", indent, index.toString(), currentComplete * 10 ) );
+            LOG.debug( format( "%s%s %d%%", indent, index.toString(), currentComplete * 10 ) );
         }
     }
 

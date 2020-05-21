@@ -16,12 +16,16 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.BenchmarkParams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 
 @State( Scope.Benchmark )
 public abstract class BaseRegularBenchmark extends BaseBenchmark
 {
+    private static final Logger LOG = LoggerFactory.getLogger( BaseRegularBenchmark.class );
+
     @Param( {} )
     public String baseNeo4jConfig;
 
@@ -35,7 +39,7 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
 
         Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
-        System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
+        LOG.debug( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
 
         benchmarkSetup( group, benchmark, neo4jConfig, forkDirectory );

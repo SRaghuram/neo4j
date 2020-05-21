@@ -11,6 +11,8 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,8 @@ import java.util.Map;
 @Command( name = "ls", description = "prints available groups and their benchmarks" )
 public class ListCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ListCommand.class );
+
     @Option( type = OptionType.COMMAND,
             name = {"-v", "--verbose"},
             description = "Print benchmark names, in addition to group names",
@@ -32,7 +36,7 @@ public class ListCommand implements Runnable
         SuiteDescription suite = SuiteDescription.fromAnnotations( benchmarksFinder, validation );
         Validation.assertValid( validation );
         Map<String,List<String>> groupBenchmarks = suite.getGroupBenchmarkNames();
-        System.out.println( makeGroupBenchmarksString( groupBenchmarks, verbose ) );
+        LOG.debug( makeGroupBenchmarksString( groupBenchmarks, verbose ) );
     }
 
     private static String makeGroupBenchmarksString( Map<String,List<String>> groupBenchmarks, boolean verbose )

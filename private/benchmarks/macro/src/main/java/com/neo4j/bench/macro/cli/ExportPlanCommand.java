@@ -21,6 +21,8 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.database.PlanCreator;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -30,6 +32,8 @@ import java.util.List;
 @Command( name = "export-plan", description = "exports the plan description for one query of one workload" )
 public class ExportPlanCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ExportPlanCommand.class );
+
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
              name = {CMD_WORKLOAD},
@@ -104,9 +108,9 @@ public class ExportPlanCommand implements Runnable
             try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
             {
                 Query query = workload.queryForName( queryName ).copyWith( runtime );
-                System.out.println( "Generating plan for : " + query.name() );
+                LOG.debug( "Generating plan for : " + query.name() );
                 Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile.toPath(), query );
-                System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
+                LOG.debug( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
             }
         }
         catch ( Exception e )

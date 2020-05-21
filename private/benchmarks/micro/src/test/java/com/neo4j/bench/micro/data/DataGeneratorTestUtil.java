@@ -11,6 +11,8 @@ import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -49,6 +51,7 @@ import static org.hamcrest.number.IsCloseTo.closeTo;
 
 public class DataGeneratorTestUtil
 {
+    private static final Logger LOG = LoggerFactory.getLogger( DataGeneratorTestUtil.class );
     private static final Path NEO4J_CONFIG = Paths.get( "neo4j.config" );
 
     static void assertGraphStatsAreConsistentWithBuilderConfiguration(
@@ -58,14 +61,14 @@ public class DataGeneratorTestUtil
     {
         DataGeneratorConfig config = builder.build();
         DataGenerator generator = new DataGenerator( config );
-        System.out.println( config.toString() );
+        LOG.debug( config.toString() );
 
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );
         Neo4jConfigBuilder.writeToFile( config.neo4jConfig(), NEO4J_CONFIG );
 
         generator.generate( store, NEO4J_CONFIG );
 
-        System.out.println( "Tolerance: " + percentageTolerance );
+        LOG.debug( "Tolerance: " + percentageTolerance );
 
         GraphDatabaseService db = null;
         try
@@ -484,7 +487,7 @@ public class DataGeneratorTestUtil
             }
             sb.append( "\n" );
         }
-        System.out.println( sb.toString() );
+        LOG.debug( sb.toString() );
     }
 
     public static class KeyCount

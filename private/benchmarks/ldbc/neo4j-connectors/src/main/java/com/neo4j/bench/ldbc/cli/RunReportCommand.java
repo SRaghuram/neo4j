@@ -66,6 +66,9 @@ import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.reporter.ResultsReporter;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -103,6 +106,8 @@ import static java.util.stream.Collectors.toSet;
         description = "Runs workload multiple times, in forked JVMs, by delegating to 'run' command" )
 public class RunReportCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( RunReportCommand.class );
+
     // ===================================================
     // ===================== Export ======================
     // ===================================================
@@ -468,7 +473,7 @@ public class RunReportCommand implements Runnable
                 profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingSecondaryEnvironmentVariables );
             }
 
-            System.out.println(
+            LOG.debug(
                     "==============================================================\n" +
                     CMD_JSON_OUTPUT + " : " + jsonOutput.getAbsolutePath() + "\n" +
                     "--------------------------------------------------------------\n" +
@@ -522,11 +527,11 @@ public class RunReportCommand implements Runnable
 
             jvmArgs = buildJvmArgsString( jvmArgs, neo4jConfig );
 
-            System.out.println( "Merged Neo4j config:\n" + neo4jConfig.toString() );
+            LOG.debug( "Merged Neo4j config:\n" + neo4jConfig.toString() );
 
             Path mergedNeo4jConfigPath = new File( resultsDir, "merged-neo4j.conf" ).toPath();
             Neo4jConfigBuilder.writeToFile( neo4jConfig, mergedNeo4jConfigPath );
-            System.out.println( "Merged Neo4j config file written into: " + mergedNeo4jConfigPath.toString() );
+            LOG.debug( "Merged Neo4j config file written into: " + mergedNeo4jConfigPath.toString() );
 
             Map<String,String> benchmarkParams = new HashMap<>();
             benchmarkParams.put( "api", neo4jApi.name() );
@@ -577,7 +582,7 @@ public class RunReportCommand implements Runnable
         }
         catch ( Exception e )
         {
-            e.printStackTrace();
+            LOG.error("fata error",e);
             System.exit( 1 );
         }
     }
@@ -593,15 +598,15 @@ public class RunReportCommand implements Runnable
             String triggeredBy,
             DriverConfiguration ldbcDriverConfig )
     {
-        System.out.println( "============================================" );
-        System.out.println( "==== Aggregating & Reporting Statistics ====" );
-        System.out.println( "============================================" );
+        LOG.debug( "============================================" );
+        LOG.debug( "==== Aggregating & Reporting Statistics ====" );
+        LOG.debug( "============================================" );
         try
         {
             Workload uninitializedWorkload = loadWorkload( ldbcDriverConfig.workloadClassName() );
             WorkloadResultsSnapshot workloadResults = aggregateResults( uninitializedWorkload, resultsDirectories );
 
-            System.out.println( workloadResults.toJson() );
+            LOG.debug( workloadResults.toJson() );
             TestRunReport testRunReport = packageResults(
                     workloadResults,
                     ldbcDriverConfig,
@@ -612,7 +617,7 @@ public class RunReportCommand implements Runnable
                     summaryBenchmark,
                     neo4jConfig,
                     triggeredBy );
-            System.out.println( "Export results to: " + jsonOutput.getAbsolutePath() );
+            LOG.debug( "Export results to: " + jsonOutput.getAbsolutePath() );
             JsonUtil.serializeJson( jsonOutput.toPath(), testRunReport );
 
             ResultsReporter resultsReporter = new ResultsReporter( profilesDir,
@@ -704,7 +709,7 @@ public class RunReportCommand implements Runnable
         {
             if ( ldbcRunConfig.storeDir.exists() )
             {
-                System.out.println( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
+                LOG.debug( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
                 org.apache.commons.io.FileUtils.deleteQuietly( ldbcRunConfig.storeDir );
             }
         }
@@ -734,7 +739,7 @@ public class RunReportCommand implements Runnable
             {
                 if ( ldbcRunConfig.storeDir.exists() )
                 {
-                    System.out.println( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
+                    LOG.debug( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
                     org.apache.commons.io.FileUtils.deleteDirectory( ldbcRunConfig.storeDir );
                 }
                 copyStore( ldbcRunConfig );
@@ -868,7 +873,7 @@ public class RunReportCommand implements Runnable
                     cliPrefix,
                     processName );
 
-            System.out.println( "LDBC Command Args: " + String.join( " ", processArgs ) );
+            LOG.debug( "LDBC Command Args: " + String.join( " ", processArgs ) );
             return new ProcessBuilder( processArgs )
                     .inheritIO()
                     .redirectOutput( outputLog )
@@ -1018,7 +1023,7 @@ public class RunReportCommand implements Runnable
         for ( ResultsDirectory resultsDirectory : resultsDirectories )
         {
             WorkloadResultsSnapshot result = fromJson( resultsDirectory.getOrCreateResultsSummaryFile( false ) );
-            System.out.println( result.toJson() );
+            LOG.debug( result.toJson() );
             startTime = Math.min( startTime, result.startTimeAsMilli() );
             totalDuration += result.latestFinishTimeAsMilli() - result.startTimeAsMilli();
 

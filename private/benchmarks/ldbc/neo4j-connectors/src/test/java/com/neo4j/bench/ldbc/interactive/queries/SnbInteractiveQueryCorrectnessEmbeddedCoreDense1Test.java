@@ -102,6 +102,8 @@ import com.neo4j.bench.ldbc.interactive.embedded_core.Update5EmbeddedCore_1_2;
 import com.neo4j.bench.ldbc.interactive.embedded_core.Update6EmbeddedCore_1;
 import com.neo4j.bench.ldbc.interactive.embedded_core.Update7EmbeddedCore_1;
 import com.neo4j.bench.ldbc.interactive.embedded_core.Update8EmbeddedCore_0_1_2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -125,13 +127,15 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         extends SnbInteractiveQueryCorrectnessTest<Neo4jConnectionState>
 {
+    private static final Logger LOG = LoggerFactory.getLogger( SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test.class );
+
     private <OPERATION_RESULT, OPERATION extends Operation<OPERATION_RESULT>> OPERATION_RESULT executeQuery(
             OPERATION operation,
             Neo4jQuery<OPERATION,OPERATION_RESULT,Neo4jConnectionState> query,
             Neo4jConnectionState connection ) throws DbException
     {
         // TODO uncomment to print query
-        System.out.println( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
+        LOG.debug( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
         OPERATION_RESULT results;
         try ( Transaction tx = connection.beginTx() )
         {
@@ -155,7 +159,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             Neo4jConnectionState connection ) throws DbException
     {
         // TODO uncomment to print query
-        System.out.println( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
+        LOG.debug( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
         try ( Transaction tx = connection.beginTx() )
         {
             query.execute( connection, operation );

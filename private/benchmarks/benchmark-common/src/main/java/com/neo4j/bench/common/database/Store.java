@@ -6,6 +6,8 @@
 package com.neo4j.bench.common.database;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +16,8 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.deleteDir;
 
 public abstract class Store implements AutoCloseable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( Store.class );
+
     /**
      * Store directory will be automatically deleted on close.
      *
@@ -54,7 +58,7 @@ public abstract class Store implements AutoCloseable
     {
         if ( isTemporaryCopy() )
         {
-            System.out.println( "Deleting store: " + topLevelDirectory().toAbsolutePath() );
+            LOG.debug( "Deleting store: " + topLevelDirectory().toAbsolutePath() );
 
             BenchmarkUtil.assertDirectoryExists( topLevelDirectory() );
             deleteDir( topLevelDirectory() );

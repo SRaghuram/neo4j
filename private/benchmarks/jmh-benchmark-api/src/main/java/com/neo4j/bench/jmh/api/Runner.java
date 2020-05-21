@@ -34,6 +34,8 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.CommandLineOptions;
 import org.openjdk.jmh.runner.options.Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -70,6 +72,9 @@ import static java.lang.String.format;
  */
 public abstract class Runner
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( Runner.class );
+
     public static SuiteDescription createSuiteDescriptionFor( String packageName, Path benchConfigFile )
     {
         BenchmarksFinder benchmarksFinder = new BenchmarksFinder( packageName );
@@ -151,7 +156,7 @@ public abstract class Runner
 
             if ( benchmarksAfterPrepare.isEmpty() )
             {
-                System.out.println( "\n\nNo benchmarks were successfully prepared, no benchmarks can be run\n\n" );
+                LOG.debug( "\n\nNo benchmarks were successfully prepared, no benchmarks can be run\n\n" );
             }
             else
             {
@@ -167,7 +172,7 @@ public abstract class Runner
 
                 if ( benchmarksAfterProfiling.isEmpty() )
                 {
-                    System.out.println( "\n\n No benchmarks were successfully profiled, no benchmarks can be run\n\n" );
+                    LOG.debug( "\n\n No benchmarks were successfully profiled, no benchmarks can be run\n\n" );
                 }
                 else
                 {
@@ -194,13 +199,13 @@ public abstract class Runner
                         boolean verbose = true;
                         String prettyResultsString = new BenchmarkGroupBenchmarkMetricsPrinter( verbose )
                                 .toPrettyString( benchmarkGroupBenchmarkMetrics, errorReporter.errors() );
-                        System.out.println( prettyResultsString );
+                        LOG.debug( prettyResultsString );
                     }
                 }
             }
             Instant finish = Instant.now();
 
-            System.out.println( format( "Complete benchmark execution took: %s\n", durationToString( Duration.between( start, finish ) ) ) );
+            LOG.debug( format( "Complete benchmark execution took: %s\n", durationToString( Duration.between( start, finish ) ) ) );
 
             return benchmarkGroupBenchmarkMetrics;
         }
@@ -291,11 +296,11 @@ public abstract class Runner
             RunnerParams runnerParams,
             ErrorReporter errorReporter )
     {
-        System.out.println( "\n\n" );
-        System.out.println( "------------------------------------------------------------------------" );
-        System.out.println( "---------------------------  PROFILING ---------------------------------" );
-        System.out.println( "------------------------------------------------------------------------" );
-        System.out.println( "\n\n" );
+        LOG.debug( "\n\n" );
+        LOG.debug( "------------------------------------------------------------------------" );
+        LOG.debug( "---------------------------  PROFILING ---------------------------------" );
+        LOG.debug( "------------------------------------------------------------------------" );
+        LOG.debug( "\n\n" );
 
         List<BenchmarkDescription> benchmarksWithProfiles = new ArrayList<>( benchmarks );
 
@@ -365,11 +370,11 @@ public abstract class Runner
             RunnerParams runnerParams,
             ErrorReporter errorReporter )
     {
-        System.out.println( "\n\n" );
-        System.out.println( "-------------------------------------------------------------------------" );
-        System.out.println( "---------------------------  EXECUTION  ---------------------------------" );
-        System.out.println( "-------------------------------------------------------------------------" );
-        System.out.println( "\n\n" );
+        LOG.debug( "\n\n" );
+        LOG.debug( "-------------------------------------------------------------------------" );
+        LOG.debug( "---------------------------  EXECUTION  ---------------------------------" );
+        LOG.debug( "-------------------------------------------------------------------------" );
+        LOG.debug( "\n\n" );
 
         RunnerParams finalRunnerParams = runnerParams.copyWithProfilers( ParameterizedProfiler.defaultProfilers( NO_OP ) );
         for ( int threadCount : threadCounts )
@@ -472,7 +477,7 @@ public abstract class Runner
 
     private static void moveProfilerRecordingsTo( Path profilerRecordingsDir, Path workDir )
     {
-        System.out.println( "Moving profile recordings to: " + profilerRecordingsDir.toAbsolutePath() );
+        LOG.debug( "Moving profile recordings to: " + profilerRecordingsDir.toAbsolutePath() );
         BenchmarkUtil.tryMkDir( profilerRecordingsDir );
         List<BenchmarkGroupDirectory> groupDirs = BenchmarkGroupDirectory.searchAllIn( workDir );
         for ( BenchmarkGroupDirectory groupDir : groupDirs )

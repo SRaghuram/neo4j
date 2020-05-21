@@ -9,6 +9,8 @@ import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,13 +20,15 @@ import static java.lang.String.format;
 @Command( name = "groups", description = "creates a benchmark configuration file limited to specified groups" )
 public class ConfigGroupCommand extends ConfigCommandBase
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ConfigGroupCommand.class );
+
     @Arguments()
     public List<String> groups = new ArrayList<>();
 
     @Override
     public void run()
     {
-        System.out.println( format( "\n-- Creating Config --\n" +
+        LOG.debug( format( "\n-- Creating Config --\n" +
                                     "\tGroups:         %s\n" +
                                     "%s", groups, baseOptionString() ) );
 

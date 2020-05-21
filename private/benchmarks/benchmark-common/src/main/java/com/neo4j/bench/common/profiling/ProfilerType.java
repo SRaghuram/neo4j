@@ -7,6 +7,8 @@ package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Sets;
 import com.neo4j.bench.model.profiling.RecordingType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,6 +24,7 @@ import static java.util.stream.Collectors.toList;
 
 public enum ProfilerType
 {
+
     ASYNC(
             AsyncProfiler.class,
             RecordingType.ASYNC,
@@ -93,6 +96,8 @@ public enum ProfilerType
             // requires no environment variables
             Sets.newHashSet(),
             SecondaryRecordingCreator.NONE );
+
+    private static final Logger LOG = LoggerFactory.getLogger( ProfilerType.class );
 
     private final Class<? extends Profiler> profiler;
     private final RecordingType primaryRecording;
@@ -172,7 +177,7 @@ public enum ProfilerType
                                   "Sorry, I ('" + name() + "' profiler) am unable to generate " + secondaryRecordings + " from my profiler recordings\n" +
                                   "You are missing some environment variables that I need: " + missingSecondaryEnvironmentVariables + "\n" +
                                   "-----------------------------------------------------------------------------------------------------------\n";
-            System.err.println( sorryMessage );
+            LOG.debug( sorryMessage );
         }
     }
 

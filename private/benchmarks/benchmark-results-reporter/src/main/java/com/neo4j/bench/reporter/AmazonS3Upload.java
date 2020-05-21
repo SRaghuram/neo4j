@@ -15,6 +15,8 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -32,9 +34,11 @@ import static org.apache.commons.lang3.StringUtils.removeStart;
 public class AmazonS3Upload implements AutoCloseable
 {
 
+    private static final Logger LOG = LoggerFactory.getLogger( AmazonS3Upload.class );
+
     public static AmazonS3Upload create( String awsRegion, String awsEndpointURL )
     {
-        System.out.println( format( "creating Amazon S3 upload client with region '%s' and AWS endpoint '%s'", awsRegion, awsEndpointURL ) );
+        LOG.debug( format( "creating Amazon S3 upload client with region '%s' and AWS endpoint '%s'", awsRegion, awsEndpointURL ) );
         try
         {
             return new AmazonS3Upload( createAmazonS3Client( awsEndpointURL != null ? new URL( awsEndpointURL ) : null, awsRegion ) );
@@ -51,7 +55,7 @@ public class AmazonS3Upload implements AutoCloseable
                                                                     .withCredentials( DefaultAWSCredentialsProviderChain.getInstance() );
         if ( endpointUrl != null )
         {
-            System.out.println( format( "S3 client endpoint URL '%s' at region '%s'", endpointUrl, region ) );
+            LOG.debug( format( "S3 client endpoint URL '%s' at region '%s'", endpointUrl, region ) );
             amazonS3ClientBuilder =
                     amazonS3ClientBuilder.withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( endpointUrl.toString(), region ) );
         }
@@ -66,7 +70,7 @@ public class AmazonS3Upload implements AutoCloseable
     {
         try
         {
-            System.out.println( format( "waiting for upload %s completion", upload ) );
+            LOG.debug( format( "waiting for upload %s completion", upload ) );
             upload.waitForCompletion();
         }
         catch ( InterruptedException e )
@@ -91,7 +95,7 @@ public class AmazonS3Upload implements AutoCloseable
     {
         String bucketName = destination.getAuthority();
         String s3key = getS3Path( destination.getPath() );
-        System.out.println( format( "uploading file '%s' to bucket '%s' at key '%s'", source, bucketName, s3key ) );
+        LOG.debug( format( "uploading file '%s' to bucket '%s' at key '%s'", source, bucketName, s3key ) );
         PutObjectRequest putObjectRequest = new PutObjectRequest( bucketName, s3key, source.toFile() );
         ObjectMetadata objectMetadata = new ObjectMetadata();
         objectMetadata.setContentLength( Files.size( source ) );
@@ -112,7 +116,7 @@ public class AmazonS3Upload implements AutoCloseable
                      .map( sourcePath ->
                            {
                                Path destinationPath = s3key.resolve( source.relativize( sourcePath ) );
-                               System.out.println( format( "upload '%s' to '%s'", sourcePath, destinationPath ) );
+                               LOG.debug( format( "upload '%s' to '%s'", sourcePath, destinationPath ) );
                                try
                                {
                                    ObjectMetadata objectMetadata = new ObjectMetadata();

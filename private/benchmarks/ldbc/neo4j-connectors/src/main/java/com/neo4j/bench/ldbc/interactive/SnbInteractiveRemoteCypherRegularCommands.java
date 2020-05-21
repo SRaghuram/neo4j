@@ -75,6 +75,8 @@ import com.neo4j.bench.ldbc.interactive.remote_cypher_regular.LdbcUpdate6Handler
 import com.neo4j.bench.ldbc.interactive.remote_cypher_regular.LdbcUpdate7HandlerRemoteCypher;
 import com.neo4j.bench.ldbc.interactive.remote_cypher_regular.LdbcUpdate8HandlerRemoteCypher;
 import com.neo4j.bench.ldbc.utils.AnnotatedQueries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -90,6 +92,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommands
 {
+    private static final Logger LOG = LoggerFactory.getLogger( SnbInteractiveRemoteCypherRegularCommands.class );
+
     private final URI uri;
     private final AuthToken authToken;
     private final LoggingService loggingService;
@@ -130,7 +134,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
             {
                 throw new DbException( format( "Incompatible schema\n%s", metadata.toString() ) );
             }
-            System.out.printf( metadata.toString() );
+            LOG.debug( metadata.toString() );
 
             dbConnectionState = new Neo4jConnectionState( managementService, db,
                     uri,

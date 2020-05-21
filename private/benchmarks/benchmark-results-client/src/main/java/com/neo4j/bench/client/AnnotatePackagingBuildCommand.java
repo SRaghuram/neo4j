@@ -14,6 +14,8 @@ import com.neo4j.bench.client.queries.annotation.CreateAnnotations;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotationsResult;
 import com.neo4j.bench.model.model.Repository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -31,6 +33,8 @@ import static java.util.stream.Collectors.toList;
 @Command( name = "packaging" )
 public class AnnotatePackagingBuildCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( AnnotatePackagingBuildCommand.class );
+
     private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_USER},
@@ -129,7 +133,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
                                                              benchmarkTools,
                                                              getAnnotationTargets() );
             CreateAnnotationsResult result = client.execute( query );
-            System.out.println( format( "Annotations created!\n" +
+            LOG.debug( format( "Annotations created!\n" +
                                         "Test Run Annotations: %s\n" +
                                         "Metrics Annotations:  %s",
                                         result.createdTestRunAnnotations(),

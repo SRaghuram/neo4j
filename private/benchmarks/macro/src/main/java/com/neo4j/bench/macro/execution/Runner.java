@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.macro.execution;
 
+import com.neo4j.bench.macro.cli.BaseRunWorkloadCommand;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Parameters;
@@ -18,6 +19,8 @@ import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.QueryString;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +30,9 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public class Runner
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( Runner.class );
+
     public static void run( Jvm jvm,
                             Database database,
                             Map<Pid,Parameters> pidParameters,
@@ -63,7 +69,7 @@ public class Runner
              */
             try ( Results.ResultsWriter warmupResultsWriter = Results.newWriter( forkDirectory, Phase.WARMUP, NANOSECONDS ) )
             {
-                System.out.println( format( "Performing warmup (%s). Policy: %s",
+                LOG.debug( format( "Performing warmup (%s). Policy: %s",
                                             shouldRollbackWarmup ? warmupQueryString.executionMode() + " + ROLLBACK" : warmupQueryString.executionMode(),
                                             warmupControl.description() ) );
                 execute( warmupQueryString, parametersReader, warmupControl, database, warmupResultsWriter, shouldRollbackWarmup );
@@ -84,7 +90,7 @@ public class Runner
         }
         else
         {
-            System.out.println( format( "Skipping warmup. Policy: %s", warmupControl.description() ) );
+            LOG.debug( format( "Skipping warmup. Policy: %s", warmupControl.description() ) );
         }
 
         /*
@@ -105,7 +111,7 @@ public class Runner
          */
         try ( Results.ResultsWriter measurementResultsWriter = Results.newWriter( forkDirectory, Phase.MEASUREMENT, NANOSECONDS ) )
         {
-            System.out.println( format( "Performing measurement (%s). Policy: %s", queryString.executionMode(), measurementControl.description() ) );
+            LOG.debug( format( "Performing measurement (%s). Policy: %s", queryString.executionMode(), measurementControl.description() ) );
             execute( queryString, parametersReader, measurementControl, database, measurementResultsWriter, false );
         }
 

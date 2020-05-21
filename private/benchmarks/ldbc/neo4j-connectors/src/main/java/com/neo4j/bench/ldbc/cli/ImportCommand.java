@@ -15,6 +15,8 @@ import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Arrays;
@@ -26,6 +28,8 @@ import static java.lang.String.format;
         description = "Imports LDBC CSV file into Neo4j" )
 public class ImportCommand implements Runnable
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ImportCommand.class );
+
     public static final String CMD_CSV_SCHEMA = "--csv-schema";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CSV_SCHEMA},
@@ -106,30 +110,30 @@ public class ImportCommand implements Runnable
     @Override
     public void run()
     {
-        System.out.println( format( "Source CSV Schema              : %s",
+        LOG.debug( format( "Source CSV Schema              : %s",
                                     csvSchemaString ) );
-        System.out.println( format( "Source CSV Directory           : %s",
+        LOG.debug( format( "Source CSV Directory           : %s",
                                     (null == csvDir) ? null : csvDir.getAbsolutePath() ) );
-        System.out.println( format( "Target Neo4j Schema            : %s",
+        LOG.debug( format( "Target Neo4j Schema            : %s",
                                     neo4jSchemaString ) );
-        System.out.println( format( "Target Neo4j Directory         : %s",
+        LOG.debug( format( "Target Neo4j Directory         : %s",
                                     (null == dbDir) ? null : dbDir.getAbsolutePath() ) );
-        System.out.println( format( "Create Unique Constraints      : %s",
+        LOG.debug( format( "Create Unique Constraints      : %s",
                                     withUnique ) );
-        System.out.println( format( "Create Mandatory Constraints   : %s",
+        LOG.debug( format( "Create Mandatory Constraints   : %s",
                                     withMandatory ) );
-        System.out.println( format( "Source CSV Date Format         : %s",
+        LOG.debug( format( "Source CSV Date Format         : %s",
                                     fromCsvFormat ) );
-        System.out.println( format( "Target Neo4j Date Format       : %s",
+        LOG.debug( format( "Target Neo4j Date Format       : %s",
                                     toNeo4JFormat ) );
-        System.out.println( format( "Dense Timestamp Resolution     : %s",
+        LOG.debug( format( "Dense Timestamp Resolution     : %s",
                                     timestampResolution ) );
-        System.out.println( format( "Importer Configuration File    : %s",
+        LOG.debug( format( "Importer Configuration File    : %s",
                                     (null == importerConfigurationFile) ? null : importerConfigurationFile.getAbsolutePath() ) );
 
-        System.out.println( "*** Neo4j DB Properties ***" );
-        System.out.println( Neo4jDb.configToString( importerConfigurationFile ) );
-        System.out.println( "************************" );
+        LOG.debug( "*** Neo4j DB Properties ***" );
+        LOG.debug( Neo4jDb.configToString( importerConfigurationFile ) );
+        LOG.debug( "************************" );
 
         if ( !csvDir.exists() )
         {

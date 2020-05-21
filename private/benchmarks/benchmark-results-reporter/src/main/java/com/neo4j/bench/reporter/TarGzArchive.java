@@ -11,6 +11,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,6 +26,8 @@ import java.util.stream.Stream;
 
 public class TarGzArchive
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( TarGzArchive.class );
 
     public static void compress( Path archivePath, Path directory ) throws IOException
     {

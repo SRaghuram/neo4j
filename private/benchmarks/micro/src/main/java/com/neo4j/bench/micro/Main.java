@@ -18,6 +18,8 @@ import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import org.openjdk.jmh.runner.options.TimeValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +30,8 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 
 public class Main
 {
+    private static final Logger LOG = LoggerFactory.getLogger( Main.class );
+
     public static void main( String[] args )
     {
         CliBuilder<Runnable> builder = Cli.<Runnable>builder( "bench" )
@@ -106,7 +110,7 @@ public class Main
     {
         if ( !Files.exists( storesDir ) )
         {
-            System.out.println( "Creating stores directory: " + storesDir.toAbsolutePath() );
+            LOG.debug( "Creating stores directory: " + storesDir.toAbsolutePath() );
             tryMkDir( storesDir );
         }
 

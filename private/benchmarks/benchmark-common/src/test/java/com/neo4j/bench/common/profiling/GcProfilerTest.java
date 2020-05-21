@@ -15,6 +15,8 @@ import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -33,9 +35,10 @@ import static org.hamcrest.core.IsCollectionContaining.hasItem;
 @TestDirectoryExtension
 class GcProfilerTest
 {
+    private static final Logger LOG = LoggerFactory.getLogger( GcProfilerTest.class );
+
     @Inject
     private TestDirectory tempFolder;
-
     private ForkDirectory forkDirectory;
     private BenchmarkGroup benchmarkGroup;
     private Benchmark benchmark;
@@ -69,7 +72,7 @@ class GcProfilerTest
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 9, "" );
         JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, null );
-        System.out.println( jvmArgs );
+        LOG.debug( jvmArgs.toString() );
         assertThat( jvmArgs.toArgs(), hasItem( startsWith( "-Xlog:gc,safepoint,gc+age=trace" ) ) );
     }
 }

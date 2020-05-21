@@ -8,6 +8,8 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -25,6 +27,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 public class ManagedStore
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ManagedStore.class );
+
     private final DataGeneratorConfig dataGeneratorConfig;
     private final StoreAndConfig storeAndConfig;
     protected GraphDatabaseService db;
@@ -75,8 +79,8 @@ public class ManagedStore
         }
         if ( !dataGeneratorConfig.isReusable() )
         {
-            System.out.println( format( "Deleting store [%s] at: %s",
-                                        bytesToString( storeAndConfig.store().bytes() ), storeAndConfig.store().topLevelDirectory() ) );
+            LOG.debug( format( "Deleting store [%s] at: %s",
+                               bytesToString( storeAndConfig.store().bytes() ), storeAndConfig.store().topLevelDirectory() ) );
             FileUtils.deleteDirectory( storeAndConfig.store().topLevelDirectory() );
         }
     }
