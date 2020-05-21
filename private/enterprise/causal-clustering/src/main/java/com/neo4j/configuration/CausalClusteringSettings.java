@@ -92,7 +92,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
     @Description( "Whether or not the cluster should attempt to automatically ensure each cluster member holds the leader role for an equal number of " +
                   "databases. Note that if a `leadership_priority_group` is specified for a given database, it will be ignored by this automatic process." )
     public static final Setting<SelectionStrategies> leader_balancing =
-            newBuilder( "causal_clustering.leadership_balancing", ofEnum( SelectionStrategies.class ), SelectionStrategies.NO_BALANCING ).build();
+            newBuilder( "causal_clustering.leadership_balancing", ofEnum( SelectionStrategies.class ), SelectionStrategies.EQUAL_BALANCING ).build();
 
     @Description( "Prevents the current instance from volunteering to become Raft leader. Defaults to false, and " +
             "should only be used in exceptional circumstances by expert users. Using this can result in reduced " +
