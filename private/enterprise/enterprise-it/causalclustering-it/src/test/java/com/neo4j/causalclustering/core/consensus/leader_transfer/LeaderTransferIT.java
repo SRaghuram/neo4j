@@ -109,18 +109,14 @@ class LeaderTransferIT
     void shouldEventuallyBalanceLeadershipsToNewMembers() throws Exception
     {
         // given
-        var systemDbLeader = 0;
         var config = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
                 .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).setting(), "prio" )
                 .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
-                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" )
-                .withInstanceCoreParam( CausalClusteringSettings.server_groups, id -> id == systemDbLeader ? "prio" : "" );
+                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" );
         var cluster = clusterFactory.createCluster( config );
         cluster.start();
-
-        assertLeaderIsOnCorrectMember( cluster, SYSTEM_DATABASE_NAME, cluster.getCoreMemberById( systemDbLeader ) );
 
         var dbNames = IntStream.iterate( 0, i -> i + 1 )
                                .mapToObj( idx -> "database-" + idx )
