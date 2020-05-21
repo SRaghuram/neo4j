@@ -94,7 +94,8 @@ public class BenchmarkUtil
                       .replace( ",", "_" )
                       .replace( "(", "_" )
                       .replace( ")", "_" )
-                      .replace( "-", " " ) )
+                      .replace( "-", " " )
+                      .replace( "|", "_" ) )
                 .replace( " ", "_" );
     }
 
@@ -145,10 +146,10 @@ public class BenchmarkUtil
 
             try ( Stream<Path> paths = Files.walk( dir ) )
             {
-            paths
-                .sorted( Comparator.reverseOrder() )
-                .map( Path::toFile )
-                .forEach( File::delete );
+                paths
+                        .sorted( Comparator.reverseOrder() )
+                        .map( Path::toFile )
+                        .forEach( File::delete );
             }
         }
         catch ( IOException e )
