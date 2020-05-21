@@ -12,6 +12,7 @@ import com.neo4j.configuration.ServerGroupName;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferTarget.NO_TARGET;
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeadershipPriorityGroupSetting.READER;
 import static java.util.function.Function.identity;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toMap;
 
 class TransferLeaderJob extends TransferLeader implements Runnable
@@ -69,8 +71,12 @@ class TransferLeaderJob extends TransferLeader implements Runnable
 
     private void doBalancing( List<NamedDatabaseId> leaderships )
     {
-        var unPrioritisedLeaderships = unPrioritisedLeaderships( config, leaderships );
-        var leaderTransferTarget = createTarget( unPrioritisedLeaderships, selectionStrategy );
+        var dbsWithPriorityGroups = prioritisedGroups( config, leaderships ).keySet();
+        var unPrioritisedNonSystemLeaderships = leaderships.stream()
+                                                          .filter( not( dbsWithPriorityGroups::contains ) )
+                                                          .filter( not( NamedDatabaseId::isSystemDatabase ) )
+                                                          .collect( Collectors.toList() );
+        var leaderTransferTarget = createTarget( unPrioritisedNonSystemLeaderships, selectionStrategy );
 
         if ( leaderTransferTarget != NO_TARGET )
         {
@@ -94,14 +100,6 @@ class TransferLeaderJob extends TransferLeader implements Runnable
         prioritisedGroups.entrySet().removeIf( entry -> myGroups.contains( entry.getValue() ) );
 
         return prioritisedGroups;
-    }
-
-    private static List<NamedDatabaseId> unPrioritisedLeaderships( Config config, List<NamedDatabaseId> myLeaderships )
-    {
-        Set<NamedDatabaseId> leadershipsWithPriorityGroups = prioritisedGroups( config, myLeaderships ).keySet();
-        return myLeaderships.stream()
-                            .filter( db -> !leadershipsWithPriorityGroups.contains( db ) )
-                            .collect( Collectors.toList() );
     }
 
     private static Map<NamedDatabaseId,ServerGroupName> prioritisedGroups( Config config, List<NamedDatabaseId> existingDatabases )

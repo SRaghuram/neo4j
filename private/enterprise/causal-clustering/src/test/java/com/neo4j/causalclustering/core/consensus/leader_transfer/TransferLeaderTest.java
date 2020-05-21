@@ -28,6 +28,11 @@ import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class TransferLeaderTest
@@ -147,6 +152,42 @@ class TransferLeaderTest
         // then
         assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId2, Set.of( transferee ) ) );
         assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo( new RaftMessages.LeadershipTransfer.Proposal( myself, transferee, Set.of() ) );
+    }
+
+    @Test
+    void shouldNotDoNormalLoadBalancingForSystemDatabase()
+    {
+        // given
+        var transferee = core1;
+        var selectionStrategyInputs = new ArrayList<TransferCandidates>();
+        SelectionStrategy mockSelectionStrategy = validTopologies ->
+        {
+            selectionStrategyInputs.addAll( validTopologies );
+            var transferCandidates = validTopologies.get(0);
+            return new LeaderTransferTarget( transferCandidates.databaseId(), transferee );
+        };
+        var nonSystemLeaderships = List.of( databaseId1 );
+
+        var transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, myself, databasePenalties,
+                                                       mockSelectionStrategy, raftMembershipResolver, () -> nonSystemLeaderships );
+
+        // when
+        transferLeaderJob.run();
+
+        // then
+        assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId1, Set.of( transferee ) ) );
+
+        // given
+        selectionStrategyInputs.clear();
+        var systemLeaderships = List.of( NAMED_SYSTEM_DATABASE_ID );
+        transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, myself, databasePenalties,
+                                                   mockSelectionStrategy, raftMembershipResolver, () -> systemLeaderships );
+
+        // when
+        transferLeaderJob.run();
+
+        // then
+        assertThat( selectionStrategyInputs ).isEmpty();
     }
 
     @Test
