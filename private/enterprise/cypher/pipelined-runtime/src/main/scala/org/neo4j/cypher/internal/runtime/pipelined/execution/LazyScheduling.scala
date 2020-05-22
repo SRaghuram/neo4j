@@ -105,7 +105,7 @@ abstract class LowMarkScheduling[T](stateFactory: StateFactory, priority: Array[
         if (schedulingResult.task != null) {
           DebugSupport.SCHEDULING.log("[nextTask] schedule %s", schedulingResult)
           if (item > 0)
-            mark.lower(item - 1)
+            mark.setLowMark(item - 1)
           return schedulingResult
         } else if (schedulingResult.someTaskWasFilteredOut) {
           someTaskWasFilteredOut = true
