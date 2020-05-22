@@ -685,8 +685,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     measureExpandInto(100, "optional-expand-into-big", logicalQuery)
   }
 
-  test("measure shortest paths") {
-    val testName = "shortest-paths"
+  test("measure all shortest paths peak - many shared relationships") {
+    val testName = "allshortestpath-sharedrels"
     val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val chainCount = 6
@@ -706,17 +706,31 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
       .build()
 
     val inputArray = Array(Array[Any](start, end), Array[Any](start, end), Array[Any](start, end))
+    runPeakMemoryUsageProfiling(logicalQuery, inputArray, heapDumpFileNamePrefix)
+  }
 
-    val rows = 3
-    val heapDumpInterval = 1
-    val input = finiteCyclicInputWithPeriodicHeapDump(inputArray, rows, heapDumpInterval, heapDumpFileNamePrefix)
+  test("measure all shortest paths peak - no shared relationships") {
+    val testName = "allshortestpath-nosharedrels"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
-    // then
-    val result = profileNonRecording(logicalQuery, runtime, input)
-    consumeNonRecording(result)
+    val chainCount = 100000
+    val chainDepth = 2
+    val (start, end) = given {
+      linkedChainGraphNoCrossLinking(chainCount, chainDepth)
+    }
 
-    val queryProfile = result.runtimeResult.queryProfile()
-    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+    // We need to restart the transaction after constructing the graph or we will track all the memory usage from it
+    runtimeTestSupport.restartTx()
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("path")
+      .shortestPath("(x)-[r*]->(y)", pathName = Some("path"), all = true)
+      .input(Seq("x", "y"))
+      .build()
+
+    val inputArray = Array(Array[Any](start, end), Array[Any](start, end), Array[Any](start, end))
+    runPeakMemoryUsageProfiling(logicalQuery, inputArray, heapDumpFileNamePrefix)
   }
 
   test("measure partial top - ordered column has one value") {
