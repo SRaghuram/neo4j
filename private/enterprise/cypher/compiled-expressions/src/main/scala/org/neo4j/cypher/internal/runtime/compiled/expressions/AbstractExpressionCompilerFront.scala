@@ -995,34 +995,52 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case StartsWith(lhs, rhs) =>
       for {l <- compileExpression(lhs)
            r <- compileExpression(rhs)} yield {
+        val leftVariableName = namer.nextVariableName()
+        val rightVariableName = namer.nextVariableName()
+        val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
+        val lazyRight = oneTime(declareAndAssign(typeRefOf[AnyValue], rightVariableName, nullCheckIfRequired(r)))
+
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
-                       invoke(cast[TextValue](l.ir), method[TextValue, Boolean, TextValue]("startsWith"),
-                              cast[TextValue](r.ir))),
+            invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("startsWith"),
+              block(lazyRight, cast[TextValue](r.ir)))),
           l.fields ++ r.fields, l.variables ++ r.variables,
-          Set(not(instanceOf[TextValue](l.ir)), not(instanceOf[TextValue](r.ir))))
+          Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
+            block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
       }
 
     case EndsWith(lhs, rhs) =>
       for {l <- compileExpression(lhs)
            r <- compileExpression(rhs)} yield {
+        val leftVariableName = namer.nextVariableName()
+        val rightVariableName = namer.nextVariableName()
+        val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
+        val lazyRight = oneTime(declareAndAssign(typeRefOf[AnyValue], rightVariableName, nullCheckIfRequired(r)))
+
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
-                       invoke(cast[TextValue](l.ir), method[TextValue, Boolean, TextValue]("endsWith"),
-                              cast[TextValue](r.ir))),
+            invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("endsWith"),
+              block(lazyRight, cast[TextValue](r.ir)))),
           l.fields ++ r.fields, l.variables ++ r.variables,
-          Set(not(instanceOf[TextValue](l.ir)), not(instanceOf[TextValue](r.ir))))
+          Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
+            block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
       }
 
     case Contains(lhs, rhs) =>
       for {l <- compileExpression(lhs)
            r <- compileExpression(rhs)} yield {
+        val leftVariableName = namer.nextVariableName()
+        val rightVariableName = namer.nextVariableName()
+        val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
+        val lazyRight = oneTime(declareAndAssign(typeRefOf[AnyValue], rightVariableName, nullCheckIfRequired(r)))
+
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
-                       invoke(cast[TextValue](l.ir), method[TextValue, Boolean, TextValue]("contains"),
-                              cast[TextValue](r.ir))),
+            invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("contains"),
+              block(lazyRight, cast[TextValue](r.ir)))),
           l.fields ++ r.fields, l.variables ++ r.variables,
-          Set(not(instanceOf[TextValue](l.ir)), not(instanceOf[TextValue](r.ir))))
+          Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
+            block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
       }
 
     case expressions.IsNull(test) =>
