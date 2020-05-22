@@ -2254,14 +2254,16 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     @ParameterizedTest
     @ValueSource( strings = {"dbms.upgrade", "dbms.upgradeDetails", "dbms.upgradeStatus", "dbms.upgradeStatusDetails"} )
-    void shouldFailUpgradeProceduresIfNotAdminNotSystemDatabase( String procedure )
+    void shouldFailUpgradeProceduresIfNotSystemDatabase( String procedure )
     {
         String query = String.format( "CALL %s", procedure );
         setupFakeSystemComponents();
-        assertFail( noneSubject, query, ACCESS_DENIED );
-        assertFail( readSubject, query, PERMISSION_DENIED );
-        assertFail( writeSubject, query, PERMISSION_DENIED );
-        assertFail( schemaSubject, query, PERMISSION_DENIED );
+        assertFail( DEFAULT_DATABASE_NAME, noneSubject, query, ACCESS_DENIED );
+        assertFail( DEFAULT_DATABASE_NAME, readSubject, query, PERMISSION_DENIED );
+        assertFail( DEFAULT_DATABASE_NAME, writeSubject, query, PERMISSION_DENIED );
+        assertFail( DEFAULT_DATABASE_NAME, schemaSubject, query, PERMISSION_DENIED );
+        assertFail( DEFAULT_DATABASE_NAME, adminSubject, query,
+                String.format( "This is an administration command and it should be executed against the system database: %s", procedure ) );
     }
 
     @ParameterizedTest
@@ -2274,15 +2276,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertFail( SYSTEM_DATABASE_NAME, readSubject, query, PERMISSION_DENIED );
         assertFail( SYSTEM_DATABASE_NAME, writeSubject, query, PERMISSION_DENIED );
         assertFail( SYSTEM_DATABASE_NAME, schemaSubject, query, PERMISSION_DENIED );
-    }
-
-    @ParameterizedTest
-    @ValueSource( strings = {"dbms.upgrade", "dbms.upgradeDetails", "dbms.upgradeStatus", "dbms.upgradeStatusDetails"} )
-    void shouldFailUpgradeProceduresIfNotOnSystemDatabase( String procedure )
-    {
-        setupFakeSystemComponents();
-        assertFail( DEFAULT_DATABASE_NAME, adminSubject, String.format( "CALL %s", procedure ),
-                String.format( "This is an administration command and it should be executed against the system database: %s", procedure ) );
     }
 
     @Test
