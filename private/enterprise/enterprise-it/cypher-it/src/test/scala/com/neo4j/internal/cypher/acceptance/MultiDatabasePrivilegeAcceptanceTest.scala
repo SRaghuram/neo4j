@@ -941,7 +941,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // create tokens
     the[QueryExecutionException] thrownBy {
       executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
-    } should have message s"'create_label' operations are not allowed for user 'Alice' with roles [PUBLIC, $role] restricted to TOKEN_WRITE."
+    } should have message s"Creating new node label is not allowed for user 'Alice' with roles [PUBLIC, $role] restricted to TOKEN_WRITE. " +
+      "See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // index management
     execute("CALL db.createLabel('Label')")

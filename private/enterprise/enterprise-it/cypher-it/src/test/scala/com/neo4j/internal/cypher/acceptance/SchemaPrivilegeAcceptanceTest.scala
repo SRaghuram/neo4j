@@ -512,7 +512,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // THEN
     assert(graph.getMaybeIndex("User", Seq("name")).isEmpty)
@@ -730,7 +730,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // THEN
     assert(graph.getMaybeNodeConstraint("User", Seq("name")).isEmpty)
@@ -962,12 +962,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:User) RETURN n")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createLabel('A')")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE."
+    } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE. " +
+      "See GRANT CREATE NEW NODE LABEL ON DATABASE..."
   }
 
   test("Should allow type creation for normal user with type create privilege") {
@@ -989,12 +990,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n")
-    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new relationship type is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
+      "See GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE..."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')")
-    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE."
+    } should have message "Creating new relationship type is not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE. " +
+      "See GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE..."
   }
 
   test("Should allow property key creation for normal user with name creation privilege") {
@@ -1017,17 +1020,20 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
+      "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE ()-[n:Rel {prop: 'value'}]->() RETURN n")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
+      "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createProperty('age')")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE."
+    } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE. " +
+      "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
   }
 
   test("Should not allow property key creation for normal user with only label creation privilege") {
@@ -1039,7 +1045,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n.name")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
+      "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
   }
 
   test("Should not allow property key creation for normal user with only type creation privilege") {
@@ -1051,7 +1058,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE ()-[r:Rel {prop: 'value'}]->() RETURN r.prop")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
+      "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
   }
 
   test("Should allow all creation for normal user with name management privilege") {
@@ -1100,9 +1108,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOn(newDefaultDatabase, "alice", "abc", "CREATE (n:Label1)-[:Type1]->({prop1: 1}) RETURN n")
     }
     exception1.getMessage should (
-      be("'create_label' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or (
-        be("'create_reltype' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or
-          be("'create_propertykey' operations are not allowed for user 'alice' with roles [PUBLIC, role]."))
+      be("Creating new node label is not allowed for user 'alice' with roles [PUBLIC, role]. See GRANT CREATE NEW NODE LABEL ON DATABASE...") or (
+        be("Creating new relationship type is not allowed for user 'alice' with roles [PUBLIC, role]. See GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE...") or
+          be("Creating new property name is not allowed for user 'alice' with roles [PUBLIC, role]. See GRANT CREATE NEW NODE PROPERTY NAME ON DATABASE..."))
       )
 
     // THEN
@@ -1129,9 +1137,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE (n:Label2)-[:Type2]->({prop2: 1}) RETURN n")
     }
     exception2.getMessage should (
-      be("'create_label' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or (
-        be("'create_reltype' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or
-          be("'create_propertykey' operations are not allowed for user 'alice' with roles [PUBLIC, role]."))
+      be("Creating new node label is not allowed for user 'alice' with roles [PUBLIC, role]. See GRANT CREATE NEW NODE LABEL ON DATABASE...") or (
+        be("Creating new relationship type is not allowed for user 'alice' with roles [PUBLIC, role]. See GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE...") or
+          be("Creating new property name is not allowed for user 'alice' with roles [PUBLIC, role]. See GRANT CREATE NEW NODE PROPERTY NAME ON DATABASE..."))
       )
 
     // THEN
