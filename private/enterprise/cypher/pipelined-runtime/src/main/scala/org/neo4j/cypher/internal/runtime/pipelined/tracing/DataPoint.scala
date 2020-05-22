@@ -10,7 +10,7 @@ import java.io.Closeable
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 case class DataPoint(id: Long,
-                     upstreamIds: Seq[Long],
+                     upstreamId: Option[Long],
                      queryId: Int,
                      schedulingThreadId: Long,
                      scheduledTime: Long,
@@ -22,7 +22,7 @@ case class DataPoint(id: Long,
   def withTimeZero(t0: Long): DataPoint =
     DataPoint(
       id,
-      upstreamIds,
+      upstreamId,
       queryId,
       schedulingThreadId,
       scheduledTime - t0,

@@ -25,7 +25,7 @@ abstract class CsvDataWriter extends DataPointFlusher {
   private def serialize(dataPoint: DataPoint): String =
     Array(
       dataPoint.id.toString,
-      dataPoint.upstreamIds.mkString("[", ";", "]"),
+      dataPoint.upstreamId.mkString("[", ";", "]"),
       dataPoint.queryId.toString,
       dataPoint.schedulingThreadId.toString,
       TimeUnit.NANOSECONDS.toMicros(dataPoint.scheduledTime).toString,

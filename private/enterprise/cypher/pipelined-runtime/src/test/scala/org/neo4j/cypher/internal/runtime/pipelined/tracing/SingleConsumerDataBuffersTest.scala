@@ -57,7 +57,7 @@ class SingleConsumerDataBuffersTest extends CypherFunSuite {
 
   private def dataPointsFor(min: Int, max: Int, threadId: Int): Seq[DataPoint] = (min until max).map(i => dataPointFor(i, threadId))
 
-  private def dataPointFor(i: Int, threadId: Int) = DataPoint(i, Seq(0), 0, 0, 0, threadId, 0, 0, NOP)
+  private def dataPointFor(i: Int, threadId: Int) = DataPoint(i, Some(0), 0, 0, 0, threadId, 0, 0, NOP)
 
   class CollectingDataPointWriter extends DataPointFlusher {
     val points: ArrayBuffer[DataPoint] = ArrayBuffer[DataPoint]()

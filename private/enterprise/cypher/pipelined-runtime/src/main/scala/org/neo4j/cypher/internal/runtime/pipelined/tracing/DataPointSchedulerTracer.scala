@@ -32,15 +32,15 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
       val scheduledTime = currentTime()
       val schedulingThread = Thread.currentThread().getId
       val workUnitId = newWorkUnitId(schedulingThread)
-      val upstreamWorkUnitIds = Option(upstreamWorkUnit).map(_.id).toList
-      ScheduledWorkUnit(workUnitId, upstreamWorkUnitIds, queryId, scheduledTime, schedulingThread, workId)
+      val maybeUpstreamWorkUnitId = Option(upstreamWorkUnit).map(_.id)
+      ScheduledWorkUnit(workUnitId, maybeUpstreamWorkUnitId, queryId, scheduledTime, schedulingThread, workId)
     }
 
     override def stopQuery(): Unit = {}
   }
 
   case class ScheduledWorkUnit(workUnitId: Long,
-                               upstreamWorkUnitIds: Seq[Long],
+                               upstreamWorkUnitId: Option[Long],
                                queryId: Int,
                                scheduledTime: Long,
                                schedulingThreadId: Long,
@@ -49,7 +49,7 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
     override def start(): WorkUnitEvent = {
       val startTime = currentTime()
       WorkUnit(workUnitId,
-        upstreamWorkUnitIds,
+        upstreamWorkUnitId,
         queryId,
         schedulingThreadId,
         scheduledTime,
@@ -60,7 +60,7 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
   }
 
   case class WorkUnit(override val id: Long,
-                      upstreamIds: Seq[Long],
+                      upstreamId: Option[Long],
                       queryId: Int,
                       schedulingThreadId: Long,
                       scheduledTime: Long,
@@ -71,7 +71,7 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
     override def stop(): Unit = {
       val stopTime = currentTime()
       dataPointWriter.write(
-        DataPoint(id, upstreamIds, queryId, schedulingThreadId, scheduledTime, executionThreadId, startTime, stopTime, workId))
+        DataPoint(id, upstreamId, queryId, schedulingThreadId, scheduledTime, executionThreadId, startTime, stopTime, workId))
     }
   }
 
