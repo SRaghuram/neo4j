@@ -44,7 +44,7 @@ class ReadOnlyArray[T](private val inner: Array[T]) {
   /**
     * Return this data in a `Seq`. Not for hot path use.
     */
-  def toSeq(): Seq[T] = inner.toSeq
+  def toSeq: Seq[T] = inner.toSeq
 
   /**
     * Return a copy of this array with an appended element `t`. Not for hot path use.
@@ -70,10 +70,12 @@ class ReadOnlyArray[T](private val inner: Array[T]) {
 
   def canEqual(other: Any): Boolean = other.isInstanceOf[ReadOnlyArray[_]]
 
+  override def toString: String = inner.mkString("[", ", ", "]")
+
   override def equals(other: Any): Boolean =
     other match {
       case that: ReadOnlyArray[_] =>
-        (that canEqual this) && inner.indices.forall(i => inner(i) == that.inner(i))
+        (that canEqual this) && inner.toSeq == that.toSeq
       case _ => false
     }
 
