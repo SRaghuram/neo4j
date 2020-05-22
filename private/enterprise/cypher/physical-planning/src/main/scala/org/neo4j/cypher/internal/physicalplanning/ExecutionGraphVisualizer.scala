@@ -95,6 +95,8 @@ object ExecutionGraphVisualizer {
           bufs(id) = new VirtualNodeHack(Map("name" -> s"AntiBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
         case AttachBufferVariant(_, _, argumentSlotOffset, _) =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"AttachBuffer[$id]", "id" -> (id: Integer), "argumentSlotOffset" -> (argumentSlotOffset: Integer)),  "Buffer")
+        case ConditionalBufferVariant(_, _, _) =>
+          bufs(id) = new VirtualNodeHack(Map("name" -> s"ConditionalSink[$id]", "id" -> (id: Integer)),  "Buffer")
       }
     }
     // Pass 2: connect the buffers
@@ -136,6 +138,9 @@ object ExecutionGraphVisualizer {
         case AttachBufferVariant(applyBuffer, _, _, _) =>
           rels += new VirtualRelationshipHack(bufs(id), bufs(applyBuffer.id.x), Map.empty, "DELEGATES_TO")
         case RegularBufferVariant => // No connections
+        case ConditionalBufferVariant(onTrue, onFalse, _) =>
+          rels += new VirtualRelationshipHack(bufs(id), bufs(onTrue.id.x), Map.empty, "DELEGATES_TO")
+          rels += new VirtualRelationshipHack(bufs(id), bufs(onFalse.id.x), Map.empty, "DELEGATES_TO")
       }
     }
 

@@ -424,6 +424,54 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     assertPlanReturns(plan, ops, Seq.empty, bufs, pipes, rels)
   }
 
+  test("should return graph for condition apply") {
+    val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .conditionalApply("n").withBreak()
+      .|.nodeByLabelScan("m", "N", IndexOrderNone, "n").withBreak()
+      .allNodeScan("n").withBreak()
+      .build())
+
+
+    val ops = Seq(
+      TNode(Map("name" -> "ProduceResult", "id" -> (0: Integer)), "End", "Operator"),
+      TNode(Map("name" -> "ConditionalApply", "id" -> (1: Integer)), "Operator"),
+      TNode(Map("name" -> "NodeByLabelScan", "id" -> (2: Integer)), "Operator"),
+      TNode(Map("name" -> "AllNodesScan", "id" -> (3: Integer)), "Operator"),
+    )
+    val bufs = Seq(
+      TNode(Map("name" -> "ApplyBuffer[0]", "id" -> (0: Integer), "argumentSlotOffset" -> (-1: Integer)), "Start", "Buffer"),
+      TNode(Map("name" -> "Buffer[1]", "id" -> (1: Integer)), "Buffer"),
+      TNode(Map("name" -> "ApplyBuffer[2]", "id" -> (2: Integer), "argumentSlotOffset" -> (1: Integer)), "Buffer"),
+      TNode(Map("name" -> "ConditionalSink[3]", "id" -> (3: Integer)), "Buffer"),
+      TNode(Map("name" -> "Buffer[4]", "id" -> (4: Integer)), "Buffer"),
+      TNode(Map("name" -> "Buffer[5]", "id" -> (5: Integer)), "Buffer"),
+    )
+    val pipes = Seq(
+      TNode(Map("name" -> "Pipeline[0]", "id" -> (0: Integer), "serial" -> (false: lang.Boolean)), "Pipeline"),
+      TNode(Map("name" -> "Pipeline[1]", "id" -> (1: Integer), "serial" -> (false: lang.Boolean)), "Pipeline"),
+      TNode(Map("name" -> "Pipeline[2]", "id" -> (2: Integer), "serial" -> (true: lang.Boolean)), "Pipeline")
+    )
+
+    val rels = Set(
+      TRel(bufs(0), bufs(1), Map.empty, "DELEGATES_TO"),
+      TRel(bufs(1), pipes(0), Map.empty, "READ_BY"),
+      TRel(pipes(0), ops(3), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"),
+      TRel(ops(2), bufs(5), Map.empty, "WRITES_TO"),
+      TRel(ops(3), bufs(3), Map.empty, "WRITES_TO"),
+      TRel(bufs(2), bufs(4), Map.empty, "DELEGATES_TO"),
+      TRel(bufs(3), bufs(2), Map.empty, "DELEGATES_TO"),
+      TRel(bufs(3), bufs(5), Map.empty, "DELEGATES_TO"),
+      TRel(bufs(4), pipes(1), Map.empty, "READ_BY"),
+      TRel(pipes(1), ops(2), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"),
+      TRel(pipes(2), ops(1), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"),
+      TRel(ops(1), ops(0), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"),
+      TRel(bufs(5), pipes(2), Map.empty, "READ_BY"),
+    )
+
+    assertPlanReturns(plan, ops, Seq.empty, bufs, pipes, rels)
+  }
+
   private def assertPlanReturns(plan: ExecutionPlan,
                                 expectedOperators: Seq[TNode],
                                 expectedASMs: Seq[TNode],
