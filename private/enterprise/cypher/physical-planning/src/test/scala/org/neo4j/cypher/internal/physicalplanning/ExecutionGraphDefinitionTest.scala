@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
@@ -163,6 +164,27 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
         .applyBuffer(2, 1, 1)
         .delegateToMorselBuffer(3, 2)
         .pipeline(1, Seq(classOf[NodeByLabelScan], classOf[ProduceResult]), serial = true)
+        .end
+    }
+  }
+
+  test("should plan conditional apply") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .conditionalApply("n").withBreak()
+      .|.nodeByLabelScan("m", "M", IndexOrderNone).withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+        .delegateToMorselBuffer(1, 3)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .conditionalSink(3, 5, 2, 1, 1)
+        .delegateToMorselBuffer(4, 2)
+        .pipeline(1, Seq(classOf[NodeByLabelScan]))
+        .morselBuffer(5)
+        .pipeline(2, Seq(classOf[ConditionalApply], classOf[ProduceResult]), serial = true)
         .end
     }
   }
@@ -538,7 +560,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
 
   def operatorFuserFactory(fusablePlans: Class[_ <: LogicalPlan]*): OperatorFuserFactory =
     new OperatorFuserFactory {
-      val fusable = fusablePlans.toSet
+      val fusable: Set[Class[_ <: LogicalPlan]] = fusablePlans.toSet
       override def newOperatorFuser(headPlanId: Id,
                                     inputSlotConfiguration: SlotConfiguration): OperatorFuser =
         new OperatorFuser {

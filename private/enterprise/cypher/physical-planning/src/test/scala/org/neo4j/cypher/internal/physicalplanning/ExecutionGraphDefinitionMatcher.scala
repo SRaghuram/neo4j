@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_ARGUMENT_STATE_MAPS
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_ARGUMENT_STATE_MAP_INITIALIZATIONS
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_BUFFERS
+import org.neo4j.cypher.internal.runtime.slotted.expressions.IsPrimitiveNull
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
@@ -152,7 +153,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       val updatedApplyBuffer = bufferDefinition.copy(variant = variant.copy(delegates = variant.delegates :+ bd.id))(SlotConfiguration.empty)
       buffers(bufferDefinition.id.x) = updatedApplyBuffer
 
-      updateAttachBuffers(updatedApplyBuffer)
+      updateAttachAndConditionalBuffers(updatedApplyBuffer)
 
       new MorselBufferSequence(bd)
     }
@@ -164,7 +165,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       )(SlotConfiguration.empty)
       buffers(bufferDefinition.id.x) = updatedApplyBuffer
 
-      updateAttachBuffers(updatedApplyBuffer)
+      updateAttachAndConditionalBuffers(updatedApplyBuffer)
 
       ExecutionGraphDefinitionMatcher.this
     }
@@ -176,15 +177,18 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       )(SlotConfiguration.empty)
       buffers(bufferDefinition.id.x) = updatedApplyBuffer
 
-      updateAttachBuffers(updatedApplyBuffer)
+      updateAttachAndConditionalBuffers(updatedApplyBuffer)
 
       ExecutionGraphDefinitionMatcher.this
     }
 
-    private def updateAttachBuffers(updatedApplyBuffer: BufferDefinition) = {
+    private def updateAttachAndConditionalBuffers(updatedApplyBuffer: BufferDefinition): Unit = {
       buffers.transform {
         case (_, bd@BufferDefinition(_, _, _, _, atv@AttachBufferVariant(`bufferDefinition`, _, _, _))) =>
           bd.copy(variant = atv.copy(applyBuffer = updatedApplyBuffer))(SlotConfiguration.empty)
+        case (_, bd@BufferDefinition(_, _, _, _, cbv@ConditionalBufferVariant(_, `bufferDefinition`, _))) =>
+          bd.copy(variant = cbv.copy(onFalse = updatedApplyBuffer))(SlotConfiguration.empty)
+
         case (_, x) => x
       }
     }
@@ -330,6 +334,27 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       val out = MorselBufferOutput(BufferId(id))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new ApplyBufferSequence(bd)
+    }
+
+    def conditionalSink(conditionalId: Int, onTrueId: Int, onFalseId: Int, argumentSlotOffset: Int = -1, planId: Int = -1): ApplyBufferSequence = {
+      val onTrue = buffers.getOrElseUpdate(onTrueId,
+        BufferDefinition(
+          BufferId(onTrueId),
+          Id(planId),
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
+          RegularBufferVariant)(SlotConfiguration.empty))
+      val apply = applyBuffer(onFalseId, argumentSlotOffset, planId)
+      val bd = buffers.getOrElseUpdate(conditionalId,
+        BufferDefinition(
+          BufferId(conditionalId),
+          Id(planId),
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
+          ConditionalBufferVariant(onTrue, buffers(onFalseId), IsPrimitiveNull(0)))(SlotConfiguration.empty))
+      val out = MorselBufferOutput(BufferId(conditionalId))
+      pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
+      apply
     }
 
     def leftOfJoinBuffer(id: Int, argumentSlotOffset: Int, asmId: Int, planId: Int): LhsJoinBufferSequence = {
