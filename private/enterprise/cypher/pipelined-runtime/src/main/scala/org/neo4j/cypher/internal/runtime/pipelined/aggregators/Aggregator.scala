@@ -21,9 +21,11 @@ import org.neo4j.values.AnyValue
  * perform any necessary synchronization with other worker threads.
  */
 trait Aggregator {
-  def isDirect: Boolean = newStandardReducer(EmptyMemoryTracker.INSTANCE).isDirect
   def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer
   def newConcurrentReducer: Reducer
+
+  def isDirect: Boolean = newStandardReducer(EmptyMemoryTracker.INSTANCE).isDirect
+  def standardShallowSize: Long
 }
 
 object Aggregator {

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicReference
 
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.AnyValues
@@ -19,6 +20,9 @@ case object MaxAggregator extends Aggregator {
 
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new MaxStandardReducer
   override def newConcurrentReducer: Reducer = new MaxConcurrentReducer
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[MaxStandardReducer])
 
   def shouldUpdate(max: AnyValue, value: AnyValue): Boolean =
     !(value eq Values.NO_VALUE) && ((max eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(max, value) < 0)

@@ -78,7 +78,10 @@ class StandardAggregationMap(override val argumentRowId: Long,
   private[this] val reducerMap: HeapTrackingOrderedAppendMap[AnyValue, StandardAggregators] =
     HeapTrackingOrderedAppendMap.createOrderedMap[AnyValue, StandardAggregators](memoryTracker)
   private[this] val estimatedShallowSizeOfMapValue =
-    StandardAggregators.SHALLOW_SIZE + HeapEstimator.shallowSizeOfObjectArray(aggregators.length)
+    StandardAggregators.SHALLOW_SIZE +
+    HeapEstimator.shallowSizeOfObjectArray(aggregators.length) +
+    aggregators.map(_.standardShallowSize).sum
+
   private[this] val needToApplyUpdates = !Aggregator.allDirect(aggregators)
 
   override def get(groupingValue: AnyValue): AggregatedRow =

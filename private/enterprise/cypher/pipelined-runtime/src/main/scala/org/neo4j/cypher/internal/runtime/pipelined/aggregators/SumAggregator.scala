@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.DurationValue
@@ -22,6 +23,9 @@ case object SumAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new SumStandardReducer
   override def newConcurrentReducer: Reducer = new SumConcurrentReducer
 
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[SumStandardReducer])
+
   def failMix() =
     throw new CypherTypeException("sum() cannot mix number and duration")
 
@@ -35,6 +39,10 @@ case object SumAggregator extends Aggregator {
 case object SumDistinctAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new SumStandardReducer(), memoryTracker)
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new SumConcurrentReducer())
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[SumStandardReducer]) +
+      HeapEstimator.shallowSizeOfInstance(classOf[DistinctStandardReducer])
 }
 
 abstract class SumBase {

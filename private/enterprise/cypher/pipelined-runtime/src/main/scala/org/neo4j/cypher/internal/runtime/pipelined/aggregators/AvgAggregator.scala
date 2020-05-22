@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.DurationValue
@@ -50,6 +51,9 @@ case object AvgAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new AvgStandardReducer
   override def newConcurrentReducer: Reducer = new AvgConcurrentReducer
 
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[AvgStandardReducer])
+
   def failMix() =
     throw new CypherTypeException("avg() cannot mix number and duration")
 
@@ -60,6 +64,10 @@ case object AvgAggregator extends Aggregator {
 case object AvgDistinctAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new AvgStandardReducer, memoryTracker)
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new AvgConcurrentReducer)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[AvgStandardReducer]) +
+    HeapEstimator.shallowSizeOfInstance(classOf[DistinctStandardReducer])
 }
 
 abstract class AvgBase() {

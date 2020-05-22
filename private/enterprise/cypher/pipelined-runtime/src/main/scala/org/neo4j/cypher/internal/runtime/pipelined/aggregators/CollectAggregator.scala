@@ -25,6 +25,15 @@ import org.neo4j.values.virtual.VirtualValues
 case object CollectAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CollectStandardReducer(preserveNulls = false, memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer(preserveNulls = false)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[CollectStandardReducer]) +
+    ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
+
+  // Since we are not using a heap-tracking ListValueBuilder, we low-bound
+  // estimate the container size to numElement * reference_bytes
+  def registerCollectedItem(value: AnyValue, memoryTracker: MemoryTracker): Unit =
+    memoryTracker.allocateHeap(value.estimatedHeapUsage() + HeapEstimator.OBJECT_REFERENCE_BYTES)
 }
 
 /**
@@ -33,6 +42,10 @@ case object CollectAggregator extends Aggregator {
 case object CollectAllAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CollectStandardReducer(preserveNulls = true, memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer(preserveNulls = true)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[CollectStandardReducer]) +
+      ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
 }
 
 /**
@@ -41,11 +54,15 @@ case object CollectAllAggregator extends Aggregator {
 case object CollectDistinctAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CollectDistinctStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectDistinctConcurrentReducer()
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[CollectDistinctStandardReducer]) +
+      ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
 }
 
 abstract class CollectUpdater(preserveNulls: Boolean) {
-  private[aggregators] var collection = ListValueBuilder.newListBuilder()
-  protected def update(value: AnyValue): Boolean = {
+  private[aggregators] var collection = new ListValueBuilder.UnknownSizeListValueBuilder()
+  protected def collect(value: AnyValue): Boolean = {
     val addMe = preserveNulls || !(value eq Values.NO_VALUE)
     if (addMe) {
       collection.add(value)
@@ -65,8 +82,8 @@ class CollectStandardReducer(preserveNulls: Boolean, memoryTracker: MemoryTracke
 
   // Updater
   override def add(value: AnyValue): Unit = {
-    if (update(value)) {
-      memoryTracker.allocateHeap(value.estimatedHeapUsage())
+    if (collect(value)) {
+      CollectAggregator.registerCollectedItem(value, memoryTracker)
     }
   }
 }
@@ -78,7 +95,7 @@ class CollectConcurrentReducer(preserveNulls: Boolean) extends Reducer {
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
 
   class Upd() extends CollectUpdater(preserveNulls) with Updater {
-    override def add(value: AnyValue): Unit = update(value)
+    override def add(value: AnyValue): Unit = collect(value)
     override def applyUpdates(): Unit = {
       collections.add(collection.build())
       reset()
@@ -90,7 +107,7 @@ class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends Direc
   // NOTE: The owner is responsible for closing the given memory tracker in the right scope, so we do not need to use a ScopedMemoryTracker
   //       or close the seenSet explicitly here.
   private val seenSet = HeapTrackingCollections.newSet[AnyValue](memoryTracker)
-  private val collection = ListValueBuilder.newListBuilder()
+  private val collection = new ListValueBuilder.UnknownSizeListValueBuilder()
 
   // Reducer
   override def newUpdater(): Updater = this
@@ -103,9 +120,7 @@ class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends Direc
     if (!(value eq Values.NO_VALUE)) {
       val isUnique = seenSet.add(value)
       if (isUnique) {
-        // Since we are not using a heap-tracking collection, we low-bound
-        // estimate the container size to numElement * reference_bytes
-        memoryTracker.allocateHeap(value.estimatedHeapUsage() + HeapEstimator.OBJECT_REFERENCE_BYTES)
+        CollectAggregator.registerCollectedItem(value, memoryTracker)
         collection.add(value)
       }
     }

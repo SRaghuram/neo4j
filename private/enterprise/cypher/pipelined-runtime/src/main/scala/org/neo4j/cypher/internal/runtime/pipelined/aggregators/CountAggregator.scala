@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -17,6 +18,9 @@ import org.neo4j.values.storable.Values
 case object CountAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CountStandardReducer(countNulls = false)
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer(countNulls = false)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[CountStandardReducer])
 }
 
 /**
@@ -25,6 +29,10 @@ case object CountAggregator extends Aggregator {
 case object CountDistinctAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new CountStandardReducer(countNulls = false), memoryTracker)
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new CountConcurrentReducer(countNulls = false))
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[DistinctStandardReducer]) +
+    HeapEstimator.shallowSizeOfInstance(classOf[CountStandardReducer])
 }
 
 /**
@@ -33,6 +41,9 @@ case object CountDistinctAggregator extends Aggregator {
 case object CountStarAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CountStandardReducer(countNulls = true)
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer(countNulls = true)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[CountStandardReducer])
 }
 
 class CountStandardReducer(countNulls: Boolean) extends DirectStandardReducer {
