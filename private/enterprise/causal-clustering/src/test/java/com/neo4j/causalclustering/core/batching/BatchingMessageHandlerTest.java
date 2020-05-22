@@ -480,7 +480,7 @@ class BatchingMessageHandlerTest
 
         RaftId raftId = RaftIdFactory.random();
         var jobScheduler = new ThreadPoolJobScheduler( executor );
-        var scheduler = new LimitingScheduler( jobScheduler, Group.RAFT_BATCH_HANDLER, NullLogProvider.getInstance().getLog( this.getClass() ),
+        var scheduler = new LimitingScheduler( jobScheduler, Group.RAFT_HANDLER, NullLogProvider.getInstance().getLog( this.getClass() ),
                 new ReoccurringJobQueue<>() );
 
         // given
