@@ -902,11 +902,15 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     val heapDumpFileName = heapDumpFileNamePrefix + "-peak.hprof"
 
     // Run query once to determine estimated peak usage
-    val result1 = profileNonRecording(logicalQuery, runtime, inputStream1)
+    var result1 = profileNonRecording(logicalQuery, runtime, inputStream1)
     consumeNonRecording(result1)
 
-    val queryProfile = result1.runtimeResult.queryProfile()
+    var queryProfile = result1.runtimeResult.queryProfile()
     val estimatedPeakHeapUsage = result1.runtimeResult.queryProfile().maxAllocatedMemory()
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    result1 = null
+    queryProfile = null
 
     // Then run again and dump when that estimated peak usage is reached. Make sure to restart transaction to get a cleared transaction memory tracker.
     runtimeTestSupport.restartTx()
@@ -937,7 +941,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
       val result2 = profileNonRecording(logicalQuery, runtime, inputStream2)
       consumeNonRecording(result2)
 
-      printQueryProfile(heapDumpFileNamePrefix + "-peak.profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY, lastAllocation, stackTrace)
+      printQueryProfile(heapDumpFileNamePrefix + "-peak.profile", estimatedPeakHeapUsage, LOG_HEAP_DUMP_ACTIVITY, lastAllocation, stackTrace)
     } finally {
       MemoryManagementProfilingBase.resetMemoryTrackingDecorator()
     }
