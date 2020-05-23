@@ -29,7 +29,7 @@ import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.server.security.auth.AuthProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,9 +47,9 @@ class QueryExecutionTypeTest
     private static TestServer testServer;
     private static Neo4j extA;
     private static Driver extADriver;
-    private static DriverUtils neo4j = new DriverUtils( "neo4j" );
-    private static DriverUtils fabric = new DriverUtils( "fabric" );
-    private static DriverUtils system = new DriverUtils( "system" );
+    private static final DriverUtils neo4j = new DriverUtils( "neo4j" );
+    private static final DriverUtils fabric = new DriverUtils( "fabric" );
+    private static final DriverUtils system = new DriverUtils( "system" );
 
     @BeforeAll
     static void beforeAll() throws KernelException
@@ -74,13 +74,10 @@ class QueryExecutionTypeTest
 
         testServer.start();
 
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class );
-        globalProceduresRegistry
-                .registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( AuthProcedures.class );
+        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
+        globalProceduresRegistry.registerFunction( ProxyFunctions.class );
+        globalProceduresRegistry.registerProcedure( ProxyFunctions.class );
+        globalProceduresRegistry.registerProcedure( AuthProcedures.class );
 
         mainDriver = GraphDatabase.driver(
                 testServer.getBoltRoutingUri(),
