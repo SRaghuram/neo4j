@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
+import org.neo4j.util.VisibleForTesting
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
@@ -52,7 +53,10 @@ class FilteringMorsel(longs: Array[Long],
     }
   }
 
-  def isCancelled(row: Int): Boolean = cancelledRows != null && cancelledRows.get(row)
+  @inline private def isCancelled(row: Int): Boolean = cancelledRows != null && cancelledRows.get(row)
+
+  @VisibleForTesting
+  def isCancelledRow(row: Int): Boolean = isCancelled(row)
 
   def numberOfCancelledRows: Int = if (cancelledRows == null) 0 else cancelledRows.cardinality
 
@@ -100,11 +104,15 @@ class FilteringMorsel(longs: Array[Long],
       nextValidRow = currentRow
     }
 
-    override def onValidRow(): Boolean = super.onValidRow() && !isCancelled(currentRow)
+    override def onValidRow(): Boolean = {
+      val _currentRow = currentRow // Accessing a protected var is a virtual call. We should avoid doing it multiple times.
+      _currentRow >= startRow && _currentRow < endRow && !isCancelled(_currentRow)
+    }
 
     override def next(): Boolean = {
-      currentRow = findNextValidRow()
-      currentRow < endRow
+      val _nextValidRow = findNextValidRow()
+      currentRow = _nextValidRow
+      _nextValidRow < endRow
     }
 
     override def hasNext: Boolean = {

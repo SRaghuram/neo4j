@@ -185,7 +185,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
 
     (0 until numberOfRows).foreach { i =>
       if (predicate(i)) {
-        morsel.isCancelled(cursor.row) shouldBe false
+        morsel.isCancelledRow(cursor.row) shouldBe false
         validateRowDataContent(cursor, i)
 
         val hasNextRow = cursor.hasNext

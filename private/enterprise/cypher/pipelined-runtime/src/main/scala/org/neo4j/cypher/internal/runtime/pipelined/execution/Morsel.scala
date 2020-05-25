@@ -113,7 +113,10 @@ class Morsel(private[execution] final val longs: Array[Long],
 
     override def setToEnd(): Unit = currentRow = endRow
 
-    override def onValidRow(): Boolean = currentRow >= startRow && currentRow < endRow
+    override def onValidRow(): Boolean = {
+      val _currentRow = currentRow  // Accessing a protected var is a virtual call. We should avoid doing it multiple times.
+      _currentRow >= startRow && _currentRow < endRow
+    }
 
     override def next(): Boolean = {
       currentRow += 1
