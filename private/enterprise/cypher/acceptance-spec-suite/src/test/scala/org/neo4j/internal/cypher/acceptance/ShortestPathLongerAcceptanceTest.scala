@@ -6,8 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.FALSE
-import java.util
 
+import org.eclipse.collections.api.map.MutableMap
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
@@ -771,8 +771,8 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   private class DebugDataMonitor extends DataMonitor {
     var count = 0
-    def monitorData(theseVisitedNodes: util.Map[Node, ShortestPath.LevelData], theseNextNodes: util.Collection[Node],
-                    thoseVisitedNodes: util.Map[Node, ShortestPath.LevelData], thoseNextNodes: util.Collection[Node],
+    def monitorData(theseVisitedNodes: MutableMap[Node, ShortestPath.LevelData], theseNextNodes: java.lang.Iterable[Node],
+                    thoseVisitedNodes: MutableMap[Node, ShortestPath.LevelData], thoseNextNodes: java.lang.Iterable[Node],
                     connectingNode: Node) {
       count = count + 1
       dprintln(s"""------------------------------------------------------------
@@ -799,8 +799,8 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     // A (*) indicates the nodes to visit next
     // A (@) also indicates a node to visit next, but additionally denotes the special case
     // of the connecting node (where the two sides made a connection).
-    def debug(dim: Int, visitedNodes: util.Map[Node, ShortestPath.LevelData],
-              nextNodes: util.Collection[Node], connectingNode: Node) {
+    def debug(dim: Int, visitedNodes: MutableMap[Node, ShortestPath.LevelData],
+              nextNodes: java.lang.Iterable[Node], connectingNode: Node) {
       val matrix: mutable.Map[String, String] = mutable.Map[String, String]()
       var cellSize: Int = 0
       for (node <- nextNodes.asScala) {
