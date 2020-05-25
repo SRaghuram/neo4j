@@ -252,19 +252,53 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     }
   }
 
-  test("measure grouping aggregation 1") {
-    val testName = "agg_grp1"
+  // ============ AGGREGATION ============
+
+  test("measure aggregation: count(...)") {
+    measureAggregation("agg_count", grouped = false, "count(x)")
+  }
+
+  test("measure aggregation: collect(...)") {
+    measureAggregation("agg_collect", grouped = false, "collect(x)")
+  }
+
+  test("measure grouping aggregation: count(...)") {
+    measureAggregation("agg_count_grouping", grouped = true, "count(x)")
+  }
+
+  test("measure grouping aggregation: collect(...)") {
+    measureAggregation("agg_collect_grouping", grouped = true, "collect(x)")
+  }
+
+  test("measure aggregation: count(DISTINCT ...)") {
+    measureAggregation("agg_count_distinct", grouped = false, "count(DISTINCT x)")
+  }
+
+  test("measure aggregation: collect(DISTINCT ...)") {
+    measureAggregation("agg_collect_distinct", grouped = false, "collect(DISTINCT x)")
+  }
+
+  test("measure grouping aggregation: count(DISTINCT ...)") {
+    measureAggregation("agg_count_distinct_grouping", grouped = true, "count(DISTINCT x)")
+  }
+
+  test("measure grouping aggregation: collect(DISTINCT ...)") {
+    measureAggregation("agg_collect_distinct_grouping", grouped = true, "collect(DISTINCT x)")
+  }
+
+  private def measureAggregation(testName: String, grouped: Boolean, aggregator: String): Unit = {
     val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
+    val grouping = if (grouped) Seq("x AS x") else Seq.empty
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("c")
-      .aggregation(Seq("x AS x"), Seq("collect(x) AS c"))
+      .aggregation(grouping, Seq(aggregator + " AS c"))
       .input(variables = Seq("x"))
       .build()
 
     // when
-    val data: Array[Array[Any]] = (1L to 10000L).map(Array[Any](_)).toArray
+    val data: Array[Array[Any]] = (1L to DEFAULT_INPUT_LIMIT).map(Array[Any](_)).toArray
     val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
@@ -273,6 +307,42 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  // ===== ORDERED AGGREGATION ========
+
+  test("measure ordered aggregation: count(...), ordered key is distinct") {
+    val testName = "ordered_agg_count_distinct"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("c")
+      .orderedAggregation(Seq("x AS x", "y AS y"), Seq("count(x) AS c"), Seq("x"))
+      .projection("42 AS y")
+      .input(variables = Seq("x"))
+      .build()
+
+    // when
+    val data: Array[Array[Any]] = (1L to DEFAULT_INPUT_LIMIT).map(Array[Any](_)).toArray
+    runPeakMemoryUsageProfiling(logicalQuery, data, heapDumpFileNamePrefix)
+  }
+
+  test("measure ordered aggregation: count(...), ordered key is fixed") {
+    val testName = "ordered_agg_count_one"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("c")
+      .orderedAggregation(Seq("x AS x", "y AS y"), Seq("count(x) AS c"), Seq("y"))
+      .projection("42 AS y")
+      .input(variables = Seq("x"))
+      .build()
+
+    // when
+    val data: Array[Array[Any]] = (1L to DEFAULT_INPUT_LIMIT).map(Array[Any](_)).toArray
+    runPeakMemoryUsageProfiling(logicalQuery, data, heapDumpFileNamePrefix)
   }
 
   test("measure sort 1 column") {
