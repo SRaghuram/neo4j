@@ -120,7 +120,10 @@ public class MigrateDataIntoOtherDatabase
                     {
                         Node fromNode = nodes.next();
                         Node toNode = copyNodeData( fromNode, toTx );
-                        fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].put( fromNode.getId(), toNode.getId() );
+                        if ( fromNode.getId() != toNode.getId() )
+                        {
+                            fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].put( fromNode.getId(), toNode.getId() );
+                        }
                     }
                     toTx.commit();
                     System.out.println( "node batch " + batch + " completed" );
@@ -134,7 +137,7 @@ public class MigrateDataIntoOtherDatabase
             {
                 for ( Node fromNode : fromTx.getAllNodes() )
                 {
-                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].get( fromNode.getId() );
+                    long toNodeId = fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].getIfAbsent( fromNode.getId(), fromNode.getId() );
                     Node toNode = toTx.getNodeById( toNodeId );
                     compareNodes( fromNode, toNode, true, true, false );
                 }
