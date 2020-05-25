@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.logical.generator.LogicalPlanGenerator.WithStat
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlanToPlanBuilderString
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.runtime.spec.LogicalPlanFuzzTesting.beSameResultAs
 import org.neo4j.cypher.internal.util.Cost
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
@@ -38,6 +39,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Signaler
 import org.scalatest.concurrent.ThreadSignaler
 import org.scalatest.concurrent.TimeLimits
+import org.scalatest.matchers.MatchResult
+import org.scalatest.matchers.Matcher
 import org.scalatest.time.Seconds
 import org.scalatest.time.Span
 
@@ -82,7 +85,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
   }
 
   private val initialSeed = Seed.random() // use `Seed.fromBase64(...).get` to reproduce test failures
-  private val maxCost = Cost(sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_COST", "10000").toInt)
+  private val maxCost = Cost(sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_COST", "1000000").toInt)
   private val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "100").toInt
   private val maxIterationTimeSpan = Span(
     sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_ITERATION_TIME_SECONDS", "60").toInt,
@@ -189,7 +192,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
   }
 
   private def compareResults(runtime: String, plan: LogicalPlan, result: IndexedSeq[Array[AnyValue]], expectedResult: IndexedSeq[Array[AnyValue]]): Unit = {
-    val columns = plan.asInstanceOf[ProduceResult].columns
+    val columns = plan.asInstanceOf[ProduceResult].columns.toIndexedSeq
     // This can get very large, so we split in multiple methods to not exceed JVM method size limit.
     val expectedRowMethods = expectedResult.map(row => row.map(_.map(new DefaultValueMapper(tx))).map {
       // TODO revisit this valueMapper when we have non-node/non-rel columns in ProduceResults
@@ -209,7 +212,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     )
     // Comparing results can take very long. We should cancel if that is the case.
     withCluesCancelAfter(maxIterationTimeSpan, s"Comparing $runtime against ${runtimes.head.name}, result.size = ${result.size}", testCase) {
-      result should (contain theSameElementsAs expectedResult)
+      result should beSameResultAs(expectedResult, columns)
     }
   }
 
@@ -261,5 +264,14 @@ object LogicalPlanFuzzTesting {
     graphCreation.nodeGraph(10, "A")
     graphCreation.nodeGraph(12, "B")
     graphCreation.nodeGraph(5, "C")
+  }
+
+  case class beSameResultAs(expected: IndexedSeq[Array[AnyValue]], columns: IndexedSeq[String]) extends Matcher[IndexedSeq[Array[AnyValue]]] {
+    private val rowsMatcher = EqualInAnyOrder(expected)
+
+    override def apply(actual: IndexedSeq[Array[AnyValue]]): MatchResult = rowsMatcher.matches(columns, actual) match {
+      case RowsMatch => MatchResult(matches = true, "", "")
+      case RowsDontMatch(msg) => MatchResult(matches = false, msg, "")
+    }
   }
 }
