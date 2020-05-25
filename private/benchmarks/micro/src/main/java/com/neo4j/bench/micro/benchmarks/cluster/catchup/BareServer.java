@@ -23,7 +23,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -45,12 +44,13 @@ import static com.neo4j.causalclustering.catchup.ResponseMessageType.TX_STREAM_F
 
 class BareServer implements CatchupServerHandler
 {
+    private static final String ATOMIC = "atomic.bin";
+
     private final Log log;
     private final BareFilesHolder fileHolder;
     private final BareTransactionProvider transactionProvider;
     private DatabaseId databaseId;
     private StoreId storeId;
-    private File[] nonAtomics;
     private long lastTxId;
 
     BareServer( LogProvider logProvider, BareFilesHolder fileHolder, BareTransactionProvider transactionProvider ) throws IOException
@@ -63,9 +63,8 @@ class BareServer implements CatchupServerHandler
         databaseId = DatabaseIdFactory.from( UUID.randomUUID() );
         storeId = new StoreId( rnd.nextInt( 1000 ), rnd.nextInt( 1000 ) + 1000, rnd.nextInt( 1000 ) + 2000 );
         lastTxId = rnd.nextInt( 1000 ) + 3000;
-        nonAtomics = fileHolder.getFiles();
 
-        fileHolder.prepareFile( "atomic.bin", 1024 );
+        fileHolder.prepareFile( ATOMIC, 1024 );
     }
 
     @Override
@@ -102,7 +101,8 @@ class BareServer implements CatchupServerHandler
             @Override
             protected void channelRead0( ChannelHandlerContext ctx, PrepareStoreCopyRequest msg )
             {
-                fileHolder.sendFile( ctx, "atomic.bin" );
+                fileHolder.sendFile( ctx, ATOMIC );
+                var nonAtomics = Stream.of( fileHolder.getFiles() ).filter( file -> !file.getName().equals( ATOMIC ) ).toArray( File[]::new );
                 respond( ctx, protocol, PREPARE_STORE_COPY_RESPONSE, PrepareStoreCopyResponse.success( nonAtomics, lastTxId ) );
             }
         };
