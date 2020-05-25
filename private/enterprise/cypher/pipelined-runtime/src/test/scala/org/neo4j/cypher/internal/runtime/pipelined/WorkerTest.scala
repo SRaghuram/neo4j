@@ -59,38 +59,12 @@ class WorkerTest extends CypherFunSuite {
     verify(sleeper, times(ATTEMPTS)).reportIdle()
   }
 
-  test("should handle scheduling error which occurred before getting morsel from parallelizer") {
-    val cause = new Exception
-    val originalMorsel = mock[Morsel]
-    val input = mock[MorselParallelizer]
-    val pipeline = mock[ExecutablePipeline]
-    when(input.originalForClosing).thenReturn(originalMorsel)
-
-    val schedulingPolicy: QuerySchedulingPolicy =
-      (_: QueryResources) =>
-        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
-
-    val query = mockExecutingQuery(schedulingPolicy)
-    val executionState = mock[ExecutionState]
-    when(query.executionState).thenReturn(executionState)
-    val resources = mock[QueryResources]
-
-
-    val worker = new Worker(1, mock[QueryManager], mock[Sleeper])
-    worker.scheduleNextTask(query, resources) shouldBe SchedulingResult(null, someTaskWasFilteredOut = true)
-
-    verify(input).originalForClosing
-    verify(input, never()).nextCopy
-    verify(executionState).closeMorselTask(pipeline, originalMorsel)
-    verify(executionState).failQuery(cause, resources, pipeline)
-  }
-
   test("should handle scheduling error which occurred after getting morsel from parallelizer") {
     val cause = new Exception
     val originalMorsel = mock[Morsel]
     val input = mock[MorselParallelizer]
-    when(input.originalForClosing).thenReturn(originalMorsel)
     val pipeline = mock[ExecutablePipeline]
+    when(input.originalForClosing).thenReturn(originalMorsel)
 
     val schedulingPolicy: QuerySchedulingPolicy =
       (_: QueryResources) =>
