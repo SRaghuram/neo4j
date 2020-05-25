@@ -36,6 +36,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 
@@ -261,7 +263,7 @@ public class RunCommand implements Runnable
                 ldbcConfig = ldbcConfig.applyArg( Neo4jDb.CYPHER_RUNTIME_KEY, runtime.name() );
             }
 
-            upgradeToFrekiIfRecord();
+            upgradeToFrekiIfRecordAndConfigured();
             Client.main( ((ConsoleAndFileDriverConfiguration) ldbcConfig).toArgs() );
 
             if ( null != waitForFile )
@@ -285,57 +287,75 @@ public class RunCommand implements Runnable
         }
     }
 
-    private void upgradeToFrekiIfRecord()
+    private void upgradeToFrekiIfRecordAndConfigured()
     {
+        String storageEngine = Config.newBuilder().fromFileNoThrow( neo4jConfig ).build().get( GraphDatabaseSettings.storage_engine );
         try ( Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
         {
+            System.out.println( "Configured storage engine: " + storageEngine );
+            boolean shouldBeFreki = storageEngine.toLowerCase().contains( "freki" );
             if ( !store.isFreki() )
             {
-                System.out.println( "Record store detected, migrating to freki." );
-                Path frekiStoreDir = null;
-                try
+                System.out.println( "Record store detected" );
+                if ( shouldBeFreki )
                 {
-                    //tmpdir is apparently not big enough, trying current working dir
-                    frekiStoreDir = Path.of( "freki_store" ).toAbsolutePath();
-                    if ( !frekiStoreDir.toFile().exists() )
+                    System.out.println( "Migrating to freki" );
+                    Path frekiStoreDir = null;
+                    try
                     {
-                        System.out.println( "Migration started" );
-                        String[] args = {
-                                getJavaExecutable().toString(),
-                                "-cp", getClassPath(),
-                                MigrateDataIntoOtherDatabase.class.getName(),
-                                storeDir.toPath().toAbsolutePath().toString(),
-                                frekiStoreDir.toAbsolutePath().toString()
-                        };
-                        int exitCode = new ProcessBuilder( args )
-                                .inheritIO()
-                                .start()
-                                .waitFor();
-                        if ( exitCode != 0 )
+                        //tmpdir is apparently not big enough, trying current working dir
+                        frekiStoreDir = Path.of( "freki_store" ).toAbsolutePath();
+                        if ( !frekiStoreDir.toFile().exists() )
                         {
-                            throw new RuntimeException( "Migration failed with code: " + exitCode );
+                            System.out.println( "Migration started" );
+                            String[] args = {
+                                    getJavaExecutable().toString(),
+                                    "-cp", getClassPath(),
+                                    MigrateDataIntoOtherDatabase.class.getName(),
+                                    storeDir.toPath().toAbsolutePath().toString(),
+                                    frekiStoreDir.toAbsolutePath().toString()
+                            };
+                            int exitCode = new ProcessBuilder( args )
+                                    .inheritIO()
+                                    .start()
+                                    .waitFor();
+                            if ( exitCode != 0 )
+                            {
+                                throw new RuntimeException( "Migration failed with code: " + exitCode );
+                            }
                         }
+                        else
+                        {
+                            System.out.println( "Cached migration found" );
+                        }
+                        org.neo4j.io.fs.FileUtils.deleteRecursively( storeDir );
+                        org.neo4j.io.fs.FileUtils.copyRecursively( frekiStoreDir.toFile(), storeDir );
+                        System.out.println( "Successful migration to Freki." );
                     }
-                    else
+                    catch ( Throwable t )
                     {
-                        System.out.println( "Cached migration found" );
+                        if ( frekiStoreDir != null )
+                        {
+                            org.neo4j.io.fs.FileUtils.deleteRecursively( frekiStoreDir.toFile() );
+                        }
+                        throw new RuntimeException( "Unexpected failure during migration", t );
                     }
-                    org.neo4j.io.fs.FileUtils.deleteRecursively( storeDir );
-                    org.neo4j.io.fs.FileUtils.copyRecursively( frekiStoreDir.toFile(), storeDir );
-                    System.out.println( "Successful migration to Freki." );
                 }
-                catch ( Throwable t )
+                else
                 {
-                    if ( frekiStoreDir != null )
-                    {
-                        org.neo4j.io.fs.FileUtils.deleteRecursively( frekiStoreDir.toFile() );
-                    }
-                    throw new RuntimeException( "Unexpected failure during migration", t );
+                    System.out.println( "No migration desired, skipping." );
                 }
             }
             else
             {
-                System.out.println( "Already freki format, no migration needed." );
+                if ( shouldBeFreki )
+                {
+                    System.out.println( "Already freki format, no migration needed." );
+                }
+                else
+                {
+                    throw new IllegalArgumentException( "Is freki but should be record, currently no available migration path" );
+                }
             }
         }
         catch ( IOException e )
