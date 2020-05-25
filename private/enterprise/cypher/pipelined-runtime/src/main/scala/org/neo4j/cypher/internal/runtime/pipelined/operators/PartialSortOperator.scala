@@ -17,7 +17,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -46,27 +45,16 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
   override def toString: String = "PartialSortOperator"
 
-  private class PartialSortState(val memoryTracker: MemoryTracker) extends OperatorState {
+  private class PartialSortState(val memoryTracker: MemoryTracker) extends DataInputOperatorState[MorselData] {
     var lastSeen: MorselRow = _
     var resultsBuffer: ResultsBuffer = HeapTrackingArrayList.newArrayList(16, memoryTracker)
     var remainingResults: ResultsBufferAndIndex = _
     var currentMorselHeapUsage: Long = 0
 
     // Memory for morsels is released in one go after all output rows for completed chunk have been written
-    var morselMemoryTracker: MemoryTracker = memoryTracker.getScopedMemoryTracker
+    val morselMemoryTracker: MemoryTracker = memoryTracker.getScopedMemoryTracker
 
-    override def nextTasks(state: PipelinedQueryState,
-                           operatorInput: OperatorInput,
-                           parallelism: Int,
-                           resources: QueryResources,
-                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-      val input: MorselData = operatorInput.takeData()
-      if (input != null) {
-        singletonIndexedSeq(new PartialSortTask(input, this))
-      } else {
-        null
-      }
-    }
+    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new PartialSortTask(input, this))
   }
 
   class PartialSortTask(morselData: MorselData,

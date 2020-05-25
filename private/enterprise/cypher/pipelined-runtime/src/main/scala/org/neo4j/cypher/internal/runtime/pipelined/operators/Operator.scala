@@ -172,44 +172,7 @@ class MemoryTrackingOperatorState(delegate: OperatorState, operatorId: Int, stat
   }
 }
 
-/**
- * The execution state of a reduce operator. One instance of this is created for every query execution.
- */
-trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
-
-  def accumulatorsPerTask(morselSize: Int): Int
-
-  final override def nextTasks(state: PipelinedQueryState,
-                               operatorInput: OperatorInput,
-                               parallelism: Int,
-                               resources: QueryResources,
-                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]] = {
-    val input = operatorInput.takeAccumulators[DATA, ACC](accumulatorsPerTask(state.morselSize))
-    if (input != null) {
-      try {
-        nextTasks(state, input, resources)
-      } catch {
-        case NonFatalCypherError(t) =>
-          throw SchedulingInputException(input, t)
-      }
-    } else {
-      null
-    }
-  }
-
-  /**
-   * Initialize new tasks for this operator.
-   */
-  def nextTasks(state: PipelinedQueryState,
-                input: IndexedSeq[ACC],
-                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
-}
-
-/**
- * A streaming operator is initialized with an input, to produce 0-n [[ContinuableOperatorTask]].
- */
-trait StreamingOperator extends Operator with OperatorState {
-
+trait MorselInputOperatorState extends OperatorState {
   final override def nextTasks(state: PipelinedQueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
@@ -237,7 +200,86 @@ trait StreamingOperator extends Operator with OperatorState {
                           parallelism: Int,
                           resources: QueryResources,
                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel]
+}
 
+/**
+ * The execution state of a reduce operator. One instance of this is created for every query execution.
+ */
+trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
+
+  def accumulatorsPerTask(morselSize: Int): Int
+
+  final override def nextTasks(state: PipelinedQueryState,
+                               operatorInput: OperatorInput,
+                               parallelism: Int,
+                               resources: QueryResources,
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]] = {
+    val input = operatorInput.takeAccumulators[DATA, ACC](accumulatorsPerTask(state.morselSize))
+    if (input != null) {
+      try {
+        nextTasks(input)
+      } catch {
+        case NonFatalCypherError(t) =>
+          throw SchedulingInputException(input, t)
+      }
+    } else {
+      null
+    }
+  }
+
+  def nextTasks(input: IndexedSeq[ACC]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
+}
+
+trait AccumulatorsAndMorselInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
+
+  final override def nextTasks(state: PipelinedQueryState,
+                               operatorInput: OperatorInput,
+                               parallelism: Int,
+                               resources: QueryResources,
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[DATA, ACC]] = {
+    val accAndMorsel = operatorInput.takeAccumulatorAndMorsel[DATA, ACC]()
+    if (accAndMorsel != null) {
+      try {
+        nextTasks(accAndMorsel)
+      } catch {
+        case NonFatalCypherError(t) =>
+          throw SchedulingInputException(accAndMorsel, t)
+      }
+    } else {
+      null
+    }
+  }
+
+  def nextTasks(input: AccumulatorAndMorsel[DATA, ACC]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[DATA, ACC]]
+}
+
+trait DataInputOperatorState[DATA <: AnyRef] extends OperatorState {
+
+  final override def nextTasks(state: PipelinedQueryState,
+                               operatorInput: OperatorInput,
+                               parallelism: Int,
+                               resources: QueryResources,
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+    val data = operatorInput.takeData[DATA]()
+    if (data != null) {
+      try {
+        nextTasks(data)
+      } catch {
+        case NonFatalCypherError(t) =>
+          throw SchedulingInputException(data, t)
+      }
+    } else {
+      null
+    }
+  }
+
+  def nextTasks(input: DATA): IndexedSeq[ContinuableOperatorTask]
+}
+
+/**
+ * A streaming operator is initialized with an input, to produce 0-n [[ContinuableOperatorTask]].
+ */
+trait StreamingOperator extends Operator with MorselInputOperatorState {
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,

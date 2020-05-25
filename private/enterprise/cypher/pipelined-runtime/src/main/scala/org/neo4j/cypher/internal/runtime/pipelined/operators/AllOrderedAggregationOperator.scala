@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -27,7 +26,6 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.MemoryTracker
 
 class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
-                                    argumentSlotOffset: Int,
                                     val workIdentity: WorkIdentity,
                                     aggregations: Array[AggregationExpression],
                                     orderedGroupings: GroupingExpression,
@@ -48,23 +46,13 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   private class AllOrderedAggregationState(var lastSeenGrouping: orderedGroupings.KeyType,
                                            val aggregationFunctions: Array[AggregationFunction],
-                                           val scopedMemoryTracker: MemoryTracker) extends OperatorState {
+                                           val scopedMemoryTracker: MemoryTracker) extends DataInputOperatorState[MorselData] {
     def this(memoryTracker: MemoryTracker) =
       this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(memoryTracker)), memoryTracker)
 
+    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTaskWithMorselData] =
+      singletonIndexedSeq(new AllOrderedAggregationTask(input, this))
 
-    override def nextTasks(state: PipelinedQueryState,
-                           operatorInput: OperatorInput,
-                           parallelism: Int,
-                           resources: QueryResources,
-                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-      val input: MorselData = operatorInput.takeData()
-      if (input != null) {
-        singletonIndexedSeq(new AllOrderedAggregationTask(input, this))
-      } else {
-        null
-      }
-    }
   }
 
   class AllOrderedAggregationTask(morselData: MorselData,

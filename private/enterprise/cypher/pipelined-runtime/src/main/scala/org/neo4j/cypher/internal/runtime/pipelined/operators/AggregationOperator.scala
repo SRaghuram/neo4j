@@ -163,7 +163,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                   reducerOutputSlots: Array[Int])
                                  (val id: Id = Id.INVALID_ID)
     extends Operator
-    with ReduceOperatorState[AnyRef, AggregatedRowMap] {
+    with AccumulatorsInputOperatorState[AnyRef, AggregatedRowMap] {
 
     override def accumulatorsPerTask(morselSize: Int): Int = 1
 
@@ -172,13 +172,13 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
                              state: PipelinedQueryState,
-                             resources: QueryResources): ReduceOperatorState[AnyRef, AggregatedRowMap] = {
+                             resources: QueryResources): AccumulatorsInputOperatorState[AnyRef, AggregatedRowMap] = {
       val memoryTracker = stateFactory.newMemoryTracker(id.x)
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatedRowMap.Factory(aggregations, memoryTracker, state.numberOfWorkers))
       this
     }
 
-    override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[AggregatedRowMap], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[AnyRef, AggregatedRowMap]] = {
+    override def nextTasks(input: IndexedSeq[AggregatedRowMap]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[AnyRef, AggregatedRowMap]] = {
       singletonIndexedSeq(new OTask(input))
     }
 

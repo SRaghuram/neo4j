@@ -34,7 +34,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         comparator: Comparator[ReadableRow])
                        (val id: Id = Id.INVALID_ID)
   extends Operator
-  with ReduceOperatorState[Morsel, ArgumentStateBuffer] {
+  with AccumulatorsInputOperatorState[Morsel, ArgumentStateBuffer] {
 
   override def toString: String = "SortMerge"
 
@@ -43,12 +43,12 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
-                           resources: QueryResources): ReduceOperatorState[Morsel, ArgumentStateBuffer] = {
+                           resources: QueryResources): AccumulatorsInputOperatorState[Morsel, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 
-  override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[ArgumentStateBuffer], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer]] = {
+  override def nextTasks(input: IndexedSeq[ArgumentStateBuffer]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer]] = {
     singletonIndexedSeq(new OTask(input))
   }
 

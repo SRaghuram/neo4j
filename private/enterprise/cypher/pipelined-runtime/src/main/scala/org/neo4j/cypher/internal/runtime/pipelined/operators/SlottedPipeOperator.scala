@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.createFeedPipeQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
+import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
@@ -117,20 +118,15 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    new OperatorState {
-      override def nextTasks(state: PipelinedQueryState,
-                             operatorInput: OperatorInput,
-                             parallelism: Int,
-                             resources: QueryResources,
-                             argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-        val input = operatorInput.takeMorsel()
-        if (input != null) {
-          val inputMorsel = input.nextCopy
-          val inputQueryState = createFeedPipeQueryState(inputMorsel, state, resources, stateFactory.memoryTracker)
-          singletonIndexedSeq(new OTask(inputMorsel, inputQueryState))
-        } else {
-          null
-        }
+    new MorselInputOperatorState {
+      override protected def nextTasks(state: PipelinedQueryState,
+                                       input: MorselParallelizer,
+                                       parallelism: Int,
+                                       resources: QueryResources,
+                                       argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+        val inputMorsel = input.nextCopy
+        val inputQueryState = createFeedPipeQueryState(inputMorsel, state, resources, stateFactory.memoryTracker)
+        singletonIndexedSeq(new OTask(inputMorsel, inputQueryState))
       }
     }
   }

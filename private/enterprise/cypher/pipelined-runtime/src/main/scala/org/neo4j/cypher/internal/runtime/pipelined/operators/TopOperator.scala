@@ -106,7 +106,7 @@ case class TopOperator(workIdentity: WorkIdentity,
   class TopReduceOperator(argumentStateMapId: ArgumentStateMapId)
                          (val id: Id = Id.INVALID_ID)
     extends Operator
-    with ReduceOperatorState[Morsel, TopTable] {
+    with AccumulatorsInputOperatorState[Morsel, TopTable] {
 
     override def workIdentity: WorkIdentity = TopOperator.this.workIdentity
 
@@ -115,14 +115,14 @@ case class TopOperator(workIdentity: WorkIdentity,
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
                              state: PipelinedQueryState,
-                             resources: QueryResources): ReduceOperatorState[Morsel, TopTable] = {
+                             resources: QueryResources): AccumulatorsInputOperatorState[Morsel, TopTable] = {
       val limit = CountingState.evaluateCountValue(state, resources, countExpression)
       val memoryTracker = stateFactory.newMemoryTracker(id.x)
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(memoryTracker, comparator, limit))
       this
     }
 
-    override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[TopTable], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, TopTable]] = {
+    override def nextTasks(input: IndexedSeq[TopTable]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, TopTable]] = {
       singletonIndexedSeq(new OTask(input))
     }
 

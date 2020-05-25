@@ -22,7 +22,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -81,7 +80,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
 
   private class PartialTopState(val memoryTracker: MemoryTracker,
                                 val limit: Int,
-                                val argumentStateMap: ArgumentStateMap[PartialTopWorkCanceller]) extends OperatorState {
+                                val argumentStateMap: ArgumentStateMap[PartialTopWorkCanceller]) extends DataInputOperatorState[MorselData] {
 
     var remainingLimit: Int = limit
     var lastSeen: MorselRow = _
@@ -91,15 +90,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
     private var activeMemoryTracker: MemoryTracker = _
     private var resultsMemoryTracker: MemoryTracker = _
 
-    override def nextTasks(state: PipelinedQueryState,
-                           operatorInput: OperatorInput,
-                           parallelism: Int,
-                           resources: QueryResources,
-                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-      val input: MorselData = operatorInput.takeData()
-      if (input != null) singletonIndexedSeq(new PartialTopTask(input, this))
-      else null
-    }
+    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new PartialTopTask(input, this))
 
     def addRow(row: MorselRow): Unit = {
       if (topTable == null) {

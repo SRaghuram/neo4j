@@ -16,11 +16,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselAttachBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -28,10 +28,9 @@ import org.neo4j.cypher.internal.util.attribution.Id
 class CartesianProductOperator(val workIdentity: WorkIdentity,
                                lhsArgumentStateMapId: ArgumentStateMapId,
                                rhsArgumentStateMapId: ArgumentStateMapId,
-                               slots: SlotConfiguration,
                                argumentSize: SlotConfiguration.Size)
                               (val id: Id = Id.INVALID_ID)
-  extends Operator with OperatorState {
+  extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, LHSMorsel] {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -42,19 +41,8 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(state: PipelinedQueryState,
-                         operatorInput: OperatorInput,
-                         parallelism: Int,
-                         resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel]] = {
-    val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
-    if (accAndMorsel != null) {
-      singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
-    } else {
-      null
-    }
-
-  }
+  override def nextTasks(input: Buffers.AccumulatorAndMorsel[Morsel, LHSMorsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel]] =
+    Array(new OTask(input.acc, input.morsel))
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
   class OTask(override val accumulator: LHSMorsel, rhsMorsel: Morsel)

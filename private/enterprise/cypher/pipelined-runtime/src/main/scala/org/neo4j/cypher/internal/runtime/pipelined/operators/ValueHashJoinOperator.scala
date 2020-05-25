@@ -22,10 +22,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ValueHashJoinOperator.HashTable
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ValueHashJoinOperator.HashTableFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -44,7 +44,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
                             longsToCopy: Array[(Int, Int)],
                             refsToCopy: Array[(Int, Int)],
                             cachedPropertiesToCopy: Array[(Int, Int)])
-                           (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
+                           (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -59,19 +59,8 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(state: PipelinedQueryState,
-                         operatorInput: OperatorInput,
-                         parallelism: Int,
-                         resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] = {
-    val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
-    if (accAndMorsel != null) {
-      Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
-    } else {
-      null
-    }
-
-  }
+  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndMorsel[Morsel, HashTable]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
+    Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
 
   class OTask(override val accumulator: HashTable, rhsMorsel: Morsel)
     extends InputLoopTask(rhsMorsel)

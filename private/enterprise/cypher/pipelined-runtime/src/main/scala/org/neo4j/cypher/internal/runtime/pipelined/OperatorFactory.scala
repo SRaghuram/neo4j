@@ -390,9 +390,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentSize = physicalPlan.argumentSizes(id)
 
         val argumentDepth = physicalPlan.applyPlans(id)
-        val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
-
-        new AntiOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, slots, argumentSize)(id)
+        new AntiOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSize)(id)
 
       case joinPlan: plans.NodeHashJoin =>
 
@@ -413,7 +411,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             buffer.rhsArgumentStateMapId,
             lhsOffsets(0),
             rhsOffsets(0),
-            slots,
             longsToCopy,
             refsToCopy,
             cachedPropertiesToCopy)(id)
@@ -462,7 +459,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           WorkIdentity.fromPlan(plan),
           buffer.lhsArgumentStateMapId,
           buffer.rhsArgumentStateMapId,
-          slots,
           physicalPlan.argumentSizes(id)
         )(id)
 
@@ -574,7 +570,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         if (unorderedGroupingColumns.isEmpty) {
           new AllOrderedAggregationOperator(
             argumentStateMapId,
-            argumentSlotOffset,
             WorkIdentity.fromPlan(plan),
             aggExpressions.result(),
             orderedGroupingColumns,

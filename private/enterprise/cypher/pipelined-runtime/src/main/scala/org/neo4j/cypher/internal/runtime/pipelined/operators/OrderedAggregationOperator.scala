@@ -21,7 +21,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -64,22 +63,11 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
   private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
                                         var resultsMap: ResultsMap,
                                         var outstandingResults: Result,
-                                        val memoryTracker: MemoryTracker) extends OperatorState {
+                                        val memoryTracker: MemoryTracker) extends DataInputOperatorState[MorselData] {
     def this(memoryTracker: MemoryTracker) =
       this(null.asInstanceOf[orderedGroupings.KeyType], HeapTrackingOrderedAppendMap.createOrderedMap(memoryTracker), null, memoryTracker)
 
-    override def nextTasks(state: PipelinedQueryState,
-                           operatorInput: OperatorInput,
-                           parallelism: Int,
-                           resources: QueryResources,
-                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-      val input: MorselData = operatorInput.takeData()
-      if (input != null) {
-        singletonIndexedSeq(new OrderedAggregationTask(input, this))
-      } else {
-        null
-      }
-    }
+    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new OrderedAggregationTask(input, this))
   }
 
   class OrderedAggregationTask(morselData: MorselData,

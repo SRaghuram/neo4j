@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiArgumentState
@@ -25,8 +24,6 @@ import org.neo4j.cypher.internal.util.attribution.Id
 
 class AntiOperator(val workIdentity: WorkIdentity,
                    argumentStateMapId: ArgumentStateMapId,
-                   argumentSlotOffset: Int,
-                   slots: SlotConfiguration,
                    argumentSize: SlotConfiguration.Size)
                   (val id: Id = Id.INVALID_ID)
   extends Operator {
@@ -42,19 +39,8 @@ class AntiOperator(val workIdentity: WorkIdentity,
     new AntiOperatorState
   }
 
-  class AntiOperatorState() extends OperatorState {
-    override def nextTasks(state: PipelinedQueryState,
-                           operatorInput: OperatorInput,
-                           parallelism: Int,
-                           resources: QueryResources,
-                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-      val input: Seq[MorselData] = operatorInput.takeData()
-      if (input != null) {
-        singletonIndexedSeq(new OTask(input))
-      } else {
-        null
-      }
-    }
+  class AntiOperatorState() extends DataInputOperatorState[Seq[MorselData]] {
+    override def nextTasks(input: Seq[MorselData]): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new OTask(input))
   }
 
   class OTask(val morselDatas: Seq[MorselData]) extends AntiOperatorTask {
