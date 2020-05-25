@@ -25,7 +25,6 @@ import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.coreapi.TransactionImpl;
 import org.neo4j.lock.ResourceTypes;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.VerboseTimeout;
@@ -650,7 +649,7 @@ public class ListQueriesProcedureTest
                 finishQueriesLatch.countDown();
             }
             return null;
-        }, null, waitingWhileIn( TransactionImpl.class, "execute" ), SECONDS_TIMEOUT, SECONDS );
+        }, null, waitingWhileIn( Transaction.class, "execute" ), SECONDS_TIMEOUT, SECONDS );
 
         return new Resource<>( listQueriesLatch, finishQueriesLatch, resource );
     }
