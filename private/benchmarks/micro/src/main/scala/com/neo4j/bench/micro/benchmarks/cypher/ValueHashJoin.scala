@@ -7,32 +7,29 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
+import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.ConstantGenerator.constant
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
-import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
-import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
 import com.neo4j.bench.micro.data.LabelKeyDefinition
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.Pos
 import com.neo4j.bench.micro.data.Plans.astLabelToken
-import com.neo4j.bench.micro.data.Plans.astProperty
 import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.PropertyDefinition
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.INT
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG
+import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
+import com.neo4j.bench.micro.data.ValueGeneratorUtil.ascGeneratorFor
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.CachedProperty
 import org.neo4j.cypher.internal.expressions.Equals
-import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
+import org.neo4j.cypher.internal.logical.plans.GetValue
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.IndexedProperty
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
-import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
-import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -50,54 +47,48 @@ import org.openjdk.jmh.infra.Blackhole
 class ValueHashJoin extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
-    base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
+    base = Array(Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
-  @ParamValues(
-    allowed = Array("0.001", "0.01", "0.1"),
-    base = Array("0.01"))
-  @Param(Array[String]())
-  var selectivity: Double = _
-
   override def description = "Value Hash Join"
-
   private val NODE_COUNT = 1000000
   private val LABEL = Label.label("SampleLabel")
   private val KEY = "key"
-  private val VALUE = 42
-  private val TOLERATED_ROW_COUNT_ERROR = 0.05
-  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
-  private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
-  private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
-  override protected def getConfig: DataGeneratorConfig = {
-    val buckets = List(
-      new Bucket(selectivity, constant(LNG, VALUE)),
-      new Bucket(1 - selectivity, constant(INT, 1)))
-    val property = new PropertyDefinition(KEY, discrete(buckets: _*))
+  val toleratedRowCountError: Double = 0.05
+  lazy val expectedRowCount: Double = NODE_COUNT
+  lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - toleratedRowCountError * expectedRowCount).toInt
+  lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + toleratedRowCountError * expectedRowCount).toInt
+
+  override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
-      .withNodeProperties(property)
+      .withNodeProperties(new PropertyDefinition(KEY, ascGeneratorFor(STR_SML, 0)))
       .withSchemaIndexes(new LabelKeyDefinition(LABEL, KEY))
       .isReusableStore(true)
       .build()
-  }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val nodeLeft = astVariable("nodeLeft")
     val nodeRight = astVariable("nodeRight")
-    val queryExpression = SingleQueryExpression(SignedDecimalIntegerLiteral(VALUE.toString)(Pos))
-    val lhs = plans.NodeIndexSeek(
+    val lhs = plans.NodeIndexScan(
       nodeLeft.name,
       astLabelToken(LABEL, planContext),
-      List(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
-      queryExpression,
+      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), GetValue)),
       Set.empty,
       IndexOrderNone)(IdGen)
-    val rhs = plans.AllNodesScan(nodeRight.name, Set.empty)(IdGen)
-    val join = ValueHashJoin(lhs, rhs, Equals(astProperty(nodeLeft, KEY), astProperty(nodeLeft, KEY))(Pos))(IdGen)
+    val rhs = plans.NodeIndexScan(
+      nodeRight.name,
+      astLabelToken(LABEL, planContext),
+      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), GetValue)),
+      Set.empty,
+      IndexOrderNone)(IdGen)
+    val join = plans.ValueHashJoin(lhs, rhs,
+      Equals(
+        CachedProperty(nodeLeft.name, nodeLeft, PropertyKeyName(KEY)(Pos), NODE_TYPE)(Pos),
+        CachedProperty(nodeRight.name, nodeRight, PropertyKeyName(KEY)(Pos), NODE_TYPE)(Pos))(Pos))(IdGen)
     val resultColumns = List(nodeLeft.name)
     val produceResults = ProduceResult(join, resultColumns)(IdGen)
 
@@ -113,6 +104,12 @@ class ValueHashJoin extends AbstractCypherBenchmark {
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, subscriber)
+  }
+}
+
+object ValueHashJoin {
+  def main(args: Array[String]): Unit = {
+    Main.run(classOf[ValueHashJoin], args:_*)
   }
 }
 
