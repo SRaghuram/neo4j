@@ -6,15 +6,19 @@
 package com.neo4j.server.enterprise.functional;
 
 import com.neo4j.dbms.LocalDbmsOperator;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -24,10 +28,10 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@EnterpriseDbmsExtension
+@EnterpriseDbmsExtension( configurationCallback = "configure" )
 class DatabaseOperationCountMetricsIT
 {
-    private static final int TIMEOUT = 10;
+    private static final int TIMEOUT = 60;
 
     @Inject
     private TestDirectory directory;
@@ -37,6 +41,14 @@ class DatabaseOperationCountMetricsIT
 
     @Inject
     private GraphDatabaseAPI graphDatabaseAPI;
+
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        builder.setConfig( MetricsSettings.metricsEnabled, true )
+                .setConfig( MetricsSettings.csvEnabled, true )
+                .setConfig( MetricsSettings.csvInterval, Duration.ofSeconds( 1 ) );
+    }
 
     @Test
     void shouldDatabaseOperationCountsMatch() throws Throwable
