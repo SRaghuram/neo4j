@@ -153,8 +153,10 @@ public class MigrateDataIntoOtherDatabase
                     for ( int i = 0; i < 100_000 && relationships.hasNext(); i++ )
                     {
                         Relationship fromRelationship = relationships.next();
-                        long startId = fromToNodeIdTable[toIntExact( fromRelationship.getStartNodeId() % numMaps )].get( fromRelationship.getStartNodeId() );
-                        long endId = fromToNodeIdTable[toIntExact( fromRelationship.getEndNodeId() % numMaps )].get( fromRelationship.getEndNodeId() );
+                        long startId = fromToNodeIdTable[toIntExact( fromRelationship.getStartNodeId() % numMaps )]
+                                .getIfAbsent( fromRelationship.getStartNodeId(), fromRelationship.getStartNodeId() );
+                        long endId = fromToNodeIdTable[toIntExact( fromRelationship.getEndNodeId() % numMaps )]
+                                .getIfAbsent( fromRelationship.getEndNodeId(), fromRelationship.getEndNodeId() );
 
                         Node toStartNode = toTx.getNodeById( startId );
                         Node toEndNode = toTx.getNodeById( endId );
@@ -173,7 +175,7 @@ public class MigrateDataIntoOtherDatabase
             {
                 for ( Node fromNode : fromTx.getAllNodes() )
                 {
-                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].get( fromNode.getId() );
+                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].getIfAbsent( fromNode.getId(), fromNode.getId() );
                     Node toNode = toTx.getNodeById( toNodeId );
                     compareNodes( fromNode, toNode, true, true, true );
                 }
