@@ -592,7 +592,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             outputSlots.result(),
             physicalPlan.argumentSizes(id)
           )(id)
-        }case plan: plans.ProduceResult => createProduceResults(plan)
+        }
+
+      case plan: plans.ProduceResult => createProduceResults(plan)
 
       case _: plans.Argument =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan),

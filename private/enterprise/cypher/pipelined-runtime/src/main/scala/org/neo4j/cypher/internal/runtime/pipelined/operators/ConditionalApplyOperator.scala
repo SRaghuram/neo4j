@@ -44,8 +44,8 @@ import org.neo4j.values.storable.Values.NO_VALUE
 
 /**
  * ConditionalApplyOperator is not really a full operator, most of the heavy lifting is done
- * by ConditionalSink. ConditionalApplyOperator is a variant of Argument which produces
- * NO_VALUE for any identifier introduced by the RHS if the RHS is not run
+ * by ConditionalSink. ConditionalApplyOperator is a variant of Argument which
+ * sets all RHS-introduced identifiers to NO_VALUE on the LHS morsel.
  */
 class ConditionalApplyOperator(val workIdentity: WorkIdentity,
                                lhsSize: SlotConfiguration.Size,
@@ -73,7 +73,11 @@ class ConditionalApplyOperator(val workIdentity: WorkIdentity,
       val inputCursor = inputMorsel.readCursor()
       val outputCursor = outputMorsel.writeCursor()
 
-      if (inputMorsel.slots.size() == lhsSize) {
+      if (inputMorsel.slots.size() == rhsSize) {
+        while (outputCursor.next() && inputCursor.next()) {
+          outputCursor.copyFrom(inputCursor, rhsSize.nLongs, rhsSize.nReferences)
+        }
+      } else if (inputMorsel.slots.size() == lhsSize) {
         while (outputCursor.next() && inputCursor.next()) {
           outputCursor.copyFrom(inputCursor, lhsSize.nLongs, lhsSize.nReferences)
           var offset = lhsSize.nLongs
@@ -87,12 +91,8 @@ class ConditionalApplyOperator(val workIdentity: WorkIdentity,
             offset += 1
           }
         }
-      } else if (inputMorsel.slots.size() == rhsSize) {
-        while (outputCursor.next() && inputCursor.next()) {
-          outputCursor.copyFrom(inputCursor, rhsSize.nLongs, rhsSize.nReferences)
-        }
       } else {
-        throw new IllegalStateException()
+        throw new IllegalStateException("must either come from the lhs or rhs")
       }
       outputCursor.truncate()
     }
