@@ -8,11 +8,12 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util
 import java.util.Map
 
-import org.eclipse.collections.api.block.function.Function
+import org.eclipse.collections.api.block.function.Function2
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.computeNewAggregatorsFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
@@ -57,8 +58,8 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   override def toString: String = "OrderedAggregationOperator"
 
-  private val newAggregationFunctions: Function[MemoryTracker, Array[AggregationFunction]] =
-    (memoryTracker: MemoryTracker) => aggregations.map(_.createAggregationFunction(memoryTracker))
+  private val newAggregationFunctions: Function2[unorderedGroupings.KeyType, MemoryTracker, Array[AggregationFunction]] =
+    computeNewAggregatorsFunction(aggregations)
 
   private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
                                         var resultsMap: ResultsMap,
@@ -105,10 +106,10 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
       taskState.lastSeenGroupingKey = orderedGroupingKey
 
       val unorderedGroupingKey = unorderedGroupings.computeGroupingKey(inputCursor, queryState)
-      val aggFunctions = taskState.resultsMap.getIfAbsentPutWithMemoryTracker(unorderedGroupingKey, newAggregationFunctions)
+      val aggFunctions = taskState.resultsMap.getIfAbsentPutWithMemoryTracker2(unorderedGroupingKey, newAggregationFunctions)
 
       var i = 0
-      while (i < aggregations.length) {
+      while (i < aggFunctions.length) {
         aggFunctions(i).apply(inputCursor, queryState)
         i += 1
       }
@@ -137,7 +138,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
         if (!it.hasNext) {
           taskState.outstandingResults = null
         } else {
-          val entry = it.next()
+          val entry = it.next() // NOTE: This entry is transient and only valid until we call next() again
           val unorderedGroupingKey = entry.getKey
           val aggResults = entry.getValue
           outputCursor.copyFrom(morselData.viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)

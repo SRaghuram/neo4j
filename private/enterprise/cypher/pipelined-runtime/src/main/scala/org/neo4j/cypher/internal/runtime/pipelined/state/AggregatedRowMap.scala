@@ -9,6 +9,7 @@ import java.util
 import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
 
+import org.eclipse.collections.api.block.function.Function2
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Reducer
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StandardReducer
@@ -74,7 +75,6 @@ class StandardAggregationMap(override val argumentRowId: Long,
                              override val argumentRowIdsForReducers: Array[Long],
                              override val argumentRow: MorselRow,
                              memoryTracker: MemoryTracker) extends AggregatedRowMap {
-
   private[this] val reducerMap: HeapTrackingOrderedAppendMap[AnyValue, StandardAggregators] =
     HeapTrackingOrderedAppendMap.createOrderedMap[AnyValue, StandardAggregators](memoryTracker)
   private[this] val estimatedShallowSizeOfMapValue =
@@ -84,8 +84,21 @@ class StandardAggregationMap(override val argumentRowId: Long,
 
   private[this] val needToApplyUpdates = !Aggregator.allDirect(aggregators)
 
+  private[this] val newAggregators: Function2[AnyValue, MemoryTracker, StandardAggregators] =
+    (groupingValue: AnyValue, scopedMemoryTracker: MemoryTracker) => {
+      val aggLength = aggregators.length
+      scopedMemoryTracker.allocateHeap(groupingValue.estimatedHeapUsage() + estimatedShallowSizeOfMapValue)
+      val reducers = new Array[StandardReducer](aggLength)
+      var i = 0
+      while (i < aggLength) {
+        reducers(i) = aggregators(i).newStandardReducer(memoryTracker)
+        i += 1
+      }
+      new StandardAggregators(reducers)
+    }
+
   override def get(groupingValue: AnyValue): AggregatedRow =
-    reducerMap.getIfAbsentPutWithMemoryTracker(groupingValue, newAggregators(groupingValue))
+    reducerMap.getIfAbsentPutWithMemoryTracker2(groupingValue, newAggregators)
 
   override def applyUpdates(workerId: Int): Unit =
     if (needToApplyUpdates) {
@@ -94,17 +107,6 @@ class StandardAggregationMap(override val argumentRowId: Long,
 
   override def result(): java.util.Iterator[java.util.Map.Entry[AnyValue, AggregatedRow]] =
     reducerMap.autoClosingEntryIterator().asInstanceOf[java.util.Iterator[java.util.Map.Entry[AnyValue, AggregatedRow]]]
-
-  private def newAggregators(groupingValue: AnyValue)(scopedMemoryTracker: MemoryTracker): StandardAggregators = {
-    scopedMemoryTracker.allocateHeap(groupingValue.estimatedHeapUsage() + estimatedShallowSizeOfMapValue)
-    val reducers = new Array[StandardReducer](aggregators.length)
-    var i = 0
-    while (i < aggregators.length) {
-      reducers(i) = aggregators(i).newStandardReducer(memoryTracker)
-      i += 1
-    }
-    new StandardAggregators(reducers)
-  }
 
   override def close(): Unit = {
     reducerMap.close()

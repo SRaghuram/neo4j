@@ -198,7 +198,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
         val outputCursor = outputMorsel.fullCursor(onFirstRow = true)
         while (resultIterator.hasNext && outputCursor.onValidRow()) {
-          val entry = resultIterator.next()
+          val entry = resultIterator.next() // NOTE: This entry is transient and only valid until we call next() again
           val key = entry.getKey
           val aggregators = entry.getValue
 

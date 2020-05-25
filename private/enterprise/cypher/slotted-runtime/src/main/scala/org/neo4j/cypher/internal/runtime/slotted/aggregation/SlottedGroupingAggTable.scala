@@ -5,19 +5,21 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
+import org.eclipse.collections.api.block.function.Function2
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTableFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.computeNewAggregatorsFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.HeapTrackingOrderedAppendMap
-import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Slotted variant of [[GroupingAggTable]]
@@ -28,13 +30,15 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
                               state: QueryState,
                               operatorId: Id) extends AggregationTable {
 
-  private var resultMap: HeapTrackingOrderedAppendMap[groupingColumns.KeyType, Array[AggregationFunction]] = _
-  private val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
+  private[this] var resultMap: HeapTrackingOrderedAppendMap[groupingColumns.KeyType, Array[AggregationFunction]] = _
+  private[this] val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
     val (a, b) = aggregations.unzip
     (a.toArray, b.toArray)
   }
-  private val memoryTracker = state.memoryTracker.memoryTrackerForOperator(operatorId.x)
-  private val nAggregations = aggregationExpressions.length
+  private[this] val memoryTracker = state.memoryTracker.memoryTrackerForOperator(operatorId.x)
+
+  private[this] val newAggregators: Function2[groupingColumns.KeyType, MemoryTracker, Array[AggregationFunction]] =
+    computeNewAggregatorsFunction(aggregationExpressions)
 
   override def clear(): Unit = {
     if (resultMap != null) {
@@ -45,19 +49,9 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
 
   override def processRow(row: CypherRow): Unit = {
     val groupingValue = groupingColumns.computeGroupingKey(row, state)
-    val functions = resultMap.getIfAbsentPutWithMemoryTracker(groupingValue, scopedMemoryTracker => {
-      val nAggregations = aggregationExpressions.length
-      scopedMemoryTracker.allocateHeap(groupingValue.estimatedHeapUsage() + HeapEstimator.shallowSizeOfObjectArray(nAggregations))
-      val functions = new Array[AggregationFunction](nAggregations)
-      var i = 0
-      while (i < nAggregations) {
-        functions(i) = aggregationExpressions(i).createAggregationFunction(scopedMemoryTracker)
-        i += 1
-      }
-      functions
-    })
+    val functions = resultMap.getIfAbsentPutWithMemoryTracker2(groupingValue, newAggregators)
     var i = 0
-    while (i < nAggregations) {
+    while (i < functions.length) {
       functions(i)(row, state)
       i += 1
     }
@@ -69,7 +63,7 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
       override def hasNext: Boolean = innerIterator.hasNext
 
       override def next(): CypherRow = {
-        val entry = innerIterator.next()
+        val entry = innerIterator.next() // NOTE: This entry is transient and only valid until we call next() again
         val unorderedGroupingValue = entry.getKey
         val aggregateFunctions = entry.getValue
         val row = SlottedRow(slots)
