@@ -79,14 +79,12 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
         }
       }
 
-      val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
-      while (outputCursor.onValidRow && canContinue) {
+      val outputCursor = outputMorsel.writeCursor()
+      while (outputCursor.next() && canContinue) {
         val nextRow: MorselReadCursor = sortedInputPerArgument.peek()
         outputCursor.copyFrom(nextRow)
-        nextRow.next()
-        outputCursor.next()
         // If there is more data in this Morsel, we will siftDown based on the new row
-        if (nextRow.onValidRow()) {
+        if (nextRow.next()) {
           sortedInputPerArgument.siftDown(nextRow)
         } else {
           sortedInputPerArgument.poll() // Otherwise we remove it
