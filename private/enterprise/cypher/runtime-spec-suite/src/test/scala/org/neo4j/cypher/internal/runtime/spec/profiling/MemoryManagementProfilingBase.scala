@@ -44,6 +44,7 @@ import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilin
 import org.neo4j.cypher.internal.runtime.spec.tests.InputStreams
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
+import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.memory.EmptyMemoryTracker
@@ -687,7 +688,6 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure all shortest paths peak - many shared relationships") {
     val testName = "allshortestpath-sharedrels"
-    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val chainCount = 6
     val chainDepth = 6
@@ -695,23 +695,11 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
       linkedChainGraph(chainCount, chainDepth)
     }
 
-    // We need to restart the transaction after constructing the graph or we will track all the memory usage from it
-    runtimeTestSupport.restartTx()
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("path")
-      .shortestPath("(x)-[r*]->(y)", pathName = Some("path"), all = true)
-      .input(Seq("x", "y"))
-      .build()
-
-    val inputArray = Array(Array[Any](start, end), Array[Any](start, end), Array[Any](start, end))
-    runPeakMemoryUsageProfiling(logicalQuery, inputArray, heapDumpFileNamePrefix)
+    measureShortestPath(testName, start, end, all = true)
   }
 
   test("measure all shortest paths peak - no shared relationships") {
     val testName = "allshortestpath-nosharedrels"
-    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val chainCount = 100000
     val chainDepth = 2
@@ -719,17 +707,47 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
       linkedChainGraphNoCrossLinking(chainCount, chainDepth)
     }
 
+    measureShortestPath(testName, start, end, all = true)
+  }
+
+  test("measure single shortest paths peak - many shared relationships") {
+    val testName = "sinlgeshortestpath-sharedrels"
+
+    val chainCount = 6
+    val chainDepth = 6
+    val (start, end) = given {
+      linkedChainGraph(chainCount, chainDepth)
+    }
+
+    measureShortestPath(testName, start, end, all = false)
+  }
+
+  test("measure single shortest paths peak - no shared relationships") {
+    val testName = "singleshortestpath-nosharedrels"
+
+    val chainCount = 100000
+    val chainDepth = 2
+    val (start, end) = given {
+      linkedChainGraphNoCrossLinking(chainCount, chainDepth)
+    }
+
+    measureShortestPath(testName, start, end, all = false)
+  }
+
+  private def measureShortestPath(testName: String, start: Node, end: Node, all: Boolean): Unit = {
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
     // We need to restart the transaction after constructing the graph or we will track all the memory usage from it
     runtimeTestSupport.restartTx()
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("path")
-      .shortestPath("(x)-[r*]->(y)", pathName = Some("path"), all = true)
+      .shortestPath("(x)-[r*]->(y)", Some("path"), all)
       .input(Seq("x", "y"))
       .build()
 
-    val inputArray = Array(Array[Any](start, end), Array[Any](start, end), Array[Any](start, end))
+    val inputArray = Array(Array[Any](start, end), Array[Any](start, end))
     runPeakMemoryUsageProfiling(logicalQuery, inputArray, heapDumpFileNamePrefix)
   }
 
