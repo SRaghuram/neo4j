@@ -8,7 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
-class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     // GIVEN
@@ -266,38 +266,42 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }
   }
 
-  test("set label allows user to create a label") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * TO custom")
-    execute("GRANT SET LABEL * ON GRAPH * TO custom")
+  Seq(VERSION_40, VERSION_41D1, VERSION_41).foreach { version =>
+    setVersion(version, if (version == VERSION_41) None else Some(classOf[UnsupportedOperationException]))
 
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CALL db.createLabel('Label')")
-    execute("CREATE ()")
+    test("set label allows user to create a label") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT MATCH {*} ON GRAPH * TO custom")
+      execute("GRANT SET LABEL * ON GRAPH * TO custom")
 
-    // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CALL db.createLabel('Label')")
+      execute("CREATE ()")
 
-    // THEN
-    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
-  }
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
 
-  test("remove label should allow user to remove a label") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * TO custom")
-    execute("GRANT REMOVE LABEL Label ON GRAPH * TO custom")
+      // THEN
+      execute("MATCH (n:Label) RETURN n").toSet should have size 1
+    }
 
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:Label)")
-    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+    test("remove label should allow user to remove a label") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT MATCH {*} ON GRAPH * TO custom")
+      execute("GRANT REMOVE LABEL Label ON GRAPH * TO custom")
 
-    // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) Remove n:Label")
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (:Label)")
+      execute("MATCH (n:Label) RETURN n").toSet should have size 1
 
-    // THEN
-    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set.empty)
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) Remove n:Label")
+
+      // THEN
+      execute("MATCH (n:Label) RETURN n.name").toSet should be(Set.empty)
+    }
   }
 
   test("set label should only allow the allowed label") {
@@ -312,7 +316,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE ()")
 
     executeOnDefault("joe", "soap", "MATCH (n) SET n:foo")
-    execute("MATCH (n:foo) RETURN n").toSet should have size (1)
+    execute("MATCH (n:foo) RETURN n").toSet should have size 1
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -332,7 +336,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
-    execute("MATCH (n:Label) RETURN n").toSet should have size (0)
+    execute("MATCH (n:Label) RETURN n").toSet should have size 0
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -341,7 +345,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     } should have message "Remove label for label 'AnotherLabel' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // THEN
-    execute("MATCH (n:AnotherLabel) RETURN n").toSet should have size(1)
+    execute("MATCH (n:AnotherLabel) RETURN n").toSet should have size 1
   }
 
   test("deny set label should override grant") {
@@ -510,7 +514,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
 
     // THEN
-    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+    execute("MATCH (n:Label) RETURN n").toSet should have size 1
   }
 
   test("setting a label that already exists will succeed if SET LABEL permission was denied as no write takes place") {
@@ -526,7 +530,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
 
     // THEN
-    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+    execute("MATCH (n:Label) RETURN n").toSet should have size 1
   }
 
   test("removing a label not present there will succeed if not allowed as no write occurs") {
@@ -542,7 +546,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel RETURN n")
 
     // THEN
-    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+    execute("MATCH (n:Label) RETURN n").toSet should have size 1
   }
 
   test("removing a label not present will succeed but do nothing if allowed") {
@@ -558,7 +562,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel")
 
     // THEN
-    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+    execute("MATCH (n:Label) RETURN n").toSet should have size 1
   }
 
   test("should be allowed to remove label that was set in the same transaction even without privilege") {

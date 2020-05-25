@@ -9,7 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 //noinspection RedundantDefaultArgument
-class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     // GIVEN
@@ -294,30 +294,32 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
   // Enforcement for create
 
-  test("granting create node allows creation of nodes")
-  {
-    setupUserWithCustomRole()
-    execute("GRANT CREATE ON GRAPH * NODES * TO custom")
+  Seq(VERSION_40, VERSION_41D1, VERSION_41).foreach { version =>
+    setVersion(version, if (version == VERSION_41) None else Some(classOf[UnsupportedOperationException]))
 
-    // WHEN
-    executeOnDefault("joe", "soap", "CREATE ()")
+    test("granting create node allows creation of nodes") {
+      setupUserWithCustomRole()
+      execute("GRANT CREATE ON GRAPH * NODES * TO custom")
 
-    // THEN
-    execute("MATCH (n) RETURN n").toSet should have size 1
-  }
+      // WHEN
+      executeOnDefault("joe", "soap", "CREATE ()")
 
-  test("granting create node allows creation of nodes with specific label")
-  {
-    setupUserWithCustomRole()
-    execute("GRANT CREATE ON GRAPH * NODES * TO custom")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CALL db.createLabel('Foo')")
+      // THEN
+      execute("MATCH (n) RETURN n").toSet should have size 1
+    }
 
-    // WHEN
-    executeOnDefault("joe", "soap", "CREATE (:Foo)")
+    test("granting create node allows creation of nodes with specific label") {
+      setupUserWithCustomRole()
+      execute("GRANT CREATE ON GRAPH * NODES * TO custom")
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CALL db.createLabel('Foo')")
 
-    // THEN
-    execute("MATCH (n:Foo) RETURN n").toSet should have size 1
+      // WHEN
+      executeOnDefault("joe", "soap", "CREATE (:Foo)")
+
+      // THEN
+      execute("MATCH (n:Foo) RETURN n").toSet should have size 1
+    }
   }
 
   test("should fail create node without privilege")

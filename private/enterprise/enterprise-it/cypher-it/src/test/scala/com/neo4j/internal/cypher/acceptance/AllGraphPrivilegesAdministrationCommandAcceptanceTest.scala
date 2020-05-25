@@ -9,7 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
-class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
   Seq(
     ("grant", granted: privilegeFunction),
@@ -100,27 +100,31 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
 
   // Enforcements tests
 
-  test("should be allowed to traverse and read when granted all graph privileges") {
-    // GIVEN
-    setupUserWithCustomRole()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A {prop: 'nodeValue'})-[:R {prop: 'relValue'}]->(:B)")
+  Seq(VERSION_40, VERSION_41D1, VERSION_41).foreach { version =>
+    setVersion(version, if (version == VERSION_41) None else Some(classOf[UnsupportedOperationException]))
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT ALL GRAPH PRIVILEGES ON GRAPH * TO custom")
+    test("should be allowed to traverse and read when granted all graph privileges") {
+      // GIVEN
+      setupUserWithCustomRole()
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (:A {prop: 'nodeValue'})-[:R {prop: 'relValue'}]->(:B)")
 
-    // THEN
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT ALL GRAPH PRIVILEGES ON GRAPH * TO custom")
 
-    // Should be allowed to traverse and read nodes
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.prop", resultHandler = (row, _) => {
-      row.get("n.prop") should be("nodeValue")
-    }) should be(1)
+      // THEN
 
-    // Should be allowed to traverse and read relationships
-    executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) RETURN r.prop", resultHandler = (row, _) => {
-      row.get("r.prop") should be("relValue")
-    }) should be(1)
+      // Should be allowed to traverse and read nodes
+      executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.prop", resultHandler = (row, _) => {
+        row.get("n.prop") should be("nodeValue")
+      }) should be(1)
+
+      // Should be allowed to traverse and read relationships
+      executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) RETURN r.prop", resultHandler = (row, _) => {
+        row.get("r.prop") should be("relValue")
+      }) should be(1)
+    }
   }
 
   test("should be allowed to write when granted all graph privileges") {

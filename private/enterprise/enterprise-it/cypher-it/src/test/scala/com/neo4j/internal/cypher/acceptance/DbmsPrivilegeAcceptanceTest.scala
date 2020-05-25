@@ -5,9 +5,10 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.Config
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
-class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
   // Privilege tests
   test("should grant dbms privileges") {
@@ -56,6 +57,47 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
         }
     }
+  }
+
+  Seq((VERSION_40, dbmsPrivilegesNotIn40()), (VERSION_41D1, dbmsPrivilegesNotIn41d01())).foreach {
+    case (version, dbmsPrivileges) =>
+      withVersion(version) {
+
+        test("should fail to grant dbms privileges") {
+          // GIVEN
+          execute("CREATE ROLE custom")
+
+          dbmsPrivileges.foreach { command =>
+            withClue(s"$command: \n") {
+              an[UnsupportedOperationException] should be thrownBy {
+                execute(s"GRANT $command ON DBMS TO custom")
+              }
+            }
+          }
+        }
+
+        test("should fail to deny dbms privileges") {
+          // GIVEN
+          execute("CREATE ROLE custom")
+
+          dbmsPrivileges.foreach { command =>
+            withClue(s"$command: \n") {
+              an[UnsupportedOperationException] should be thrownBy {
+                execute(s"DENY $command ON DBMS TO custom")
+              }
+            }
+          }
+        }
+      }
+  }
+
+  private def dbmsPrivilegesNotIn40(): Seq[String] = {
+    dbmsPrivileges.keys.filter(!_.contains("ROLE")).toSeq
+  }
+
+  private def dbmsPrivilegesNotIn41d01(): Seq[String] = {
+    //dbmsPrivileges.keys.filter(!_.contains("ROLE")).toSeq
+    Seq.empty
   }
 
   test("should not revoke other dbms privileges when revoking all dbms privileges") {
@@ -113,6 +155,9 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   test("Should do nothing when revoking a non-existing subset of a compound (mostly dbms) admin privilege") {
     // Given
     setup()
+    // When using setup() within version tests the privileges are not automatically initialized, so we need to do that explicitly
+    initializeEnterpriseSecurityGraphComponent(defaultConfig, VERSION_41, verbose = false)
+
     createRoleWithOnlyAdminPrivilege("custom")
 
     // When

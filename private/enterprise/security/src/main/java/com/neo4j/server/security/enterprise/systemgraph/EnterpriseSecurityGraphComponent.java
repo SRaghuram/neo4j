@@ -110,14 +110,13 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         } );
     }
 
-    public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase )
-            throws UnsupportedOperationException
+    public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
     {
         KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
         component.assertUpdateWithAction( action, specialDatabase );
     }
 
-    KnownEnterpriseSecurityComponentVersion findSecurityGraphComponentVersion( String substring )
+    public KnownEnterpriseSecurityComponentVersion findSecurityGraphComponentVersion( String substring )
     {
         return knownSecurityComponentVersions.findSecurityGraphVersion( substring );
     }

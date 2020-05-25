@@ -124,7 +124,7 @@ abstract class SecurityGraphCompatibilityTestBase
             var communityComponent = new UserSecurityGraphComponent( securityLog, userRepository, userRepository, cfg );
             enterpriseComponent = new EnterpriseSecurityGraphComponent( securityLog, roleRepository, userRepository, cfg );
             var testSystemGraphComponents = new TestSystemGraphComponents( new DefaultSystemGraphComponent( cfg ), communityComponent );
-            //testSystemGraphComponents.registerTest( enterpriseComponent );
+            // We explicitly do not add enterpriseComponents to the component initializer, so we can initialize per test class
 
             Dependencies deps = new Dependencies( dependencies );
             deps.satisfyDependencies( testSystemGraphComponents );

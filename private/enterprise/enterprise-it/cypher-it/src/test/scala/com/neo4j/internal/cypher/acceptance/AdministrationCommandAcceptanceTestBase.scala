@@ -225,7 +225,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
     def property(property: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
 
-    def label(label: String) = {
+    def label(label: String): PrivilegeMapBuilder = {
       val labelResource = if (label.equals("*"))  "all_labels" else s"label($label)"
       PrivilegeMapBuilder(map + ("resource" -> labelResource))
     }
@@ -472,23 +472,30 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     initSystemGraph(config)
   }
 
-  def initSystemGraph(config: Config): Unit = {
+  def initSystemGraph(config: Config = defaultConfig): Unit = {
     val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
     val systemGraphSupplier = SystemGraphRealmHelper.makeSystemSupplier(databaseManager)
 
     val userRepository = new InMemoryUserRepository
-    val roleRepository = new InMemoryRoleRepository
     val userSecurityGraphComponent = new UserSecurityGraphComponent(mock[Log], userRepository, userRepository, config)
-    val enterpriseSecurityGraphComponent = new EnterpriseSecurityGraphComponent(mock[Log], roleRepository, userRepository, config)
 
     val systemGraphComponents = new SystemGraphComponents()
     systemGraphComponents.register(new EnterpriseSystemGraphComponent(config))
     systemGraphComponents.register(userSecurityGraphComponent)
-    systemGraphComponents.register(enterpriseSecurityGraphComponent)
     val systemGraphInitializer = new DefaultSystemGraphInitializer(systemGraphSupplier, systemGraphComponents)
     systemGraphInitializer.start()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // we started the enterprise security graph component separately to allow tests to override this behaviour for version testing
+    initializeEnterpriseSecurityGraphComponent(config)
+  }
+
+  def initializeEnterpriseSecurityGraphComponent(config: Config): Unit = {
+    val userRepository = new InMemoryUserRepository
+    val roleRepository = new InMemoryRoleRepository
+    val enterpriseSecurityGraphComponent = new EnterpriseSecurityGraphComponent(mock[Log], roleRepository, userRepository, config)
+    enterpriseSecurityGraphComponent.initializeSystemGraph(graphOps)
   }
 
   def clearPublicRole(): Unit = {
