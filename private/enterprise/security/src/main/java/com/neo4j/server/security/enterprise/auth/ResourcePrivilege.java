@@ -11,6 +11,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRANSACTION_MANAGEMENT;
 
 public class ResourcePrivilege
 {
@@ -64,7 +65,7 @@ public class ResourcePrivilege
                 return true;
             }
         }
-        return allDatabases || database.equals( dbName );
+        return allDatabases || database.equals( dbName ) || TRANSACTION_MANAGEMENT.satisfies(action);
     }
 
     boolean appliesToDefault()

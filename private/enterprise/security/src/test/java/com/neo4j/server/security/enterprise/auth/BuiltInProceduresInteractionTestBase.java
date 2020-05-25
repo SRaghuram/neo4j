@@ -438,7 +438,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
             Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", query );
 
-            assertThat( maps, matchesOneToOneInAnyOrder( thisTransaction ) );
+            Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q2 );
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, thisTransaction ) );
         } );
 
         assertSuccess( subject, "foo", query, r ->
@@ -450,6 +451,93 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
             assertThat( maps, matchesOneToOneInAnyOrder( matcher1, thisTransaction ) );
         } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void listAllowedTransactionsOnDifferentDatabasesShouldNotMakeADifference() throws Throwable
+    {
+        // as long as there is access and the privilege to SHOW TRANSACTIONS on database A,
+        // the user should see all transactions on A, even when connected to B
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION ON DATABASE neo4j, foo TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+
+        for ( String db : new String[]{ DEFAULT_DATABASE_NAME, "foo" } )
+        {
+            assertSuccess( subject, db, query, r ->
+            {
+                List<Map<String,Object>> maps = collectResults( r );
+
+                Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", query );
+                Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q1 );
+                Matcher<Map<String,Object>> matcher2 = listedTransaction( startTime, "readSubject", q2 );
+                assertThat( "On database " + db, maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+            } );
+        }
+
+        latch.finishAndWaitForAllToFinish();
+
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void listAllowedTransactionsOnDifferentDatabasesShouldNotMakeADifferenceWithStar() throws Throwable
+    {
+        // as long as there is access and the privilege to SHOW TRANSACTIONS on database A,
+        // the user should see all transactions on A, even when connected to B
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+        for ( String db : new String[]{ DEFAULT_DATABASE_NAME, "foo" } )
+        {
+            assertSuccess( subject, db, query, r ->
+            {
+                List<Map<String,Object>> maps = collectResults( r );
+
+                Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", query );
+                Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q1 );
+                Matcher<Map<String,Object>> matcher2 = listedTransaction( startTime, "readSubject", q2 );
+                assertThat( "On database " + db, maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+            } );
+        }
 
         latch.finishAndWaitForAllToFinish();
 
@@ -1118,8 +1206,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             List<Map<String,Object>> maps = collectResults( r );
 
             Matcher<Map<String,Object>> thisQuery = listedQueryOfInteractionLevel( startTime, "alice", query );
+            Matcher<Map<String,Object>> matcher1 = listedQuery( startTime, "readSubject", q2 );
 
-            assertThat( maps, matchesOneToOneInAnyOrder( thisQuery ) );
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, thisQuery ) );
         } );
 
         assertSuccess( subject, "foo", query, r ->
@@ -1131,6 +1220,93 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
             assertThat( maps, matchesOneToOneInAnyOrder( matcher1, thisQuery ) );
         } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void shouldListAllowedQueriesOnDifferentDatabasesShouldNotMakeADifference() throws Throwable
+    {
+        // as long as there is access and the privilege to SHOW TRANSACTIONS on database A,
+        // the user should see all queries on A, even when connected to B
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION ON DATABASE neo4j, foo TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listQueries()";
+
+        for ( String db : new String[]{ DEFAULT_DATABASE_NAME, "foo" } )
+        {
+            assertSuccess( subject, db, query, r ->
+            {
+                List<Map<String,Object>> maps = collectResults( r );
+
+                Matcher<Map<String,Object>> thisTransaction = listedQueryOfInteractionLevel( startTime, "alice", query );
+                Matcher<Map<String,Object>> matcher1 = listedQuery( startTime, "readSubject", q1 );
+                Matcher<Map<String,Object>> matcher2 = listedQuery( startTime, "readSubject", q2 );
+                assertThat( "On database " + db, maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+            } );
+        }
+
+        latch.finishAndWaitForAllToFinish();
+
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void shouldListAllowedQueriesOnDifferentDatabasesShouldNotMakeADifferenceWithStar() throws Throwable
+    {
+        // as long as there is access and the privilege to SHOW TRANSACTIONS on database A,
+        // the user should see all queries on A, even when connected to B
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listQueries()";
+        for ( String db : new String[]{ DEFAULT_DATABASE_NAME, "foo" } )
+        {
+            assertSuccess( subject, db, query, r ->
+            {
+                List<Map<String,Object>> maps = collectResults( r );
+
+                Matcher<Map<String,Object>> thisTransaction = listedQueryOfInteractionLevel( startTime, "alice", query );
+                Matcher<Map<String,Object>> matcher1 = listedQuery( startTime, "readSubject", q1 );
+                Matcher<Map<String,Object>> matcher2 = listedQuery( startTime, "readSubject", q2 );
+                assertThat( "On database " + db, maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+            } );
+        }
 
         latch.finishAndWaitForAllToFinish();
 
