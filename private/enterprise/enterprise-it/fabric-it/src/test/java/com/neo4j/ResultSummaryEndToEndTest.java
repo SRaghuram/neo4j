@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
@@ -128,11 +130,22 @@ class ResultSummaryEndToEndTest
     @Test
     void testSingleLocalGraphExplain()
     {
+        odTestSingleLocalGraphExplain( query -> runOnFooAndGetSummary( query, 0 ) );
+    }
+
+    @Test
+    void testSingleLocalGraphExplainWithoutConsumingRecords()
+    {
+        odTestSingleLocalGraphExplain( this::getSummary );
+    }
+
+    private void odTestSingleLocalGraphExplain( Function<String,ResultSummary> obtainSummary )
+    {
         var query = joinAsLines( "EXPLAIN",
                 "MATCH (n {name: 'Carrie'})",
                 "RETURN n" );
 
-        var resultSummary = runOnFooAndGetSummary( query, 0 );
+        var resultSummary = obtainSummary.apply( query );
         assertTrue(resultSummary.hasPlan());
         assertFalse( resultSummary.hasProfile() );
         assertNotNull( resultSummary.plan() );
@@ -406,6 +419,17 @@ class ResultSummaryEndToEndTest
     @Test
     void testLocalGraphNotifications()
     {
+        doTestLocalGraphNotifications( query -> runOnFooAndGetSummary( query, 0 ) );
+    }
+
+    @Test
+    void testLocalGraphNotificationsWithoutConsumingRecords()
+    {
+        doTestLocalGraphNotifications( this::getSummary );
+    }
+
+    private void doTestLocalGraphNotifications( Function<String,ResultSummary> obtainSummary )
+    {
         var query = joinAsLines(
                 "EXPLAIN",
                 "USE neo4j",
@@ -413,7 +437,7 @@ class ResultSummaryEndToEndTest
                 "RETURN n"
         );
 
-        var resultSummary = runOnFooAndGetSummary( query, 0 );
+        var resultSummary = obtainSummary.apply( query );
         assertEquals( 1, resultSummary.notifications().size() );
         assertThat( resultSummary.notifications().get( 0 ).code() ).contains( Status.Statement.UnknownLabelWarning.code().serialize() );
     }
@@ -424,6 +448,15 @@ class ResultSummaryEndToEndTest
         {
             var result = session.run( query );
             assertEquals( expectedNumberOfRecords, result.list().size() );
+            return result.consume();
+        } );
+    }
+
+    private ResultSummary getSummary( String query )
+    {
+        return fooDriverUtils.inSession( clientDriver, session ->
+        {
+            var result = session.run( query );
             return result.consume();
         } );
     }

@@ -453,7 +453,7 @@ class TransactionTest
         } ) );
 
         assertEquals( "Neo.ClientError.Transaction.TransactionTimedOut", e.code() );
-        assertThat( e.getMessage() ).contains( "Trying to execute query in a terminated transaction" );
+        assertThat( e.getMessage() ).contains( "The transaction has been terminated. Retry your operation in a new transaction" );
 
         verifyRolledBack( tx1, tx2 );
         verifyDriverReturned( shard1Driver, shard2Driver );
