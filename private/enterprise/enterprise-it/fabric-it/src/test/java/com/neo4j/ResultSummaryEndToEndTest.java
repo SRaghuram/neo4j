@@ -130,16 +130,16 @@ class ResultSummaryEndToEndTest
     @Test
     void testSingleLocalGraphExplain()
     {
-        odTestSingleLocalGraphExplain( query -> runOnFooAndGetSummary( query, 0 ) );
+        doTestSingleLocalGraphExplain( query -> runOnFooAndGetSummary( query, 0 ) );
     }
 
     @Test
     void testSingleLocalGraphExplainWithoutConsumingRecords()
     {
-        odTestSingleLocalGraphExplain( this::getSummary );
+        doTestSingleLocalGraphExplain( this::getSummary );
     }
 
-    private void odTestSingleLocalGraphExplain( Function<String,ResultSummary> obtainSummary )
+    private void doTestSingleLocalGraphExplain( Function<String,ResultSummary> obtainSummary )
     {
         var query = joinAsLines( "EXPLAIN",
                 "MATCH (n {name: 'Carrie'})",
