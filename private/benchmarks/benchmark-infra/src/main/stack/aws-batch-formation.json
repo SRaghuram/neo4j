@@ -64,7 +64,7 @@
           "Ec2KeyPair": "benchmark",
           "MinvCpus": 0,
           "DesiredvCpus": 0,
-          "MaxvCpus": 256,
+          "MaxvCpus": 512,
           "InstanceTypes": [
             "m5d.2xlarge"
           ],
@@ -110,7 +110,7 @@
           "Ec2KeyPair": "benchmark",
           "MinvCpus": 0,
           "DesiredvCpus": 0,
-          "MaxvCpus": 256,
+          "MaxvCpus": 512,
           "InstanceTypes": [
             "m5d.large"
           ],
@@ -156,7 +156,7 @@
           "Ec2KeyPair": "benchmark",
           "MinvCpus": 0,
           "DesiredvCpus": 0,
-          "MaxvCpus": 256,
+          "MaxvCpus": 512,
           "InstanceTypes": [
             "r5d.2xlarge"
           ],
