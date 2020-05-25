@@ -69,21 +69,18 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         // chunked transaction stream ends the interaction internally and closes the cursor
         ctx.writeAndFlush( txStream ).addListener( f ->
         {
-            if ( log.isDebugEnabled() || !f.isSuccess() )
+            // if an exception happens during reading from txStream, it has to be handled here, since it will not be propagated up in the netty pipeline
+            if ( !f.isSuccess() )
             {
-                String message =
-                        format( "Streamed transactions [%d--%d] to %s", txPullingContext.firstTxId(), txStream.lastTxId(), ctx.channel().remoteAddress() );
-                if ( f.isSuccess() )
-                {
-                    log.debug( message );
-                }
-                else
-                {
-                    log.warn( message, f.cause() );
-                }
+                log.warn( format( "Failed streaming transactions [%d--%d] to %s", txPullingContext.firstTxId(), txStream.lastTxId(),
+                        ctx.channel().remoteAddress() ), f.cause() );
+                ctx.close();
+            }
+            else if ( log.isDebugEnabled() )
+            {
+                log.debug( "Streamed transactions [%d--%d] to %s", txPullingContext.firstTxId(), txStream.lastTxId(), ctx.channel().remoteAddress() );
             }
         } );
-
     }
 
     private Prepare prepareRequest( TxPullRequest msg ) throws IOException
