@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.mockito.Mockito.mock
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.builder.AbstractLogicalPlanBuilder
@@ -13,9 +14,7 @@ import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
@@ -53,7 +52,7 @@ class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory
       semanticTable,
       breakingPolicy,
       allocateArgumentSlots = true)
-    val converters: ExpressionConverters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
+    val converters: ExpressionConverters = mock(classOf[ExpressionConverters])
     ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters)
   }
 }

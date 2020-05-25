@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_ARGUMENT_STATE_MAPS
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_ARGUMENT_STATE_MAP_INITIALIZATIONS
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_BUFFERS
-import org.neo4j.cypher.internal.runtime.slotted.expressions.IsPrimitiveNull
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
@@ -351,7 +350,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
-          ConditionalBufferVariant(onTrue, buffers(onFalseId), IsPrimitiveNull(0)))(SlotConfiguration.empty))
+          ConditionalBufferVariant(onTrue, buffers(onFalseId), null))(SlotConfiguration.empty))
       val out = MorselBufferOutput(BufferId(conditionalId))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       apply

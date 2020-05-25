@@ -151,12 +151,6 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-      <dependency>
-          <groupId>com.neo4j</groupId>
-          <artifactId>neo4j-cypher-slotted-runtime</artifactId>
-          <scope>test</scope>
-          <version>${project.version}</version>
-      </dependency>
 
         <!-- neo4j-cypher re-include excluded (with correct version) -->
 
