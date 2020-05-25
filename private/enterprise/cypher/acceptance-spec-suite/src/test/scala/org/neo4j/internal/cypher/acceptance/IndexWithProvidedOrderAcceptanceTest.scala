@@ -459,8 +459,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     val var2 = varFor("n.prop2")
 
     Seq(
-      (Configs.InterpretedAndSlotted, "n.prop1 ASC", ProvidedOrder.asc(var1), expectedAscAsc),
-      (Configs.CachedProperty, "n.prop1 DESC", ProvidedOrder.desc(var1), expectedDescAsc),
+      (Configs.CachedProperty, "n.prop1 ASC", ProvidedOrder.asc(var1), expectedAscAsc),
+      (Configs.InterpretedAndSlotted, "n.prop1 DESC", ProvidedOrder.desc(var1), expectedDescAsc),
       (Configs.CachedProperty, "n.prop1 ASC, n.prop2 ASC", ProvidedOrder.asc(var1).asc(var2), expectedAscAsc),
       (Configs.CachedProperty, "n.prop1 ASC, n.prop2 DESC", ProvidedOrder.asc(var1).desc(var2), expectedAscDesc),
       (Configs.CachedProperty, "n.prop1 DESC, n.prop2 ASC", ProvidedOrder.desc(var1).asc(var2), expectedDescAsc),
@@ -473,7 +473,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 >= 42 AND exists(n.prop2)
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        // For 'n.prop1 ASC': Pipelined gives different order on n.prop2
+        // For 'n.prop1 DESC': Pipelined gives different order on n.prop2
         val result = executeWith(configs, query, executeExpectedFailures = false)
 
         // Then
