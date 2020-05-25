@@ -14,22 +14,22 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
-@Documented( ".Multi database count metrics" )
+@Documented( ".Database operation count metrics" )
 public class DatabaseOperationCountMetrics extends LifecycleAdapter
 {
     private static final String SERVER_PREFIX = "db.operation.count";
 
-    @Documented( "Database create operations." )
+    @Documented( "Count of successful database create operations." )
     public static final String DATABASE_CREATE_COUNT = name( SERVER_PREFIX, "create" );
-    @Documented( "Database start operations." )
+    @Documented( "Count of successful database start operations." )
     public static final String DATABASE_START_COUNT = name( SERVER_PREFIX, "start" );
-    @Documented( "Database stop operations." )
+    @Documented( "Count of successful database stop operations." )
     public static final String DATABASE_STOP_COUNT = name( SERVER_PREFIX, "stop" );
-    @Documented( "Database drop operations." )
+    @Documented( "Count of successful database drop operations." )
     public static final String DATABASE_DROP_COUNT = name( SERVER_PREFIX, "drop" );
     @Documented( "Count of failed database operations." )
     public static final String DATABASE_FAILED_COUNT = name( SERVER_PREFIX, "failed" );
-    @Documented( "Count of database operations recovered." )
+    @Documented( "Count of database operations which failed previously but have recovered." )
     public static final String DATABASE_RECOVERED_COUNT = name( SERVER_PREFIX, "recovered" );
 
     private final String countCreate;

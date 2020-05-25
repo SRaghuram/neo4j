@@ -29,7 +29,7 @@ public class CoreMetrics extends LifecycleAdapter
     private static final String APPEND_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "append_index" );
     @Documented( "Commit index of the RAFT log." )
     private static final String COMMIT_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "commit_index" );
-    @Documented( "Commit index of the RAFT log." )
+    @Documented( "Applied index of the RAFT log." )
     private static final String APPLIED_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "applied_index" );
     @Documented( "RAFT Term of this server." )
     private static final String TERM_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "term" );
@@ -71,7 +71,7 @@ public class CoreMetrics extends LifecycleAdapter
     public static final String DISCOVERY_CLUSTER_UNREACHABLE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "unreachable" );
     @Documented( "Discovery cluster convergence." )
     public static final String DISCOVERY_CLUSTER_CONVERGED = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "converged" );
-    @Documented( "Time since last leader message in milliseconds" )
+    @Documented( "Time elapsed since last message from leader in milliseconds." )
     public static final String LAST_LEADER_MESSAGE_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "last_leader_message" );
 
     private final String appendIndex;

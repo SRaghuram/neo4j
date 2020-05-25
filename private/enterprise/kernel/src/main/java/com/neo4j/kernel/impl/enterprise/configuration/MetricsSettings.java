@@ -61,7 +61,7 @@ public class MetricsSettings implements SettingsDeclaration
             newBuilder( "metrics.neo4j.causal_clustering.enabled", BOOL, true ).build();
 
     @Description( "Enable reporting metrics for Neo4j dbms operations; " +
-            "e.g. how many databases have been created or dropped, and how many attempted operations have failed." )
+            "how many times databases have been created, started, stopped or dropped, and how many attempted operations have failed and recovered later." )
     public static final Setting<Boolean> databaseOperationCountEnabled =
             newBuilder( "metrics.neo4j.database_operation_count.enabled", BOOL, true ).build();
 
