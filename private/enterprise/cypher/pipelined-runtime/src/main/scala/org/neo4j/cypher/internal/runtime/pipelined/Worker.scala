@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QuerySchedulingPoli
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 
 /**
@@ -157,8 +158,26 @@ class Worker(val workerId: Int,
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking Accumulator
-      case NextTaskException(pipeline, SchedulingInputException(acc: IndexedSeq[MorselAccumulator[_]], cause)) =>
-        executingQuery.executionState.closeAccumulatorsTask(pipeline, acc)
+      case NextTaskException(pipeline, SchedulingInputException(acc: Array[MorselAccumulator[_]], cause)) =>
+        executingQuery.executionState.closeAccumulatorsTask(pipeline, acc.toIndexedSeq)
+        executingQuery.executionState.failQuery(cause, resources, pipeline)
+        SchedulingResult(null, someTaskWasFilteredOut = true)
+
+      // Failure in nextTask of a pipeline, after taking Accumulator
+      case NextTaskException(pipeline, SchedulingInputException(acc: TraversableOnce[MorselAccumulator[_]], cause)) =>
+        executingQuery.executionState.closeAccumulatorsTask(pipeline, acc.toIndexedSeq)
+        executingQuery.executionState.failQuery(cause, resources, pipeline)
+        SchedulingResult(null, someTaskWasFilteredOut = true)
+
+      // Failure in nextTask of a pipeline, after taking AccumulatorAndMorsel
+      case NextTaskException(pipeline, SchedulingInputException(accAndMorsel: AccumulatorAndMorsel[_, MorselAccumulator[_]], cause)) =>
+        executingQuery.executionState.closeMorselAndAccumulatorTask(pipeline, accAndMorsel.morsel, accAndMorsel.acc)
+        executingQuery.executionState.failQuery(cause, resources, pipeline)
+        SchedulingResult(null, someTaskWasFilteredOut = true)
+
+      // Failure in nextTask of a pipeline, after taking Data
+      case NextTaskException(pipeline, SchedulingInputException(data: AnyRef, cause)) =>
+        executingQuery.executionState.closeData(pipeline, data)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
