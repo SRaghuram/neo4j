@@ -46,10 +46,11 @@ class OffloadStoreTracingTest
     private TestDirectory testDirectory;
 
     private final SimpleByteArrayLayout layout = new SimpleByteArrayLayout( false );
-    private DefaultPageCacheTracer pageCacheTracer = new DefaultPageCacheTracer();
+    private final DefaultPageCacheTracer pageCacheTracer = new DefaultPageCacheTracer();
     private OffloadStoreImpl<RawBytes,RawBytes> offloadStore;
     private PageCursorTracer cursorTracer;
     private PagedFile pagedFile;
+    private FreeListIdProvider idProvider;
 
     @BeforeEach
     void setUp() throws IOException
@@ -57,8 +58,8 @@ class OffloadStoreTracingTest
         cursorTracer = pageCacheTracer.createPageCursorTracer( "testCursorTracer" );
         pagedFile = pageCache.map( testDirectory.createFile( "file" ), pageCache.pageSize() );
         OffloadPageCursorFactory pcFactory = pagedFile::io;
-        var idProvider = new FreeListIdProvider( pagedFile, 10 );
-        offloadStore = new OffloadStoreImpl<>( layout, idProvider, pcFactory, ALWAYS_TRUE, pageCache.pageSize() );
+        idProvider = new FreeListIdProvider( pagedFile, 10 );
+        offloadStore = new OffloadStoreImpl<>( layout, pcFactory, ALWAYS_TRUE, pageCache.pageSize() );
     }
 
     @AfterEach
@@ -73,10 +74,17 @@ class OffloadStoreTracingTest
     @Test
     void tracePageCacheAccessOnKeyWrite() throws IOException
     {
+        try ( IdProvider.Writer ids = idProvider.writer( cursorTracer ) )
+        {
+            ids.releaseId( 1, 1, 15 );
+        }
         cursorTracer.reportEvents();
         assertZeroCursor();
 
-        offloadStore.writeKey( EMPTY_BYTES, 0, 1, cursorTracer );
+        try ( IdProvider.Writer ids = idProvider.writer( cursorTracer ) )
+        {
+            offloadStore.writeKey( EMPTY_BYTES, 0, 1, ids, cursorTracer );
+        }
 
         assertWriteCursorEvents();
     }
@@ -84,10 +92,17 @@ class OffloadStoreTracingTest
     @Test
     void tracePageCacheAccessOnKeyValueWrite() throws IOException
     {
+        try ( IdProvider.Writer ids = idProvider.writer( cursorTracer ) )
+        {
+            ids.releaseId( 1, 1, 15 );
+        }
         cursorTracer.reportEvents();
         assertZeroCursor();
 
-        offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 1, cursorTracer );
+        try ( IdProvider.Writer ids = idProvider.writer( cursorTracer ) )
+        {
+            offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 1, ids, cursorTracer );
+        }
 
         assertWriteCursorEvents();
     }
@@ -98,7 +113,10 @@ class OffloadStoreTracingTest
         cursorTracer.reportEvents();
         assertZeroCursor();
 
-        offloadStore.free( 1, 1, 1, cursorTracer );
+        try ( IdProvider.Writer ids = idProvider.writer( cursorTracer ) )
+        {
+            offloadStore.free( 1, 1, 1, ids, cursorTracer );
+        }
 
         assertThat( cursorTracer.hits() ).isEqualTo( 0 );
         assertThat( cursorTracer.faults() ).isEqualTo( 1 );
@@ -109,7 +127,11 @@ class OffloadStoreTracingTest
     @Test
     void tracePageCacheAccessOnKeyRead() throws IOException
     {
-        long id = offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 2, cursorTracer );
+        long id;
+        try ( IdProvider.Writer freelistWriter = idProvider.writer( cursorTracer ) )
+        {
+            id = offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 2, freelistWriter, cursorTracer );
+        }
         cursorTracer.reportEvents();
         assertZeroCursor();
 
@@ -121,7 +143,11 @@ class OffloadStoreTracingTest
     @Test
     void tracePageCacheAccessOnKeyValueRead() throws IOException
     {
-        long id = offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 2, cursorTracer );
+        long id;
+        try ( IdProvider.Writer freelistWriter = idProvider.writer( cursorTracer ) )
+        {
+            id = offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 2, freelistWriter, cursorTracer );
+        }
         cursorTracer.reportEvents();
         assertZeroCursor();
 
@@ -133,7 +159,11 @@ class OffloadStoreTracingTest
     @Test
     void tracePageCacheAccessOnValueRead() throws IOException
     {
-        long id = offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 2, cursorTracer );
+        long id;
+        try ( IdProvider.Writer freelistWriter = idProvider.writer( cursorTracer ) )
+        {
+            id = offloadStore.writeKeyValue( EMPTY_BYTES, EMPTY_BYTES, 1, 2, freelistWriter, cursorTracer );
+        }
         cursorTracer.reportEvents();
         assertZeroCursor();
 

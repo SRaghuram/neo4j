@@ -61,9 +61,9 @@ public interface OffloadStore<KEY, VALUE>
     /**
      * Store key in offload store.
      *
-     * @see #writeKeyValue(Object, Object, long, long, PageCursorTracer)
+     * @see #writeKeyValue(Object, Object, long, long, IdProvider.Writer, PageCursorTracer)
      */
-    long writeKey( KEY key, long stableGeneration, long unstableGeneration, PageCursorTracer cursorTracer ) throws IOException;
+    long writeKey( KEY key, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
 
     /**
      * Store key and value in offload store, mapping them to offloadId
@@ -73,11 +73,12 @@ public interface OffloadStore<KEY, VALUE>
      * @param value the value to write to offload store together with key.
      * @param stableGeneration current stable generation when key is written.
      * @param unstableGeneration current unstable generation when key is written.
+     * @param idProvider
      * @param cursorTracer underlying page cursor tracer
      * @return offloadId to use when reading key and value back.
      * @throws IOException if something went wrong while writing key or value.
      */
-    long writeKeyValue( KEY key, VALUE value, long stableGeneration, long unstableGeneration, PageCursorTracer cursorTracer ) throws IOException;
+    long writeKeyValue( KEY key, VALUE value, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
 
     /**
      * Free the given offloadId effectively deleting that entry from offload store.
@@ -85,8 +86,9 @@ public interface OffloadStore<KEY, VALUE>
      * @param offloadId id to free
      * @param stableGeneration current stable generation when id is freed.
      * @param unstableGeneration current unstable generation when id is freed.
+     * @param idProvider
      * @param cursorTracer underlying page cursor tracer
      * @throws IOException if something went wrong when freeing id.
      */
-    void free( long offloadId, long stableGeneration, long unstableGeneration, PageCursorTracer cursorTracer ) throws IOException;
+    void free( long offloadId, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
 }

@@ -20,32 +20,32 @@
 package org.neo4j.index.internal.gbptree;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.collections.api.iterator.LongIterator;
-import org.eclipse.collections.api.set.primitive.MutableLongSet;
-import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.function.Supplier;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
-class SimpleIdProvider implements IdProvider
+class SimpleIdProvider implements IdProvider, IdProvider.Writer
 {
     private final Queue<Pair<Long,Long>> releasedIds = new LinkedList<>();
-    private final Supplier<PageCursor> cursorSupplier;
     private long lastId;
 
-    SimpleIdProvider( Supplier<PageCursor> cursorSupplier )
+    SimpleIdProvider()
     {
-        this.cursorSupplier = cursorSupplier;
         reset();
     }
 
     @Override
-    public long acquireNewId( long stableGeneration, long unstableGeneration, PageCursorTracer cursorTracer )
+    public Writer writer( PageCursorTracer cursorTracer )
+    {
+        return this;
+    }
+
+    @Override
+    public long acquireNewId( long stableGeneration, long unstableGeneration, PageCursor targetCursor ) throws IOException
     {
         if ( !releasedIds.isEmpty() )
         {
@@ -53,26 +53,21 @@ class SimpleIdProvider implements IdProvider
             if ( free.getLeft() <= stableGeneration )
             {
                 releasedIds.poll();
-                Long pageId = free.getRight();
-                zapPage( pageId );
+                long pageId = free.getRight();
+                targetCursor.next( pageId );
+                targetCursor.zapPage();
                 return pageId;
             }
         }
         lastId++;
+        targetCursor.next( lastId );
         return lastId;
     }
 
     @Override
-    public void releaseId( long stableGeneration, long unstableGeneration, long id, PageCursorTracer cursorTracer )
+    public void releaseId( long stableGeneration, long unstableGeneration, long id )
     {
         releasedIds.add( Pair.of( unstableGeneration, id ) );
-    }
-
-    LongIterator unacquiredIds()
-    {
-        final MutableLongSet unacquiredIds = new LongHashSet();
-        releasedIds.forEach( pair -> unacquiredIds.add( pair.getValue() ) );
-        return unacquiredIds.longIterator();
     }
 
     @Override
@@ -93,22 +88,14 @@ class SimpleIdProvider implements IdProvider
         return lastId;
     }
 
+    @Override
+    public void close()
+    {
+    }
+
     void reset()
     {
         releasedIds.clear();
         lastId = IdSpace.MIN_TREE_NODE_ID - 1;
-    }
-
-    private void zapPage( Long pageId )
-    {
-        try ( PageCursor cursor = cursorSupplier.get() )
-        {
-            cursor.next( pageId );
-            cursor.zapPage();
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Could not go to page " + pageId );
-        }
     }
 }
