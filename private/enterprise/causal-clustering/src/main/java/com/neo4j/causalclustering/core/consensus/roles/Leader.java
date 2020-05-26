@@ -334,7 +334,8 @@ public class Leader implements RaftMessageHandler
 
             var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), appendIndex, appendIndexTerm, proposal.priorityGroups() );
             outcomeBuilder.startTransferringLeadership( proposed );
-            log.info( "Attempt to transfer leadership to follower %s. Will stop accepting writes for a short period.", proposal.proposed() );
+            log.info( "Attempt to transfer leadership to follower %s with request %s. Will stop accepting writes for a short period.",
+                      proposal.proposed(), request );
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( proposed, request ) );
             return outcomeBuilder;
         }
