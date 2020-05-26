@@ -59,7 +59,7 @@ class LimitingSchedulerTest
     }
 
     @Test
-    void shouldNotClearQueueOnDisable()
+    void shouldNotDropQueueOnStop()
     {
         // given
         AtomicInteger integer = new AtomicInteger();

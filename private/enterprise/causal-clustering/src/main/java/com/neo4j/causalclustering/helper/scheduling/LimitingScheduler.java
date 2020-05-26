@@ -18,7 +18,7 @@ public class LimitingScheduler
     private final JobsQueue<Runnable> jobsQueue;
     private final Log log;
 
-    private volatile boolean enabled = true;
+    private volatile boolean stopped; // implicitly false (initialise in stopped state)
     private volatile ReschedulingJob job;
     private volatile JobHandle<?> jobHandle;
 
@@ -47,18 +47,18 @@ public class LimitingScheduler
     public void offerJob( Runnable runnable )
     {
         // exit without taking a lock if we're already disabled
-        throwIfDisabled();
+        throwIfStopped();
         synchronized ( this )
         {
-            throwIfDisabled();
+            throwIfStopped();
             jobsQueue.offer( runnable );
             trySchedule();
         }
     }
 
-    private void throwIfDisabled()
+    private void throwIfStopped()
     {
-        if ( !enabled )
+        if ( stopped )
         {
             throw new IllegalStateException( "Not allowing jobs to be scheduled when disabled" );
         }
@@ -87,9 +87,9 @@ public class LimitingScheduler
      */
     public void stopAndFlush()
     {
-        // use synchronized setDisabled method so that we know that all in progress offerJob() calls have completed before we disable
-        // that allows us to be sure that no items are going to join the queue after this point
-        setDisabled();
+        // use synchronized setStopped method so that we know that all in progress offerJob() calls have completed before we disable.
+        // That allows us to be sure that no items are going to join the queue after this point
+        setStopped();
 
         try
         {
@@ -107,9 +107,9 @@ public class LimitingScheduler
      */
     private synchronized boolean isEmpty()
     {
-        if ( enabled )
+        if ( !stopped )
         {
-            throw new IllegalStateException( "Checking if the queue is empty while the scheduler is enabled is not supported" );
+            throw new IllegalStateException( "Checking if the queue is empty before stopping the scheduler is not supported" );
         }
         return jobsQueue.isEmpty();
     }
@@ -121,27 +121,25 @@ public class LimitingScheduler
     {
         while ( !isEmpty() )
         {
-            // n.b we use a synchronized method to get the latest jobHandle to avoid races with trySchedule on other threads
-            waitTermination( getJobHandle() );
+            waitTermination( jobHandle );
             // the queue should be self-scheduling but we do this anyway to keep moving and to avoid being a busy-loop
             trySchedule();
         }
         // Wait on the last scheduled job to finish
-        waitTermination( getJobHandle() );
+        waitTermination( jobHandle );
     }
 
-    private synchronized JobHandle<?> getJobHandle()
+    private synchronized void setStopped()
     {
-        return jobHandle;
-    }
-
-    private synchronized void setDisabled()
-    {
-        enabled = false;
+        stopped = true;
     }
 
     private synchronized void abortJob()
     {
+        if ( !isEmpty() )
+        {
+            log.warn( "LimitingScheduler aborted with unfinished jobs still in its queue" );
+        }
         jobsQueue.clear();
         var currentJob = this.job;
         if ( currentJob != null )
@@ -173,7 +171,7 @@ public class LimitingScheduler
             finally
             {
                 job = null;
-                // It's not necessary to check if we are enabled here since we are expected to always flush our whole queue
+                // It's not necessary to check if the scheduler is stopped here since we are expected to always flush our whole queue
                 trySchedule();
             }
         }
