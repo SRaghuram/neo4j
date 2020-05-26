@@ -360,7 +360,7 @@ class FabricQueryLoggingTest
                         .where( "query", e -> e.query, query()
                                 .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
                                 .where( "dbName", this::dbName, is( Optional.empty() ) ) )
-                        .where( "failure", e -> e.failure, throwable( is( FabricException.class ), containsString( "my failure!" ) ) )
+                        .where( "failure", e -> e.failureMessage, containsString( "my failure!" ) )
                         .where( "status", e -> e.snapshot.status(), is( "running" ) )
         ) );
 

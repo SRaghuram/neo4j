@@ -36,13 +36,15 @@ public class AssertableQueryExecutionMonitor
         final ExecutingQuery query;
         final Throwable failure;
         final QuerySnapshot snapshot;
+        final String failureMessage;
 
-        Event( EventType type, ExecutingQuery query, QuerySnapshot snapshot, Throwable failure )
+        Event( EventType type, ExecutingQuery query, QuerySnapshot snapshot, Throwable failure, String failureMessage )
         {
             this.type = type;
             this.query = query;
             this.snapshot = snapshot;
             this.failure = failure;
+            this.failureMessage = failureMessage;
         }
 
         @Override
@@ -101,7 +103,7 @@ public class AssertableQueryExecutionMonitor
         @Override
         public boolean matches( Object actual )
         {
-            if ( clazz.isAssignableFrom( actual.getClass() ) )
+            if ( actual != null && clazz.isAssignableFrom( actual.getClass() ) )
             {
                 return matchers.stream().allMatch( m ->
                 {
@@ -142,31 +144,31 @@ public class AssertableQueryExecutionMonitor
         @Override
         public void startProcessing( ExecutingQuery query )
         {
-            events.add( new Event( EventType.StartProcessing, query, query.snapshot(), null ) );
+            events.add( new Event( EventType.StartProcessing, query, query.snapshot(), null, null ) );
         }
 
         @Override
         public void startExecution( ExecutingQuery query )
         {
-            events.add( new Event( EventType.StartExecution, query, query.snapshot(), null ) );
+            events.add( new Event( EventType.StartExecution, query, query.snapshot(), null, null ) );
         }
 
         @Override
         public void endFailure( ExecutingQuery query, Throwable failure )
         {
-            events.add( new Event( EventType.EndFailure, query, query.snapshot(), failure ) );
+            events.add( new Event( EventType.EndFailure, query, query.snapshot(), failure, failure.getMessage() ) );
         }
 
         @Override
         public void endFailure( ExecutingQuery query, String reason )
         {
-            events.add( new Event( EventType.EndFailure, query, query.snapshot(), null ) );
+            events.add( new Event( EventType.EndFailure, query, query.snapshot(), null, reason ) );
         }
 
         @Override
         public void endSuccess( ExecutingQuery query )
         {
-            events.add( new Event( EventType.EndSuccess, query, query.snapshot(), null ) );
+            events.add( new Event( EventType.EndSuccess, query, query.snapshot(), null, null ) );
         }
     }
 }
