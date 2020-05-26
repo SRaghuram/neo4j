@@ -424,7 +424,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     assertPlanReturns(plan, ops, Seq.empty, bufs, pipes, rels)
   }
 
-  test("should return graph for condition apply") {
+  test("should return graph for conditional apply") {
     val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
       .produceResults("n")
       .conditionalApply("n").withBreak()
