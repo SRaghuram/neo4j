@@ -41,9 +41,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.DirContext;
@@ -55,6 +57,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.TransientException;
@@ -80,11 +83,14 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @RunWith( FrameworkRunner.class )
 @CreateDS(
@@ -180,6 +186,54 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             assertThat( record.get( 0 ).asString(), equalTo( "smith" ) );
             assertThat( record.get( 1 ).asList(), equalTo( List.of( "agent", PredefinedRoles.PUBLIC ) ) );
             assertThat( record.get( 2 ).asList(), equalTo( Collections.emptyList() ) );
+        }
+    }
+
+    @Test
+    public void shouldShowCurrentUserPrivileges()
+    {
+        startDatabase();
+        try ( Driver driver = connectDriver( boltUri, "neo", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            List<Record> records = session.run( "SHOW USER PRIVILEGES" ).list();
+            Set<String> roles = records.stream().map( r -> r.get( "role" ).asString() ).collect( Collectors.toSet() );
+
+            // then all privileges should be granted through the reader role
+            assertThat( roles, contains( "reader", "PUBLIC" ) );
+        }
+    }
+
+    @Test
+    public void shouldShowCurrentUserPrivilegesWhenExplicitlyQueried()
+    {
+        startDatabase();
+        try ( Driver driver = connectDriver( boltUri, "neo", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            List<Record> records = session.run( "SHOW USER neo PRIVILEGES" ).list();
+            Set<String> roles = records.stream().map( r -> r.get( "role" ).asString() ).collect( Collectors.toSet() );
+
+            // then all privileges should be granted through the reader role
+            assertThat( roles, contains( "reader", "PUBLIC" ) );
+        }
+    }
+
+    @Test
+    public void shouldGiveEmptyResultShowOtherUserPrivileges()
+    {
+        startDatabase();
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            List<Record> records = session.run( "SHOW USER neo PRIVILEGES" ).list();
+            Set<String> roles = records.stream().map( r -> r.get( "role" ).asString() ).collect( Collectors.toSet() );
+
+            // then no privileges will be found since the user does not exist in the system graph
+            assertThat( roles, empty() );
         }
     }
 
