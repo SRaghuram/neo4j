@@ -71,7 +71,7 @@ class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements Sim
     {
         DenseRelationships relationships = existingRelationshipsByType( nodeId, type, false );
         return relationships == null ? emptyResourceIterator() : resourceIterator(
-                relationships.inserted.stream().filter( rel -> directionMatches( rel, direction ) ).map( rel -> (RelationshipData) rel ).iterator(),
+                relationships.relationships.stream().filter( rel -> directionMatches( rel, direction ) ).map( rel -> (RelationshipData) rel ).iterator(),
                 Resource.EMPTY );
     }
 
@@ -81,7 +81,7 @@ class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements Sim
     {
         DenseRelationships relationships = existingRelationshipsByType( nodeId, type, false );
         return relationships == null ? emptyResourceIterator() : resourceIterator(
-                relationships.inserted.stream().filter( rel -> directionMatches( rel, direction ) && rel.otherNodeId == neighbourNodeId )
+                relationships.relationships.stream().filter( rel -> directionMatches( rel, direction ) && rel.otherNodeId == neighbourNodeId )
                         .map( rel -> (RelationshipData) rel ).iterator(), Resource.EMPTY );
     }
 
@@ -104,7 +104,7 @@ class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements Sim
             {
                 ConcurrentMap<Integer,DenseRelationships> nodeData = data.computeIfAbsent( sourceNodeId, nodeId -> new ConcurrentHashMap<>() );
                 DenseRelationships relationships = nodeData.computeIfAbsent( type, t -> new DenseRelationships( sourceNodeId, t ) );
-                relationships.insert( new InternalRelationship( sourceNodeId, internalId, type, targetNodeId, outgoing, properties ) );
+                relationships.add( new InternalRelationship( sourceNodeId, internalId, type, targetNodeId, outgoing, properties ) );
             }
 
             @Override
@@ -112,7 +112,7 @@ class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements Sim
             {
                 DenseRelationships relationships = existingRelationshipsByType( sourceNodeId, type, true );
                 DenseRelationships.DenseRelationship relationship = findRelationship( relationships, sourceNodeId, internalId, targetNodeId, outgoing );
-                boolean removed = relationships.inserted.remove( relationship );
+                boolean removed = relationships.relationships.remove( relationship );
                 assert removed;
             }
 
@@ -145,7 +145,7 @@ class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements Sim
     private DenseRelationships.DenseRelationship findRelationship( DenseRelationships relationships, long nodeId, long internalId, long otherNodeId,
             boolean outgoing )
     {
-        for ( DenseRelationships.DenseRelationship relationship : relationships.inserted )
+        for ( DenseRelationships.DenseRelationship relationship : relationships.relationships )
         {
             if ( relationship.otherNodeId == otherNodeId && relationship.outgoing == outgoing && relationship.internalId == internalId )
             {
@@ -185,7 +185,7 @@ class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements Sim
 
         InternalRelationship( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> propertyUpdates )
         {
-            super( internalId, otherNodeId, outgoing, propertyUpdates );
+            super( internalId, otherNodeId, outgoing, propertyUpdates, false );
             this.nodeId = nodeId;
             this.type = type;
         }

@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
@@ -122,7 +123,7 @@ public class FrekiCommandSerializationTest
     {
         // given
         long nodeId = randomLargeId();
-        IntObjectMap<DenseRelationships> relationships = randomRelationships();
+        TreeMap<Integer,DenseRelationships> relationships = randomRelationships();
         FrekiCommand.DenseNode node = new FrekiCommand.DenseNode( nodeId, relationships );
 
         // when
@@ -347,19 +348,16 @@ public class FrekiCommandSerializationTest
         return serializedValue;
     }
 
-    private IntObjectMap<DenseRelationships> randomRelationships()
+    private TreeMap<Integer,DenseRelationships> randomRelationships()
     {
-        MutableIntObjectMap<DenseRelationships> map = IntObjectMaps.mutable.empty();
+        TreeMap<Integer,DenseRelationships> map = new TreeMap<>();
         for ( int type : randomTokens() )
         {
-            DenseRelationships relationships = map.getIfAbsentPut( type, new DenseRelationships( 0, type ) );
-            for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
+            DenseRelationships relationships = map.computeIfAbsent( type, t -> new DenseRelationships( 0, type ) );
+            for ( int i = 0, count = random.nextInt( 2, 10 ); i < count; i++ )
             {
-                relationships.insert( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );
-            }
-            for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
-            {
-                relationships.delete( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );
+                relationships.add( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties(),
+                        random.nextBoolean() ) );
             }
         }
         return map;

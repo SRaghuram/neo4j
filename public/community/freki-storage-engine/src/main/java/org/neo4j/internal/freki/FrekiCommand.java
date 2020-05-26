@@ -21,7 +21,6 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.tuple.primitive.IntObjectPair;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
 import java.io.IOException;
@@ -31,7 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.TreeMap;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 
@@ -321,9 +320,9 @@ abstract class FrekiCommand implements StorageCommand
         static final byte TYPE = 2;
 
         final long nodeId;
-        final IntObjectMap<DenseRelationships> relationshipUpdates;
+        final TreeMap<Integer,DenseRelationships> relationshipUpdates;
 
-        DenseNode( long nodeId, IntObjectMap<DenseRelationships> relationshipUpdates )
+        DenseNode( long nodeId, TreeMap<Integer,DenseRelationships> relationshipUpdates )
         {
             super( TYPE );
             this.nodeId = nodeId;
@@ -345,24 +344,17 @@ abstract class FrekiCommand implements StorageCommand
             channel.put( header );
             putCompactLong( channel, nodeId );
             putCompactInt( channel, relationshipUpdates.size() );
-            for ( IntObjectPair<DenseRelationships> relationships : relationshipUpdates.keyValuesView() )
+            for ( Map.Entry<Integer,DenseRelationships> entry : relationshipUpdates.entrySet() )
             {
-                // Small header with type, num created and numDeleted
-                DenseRelationships relationshipsOfType = relationships.getTwo();
-                int type = relationships.getOne();
-                int numInserted = relationshipsOfType.inserted.size();
-                int numDeleted = relationshipsOfType.deleted.size();
-                byte typeHeader = (byte) (intSizeCode( type ) | (intSizeCode( numInserted ) << 2) | (intSizeCode( numDeleted ) << 4));
+                int type = entry.getKey();
+                DenseRelationships relationshipsOfType = entry.getValue();
+                int numRelationships = relationshipsOfType.relationships.size();
+                byte typeHeader = (byte) (intSizeCode( type ) | (intSizeCode( numRelationships ) << 2));
                 channel.put( typeHeader );
                 putCompactInt( channel, type );
-                putCompactInt( channel, numInserted );
-                putCompactInt( channel, numDeleted );
+                putCompactInt( channel, numRelationships );
 
-                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.inserted )
-                {
-                    writeRelationship( channel, relationship );
-                }
-                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.deleted )
+                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.relationships )
                 {
                     writeRelationship( channel, relationship );
                 }
@@ -445,7 +437,7 @@ abstract class FrekiCommand implements StorageCommand
         {
             int numProperties = relationship.propertyUpdates.size();
             byte header = (byte) (longSizeCode( relationship.internalId ) | (longSizeCode( relationship.otherNodeId ) << 2) |
-                    (intSizeCode( numProperties ) << 4) | (relationship.outgoing ? 0x40 : 0));
+                    (intSizeCode( numProperties ) << 4) | (relationship.outgoing ? 0x40 : 0) | (relationship.deleted ? 0x80 : 0));
             channel.put( header );
             putCompactLong( channel, relationship.internalId );
             putCompactLong( channel, relationship.otherNodeId );
@@ -456,41 +448,40 @@ abstract class FrekiCommand implements StorageCommand
             }
         }
 
-        private static void readRelationships( ReadableChannel channel, int numRelationships, Consumer<DenseRelationships.DenseRelationship> target )
+        private static void readRelationships( ReadableChannel channel, int numRelationships, DenseRelationships target )
                 throws IOException
         {
             for ( int j = 0; j < numRelationships; j++ )
             {
-                readRelationship( channel, target );
+                target.add( readRelationship( channel ) );
             }
         }
 
-        private static void readRelationship( ReadableChannel channel, Consumer<DenseRelationships.DenseRelationship> target )
-                throws IOException
+        private static DenseRelationships.DenseRelationship readRelationship( ReadableChannel channel ) throws IOException
         {
             byte header = channel.get();
             long internalId = getCompactLong( channel, header & 0x3 );
             long otherNodeId = getCompactLong( channel, (header >> 2) & 0x3 );
             int numProperties = getCompactInt( channel, (header >> 4) & 0x3 );
             boolean outgoing = (header & 0x40) != 0;
-            target.accept( new DenseRelationships.DenseRelationship( internalId, otherNodeId, outgoing, readProperties( channel, numProperties ) ) );
+            boolean deleted = (header & 0x80) != 0;
+            return new DenseRelationships.DenseRelationship( internalId, otherNodeId, outgoing, readProperties( channel, numProperties ), deleted );
         }
 
         static DenseNode deserialize( ReadableChannel channel ) throws IOException
         {
             byte header = channel.get();
             long nodeId = getCompactLong( channel, header & 0x3 );
-            MutableIntObjectMap<DenseRelationships> relationships = IntObjectMaps.mutable.empty();
+            TreeMap<Integer,DenseRelationships> relationships = new TreeMap<>();
             int numRelationshipTypes = getCompactInt( channel, (header >>> 2) & 0x3 );
             for ( int i = 0; i < numRelationshipTypes; i++ )
             {
                 byte typeHeader = channel.get();
                 int type = getCompactInt( channel, typeHeader & 0x3 );
-                int numInserted = getCompactInt( channel, (typeHeader >> 2) & 0x3 );
-                int numDeleted = getCompactInt( channel, (typeHeader >> 4) & 0x3 );
-                DenseRelationships relationshipsOfType = relationships.getIfAbsentPut( type, new DenseRelationships( nodeId, type ) );
-                readRelationships( channel, numInserted, relationshipsOfType::insert );
-                readRelationships( channel, numDeleted, relationshipsOfType::delete );
+                int numRelationships = getCompactInt( channel, (typeHeader >> 2) & 0x3 );
+                DenseRelationships relationshipsOfType = new DenseRelationships( nodeId, type );
+                relationships.put( type, relationshipsOfType );
+                readRelationships( channel, numRelationships, relationshipsOfType );
             }
 
             return new DenseNode( nodeId, relationships );
@@ -505,16 +496,12 @@ abstract class FrekiCommand implements StorageCommand
         private String updatesToString()
         {
             StringBuilder toString = new StringBuilder();
-            for ( DenseRelationships forType : relationshipUpdates )
+            for ( DenseRelationships forType : relationshipUpdates.values() )
             {
                 toString.append( "  type=" ).append( forType.type );
-                for ( DenseRelationships.DenseRelationship relationship : forType.inserted )
+                for ( DenseRelationships.DenseRelationship relationship : forType.relationships )
                 {
-                    toString.append( format( "    +%s", relationship ) );
-                }
-                for ( DenseRelationships.DenseRelationship relationship : forType.deleted )
-                {
-                    toString.append( format( "    -%s", relationship ) );
+                    toString.append( format( "    %s%s", relationship.deleted ? "-" : "+", relationship ) );
                 }
             }
             return toString.toString();

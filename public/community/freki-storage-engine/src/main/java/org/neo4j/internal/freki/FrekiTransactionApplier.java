@@ -22,6 +22,7 @@ package org.neo4j.internal.freki;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -282,13 +283,22 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         {
             for ( FrekiCommand.DenseNode node : nodes )
             {
-                node.relationshipUpdates.forEachKeyValue( ( type, typedRelationships ) ->
+                for ( Map.Entry<Integer,DenseRelationships> typedRelationships : node.relationshipUpdates.entrySet() )
                 {
-                    typedRelationships.deleted.forEach( relationship ->
-                            updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing ) );
-                    typedRelationships.inserted.forEach( relationship -> updater.insertRelationship( relationship.internalId, node.nodeId, type,
-                            relationship.otherNodeId, relationship.outgoing, relationship.propertyUpdates, u -> u.after ) );
-                } );
+                    int type = typedRelationships.getKey();
+                    typedRelationships.getValue().relationships.forEach( relationship ->
+                    {
+                        if ( relationship.deleted )
+                        {
+                            updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing );
+                        }
+                        else
+                        {
+                            updater.insertRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing,
+                                    relationship.propertyUpdates, u -> u.after );
+                        }
+                    } );
+                }
             }
         }
     }

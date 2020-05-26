@@ -28,33 +28,20 @@ import java.util.Objects;
 /**
  * Logical information about relationships which will go into commands for dense nodes.
  */
-class DenseRelationships
+class DenseRelationships implements Comparable<DenseRelationships>
 {
     private final long nodeId;
     final int type;
-    // TODO consider consolidating these lists into one with a Mode on each individual relationship?
-    final List<DenseRelationship> inserted = new ArrayList<>();
-    final List<DenseRelationship> deleted = new ArrayList<>();
+    final List<DenseRelationship> relationships = new ArrayList<>();
 
     DenseRelationships( long nodeId, int type )
     {
         this.nodeId = nodeId;
         this.type = type;
     }
-
-    void insert( DenseRelationship relationship )
+    void add( DenseRelationship relationship )
     {
-        add( relationship, inserted );
-    }
-
-    void delete( DenseRelationship relationship )
-    {
-        add( relationship, deleted );
-    }
-
-    void add( DenseRelationship relationship, List<DenseRelationship> list )
-    {
-        list.add( relationship );
+        relationships.add( relationship );
     }
 
     @Override
@@ -69,28 +56,41 @@ class DenseRelationships
             return false;
         }
         DenseRelationships that = (DenseRelationships) o;
-        return type == that.type && Objects.equals( inserted, that.inserted ) && Objects.equals( deleted, that.deleted );
+        return type == that.type && Objects.equals( relationships, that.relationships );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( type, inserted, deleted );
+        return Objects.hash( type, relationships );
     }
 
-    static class DenseRelationship
+    @Override
+    public int compareTo( DenseRelationships o )
+    {
+        int nodeComparison = Long.compare( nodeId, o.nodeId );
+        if ( nodeComparison != 0 )
+        {
+            return nodeComparison;
+        }
+        return Integer.compare( type, o.type );
+    }
+
+    static class DenseRelationship implements Comparable<DenseRelationship>
     {
         long internalId;
         long otherNodeId;
         boolean outgoing;
         IntObjectMap<PropertyUpdate> propertyUpdates;
+        boolean deleted;
 
-        DenseRelationship( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> propertyUpdates )
+        DenseRelationship( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> propertyUpdates, boolean deleted )
         {
             this.internalId = internalId;
             this.otherNodeId = otherNodeId;
             this.outgoing = outgoing;
             this.propertyUpdates = propertyUpdates;
+            this.deleted = deleted;
         }
 
         @Override
@@ -106,13 +106,29 @@ class DenseRelationships
             }
             DenseRelationship that = (DenseRelationship) o;
             return internalId == that.internalId && otherNodeId == that.otherNodeId && outgoing == that.outgoing &&
-                    propertyUpdates.equals( that.propertyUpdates );
+                    propertyUpdates.equals( that.propertyUpdates ) && deleted == that.deleted;
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( internalId, otherNodeId, outgoing, propertyUpdates );
+            return Objects.hash( internalId, otherNodeId, outgoing, propertyUpdates, deleted );
+        }
+
+        @Override
+        public int compareTo( DenseRelationship o )
+        {
+            int directionComparison = Boolean.compare( outgoing, o.outgoing );
+            if ( directionComparison != 0 )
+            {
+                return directionComparison;
+            }
+            int neighbourComparison = Long.compare( otherNodeId, o.otherNodeId );
+            if ( neighbourComparison != 0 )
+            {
+                return neighbourComparison;
+            }
+            return Long.compare( internalId, o.internalId );
         }
 
         @Override

@@ -24,18 +24,18 @@ import org.eclipse.collections.api.iterator.IntIterator;
 import org.eclipse.collections.api.list.primitive.MutableLongList;
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongLists;
-import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.IntPredicate;
 
@@ -72,7 +72,7 @@ class GraphUpdates
     private final Collection<StorageCommand> bigValueCreationCommands = new ArrayList<>();
     private final Collection<StorageCommand> bigValueDeletionCommands = new ArrayList<>();
     private final MemoryTracker memoryTracker;
-    private final MutableLongObjectMap<NodeUpdates> mutations = LongObjectMaps.mutable.empty();
+    private final TreeMap<Long,NodeUpdates> mutations = new TreeMap<>();
     private final MainStores stores;
     private final PageCursorTracer cursorTracer;
 
@@ -94,9 +94,9 @@ class GraphUpdates
 
     NodeUpdates getOrLoad( long nodeId )
     {
-        return mutations.getIfAbsentPut( nodeId, () ->
+        return mutations.computeIfAbsent( nodeId, id ->
         {
-            NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCreationCommands::add, bigValueDeletionCommands::add, cursorTracer );
+            NodeUpdates updates = new NodeUpdates( id, stores, bigValueCreationCommands::add, bigValueDeletionCommands::add, cursorTracer );
             updates.load();
             return updates;
         } );
@@ -126,7 +126,7 @@ class GraphUpdates
         ByteBuffer maxBuffer = ByteBuffer.wrap( new byte[x8Size] );
         Header x1Header = new Header();
         Header xLHeader = new Header();
-        for ( NodeUpdates mutation : mutations )
+        for ( NodeUpdates mutation : mutations.values() )
         {
             mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, recordPointersBuffer, otherCommands::add, x1Header, xLHeader );
         }
@@ -836,7 +836,7 @@ class GraphUpdates
 
         // changes
         // TODO it feels like we've simply moving tx-state data from one form to another and that's probably true and can probably be improved on later
-        private final MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
+        private final TreeMap<Integer,DenseRelationships> relationshipUpdates = new TreeMap<>();
 
         DenseRecordAndData( SparseRecordAndData sparse, SimpleDenseRelationshipStore store, SimpleBigValueStore bigValueStore,
                 Consumer<FrekiCommand.BigPropertyValue> createdBigValues, Consumer<Value> removedValuesBin, PageCursorTracer cursorTracer )
@@ -873,7 +873,7 @@ class GraphUpdates
             // this counter in an explicit field in the small record. This call keeps that counter updated.
             sparse.data.registerInternalRelationshipId( internalId );
             sparse.data.addDegree( type, calculateDirection( targetNode, outgoing ), 1 );
-            relationshipUpdatesForType( type ).insert( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties ) );
+            relationshipUpdatesForType( type ).add( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties, false ) );
         }
 
         private RelationshipDirection calculateDirection( long targetNode, boolean outgoing )
@@ -883,7 +883,7 @@ class GraphUpdates
 
         private DenseRelationships relationshipUpdatesForType( int type )
         {
-            return relationshipUpdates.getIfAbsentPutWithKey( type, t -> new DenseRelationships( nodeId(), t ) );
+            return relationshipUpdates.computeIfAbsent( type, t -> new DenseRelationships( nodeId(), t ) );
         }
 
         @Override
@@ -893,7 +893,7 @@ class GraphUpdates
             sparse.data.addDegree( type, calculateDirection( otherNode, outgoing ), -1 );
             MutableIntObjectMap<PropertyUpdate> properties =
                     store.loadRelationshipProperties( nodeId(), internalId, type, otherNode, outgoing, PropertyUpdate::remove, cursorTracer );
-            relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties ) );
+            relationshipUpdatesForType( type ).add( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties, true ) );
             properties.forEachValue( update -> checkAddBigValueToRemovedValuesBin( update.before ) );
         }
 
@@ -942,7 +942,7 @@ class GraphUpdates
                     checkAddBigValueToRemovedValuesBin( existing.after );
                 }
             }
-            relationshipUpdatesForType( type ).insert( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties ) );
+            relationshipUpdatesForType( type ).add( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties, false ) );
         }
 
         @Override
@@ -953,6 +953,11 @@ class GraphUpdates
 
         void prepareForCommandExtraction() throws ConstraintViolationTransactionFailureException
         {
+            // Be mechanically sympathetic to the applier by sorting the relationship updates
+            for ( DenseRelationships relationships : relationshipUpdates.values() )
+            {
+                Collections.sort( relationships.relationships );
+            }
             if ( deleted )
             {
                 // This dense node has now been deleted, verify that all its relationships have also been removed in this transaction
