@@ -11,7 +11,6 @@ import reactor.core.publisher.Mono;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.fabric.executor.FabricException;
@@ -21,7 +20,8 @@ import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.fabric.stream.summary.Summary;
 import org.neo4j.graphdb.QueryExecutionType;
-import org.neo4j.kernel.api.exceptions.Status;
+
+import static com.neo4j.fabric.driver.Utils.translateError;
 
 abstract class AbstractRemoteStatementResult implements StatementResult
 {

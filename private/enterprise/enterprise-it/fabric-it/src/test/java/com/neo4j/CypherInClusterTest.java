@@ -12,6 +12,7 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -65,7 +66,7 @@ class CypherInClusterTest extends ClusterTestSupport
     static void beforeAll() throws Exception
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
-                                                   .withNumberOfCoreMembers( 3 )
+                                                   .withNumberOfCoreMembers( 2 )
                                                    .withSharedCoreParam( connector_routing_enabled, "true" )
                                                    .withNumberOfReadReplicas( 1 )
                                                    .withSharedReadReplicaParam( connector_routing_enabled, "true" );
@@ -136,6 +137,7 @@ class CypherInClusterTest extends ClusterTestSupport
                         " The role of this server is: FOLLOWER" );
     }
 
+    @Disabled
     @Test
     void testWriteWithNoLeader() throws Exception
     {
@@ -143,7 +145,7 @@ class CypherInClusterTest extends ClusterTestSupport
         cluster.removeCoreMember( fooLeader );
         try
         {
-            assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( "foo" ) );
+            assertEquals( 1, cluster.numberOfCoreMembersReportedByTopology( "foo" ) );
             doWriteWithNoLeader( fooFollowerDriver );
             doWriteWithNoLeader( readReplicaDriver );
         }
