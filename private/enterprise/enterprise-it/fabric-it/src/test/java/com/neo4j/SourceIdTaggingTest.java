@@ -6,7 +6,6 @@
 package com.neo4j;
 
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ProxyFunctions;
 import com.neo4j.utils.ShardFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,12 +28,12 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.fabric.stream.SourceTagging;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.procedure.impl.GlobalProceduresRegistry;
-import org.neo4j.server.security.auth.AuthProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 @ExtendWith( FabricEverywhereExtension.class )
 class SourceIdTaggingTest
@@ -77,14 +76,6 @@ class SourceIdTaggingTest
         // testServer.setLogService( new SimpleLogService( new StdoutLogProvider() ) );
 
         testServer.start();
-
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class );
-        globalProceduresRegistry
-                .registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( AuthProcedures.class );
 
         mainDriver = driverTo( testServer.getBoltRoutingUri() );
         extADriver = driverTo( extA.boltURI() );
@@ -153,8 +144,6 @@ class SourceIdTaggingTest
                 () -> extB.close()
         ).parallelStream().forEach( Runnable::run );
     }
-
-    // TODO: Add test of fabric aggregation execution
 
     @Test
     void returnNodes()
@@ -263,6 +252,29 @@ class SourceIdTaggingTest
 
         assertThat( records )
                 .hasSize( 4 );
+    }
+
+    @Test
+    void aggregatingQuery()
+    {
+        var query = joinAsLines(
+                "UNWIND [0, 1] AS n",
+                "CALL { USE intA MATCH (x) RETURN x AS x1 }",
+                "CALL { USE intB MATCH (x) RETURN x AS x2 }",
+                "CALL { USE fabric.extA MATCH (x) RETURN x AS x3 }",
+                "CALL { USE fabric.extB MATCH (x) RETURN x AS x4 }",
+                "UNWIND [x1, x2, x3, x4] AS x",
+                "RETURN DISTINCT x"
+        );
+
+        List<Record> records = run( fabric, query );
+
+        assertThat( records )
+                .hasSize( 8 );
+
+        assertThat( records )
+                .extracting( rec -> SourceTagging.extractSourceId( rec.get( "x" ).asNode().id() ) )
+                .containsOnly( 0L, 1L, 3L, 4L );
     }
 
     private String makeDoubleUnionQuery( String query )
