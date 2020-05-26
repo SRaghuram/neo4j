@@ -30,7 +30,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.api.tracer.DefaultTracer;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -72,7 +72,7 @@ class DatabaseMetricsExtensionTest
     @BeforeEach
     void setUp()
     {
-        context = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.TOOL, new Dependencies() );
+        context = new DatabaseExtensionContext( databaseLayout, DbmsInfo.TOOL, new Dependencies() );
     }
 
     @Test

@@ -13,7 +13,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 public class CoreGraphDatabase
 {
@@ -33,7 +33,7 @@ public class CoreGraphDatabase
     protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory, CoreEditionModuleFactory editionModuleFactory )
     {
-        return new DatabaseManagementServiceFactory( DatabaseInfo.CORE,
+        return new DatabaseManagementServiceFactory( DbmsInfo.CORE,
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
                 .build( config, dependencies );
     }

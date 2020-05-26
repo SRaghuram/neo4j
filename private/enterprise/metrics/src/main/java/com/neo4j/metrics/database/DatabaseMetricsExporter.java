@@ -64,7 +64,7 @@ public class DatabaseMetricsExporter
 
         if ( config.get( MetricsSettings.neoCountsEnabled ) )
         {
-            if ( context.databaseInfo().edition != Edition.COMMUNITY && context.databaseInfo().edition != Edition.UNKNOWN )
+            if ( context.dbmsInfo().edition != Edition.COMMUNITY && context.dbmsInfo().edition != Edition.UNKNOWN )
             {
                 life.add( new EntityCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters() ) );
             }
@@ -72,7 +72,7 @@ public class DatabaseMetricsExporter
 
         if ( config.get( MetricsSettings.databaseCountsEnabled ) )
         {
-            if ( context.databaseInfo().edition != Edition.COMMUNITY && context.databaseInfo().edition != Edition.UNKNOWN )
+            if ( context.dbmsInfo().edition != Edition.COMMUNITY && context.dbmsInfo().edition != Edition.UNKNOWN )
             {
                 var pageCacheTracer = dependencies.tracers().getPageCacheTracer();
                 life.add( new DatabaseCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters(), pageCacheTracer ) );
@@ -98,7 +98,7 @@ public class DatabaseMetricsExporter
 
         if ( config.get( MetricsSettings.causalClusteringEnabled ) )
         {
-            OperationalMode mode = context.databaseInfo().operationalMode;
+            OperationalMode mode = context.dbmsInfo().operationalMode;
             if ( mode == OperationalMode.CORE )
             {
                 life.add( new CoreMetrics( metricsPrefix, dependencies.clusterMonitors(), registry, dependencies.coreMetadataSupplier() ) );

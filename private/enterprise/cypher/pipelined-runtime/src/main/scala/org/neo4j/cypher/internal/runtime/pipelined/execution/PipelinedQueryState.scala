@@ -51,7 +51,7 @@ case class PipelinedQueryState(queryContext: QueryContext,
     val pipeDecorator =
       if (doProfile) {
         val profileInformation = resources.profileInformation
-        new Profiler(queryContext.transactionalContext.databaseInfo, profileInformation)
+        new Profiler(queryContext.transactionalContext.dbmsInfo, profileInformation)
       } else {
         NullPipeDecorator
       }

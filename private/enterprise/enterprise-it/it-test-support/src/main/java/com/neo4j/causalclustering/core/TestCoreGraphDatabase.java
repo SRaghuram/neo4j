@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 public class TestCoreGraphDatabase extends CoreGraphDatabase
 {
@@ -25,7 +25,7 @@ public class TestCoreGraphDatabase extends CoreGraphDatabase
     protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory, CoreEditionModuleFactory editionFactory )
     {
-        return new TestClusterDatabaseManagementServiceFactory( DatabaseInfo.CORE,
+        return new TestClusterDatabaseManagementServiceFactory( DbmsInfo.CORE,
                 globalModule -> editionFactory.create( globalModule, discoveryServiceFactory ) )
                 .build( config, dependencies );
     }

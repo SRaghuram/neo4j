@@ -5,8 +5,6 @@
  */
 package com.neo4j.test.fabric;
 
-import org.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
-
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
@@ -14,12 +12,13 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManagementServiceImpl;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -30,7 +29,7 @@ public class TestFabricDatabaseManagementServiceFactory extends TestDatabaseMana
 {
     private final Config config;
 
-    public TestFabricDatabaseManagementServiceFactory( DatabaseInfo databaseInfo,
+    public TestFabricDatabaseManagementServiceFactory( DbmsInfo dbmsInfo,
                                                        Function<GlobalModule,AbstractEditionModule> editionFactory,
                                                        boolean impermanent,
                                                        FileSystemAbstraction fileSystem,
@@ -38,7 +37,7 @@ public class TestFabricDatabaseManagementServiceFactory extends TestDatabaseMana
                                                        LogProvider internalLogProvider,
                                                        Config config )
     {
-        super( databaseInfo, editionFactory, impermanent, fileSystem, clock, internalLogProvider );
+        super( dbmsInfo, editionFactory, impermanent, fileSystem, clock, internalLogProvider );
 
         this.config = config;
     }

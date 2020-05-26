@@ -24,7 +24,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
+import static org.neo4j.kernel.impl.factory.DbmsInfo.COMMUNITY;
 
 @TestDirectoryExtension
 class GlobalMetricsBuilderTest

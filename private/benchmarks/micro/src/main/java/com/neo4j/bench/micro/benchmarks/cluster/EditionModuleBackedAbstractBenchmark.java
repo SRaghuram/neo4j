@@ -33,7 +33,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.noOpSystemGraphInitializer;
@@ -82,7 +82,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         tempDirectory = tempDirectory.resolve( "temp-db" ).toAbsolutePath().normalize();
         FileUtils.deleteDirectory( tempDirectory.toFile() );
         config = Config.newBuilder().set( GraphDatabaseSettings.neo4j_home, tempDirectory ).build();
-        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, this::saveModule )
+        managementService = new DatabaseManagementServiceFactory( DbmsInfo.COMMUNITY, this::saveModule )
                 .build( config, GraphDatabaseDependencies.newDependencies().dependencies( noOpSystemGraphInitializer() ) );
         graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
         setUp();

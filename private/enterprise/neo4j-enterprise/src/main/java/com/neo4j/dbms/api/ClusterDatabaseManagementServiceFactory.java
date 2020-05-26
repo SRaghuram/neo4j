@@ -14,15 +14,15 @@ import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 
 public class ClusterDatabaseManagementServiceFactory extends DatabaseManagementServiceFactory
 {
-    public ClusterDatabaseManagementServiceFactory( DatabaseInfo databaseInfo, Function<GlobalModule,AbstractEditionModule> editionFactory )
+    public ClusterDatabaseManagementServiceFactory( DbmsInfo dbmsInfo, Function<GlobalModule,AbstractEditionModule> editionFactory )
     {
-        super( databaseInfo, editionFactory );
+        super( dbmsInfo, editionFactory );
     }
 
     @Override

@@ -36,12 +36,12 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
@@ -93,7 +93,7 @@ class CoreStatusTest
         var databaseFacade = mock( GraphDatabaseFacade.class );
         when( databaseFacade.databaseName() ).thenReturn( databaseName );
         when( databaseFacade.databaseId() ).thenReturn( idRepository.defaultDatabase() );
-        when( databaseFacade.databaseInfo() ).thenReturn( DatabaseInfo.CORE );
+        when( databaseFacade.dbmsInfo() ).thenReturn( DbmsInfo.CORE );
         when( databaseFacade.getDependencyResolver() ).thenReturn( dependencyResolver );
         when( managementService.database( databaseName ) ).thenReturn( databaseFacade );
 

@@ -20,7 +20,7 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.extension.context.GlobalExtensionContext;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -48,7 +48,7 @@ class GlobalMetricsExtensionTest
     @BeforeEach
     void setUp()
     {
-        context = new GlobalExtensionContext( neo4jLayout, DatabaseInfo.TOOL, new Dependencies() );
+        context = new GlobalExtensionContext( neo4jLayout, DbmsInfo.TOOL, new Dependencies() );
     }
 
     @Test

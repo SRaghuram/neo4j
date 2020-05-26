@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.CommunityNeoWebServer;
 import org.neo4j.server.modules.AuthorizationModule;
@@ -33,9 +33,9 @@ import static com.neo4j.server.rest.EnterpriseDiscoverableURIs.enterpriseDiscove
 public class EnterpriseNeoWebServer extends CommunityNeoWebServer
 {
     public EnterpriseNeoWebServer( DatabaseManagementService managementService, Dependencies globalDependencies, Config config,
-            LogProvider userLogProvider, DatabaseInfo databaseInfo )
+            LogProvider userLogProvider, DbmsInfo dbmsInfo )
     {
-        super( managementService, globalDependencies, config, userLogProvider, databaseInfo );
+        super( managementService, globalDependencies, config, userLogProvider, dbmsInfo );
     }
 
     @Override

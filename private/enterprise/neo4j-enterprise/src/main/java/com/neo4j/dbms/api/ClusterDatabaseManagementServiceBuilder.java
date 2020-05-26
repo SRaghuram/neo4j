@@ -18,7 +18,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 import static java.lang.Boolean.FALSE;
 
@@ -34,7 +34,7 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
     protected ClusterDatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
     {
         config.set( GraphDatabaseSettings.ephemeral_lucene, FALSE );
-        return new ClusterDatabaseManagementServiceFactory( getDatabaseInfo( config ), getEditionFactory( config ) )
+        return new ClusterDatabaseManagementServiceFactory( getDbmsInfo( config ), getEditionFactory( config ) )
                 .build( augmentConfig( config ), dependencies );
     }
 
@@ -45,15 +45,15 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
     }
 
     @Override
-    protected DatabaseInfo getDatabaseInfo( Config config )
+    protected DbmsInfo getDbmsInfo( Config config )
     {
         GraphDatabaseSettings.Mode mode = config.get( GraphDatabaseSettings.mode );
         switch ( mode )
         {
         case CORE:
-            return DatabaseInfo.CORE;
+            return DbmsInfo.CORE;
         case READ_REPLICA:
-            return DatabaseInfo.READ_REPLICA;
+            return DbmsInfo.READ_REPLICA;
         default:
             throw new IllegalArgumentException( "Unsupported mode: " + mode );
         }

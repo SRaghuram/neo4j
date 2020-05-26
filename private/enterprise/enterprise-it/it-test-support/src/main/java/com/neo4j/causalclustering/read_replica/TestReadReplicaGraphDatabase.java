@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 public class TestReadReplicaGraphDatabase extends ReadReplicaGraphDatabase
 {
@@ -27,7 +27,7 @@ public class TestReadReplicaGraphDatabase extends ReadReplicaGraphDatabase
     protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId, ReadReplicaEditionModuleFactory editionModuleFactory )
     {
-        return new TestClusterDatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA,
+        return new TestClusterDatabaseManagementServiceFactory( DbmsInfo.READ_REPLICA,
             globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId ) )
             .build( config, dependencies );
     }

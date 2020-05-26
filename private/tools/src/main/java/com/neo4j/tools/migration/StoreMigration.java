@@ -22,7 +22,7 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.extension.DatabaseExtensions;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.storemigration.DatabaseMigrator;
 import org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator;
@@ -111,7 +111,7 @@ public final class StoreMigration
 
             DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory );
             LegacyTransactionLogsLocator legacyLogsLocator = new LegacyTransactionLogsLocator( config, databaseLayout );
-            DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, deps );
+            DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
             StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();

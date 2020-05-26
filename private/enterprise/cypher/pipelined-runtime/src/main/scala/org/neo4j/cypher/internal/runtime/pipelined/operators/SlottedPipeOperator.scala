@@ -226,7 +226,7 @@ object SlottedPipeOperator {
     val (pipeDecorator, profileInformation) =
       if (morselQueryState.doProfile) {
         val profileInformation = new InterpretedProfileInformation
-        (new Profiler(morselQueryState.queryContext.transactionalContext.databaseInfo, profileInformation), profileInformation)
+        (new Profiler(morselQueryState.queryContext.transactionalContext.dbmsInfo, profileInformation), profileInformation)
       } else {
         (NullPipeDecorator, null)
       }

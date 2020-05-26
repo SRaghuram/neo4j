@@ -17,7 +17,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 public class EnterpriseManagementServiceFactory
 {
@@ -35,7 +35,7 @@ public class EnterpriseManagementServiceFactory
         case READ_REPLICA:
             return new ReadReplicaGraphDatabase( config, dependencies, newDiscoveryServiceFactory(), ReadReplicaEditionModule::new ).getManagementService();
         case SINGLE:
-            return new DatabaseManagementServiceFactory( DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new ).build( config, dependencies );
+            return new DatabaseManagementServiceFactory( DbmsInfo.ENTERPRISE, EnterpriseEditionModule::new ).build( config, dependencies );
         default:
             throw new IllegalArgumentException( "Unknown mode: " + mode );
         }

@@ -94,7 +94,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -404,9 +404,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     @Override
     public Lifecycle createWebServer( DatabaseManagementService managementService, Dependencies globalDependencies, Config config,
-            LogProvider userLogProvider, DatabaseInfo databaseInfo )
+            LogProvider userLogProvider, DbmsInfo dbmsInfo )
     {
-        return new EnterpriseNeoWebServer( managementService, globalDependencies, config, userLogProvider, databaseInfo );
+        return new EnterpriseNeoWebServer( managementService, globalDependencies, config, userLogProvider, dbmsInfo );
     }
 
     private static ClusterStateMigrator createClusterStateMigrator( GlobalModule globalModule, ClusterStateLayout clusterStateLayout,

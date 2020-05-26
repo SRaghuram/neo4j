@@ -23,7 +23,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
 import org.neo4j.scheduler.JobScheduler;
@@ -56,7 +56,7 @@ class CsvOutputTest
     @BeforeEach
     void setup()
     {
-        extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, new Dependencies() );
+        extensionContext = new DatabaseExtensionContext( databaseLayout, DbmsInfo.UNKNOWN, new Dependencies() );
     }
 
     @Test

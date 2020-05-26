@@ -65,7 +65,7 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
@@ -261,9 +261,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
 
     @Override
     public Lifecycle createWebServer( DatabaseManagementService managementService, Dependencies globalDependencies, Config config,
-            LogProvider userLogProvider, DatabaseInfo databaseInfo )
+            LogProvider userLogProvider, DbmsInfo dbmsInfo )
     {
-        return new EnterpriseNeoWebServer( managementService, globalDependencies, config, userLogProvider, databaseInfo );
+        return new EnterpriseNeoWebServer( managementService, globalDependencies, config, userLogProvider, dbmsInfo );
     }
 
     @Override

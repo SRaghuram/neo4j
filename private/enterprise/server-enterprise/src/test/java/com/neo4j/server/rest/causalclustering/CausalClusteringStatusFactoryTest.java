@@ -17,7 +17,7 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -31,11 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
-import static org.neo4j.kernel.impl.factory.DatabaseInfo.CORE;
-import static org.neo4j.kernel.impl.factory.DatabaseInfo.ENTERPRISE;
-import static org.neo4j.kernel.impl.factory.DatabaseInfo.READ_REPLICA;
-import static org.neo4j.kernel.impl.factory.DatabaseInfo.UNKNOWN;
+import static org.neo4j.kernel.impl.factory.DbmsInfo.COMMUNITY;
+import static org.neo4j.kernel.impl.factory.DbmsInfo.CORE;
+import static org.neo4j.kernel.impl.factory.DbmsInfo.ENTERPRISE;
+import static org.neo4j.kernel.impl.factory.DbmsInfo.READ_REPLICA;
+import static org.neo4j.kernel.impl.factory.DbmsInfo.UNKNOWN;
 
 class CausalClusteringStatusFactoryTest
 {
@@ -200,7 +200,7 @@ class CausalClusteringStatusFactoryTest
         }
     }
 
-    private static void testBuildStatusForStandalone( DatabaseInfo standaloneInfo )
+    private static void testBuildStatusForStandalone( DbmsInfo standaloneInfo )
     {
         var dbService = databaseServiceMock( standaloneInfo );
         var databaseStateService = databaseStateServiceMock();
@@ -229,11 +229,11 @@ class CausalClusteringStatusFactoryTest
         return CausalClusteringStatusFactory.build( mock( OutputFormat.class ), databaseStateService, dbService, databaseName, mock( ClusterService.class ) );
     }
 
-    private static DatabaseManagementService databaseServiceMock( DatabaseInfo knownDbInfo )
+    private static DatabaseManagementService databaseServiceMock( DbmsInfo knownDbmsInfo )
     {
         var dbService = mock( DatabaseManagementService.class );
         var db = mock( GraphDatabaseFacade.class );
-        when( db.databaseInfo() ).thenReturn( knownDbInfo );
+        when( db.dbmsInfo() ).thenReturn( knownDbmsInfo );
         var namedDatabaseId = mock( NamedDatabaseId.class );
         when( db.databaseId() ).thenReturn( namedDatabaseId );
         var dependencyResolver = mock( DependencyResolver.class );

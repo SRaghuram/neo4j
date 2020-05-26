@@ -57,7 +57,7 @@ public class CausalClusteringStatusFactory
 
     private static CausalClusteringStatus createStatus( OutputFormat output, ClusterService clusterService, GraphDatabaseAPI db )
     {
-        switch ( db.databaseInfo() )
+        switch ( db.dbmsInfo() )
         {
         case CORE:
             return new CoreStatus( output, db, clusterService );

@@ -27,7 +27,7 @@ import org.neo4j.graphdb.security.URLAccessRule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -66,7 +66,7 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
         if ( fabricInEmbeddedTestTransactionsEnabled() )
         {
             var factory = new TestFabricDatabaseManagementServiceFactory(
-                    getDatabaseInfo( config ), getEditionFactory( config ), impermanent, fileSystem, clock, internalLogProvider, config
+                    getDbmsInfo( config ), getEditionFactory( config ), impermanent, fileSystem, clock, internalLogProvider, config
             );
             return factory.build( augmentConfig( config ), GraphDatabaseDependencies.newDependencies( dependencies ) );
         }
@@ -91,9 +91,9 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
-    protected DatabaseInfo getDatabaseInfo( Config config )
+    protected DbmsInfo getDbmsInfo( Config config )
     {
-        return DatabaseInfo.ENTERPRISE;
+        return DbmsInfo.ENTERPRISE;
     }
 
     @Override

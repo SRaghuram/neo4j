@@ -19,7 +19,7 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 
@@ -53,12 +53,12 @@ public class EnterpriseDatabaseManagementServiceBuilder extends DatabaseManageme
     }
 
     @Override
-    protected DatabaseInfo getDatabaseInfo( Config config )
+    protected DbmsInfo getDbmsInfo( Config config )
     {
         GraphDatabaseSettings.Mode mode = config.get( GraphDatabaseSettings.mode );
         if ( mode == GraphDatabaseSettings.Mode.SINGLE )
         {
-            return DatabaseInfo.ENTERPRISE;
+            return DbmsInfo.ENTERPRISE;
         }
         throw new IllegalArgumentException( "Unsupported mode: " + mode );
     }

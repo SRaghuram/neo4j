@@ -16,7 +16,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 public class ReadReplicaGraphDatabase
 {
@@ -42,7 +42,7 @@ public class ReadReplicaGraphDatabase
     protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId, ReadReplicaEditionModuleFactory editionModuleFactory )
     {
-        return new DatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA,
+        return new DatabaseManagementServiceFactory( DbmsInfo.READ_REPLICA,
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId ) )
                 .build( config, dependencies );
     }

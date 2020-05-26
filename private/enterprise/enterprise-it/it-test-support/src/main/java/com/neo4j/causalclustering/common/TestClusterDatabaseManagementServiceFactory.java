@@ -13,26 +13,26 @@ import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 public class TestClusterDatabaseManagementServiceFactory extends DatabaseManagementServiceFactory
 {
-    public TestClusterDatabaseManagementServiceFactory( DatabaseInfo databaseInfo, Function<GlobalModule,AbstractEditionModule> editionFactory )
+    public TestClusterDatabaseManagementServiceFactory( DbmsInfo dbmsInfo, Function<GlobalModule,AbstractEditionModule> editionFactory )
     {
-        super( databaseInfo, editionFactory );
+        super( dbmsInfo, editionFactory );
     }
 
     @Override
     protected GlobalModule createGlobalModule( Config config, ExternalDependencies dependencies )
     {
-        return new TestClusterGlobalModule( config, dependencies, this.databaseInfo );
+        return new TestClusterGlobalModule( config, dependencies, this.dbmsInfo );
     }
 
     static class TestClusterGlobalModule extends GlobalModule
     {
-        TestClusterGlobalModule( Config config, ExternalDependencies dependencies, DatabaseInfo databaseInfo )
+        TestClusterGlobalModule( Config config, ExternalDependencies dependencies, DbmsInfo dbmsInfo )
         {
-            super( config, databaseInfo, dependencies );
+            super( config, dbmsInfo, dependencies );
         }
 
         @Override
