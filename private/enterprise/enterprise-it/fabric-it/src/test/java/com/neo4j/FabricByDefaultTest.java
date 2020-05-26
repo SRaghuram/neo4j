@@ -26,9 +26,11 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.types.Node;
@@ -36,6 +38,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.internal.helpers.collection.Iterables.stream;
@@ -346,6 +349,26 @@ class FabricByDefaultTest
         finally
         {
             Files.delete( csvFile );
+        }
+    }
+
+    @Test
+    void testIncorrectBookmark()
+    {
+        Bookmark receivedBookmark;
+        try ( var session = driver.session() )
+        {
+            session.run( "RETURN 1" ).list();
+            receivedBookmark = session.lastBookmark();
+        }
+
+        Bookmark modifiedBookmark = Bookmark.from( receivedBookmark.values().stream().map( v -> v + "O" ).collect( Collectors.toSet() ) );
+
+        try ( var session = driver.session( SessionConfig.builder().withBookmarks( modifiedBookmark ).build() ) )
+        {
+            assertThatThrownBy( () -> session.run( "RETURN 1" ).list() )
+                    .isInstanceOf( ClientException.class )
+                    .hasMessageContaining( "Parsing of supplied bookmarks failed with message:" );
         }
     }
 
