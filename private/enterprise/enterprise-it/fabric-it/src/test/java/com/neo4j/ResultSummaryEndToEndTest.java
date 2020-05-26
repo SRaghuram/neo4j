@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
