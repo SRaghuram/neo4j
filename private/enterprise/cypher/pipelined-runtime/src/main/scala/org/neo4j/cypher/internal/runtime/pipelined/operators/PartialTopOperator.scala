@@ -84,7 +84,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
 
     var remainingLimit: Int = limit
     var lastSeen: MorselRow = _
-    var topTable: DefaultComparatorTopTable[ReadableRow] = _
+    var topTable: DefaultComparatorTopTable[MorselRow] = _
     var resultsIterator: util.Iterator[MorselRow] = Collections.emptyIterator()
 
     private var activeMemoryTracker: MemoryTracker = _
@@ -95,15 +95,16 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
     def addRow(row: MorselRow): Unit = {
       if (topTable == null) {
         activeMemoryTracker = memoryTracker.getScopedMemoryTracker
-        topTable = new DefaultComparatorTopTable[ReadableRow](suffixComparator, remainingLimit, activeMemoryTracker)
+        topTable = new DefaultComparatorTopTable(suffixComparator, remainingLimit, activeMemoryTracker)
       }
 
+      val evictedRow = topTable.addAndGetEvicted(row)
+      if (row ne evictedRow) {
+        activeMemoryTracker.allocateHeap(row.estimatedHeapUsage())
+        if (evictedRow != null)
+          activeMemoryTracker.releaseHeap(evictedRow.estimatedHeapUsage())
+      }
       lastSeen = row
-      val sizeBefore = topTable.getSize
-      topTable.add(lastSeen)
-      val sizeAfter = topTable.getSize
-      if (sizeAfter > sizeBefore)
-        activeMemoryTracker.allocateHeap(lastSeen.estimatedHeapUsage)
     }
 
     def computeResults(): Unit = {

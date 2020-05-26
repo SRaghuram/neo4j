@@ -780,6 +780,25 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
   }
 
+  test("measure partial top - worst case") {
+    val testName = "partial-top-worst-case"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y")
+      .partialTop(Seq(Ascending("x")), Seq(Ascending("y")), DEFAULT_INPUT_LIMIT / 2)
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (x <- 0L until DEFAULT_INPUT_LIMIT) yield {
+      // First half of the rows has no y column. This half will get evicted.
+      // Second half of the rows has a large y value. This half will get retained.
+      val y = if (x < DEFAULT_INPUT_LIMIT / 2) null else Seq.fill(1000)(0).asJava
+      Array[Any](1, y)
+    }
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
   test("measure partial sort - ordered column has one value") {
     val testName = "partial-sort-one"
     val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
@@ -811,7 +830,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure top - all distinct") {
     val testName = "top-distinct"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
@@ -825,7 +844,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure top - worst case") {
     val testName = "top-worst-case"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x", "y")
