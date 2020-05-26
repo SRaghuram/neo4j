@@ -374,17 +374,19 @@ abstract class TreeNode<KEY,VALUE>
      * Key count is updated.
      */
     abstract void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, VALUE newValue, KEY newSplitter,
-            double ratioToKeepInLeftOnSplit, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
+            double ratioToKeepInLeftOnSplit, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer )
+            throws IOException;
 
     /**
      * Performs the entry moving part of split in internal.
-     *
+     * <p>
      * Keys and children from left is divided between left and right and the new key and child is inserted where it belongs.
-     *
+     * <p>
      * Key count is updated.
      */
-    abstract void doSplitInternal( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, long newRightChild, long stableGeneration, long unstableGeneration, KEY newSplitter, double ratioToKeepInLeftOnSplit,
-            IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
+    abstract void doSplitInternal( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, long newRightChild,
+            long stableGeneration, long unstableGeneration, KEY newSplitter, double ratioToKeepInLeftOnSplit, IdProvider.Writer idProvider,
+            PageCursorTracer cursorTracer ) throws IOException;
 
     /**
      * Move all rightmost keys and values in left leaf from given position to right leaf.

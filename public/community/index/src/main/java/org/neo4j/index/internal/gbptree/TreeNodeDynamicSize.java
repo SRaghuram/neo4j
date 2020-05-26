@@ -845,7 +845,8 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             moveKeysAndValues( leftCursor, splitPos, rightCursor, 0, keysToMove );
             defragmentLeaf( leftCursor );
             insertKeyValueAt( rightCursor, newKey, newValue, newInsertPos, keysToMove, stableGeneration, unstableGeneration, idProvider, cursorTracer );
-        } TreeNode.setKeyCount( leftCursor, splitPos );
+        }
+        TreeNode.setKeyCount( leftCursor, splitPos );
         TreeNode.setKeyCount( rightCursor, rightKeyCount );
     }
 

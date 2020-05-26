@@ -417,7 +417,8 @@ class TreeNodeFixedSize<KEY,VALUE> extends TreeNode<KEY,VALUE>
                 // second copy
                 copyKeysAndValues( leftCursor, insertPos, rightCursor, countBeforePos + 1, countAfterPos );
             }
-        } TreeNode.setKeyCount( leftCursor, splitPos );
+        }
+        TreeNode.setKeyCount( leftCursor, splitPos );
         TreeNode.setKeyCount( rightCursor, rightKeyCount );
     }
 

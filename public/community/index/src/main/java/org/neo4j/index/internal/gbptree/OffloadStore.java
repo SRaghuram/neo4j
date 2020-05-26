@@ -78,7 +78,8 @@ public interface OffloadStore<KEY, VALUE>
      * @return offloadId to use when reading key and value back.
      * @throws IOException if something went wrong while writing key or value.
      */
-    long writeKeyValue( KEY key, VALUE value, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
+    long writeKeyValue( KEY key, VALUE value, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer )
+            throws IOException;
 
     /**
      * Free the given offloadId effectively deleting that entry from offload store.
