@@ -28,6 +28,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.Set;
 
 import org.neo4j.logging.Log;
@@ -67,20 +68,24 @@ class LeaderTest
         // given
         var state = RaftStateBuilder.builder()
                 .myself( myself )
-                .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setCommitIndex( 2 )
-                        .setTerm( 1 ).build() )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
                 .votingMembers( myself, member1, member2 )
                 .supportsPreVoting( true )
                 .build();
 
         var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1, Set.of() );
+        var leader = new Leader();
+
+        appendSomeEntriesToLog( state, leader, 3, 1  );
 
         // when
-        Outcome outcome = new Leader().handle( message, state, log() );
+        Outcome outcome = leader.handle( message, state, log() );
 
         // then
-        assertThat( RaftMessages.Type.LEADERSHIP_TRANSFER_REQUEST ).isEqualTo( messageFor( outcome, member1 ).type() );
+        var request = messageFor( outcome, member1 );
+        assertThat( RaftMessages.Type.LEADERSHIP_TRANSFER_REQUEST ).isEqualTo( request.type() );
+        assertThat( outcome.getOutgoingMessages() ).hasSize( 1 );
+        assertThat( ((RaftMessages.LeadershipTransfer.Request) request).previousIndex() ).isEqualTo( 2 );
     }
 
     @Test
@@ -90,7 +95,6 @@ class LeaderTest
         var state = RaftStateBuilder.builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setCommitIndex( 2 )
                         .setTerm( 1 ).build() )
                 .votingMembers( myself, member2 )
                 .supportsPreVoting( true )
@@ -849,5 +853,15 @@ class LeaderTest
     private Log log()
     {
         return logProvider.getLog( getClass() );
+    }
+
+    private void appendSomeEntriesToLog( RaftState raft, Leader leader, int numberOfEntriesToAppend, int firstIndex ) throws IOException
+    {
+        for ( int i = 0; i < numberOfEntriesToAppend; i++ )
+        {
+            int prevLogIndex = (firstIndex + i) - 1;
+            var content = new ReplicatedString( String.format( "content#%d", prevLogIndex ) );
+            raft.update( leader.handle( new RaftMessages.NewEntry.Request( myself, content ), raft, log() ) );
+        }
     }
 }

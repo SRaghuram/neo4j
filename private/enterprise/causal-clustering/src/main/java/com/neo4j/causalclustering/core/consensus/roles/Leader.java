@@ -320,8 +320,8 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal proposal ) throws IOException
         {
-            long commitIndex = ctx.commitIndex();
-            long commitIndexTerm = ctx.entryLog().readEntryTerm( commitIndex );
+            long appendIndex = ctx.entryLog().appendIndex();
+            long appendIndexTerm = ctx.entryLog().readEntryTerm( appendIndex );
             var proposed = proposal.proposed();
 
             var proposedKnown = stream( replicationTargets( ctx ) )
@@ -329,10 +329,10 @@ public class Leader implements RaftMessageHandler
 
             if ( !proposedKnown )
             {
-                return handle( new RaftMessages.LeadershipTransfer.Rejection( proposed, commitIndex, commitIndexTerm ) );
+                return handle( new RaftMessages.LeadershipTransfer.Rejection( proposed, appendIndex, appendIndexTerm ) );
             }
 
-            var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), commitIndex, commitIndexTerm, proposal.priorityGroups() );
+            var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), appendIndex, appendIndexTerm, proposal.priorityGroups() );
             outcomeBuilder.startTransferringLeadership( proposed );
             log.info( "Attempt to transfer leadership to follower %s. Will stop accepting writes for a short period.", proposal.proposed() );
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( proposed, request ) );

@@ -73,15 +73,25 @@ class FollowerTest
     }
 
     @Test
-    void shouldInstigateAPreElectionAfterValidLeadershipTransfer() throws Exception
+    void shouldInstigateAnElectionAfterValidLeadershipTransfer() throws Exception
     {
         // given
-        var validLeadershipTransfer = new ValidLeadershipTransfer();
-        var state = validLeadershipTransfer.stateBuilder.build();
-        var message = validLeadershipTransfer.message;
+        var entryLog = new InMemoryRaftLog();
+        entryLog.append( new RaftLogEntry( 1, new ReplicatedString( "foo" ) ) );
+        var state = builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
+                .entryLog( entryLog )
+                .votingMembers( myself, member1, member2 )
+                .supportsPreVoting( true )
+                .build();
+
+        var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
+        var follower = new Follower();
+        appendSomeEntriesToLog( state, follower, 3, 1, 1 );
 
         // when
-        Outcome outcome = new Follower().handle( message, state, log() );
+        Outcome outcome = follower.handle( message, state, log() );
 
         // then
         assertThat( messageFor( outcome, member1 ).type() ).isEqualTo( RaftMessages.Type.VOTE_REQUEST );
@@ -93,14 +103,18 @@ class FollowerTest
     void shouldSendALeadershipRejectionResponseAfterInvalidLeadershipTransfer() throws Exception
     {
         // given
+        var entryLog = new InMemoryRaftLog();
+        entryLog.append( new RaftLogEntry( 1, new ReplicatedString( "foo" ) ) );
         var state = builder()
                 .myself( myself )
-                .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setCommitIndex( 2 )
-                        .setTerm( 1 ).build() )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
                 .votingMembers( myself, member1, member2 )
+                .entryLog( entryLog )
                 .supportsPreVoting( true )
                 .build();
+
+        var follower = new Follower();
+        appendSomeEntriesToLog( state, follower, 2, 1, 1 );
 
         var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
 
@@ -108,8 +122,17 @@ class FollowerTest
         Outcome outcome = new Follower().handle( message, state, log() );
 
         // then
-        assertThat( messageFor( outcome, member2 ).type() ).isEqualTo( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION  );
+        assertThat( messageFor( outcome, member2 ).type() ).isEqualTo( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION );
         assertThat( outcome.getOutgoingMessages() ).hasSize( 1 );
+
+        // when
+        appendSomeEntriesToLog( state, follower, 1, 1, 3 );
+        outcome = follower.handle( message, state, log() );
+
+        // then
+        assertThat( messageFor( outcome, member1 ).type() ).isEqualTo( RaftMessages.Type.VOTE_REQUEST );
+        assertThat( messageFor( outcome, member2 ).type() ).isEqualTo( RaftMessages.Type.VOTE_REQUEST );
+        assertThat( outcome.getOutgoingMessages() ).hasSize( 2 );
     }
 
     @Test

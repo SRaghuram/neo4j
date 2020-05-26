@@ -72,7 +72,8 @@ class Follower implements RaftMessageHandler
             Log log ) throws IOException
     {
         var sameOrEarlierTerm = ctx.term() <= request.term();
-        var upToDate = ctx.commitIndex() >= request.previousIndex();
+        var localAppendIndex = ctx.entryLog().appendIndex();
+        var upToDate = localAppendIndex >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
         if (
@@ -89,7 +90,7 @@ class Follower implements RaftMessageHandler
         else
         {
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(),
-                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) ) );
+                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), localAppendIndex, ctx.term() ) ) );
         }
     }
 
