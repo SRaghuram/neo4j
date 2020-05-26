@@ -2630,39 +2630,50 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     for {collection <- collectionExpression
          inner <- compileExpression(extractExpression)
     } yield {
+      val returnVar = namer.nextVariableName()
       val listVar = namer.nextVariableName()
       val extractedVars = namer.nextVariableName()
+      val innerVar = namer.nextVariableName()
+      val payloadVar = namer.nextVariableName()
       val currentValue = namer.nextVariableName()
       val ops = Seq(
         // ListValue list = [evaluate collection expression];
         // ArrayList<AnyValue> extracted = new ArrayList<>();
         declare[ListValue](listVar),
-        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-        declare[java.util.ArrayList[AnyValue]](extractedVars),
-        assign(extractedVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
-        // Iterator<AnyValue> iter = list.iterator();
-        // while (iter.hasNext) {
-        //   AnyValue currentValue = iter.next();
-        declare[java.util.Iterator[AnyValue]](iterVariable),
-        assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-        loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
-          block(Seq(
-            declare[AnyValue](currentValue),
-            assign(currentValue,
-                   cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-            // expressionVariables[innerVarOffset] = currentValue;
-            setExpressionVariable(innerVariable, load(currentValue)),
-            // extracted.add([result from inner expression]);
-            invokeSideEffect(load(extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
-                             nullCheckIfRequired(inner))): _*)
+        declareAndAssign(typeRefOf[AnyValue], returnVar, nullCheckIfRequired(collection)),
+        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), load(returnVar))),
+        condition(notEqual(load(returnVar), noValue)) {
+          block(
+            declare[java.util.ArrayList[AnyValue]](extractedVars),
+            assign(extractedVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
+            declareAndAssign(typeRefOf[Long], payloadVar, constant(0L)),
+            // Iterator<AnyValue> iter = list.iterator();
+            // while (iter.hasNext) {
+            //   AnyValue currentValue = iter.next();
+            declare[java.util.Iterator[AnyValue]](iterVariable),
+            assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+            loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
+              block(Seq(
+                declare[AnyValue](currentValue),
+                assign(currentValue,
+                  cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+                // expressionVariables[innerVarOffset] = currentValue;
+                setExpressionVariable(innerVariable, load(currentValue)),
+                // extracted.add([result from inner expression]);
+                declareAndAssign(typeRefOf[AnyValue], innerVar, nullCheckIfRequired(inner)),
+                assign(payloadVar, add(load(payloadVar), invoke(load(innerVar), method[AnyValue, Long]("estimatedHeapUsage")))),
+                invokeSideEffect(load(extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
+                  load(innerVar))): _*)
+            },
+            // }
+            // returnVar = VirtualValues.fromList(extracted);
+            assign(returnVar, invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue], Long]("fromList"), load(extractedVars), load(payloadVar)))
+          )
         },
-        // }
-        // return VirtualValues.fromList(extracted);
-        invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load(extractedVars))
+        load(returnVar)
       )
       IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
-                             collection.variables ++ inner.variables,
-                             collection.nullChecks)
+                             collection.variables ++ inner.variables, Set.empty, requireNullCheck = false)
     }
   }
 
