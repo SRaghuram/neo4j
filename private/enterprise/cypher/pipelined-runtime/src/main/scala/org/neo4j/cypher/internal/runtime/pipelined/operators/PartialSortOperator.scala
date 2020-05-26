@@ -51,7 +51,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
     var lastSeen: MorselRow = _
     var resultsBuffer: ResultsBuffer = HeapTrackingArrayList.newArrayList(16, memoryTracker)
     var remainingResults: ResultsBufferAndIndex = _
-    var currentMorsel: Morsel = _
+    var currentMorselHeapUsage: Long = 0
 
     // Memory for morsels is released in one go after all output rows for completed chunk have been written
     var morselMemoryTracker: ScopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
@@ -80,8 +80,9 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
     override def initialize(state: PipelinedQueryState, resources: QueryResources): Unit = ()
 
     override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = {
-      taskState.currentMorsel = inputCursor.morsel
-      taskState.morselMemoryTracker.allocateHeap(taskState.currentMorsel.estimatedHeapUsage)
+      val heapUsage = inputCursor.morsel.estimatedHeapUsage
+      taskState.currentMorselHeapUsage = heapUsage
+      taskState.morselMemoryTracker.allocateHeap(heapUsage)
     }
 
     override def processRow(outputCursor: MorselWriteCursor,
@@ -99,7 +100,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
     override def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit =
       morselData.argumentStream match {
         case EndOfNonEmptyStream =>
-          taskState.currentMorsel = null
+          taskState.currentMorselHeapUsage = 0
           if (taskState.lastSeen != null)
             completeCurrentChunk()
         case _ =>
@@ -120,8 +121,8 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
           // current morsel might contain more chunks, so we don't know if it should be released just yet
           taskState.morselMemoryTracker.reset()
-          if (taskState.currentMorsel != null)
-            taskState.morselMemoryTracker.allocateHeap(taskState.currentMorsel.estimatedHeapUsage)
+          if (taskState.currentMorselHeapUsage > 0)
+            taskState.morselMemoryTracker.allocateHeap(taskState.currentMorselHeapUsage)
         } else {
           val morselRow = resultsBufferAndIndex.buffer.get(resultsBufferAndIndex.currentIndex)
           outputCursor.copyFrom(morselRow)
