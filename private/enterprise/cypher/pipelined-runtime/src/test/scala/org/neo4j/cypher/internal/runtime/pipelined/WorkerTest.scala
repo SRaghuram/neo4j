@@ -10,6 +10,10 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndMorselInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.DataInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselAccumulatorsInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselParallelizerInput
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutingQuery
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryManager
@@ -70,7 +74,7 @@ class WorkerTest extends CypherFunSuite {
 
     val schedulingPolicy: QuerySchedulingPolicy =
       (_: QueryResources) =>
-        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
+        throw NextTaskException(pipeline, SchedulingInputException(MorselParallelizerInput(input), cause))
 
     val query = mockExecutingQuery(schedulingPolicy)
     val executionState = mock[ExecutionState]
@@ -94,7 +98,7 @@ class WorkerTest extends CypherFunSuite {
 
     val schedulingPolicy: QuerySchedulingPolicy =
       (_: QueryResources) =>
-        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
+        throw NextTaskException(pipeline, SchedulingInputException(MorselAccumulatorsInput(input), cause))
 
     val query = mockExecutingQuery(schedulingPolicy)
     val executionState = mock[ExecutionState]
@@ -115,7 +119,7 @@ class WorkerTest extends CypherFunSuite {
 
     val schedulingPolicy: QuerySchedulingPolicy =
       (_: QueryResources) =>
-        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
+        throw NextTaskException(pipeline, SchedulingInputException(MorselAccumulatorsInput(input), cause))
 
     val query = mockExecutingQuery(schedulingPolicy)
     val executionState = mock[ExecutionState]
@@ -138,7 +142,7 @@ class WorkerTest extends CypherFunSuite {
 
     val schedulingPolicy: QuerySchedulingPolicy =
       (_: QueryResources) =>
-        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
+        throw NextTaskException(pipeline, SchedulingInputException(AccumulatorAndMorselInput(input), cause))
 
     val query = mockExecutingQuery(schedulingPolicy)
     val executionState = mock[ExecutionState]
@@ -159,7 +163,7 @@ class WorkerTest extends CypherFunSuite {
 
     val schedulingPolicy: QuerySchedulingPolicy =
       (_: QueryResources) =>
-        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
+        throw NextTaskException(pipeline, SchedulingInputException(DataInput(input), cause))
 
     val query = mockExecutingQuery(schedulingPolicy)
     val executionState = mock[ExecutionState]

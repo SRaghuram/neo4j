@@ -11,6 +11,10 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndMorselInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.DataInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselAccumulatorsInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselParallelizerInput
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -184,7 +188,7 @@ trait MorselInputOperatorState extends OperatorState {
         nextTasks(state, input, parallelism, resources, argumentStateMaps)
       } catch {
         case NonFatalCypherError(t) =>
-          throw SchedulingInputException(input, t)
+          throw SchedulingInputException(MorselParallelizerInput(input), t)
       }
     } else {
       null
@@ -220,7 +224,7 @@ trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DA
         nextTasks(input)
       } catch {
         case NonFatalCypherError(t) =>
-          throw SchedulingInputException(input, t)
+          throw SchedulingInputException(MorselAccumulatorsInput(input), t)
       }
     } else {
       null
@@ -243,7 +247,7 @@ trait AccumulatorsAndMorselInputOperatorState[DATA <: AnyRef, ACC <: MorselAccum
         nextTasks(accAndMorsel)
       } catch {
         case NonFatalCypherError(t) =>
-          throw SchedulingInputException(accAndMorsel, t)
+          throw SchedulingInputException(AccumulatorAndMorselInput(accAndMorsel), t)
       }
     } else {
       null
@@ -266,7 +270,7 @@ trait DataInputOperatorState[DATA <: AnyRef] extends OperatorState {
         nextTasks(data)
       } catch {
         case NonFatalCypherError(t) =>
-          throw SchedulingInputException(data, t)
+          throw SchedulingInputException(DataInput(data), t)
       }
     } else {
       null

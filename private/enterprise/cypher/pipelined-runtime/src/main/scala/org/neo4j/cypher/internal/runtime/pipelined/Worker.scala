@@ -9,14 +9,15 @@ import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndMorselInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.DataInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselAccumulatorsInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselParallelizerInput
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutingQuery
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryManager
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QuerySchedulingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PreparedOutput
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
-import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 
 /**
@@ -152,31 +153,25 @@ class Worker(val workerId: Int,
       executingQuery.querySchedulingPolicy.nextTask(resources)
     } catch {
       // Failure in nextTask of a pipeline, after taking Morsel
-      case NextTaskException(pipeline, SchedulingInputException(morsel: MorselParallelizer, cause)) =>
+      case NextTaskException(pipeline, SchedulingInputException(MorselParallelizerInput(morsel), cause)) =>
         executingQuery.executionState.closeMorselTask(pipeline, morsel.originalForClosing)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking Accumulator
-      case NextTaskException(pipeline, SchedulingInputException(acc: Array[MorselAccumulator[_]], cause)) =>
-        executingQuery.executionState.closeAccumulatorsTask(pipeline, acc.toIndexedSeq)
-        executingQuery.executionState.failQuery(cause, resources, pipeline)
-        SchedulingResult(null, someTaskWasFilteredOut = true)
-
-      // Failure in nextTask of a pipeline, after taking Accumulator
-      case NextTaskException(pipeline, SchedulingInputException(acc: TraversableOnce[MorselAccumulator[_]], cause)) =>
+      case NextTaskException(pipeline, SchedulingInputException(MorselAccumulatorsInput(acc), cause)) =>
         executingQuery.executionState.closeAccumulatorsTask(pipeline, acc.toIndexedSeq)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking AccumulatorAndMorsel
-      case NextTaskException(pipeline, SchedulingInputException(accAndMorsel: AccumulatorAndMorsel[_, MorselAccumulator[_]], cause)) =>
+      case NextTaskException(pipeline, SchedulingInputException(AccumulatorAndMorselInput(accAndMorsel), cause)) =>
         executingQuery.executionState.closeMorselAndAccumulatorTask(pipeline, accAndMorsel.morsel, accAndMorsel.acc)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking Data
-      case NextTaskException(pipeline, SchedulingInputException(data: AnyRef, cause)) =>
+      case NextTaskException(pipeline, SchedulingInputException(DataInput(data), cause)) =>
         executingQuery.executionState.closeData(pipeline, data)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         SchedulingResult(null, someTaskWasFilteredOut = true)
