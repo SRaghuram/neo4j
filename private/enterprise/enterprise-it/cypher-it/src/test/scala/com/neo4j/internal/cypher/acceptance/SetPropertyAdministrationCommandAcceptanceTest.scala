@@ -265,8 +265,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
   // Implementation tests
 
-  Seq(VERSION_40, VERSION_41D1, VERSION_41).foreach { version =>
-    setVersion(version, if (version == VERSION_41) None else Some(classOf[UnsupportedOperationException]))
+  withAllSystemGraphVersions(unsupportedWhenNotLatest) {
 
     test("set property should allow setting a property on a node") {
       // GIVEN
@@ -282,7 +281,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
 
       // THEN
-      execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size (1)
+      execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size 1
     }
 
     test("set property should allow remove a property from a node") {
@@ -299,7 +298,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = null")
 
       // THEN
-      execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size (0)
+      execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size 0
     }
 
     test("set property on a node should allow specific property only") {
@@ -322,7 +321,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       } should have message "Set property for property 'prop2' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
       // THEN
-      execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size (1)
+      execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size 1
     }
 
     test("set property on a relationship should allow specific property only") {

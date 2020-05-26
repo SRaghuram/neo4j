@@ -400,8 +400,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
 
-  Seq(VERSION_40, VERSION_41D1, VERSION_41).foreach { version =>
-    setVersion(version)
+  withAllSystemGraphVersions(allSupported) {
 
     test("should not create node without WRITE privilege") {
       // GIVEN

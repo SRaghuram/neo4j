@@ -294,8 +294,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
   // Enforcement for create
 
-  Seq(VERSION_40, VERSION_41D1, VERSION_41).foreach { version =>
-    setVersion(version, if (version == VERSION_41) None else Some(classOf[UnsupportedOperationException]))
+  withAllSystemGraphVersions(unsupportedWhenNotLatest) {
 
     test("granting create node allows creation of nodes") {
       setupUserWithCustomRole()

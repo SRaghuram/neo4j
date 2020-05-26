@@ -10,11 +10,12 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
-class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -1041,5 +1042,19 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES",
         params = Map[String, Object]("__internal_currentUser" -> "neo4j").asJava)
     } should have message ("The query contains a parameter with an illegal name: '__internal_currentUser'")
+  }
+
+  withAllSystemGraphVersions(allSupported) {
+    val expectedVersion = _version.get  // capture transient state into closure
+
+    test("Should be able to run SHOW PRIVILEGES on multiple versions of the system graph with different but valid results") {
+      // Given
+      execute("CREATE ROLE custom AS COPY OF admin")
+      val expectedCurrent = defaultRolePrivilegesFor("admin", "custom")
+      val expected = translatePrivileges(expectedCurrent, expectedVersion)
+
+      // When && Then
+      execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+    }
   }
 }

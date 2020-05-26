@@ -266,8 +266,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }
   }
 
-  Seq(VERSION_40, VERSION_41D1, VERSION_41).foreach { version =>
-    setVersion(version, if (version == VERSION_41) None else Some(classOf[UnsupportedOperationException]))
+  withAllSystemGraphVersions(unsupportedWhenNotLatest) {
 
     test("set label allows user to create a label") {
       // GIVEN

@@ -5,7 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.Config
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
@@ -96,7 +95,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   }
 
   private def dbmsPrivilegesNotIn41d01(): Seq[String] = {
-    //dbmsPrivileges.keys.filter(!_.contains("ROLE")).toSeq
     Seq.empty
   }
 
@@ -156,7 +154,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     // Given
     setup()
     // When using setup() within version tests the privileges are not automatically initialized, so we need to do that explicitly
-    initializeEnterpriseSecurityGraphComponent(defaultConfig, VERSION_41, verbose = false)
+    initializeEnterpriseSecurityGraphComponent(defaultConfig, CURRENT_VERSION, verbose = false)
 
     createRoleWithOnlyAdminPrivilege("custom")
 
