@@ -13,11 +13,20 @@ com.neo4j.dbms.api.ClusterDatabaseManagementService::startDatabase(java.lang.Str
 com.neo4j.dbms.api.ClusterDatabaseManagementService::unregisterDatabaseEventListener(org.neo4j.graphdb.event.DatabaseEventListener) void public
 com.neo4j.dbms.api.ClusterDatabaseManagementService::unregisterTransactionEventListener(java.lang.String, org.neo4j.graphdb.event.TransactionEventListener<?>) void public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public class extends com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::<T extends java.lang.Object>setConfig(org.neo4j.graphdb.config.Setting<T>, #T) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::ClusterDatabaseManagementServiceBuilder(java.io.File) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::addDatabaseListener(org.neo4j.graphdb.event.DatabaseEventListener) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::addURLAccessRule(java.lang.String, org.neo4j.graphdb.security.URLAccessRule) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::build() com.neo4j.dbms.api.ClusterDatabaseManagementService public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getDbmsInfo(org.neo4j.configuration.Config) org.neo4j.kernel.impl.factory.DbmsInfo protected
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getEditionFactory(org.neo4j.configuration.Config) java.util.function.Function<org.neo4j.graphdb.factory.module.GlobalModule,org.neo4j.graphdb.factory.module.edition.AbstractEditionModule> protected
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::loadPropertiesFromFile(java.lang.String) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::newDatabaseManagementService(org.neo4j.configuration.Config, org.neo4j.graphdb.facade.ExternalDependencies) com.neo4j.dbms.api.ClusterDatabaseManagementService protected
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setConfig(java.util.Map<org.neo4j.graphdb.config.Setting<?>,java.lang.Object>) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setConfigRaw(java.util.Map<java.lang.String,java.lang.String>) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setExternalDependencies(org.neo4j.common.DependencyResolver) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setMonitors(org.neo4j.monitoring.Monitors) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setUserLogProvider(org.neo4j.logging.LogProvider) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder public class extends org.neo4j.dbms.api.DatabaseManagementServiceBuilder
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::EnterpriseDatabaseManagementServiceBuilder(java.io.File) void public
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::databaseDependencies() org.neo4j.graphdb.facade.ExternalDependencies protected

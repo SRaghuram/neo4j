@@ -10,16 +10,23 @@ import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 
 import java.io.File;
+import java.util.Map;
 import java.util.function.Function;
 
 import org.neo4j.annotations.api.PublicApi;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.config.Setting;
+import org.neo4j.graphdb.event.DatabaseEventListener;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
+import org.neo4j.graphdb.security.URLAccessRule;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static java.lang.Boolean.FALSE;
 
@@ -73,5 +80,68 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
         default:
             throw new IllegalArgumentException( "Unsupported mode: " + mode );
         }
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder addDatabaseListener( DatabaseEventListener databaseEventListener )
+    {
+        super.addDatabaseListener( databaseEventListener );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder addURLAccessRule( String protocol, URLAccessRule rule )
+    {
+        super.addURLAccessRule( protocol, rule );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder setUserLogProvider( LogProvider userLogProvider )
+    {
+        super.setUserLogProvider( userLogProvider );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder setMonitors( Monitors monitors )
+    {
+        super.setMonitors( monitors );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder setExternalDependencies( DependencyResolver dependencies )
+    {
+        super.setExternalDependencies( dependencies );
+        return this;
+    }
+
+    @Override
+    public <T> ClusterDatabaseManagementServiceBuilder setConfig( Setting<T> setting, T value )
+    {
+        super.setConfig( setting, value );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder setConfig( Map<Setting<?>,Object> config )
+    {
+        super.setConfig( config );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder setConfigRaw( Map<String, String> raw )
+    {
+        super.setConfigRaw( raw );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder loadPropertiesFromFile( String fileName )
+    {
+        super.loadPropertiesFromFile( fileName );
+        return this;
     }
 }

@@ -288,51 +288,40 @@ class EmbeddedClusterIT
         {
             var homeDir = new File( baseDir, "core-" + serverId );
 
-            var builder = new ClusterDatabaseManagementServiceBuilder( homeDir );
-
-            builder.setConfig( GraphDatabaseSettings.mode, CORE );
-
-            builder.setConfig( CausalClusteringSettings.initial_discovery_members, coreDiscoveryAddresses );
-
-            builder.setConfig( CausalClusteringSettings.discovery_listen_address, coreDiscoveryAddresses.get( serverId ) );
-            builder.setConfig( CausalClusteringSettings.discovery_advertised_address, coreDiscoveryAddresses.get( serverId ) );
-
-            var txAddress = new SocketAddress( "localhost", allocatePort() );
-            builder.setConfig( CausalClusteringSettings.transaction_listen_address, txAddress );
-            builder.setConfig( CausalClusteringSettings.transaction_advertised_address, txAddress );
-
             var raftAddress = new SocketAddress( "localhost", allocatePort() );
-            builder.setConfig( CausalClusteringSettings.raft_listen_address, raftAddress );
-            builder.setConfig( CausalClusteringSettings.raft_advertised_address, raftAddress );
-
+            var txAddress = new SocketAddress( "localhost", allocatePort() );
             var backupAddress = new SocketAddress( "localhost", allocatePort() );
-            builder.setConfig( OnlineBackupSettings.online_backup_listen_address, backupAddress );
 
-            return builder.build();
+            return new ClusterDatabaseManagementServiceBuilder( homeDir )
+                .setConfig( GraphDatabaseSettings.mode, CORE )
+                .setConfig( CausalClusteringSettings.initial_discovery_members, coreDiscoveryAddresses )
+                .setConfig( CausalClusteringSettings.discovery_listen_address, coreDiscoveryAddresses.get( serverId ) )
+                .setConfig( CausalClusteringSettings.discovery_advertised_address, coreDiscoveryAddresses.get( serverId ) )
+                .setConfig( CausalClusteringSettings.transaction_listen_address, txAddress )
+                .setConfig( CausalClusteringSettings.transaction_advertised_address, txAddress )
+                .setConfig( CausalClusteringSettings.raft_listen_address, raftAddress )
+                .setConfig( CausalClusteringSettings.raft_advertised_address, raftAddress )
+                .setConfig( OnlineBackupSettings.online_backup_listen_address, backupAddress )
+                .build();
         }
 
         ClusterDatabaseManagementService startReadReplica( int serverId, List<SocketAddress> coreDiscoveryAddresses )
         {
             var homeDir = new File( baseDir, "read-replica-" + serverId );
 
-            var builder = new ClusterDatabaseManagementServiceBuilder( homeDir );
-
-            builder.setConfig( GraphDatabaseSettings.mode, READ_REPLICA );
-
-            builder.setConfig( CausalClusteringSettings.initial_discovery_members, coreDiscoveryAddresses );
-
             var discoveryAddress = new SocketAddress( "localhost", allocatePort() );
-            builder.setConfig( CausalClusteringSettings.discovery_listen_address, discoveryAddress );
-            builder.setConfig( CausalClusteringSettings.discovery_advertised_address, discoveryAddress );
-
             var txAddress = new SocketAddress( "localhost", allocatePort() );
-            builder.setConfig( CausalClusteringSettings.transaction_listen_address, txAddress );
-            builder.setConfig( CausalClusteringSettings.transaction_advertised_address, txAddress );
-
             var backupAddress = new SocketAddress( "localhost", allocatePort() );
-            builder.setConfig( OnlineBackupSettings.online_backup_listen_address, backupAddress );
 
-            return builder.build();
+            return new ClusterDatabaseManagementServiceBuilder( homeDir )
+                .setConfig( GraphDatabaseSettings.mode, READ_REPLICA )
+                .setConfig( CausalClusteringSettings.initial_discovery_members, coreDiscoveryAddresses )
+                .setConfig( CausalClusteringSettings.discovery_listen_address, discoveryAddress )
+                .setConfig( CausalClusteringSettings.discovery_advertised_address, discoveryAddress )
+                .setConfig( CausalClusteringSettings.transaction_listen_address, txAddress )
+                .setConfig( CausalClusteringSettings.transaction_advertised_address, txAddress )
+                .setConfig( OnlineBackupSettings.online_backup_listen_address, backupAddress )
+                .build();
         }
     }
 }
