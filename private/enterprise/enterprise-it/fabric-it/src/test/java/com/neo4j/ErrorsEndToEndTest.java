@@ -9,6 +9,7 @@ import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +19,8 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.summary.Notification;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
@@ -327,6 +330,32 @@ class ErrorsEndToEndTest
             assertEquals( ConstraintValidationFailed.code().serialize(), e.code() );
             assertThat( e.getMessage() ).contains( "with label `Library` must have the property `isbn`" );
         }
+    }
+
+    @Test
+    void testRxApiExplainNotifications()
+    {
+        var notifications = Mono.from( clientDriver.rxSession()
+                                                   .run( "EXPLAIN MATCH (n:ThisLabelDoesNotExist) RETURN n" )
+                                                   .consume() )
+                                .map( ResultSummary::notifications )
+                                .block();
+
+        assertThat( notifications ).extracting( Notification::code )
+                                   .contains( "Neo.ClientNotification.Statement.UnknownLabelWarning" );
+    }
+
+    @Test
+    void testSyncApiExplainNotifications()
+    {
+
+        var notifications = clientDriver.session()
+                                        .run( "EXPLAIN MATCH (n:ThisLabelDoesNotExist) RETURN n" )
+                                        .consume()
+                                        .notifications();
+
+        assertThat( notifications ).extracting( Notification::code )
+                                   .contains( "Neo.ClientNotification.Statement.UnknownLabelWarning" );
     }
 
     private void verifyCleanUp()
