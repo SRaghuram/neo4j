@@ -157,7 +157,7 @@ class CatalogManagementTest
         while ( true )
         {
             var currentStatus = driverUtils.inSession( clientDriver, session ->
-                    session.run( "SHOW DATABASES" ).stream()
+                    session.run( "SHOW DATABASES YIELD name, currentStatus" ).stream()
                            .filter( record -> databaseName.toLowerCase().equals( record.get( "name" ).asString() ) )
                            .map( record -> record.get( "currentStatus" ).asString() )
                            .findAny()

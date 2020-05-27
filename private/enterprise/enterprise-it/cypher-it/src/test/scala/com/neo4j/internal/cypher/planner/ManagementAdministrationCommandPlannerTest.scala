@@ -47,6 +47,14 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(managementPlan("ShowDefaultDatabase").toString)
   }
 
+  test("Show databases with clauses") {
+    // When
+    val plan = execute("EXPLAIN SHOW DATABASES YIELD name ORDER BY name SKIP 1 LIMIT 1 WHERE name='neo4j'").executionPlanString()
+
+    // Then
+    plan should include(managementPlan("ShowDatabases", Seq(details("name = \"neo4j\""))).toString)
+  }
+
   test("Create database") {
     // When
     val plan = execute("EXPLAIN CREATE DATABASE foo").executionPlanString()
@@ -249,6 +257,18 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowUsers",
+        assertDbmsAdminPlan("SHOW USER")
+      ).toString
+    )
+  }
+
+  test("Show users with where clause") {
+    // When
+    val plan = execute("EXPLAIN SHOW USERS WHERE user ='bob'").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowUsers", Seq(details("user = \"bob\"")),
         assertDbmsAdminPlan("SHOW USER")
       ).toString
     )
@@ -494,6 +514,18 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowRoles",
+        assertDbmsAdminPlan("SHOW ROLE", "SHOW USER")
+      ).toString
+    )
+  }
+
+  test("Show roles with users with WHERE") {
+    // When
+    val plan = execute("EXPLAIN SHOW ROLES WITH USERS WHERE role = 'PUBLIC'").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowRoles", Seq(details("role = \"PUBLIC\"")),
         assertDbmsAdminPlan("SHOW ROLE", "SHOW USER")
       ).toString
     )
@@ -793,6 +825,18 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowPrivileges", Seq(details("ALL")),
+        assertDbmsAdminPlan("SHOW PRIVILEGE")
+      ).toString
+    )
+  }
+
+  test("Show all privileges with WHERE") {
+    // When
+    val plan = execute("EXPLAIN SHOW PRIVILEGES WHERE role = 'PUBLIC'").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(details(Seq("ALL", "role = \"PUBLIC\""))),
         assertDbmsAdminPlan("SHOW PRIVILEGE")
       ).toString
     )

@@ -78,6 +78,175 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet shouldBe Set(neo4jUser, user("Bar"), user("Baz"), user("Zet"))
   }
 
+  test("should show users with yield") {
+    // WHEN
+    val result = execute("SHOW USERS YIELD user, suspended")
+
+    // THEN
+    result.toSet should be(Set(Map("user"->"neo4j", "suspended"-> false)))
+  }
+
+  test("should show users with yield and where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user, suspended WHERE user = 'neo4j'")
+
+    // THEN
+    result.toSet should be(Set(Map("user"->"neo4j", "suspended"-> false)))
+  }
+
+  test("should show users with yield and where 2") {
+    // GIVEN
+    setup()
+    execute("CREATE USER bar SET PASSWORD 'password' SET STATUS SUSPENDED")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user, suspended WHERE user = 'bar'")
+
+    // THEN
+    result.toList should be(List(Map("user"->"bar", "suspended"-> true)))
+  }
+
+  test("should show users with yield and skip") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+    execute("CREATE USER zoo SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user ORDER BY user SKIP 2")
+
+    // THEN
+    result.toList should be(List(Map("user" -> "neo4j"), Map("user" -> "zoo")))
+  }
+
+  test("should show users with yield and limit") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user ORDER BY user LIMIT 1")
+
+    // THEN
+    result.toList should be(List(Map("user" -> "bar")))
+  }
+
+  test("should show users with yield and order by asc") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user ORDER BY user ASC")
+
+    // THEN
+    result.toList should be(List(Map("user" -> "bar"),Map("user" -> "foo"),Map("user" -> "neo4j")))
+  }
+
+  test("should show users with yield and order by desc") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user ORDER BY user DESC")
+
+    // THEN
+    result.toList should be(List(Map("user" -> "neo4j"),Map("user" -> "foo"),Map("user" -> "bar")))
+  }
+
+  test("should not show users with invalid yield") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USERS YIELD foo, bar, baz")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 18 (offset: 17))")
+
+  }
+
+  test("should not show users with invalid where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USERS WHERE foo = 'bar'")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 18 (offset: 17))")
+  }
+
+  test("should not show users with yield and invalid where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USERS YIELD user WHERE foo = 'bar'")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 29 (offset: 28))")
+  }
+
+  test("should not show users with yield and invalid skip") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USERS YIELD user ORDER BY user SKIP -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 42 (offset: 41))")
+  }
+
+  test("should not show users with yield and invalid limit") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USERS YIELD user ORDER BY user LIMIT -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 43 (offset: 42))")
+  }
+
+  test("should not show users with invalid order by") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USERS YIELD user ORDER BY bar")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `bar` not defined")
+    exception.getMessage should include("(line 1, column 32 (offset: 31))")
+  }
+
   // Tests for creating users
 
   test("should create user with password as string") {

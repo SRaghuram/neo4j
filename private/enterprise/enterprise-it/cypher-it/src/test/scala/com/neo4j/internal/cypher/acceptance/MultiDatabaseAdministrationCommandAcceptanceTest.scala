@@ -26,7 +26,6 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.DeadlockDetectedException
 import org.neo4j.kernel.api.KernelTransaction
-import org.neo4j.kernel.internal.GraphDatabaseAPI
 
 class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   test("should return empty counts to the outside for commands that update the system graph internally") {
@@ -119,6 +118,190 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
+  }
+
+  test("should show database with yield") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DATABASE $db YIELD name, address, role", Map("db" -> DEFAULT_DATABASE_NAME))
+
+    // THEN
+    result.toList should be(List(Map("name" -> "neo4j",
+      "address" -> "localhost:7687",
+      "role" -> "standalone")))
+  }
+
+  test("should show database with yield and where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DATABASE $db YIELD name, address, role WHERE name = 'neo4j'", Map("db" -> DEFAULT_DATABASE_NAME))
+
+    // THEN
+    result.toList should be(List(Map("name" -> "neo4j",
+      "address" -> "localhost:7687",
+      "role" -> "standalone")))
+  }
+
+  test("should show database with yield and where 2") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD name, address, role WHERE name = 'neo4j'")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "neo4j",
+      "address" -> "localhost:7687",
+      "role" -> "standalone")))
+  }
+
+  test("should show database with yield and skip") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE baz")
+    execute("GRANT ACCESS ON DATABASE baz TO PUBLIC")
+    execute("CREATE DATABASE bar")
+    execute("GRANT ACCESS ON DATABASE bar TO PUBLIC")
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD name ORDER BY name SKIP 2")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "neo4j"),Map("name" -> "system")))
+  }
+
+  test("should show database with yield and limit") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE baz")
+    execute("GRANT ACCESS ON DATABASE baz TO PUBLIC")
+    execute("CREATE DATABASE bar")
+    execute("GRANT ACCESS ON DATABASE bar TO PUBLIC")
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD name ORDER BY name LIMIT 1")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "bar")))
+  }
+
+  test("should show database with yield and order by asc") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE baz")
+    execute("GRANT ACCESS ON DATABASE baz TO PUBLIC")
+    execute("CREATE DATABASE bar")
+    execute("GRANT ACCESS ON DATABASE bar TO PUBLIC")
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD name ORDER BY name ASC")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "bar"),Map("name" -> "baz"),Map("name" -> "neo4j"),Map("name" -> "system")))
+  }
+
+  test("should show database with yield and order by desc") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE baz")
+    execute("GRANT ACCESS ON DATABASE baz TO PUBLIC")
+    execute("CREATE DATABASE bar")
+    execute("GRANT ACCESS ON DATABASE bar TO PUBLIC")
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD name ORDER BY name DESC")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "system"),Map("name" -> "neo4j"),Map("name" -> "baz"),Map("name" -> "bar")))
+  }
+
+  test("should not show database with invalid yield") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DATABASE $db YIELD foo, bar, baz", Map("db" -> DEFAULT_DATABASE_NAME))
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 25 (offset: 24))")
+
+  }
+
+  test("should not show database with invalid where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DATABASE $db WHERE foo = 'bar'", Map("db" -> DEFAULT_DATABASE_NAME))
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 25 (offset: 24))")
+  }
+
+  test("should not show database with yield and invalid where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DATABASE $db YIELD name, address, role WHERE foo = 'bar'", Map("db" -> DEFAULT_DATABASE_NAME))
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 51 (offset: 50))")
+  }
+
+  test("should not show database with yield and invalid skip") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DATABASES YIELD name ORDER BY name SKIP -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 46 (offset: 45))")
+  }
+
+  test("should not show database with yield and invalid limit") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DATABASES YIELD name ORDER BY name LIMIT -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 47 (offset: 46))")
+  }
+
+  test("should not show database with invalid order by") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DEFAULT DATABASE YIELD name ORDER BY bar")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `bar` not defined")
+    exception.getMessage should include("(line 1, column 43 (offset: 42))")
   }
 
   test("Should always show system even without access") {

@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
@@ -78,6 +79,80 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   test("should show privileges for users") {
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
+
+  test("should show privileges WHERE access = 'GRANTED' AND action = 'match'") {
+
+    // WHEN
+    val expected = Set("reader", "editor", "publisher", "architect", "admin").flatMap { role =>
+      Set(
+        granted(matchPrivilege).role(role).node("*").map,
+        granted(matchPrivilege).role(role).relationship("*").map
+      )
+    }
+    execute("SHOW PRIVILEGES WHERE access = 'GRANTED' AND action = 'match'").toSet should be(expected)
+  }
+
+  test("should not show privileges when an invalid column is specified in the where clause") {
+
+    val theException = the[SyntaxException] thrownBy {
+      // WHEN
+      execute("SHOW PRIVILEGES WHERE missing = 'notthere'")
+    }
+    // THEN
+    theException.getMessage should startWith ("Variable `missing` not defined (line 1, column 23 (offset: 22))")
+  }
+
+  test("should show privileges with YIELD action, access") {
+
+    val expected = defaultRolePrivileges.map(_.filterKeys(Set("action","access").contains))
+
+    // WHEN
+    execute("SHOW PRIVILEGES YIELD action, access").toSet should be (expected)
+  }
+
+  test("should show privileges with YIELD missing") {
+
+    val theException = the[SyntaxException] thrownBy {
+      // WHEN
+      execute("SHOW PRIVILEGES YIELD missing")
+    }
+
+    theException.getMessage should startWith("Variable `missing` not defined")
+    theException.getMessage should include("(line 1, column 23 (offset: 22))")
+
+  }
+
+  test("should show privileges with YIELD role, action, access ORDER BY action, role, access") {
+
+    val expected = defaultRolePrivileges.toList
+      .sortBy(row => Seq("action", "access", "role").map(row).mkString(","))
+      .map(_.filterKeys(Set("action","access","role").contains))
+
+    // WHEN
+    execute("SHOW PRIVILEGES YIELD role, action, access ORDER BY action, role, access WHERE access = 'GRANTED'").toList should be(expected)
+  }
+
+  test("should show privileges with YIELD role, action, access WHERE access = 'GRANTED' using default ordering") {
+
+    val expected = defaultRolePrivileges.toList
+      .sortBy(row => Seq("role", "action", "access").map(row).mkString(","))
+      .map(_.filterKeys(Set("role", "action", "access").contains))
+
+    // WHEN
+    execute("SHOW PRIVILEGES YIELD role, action, access WHERE access = 'GRANTED' ").toList should be(expected)
+  }
+
+  test("should show privileges with YIELD role, action, access SKIP 5 LIMIT 5 ORDER BY action, role, access") {
+
+    val expected = defaultRolePrivileges.toList
+      .sortBy(row => Seq("action", "role", "access").map(row).mkString(","))
+      .map(_.filterKeys(Set("role", "action", "access").contains))
+      .slice(5, 10)
+
+    // WHEN
+    execute("SHOW PRIVILEGES YIELD role, action, access ORDER BY action, role, access SKIP 5 LIMIT 5 ").toList should be(expected)
+  }
+
 
   test("should show all privileges") {
     execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges)
@@ -191,6 +266,45 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     result.toSet should be(defaultUserPrivileges)
+  }
+
+  test("should show privileges for specific user WHERE role = 'PUBLIC'") {
+
+    val expected = Set(granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map)
+
+    // WHEN
+    execute("SHOW USER neo4j PRIVILEGES WHERE role = 'PUBLIC'").toSet should be(expected)
+  }
+
+  test("should show privileges for specific user YIELD role, action, access") {
+
+    val expected = defaultUserPrivileges.map(_.filterKeys(Set("role", "action", "access").contains))
+
+    // WHEN
+    execute("SHOW USER neo4j PRIVILEGES YIELD role, action, access").toSet should be (expected)
+  }
+
+  test("should show privileges for specific user YIELD role, action, access ORDER BY action, role, access") {
+
+    val expected = defaultUserPrivileges.toList
+      .sortBy(row => Seq("action", "role", "access").map(row).mkString(","))
+      .map(_.filterKeys(Set("role", "action", "access").contains))
+
+    // WHEN
+    execute("SHOW USER neo4j PRIVILEGES YIELD role, action, access ORDER BY action, role, access")
+      .toList should be (expected)
+
+  }
+
+  test("should show privileges for specific user YIELD access, resource, role, segment WHERE role = 'PUBLIC'") {
+
+    val expected = defaultUserPrivileges.toList
+      .map(_.filterKeys(Set("access", "resource", "role", "segment").contains))
+      .filter(map => map.get("role").contains("PUBLIC"))
+
+    // WHEN
+    execute("SHOW USER neo4j PRIVILEGES YIELD access, resource, role, segment WHERE role = 'PUBLIC'")
+      .toList should be (expected)
   }
 
   test("should show user privileges for current user as non admin") {

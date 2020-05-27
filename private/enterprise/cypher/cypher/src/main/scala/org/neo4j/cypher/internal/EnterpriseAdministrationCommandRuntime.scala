@@ -160,13 +160,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
   private def logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping) => ExecutionPlan] = {
     // SHOW USERS
-    case ShowUsers(source) => (context, parameterMapping) =>
+    case ShowUsers(source, symbols, yields, where, returns) => (context, parameterMapping) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
-        """MATCH (u:User)
+        s"""MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
-          |RETURN u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended""".stripMargin,
+          |WITH u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended
+          ${AdministrationShowCommandUtils.generateWhereClause(where)}
+          ${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
+          |""".stripMargin,
         VirtualValues.EMPTY_MAP, source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
@@ -183,8 +186,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeAlterUserExecutionPlan(userName, password, requirePasswordChange, suspended)(sourcePlan, normalExecutionEngine)
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
-    case ShowRoles(source, withUsers, showAll) => (context, parameterMapping) =>
-      val userColumns = if (withUsers) ", u.name as member" else ""
+    case ShowRoles(source, withUsers, showAll, symbols, yields, where, returns) => (context, parameterMapping) =>
+      val userWithColumns = if (withUsers) ", u.name as member" else ""
+      val userReturnColumns = if (withUsers) ", member" else ""
       val maybeMatchUsers = if (withUsers) "OPTIONAL MATCH (u:User)" else ""
       val roleMatch = (showAll, withUsers) match {
         case (true, true) =>
@@ -196,15 +200,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
       SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine,
         s"""
+           |CALL {
            |$roleMatch
            |
-           |RETURN DISTINCT r.name as role
-           |$userColumns
+           |WITH DISTINCT r.name as role $userWithColumns
+           |${AdministrationShowCommandUtils.generateWhereClause(where)}
+           |RETURN role $userReturnColumns
            |UNION
            |MATCH (r:Role) WHERE r.name = 'PUBLIC'
            |$maybeMatchUsers
-           |RETURN DISTINCT r.name as role
-           |$userColumns
+           |WITH DISTINCT r.name as role $userWithColumns
+           |${AdministrationShowCommandUtils.generateWhereClause(where)}
+           |RETURN role $userReturnColumns
+           |}
+           |${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("role"))}
         """.stripMargin,
         VirtualValues.EMPTY_MAP,
         source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
@@ -426,7 +435,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke match privilege from role '${runtimeValue(roleName, params)}'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(source, scope) => (context, parameterMapping) =>
+    case ShowPrivileges(source, scope, symbols, yields, where, returns) => (context, parameterMapping) =>
       val currentUserKey = internalKey("currentUser")
       val privilegeMatch =
         """
@@ -454,15 +463,35 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  ELSE res.type
           |END
         """.stripMargin
-      val returnColumns =
+      val projection =
         s"""
-           |RETURN type(g) AS access, p.action AS action, $resourceColumn AS resource,
+           |WITH type(g) AS access, p.action AS action, $resourceColumn AS resource,
            |coalesce(d.name, '*') AS graph, segment, r.name AS role
         """.stripMargin
-      val orderBy =
+
+      val filtering = AdministrationShowCommandUtils.generateWhereClause(where)
+      val returnClause = AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user", "role", "graph", "segment", "resource", "action", "access"))
+
+      def makeUserPrivilegesQuery(nameKey: String) =
         s"""
-           |ORDER BY role, graph, segment, resource, action
-        """.stripMargin
+           |CALL {
+           |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$`$nameKey` WITH r, u
+           |$privilegeMatch
+           |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
+           |$projection, u.name AS user
+           |$filtering
+           |RETURN access, action, resource, graph, segment, role, user
+           |UNION
+           |MATCH (u:User) WHERE u.name = $$`$nameKey`
+           |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
+           |$privilegeMatch
+           |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
+           |$projection, u.name AS user
+           |$filtering
+           |RETURN access, action, resource, graph, segment, role, user
+           |}
+           |$returnClause
+          """.stripMargin
 
       val (nameKey: String, grantee: Value, converter: Function[MapValue, MapValue], query) = scope match {
         case ShowRolePrivileges(name) =>
@@ -471,51 +500,27 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             s"""
                |OPTIONAL MATCH (r:Role) WHERE r.name = $$`$roleNameKey` WITH r
                |$privilegeMatch
-               |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
-               |$returnColumns
-               |$orderBy
+               |WITH g, p, res, d, $segmentColumn AS segment, r
+               |$projection
+               |$filtering
+               |$returnClause
           """.stripMargin
           )
         case ShowUserPrivileges(Some(name)) =>
           val (userNameKey, userNameValue, userNameConverter) = getNameFields("user", name)
-          (userNameKey, userNameValue, userNameConverter,
-            s"""
-               |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$`$userNameKey` WITH r, u
-               |$privilegeMatch
-               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
-               |$returnColumns, u.name AS user
-               |UNION
-               |MATCH (u:User) WHERE u.name = $$`$userNameKey`
-               |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
-               |$privilegeMatch
-               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
-               |$returnColumns, u.name AS user
-               |$orderBy
-          """.stripMargin
-          )
+          (userNameKey, userNameValue, userNameConverter, makeUserPrivilegesQuery(userNameKey))
         case ShowUserPrivileges(None) =>
           ("grantee", Values.NO_VALUE, IdentityConverter, // will generate correct parameter name later and don't want to risk clash
-            s"""
-               |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$`$currentUserKey` WITH r, u
-               |$privilegeMatch
-               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
-               |$returnColumns, u.name AS user
-               |UNION
-               |MATCH (u:User) WHERE u.name = $$`$currentUserKey`
-               |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
-               |$privilegeMatch
-               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
-               |$returnColumns, u.name AS user
-               |$orderBy
-          """.stripMargin
+            makeUserPrivilegesQuery(currentUserKey)
           )
         case ShowAllPrivileges() => ("grantee", Values.NO_VALUE, IdentityConverter,
           s"""
              |OPTIONAL MATCH (r:Role) WITH r
              |$privilegeMatch
              |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
-             |$returnColumns
-             |$orderBy
+             |$projection
+             |$filtering
+             |$returnClause
           """.stripMargin
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")

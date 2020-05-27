@@ -5,6 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER
@@ -49,6 +50,22 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toSet should be(defaultRoles)
+  }
+
+  test("should show all default roles with yield") {
+    // WHEN
+    val result = execute("SHOW ALL ROLES YIELD role")
+
+    // THEN
+    result.toSet should be(defaultRoles)
+  }
+
+  test("should show all default roles with where") {
+    // WHEN
+    val result = execute(s"SHOW ALL ROLES WHERE role='${PredefinedRoles.PUBLIC}'")
+
+    // THEN
+    result.toSet should be(Set(public))
   }
 
   test("should show populated default roles") {
@@ -98,6 +115,33 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRolesWithUsers)
   }
 
+  test("should show all default roles with users with yield") {
+    // WHEN
+    val result = execute("SHOW ALL ROLES WITH USERS YIELD member ")
+
+    // THEN
+    val justMembers = defaultRolesWithUsers.toList.map(_.filterKeys(_ == "member"))
+    result.toList should contain theSameElementsAs justMembers
+  }
+
+  test("should show all default roles with users with order by") {
+    // WHEN
+    val result = execute("SHOW ALL ROLES WITH USERS YIELD role, member ORDER BY role")
+
+    // THEN
+    val sortedByRole = defaultRolesWithUsers.toList.sortBy(_.apply("role").asInstanceOf[String])
+    result.toList should be(sortedByRole)
+  }
+
+  test("should show all default roles with users with order by limit / skip ") {
+    // WHEN
+    // Order should be PUBLIC, admin, architect, editor, publisher, reader
+    val result = execute("SHOW ALL ROLES WITH USERS YIELD role, member ORDER BY role SKIP 1 LIMIT 2")
+
+    // THEN
+    result.toList should be(List(Map("role" -> "admin", "member" -> "neo4j"), Map("role" -> "architect", "member" -> null)))
+  }
+
   test("should show populated roles with users") {
     // GIVEN
     execute("CREATE ROLE foo")
@@ -126,6 +170,91 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       role("foo").member("Bar").map,
       role("foo").member("Baz").map,
     ) ++ publicRole("neo4j", "Bar", "Baz"))
+  }
+
+  test("should not show role with invalid yield") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES YIELD foo, bar, baz")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 22 (offset: 21))")
+
+  }
+
+  test("should not show role with invalid where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW POPULATED ROLES WHERE foo = 'bar'")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 28 (offset: 27))")
+  }
+
+  test("should not show role with yield and invalid where") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES YIELD role WHERE foo = 'bar'")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 33 (offset: 32))")
+  }
+
+  test("should not show role with yield and invalid skip") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW POPULATED ROLES YIELD role ORDER BY role SKIP -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 52 (offset: 51))")
+  }
+
+  test("should not show role with yield and invalid limit") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES YIELD role ORDER BY role LIMIT -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 47 (offset: 46))")
+  }
+
+  test("should not show role with invalid order by") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES YIELD role ORDER BY bar")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `bar` not defined")
+    exception.getMessage should include("(line 1, column 36 (offset: 35))")
   }
 
   // Tests for creating roles

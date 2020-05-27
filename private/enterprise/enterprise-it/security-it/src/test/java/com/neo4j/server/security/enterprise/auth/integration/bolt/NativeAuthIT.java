@@ -172,6 +172,12 @@ public class NativeAuthIT
                 assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 6 ) );
                 List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(prop1)" ) ).collect( Collectors.toList() );
                 assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
+
+                List<Record> filteredRecords = session.run( "SHOW ROLE custom PRIVILEGES YIELD resource" ).list();
+                assertThat( "Should have the right number of underlying privileges", filteredRecords.size(), equalTo( 6 ) );
+                List<Record> filteredGrants =
+                        filteredRecords.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(prop1)" ) ).collect( Collectors.toList() );
+                assertThat( "Should have read access to nodes on all databases", filteredGrants.size(), equalTo( 1 ) );
             }
         }
 

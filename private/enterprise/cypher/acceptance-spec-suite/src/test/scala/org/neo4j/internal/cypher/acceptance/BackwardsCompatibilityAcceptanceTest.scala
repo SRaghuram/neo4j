@@ -849,5 +849,96 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     // THEN
     executeSingle("SHOW ROLE role PRIVILEGES").toList should not be (List.empty)
   }
+
+  // Extended show privileges should not work in 3.5 or 4.0
+  test("SHOW PRIVILEGES YIELD / WHERE is not supported in 3.5") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 SHOW PRIVILEGES YIELD role WHERE role='PUBLIC'")
+    }
+    // THEN
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 SHOW PRIVILEGES YIELD role WHERE role='PUBLIC'")
+    }
+    // THEN
+    exception_40.getMessage should include("Extended show commands are not supported in this Cypher version.")
+  }
+
+  // Extended show users should not work in 3.5 or 4.0
+  test("SHOW USERS YIELD / WHERE is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 SHOW USERS YIELD user WHERE user='neo4j'")
+    }
+    // THEN
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 SHOW USERS YIELD user WHERE user='neo4j'")
+    }
+    // THEN
+    exception_40.getMessage should include("Extended show commands are not supported in this Cypher version.")
+  }
+
+  // Extended show privileges should not work in 3.5 or 4.0
+  test("SHOW DATABASES YIELD / WHERE is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN 3.5
+    (the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 SHOW DATABASES YIELD name WHERE name='neo4j'")
+    }).getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    (the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 SHOW DATABASE db YIELD name WHERE name='neo4j'")
+    }).getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    (the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 SHOW DEFAULT DATABASE YIELD name WHERE name='neo4j'")
+    }).getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+
+    // WHEN 4.0
+    (the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 SHOW DATABASES YIELD name WHERE name='neo4j'")
+    }).getMessage should include("Extended show commands are not supported in this Cypher version.")
+    (the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 SHOW DATABASE db YIELD name WHERE name='neo4j'")
+    }).getMessage should include("Extended show commands are not supported in this Cypher version.")
+    (the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 SHOW DEFAULT DATABASE YIELD name WHERE name='neo4j'")
+    }).getMessage should include("Extended show commands are not supported in this Cypher version.")
+  }
+
+  // Extended show roles should not work in 3.5 or 4.0
+  test("SHOW ROLES YIELD / WHERE is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 SHOW ROLES YIELD role WHERE role='PUBLIC'")
+    }
+    // THEN
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 SHOW ROLES YIELD role WHERE role='PUBLIC'")
+    }
+    // THEN
+    exception_40.getMessage should include("Extended show commands are not supported in this Cypher version.")
+  }
 }
 
