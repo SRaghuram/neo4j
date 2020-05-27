@@ -39,8 +39,6 @@ public class Neo4jConfigBuilder
                 .withSetting( OnlineBackupSettings.online_backup_enabled, FALSE )
                 .withSetting( GraphDatabaseSettings.fail_on_missing_files, FALSE )
                 .withSetting( HttpConnector.enabled, FALSE )
-                .withSetting( HttpConnector.enabled, FALSE )
-                .withSetting( OnlineBackupSettings.online_backup_enabled, FALSE )
                 .withSetting( GraphDatabaseSettings.log_queries, FALSE )
                 .withSetting( ServerSettings.http_logging_enabled, FALSE )
                 .withSetting( GraphDatabaseSettings.strict_config_validation, TRUE );
