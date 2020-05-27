@@ -11,9 +11,9 @@
       }
     },
     {
-      "name": "Read 14 -- Sub Query",
-      "description": "Read 14, modified with correlated sub-queries",
-      "queryFile": "queries/query_14_subquery.cypher",
+      "name": "Read 14 -- Old",
+      "description": "Read 14, the old version, without correlated sub-queries",
+      "queryFile": "queries/query_14_old.cypher",
       "parameters": {
         "file": "parameters/query_14.txt"
       }
