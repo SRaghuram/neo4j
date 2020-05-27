@@ -55,7 +55,7 @@ public class DumpFrekiStore
             var stats = args.getBoolean( "stats", false );
             if ( stats )
             {
-                analysis.dumpStats();
+                analysis.dumpStoreStats();
             }
         }
     }

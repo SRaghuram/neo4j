@@ -19,7 +19,9 @@
  */
 package org.neo4j.internal.freki;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
@@ -43,14 +46,22 @@ import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.token.api.NamedToken;
 
+import static java.lang.String.format;
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.FLAG_LABELS;
 import static org.neo4j.internal.freki.Header.OFFSET_DEGREES;
 import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
+import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
+import static org.neo4j.internal.freki.MutableNodeData.buildRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
+import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.readRecordPointers;
 import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordSize;
@@ -64,13 +75,14 @@ import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIP
 public class FrekiAnalysis extends Life implements AutoCloseable
 {
     private final MainStores stores;
+    private final PrintStream out;
     private final FrekiCursorFactory cursorFactory;
 
     public FrekiAnalysis( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
         this( new Stores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL, immediate(), false,
                         new StandardConstraintRuleAccessor(), i -> i, EmptyMemoryTracker.INSTANCE ), true,
-                stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
+                stores -> new FrekiCursorFactory( stores, NO_TRACING ), System.out );
     }
 
     public FrekiAnalysis( MainStores stores )
@@ -80,12 +92,13 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public FrekiAnalysis( MainStores stores, FrekiCursorFactory cursorFactory )
     {
-        this( stores, false, s -> cursorFactory );
+        this( stores, false, s -> cursorFactory, System.out );
     }
 
-    FrekiAnalysis( MainStores stores, boolean manageStoreLifeToo, Function<MainStores,FrekiCursorFactory> cursorFactory )
+    FrekiAnalysis( MainStores stores, boolean manageStoreLifeToo, Function<MainStores,FrekiCursorFactory> cursorFactory, PrintStream out )
     {
         this.stores = stores;
+        this.out = out;
         this.cursorFactory = cursorFactory.apply( stores );
         if ( manageStoreLifeToo )
         {
@@ -102,13 +115,13 @@ public class FrekiAnalysis extends Life implements AutoCloseable
             cursor.single( relId );
             if ( cursor.next() )
             {
-                System.out.printf( "%d -[%d]-> %d %n", cursor.sourceNodeReference(), cursor.type(), cursor.targetNodeReference() );
+                out.printf( "%d -[%d]-> %d %n", cursor.sourceNodeReference(), cursor.type(), cursor.targetNodeReference() );
                 cursor.properties( propertyCursor );
                 dumpProperties( propertyCursor );
             }
             else
             {
-                System.out.println( "Not found" );
+                out.println( "Not found" );
             }
         }
     }
@@ -136,7 +149,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    private void dumpAllNodes()
+    void dumpAllNodes()
     {
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL  );
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
@@ -150,7 +163,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    public void dumpNodes( long... nodeIds )
+    void dumpNodes( long... nodeIds )
     {
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL  );
                 var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
@@ -163,7 +176,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    public void dumpNodeRange( long fromNodeId, long toNodeId )
+    void dumpNodeRange( long fromNodeId, long toNodeId )
     {
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL  );
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
@@ -176,23 +189,23 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    public void dumpNode( long nodeId, FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor, FrekiRelationshipTraversalCursor relationshipCursor )
+    void dumpNode( long nodeId, FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor, FrekiRelationshipTraversalCursor relationshipCursor )
     {
         nodeCursor.single( nodeId );
         if ( !nodeCursor.next() )
         {
-            System.out.println( "Node " + nodeId + " not in use" );
+            out.println( "Node " + nodeId + " not in use" );
             return;
         }
         dumpNode( nodeCursor, propertyCursor, relationshipCursor );
     }
 
-    private void dumpNode( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor, FrekiRelationshipTraversalCursor relationshipCursor )
+    void dumpNode( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor, FrekiRelationshipTraversalCursor relationshipCursor )
     {
         dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
 
         // More physical
-        System.out.println( nodeCursor.toString() );
+        out.println( nodeCursor.toString() );
         printRawRecordContents( nodeCursor.data.records[0], 0 );
         if ( nodeCursor.data.xLChainStartPointer != NULL )
         {
@@ -210,44 +223,87 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    private void printRawRecordContents( Record record, long nodeId )
+    // e.g. X1(12):L -> X8(19):R -> X4(243):P -> DENSE
+    public void dumpPhysicalPartsLayout( long nodeId )
     {
-        System.out.println( record );
-        MutableNodeData data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, PageCursorTracer.NULL );
-        data.deserialize( record );
-        System.out.println( "  " + data );
+        StringBuilder builder = new StringBuilder();
+        Header header = new Header();
+        long pointer = buildRecordPointer( 0, nodeId );
+        while ( pointer != NULL )
+        {
+            Record record = loadRecord( idFromRecordPointer( pointer ), sizeExponentialFromRecordPointer( pointer ) );
+            appendPhysicalPartsLayout( builder, header, record );
+            pointer = header.hasMark( OFFSET_RECORD_POINTER ) ?
+                      forwardPointer( readRecordPointers( record.data( header.getOffset( OFFSET_RECORD_POINTER ) ) ), record.sizeExp() > 0 ) : NULL;
+            builder.append( pointer != NULL ? " -> " : "" );
+        }
+        builder.append( header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) ? " -> DENSE" : "" );
+        out.println( builder );
     }
 
-    public void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
+    private void appendPhysicalPartsLayout( StringBuilder builder, Header header, Record record )
+    {
+        builder.append( format( "X%d(%d):", recordXFactor( record.sizeExp() ), record.id ) );
+        header.deserialize( record.data( 0 ) );
+        appendPhysicalPart( builder, header, FLAG_LABELS, 'L' );
+        appendPhysicalPart( builder, header, OFFSET_PROPERTIES, 'P' );
+        appendPhysicalPart( builder, header, OFFSET_RELATIONSHIPS, 'R' );
+        appendPhysicalPart( builder, header, OFFSET_DEGREES, 'D' );
+    }
+
+    private void appendPhysicalPart( StringBuilder builder, Header header, int slot, char part )
+    {
+        if ( header.hasMark( slot ) )
+        {
+            builder.append( part );
+        }
+    }
+
+    void printRawRecordContents( Record record, long nodeId )
+    {
+        out.println( record );
+        MutableNodeData data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, PageCursorTracer.NULL );
+        data.deserialize( record );
+        out.println( "  " + data );
+    }
+
+    void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
             FrekiRelationshipTraversalCursor relationshipCursor )
     {
         var nodeId = nodeCursor.entityReference();
-        System.out.printf( "Node[%d] %s%n", nodeId, nodeCursor );
-        System.out.printf( "  labels:%s%n", Arrays.toString( nodeCursor.labels() ) );
+        out.printf( "Node[%d] %s%n", nodeId, nodeCursor );
+        out.printf( "  labels:%s%n", Arrays.toString( nodeCursor.labels() ) );
 
         nodeCursor.properties( propertyCursor );
         dumpProperties( propertyCursor );
 
-        System.out.println( "  relationships..." );
+        out.println( "  relationships..." );
         nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
         while ( relationshipCursor.next() )
         {
             var direction = relationshipCursor.sourceNodeReference() == relationshipCursor.targetNodeReference() ? LOOP :
                             relationshipCursor.sourceNodeReference() == nodeId ? OUTGOING : INCOMING;
-            System.out.printf( "  (%d)%s[:%d,%d]%s(%d)%n", relationshipCursor.originNodeReference(),
+            out.printf( "  (%d)%s[:%d,%d]%s(%d)%n", relationshipCursor.originNodeReference(),
                     direction == LOOP ? "--" : direction == OUTGOING ? "--" : "<-", relationshipCursor.type(),
                     relationshipCursor.entityReference(),
                     direction == LOOP ? "--" : direction == OUTGOING ? "->" : "--", relationshipCursor.neighbourNodeReference() );
         }
     }
 
-    private void dumpProperties( FrekiPropertyCursor propertyCursor )
+    void dumpProperties( FrekiPropertyCursor propertyCursor )
     {
-        System.out.println( "  properties..." );
+        out.println( "  properties..." );
         while ( propertyCursor.next() )
         {
-            System.out.printf( "  %d=%s%n", propertyCursor.propertyKey(), propertyCursor.propertyValue() );
+            out.printf( "  %d=%s%n", propertyCursor.propertyKey(), propertyCursor.propertyValue() );
         }
+    }
+
+    public boolean nodeIsDense( long nodeId )
+    {
+        Header header = new Header();
+        header.deserialize( loadRecord( nodeId, 0 ).data( 0 ) );
+        return header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS );
     }
 
     /**
@@ -271,7 +327,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         dumpRecord( id, sizeExp );
     }
 
-    public void dumpRecord( long id, int sizeExp )
+    void dumpRecord( long id, int sizeExp )
     {
         dumpRecord( loadRecord( id, sizeExp ) );
     }
@@ -287,18 +343,18 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    public void dumpRecord( Record record )
+    void dumpRecord( Record record )
     {
-        System.out.println( record );
+        out.println( record );
         MutableNodeData data = new MutableNodeData( -1, stores.bigPropertyValueStore, PageCursorTracer.NULL );
         data.deserialize( record );
-        System.out.println( data );
+        out.println( data );
     }
 
-    public void dumpStats()
+    public void dumpStoreStats()
     {
         // Sparse store stats
-        System.out.println( "Calculating main store stats ..." );
+        out.println( "Calculating main store stats ..." );
         var storeStats = gatherStoreStats();
         var totalNumDenseNodes = of( storeStats ).mapToLong( s -> s.numDenseNodes ).sum();
         printPercents( "  Record sizes distribution", storeStats, ( stats, stat ) ->
@@ -309,7 +365,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                     : stat.usedRecords;
             return (double) numRecords / stats[0].usedRecords;
         }, true );
-        System.out.printf( "   (DE: %.2f%%)%n", percent( totalNumDenseNodes, storeStats[0].usedRecords ) );
+        out.printf( "   (DE: %.2f%%)%n", percent( totalNumDenseNodes, storeStats[0].usedRecords ) );
         printPercents( "  Record chains distribution", storeStats, ( stats, stat ) ->
         {
             long numChainRecords = stream( stats ).mapToLong( s -> s.chainRecords ).sum();
@@ -324,25 +380,25 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         var totalPossibleOccupied = of( storeStats ).mapToLong( s -> s.usedRecords * recordSize( s.sizeExp ) ).sum();
         var total = of( storeStats ).mapToLong( s -> (s.usedRecords + s.unusedRecords) * recordSize( s.sizeExp ) ).sum();
 
-        System.out.printf( "  Total occupied/vacant bytes in used records %s/%s (%.2f%%/%.2f%%)%n",
+        out.printf( "  Total occupied/vacant bytes in used records %s/%s (%.2f%%/%.2f%%)%n",
                 bytesToString( totalOccupied ), bytesToString( totalVacantInUsedRecords ),
                 percent( totalOccupied, totalPossibleOccupied ), percent( totalVacantInUsedRecords, totalPossibleOccupied ) );
-        System.out.printf( "  Total occupied/vacant bytes %s/%s (%.2f%%/%.2f%%)%n",
+        out.printf( "  Total occupied/vacant bytes %s/%s (%.2f%%/%.2f%%)%n",
                 bytesToString( totalOccupied ), bytesToString( totalVacant ),
                 percent( totalOccupied, total ), percent( totalVacant, total ) );
 
         // Dense store stats
-        System.out.println();
-        System.out.println( "Calculating dense store stats ..." );
+        out.println();
+        out.println( "Calculating dense store stats ..." );
         DenseRelationshipStore.Stats denseStats = stores.denseStore.gatherStats( PageCursorTracer.NULL );
-        System.out.printf( "  Total dense store file size: %s%n", bytesToString( denseStats.totalTreeByteSize() ) );
-        System.out.printf( "  Effective dense store data size: %s%n", bytesToString( denseStats.effectiveByteSize() ) );
-        System.out.printf( "  Number of dense nodes: %d%n", denseStats.numberOfNodes() );
-        System.out.printf( "  Avg number of relationships per dense node: %.2f%n", (double) denseStats.numberOfRelationships() / denseStats.numberOfNodes() );
-        System.out.printf( "  Avg effective size per dense node: %.2f%n", (double) denseStats.effectiveByteSize() / denseStats.numberOfNodes() );
-        System.out.printf( "  Avg effective size per relationship: %.2f%n",
+        out.printf( "  Total dense store file size: %s%n", bytesToString( denseStats.totalTreeByteSize() ) );
+        out.printf( "  Effective dense store data size: %s%n", bytesToString( denseStats.effectiveByteSize() ) );
+        out.printf( "  Number of dense nodes: %d%n", denseStats.numberOfNodes() );
+        out.printf( "  Avg number of relationships per dense node: %.2f%n", (double) denseStats.numberOfRelationships() / denseStats.numberOfNodes() );
+        out.printf( "  Avg effective size per dense node: %.2f%n", (double) denseStats.effectiveByteSize() / denseStats.numberOfNodes() );
+        out.printf( "  Avg effective size per relationship: %.2f%n",
                 (double) denseStats.effectiveRelationshipsByteSize() / denseStats.numberOfRelationships() );
-        System.out.printf( "  Avg total size per dense node: %.2f%n", (double) denseStats.totalTreeByteSize() / denseStats.numberOfNodes() );
+        out.printf( "  Avg total size per dense node: %.2f%n", (double) denseStats.totalTreeByteSize() / denseStats.numberOfNodes() );
 
         // - TODO Number of big values
         // - TODO Avg size of big value
@@ -355,7 +411,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     private void printPercents( String title, StoreStats[] stats, BiFunction<StoreStats[],StoreStats,Double> calculator, boolean includeCumulative )
     {
-        System.out.println( title + ":" );
+        out.println( title + ":" );
         double cumulativePercent = 0;
         String format = "    x%d: %.2f%%" + (includeCumulative ? " = %.2f" : "") + "%n";
         for ( StoreStats stat : stats )
@@ -365,11 +421,11 @@ public class FrekiAnalysis extends Life implements AutoCloseable
             Object[] args = includeCumulative
                             ? new Object[]{recordXFactor( stat.sizeExp ), percent, cumulativePercent}
                             : new Object[]{recordXFactor( stat.sizeExp ), percent};
-            System.out.printf( format, args );
+            out.printf( format, args );
         }
     }
 
-    public StoreStats[] gatherStoreStats()
+    private StoreStats[] gatherStoreStats()
     {
         Collection<Callable<StoreStats>> storeDistributionTasks = new ArrayList<>();
         for ( var i = 0; i < stores.getNumMainStores(); i++ )
@@ -475,17 +531,31 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
         else
         {
-            System.out.println( "Please instantiate FrekiAnalysis with a full Stores to get this feature" );
+            out.println( "Please instantiate FrekiAnalysis with a full Stores to get this feature" );
         }
     }
 
-    public void dumpTokens( GBPTreeTokenStore tokenStore, String name ) throws IOException
+    void dumpTokens( GBPTreeTokenStore tokenStore, String name ) throws IOException
     {
-        System.out.println( name );
+        out.println( name );
         for ( NamedToken token : tokenStore.loadTokens( PageCursorTracer.NULL ) )
         {
-            System.out.println( "  " + token.id() + ": " + token.name() );
+            out.println( "  " + token.id() + ": " + token.name() );
         }
+    }
+
+    FrekiAnalysis forOutput( PrintStream out )
+    {
+        return new FrekiAnalysis( stores, false, stores -> cursorFactory, out );
+    }
+
+    public String captureOutput( Consumer<FrekiAnalysis> action )
+    {
+        ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+        PrintStream capturedOut = new PrintStream( byteArrayOut );
+        action.accept( forOutput( capturedOut ) );
+        capturedOut.close();
+        return byteArrayOut.toString();
     }
 
     @Override
