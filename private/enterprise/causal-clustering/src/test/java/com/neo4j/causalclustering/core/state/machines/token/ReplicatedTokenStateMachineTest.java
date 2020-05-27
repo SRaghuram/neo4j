@@ -188,7 +188,9 @@ public class ReplicatedTokenStateMachineTest
     private static List<StorageCommand> tokenCommands( int expectedTokenId, boolean internal )
     {
         LabelTokenRecord record = new LabelTokenRecord( expectedTokenId ).initialize( true, 7 );
-        record.addNameRecord( DynamicRecord.dynamicRecord( 7, true, true, -1, PropertyType.STRING.intValue(), "Person".getBytes( StandardCharsets.UTF_8 ) ) );
+        DynamicRecord dynamicRecord = new DynamicRecord( 7 ).initialize( true, true, -1, PropertyType.STRING.intValue() );
+        dynamicRecord.setData( "Person".getBytes( StandardCharsets.UTF_8 )  );
+        record.addNameRecord( dynamicRecord );
         record.setInternal( internal );
         return singletonList( new Command.LabelTokenCommand(
                 new LabelTokenRecord( expectedTokenId ), record

@@ -83,27 +83,27 @@ class CheckTxLogsTest
 
         writeTxContent( log, 1,
                 new Command.NodeCommand(
-                        new NodeRecord( 42, false, false, -1, -1, 1 ),
-                        new NodeRecord( 42, true, false, 42, -1, 1 )
+                        nodeRecord( 42, false, false, -1, -1, 1 ),
+                        nodeRecord( 42, true, false, 42, -1, 1 )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 1, true, true, 2, -1, 1 ),
-                        new NodeRecord( 1, true, false, -1, -1, 1 )
+                        nodeRecord( 1, true, true, 2, -1, 1 ),
+                        nodeRecord( 1, true, false, -1, -1, 1 )
                 )
         );
 
         writeTxContent( log, 2,
                 new Command.NodeCommand(
-                        new NodeRecord( 2, false, false, -1, -1, 1 ),
-                        new NodeRecord( 2, true, false, -1, -1, 1 )
+                        nodeRecord( 2, false, false, -1, -1, 1 ),
+                        nodeRecord( 2, true, false, -1, -1, 1 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 42, true, false, 42, -1, 1 ),
-                        new NodeRecord( 42, true, false, 24, 5, 1 )
+                        nodeRecord( 42, true, false, 42, -1, 1 ),
+                        nodeRecord( 42, true, false, 24, 5, 1 )
                 )
         );
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
@@ -133,27 +133,27 @@ class CheckTxLogsTest
 
         writeTxContent( log, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 42, false, false, -1, -1, 1 ),
-                        new NodeRecord( 42, true, false, 42, -1, 1 )
+                        nodeRecord( 42, false, false, -1, -1, 1 ),
+                        nodeRecord( 42, true, false, 42, -1, 1 )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 1, true, true, 2, -1, 1 ),
-                        new NodeRecord( 1, true, false, -1, -1, 1 )
+                        nodeRecord( 1, true, true, 2, -1, 1 ),
+                        nodeRecord( 1, true, false, -1, -1, 1 )
                 )
         );
 
         writeTxContent( log, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 2, false, false, -1, -1, 1 ),
-                        new NodeRecord( 2, true, false, -1, -1, 1 )
+                        nodeRecord( 2, false, false, -1, -1, 1 ),
+                        nodeRecord( 2, true, false, -1, -1, 1 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 42, true, false, 24, -1, 1 ),
-                        new NodeRecord( 42, true, false, 24, 5, 1 )
+                        nodeRecord( 42, true, false, 24, -1, 1 ),
+                        nodeRecord( 42, true, false, 24, 5, 1 )
                 )
         );
 
@@ -184,40 +184,40 @@ class CheckTxLogsTest
 
         writeTxContent( log, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 42, false, false, -1, -1, 1 ),
-                        new NodeRecord( 42, true, false, 42, -1, 1 )
+                        nodeRecord( 42, false, false, -1, -1, 1 ),
+                        nodeRecord( 42, true, false, 42, -1, 1 )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 1, true, true, 2, -1, 1 ),
-                        new NodeRecord( 1, true, false, -1, -1, 1 )
+                        nodeRecord( 1, true, true, 2, -1, 1 ),
+                        nodeRecord( 1, true, false, -1, -1, 1 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 5, true, true, 2, -1, 1 ),
-                        new NodeRecord( 5, true, false, -1, -1, 1 )
+                        nodeRecord( 5, true, true, 2, -1, 1 ),
+                        nodeRecord( 5, true, false, -1, -1, 1 )
                 )
 
         );
 
         writeTxContent( log, 1,
                 new Command.NodeCommand(
-                        new NodeRecord( 2, false, false, -1, -1, 1 ),
-                        new NodeRecord( 2, true, false, -1, -1, 1 )
+                        nodeRecord( 2, false, false, -1, -1, 1 ),
+                        nodeRecord( 2, true, false, -1, -1, 1 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 5, true, true, 2, -1, 1 ), // inconsistent
-                        new NodeRecord( 5, true, false, -1, -1, 1 )
+                        nodeRecord( 5, true, true, 2, -1, 1 ), // inconsistent
+                        nodeRecord( 5, true, false, -1, -1, 1 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 1, true, false, -1, -1, 1 ),
-                        new NodeRecord( 1, true, true, 2, 1, 1 )
+                        nodeRecord( 1, true, false, -1, -1, 1 ),
+                        nodeRecord( 1, true, true, 2, 1, 1 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 42, true, false, 24, -1, 1 ), // inconsistent
-                        new NodeRecord( 42, true, false, 24, 5, 1 )
+                        nodeRecord( 42, true, false, 24, -1, 1 ), // inconsistent
+                        nodeRecord( 42, true, false, 24, 5, 1 )
                 )
         );
 
@@ -247,34 +247,34 @@ class CheckTxLogsTest
 
         writeTxContent( log1, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 42, false, false, -1, -1, 1 ),
-                        new NodeRecord( 42, true, false, 42, -1, 1 )
+                        nodeRecord( 42, false, false, -1, -1, 1 ),
+                        nodeRecord( 42, true, false, 42, -1, 1 )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, true, -1, -1, 777 ),
                         propertyRecord( 5, true, -1, -1, 777, 888 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 1, true, true, 2, -1, 1 ),
-                        new NodeRecord( 1, true, false, -1, -1, 1 )
+                        nodeRecord( 1, true, true, 2, -1, 1 ),
+                        nodeRecord( 1, true, false, -1, -1, 1 )
                 )
         );
 
         writeTxContent( log2, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 2, false, false, -1, -1, 1 ),
-                        new NodeRecord( 2, true, false, -1, -1, 1 )
+                        nodeRecord( 2, false, false, -1, -1, 1 ),
+                        nodeRecord( 2, true, false, -1, -1, 1 )
                 )
         );
 
         writeTxContent( log3, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 42, true, true, 42, -1, 1 ),
-                        new NodeRecord( 42, true, true, 42, 10, 1 )
+                        nodeRecord( 42, true, true, 42, -1, 1 ),
+                        nodeRecord( 42, true, true, 42, 10, 1 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 2, true, false, -1, -1, 5 ),
-                        new NodeRecord( 2, false, false, -1, -1, 5 )
+                        nodeRecord( 2, true, false, -1, -1, 5 ),
+                        nodeRecord( 2, false, false, -1, -1, 5 )
                 )
         );
 
@@ -324,8 +324,8 @@ class CheckTxLogsTest
 
         writeTxContent( log, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 2, false, false, -1, -1, 1 ),
-                        new NodeRecord( 2, true, false, -1, -1, 1 )
+                        nodeRecord( 2, false, false, -1, -1, 1 ),
+                        nodeRecord( 2, true, false, -1, -1, 1 )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 42, true, -1, -1, 10 ),
@@ -362,16 +362,16 @@ class CheckTxLogsTest
 
         writeTxContent( log1, 0,
                 new Command.NodeCommand(
-                        new NodeRecord( 42, false, false, -1, -1, 1 ),
-                        new NodeRecord( 42, true, false, 42, -1, 1 )
+                        nodeRecord( 42, false, false, -1, -1, 1 ),
+                        nodeRecord( 42, true, false, 42, -1, 1 )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, true, -1, -1, 777 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 1, true, true, 2, -1, 1 ),
-                        new NodeRecord( 1, true, false, -1, -1, 1 )
+                        nodeRecord( 1, true, true, 2, -1, 1 ),
+                        nodeRecord( 1, true, false, -1, -1, 1 )
                 )
         );
 
@@ -388,8 +388,8 @@ class CheckTxLogsTest
                         propertyRecord( 24, true, -1, -1, 777 )
                 ),
                 new Command.NodeCommand(
-                        new NodeRecord( 42, true, true, 42, -1, 1 ),
-                        new NodeRecord( 42, true, true, 42, 10, 1 )
+                        nodeRecord( 42, true, true, 42, -1, 1 ),
+                        nodeRecord( 42, true, true, 42, 10, 1 )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, true, -1, -1, 777, 888 ),
@@ -558,27 +558,27 @@ class CheckTxLogsTest
 
         writeTxContent( log, 0,
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 42, -1, -1, -1, -1, -1, -1, false ),
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
+                        relationshipGroupRecord( 42, -1, -1, -1, -1, -1, -1, false ),
+                        relationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 21, 1, 2, 3, 4, 5, 7, true ),
-                        new RelationshipGroupRecord( 21, -1, -1, -1, -1, -1, -1, false )
+                        relationshipGroupRecord( 21, 1, 2, 3, 4, 5, 7, true ),
+                        relationshipGroupRecord( 21, -1, -1, -1, -1, -1, -1, false )
                 )
         );
 
         writeTxContent( log, 0,
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 53, 1, 2, 3, 4, 5, 6, true ),
-                        new RelationshipGroupRecord( 53, 1, 2, 30, 4, 14, 6, true )
+                        relationshipGroupRecord( 53, 1, 2, 3, 4, 5, 6, true ),
+                        relationshipGroupRecord( 53, 1, 2, 30, 4, 14, 6, true )
                 ),
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 9, 5, 6, true ),
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
+                        relationshipGroupRecord( 42, 1, 2, 3, 9, 5, 6, true ),
+                        relationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
                 )
         );
 
@@ -612,34 +612,34 @@ class CheckTxLogsTest
 
         writeTxContent( log1, 0,
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 42, -1, -1, -1, -1, -1, -1, false ),
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
+                        relationshipGroupRecord( 42, -1, -1, -1, -1, -1, -1, false ),
+                        relationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 21, 1, 2, 3, 4, 5, 6, true ),
-                        new RelationshipGroupRecord( 21, -1, -1, -1, -1, -1, -1, false )
+                        relationshipGroupRecord( 21, 1, 2, 3, 4, 5, 6, true ),
+                        relationshipGroupRecord( 21, -1, -1, -1, -1, -1, -1, false )
                 )
         );
 
         writeTxContent( log2, 0,
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 9, 5, 6, true ),
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
+                        relationshipGroupRecord( 42, 1, 2, 3, 9, 5, 6, true ),
+                        relationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, true )
                 )
         );
 
         writeTxContent( log3, 0,
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 53, 1, 2, 3, 4, 5, 6, true ),
-                        new RelationshipGroupRecord( 53, 1, 2, 30, 4, 14, 6, true )
+                        relationshipGroupRecord( 53, 1, 2, 3, 4, 5, 6, true ),
+                        relationshipGroupRecord( 53, 1, 2, 30, 4, 14, 6, true )
                 ),
                 new Command.RelationshipGroupCommand(
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, false ),
-                        new RelationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, false )
+                        relationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, false ),
+                        relationshipGroupRecord( 42, 1, 2, 3, 4, 5, 6, false )
                 )
         );
 
@@ -738,8 +738,8 @@ class CheckTxLogsTest
     {
         // given
         LongFunction<Command.NodeCommand> newNodeCommandFunction =
-                i -> new Command.NodeCommand( new NodeRecord( i, false, false, -1, -1, -1 ),
-                        new NodeRecord( i, true, false, -1, -1, -1 ) );
+                i -> new Command.NodeCommand( nodeRecord( i, false, false, -1, -1, -1 ),
+                        nodeRecord( i, true, false, -1, -1, -1 ) );
         writeTxContent( logFile( 1 ), 40L, newNodeCommandFunction.apply( 1L ) );
         writeTxContent( logFile( 1 ), 41L, newNodeCommandFunction.apply( 2L ) );
         writeTxContent( logFile( 1 ), 42L, newNodeCommandFunction.apply( 3L ) );
@@ -763,8 +763,8 @@ class CheckTxLogsTest
     {
         // given
         LongFunction<Command.NodeCommand> newNodeCommandFunction =
-                i -> new Command.NodeCommand( new NodeRecord( i, false, false, -1, -1, -1 ),
-                        new NodeRecord( i, true, false, -1, -1, -1 ) );
+                i -> new Command.NodeCommand( nodeRecord( i, false, false, -1, -1, -1 ),
+                        nodeRecord( i, true, false, -1, -1, -1 ) );
         writeTxContent( logFile( 1 ), 40L, newNodeCommandFunction.apply( 1L ) );
         writeTxContent( logFile( 1 ), 41L, newNodeCommandFunction.apply( 2L ) );
         writeTxContent( logFile( 1 ), 42L, newNodeCommandFunction.apply( 3L ) );
@@ -789,8 +789,8 @@ class CheckTxLogsTest
         // given
 
         LongFunction<Command.NodeCommand> newNodeCommandFunction =
-                i -> new Command.NodeCommand( new NodeRecord( i, false, false, -1, -1, -1 ),
-                        new NodeRecord( i, true, false, -1, -1, -1 ) );
+                i -> new Command.NodeCommand( nodeRecord( i, false, false, -1, -1, -1 ),
+                        nodeRecord( i, true, false, -1, -1, -1 ) );
         writeTxContent( logFile( 1 ), 40L, newNodeCommandFunction.apply( 1L ) );
         writeTxContent( logFile( 1 ), 41L, newNodeCommandFunction.apply( 2L ) );
         writeTxContent( logFile( 1 ), 42L, newNodeCommandFunction.apply( 3L ) );
@@ -839,6 +839,11 @@ class CheckTxLogsTest
         return new File( databaseLayout.databaseDirectory(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
     }
 
+    private static NodeRecord nodeRecord( long id, boolean inUse, boolean dense, long nextRel, long nextProp, long labels )
+    {
+        return new NodeRecord( id ).initialize( inUse, nextProp, dense, nextRel, labels );
+    }
+
     private static PropertyRecord propertyRecord( long id, boolean inUse, long prevProp, long nextProp, long... blocks )
     {
         PropertyRecord record = new PropertyRecord( id );
@@ -854,6 +859,12 @@ class CheckTxLogsTest
             record.addPropertyBlock( block );
         }
         return record;
+    }
+
+    private static RelationshipGroupRecord relationshipGroupRecord( long id, int type, long firstOut, long firstIn, long firstLoop, long owningNode, long next,
+            boolean inUse )
+    {
+        return new RelationshipGroupRecord( id ).initialize( inUse, type, firstOut, firstIn, firstLoop, owningNode, next );
     }
 
     private void writeTxContent( File log, long txId, Command... commands ) throws IOException
