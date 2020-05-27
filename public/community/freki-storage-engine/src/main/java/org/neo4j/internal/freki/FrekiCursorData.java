@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
@@ -39,7 +40,9 @@ import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
  */
 class FrekiCursorData
 {
-    Record[] records;
+    private static final int RECORD_REUSE_NUM = 3;
+    Record[][] records;
+    int[] recordIndex;
     Header header = new Header();
 
     long nodeId = NULL;
@@ -64,7 +67,10 @@ class FrekiCursorData
 
     FrekiCursorData( int numMainStores )
     {
-        this.records = new Record[numMainStores];
+        this.records = new Record[numMainStores][RECORD_REUSE_NUM];
+        this.records[0] = new Record[1];
+        this.recordIndex = new int[numMainStores];
+        Arrays.fill( recordIndex, -1 );
     }
 
     void gatherDataFromX1( Record record )
@@ -175,6 +181,7 @@ class FrekiCursorData
         relationshipOffset = 0;
         relationshipTypeOffsetsOffset = 0;
         degreesIsSplit = false;
+        Arrays.fill( recordIndex, -1 );
     }
 
     @Override

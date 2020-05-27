@@ -118,17 +118,20 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     Record xRecord( int sizeExp )
     {
-        if ( data.records[sizeExp] == null )
+        if ( data.recordIndex[sizeExp] < data.records[sizeExp].length - 1 )
         {
-            data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
+            data.recordIndex[sizeExp]++;
         }
-        else if ( sizeExp > 0 && data.xLChainNextLinkPointer != data.xLChainStartPointer )
+        else
         {
-            //We cant reuse records when loading chains because we only have a one slot per sizeExp, just create a new one
-            //TODO reuse up to 2 or 3 first in chain?
-            data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
+            data.records[sizeExp][data.recordIndex[sizeExp]] = null;
         }
-        return data.records[sizeExp];
+
+        if ( data.records[sizeExp][data.recordIndex[sizeExp]] == null )
+        {
+            data.records[sizeExp][data.recordIndex[sizeExp]] = stores.mainStore( sizeExp ).newRecord();
+        }
+        return data.records[sizeExp][data.recordIndex[sizeExp]];
     }
 
     boolean loadSuperLight( long nodeId )
