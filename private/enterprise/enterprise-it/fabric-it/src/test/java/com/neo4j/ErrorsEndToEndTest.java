@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
+import static org.neo4j.kernel.api.exceptions.Status.Schema.ConstraintValidationFailed;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.ArithmeticError;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.EntityNotFound;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.ParameterMissing;
@@ -307,6 +308,25 @@ class ErrorsEndToEndTest
         assertThat( notifications.size() ).isEqualTo( 1 );
         assertThat( notifications.get( 0 ).code() ).isEqualTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" );
         assertThat( notifications.get( 0 ).description() ).startsWith( "Binding relationships" );
+    }
+
+    @Test
+    void testKernelExceptionsMapping()
+    {
+        try ( var session = clientDriver.session() )
+        {
+            session.run( "CREATE CONSTRAINT ON (book:Library) ASSERT exists(book.isbn)" );
+        }
+
+        try ( var session = clientDriver.session() )
+        {
+            var tx = session.beginTransaction();
+            tx.run( "CREATE (:Library)" );
+
+            var e = assertThrows( ClientException.class, tx::commit );
+            assertEquals( ConstraintValidationFailed.code().serialize(), e.code() );
+            assertThat( e.getMessage() ).contains( "with label `Library` must have the property `isbn`" );
+        }
     }
 
     private void verifyCleanUp()
