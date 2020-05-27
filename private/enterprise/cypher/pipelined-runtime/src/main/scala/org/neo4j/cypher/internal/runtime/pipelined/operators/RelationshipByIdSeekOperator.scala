@@ -274,11 +274,6 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
 abstract class RelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                 id: Id,
                                                 innermost: DelegateOperatorTaskTemplate,
-                                                relationshipOffset: Int,
-                                                fromOffset: Int,
-                                                toOffset: Int,
-                                                relIdExpr: Expression,
-                                                argumentSize: SlotConfiguration.Size,
                                                 codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
@@ -315,20 +310,11 @@ abstract class RelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
 abstract class SingleRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                       id: Id,
                                                       innermost: DelegateOperatorTaskTemplate,
-                                                      relationshipOffset: Int,
-                                                      fromOffset: Int,
-                                                      toOffset: Int,
                                                       relIdExpr: Expression,
-                                                      argumentSize: SlotConfiguration.Size,
                                                       codeGen: OperatorExpressionCompiler)
   extends RelationshipByIdSeekTaskTemplate(inner,
     id,
     innermost,
-    relationshipOffset,
-    fromOffset,
-    toOffset,
-    relIdExpr,
-    argumentSize,
     codeGen) {
 
   protected val idVariable: LocalVariable = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
@@ -373,8 +359,11 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
                                                      relIdExpr: Expression,
                                                      argumentSize: SlotConfiguration.Size)
                                                     (codeGen: OperatorExpressionCompiler)
-  extends SingleRelationshipByIdSeekTaskTemplate(inner, id, innermost, relationshipOffset, fromOffset, toOffset,
-    relIdExpr, argumentSize, codeGen) {
+  extends SingleRelationshipByIdSeekTaskTemplate(inner,
+    id,
+    innermost,
+    relIdExpr,
+    codeGen) {
 
 
   override def genMoreFields: Seq[Field] = Seq(cursor)
@@ -414,8 +403,11 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
                                                        relIdExpr: Expression,
                                                        argumentSize: SlotConfiguration.Size)
                                                       (codeGen: OperatorExpressionCompiler)
-  extends SingleRelationshipByIdSeekTaskTemplate(inner, id, innermost, relationshipOffset, fromOffset, toOffset,
-    relIdExpr, argumentSize, codeGen) {
+  extends SingleRelationshipByIdSeekTaskTemplate(inner,
+    id,
+    innermost,
+    relIdExpr,
+    codeGen) {
 
 
   /**
@@ -477,20 +469,11 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
 abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                      id: Id,
                                                      innermost: DelegateOperatorTaskTemplate,
-                                                     relationshipOffset: Int,
-                                                     fromOffset: Int,
-                                                     toOffset: Int,
                                                      relIdsExpr: Expression,
-                                                     argumentSize: SlotConfiguration.Size,
                                                      codeGen: OperatorExpressionCompiler)
   extends RelationshipByIdSeekTaskTemplate(inner,
     id,
     innermost,
-    relationshipOffset,
-    fromOffset,
-    toOffset,
-    relIdsExpr,
-    argumentSize,
     codeGen) {
 
 
@@ -534,11 +517,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
   extends ManyRelationshipByIdsSeekTaskTemplate(inner,
     id,
     innermost,
-    relationshipOffset,
-    fromOffset,
-    toOffset,
     relIdsExpr,
-    argumentSize,
     codeGen) {
 
   override def genMoreFields: Seq[Field] = Seq(cursor, idCursor)
@@ -597,11 +576,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
   extends ManyRelationshipByIdsSeekTaskTemplate(inner,
     id,
     innermost,
-    relationshipOffset,
-    fromOffset,
-    toOffset,
     relIdsExpr,
-    argumentSize,
     codeGen) {
 
 
