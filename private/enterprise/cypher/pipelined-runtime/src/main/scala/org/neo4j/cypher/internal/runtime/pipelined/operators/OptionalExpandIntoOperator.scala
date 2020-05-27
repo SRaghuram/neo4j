@@ -124,7 +124,8 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
-          relationships.relationshipReference())
+          relationships.relationshipReference()
+        ) || hasWritten
       }
       if (outputRow.onValidRow && !hasWritten) {
         writeNullRow(outputRow)
