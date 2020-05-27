@@ -127,7 +127,8 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
         cacheRelationshipProperties(outputRow, state.query)
         hasWritten = writeRow(outputRow,
           relationships.relationshipReference(),
-          relationships.otherNodeReference())
+          relationships.otherNodeReference()
+        ) || hasWritten
       }
       if (outputRow.onValidRow && !hasWritten) {
         writeNullRow(outputRow)
