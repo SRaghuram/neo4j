@@ -100,7 +100,7 @@ class FollowerTest
     }
 
     @Test
-    void shouldSendALeadershipRejectionResponseAfterInvalidLeadershipTransfer() throws Exception
+    void shouldSendALeadershipRejectionResponseAfterLeadershipTransferWithUnseenIndex() throws Exception
     {
         // given
         var entryLog = new InMemoryRaftLog();
@@ -133,6 +133,34 @@ class FollowerTest
         assertThat( messageFor( outcome, member1 ).type() ).isEqualTo( RaftMessages.Type.VOTE_REQUEST );
         assertThat( messageFor( outcome, member2 ).type() ).isEqualTo( RaftMessages.Type.VOTE_REQUEST );
         assertThat( outcome.getOutgoingMessages() ).hasSize( 2 );
+    }
+
+    @Test
+    void shouldSendALeadershipRejectionResponseAfterLeadershipTransferWithDifferentTerm() throws Exception
+    {
+
+        // given
+        var entryLog = new InMemoryRaftLog();
+        entryLog.append( new RaftLogEntry( 1, new ReplicatedString( "foo" ) ) );
+        var state = builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
+                .entryLog( entryLog )
+                .supportsPreVoting( true )
+                .build();
+
+        var follower = new Follower();
+        appendSomeEntriesToLog( state, follower, 2, 1, 1 );
+
+        var message = new RaftMessages.LeadershipTransfer.Request( member2, 2, 2, Set.of() );
+
+        // when
+        Outcome outcome = new Follower().handle( message, state, log() );
+
+        // then
+        assertThat( messageFor( outcome, member2 ).type() ).isEqualTo( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION );
+        assertThat( outcome.getOutgoingMessages() ).hasSize( 1 );
     }
 
     @Test

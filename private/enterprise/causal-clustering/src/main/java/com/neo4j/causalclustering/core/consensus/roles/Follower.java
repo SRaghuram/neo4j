@@ -71,15 +71,15 @@ class Follower implements RaftMessageHandler
     private static void handleLeadershipTransfer( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder, RaftMessages.LeadershipTransfer.Request request,
             Log log ) throws IOException
     {
-        var sameOrEarlierTerm = ctx.term() <= request.term();
+        var sameTerm = ctx.term() == request.term();
         var localAppendIndex = ctx.entryLog().appendIndex();
         var upToDate = localAppendIndex >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
-        if (
-                ( !ctx.refusesToBeLeader() )
-                && ( sameOrEarlierTerm && upToDate && (noRequestedPriority( request ) || iAmInPriority( myGroups, request )) )
-        )
+        var doesNotRefuseToBeLeader = !ctx.refusesToBeLeader();
+        var satisfiesRequestPriorities = noRequestedPriority( request ) || iAmInPriority( myGroups, request );
+
+        if ( doesNotRefuseToBeLeader && sameTerm && upToDate && satisfiesRequestPriorities )
         {
             if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
             {
