@@ -56,10 +56,11 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 sealed trait HeadPlan {
-  def id: Id
+  def id: Id = plan.id
+  def plan: LogicalPlan
 }
-case class InterpretedHead(plan: LogicalPlan) extends HeadPlan { def id: Id = plan.id }
-case class FusedHead(operatorFuser: OperatorFuser) extends HeadPlan { def id: Id = operatorFuser.fusedPlans.head.id }
+case class InterpretedHead(plan: LogicalPlan) extends HeadPlan
+case class FusedHead(operatorFuser: OperatorFuser) extends HeadPlan { def plan: LogicalPlan = operatorFuser.fusedPlans.head }
 
 /**
  * Collection of mutable builder classes that are modified by [[PipelineTreeBuilder]] and finally

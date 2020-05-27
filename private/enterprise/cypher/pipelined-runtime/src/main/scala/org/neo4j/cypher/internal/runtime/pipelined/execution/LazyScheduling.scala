@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.eclipse.collections.impl.factory.primitive.IntStacks
+import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
@@ -43,8 +44,11 @@ class LazyExecutionGraphScheduling(executionGraphDefinition: ExecutionGraphDefin
         priority(i) =
           pipelineState.inputBuffer.variant match {
             case _: ArgumentStateBufferVariant
-               | _: ArgumentStreamBufferVariant => true
-            case _ => pipelineId == 0 // always give the leftmost leaf priority
+                 | _: ArgumentStreamBufferVariant => true
+            case _ => pipelineState.headPlan.plan match {
+              case _: ConditionalApply => true
+              case _ => pipelineId == 0 // always give the leftmost leaf priority
+            }
           }
         i += 1
 

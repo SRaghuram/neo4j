@@ -11,8 +11,10 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
@@ -26,9 +28,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.Worker
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class CallingThreadExecutingQueryTest extends CypherFunSuite {
+  private val idGen = new SequentialIdGen()
 
   test("should stop loop if there is no more work and nothing cancelled") {
     val executionState = getExecutionState(SchedulingResult(null, someTaskWasFilteredOut = false))
@@ -90,7 +94,7 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
 
   def getExecutingQuery(executionState: ExecutionState): CallingThreadExecutingQuery = {
     val executionGraphDefinition = ExecutionGraphDefinition(
-      null, null, null, Array(PipelineDefinition(PipelineId(0), PipelineId.NO_PIPELINE, PipelineId.NO_PIPELINE, null, mock[BufferDefinition], null, null, serial = false, None)), null
+      null, null, null, Array(PipelineDefinition(PipelineId(0), PipelineId.NO_PIPELINE, PipelineId.NO_PIPELINE, InterpretedHead(Argument()(idGen)), mock[BufferDefinition], null, null, serial = false, None)), null
     )
 
     new CallingThreadExecutingQuery(
