@@ -58,7 +58,7 @@ class FilteringMorsel(longs: Array[Long],
   @VisibleForTesting
   def isCancelledRow(row: Int): Boolean = isCancelled(row)
 
-  def numberOfCancelledRows: Int = if (cancelledRows == null) 0 else cancelledRows.cardinality
+  @inline def numberOfCancelledRows: Int = if (cancelledRows == null) 0 else cancelledRows.cardinality
 
   def hasCancelledRows: Boolean = cancelledRows != null && !cancelledRows.isEmpty
 
