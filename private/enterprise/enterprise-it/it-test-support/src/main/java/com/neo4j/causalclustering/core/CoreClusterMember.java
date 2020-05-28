@@ -47,6 +47,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
+import static com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies.NO_BALANCING;
 import static java.lang.Boolean.TRUE;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
@@ -121,6 +122,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_formation, clusterSize );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, clusterSize );
+        config.set( CausalClusteringSettings.leader_balancing, NO_BALANCING );
         config.set( CausalClusteringInternalSettings.raft_messages_log_enable, TRUE );
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );

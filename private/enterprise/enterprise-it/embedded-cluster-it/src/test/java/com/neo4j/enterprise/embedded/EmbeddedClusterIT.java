@@ -37,6 +37,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies.NO_BALANCING;
 import static java.time.Duration.ofMinutes;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -302,6 +303,7 @@ class EmbeddedClusterIT
                 .setConfig( CausalClusteringSettings.raft_listen_address, raftAddress )
                 .setConfig( CausalClusteringSettings.raft_advertised_address, raftAddress )
                 .setConfig( OnlineBackupSettings.online_backup_listen_address, backupAddress )
+                .setConfig( CausalClusteringSettings.leader_balancing, NO_BALANCING )
                 .build();
         }
 
