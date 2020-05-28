@@ -19,6 +19,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,7 @@ import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.SystemNanoClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -91,6 +93,8 @@ class TransactionTest
     private static final DatabaseManagementService databaseManagementService = mock( DatabaseManagementService.class );
     private static final FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
     private static DriverUtils driverUtils;
+    private static ArgumentCaptor<Runnable> timeoutCallback = ArgumentCaptor.forClass( Runnable.class );
+    private static SystemNanoClock clock = mock( SystemNanoClock.class );
 
     private final CountDownLatch latch = new CountDownLatch( 3 );
     private final FabricDriverTransaction tx1 = mockTransactionWithDefaultResult();
@@ -109,18 +113,21 @@ class TransactionTest
                 "fabric.graph.1.uri", "bolt://somewhere:1001",
                 "fabric.graph.2.uri", "bolt://somewhere:1002",
                 "fabric.graph.3.uri", "bolt://somewhere:1003",
-                "dbms.transaction.timeout", "1000",
+                "dbms.transaction.timeout", "120s",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
         var config = Config.newBuilder().setRaw( configProperties ).build();
 
         testServer = new TestServer( config );
-        testServer.addMocks( driverPool, jobScheduler, databaseManagementService, fabricDatabaseManager );
+        testServer.addMocks( driverPool, jobScheduler, databaseManagementService, fabricDatabaseManager, clock );
 
         JobHandle timeoutHandle = mock( JobHandle.class );
         when( jobScheduler.schedule( any(), any(), anyLong(), any() ) ).thenReturn( timeoutHandle );
         when( jobScheduler.executor( Group.FABRIC_WORKER ) ).thenReturn( callableFabricWorkerExecutorService );
+
+        when( clock.nanos() ).thenReturn( System.nanoTime() );
+        when( jobScheduler.scheduleRecurring( any(), timeoutCallback.capture(), anyLong(), any() ) ).thenReturn( mock( JobHandle.class ) );
 
         testServer.start();
 
@@ -439,14 +446,13 @@ class TransactionTest
     @Test
     void testTimeout()
     {
-        ArgumentCaptor<Runnable> timeoutCallback = ArgumentCaptor.forClass( Runnable.class );
-        when( jobScheduler.schedule( any(), timeoutCallback.capture(), anyLong(), any() ) ).thenReturn( mock( JobHandle.class ) );
-
         var e = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
             writeToShard1( tx );
+            timeoutCallback.getValue().run();
             readFromShard2( tx );
 
+            when( clock.nanos() ).thenReturn( System.nanoTime() + Duration.ofSeconds( 121 ).toNanos() );
             timeoutCallback.getValue().run();
 
             tx.run( "USE mega.shard1 MATCH (n) RETURN n" ).consume();
