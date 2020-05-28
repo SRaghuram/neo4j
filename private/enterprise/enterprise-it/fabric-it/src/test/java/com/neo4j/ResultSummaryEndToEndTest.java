@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,9 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.summary.Notification;
+import org.neo4j.driver.summary.Plan;
+import org.neo4j.driver.summary.ProfiledPlan;
 import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.harness.Neo4j;
@@ -439,6 +443,46 @@ class ResultSummaryEndToEndTest
         var resultSummary = obtainSummary.apply( query );
         assertEquals( 1, resultSummary.notifications().size() );
         assertThat( resultSummary.notifications().get( 0 ).code() ).contains( Status.Statement.UnknownLabelWarning.code().serialize() );
+    }
+
+    @Test
+    void testLocalGraphNotificationsRx()
+    {
+        var query = joinAsLines(
+                "EXPLAIN",
+                "USE neo4j",
+                "MATCH (n:NonExistentLabel)",
+                "RETURN n"
+        );
+
+        var notifications = Mono.from( clientDriver.rxSession().run( query ).consume() )
+                                .map( ResultSummary::notifications )
+                                .block();
+
+        assertThat( notifications ).extracting( Notification::code )
+                                   .contains( Status.Statement.UnknownLabelWarning.code().serialize() );
+    }
+
+    @Test
+    void testDeprecationNotification()
+    {
+        var notifications = runOnFooAndGetSummary( "explain MATCH ()-[rs*]-() RETURN rs", 0 ).notifications();
+
+        assertThat( notifications.size() ).isEqualTo( 1 );
+        assertThat( notifications.get( 0 ).code() ).isEqualTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" );
+        assertThat( notifications.get( 0 ).description() ).startsWith( "Binding relationships" );
+    }
+
+    @Test
+    void testParserNotificationCaching()
+    {
+        runOnFooAndGetSummary( "MATCH ()-[rs*]-() RETURN rs", 0 ).notifications();
+
+        var notifications = runOnFooAndGetSummary( "explain MATCH ()-[rs*]-() RETURN rs", 0 ).notifications();
+
+        assertThat( notifications.size() ).isEqualTo( 1 );
+        assertThat( notifications.get( 0 ).code() ).isEqualTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" );
+        assertThat( notifications.get( 0 ).description() ).startsWith( "Binding relationships" );
     }
 
     private ResultSummary runOnFooAndGetSummary( String query, int expectedNumberOfRecords )
