@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import java.util.Random
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
@@ -22,6 +23,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlanToPlanBuilderString
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.runtime.spec.LogicalPlanFuzzTesting.beSameResultAs
+import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.util.Cost
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
@@ -56,37 +58,61 @@ import scala.util.Try
 // Class name not ending in `Test` to make sure `mvn test` won't run it
 class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with TimeLimits {
 
-  private val managementService = ENTERPRISE.DEFAULT.newGraphManagementService()
+  private val initialSeed = Seed.random() // use `Seed.fromBase64(...).get` to reproduce test failures
+  private val maxCost = Cost(sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_COST", "1000000").toInt)
+  private val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "1000").toInt
+  private val maxIterationTimeSpan = Span(
+    sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_ITERATION_TIME_SECONDS", "60").toInt,
+    Seconds)
+  private val tx_max_memory = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_TX_MAX_MEM", "2000000000").toLong // 2 GB
+
+  private val edition: Edition[EnterpriseRuntimeContext] = ENTERPRISE.DEFAULT.copyWith(
+    GraphDatabaseSettings.track_query_allocation -> java.lang.Boolean.TRUE,
+    GraphDatabaseSettings.memory_transaction_max_size -> Long.box(tx_max_memory)
+  )
+
+  private val managementService = edition.newGraphManagementService()
   private val graphDb = managementService.database(DEFAULT_DATABASE_NAME)
   private val logProvider: AssertableLogProvider = new AssertableLogProvider()
-  private val runtimeTestSupport = new RuntimeTestSupport[EnterpriseRuntimeContext](graphDb, ENTERPRISE.WITH_FUSING(ENTERPRISE.DEFAULT), false, logProvider) with GraphCreation[EnterpriseRuntimeContext] {
+
+
+  // Used for setup and all runtimes except when wo want to force no fusion
+  private val runtimeTestSupport = new RuntimeTestSupport[EnterpriseRuntimeContext](graphDb, ENTERPRISE.WITH_FUSING(edition), false, logProvider) with GraphCreation[EnterpriseRuntimeContext] {
+    override protected def runtimeTestSupport: RuntimeTestSupport[EnterpriseRuntimeContext] = this
+  }
+  private val runtimeTestSupportNoFusion = new RuntimeTestSupport[EnterpriseRuntimeContext](graphDb, ENTERPRISE.WITH_NO_FUSING(edition), false, logProvider) with GraphCreation[EnterpriseRuntimeContext] {
     override protected def runtimeTestSupport: RuntimeTestSupport[EnterpriseRuntimeContext] = this
   }
 
-  private val runtimes = Seq(InterpretedRuntime, SlottedRuntime, PIPELINED/*, PARALLEL*/)
+  case class TestRunrime(runtime: CypherRuntime[EnterpriseRuntimeContext], rts: RuntimeTestSupport[EnterpriseRuntimeContext], name: String)
 
+  private val runtimes = Seq(
+    TestRunrime(InterpretedRuntime, runtimeTestSupport, "interpreted"),
+    TestRunrime(SlottedRuntime, runtimeTestSupport, "slotted"),
+    TestRunrime(PIPELINED, runtimeTestSupport, "pipelined with fusion"),
+    TestRunrime(PIPELINED, runtimeTestSupportNoFusion, "pipelined without fusion")
+  )
+
+  // Start tx with runtimeTestSupport, create data
   private val (tx, txContext) = {
     // Create the data (all executors use the same database instance)
     runtimeTestSupport.start()
     runtimeTestSupport.startTx()
     LogicalPlanFuzzTesting.createData(runtimeTestSupport)
+    // Commit and get a new TX. Keep it around, it is used when generating plans.
     runtimeTestSupport.restartTx()
     (runtimeTestSupport.tx, runtimeTestSupport.txContext)
   }
+  // Also start runtimeTestSupportNoFusion
+  runtimeTestSupportNoFusion.start()
 
   override protected def afterAll(): Unit = {
     txContext.close()
     tx.close()
     runtimeTestSupport.stop()
+    runtimeTestSupportNoFusion.stop()
     managementService.shutdown()
   }
-
-  private val initialSeed = Seed.random() // use `Seed.fromBase64(...).get` to reproduce test failures
-  private val maxCost = Cost(sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_COST", "1000000").toInt)
-  private val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "100").toInt
-  private val maxIterationTimeSpan = Span(
-    sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_ITERATION_TIME_SECONDS", "60").toInt,
-    Seconds)
 
   private val generator = LogicalQueryGenerator.logicalQuery(txContext, maxCost)
 
@@ -115,12 +141,14 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
 
     withClue(clues.mkString("", "\n", "\n")) {
       runtimeTestSupport.startTx()
+      runtimeTestSupportNoFusion.startTx()
 
       try {
         val results = {
+          val TestRunrime(referenceRuntime, rts, name) = runtimes.head
           // If the reference runtime does not finish in time, let's just ignore this case.
-          withCluesCancelAfter(maxIterationTimeSpan, s"runtime = ${runtimes.head.name}") {
-            Try(runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtimes.head, parameters))
+          withCluesCancelAfter(maxIterationTimeSpan, s"runtime = ${name}") {
+            Try(rts.executeAndConsumeTransactionally(logicalQuery, referenceRuntime, parameters))
           }
         } +: runtimes.tail.map {
           runtime =>
@@ -147,6 +175,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
         }
       } finally {
         runtimeTestSupport.stopTx()
+        runtimeTestSupportNoFusion.stopTx()
       }
     }
   }
@@ -176,15 +205,16 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     }
   }
 
-  private def resultFailingIfHangs(logicalQuery: LogicalQuery, runtime: CypherRuntime[EnterpriseRuntimeContext], parameters: Map[String, AnyRef]): IndexedSeq[Array[AnyValue]] = {
+  private def resultFailingIfHangs(logicalQuery: LogicalQuery, runtime: TestRunrime, parameters: Map[String, AnyRef]): IndexedSeq[Array[AnyValue]] = {
+    val TestRunrime(r, rts, name) = runtime
     val testCase = testCaseString(logicalQuery.logicalPlan, "",
       """consume(runtimeResult)
         |
         |// should complete
         |""".stripMargin
     )
-    withCluesFailAfter(maxIterationTimeSpan, s"runtime = $runtime", testCase) {
-      runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters)
+    withCluesFailAfter(maxIterationTimeSpan, s"runtime = $name", testCase) {
+      rts.executeAndConsumeTransactionally(logicalQuery, r, parameters)
     }
   }
 
