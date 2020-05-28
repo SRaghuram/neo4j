@@ -151,7 +151,7 @@ case class TopOperator(workIdentity: WorkIdentity,
         }
 
         if (!sortedInputPerArgument.hasNext) {
-          accumulator.deallocateMemory()
+          accumulator.close()
         }
 
         outputCursor.truncate()
@@ -197,8 +197,6 @@ object TopOperator {
       rows
     }
 
-    def deallocateMemory(): Unit
-
     protected def getTopRows: java.util.Iterator[MorselRow]
   }
 
@@ -209,9 +207,6 @@ object TopOperator {
 
     override def update(data: Morsel, resources: QueryResources): Unit =
       error()
-
-    // expected to be called by reduce task
-    override def deallocateMemory(): Unit = {}
 
     private def error() =
       throw new IllegalStateException("Top table method should never be called with LIMIT 0")
@@ -245,8 +240,9 @@ object TopOperator {
       }
     }
 
-    override def deallocateMemory(): Unit = {
+    override def close(): Unit = {
       memoryTracker.releaseHeap(totalTopHeapUsage)
+      totalTopHeapUsage = 0
       topTable.close()
     }
 
@@ -271,8 +267,6 @@ object TopOperator {
         topTable.add(cursor.snapshot())
       }
     }
-
-    override def deallocateMemory(): Unit = {}
 
     override protected def getTopRows: util.Iterator[MorselRow] = {
       val topTables = topTableByThread.values().iterator()
