@@ -28,12 +28,25 @@ import com.ldbc.driver.temporal.SystemTimeSource;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.Profiler;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Args;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
+import com.neo4j.bench.ldbc.connection.Neo4jApi;
+import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -49,25 +62,14 @@ import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
-import com.neo4j.bench.common.options.Planner;
-import com.neo4j.bench.common.options.Runtime;
-import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.model.process.JvmArgs;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.model.profiling.RecordingType;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
-import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.util.JsonUtil;
-import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
-import com.neo4j.bench.ldbc.connection.Neo4jApi;
-import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
+import com.neo4j.bench.reporter.ResultsReporter;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -86,12 +88,12 @@ import static com.ldbc.driver.util.FileUtils.copyDir;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileNotEmpty;
 import static com.neo4j.bench.common.util.BenchmarkUtil.lessWhiteSpace;
-import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.assertDisallowFormatMigration;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.assertStoreFormatIsSet;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.extractScaleFactor;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.extractStoreFormat;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.toBenchmarkGroupName;
+import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -387,6 +389,52 @@ public class RunExportCommand implements Runnable
     @Required
     private File profilesDir;
 
+    @Option(
+            type = OptionType.COMMAND,
+            name = {"--aws-endpoint-url"},
+            description = "AWS endpoint URL, used during testing",
+            title = "AWS endpoint URL" )
+    private String awsEndpointURL;
+
+    @Option(
+            type = OptionType.COMMAND,
+            name = "--aws-region",
+            description = "AWS region",
+            title = "AWS region" )
+    private String awsRegion = "eu-north-1";
+
+    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_USER},
+             description = "Username for Neo4j database server that stores benchmarking results",
+             title = "Results Store Username" )
+    @Required
+    private String resultsStoreUsername;
+
+    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_PASSWORD},
+             description = "Password for Neo4j database server that stores benchmarking results",
+             title = "Results Store Password" )
+    @Required
+    private String resultsStorePassword;
+
+    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_URI},
+             description = "URI to Neo4j database server for storing benchmarking results",
+             title = "Results Store" )
+    @Required
+    private URI resultsStoreUri;
+
+    public static final String CMD_S3_BUCKET = "--s3-bucket";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_S3_BUCKET},
+             description = "S3 bucket profiles were uploaded to",
+             title = "S3 bucket" )
+    @Required
+    private String s3Bucket;
+
     private static final String LDBC_FORK_NAME = "ldbc-fork";
 
     @Override
@@ -566,6 +614,17 @@ public class RunExportCommand implements Runnable
                     triggeredBy );
             System.out.println( "Export results to: " + jsonOutput.getAbsolutePath() );
             JsonUtil.serializeJson( jsonOutput.toPath(), testRunReport );
+
+            ResultsReporter resultsReporter = new ResultsReporter( resultsDir,
+                                                                   testRunReport,
+                                                                   s3Bucket,
+                                                                   true,
+                                                                   resultsStoreUsername,
+                                                                   resultsStorePassword,
+                                                                   resultsStoreUri,
+                                                                   workingDir,
+                                                                   awsEndpointURL );
+            resultsReporter.report();
         }
         catch ( Exception e )
         {

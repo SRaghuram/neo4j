@@ -51,9 +51,9 @@ triggered_by="${32}"
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
-AWS_EXTRAS=
+aws_endpoint_url=
 if [[ $# -eq 33 ]]; then
-	AWS_EXTRAS="--endpoint-url=${33}"
+	aws_endpoint_url="${33}"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then
@@ -163,27 +163,10 @@ ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-
   --triggered-by "${triggered_by}" \
   --trace \
   --profilers "${profilers}" \
-  --profiles-dir "${profiler_recording_dir}"
-
-# --- create archive of profiler recording artifacts---
-archive=${profiler_recording_dir_name}.tar.gz
-tar czvf "${archive}" "${profiler_recording_dir}"
-
-# --- upload archive of profiler recording artifacts to S3 ---
-aws  ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recordings/"${archive}"
-# --- upload profiler recording artifacts to S3 ---
-aws  ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 sync "${profiler_recording_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
-
-# --- enrich results file with profiler recording information (locations in S3) ---
-${jvm_path} -cp "${jar_path}" com.neo4j.bench.client.Main add-profiles \
-        --dir "${profiler_recording_dir}"  \
-        --s3-bucket benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}" \
-        --archive benchmarking.neo4j.com/recordings/"${archive}"  \
-        --test_run_report "${json_path}" \
-        --ignore_unrecognized_files
-
-${jvm_path} -cp "${jar_path}" com.neo4j.bench.client.Main report \
-            --results-store-uri "${results_store_uri}" \
-            --results-store-user "${results_store_user}" \
-            --results-store-pass "${results_store_pass}" \
-            --test_run_results "${json_path}"
+  --profiles-dir "${profiler_recording_dir}" \
+  --results-store-uri "${results_store_uri}" \
+  --results-store-user "${results_store_user}" \
+  --results-store-pass "${results_store_password}" \
+  --s3-bucket "benchmarking.neo4j.com/recordings/" \
+  --aws-region "eu-north-1" \
+  ${aws_endpoint_url:+--aws-endpoint-url $aws_endpoint_url}

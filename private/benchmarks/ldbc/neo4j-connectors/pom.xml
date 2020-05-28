@@ -135,7 +135,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j.bench</groupId>
-            <artifactId>benchmark-results-client</artifactId>
+            <artifactId>benchmark-results-reporter</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
