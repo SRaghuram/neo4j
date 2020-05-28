@@ -34,7 +34,7 @@ class PreVoteRequestTest
 
     @ParameterizedTest
     @EnumSource( Role.class )
-    void shouldDenyForCandidateInLaterTermWhenPreVoteNotActive( Role role ) throws Exception
+    void shouldGrantPreVoteInLaterTermOnlyWhenCandidate( Role role ) throws Exception
     {
         // given
         RaftState state = newState();
@@ -47,7 +47,8 @@ class PreVoteRequestTest
                 .lastLogTerm( -1 ).build(), state, log() );
 
         // then
-        assertFalse( ((RaftMessages.PreVote.Response) messageFor( outcome, member1 )).voteGranted() );
+        // Candidate grants preVote if requestor is up to date
+        assertEquals(  role == Role.CANDIDATE,  ((RaftMessages.PreVote.Response) messageFor( outcome, member1 )).voteGranted() );
     }
 
     @ParameterizedTest

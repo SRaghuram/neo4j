@@ -28,7 +28,7 @@ class VotingTest
     @Test
     void shouldAcceptRequestWithIdenticalLog()
     {
-        Assertions.assertTrue( Voting.shouldVoteFor(
+        Assertions.assertTrue( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -43,7 +43,7 @@ class VotingTest
     @Test
     void shouldRejectRequestFromOldTerm()
     {
-        Assertions.assertFalse( Voting.shouldVoteFor(
+        Assertions.assertFalse( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm - 1,
@@ -58,7 +58,7 @@ class VotingTest
     @Test
     void shouldRejectRequestIfCandidateLogEndsAtLowerTerm()
     {
-        Assertions.assertFalse( Voting.shouldVoteFor(
+        Assertions.assertFalse( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -73,7 +73,7 @@ class VotingTest
     @Test
     void shouldRejectRequestIfLogsEndInSameTermButCandidateLogIsShorter()
     {
-        Assertions.assertFalse( Voting.shouldVoteFor(
+        Assertions.assertFalse( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -88,7 +88,7 @@ class VotingTest
     @Test
     void shouldAcceptRequestIfLogsEndInSameTermAndCandidateLogIsSameLength()
     {
-        Assertions.assertTrue( Voting.shouldVoteFor(
+        Assertions.assertTrue( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -103,7 +103,7 @@ class VotingTest
     @Test
     void shouldAcceptRequestIfLogsEndInSameTermAndCandidateLogIsLonger()
     {
-        Assertions.assertTrue( Voting.shouldVoteFor(
+        Assertions.assertTrue( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -118,7 +118,7 @@ class VotingTest
     @Test
     void shouldAcceptRequestIfLogsEndInHigherTermAndCandidateLogIsShorter()
     {
-        Assertions.assertTrue( Voting.shouldVoteFor(
+        Assertions.assertTrue( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -133,7 +133,7 @@ class VotingTest
     @Test
     void shouldAcceptRequestIfLogEndsAtHigherTermAndCandidateLogIsSameLength()
     {
-        Assertions.assertTrue( Voting.shouldVoteFor(
+        Assertions.assertTrue( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -148,7 +148,7 @@ class VotingTest
     @Test
     void shouldAcceptRequestIfLogEndsAtHigherTermAndCandidateLogIsLonger()
     {
-        Assertions.assertTrue( Voting.shouldVoteFor(
+        Assertions.assertTrue( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,
@@ -163,7 +163,7 @@ class VotingTest
     @Test
     void shouldRejectRequestIfAlreadyVotedForOtherCandidate()
     {
-        Assertions.assertFalse( Voting.shouldVoteFor(
+        Assertions.assertFalse( Voting.shouldAnyVoteFor(
                 candidate,
                 currentTerm,
                 currentTerm,

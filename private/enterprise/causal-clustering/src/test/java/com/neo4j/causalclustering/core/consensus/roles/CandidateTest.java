@@ -8,6 +8,9 @@ package com.neo4j.causalclustering.core.consensus.roles;
 import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
+import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
+import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
@@ -218,7 +221,7 @@ class CandidateTest
     }
 
     @Test
-    void shouldDeclinePreVoteFromSameTerm() throws Throwable
+    void shouldGrantPreVoteFromSameTermAndSameLog() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -236,12 +239,40 @@ class CandidateTest
         // then
         assertThat(
                 outcome.getOutgoingMessages() )
+                .contains( new RaftMessages.Directed( member1, preVoteResponse().term( raftState.term() ).from( myself ).grant().build() ) );
+        Assertions.assertEquals( Role.CANDIDATE, outcome.getRole() );
+    }
+
+    @Test
+    void shouldDeclinePreVoteFromSameTermButNewerLog() throws Throwable
+    {
+        RaftLog entryLog = new InMemoryRaftLog();
+        entryLog.append( new RaftLogEntry( 0, ReplicatedInteger.valueOf( 0 ) ) );
+        entryLog.append( new RaftLogEntry( 0, ReplicatedInteger.valueOf( 1 ) ) );
+
+        // given
+        RaftState raftState = builder()
+                .myself( myself )
+                .supportsPreVoting( true )
+                .entryLog( entryLog )
+                .build();
+
+        // when
+        Outcome outcome = CANDIDATE.handler.handle( preVoteRequest()
+                .candidate( member1 )
+                .from( member1 )
+                .term( raftState.term() )
+                .build(), raftState, log() );
+
+        // then
+        assertThat(
+                outcome.getOutgoingMessages() )
                 .contains( new RaftMessages.Directed( member1, preVoteResponse().term( raftState.term() ).from( myself ).deny().build() ) );
         Assertions.assertEquals( Role.CANDIDATE, outcome.getRole() );
     }
 
     @Test
-    void shouldBecomeFollowerIfReceivePreVoteRequestFromLaterTerm() throws Throwable
+    void shouldBecomeFollowerIfReceivePreVoteRequestFromLaterTermAndGrantPreVote() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -264,7 +295,7 @@ class CandidateTest
 
         assertThat(
                 outcome.getOutgoingMessages() )
-                .contains( new RaftMessages.Directed( member1, preVoteResponse().term( newTerm ).from( myself ).deny().build() ) );
+                .contains( new RaftMessages.Directed( member1, preVoteResponse().term( newTerm ).from( myself ).grant().build() ) );
     }
 
     RaftState newState() throws IOException

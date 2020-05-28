@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 
@@ -88,7 +89,7 @@ class CCIdReuseBySwitchAndRollbackIT
                 .withSharedCoreParam( CausalClusteringSettings.failure_resolution_window, "2s-3s" ) );
         cluster.start();
         //add monitors
-        List<StubRaftLogCommitIndexMonitor> monitors = registerMonitors( cluster );
+        List<RaftLogCommitIndexMonitor> monitors = registerMonitors( cluster );
 
         // Instance A is leader
         CoreClusterMember instanceA = cluster.awaitLeader();
@@ -130,14 +131,14 @@ class CCIdReuseBySwitchAndRollbackIT
     }
 
     private CoreClusterMember switchLeaderFrom( Cluster cluster,
-            List<StubRaftLogCommitIndexMonitor> monitors,
+            List<RaftLogCommitIndexMonitor> monitors,
             CoreClusterMember expectedCurrentLeader ) throws Exception
     {
         return switchLeader( cluster, monitors, memberId -> expectedCurrentLeader.id().equals( memberId ) );
     }
 
     private void switchLeaderTo( Cluster cluster,
-            List<StubRaftLogCommitIndexMonitor> monitors,
+            List<RaftLogCommitIndexMonitor> monitors,
             CoreClusterMember expectedNewLeader ) throws Exception
     {
         switchLeader( cluster, monitors, memberId -> !memberId.equals( expectedNewLeader.id() ) );
@@ -155,14 +156,14 @@ class CCIdReuseBySwitchAndRollbackIT
     }
 
     private CoreClusterMember switchLeader( Cluster cluster,
-            List<StubRaftLogCommitIndexMonitor> monitors,
+            List<RaftLogCommitIndexMonitor> monitors,
             Predicate<MemberId> shouldRetry ) throws Exception
     {
+        assertEventually( "Members could not catch up", () -> allMonitorsHaveSameIndex( monitors ), same -> same, 30, TimeUnit.SECONDS );
         forceReelection( cluster, DEFAULT_DATABASE_NAME );
         var newLeader = cluster.awaitLeader();
         if ( shouldRetry.test( newLeader.id() ) )
         {
-            assertEventually( "Members could not catch up", () -> allMonitorsHaveSameIndex( monitors ), same -> same, 30, TimeUnit.SECONDS );
             return switchLeader( cluster, monitors, shouldRetry );
         }
         return newLeader;
@@ -209,9 +210,9 @@ class CCIdReuseBySwitchAndRollbackIT
         }
     }
 
-    private List<StubRaftLogCommitIndexMonitor> registerMonitors( Cluster cluster )
+    private static List<RaftLogCommitIndexMonitor> registerMonitors( Cluster cluster )
     {
-        List<StubRaftLogCommitIndexMonitor> monitors = new ArrayList<>();
+        List<RaftLogCommitIndexMonitor> monitors = new ArrayList<>();
         cluster.coreMembers().forEach( coreClusterMember -> {
             var monitor = new StubRaftLogCommitIndexMonitor();
             var clusterMonitors = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( ClusterMonitors.class );
@@ -221,26 +222,29 @@ class CCIdReuseBySwitchAndRollbackIT
         return monitors;
     }
 
-    private boolean allMonitorsHaveSameIndex( List<StubRaftLogCommitIndexMonitor> monitors )
+    private static Long START = -1L;
+    private static Long EXIT = -2L;
+
+    private static boolean allMonitorsHaveSameIndex( List<RaftLogCommitIndexMonitor> monitors )
     {
-        long maxCommitIndex = monitors.stream().map( StubRaftLogCommitIndexMonitor::commitIndex ).max(Long::compare).orElse( 0L );
-        return monitors.stream().map( StubRaftLogCommitIndexMonitor::commitIndex ).allMatch( commitIndex -> commitIndex == maxCommitIndex );
+        return !EXIT.equals( monitors.stream().map( RaftLogCommitIndexMonitor::commitIndex ).reduce( START,
+                ( previous, actual ) -> !previous.equals( EXIT ) && ((previous.equals( START ) || previous.equals( actual ))) ? actual : EXIT ) );
     }
 
     private static class StubRaftLogCommitIndexMonitor implements RaftLogCommitIndexMonitor
     {
-        private long commitIndex;
+        private AtomicLong commitIndex = new AtomicLong( 0 );
 
         @Override
         public long commitIndex()
         {
-            return commitIndex;
+            return commitIndex.get();
         }
 
         @Override
         public void commitIndex( long commitIndex )
         {
-            this.commitIndex = commitIndex;
+            this.commitIndex.set( commitIndex );
         }
     }
 }

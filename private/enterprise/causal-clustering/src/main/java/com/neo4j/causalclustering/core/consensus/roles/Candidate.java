@@ -169,7 +169,7 @@ class Candidate implements RaftMessageHandler
                 {
                     outcomeBuilder.setTerm( term );
                 }
-                Voting.declinePreVoteRequest( ctx, outcomeBuilder, req, term );
+                Voting.handlePreVoteVerdict( ctx, outcomeBuilder, req, log, term );
             }
             return outcomeBuilder;
         }

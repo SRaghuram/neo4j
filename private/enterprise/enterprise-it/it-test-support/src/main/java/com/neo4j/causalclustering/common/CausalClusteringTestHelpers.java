@@ -524,7 +524,7 @@ public final class CausalClusteringTestHelpers
         return members[ThreadLocalRandom.current().nextInt( members.length )];
     }
 
-    private static Server raftServer( ClusterMember member )
+    public static Server raftServer( ClusterMember member )
     {
         return member.defaultDatabase().getDependencyResolver().resolveDependency( Server.class, new RaftServerSelectionStrategy() );
     }
