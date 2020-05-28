@@ -39,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.InputWithMaterializedEntitie
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
@@ -168,6 +169,7 @@ class SlottedMemoryManagementTest extends MemoryManagementTestBase(ENTERPRISE.DE
                                   with FullSupportMemoryManagementTestBase[EnterpriseRuntimeContext]
                                   with SlottedMemoryManagementTestBase
 class SlottedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
+class SlottedMemoryDeallocationTest extends MemoryDeallocationTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSubscriberErrorTest extends SubscriberErrorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedApplyTest extends ApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
