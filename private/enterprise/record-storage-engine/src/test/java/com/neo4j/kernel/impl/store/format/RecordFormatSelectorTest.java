@@ -26,9 +26,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
+import org.neo4j.kernel.impl.store.format.aligned.PageAligned;
+import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
@@ -76,12 +77,13 @@ class RecordFormatSelectorTest
     @Test
     void defaultFormatTest()
     {
-        assertSame( Standard.LATEST_RECORD_FORMATS, defaultFormat() );
+        assertSame( PageAligned.LATEST_RECORD_FORMATS, defaultFormat() );
     }
 
     @Test
     void selectForVersionTest()
     {
+        assertSame( PageAlignedV4_1.RECORD_FORMATS, selectForVersion( StoreVersion.ALIGNED_V4_1.versionString() ) );
         assertSame( StandardV3_4.RECORD_FORMATS, selectForVersion( StandardV3_4.STORE_VERSION ) );
         assertSame( StandardV4_0.RECORD_FORMATS, selectForVersion( StandardV4_0.STORE_VERSION ) );
         assertSame( HighLimitV3_0_0.RECORD_FORMATS, selectForVersion( HighLimitV3_0_0.STORE_VERSION ) );
@@ -321,7 +323,7 @@ class RecordFormatSelectorTest
 
         Config config = Config.defaults();
 
-        assertSame( defaultFormat(), selectNewestFormat( config, databaseLayout, fs, this.pageCache, LOG, NULL ) );
+        assertSame( Standard.LATEST_RECORD_FORMATS, selectNewestFormat( config, databaseLayout, fs, this.pageCache, LOG, NULL ) );
     }
 
     @Test
