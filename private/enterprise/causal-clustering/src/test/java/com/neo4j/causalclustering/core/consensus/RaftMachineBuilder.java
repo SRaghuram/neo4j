@@ -90,8 +90,8 @@ public class RaftMachineBuilder
     {
         termState.update( term );
         var config = Config.newBuilder()
-                .set( CausalClusteringSettings.failure_detection_window, detectionWindow )
-                .set( CausalClusteringSettings.failure_resolution_window, detectionWindow );
+                .set( CausalClusteringSettings.leader_failure_detection_window, detectionWindow )
+                .set( CausalClusteringSettings.election_failure_detection_window, detectionWindow );
         var raftTimersConfig = new RaftTimersConfig( config.build() );
         LeaderAvailabilityTimers leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, clock, timerService, logProvider );
         SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );

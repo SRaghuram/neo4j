@@ -70,19 +70,20 @@ public class CausalClusteringSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.join_catch_up_max_lag", DURATION, ofSeconds( 10 ) ).build();
 
     @Deprecated
-    @Description( "This setting is moved and enhanced into causal_clustering.failure_detection_window and causal_clustering.failure_resolution_window." )
+    @Description( "This setting is moved and enhanced into causal_clustering.leader_failure_detection_window " +
+                  "and causal_clustering.election_failure_detection_window." )
     public static final Setting<Duration> leader_election_timeout =
             newBuilder( "causal_clustering.leader_election_timeout", DURATION, ofSeconds( 7 ) ).build();
 
     @Description( "The time window within which the loss of the leader is detected and the first re-election attempt is held." +
             "The window should be significantly larger than typical communication delays to make conflicts unlikely." )
-    public static final Setting<DurationRange> failure_detection_window =
-            newBuilder( "causal_clustering.failure_detection_window", DURATION_RANGE, DurationRange.fromSeconds( 20, 23 ) ).build();
+    public static final Setting<DurationRange> leader_failure_detection_window =
+            newBuilder( "causal_clustering.leader_failure_detection_window", DURATION_RANGE, DurationRange.fromSeconds( 20, 23 ) ).build();
 
     @Description( "The rate at which leader elections happen. Note that due to election conflicts it might take several attempts to find a leader. " +
             "The window should be significantly larger than typical communication delays to make conflicts unlikely." )
-    public static final Setting<DurationRange> failure_resolution_window =
-            newBuilder( "causal_clustering.failure_resolution_window", DURATION_RANGE, DurationRange.fromSeconds( 3, 6 ) ).build();
+    public static final Setting<DurationRange> election_failure_detection_window =
+            newBuilder( "causal_clustering.election_failure_detection_window", DURATION_RANGE, DurationRange.fromSeconds( 3, 6 ) ).build();
 
     public enum SelectionStrategies
     {

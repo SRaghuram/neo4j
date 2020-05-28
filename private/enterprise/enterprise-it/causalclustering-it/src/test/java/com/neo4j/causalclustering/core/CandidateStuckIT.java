@@ -44,7 +44,7 @@ class CandidateStuckIT
         Cluster cluster = clusterFactory.createCluster( clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.failure_detection_window, "60s-61s" ) );
+                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "60s-61s" ) );
         cluster.start();
 
         var leader = cluster.awaitLeader();

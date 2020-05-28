@@ -19,8 +19,8 @@ import org.neo4j.logging.Log;
 
 import static com.neo4j.configuration.CausalClusteringSettings.discovery_advertised_address;
 import static com.neo4j.configuration.CausalClusteringSettings.discovery_listen_address;
-import static com.neo4j.configuration.CausalClusteringSettings.failure_detection_window;
-import static com.neo4j.configuration.CausalClusteringSettings.failure_resolution_window;
+import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.election_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.configuration.CausalClusteringSettings.raft_advertised_address;
 import static com.neo4j.configuration.CausalClusteringSettings.raft_listen_address;
@@ -130,8 +130,8 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
     private void migrateElectionTimeout( Map<String,String> values, Map<String,String> defaultValues, Log log )
     {
         var leaderElectionTimoutSetting = "causal_clustering.leader_election_timeout";
-        var failureDetectionWindowSetting = failure_detection_window.name();
-        var failureResolutionWindowSetting = failure_resolution_window.name();
+        var failureDetectionWindowSetting = leader_failure_detection_window.name();
+        var failureResolutionWindowSetting = election_failure_detection_window.name();
         var leaderElectionTimoutValue = values.get( leaderElectionTimoutSetting );
         var failureDetectionWindowValue = values.get( failureDetectionWindowSetting );
         var failureResolutionWindowValue = values.get( failureResolutionWindowSetting );
@@ -153,8 +153,8 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
                                          String leaderElectionTimoutValue, String failureResolutionWindowValue, Log log )
     {
         var leaderElectionTimoutSetting = "causal_clustering.leader_election_timeout";
-        var failureDetectionWindowSetting = failure_detection_window.name();
-        var failureResolutionWindowSetting = failure_resolution_window.name();
+        var failureDetectionWindowSetting = leader_failure_detection_window.name();
+        var failureResolutionWindowSetting = election_failure_detection_window.name();
 
         log.warn( "Use of deprecated setting '%s'. It is replaced by '%s' and '%s'",
                   leaderElectionTimoutSetting, failureDetectionWindowSetting, failureResolutionWindowSetting );
@@ -167,7 +167,7 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
 
         if ( isBlank( failureResolutionWindowValue ) )
         {
-            var defaultFailureResolutionWindow = failure_resolution_window.defaultValue();
+            var defaultFailureResolutionWindow = election_failure_detection_window.defaultValue();
             var overriddenFailureResolutionWindowValue = defaultValues.get( failureResolutionWindowSetting );
             if ( isNotBlank( overriddenFailureResolutionWindowValue ) )
             {

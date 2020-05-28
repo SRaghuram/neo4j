@@ -25,8 +25,8 @@ public class RaftTimersConfig
 
     RaftTimersConfig( Config config )
     {
-        detectionWindow = config.get( CausalClusteringSettings.failure_detection_window );
-        resolutionWindow = config.get( CausalClusteringSettings.failure_resolution_window );
+        detectionWindow = config.get( CausalClusteringSettings.leader_failure_detection_window );
+        resolutionWindow = config.get( CausalClusteringSettings.election_failure_detection_window );
 
         var detectionWindowMin = detectionWindow.getMin();
         var resolutionWindowMin = resolutionWindow.getMin();

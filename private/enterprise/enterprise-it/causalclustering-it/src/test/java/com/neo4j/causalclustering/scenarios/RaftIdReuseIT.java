@@ -44,8 +44,8 @@ class RaftIdReuseIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 // increased to decrease likelihood of unnecessary leadership changes
-                .withSharedCoreParam( CausalClusteringSettings.failure_detection_window, "2s-3s" )
-                .withSharedCoreParam( CausalClusteringSettings.failure_resolution_window, "2s-3s" )
+                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "2s-3s" )
+                .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "2s-3s" )
                 .withNumberOfReadReplicas( 0 );
 
         cluster = clusterFactory.createCluster( clusterConfig );

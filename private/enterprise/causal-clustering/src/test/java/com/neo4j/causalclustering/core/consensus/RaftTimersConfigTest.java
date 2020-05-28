@@ -12,8 +12,8 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 
 import static com.neo4j.causalclustering.core.consensus.RaftTimersConfig.HEARTBEAT_COUNT_IN_FAILURE_DETECTION;
-import static com.neo4j.configuration.CausalClusteringSettings.failure_detection_window;
-import static com.neo4j.configuration.CausalClusteringSettings.failure_resolution_window;
+import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.election_failure_detection_window;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.helpers.DurationRange.fromSeconds;
@@ -87,8 +87,8 @@ public class RaftTimersConfigTest
     {
         var config = Config.newBuilder()
                            .setRaw( Map.of( "causal_clustering.leader_election_timeout", "1s" ) )
-                           .set( failure_detection_window, fromSeconds( 10, 12 ) )
-                           .set( failure_resolution_window, fromSeconds( 8, 9 ) )
+                           .set( leader_failure_detection_window, fromSeconds( 10, 12 ) )
+                           .set( election_failure_detection_window, fromSeconds( 8, 9 ) )
                            .build();
         var raftTimersConfig = new RaftTimersConfig( config );
 
@@ -104,15 +104,15 @@ public class RaftTimersConfigTest
     void invalidRangeShouldThrow()
     {
         var configBuilder = Config.newBuilder();
-        assertThrows( IllegalArgumentException.class, () -> configBuilder.set( failure_detection_window, fromSeconds( 12, 10 ) ) );
+        assertThrows( IllegalArgumentException.class, () -> configBuilder.set( leader_failure_detection_window, fromSeconds( 12, 10 ) ) );
     }
 
     @Test
     void shorterDetectionThanResolutionShouldThrow()
     {
         var config = Config.newBuilder()
-                           .set( failure_detection_window, fromSeconds( 5, 6 ) )
-                           .set( failure_resolution_window, fromSeconds( 8, 9 ) )
+                           .set( leader_failure_detection_window, fromSeconds( 5, 6 ) )
+                           .set( election_failure_detection_window, fromSeconds( 8, 9 ) )
                            .build();
         assertThrows( IllegalArgumentException.class, () -> new RaftTimersConfig( config ) );
     }

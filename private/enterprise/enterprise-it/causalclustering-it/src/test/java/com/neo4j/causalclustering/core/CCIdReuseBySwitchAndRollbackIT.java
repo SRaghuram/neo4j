@@ -85,8 +85,8 @@ class CCIdReuseBySwitchAndRollbackIT
         Cluster cluster = clusterFactory.createCluster( clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.failure_detection_window, "2s-3s" )
-                .withSharedCoreParam( CausalClusteringSettings.failure_resolution_window, "2s-3s" ) );
+                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "2s-3s" )
+                .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "2s-3s" ) );
         cluster.start();
         //add monitors
         List<RaftLogCommitIndexMonitor> monitors = registerMonitors( cluster );
