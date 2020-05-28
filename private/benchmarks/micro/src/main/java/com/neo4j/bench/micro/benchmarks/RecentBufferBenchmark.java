@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.Main;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Neo4jConfig;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
@@ -34,13 +34,13 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
     @Override
     public String description()
     {
-        return "Benchmarks RecentBuffer implementations";
+        return "Benchmarks RingRecentBuffer";
     }
 
     @Override
     public String benchmarkGroup()
     {
-        return "Cypher";
+        return "cypher";
     }
 
     @ParamValues(
@@ -63,7 +63,7 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
             buffer = new ConcurrentLinkedQueueRecentBuffer<>( 8192 );
             break;
         case "ringBuffer":
-            buffer = new RingRecentBuffer<>( 8192, discarded -> {} );
+            buffer = new RingRecentBuffer<>( 8192 );
             break;
         default:
             throw new IllegalStateException( "Unknown thingy" );
