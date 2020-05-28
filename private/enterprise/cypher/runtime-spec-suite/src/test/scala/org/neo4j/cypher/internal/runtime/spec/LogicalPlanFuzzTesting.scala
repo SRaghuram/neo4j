@@ -70,10 +70,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     runtimeTestSupport.start()
     runtimeTestSupport.startTx()
     LogicalPlanFuzzTesting.createData(runtimeTestSupport)
-    runtimeTestSupport.tx.commit()
-    runtimeTestSupport.stopTx()
-
-    runtimeTestSupport.startTx()
+    runtimeTestSupport.restartTx()
     (runtimeTestSupport.tx, runtimeTestSupport.txContext)
   }
 
