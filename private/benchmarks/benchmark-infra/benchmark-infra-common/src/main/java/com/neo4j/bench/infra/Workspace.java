@@ -12,17 +12,20 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.FileFilter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Describes structure of benchmarking workspace, which contains build artifacts.
@@ -111,17 +114,6 @@ public class Workspace
         }
     }
 
-    private static void ensureFilesExists( Collection<Path> paths )
-    {
-        List<Path> collect = paths.stream().filter( artifact -> !Files.isRegularFile( artifact ) ).collect( Collectors.toList() );
-
-        if ( !collect.isEmpty() )
-        {
-            String missingArtifacts = collect.stream().map( Path::toString ).collect( Collectors.joining( "," ) );
-            throw new IllegalStateException( format( "missing artifacts: %s\n", missingArtifacts ) );
-        }
-    }
-
     public Path get( String key )
     {
 
@@ -129,18 +121,20 @@ public class Workspace
         {
             throw new RuntimeException( format( "key %s not found in workspace %s", key, baseDir ) );
         }
-        Path path = baseDir.resolve( allArtifacts.get( key ) );
-        return path;
+        return baseDir.resolve( allArtifacts.get( key ) );
     }
 
     public static class Builder
     {
         private final Path baseDir;
-        private final Map<String,String> artifacts = new HashMap<>();
+        private final Map<String,String> artifacts;
+        private FileFilter fileFilter;
 
         private Builder( Path baseDir )
         {
             this.baseDir = baseDir;
+            this.artifacts = new HashMap<>();
+            this.fileFilter = null;
         }
 
         public Builder withArtifact( String key, String file )
@@ -154,16 +148,43 @@ public class Workspace
         public Builder withFilesRecursively( FileFilter fileFilter )
         {
             Objects.requireNonNull( fileFilter, "file filter cannot be null" );
+            this.fileFilter = fileFilter;
             return this;
         }
 
         public Workspace build()
         {
-            Map<String,Path> allArtifacts = new HashMap<>();
-            artifacts.forEach( ( key, entry ) -> allArtifacts.put( key, baseDir.resolve( entry ) ) );
-            ensureFilesExists( allArtifacts.values() );
+            if ( null != fileFilter )
+            {
+                try ( Stream<Path> dirs = Files.walk( baseDir ) )
+                {
+                    dirs.filter( dir -> fileFilter.accept( dir.toFile() ) )
+                        .filter( Files::isRegularFile )
+                        .map( baseDir::relativize )
+                        .forEach( relativePath -> artifacts.put( relativePath.toString(), relativePath.toString() ) );
+                }
+                catch ( IOException e )
+                {
+                    throw new UncheckedIOException( "Encountered error while traversing work directory", e );
+                }
+            }
+            ensureValidWorkspaceFiles();
 
             return new Workspace( baseDir, artifacts );
+        }
+
+        private void ensureValidWorkspaceFiles()
+        {
+            List<Path> invalidArtifacts = artifacts.values().stream()
+                                                   .map( baseDir::resolve )
+                                                   .filter( artifact -> !Files.isRegularFile( artifact ) )
+                                                   .collect( toList() );
+
+            if ( !invalidArtifacts.isEmpty() )
+            {
+                String missingArtifacts = invalidArtifacts.stream().map( Path::toString ).collect( Collectors.joining( "\n\t" ) );
+                throw new IllegalStateException( format( "missing artifacts:\n\t%s", missingArtifacts ) );
+            }
         }
     }
 
@@ -205,7 +226,7 @@ public class Workspace
      */
     public List<Path> allArtifacts()
     {
-        return allArtifacts.values().stream().map( baseDir::resolve ).collect( Collectors.toList() );
+        return allArtifacts.values().stream().map( baseDir::resolve ).collect( toList() );
     }
 
     public List<String> allArtifactKeys()

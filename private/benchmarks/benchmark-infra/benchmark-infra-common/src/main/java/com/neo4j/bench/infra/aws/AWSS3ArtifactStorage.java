@@ -107,7 +107,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     @Override
     public void uploadBuildArtifacts( URI artifactBaseURI, Workspace workspace ) throws ArtifactStoreException
     {
-        LOG.debug( "uploading build {} artifacts from workspace {}", artifactBaseURI, workspace.baseDir() );
+        LOG.info( "uploading build {} artifacts from workspace {}", artifactBaseURI, workspace.baseDir() );
         String bucketName = artifactBaseURI.getAuthority();
         String s3Path = getS3Path( artifactBaseURI.getPath() );
         if ( !amazonS3.doesBucketExistV2( bucketName ) )
