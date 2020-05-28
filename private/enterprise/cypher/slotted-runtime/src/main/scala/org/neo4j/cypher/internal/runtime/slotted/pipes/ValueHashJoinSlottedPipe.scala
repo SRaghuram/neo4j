@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.Iterators
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -45,8 +46,7 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
           newRow
         }
       }
-
-    result.flatten
+    Iterators.resourceClosingIterator(result.flatten, table)
   }
 
   override def buildProbeTable(input: Iterator[CypherRow], queryState: QueryState): collection.ProbeTable[AnyValue, CypherRow] = {

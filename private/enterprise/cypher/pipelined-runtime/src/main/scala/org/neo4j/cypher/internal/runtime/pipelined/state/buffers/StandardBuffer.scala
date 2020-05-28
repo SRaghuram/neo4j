@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker

@@ -40,8 +40,10 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
 
     // This will only happen if all the lhs-values evaluate to null, which is probably rare.
     // But, it's cheap to check and will save us from exhausting the rhs, so it's probably worth it
-    if (table.isEmpty)
+    if (table.isEmpty) {
+      table.close()
       return Iterator.empty
+    }
 
     probeInput(rhsIterator, state, table)
   }

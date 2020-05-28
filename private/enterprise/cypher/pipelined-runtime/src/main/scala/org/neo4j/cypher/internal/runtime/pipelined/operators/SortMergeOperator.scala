@@ -48,8 +48,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     new MemoryTrackingAccumulatorsInputOperatorState(this, id.x, stateFactory)
   }
 
-  override def nextTasks(state: PipelinedQueryState,
-                         input: IndexedSeq[ArgumentStateBuffer],
+  override def nextTasks(input: IndexedSeq[ArgumentStateBuffer],
                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer]] = {
     singletonIndexedSeq(new OTask(input, resources.memoryTracker))
   }

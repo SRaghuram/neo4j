@@ -158,7 +158,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(input: IndexedSeq[AggregatedRowAccumulator]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[AnyRef, AggregatedRowAccumulator]] = {
+    override def nextTasks(input: IndexedSeq[AggregatedRowAccumulator],
+                           resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[AnyRef, AggregatedRowAccumulator]] = {
       singletonIndexedSeq(new OTask(input))
     }
 

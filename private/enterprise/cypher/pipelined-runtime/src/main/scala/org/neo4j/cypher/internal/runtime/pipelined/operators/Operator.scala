@@ -216,12 +216,11 @@ class MemoryTrackingAccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: Morsel
   extends AccumulatorsInputOperatorState[DATA, ACC] {
   private val memoryTracker = stateFactory.newMemoryTracker(operatorId)
 
-  final override def nextTasks(state: PipelinedQueryState,
-                               input: IndexedSeq[ACC],
+  final override def nextTasks(input: IndexedSeq[ACC],
                                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]] = {
     resources.setMemoryTracker(memoryTracker)
     try {
-      delegate.nextTasks(state, input, resources)
+      delegate.nextTasks(input, resources)
     } finally {
       resources.resetMemoryTracker()
     }
@@ -245,7 +244,7 @@ trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DA
     val input = operatorInput.takeAccumulators[DATA, ACC](accumulatorsPerTask(state.morselSize))
     if (input != null) {
       try {
-        nextTasks(state, input, resources)
+        nextTasks(input, resources)
       } catch {
         case NonFatalCypherError(t) =>
           throw SchedulingInputException(MorselAccumulatorsInput(input), t)
@@ -255,9 +254,7 @@ trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DA
     }
   }
 
-  def nextTasks(state: PipelinedQueryState,
-                input: IndexedSeq[ACC],
-                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
+  def nextTasks(input: IndexedSeq[ACC], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
 }
 
 trait AccumulatorsAndMorselInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {

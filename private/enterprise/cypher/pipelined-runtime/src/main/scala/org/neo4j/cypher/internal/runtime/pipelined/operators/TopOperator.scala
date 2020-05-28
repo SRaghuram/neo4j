@@ -122,7 +122,8 @@ case class TopOperator(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(input: IndexedSeq[TopTable]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, TopTable]] = {
+    override def nextTasks(input: IndexedSeq[TopTable],
+                           resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, TopTable]] = {
       singletonIndexedSeq(new OTask(input))
     }
 
