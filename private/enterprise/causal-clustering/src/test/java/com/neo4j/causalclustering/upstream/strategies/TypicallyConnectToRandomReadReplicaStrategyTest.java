@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

@@ -11,7 +11,7 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,9 +29,9 @@ import org.neo4j.logging.RotatingFileOutputStreamSupplier;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvInterval;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvPath;
+import static com.neo4j.configuration.MetricsSettings.csv_enabled;
+import static com.neo4j.configuration.MetricsSettings.csv_interval;
+import static com.neo4j.configuration.MetricsSettings.csv_path;
 
 public class CsvOutput implements Lifecycle, EventReporter
 {
@@ -59,14 +59,14 @@ public class CsvOutput implements Lifecycle, EventReporter
     public void init() throws IOException
     {
         // Setup CSV reporting
-        File configuredPath = config.get( csvPath ).toFile();
+        File configuredPath = config.get( csv_path ).toFile();
         if ( configuredPath == null )
         {
-            throw new IllegalArgumentException( csvPath.name() + " configuration is required since " +
-                                                csvEnabled.name() + " is enabled" );
+            throw new IllegalArgumentException( csv_path.name() + " configuration is required since " +
+                                                csv_enabled.name() + " is enabled" );
         }
-        Long rotationThreshold = config.get( MetricsSettings.csvRotationThreshold );
-        Integer maxArchives = config.get( MetricsSettings.csvMaxArchives );
+        Long rotationThreshold = config.get( MetricsSettings.csv_rotation_threshold );
+        Integer maxArchives = config.get( MetricsSettings.csv_max_archives );
         outputPath = absoluteFileOrRelativeTo( extensionContext.directory(), configuredPath );
         csvReporter = RotatableCsvReporter.forRegistry( registry )
                 .convertRatesTo( TimeUnit.SECONDS )
@@ -80,7 +80,7 @@ public class CsvOutput implements Lifecycle, EventReporter
     @Override
     public void start()
     {
-        csvReporter.start( config.get( csvInterval ).toMillis(), TimeUnit.MILLISECONDS );
+        csvReporter.start( config.get( csv_interval ).toMillis(), TimeUnit.MILLISECONDS );
         logger.info( "Sending metrics to CSV file at " + outputPath );
     }
 

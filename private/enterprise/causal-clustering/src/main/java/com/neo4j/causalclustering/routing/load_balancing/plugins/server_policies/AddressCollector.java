@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,7 +27,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 

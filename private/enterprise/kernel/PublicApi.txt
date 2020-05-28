@@ -1,0 +1,45 @@
+com.neo4j.configuration.EnterpriseEditionSettings public class extends java.lang.Object implements org.neo4j.configuration.SettingsDeclaration
+com.neo4j.configuration.EnterpriseEditionSettings::EnterpriseEditionSettings() void public
+com.neo4j.configuration.EnterpriseEditionSettings::dynamic_setting_whitelist org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
+com.neo4j.configuration.EnterpriseEditionSettings::max_number_of_databases org.neo4j.graphdb.config.Setting<java.lang.Long> public static final
+com.neo4j.configuration.MetricsSettings public class extends java.lang.Object implements org.neo4j.configuration.SettingsDeclaration
+com.neo4j.configuration.MetricsSettings::MetricsSettings() void public
+com.neo4j.configuration.MetricsSettings::bolt_messages_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::causal_clustering_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::csv_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::csv_interval org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.MetricsSettings::csv_max_archives org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.MetricsSettings::csv_path org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
+com.neo4j.configuration.MetricsSettings::csv_rotation_threshold org.neo4j.graphdb.config.Setting<java.lang.Long> public static final
+com.neo4j.configuration.MetricsSettings::cypher_planning_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::database_counts_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::database_operation_count_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::graphite_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::graphite_interval org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.MetricsSettings::graphite_server org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.MetricsSettings::jmx_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::jvm_buffers_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::jvm_file_descriptors_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::jvm_gc_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::jvm_heap_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::jvm_memory_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::jvm_pause_time_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::jvm_threads_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::metrics_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::metrics_prefix org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.MetricsSettings::neo_check_pointing_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::neo_counts_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::neo_memory_pools_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::neo_page_cache_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::neo_server_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::neo_store_size_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::neo_transaction_logs_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::neo_tx_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::prometheus_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::prometheus_endpoint org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.OnlineBackupSettings public class extends java.lang.Object implements org.neo4j.configuration.SettingsDeclaration
+com.neo4j.configuration.OnlineBackupSettings::DEFAULT_BACKUP_HOST java.lang.String public static final = localhost
+com.neo4j.configuration.OnlineBackupSettings::DEFAULT_BACKUP_PORT int public static final = 6362
+com.neo4j.configuration.OnlineBackupSettings::OnlineBackupSettings() void public
+com.neo4j.configuration.OnlineBackupSettings::online_backup_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.OnlineBackupSettings::online_backup_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final

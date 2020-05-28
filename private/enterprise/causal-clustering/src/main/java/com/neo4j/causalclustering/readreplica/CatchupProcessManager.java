@@ -9,13 +9,14 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider.UpstreamStrateg
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.util.concurrent.Executor;
@@ -133,7 +134,7 @@ public class CatchupProcessManager extends SafeLifecycle
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionAppender.class ),
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( StorageEngine.class ) );
 
-        int maxBatchSize = config.get( CausalClusteringSettings.read_replica_transaction_applier_batch_size );
+        int maxBatchSize = config.get( CausalClusteringInternalSettings.read_replica_transaction_applier_batch_size );
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
                 () -> databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
                 databaseContext.monitors(), databaseContext.kernelDatabase().getVersionContextSupplier(), commandIndexTracker,

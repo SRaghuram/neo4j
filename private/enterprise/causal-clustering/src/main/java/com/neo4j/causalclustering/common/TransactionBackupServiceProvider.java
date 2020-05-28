@@ -7,12 +7,12 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;

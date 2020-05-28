@@ -73,6 +73,8 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -127,9 +129,9 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.token.TokenRegistry;
 import org.neo4j.token.api.TokenHolder;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_apply_max_batch_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_frequency;
+import static com.neo4j.configuration.CausalClusteringSettings.state_machine_apply_max_batch_size;
+import static com.neo4j.configuration.CausalClusteringSettings.state_machine_flush_window_size;
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
@@ -360,7 +362,7 @@ class CoreDatabaseFactory
                 storageEngineFactory, config, bootstrapSaver, pageCacheTracer, memoryTracker );
 
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-        Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
+        Duration clusterBindingTimeout = config.get( CausalClusteringInternalSettings.cluster_binding_timeout );
         return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, Clocks.systemClock(), () -> sleep( 100 ),
                 clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors );
     }

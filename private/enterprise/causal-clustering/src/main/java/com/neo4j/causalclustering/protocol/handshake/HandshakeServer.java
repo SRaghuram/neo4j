@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.Channel;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
+import com.neo4j.configuration.ApplicationProtocolVersion;
 
 import java.util.Collections;
 import java.util.List;

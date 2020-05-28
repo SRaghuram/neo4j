@@ -12,8 +12,8 @@ import java.util.Map;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authentication_providers;
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authorization_providers;
+import static com.neo4j.configuration.SecuritySettings.authentication_providers;
+import static com.neo4j.configuration.SecuritySettings.authorization_providers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SecuritySettingsMigratorTest

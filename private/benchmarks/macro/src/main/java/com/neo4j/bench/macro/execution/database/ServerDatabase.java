@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
@@ -25,9 +26,9 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
-import org.neo4j.driver.Result;
 import org.neo4j.driver.Transaction;
 
 import static java.lang.ProcessBuilder.Redirect;
@@ -48,7 +49,7 @@ public class ServerDatabase implements Database
         Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                           .setBoltUri( generateBoltUriString() )
                           .withSetting( GraphDatabaseSettings.auth_enabled, FALSE )
-                          .withSetting( GraphDatabaseSettings.databases_root_path,
+                          .withSetting( GraphDatabaseInternalSettings.databases_root_path,
                                         store.topLevelDirectory().resolve( "data" ).resolve( "databases" ).toString() )
                           .withSetting( GraphDatabaseSettings.default_database, databaseName.name() )
                           .withSetting( GraphDatabaseSettings.transaction_logs_root_path,

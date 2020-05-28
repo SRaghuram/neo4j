@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.functions;
 
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
+import com.neo4j.configuration.FabricEnterpriseConfig;
 
 import java.util.Collections;
 import java.util.List;

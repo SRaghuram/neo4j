@@ -5,7 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
@@ -27,8 +27,8 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_HOST;
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
+import static com.neo4j.configuration.OnlineBackupSettings.DEFAULT_BACKUP_HOST;
+import static com.neo4j.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
 import static java.lang.Boolean.FALSE;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;

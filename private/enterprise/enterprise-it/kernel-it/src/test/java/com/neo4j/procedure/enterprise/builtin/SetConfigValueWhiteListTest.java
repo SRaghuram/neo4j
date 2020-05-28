@@ -19,7 +19,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.dynamic_setting_whitelist;
+import static com.neo4j.configuration.EnterpriseEditionSettings.dynamic_setting_whitelist;
 import static java.util.List.of;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;

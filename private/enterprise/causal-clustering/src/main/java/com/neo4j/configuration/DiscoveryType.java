@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core;
+package com.neo4j.configuration;
 
 import com.neo4j.causalclustering.discovery.DnsHostnameResolver;
 import com.neo4j.causalclustering.discovery.DomainNameResolverImpl;
@@ -17,14 +17,16 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.BiFunction;
 
+import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.logging.internal.LogService;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.kubernetes_label_selector;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.kubernetes_service_port_name;
+import static com.neo4j.configuration.CausalClusteringSettings.initial_discovery_members;
+import static com.neo4j.configuration.CausalClusteringSettings.kubernetes_label_selector;
+import static com.neo4j.configuration.CausalClusteringSettings.kubernetes_service_port_name;
 
+@PublicApi
 public enum DiscoveryType
 {
     DNS( ( logService, conf ) -> DnsHostnameResolver.resolver( logService, new DomainNameResolverImpl(), conf ),
@@ -48,12 +50,12 @@ public enum DiscoveryType
         this.requiredSettings = Arrays.asList( requiredSettings );
     }
 
-    public RemoteMembersResolver getHostnameResolver( LogService logService, Config config )
+    RemoteMembersResolver getHostnameResolver( LogService logService, Config config )
     {
         return this.resolverSupplier.apply( logService, config );
     }
 
-    public Collection<Setting<?>> requiredSettings()
+    Collection<Setting<?>> requiredSettings()
     {
         return requiredSettings;
     }

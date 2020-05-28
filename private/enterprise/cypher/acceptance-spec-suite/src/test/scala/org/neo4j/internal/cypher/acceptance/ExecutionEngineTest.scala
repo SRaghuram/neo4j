@@ -11,6 +11,7 @@ import java.lang.Boolean.TRUE
 import java.time.Duration
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -40,8 +41,8 @@ import org.neo4j.kernel.impl.coreapi.TransactionImpl
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 import scala.collection.JavaConverters.asJavaIterableConverter
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.collection.mutable
 
 class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CreateTempFileTestSupport with CypherComparisonSupport {
@@ -893,7 +894,7 @@ order by a.COL1""".format(a, b))
 
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
-    GraphDatabaseSettings.cypher_compiler_tracing -> TRUE
+    GraphDatabaseInternalSettings.cypher_compiler_tracing -> TRUE
   )
 
   case class PlanningListener(planRequests: mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty) extends TimingCompilationTracer.EventListener {

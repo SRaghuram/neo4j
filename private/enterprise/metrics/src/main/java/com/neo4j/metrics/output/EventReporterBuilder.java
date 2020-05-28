@@ -8,28 +8,28 @@ package com.neo4j.metrics.output;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jmx.JmxReporter;
 import com.codahale.metrics.jmx.ObjectNameFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteInterval;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteServer;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsPrefix;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEndpoint;
+import static com.neo4j.configuration.MetricsSettings.csv_enabled;
+import static com.neo4j.configuration.MetricsSettings.graphite_enabled;
+import static com.neo4j.configuration.MetricsSettings.graphite_interval;
+import static com.neo4j.configuration.MetricsSettings.graphite_server;
+import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
+import static com.neo4j.configuration.MetricsSettings.metrics_prefix;
+import static com.neo4j.configuration.MetricsSettings.prometheus_enabled;
+import static com.neo4j.configuration.MetricsSettings.prometheus_endpoint;
 import static javax.management.ObjectName.quote;
 
 public class EventReporterBuilder
@@ -61,38 +61,38 @@ public class EventReporterBuilder
     public CompositeEventReporter build()
     {
         CompositeEventReporter reporter = new CompositeEventReporter();
-        if ( !config.get( metricsEnabled ) )
+        if ( !config.get( metrics_enabled ) )
         {
             return reporter;
         }
 
-        if ( config.get( csvEnabled ) )
+        if ( config.get( csv_enabled ) )
         {
             CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem, scheduler );
             reporter.add( csvOutput );
             life.add( csvOutput );
         }
 
-        if ( config.get( graphiteEnabled ) )
+        if ( config.get( graphite_enabled ) )
         {
-            HostnamePort server = config.get( graphiteServer );
-            long period = config.get( graphiteInterval ).toMillis();
+            SocketAddress server = config.get( graphite_server );
+            long period = config.get( graphite_interval ).toMillis();
             GraphiteOutput graphiteOutput = new GraphiteOutput( server, period, registry, logger );
             reporter.add( graphiteOutput );
             life.add( graphiteOutput );
         }
 
-        if ( config.get( prometheusEnabled ) )
+        if ( config.get( prometheus_enabled ) )
         {
-            HostnamePort server = config.get( prometheusEndpoint );
+            SocketAddress server = config.get( prometheus_endpoint );
             PrometheusOutput prometheusOutput = new PrometheusOutput( server, registry, logger, portRegister );
             reporter.add( prometheusOutput );
             life.add( prometheusOutput );
         }
 
-        if ( config.get( MetricsSettings.jmxEnabled ) )
+        if ( config.get( MetricsSettings.jmx_enabled ) )
         {
-            String domain = config.get( metricsPrefix ) + METRICS_JMX_BEAN_SUFFIX;
+            String domain = config.get( metrics_prefix ) + METRICS_JMX_BEAN_SUFFIX;
             JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( domain )
                     .createsObjectNamesWith( new MetricsObjectNameFactory() ).build();
             life.add( new JmxOutput( jmxReporter ) );

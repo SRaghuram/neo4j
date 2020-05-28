@@ -11,13 +11,13 @@ import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.AllReplicatedDatabaseStates;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.time.Clock;
 import java.time.Duration;

@@ -6,8 +6,8 @@
 package com.neo4j.bolt;
 
 import com.neo4j.bolt.txtracking.WaitTrackingMonitor;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterEach;

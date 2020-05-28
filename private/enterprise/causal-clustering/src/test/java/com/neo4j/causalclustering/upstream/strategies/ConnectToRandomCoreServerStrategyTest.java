@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
@@ -14,6 +13,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
+import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;

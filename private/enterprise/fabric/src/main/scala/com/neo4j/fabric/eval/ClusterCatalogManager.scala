@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.eval
 
-import com.neo4j.fabric.config.FabricEnterpriseConfig
+import com.neo4j.configuration.FabricEnterpriseConfig
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.dbms.api.DatabaseManagementService

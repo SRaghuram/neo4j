@@ -5,10 +5,10 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthenticationPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.TestCustomCacheableAuthenticationPlugin;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,6 +35,9 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.configuration.SecuritySettings.PLUGIN_REALM_NAME_PREFIX;
+import static com.neo4j.configuration.SecuritySettings.authentication_providers;
+import static com.neo4j.configuration.SecuritySettings.authorization_providers;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthorizationExpired;
@@ -42,9 +45,6 @@ import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverA
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteFails;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.clearAuthCacheFromDifferentConnection;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriver;
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.PLUGIN_REALM_NAME_PREFIX;
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authentication_providers;
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authorization_providers;
 import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;

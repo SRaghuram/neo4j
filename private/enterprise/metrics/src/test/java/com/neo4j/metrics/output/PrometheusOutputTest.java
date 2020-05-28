@@ -13,12 +13,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.function.LongConsumer;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 
 import static java.util.Collections.emptySortedMap;
@@ -91,7 +92,7 @@ class PrometheusOutputTest
         URLConnection connection = new URL( url ).openConnection();
         connection.setDoOutput( true );
         connection.connect();
-        try ( Scanner s = new Scanner( connection.getInputStream(), "UTF-8" ).useDelimiter( "\\A" ) )
+        try ( Scanner s = new Scanner( connection.getInputStream(), StandardCharsets.UTF_8 ).useDelimiter( "\\A" ) )
         {
             assertTrue( s.hasNext() );
             String ret = s.next();
@@ -104,7 +105,7 @@ class PrometheusOutputTest
     {
         DynamicAddressPrometheusOutput( String host, MetricRegistry registry, Log logger )
         {
-            super( new HostnamePort( host ), registry, logger, mock( ConnectorPortRegister.class ) );
+            super( new SocketAddress( host, 0 ), registry, logger, mock( ConnectorPortRegister.class ) );
         }
 
         String getServerAddress()

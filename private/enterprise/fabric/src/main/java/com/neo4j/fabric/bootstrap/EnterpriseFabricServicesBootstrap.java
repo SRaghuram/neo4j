@@ -7,11 +7,11 @@ package com.neo4j.fabric.bootstrap;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.configuration.FabricEnterpriseConfig;
+import com.neo4j.configuration.FabricEnterpriseSettings;
 import com.neo4j.fabric.auth.ClusterCredentialsProvider;
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.auth.ExternalCredentialsProvider;
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
-import com.neo4j.fabric.config.FabricEnterpriseSettings;
 import com.neo4j.fabric.driver.ClusterDriverConfigFactory;
 import com.neo4j.fabric.driver.DriverConfigFactory;
 import com.neo4j.fabric.driver.DriverPool;
@@ -159,9 +159,9 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         @Override
         protected void validateFabricSettings( Config config )
         {
-            assertNotSet( config, FabricEnterpriseSettings.databaseName );
-            assertNotSet( config, FabricEnterpriseSettings.fabricServersSetting );
-            assertNotSet( config, FabricEnterpriseSettings.routingTtlSetting );
+            assertNotSet( config, FabricEnterpriseSettings.database_name );
+            assertNotSet( config, FabricEnterpriseSettings.fabric_servers_setting );
+            assertNotSet( config, FabricEnterpriseSettings.routing_ttl_setting );
 
             if ( !config.getGroups( FabricEnterpriseSettings.GraphSetting.class ).isEmpty() )
             {

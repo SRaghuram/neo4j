@@ -5,7 +5,7 @@
  */
 package com.neo4j.upgrade;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;

@@ -9,8 +9,8 @@ import java.util
 import java.util.concurrent.TimeUnit
 
 import com.neo4j.cypher.RunWithConfigTestSupport
-import org.neo4j.configuration.GraphDatabaseSettings.cypher_idp_solver_duration_threshold
-import org.neo4j.configuration.GraphDatabaseSettings.cypher_idp_solver_table_threshold
+import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_idp_solver_duration_threshold
+import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_idp_solver_table_threshold
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport

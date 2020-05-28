@@ -5,10 +5,10 @@
  */
 package com.neo4j.enterprise.embedded;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.api.ClusterDatabaseManagementService;
 import com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

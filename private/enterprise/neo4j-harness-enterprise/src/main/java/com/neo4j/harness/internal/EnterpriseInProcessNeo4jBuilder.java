@@ -5,7 +5,7 @@
  */
 package com.neo4j.harness.internal;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.server.enterprise.EnterpriseManagementServiceFactory;
 import org.apache.commons.lang3.SystemUtils;
 

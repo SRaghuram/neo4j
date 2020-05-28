@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -65,6 +66,6 @@ class TempBootstrapDirTest
 
     private File tempBootstrapDir()
     {
-        return new File( databaseLayout.databaseDirectory(), CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME );
+        return new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME );
     }
 }

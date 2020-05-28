@@ -5,7 +5,7 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.config.FabricEnterpriseSettings;
+import com.neo4j.configuration.FabricEnterpriseSettings;
 import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
@@ -110,7 +110,7 @@ class FabricQueryLoggingTest
     {
         config = Config.newBuilder()
                        .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath() )
-                       .set( FabricEnterpriseSettings.databaseName, "mega" )
+                       .set( FabricEnterpriseSettings.database_name, "mega" )
                        .set( FabricEnterpriseSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
                        .set( FabricEnterpriseSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )
                        .set( BoltConnector.listen_address, new SocketAddress( "0.0.0.0", 0 ) )

@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.ZoneId;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.graphdb.config.Setting;
@@ -68,7 +69,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     {
         // This set of settings are currently not dynamic:
         ZoneId currentLogTimeZone = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
-        logBuilder = FormattedLog.withZoneId( currentLogTimeZone ).withFormat( config.get( GraphDatabaseSettings.log_format ) );
+        logBuilder = FormattedLog.withZoneId( currentLogTimeZone ).withFormat( config.get( GraphDatabaseInternalSettings.log_format ) );
         currentQueryLogFile = config.get( GraphDatabaseSettings.log_queries_filename ).toFile();
 
         updateSettings();
@@ -84,7 +85,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_allocation_logging_enabled );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_early_raw_logging_enabled );
-        registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_heap_dump_enabled );
+        registerDynamicSettingUpdater( GraphDatabaseInternalSettings.log_queries_heap_dump_enabled );
     }
 
     private <T> void registerDynamicSettingUpdater( Setting<T> setting )
@@ -106,7 +107,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
         // are prime candidates.
         if ( config.get( GraphDatabaseSettings.log_queries ) != LogQueryLevel.OFF )
         {
-            boolean heapDumpEnabled = config.get( GraphDatabaseSettings.log_queries_heap_dump_enabled );
+            boolean heapDumpEnabled = config.get( GraphDatabaseInternalSettings.log_queries_heap_dump_enabled );
             if ( heapDumpEnabled )
             {
                 heapDumper = new HeapDumper();

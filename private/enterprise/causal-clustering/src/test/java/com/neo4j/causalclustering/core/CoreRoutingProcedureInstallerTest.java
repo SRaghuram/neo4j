@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForMultiDC;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForSingleDC;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;

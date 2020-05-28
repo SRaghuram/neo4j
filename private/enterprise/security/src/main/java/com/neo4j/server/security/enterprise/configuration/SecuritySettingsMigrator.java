@@ -11,8 +11,8 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.SettingMigrator;
 import org.neo4j.logging.Log;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authentication_providers;
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authorization_providers;
+import static com.neo4j.configuration.SecuritySettings.authentication_providers;
+import static com.neo4j.configuration.SecuritySettings.authorization_providers;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @ServiceProvider

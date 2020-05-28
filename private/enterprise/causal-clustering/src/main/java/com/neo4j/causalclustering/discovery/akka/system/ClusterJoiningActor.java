@@ -9,9 +9,9 @@ import akka.actor.Address;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.japi.pf.ReceiveBuilder;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -42,7 +42,7 @@ public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
     {
         this.cluster = cluster;
         this.remoteMembersResolver = remoteMembersResolver;
-        this.retry = config.get( CausalClusteringSettings.cluster_binding_retry_timeout );
+        this.retry = config.get( CausalClusteringInternalSettings.cluster_binding_retry_timeout );
     }
 
     @Override

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

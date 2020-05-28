@@ -7,8 +7,8 @@ package com.neo4j.kernel;
 
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.MetricsSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.neo4j.cli.AdminTool;
 import org.neo4j.cli.ExecutionContext;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -81,7 +82,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     public void warmupMustReloadHotPagesAfterRestartAndFaultsMustBeVisibleViaMetrics() throws Exception
     {
         File metricsDirectory = testDirectory.directory( "metrics" );
-        db.withSetting( MetricsSettings.metricsEnabled, false )
+        db.withSetting( MetricsSettings.metrics_enabled, false )
           .withSetting( OnlineBackupSettings.online_backup_enabled, false )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, Duration.ofMillis( 100 ) );
         db.ensureStarted();
@@ -90,10 +91,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         long pagesInMemory = waitForCacheProfile( db.getMonitors() );
 
         db.restartDatabase( Map.of(
-                MetricsSettings.metricsEnabled, true,
-                MetricsSettings.csvEnabled, true,
-                MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
-                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() ) );
+                MetricsSettings.metrics_enabled, true,
+                MetricsSettings.csv_enabled, true,
+                MetricsSettings.csv_interval, Duration.ofMillis( 100 ),
+                MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath() ) );
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
     }
@@ -110,7 +111,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     @Test
     public void cacheProfilesMustBeIncludedInOnlineBackups() throws Exception
     {
-        db.withSetting( MetricsSettings.metricsEnabled, false )
+        db.withSetting( MetricsSettings.metrics_enabled, false )
           .withSetting( OnlineBackupSettings.online_backup_enabled, true )
           .withSetting( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "localhost", 0 ) )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, Duration.ofMillis( 100 ) );
@@ -132,10 +133,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         };
         db.restartDatabase( useBackupDir, Map.of(
                 OnlineBackupSettings.online_backup_enabled, false,
-                MetricsSettings.metricsEnabled, true,
-                MetricsSettings.csvEnabled, true,
-                MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
-                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() ) );
+                MetricsSettings.metrics_enabled, true,
+                MetricsSettings.csv_enabled, true,
+                MetricsSettings.csv_interval, Duration.ofMillis( 100 ),
+                MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath() ) );
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
     }
@@ -145,7 +146,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     {
         // Here we are testing that the file modifications done by the page cache profiler,
         // does not make online backup throw any exceptions.
-        db.withSetting( MetricsSettings.metricsEnabled, false )
+        db.withSetting( MetricsSettings.metrics_enabled, false )
           .withSetting( OnlineBackupSettings.online_backup_enabled, true )
           .withSetting( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "localhost", 0 ) )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, Duration.ofMillis( 1 ) );
@@ -166,9 +167,9 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     {
         File data = testDirectory.directory( "data" );
         File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
-        db.withSetting( MetricsSettings.metricsEnabled, false )
+        db.withSetting( MetricsSettings.metrics_enabled, false )
           .withSetting( OnlineBackupSettings.online_backup_enabled, false )
-          .withSetting( GraphDatabaseSettings.databases_root_path, testDirectory.homeDir().toPath().toAbsolutePath() )
+          .withSetting( GraphDatabaseInternalSettings.databases_root_path, testDirectory.homeDir().toPath().toAbsolutePath() )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, Duration.ofMillis( 100 ) );
         db.ensureStarted();
         createData();
@@ -194,11 +195,11 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         deleteRecursively( graphdb );
 
         File metricsDirectory = testDirectory.cleanDirectory( "metrics" );
-        db.withSetting( MetricsSettings.metricsEnabled, true )
-          .withSetting( MetricsSettings.csvEnabled, true )
-          .withSetting( MetricsSettings.csvInterval, Duration.ofMillis( 100 ) )
+        db.withSetting( MetricsSettings.metrics_enabled, true )
+          .withSetting( MetricsSettings.csv_enabled, true )
+          .withSetting( MetricsSettings.csv_interval, Duration.ofMillis( 100 ) )
           .withSetting( GraphDatabaseSettings.fail_on_missing_files, false )
-          .withSetting( MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() );
+          .withSetting( MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath() );
         db.ensureStarted();
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
@@ -208,7 +209,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     public void logPageCacheWarmupStartCompletionMessages() throws Exception
     {
         File metricsDirectory = testDirectory.directory( "metrics" );
-        db.withSetting( MetricsSettings.metricsEnabled, false )
+        db.withSetting( MetricsSettings.metrics_enabled, false )
                 .withSetting( OnlineBackupSettings.online_backup_enabled, false )
                 .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, Duration.ofMillis( 100 ) );
         db.ensureStarted();
@@ -217,10 +218,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         long pagesInMemory = waitForCacheProfile( db.getMonitors() );
 
         db.restartDatabase( Map.of(
-                MetricsSettings.metricsEnabled, true,
-                MetricsSettings.csvEnabled, true,
-                MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
-                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() ) );
+                MetricsSettings.metrics_enabled, true,
+                MetricsSettings.csv_enabled, true,
+                MetricsSettings.csv_interval, Duration.ofMillis( 100 ),
+                MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath() ) );
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
 
@@ -232,7 +233,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     {
         File metricsDirectory = testDirectory.directory( "metrics" );
 
-        db.withSetting( MetricsSettings.metricsEnabled, false )
+        db.withSetting( MetricsSettings.metrics_enabled, false )
                 .withSetting( OnlineBackupSettings.online_backup_enabled, false )
                 .withSetting( GraphDatabaseSettings.pagecache_warmup_enabled, false )
                 .withSetting( GraphDatabaseSettings.pagecache_memory, "50M" ) //enough to keep everything in page-cache & prevent evictions
@@ -248,10 +249,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         Map<Setting<?>,Object> config = Map.of(
                 GraphDatabaseSettings.pagecache_warmup_enabled, true,
                 GraphDatabaseSettings.pagecache_warmup_prefetch, true,
-                MetricsSettings.metricsEnabled, true,
-                MetricsSettings.csvEnabled, true,
-                MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
-                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath()
+                MetricsSettings.metrics_enabled, true,
+                MetricsSettings.csv_enabled, true,
+                MetricsSettings.csv_interval, Duration.ofMillis( 100 ),
+                MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath()
         );
 
         db.restartDatabase( config );

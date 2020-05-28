@@ -11,9 +11,9 @@ import java.util.Map;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_detection_window;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_resolution_window;
 import static com.neo4j.causalclustering.core.consensus.RaftTimersConfig.HEARTBEAT_COUNT_IN_FAILURE_DETECTION;
+import static com.neo4j.configuration.CausalClusteringSettings.failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.failure_resolution_window;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.helpers.DurationRange.fromSeconds;

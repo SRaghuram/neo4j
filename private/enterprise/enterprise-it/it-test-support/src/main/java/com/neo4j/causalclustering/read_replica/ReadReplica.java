@@ -6,12 +6,12 @@
 package com.neo4j.causalclustering.read_replica;
 
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.time.Duration;
@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.function.IntFunction;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -84,8 +85,8 @@ public class ReadReplica implements ClusterMember
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
-        config.set( GraphDatabaseSettings.auth_store, parentDir.toPath().resolve( "auth" ).toAbsolutePath() );
-        config.set( GraphDatabaseSettings.transaction_start_timeout, Duration.ZERO );
+        config.set( GraphDatabaseInternalSettings.auth_store, parentDir.toPath().resolve( "auth" ).toAbsolutePath() );
+        config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();

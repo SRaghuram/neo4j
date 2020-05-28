@@ -21,7 +21,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.lock_manager;
 
 @TestDirectoryExtension
 class ForsetiServiceLoadingTest

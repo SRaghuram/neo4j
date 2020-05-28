@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.messaging.marshalling.v3.decoding;
 
 import com.neo4j.causalclustering.catchup.Protocol;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
@@ -16,6 +15,7 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
+import com.neo4j.configuration.ServerGroupName;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;

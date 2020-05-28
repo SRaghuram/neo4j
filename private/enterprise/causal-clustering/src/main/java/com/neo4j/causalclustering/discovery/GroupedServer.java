@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Set;
 

@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Objects;
 import java.util.Set;

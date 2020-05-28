@@ -26,9 +26,9 @@ import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.internal.helpers.Args;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 public class CreateIndex

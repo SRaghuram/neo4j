@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
@@ -16,6 +15,7 @@ import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.InvalidFilterSpecification;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerInfo;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
 import java.util.Map;

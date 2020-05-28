@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.parallel
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
@@ -27,9 +27,9 @@ object ParallelErrorHandlingTestBase {
 
 abstract class ParallelErrorHandlingTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.DEFAULT).copyWith(
-    GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKERS)), runtime) {
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(WORKERS)), runtime) {
 
   test("should complete query with concurrent errors and close cursors") {
     given {

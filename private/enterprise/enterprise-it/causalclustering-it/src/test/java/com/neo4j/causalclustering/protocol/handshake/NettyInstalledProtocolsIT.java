@@ -48,12 +48,12 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.ports.PortAuthority;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.handshake_timeout;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.inbound_connection_initialization_logging_enabled;
 import static com.neo4j.causalclustering.identity.RaftIdFactory.random;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.inbound_connection_initialization_logging_enabled;
+import static com.neo4j.configuration.CausalClusteringSettings.handshake_timeout;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.UUID.randomUUID;

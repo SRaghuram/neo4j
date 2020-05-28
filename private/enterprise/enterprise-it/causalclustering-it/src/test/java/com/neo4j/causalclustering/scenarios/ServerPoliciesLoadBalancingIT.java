@@ -6,10 +6,10 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.LoadBalancingServerPoliciesGroup;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.Policies;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;

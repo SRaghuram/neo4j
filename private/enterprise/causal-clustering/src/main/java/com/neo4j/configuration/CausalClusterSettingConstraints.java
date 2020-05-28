@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core;
+package com.neo4j.configuration;
 
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -18,11 +18,11 @@ import org.neo4j.configuration.SettingConstraints;
 import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.graphdb.config.Setting;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_akka_external_config;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.middleware_akka_external_config;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
-class CausalClusterSettingConstraints
+final class CausalClusterSettingConstraints
 {
     private CausalClusterSettingConstraints()
     {

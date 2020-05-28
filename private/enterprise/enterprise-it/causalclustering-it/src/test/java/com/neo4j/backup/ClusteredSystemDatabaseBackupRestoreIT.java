@@ -8,9 +8,9 @@ package com.neo4j.backup;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreDatabaseManager;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.restore.RestoreDatabaseCommand;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -42,7 +43,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
+import static com.neo4j.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static com.neo4j.security.SecurityHelpers.newUser;
 import static com.neo4j.security.SecurityHelpers.showUsers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -88,7 +89,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation, databaseName, Config
                 .newBuilder()
                 .set( GraphDatabaseSettings.transaction_logs_root_path, backupLocation.toPath().toAbsolutePath() )
-                .set( GraphDatabaseSettings.databases_root_path, backupLocation.toPath().toAbsolutePath() )
+                .set( GraphDatabaseInternalSettings.databases_root_path, backupLocation.toPath().toAbsolutePath() )
                 .build() );
         assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 

@@ -22,10 +22,10 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_frequency;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_strategy;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_rotation_size;
+import static com.neo4j.configuration.CausalClusteringSettings.state_machine_flush_window_size;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

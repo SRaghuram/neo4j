@@ -12,7 +12,9 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +26,7 @@ import java.util.SortedMap;
 import java.util.function.IntFunction;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -118,7 +121,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_formation, clusterSize );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, clusterSize );
-        config.set( CausalClusteringSettings.raft_messages_log_enable, TRUE );
+        config.set( CausalClusteringInternalSettings.raft_messages_log_enable, TRUE );
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( BoltConnector.enabled, TRUE );
@@ -132,8 +135,8 @@ public class CoreClusterMember implements ClusterMember
         config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
-        config.set( GraphDatabaseSettings.auth_store, parentDir.toPath().resolve( "auth" ).toAbsolutePath() );
-        config.set( GraphDatabaseSettings.transaction_start_timeout, Duration.ZERO );
+        config.set( GraphDatabaseInternalSettings.auth_store, parentDir.toPath().resolve( "auth" ).toAbsolutePath() );
+        config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();

@@ -7,6 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.time.Duration
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CacheCounts
 import org.neo4j.cypher.ExecutionEngineCacheCounter
@@ -24,7 +25,7 @@ class CypherCompilerExecutionEngineQueryCacheMonitoringAcceptanceTest extends Ex
 
   override def databaseConfig(): Map[Setting[_],Object] = super.databaseConfig() ++
     Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
-      GraphDatabaseSettings.cypher_expression_recompilation_limit -> Integer.valueOf(2)
+      GraphDatabaseInternalSettings.cypher_expression_recompilation_limit -> Integer.valueOf(2)
     )
 
   test("should monitor cache miss") {

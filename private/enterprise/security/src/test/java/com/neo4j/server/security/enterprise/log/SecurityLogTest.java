@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.log;
 
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.SecuritySettings;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;

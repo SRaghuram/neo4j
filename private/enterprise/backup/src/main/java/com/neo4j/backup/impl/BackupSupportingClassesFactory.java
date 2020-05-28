@@ -7,15 +7,16 @@ package com.neo4j.backup.impl;
 
 import com.neo4j.causalclustering.catchup.CatchupClientBuilder;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
-import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -94,7 +95,8 @@ public class BackupSupportingClassesFactory
 
         Function<NamedDatabaseId,TxPullClient> txPullClient = databaseId -> new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
-                new ExponentialBackoffStrategy( 1, config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
+                new ExponentialBackoffStrategy( 1, config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis(),
+                        TimeUnit.MILLISECONDS );
 
         Function<NamedDatabaseId,StoreCopyClient> storeCopyClient = databaseId ->
                 new StoreCopyClient( catchUpClient, databaseId, () -> monitors, logProvider, backOffStrategy );

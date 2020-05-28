@@ -49,11 +49,11 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_advertised_address;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_listen_address;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.causalclustering.discovery.akka.system.ClusterJoiningActor.AKKA_SCHEME;
+import static com.neo4j.configuration.CausalClusteringSettings.discovery_advertised_address;
+import static com.neo4j.configuration.CausalClusteringSettings.discovery_listen_address;
+import static com.neo4j.configuration.CausalClusteringSettings.initial_discovery_members;
+import static com.neo4j.configuration.CausalClusteringSettings.middleware_logging_level;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.configuration.GraphDatabaseSettings.SERVER_DEFAULTS;

@@ -5,7 +5,7 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.config.FabricEnterpriseSettings;
+import com.neo4j.configuration.FabricEnterpriseSettings;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
@@ -63,7 +63,7 @@ class RoutingTableTest
                 socket( "host2", 1002 ),
                 socket( "host3", 1003 )
         );
-        testServer.getRuntimeConfig().setDynamic( FabricEnterpriseSettings.fabricServersSetting, newRoutingTable, "RoutingTableTest" );
+        testServer.getRuntimeConfig().setDynamic( FabricEnterpriseSettings.fabric_servers_setting, newRoutingTable, "RoutingTableTest" );
 
         testServer.getDependencies().resolveDependency( GlobalProcedures.class )
                 .registerFunction( ProxyFunctions.class );

@@ -20,9 +20,9 @@ import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvPath;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled;
+import static com.neo4j.configuration.MetricsSettings.csv_enabled;
+import static com.neo4j.configuration.MetricsSettings.csv_path;
+import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -48,9 +48,9 @@ public class MemoryPoolsMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.homeDir(), "metrics" );
-        builder.setConfig( metricsEnabled, true );
-        builder.setConfig( csvEnabled, true );
-        builder.setConfig( csvPath, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( metrics_enabled, true );
+        builder.setConfig( csv_enabled, true );
+        builder.setConfig( csv_path, outputPath.toPath().toAbsolutePath() );
     }
 
     @Test

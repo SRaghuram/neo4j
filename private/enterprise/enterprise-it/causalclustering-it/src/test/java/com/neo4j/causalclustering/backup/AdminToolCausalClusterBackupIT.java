@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.backup;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -31,7 +31,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromSameJvm;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled;
+import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
@@ -99,7 +99,7 @@ class AdminToolCausalClusterBackupIT
 
     private static Config tempDbConfig()
     {
-        return Config.defaults( metricsEnabled, false );
+        return Config.defaults( metrics_enabled, false );
     }
 
     private static String newBackupDirName()

@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.time.Instant;
 import java.util.Arrays;

@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.MetricsSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.assertj.core.api.Condition;
@@ -23,6 +23,7 @@ import javax.management.MBeanServer;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -41,7 +42,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsPrefix;
+import static com.neo4j.configuration.MetricsSettings.metrics_prefix;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_COMMITTED_TEMPLATE;
@@ -70,13 +71,13 @@ class GlobalMetricsExtensionFactoryIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.homeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, true );
-        builder.setConfig( MetricsSettings.jmxEnabled, true );
-        builder.setConfig( MetricsSettings.csvEnabled, true );
+        builder.setConfig( MetricsSettings.metrics_enabled, true );
+        builder.setConfig( MetricsSettings.jmx_enabled, true );
+        builder.setConfig( MetricsSettings.csv_enabled, true );
         builder.setConfig( GraphDatabaseSettings.cypher_min_replan_interval, Duration.ofMillis( 0 ) );
-        builder.setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() );
         builder.setConfig( GraphDatabaseSettings.check_point_interval_time, Duration.ofMillis( 100 ) );
-        builder.setConfig( MetricsSettings.graphiteInterval, Duration.ofSeconds( 1 ) );
+        builder.setConfig( MetricsSettings.graphite_interval, Duration.ofSeconds( 1 ) );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
@@ -107,7 +108,7 @@ class GlobalMetricsExtensionFactoryIT
     @Test
     void reportHeapUsageMetrics() throws IOException
     {
-        String prefix = config.get( metricsPrefix ) + ".";
+        String prefix = config.get( metrics_prefix ) + ".";
         File heapCommittedFile = metricsCsv( outputPath, prefix + HEAP_COMMITTED_TEMPLATE );
         File heapMaxFile = metricsCsv( outputPath, prefix + HEAP_MAX_TEMPLATE );
         File heapUsedFile = metricsCsv( outputPath, prefix + HEAP_USED_TEMPLATE );
@@ -129,11 +130,11 @@ class GlobalMetricsExtensionFactoryIT
         File disabledTracerDb = directory.homeDir( "disabledTracerDb" );
 
         DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( disabledTracerDb )
-                .setConfig( MetricsSettings.metricsEnabled, true )
-                .setConfig( MetricsSettings.csvEnabled, true )
-                .setConfig( MetricsSettings.jmxEnabled, false )
-                .setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
+                .setConfig( MetricsSettings.metrics_enabled, true )
+                .setConfig( MetricsSettings.csv_enabled, true )
+                .setConfig( MetricsSettings.jmx_enabled, false )
+                .setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseInternalSettings.tracer, "null" ) // key point!
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .build();
         // key point!

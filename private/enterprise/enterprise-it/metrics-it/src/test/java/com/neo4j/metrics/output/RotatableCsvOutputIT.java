@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.output;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,10 +25,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvInterval;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvMaxArchives;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvPath;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvRotationThreshold;
+import static com.neo4j.configuration.MetricsSettings.csv_interval;
+import static com.neo4j.configuration.MetricsSettings.csv_max_archives;
+import static com.neo4j.configuration.MetricsSettings.csv_path;
+import static com.neo4j.configuration.MetricsSettings.csv_rotation_threshold;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.time.Duration.ofMinutes;
 import static java.util.Objects.requireNonNull;
@@ -56,10 +56,10 @@ class RotatableCsvOutputIT
     {
         outputPath = testDirectory.directory( "metrics" );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
-                .setConfig( csvPath, outputPath.toPath().toAbsolutePath() )
-                .setConfig( csvRotationThreshold, "t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1L )
-                .setConfig( csvInterval, Duration.ofMillis( 100 ) )
-                .setConfig( csvMaxArchives, MAX_ARCHIVES )
+                .setConfig( csv_path, outputPath.toPath().toAbsolutePath() )
+                .setConfig( csv_rotation_threshold, "t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1L )
+                .setConfig( csv_interval, Duration.ofMillis( 100 ) )
+                .setConfig( csv_max_archives, MAX_ARCHIVES )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }

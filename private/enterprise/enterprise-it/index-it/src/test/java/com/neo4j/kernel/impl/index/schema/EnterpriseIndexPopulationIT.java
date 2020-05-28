@@ -34,8 +34,8 @@ import org.neo4j.util.concurrent.Futures;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.neo4j.configuration.GraphDatabaseSettings.index_population_parallelism;
-import static org.neo4j.configuration.GraphDatabaseSettings.index_population_workers;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.index_population_parallelism;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.index_population_workers;
 import static org.neo4j.test.TestLabels.LABEL_ONE;
 import static org.neo4j.test.TestLabels.LABEL_THREE;
 import static org.neo4j.test.TestLabels.LABEL_TWO;

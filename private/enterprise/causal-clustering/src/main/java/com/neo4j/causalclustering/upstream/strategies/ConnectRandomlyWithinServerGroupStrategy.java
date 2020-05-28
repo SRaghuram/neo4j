@@ -5,14 +5,12 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 

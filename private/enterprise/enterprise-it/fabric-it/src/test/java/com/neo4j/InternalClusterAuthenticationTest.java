@@ -5,9 +5,9 @@
  */
 package com.neo4j;
 
+import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 import com.neo4j.fabric.auth.ClusterCredentialsProvider;
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import com.neo4j.fabric.driver.ClusterDriverConfigFactory;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.PooledDriver;

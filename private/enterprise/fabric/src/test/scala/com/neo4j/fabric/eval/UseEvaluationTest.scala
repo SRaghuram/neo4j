@@ -9,9 +9,9 @@ import java.time.Duration
 import java.util
 import java.util.UUID
 
-import com.neo4j.fabric.config.FabricEnterpriseConfig
-import com.neo4j.fabric.config.FabricEnterpriseConfig.GlobalDriverConfig
-import com.neo4j.fabric.config.FabricEnterpriseConfig.Graph
+import com.neo4j.configuration.FabricEnterpriseConfig
+import com.neo4j.configuration.FabricEnterpriseConfig.GlobalDriverConfig
+import com.neo4j.configuration.FabricEnterpriseConfig.Graph
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.ast.UseGraph

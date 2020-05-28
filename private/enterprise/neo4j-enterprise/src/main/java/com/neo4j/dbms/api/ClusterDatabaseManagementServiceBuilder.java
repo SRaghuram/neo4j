@@ -14,6 +14,7 @@ import java.util.function.Function;
 
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -33,7 +34,7 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
     @Override
     protected ClusterDatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
     {
-        config.set( GraphDatabaseSettings.ephemeral_lucene, FALSE );
+        config.set( GraphDatabaseInternalSettings.ephemeral_lucene, FALSE );
         return new ClusterDatabaseManagementServiceFactory( getDbmsInfo( config ), getEditionFactory( config ) )
                 .build( augmentConfig( config ), dependencies );
     }

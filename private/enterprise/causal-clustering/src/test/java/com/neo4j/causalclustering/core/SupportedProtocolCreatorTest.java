@@ -7,9 +7,10 @@ package com.neo4j.causalclustering.core;
 
 import co.unruly.matchers.StreamMatchers;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.SupportedProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
+import com.neo4j.configuration.ApplicationProtocolVersion;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

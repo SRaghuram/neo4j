@@ -11,7 +11,7 @@ import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -68,7 +68,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.catch_up_client_inactivity_timeout;
+import static com.neo4j.configuration.CausalClusteringSettings.catch_up_client_inactivity_timeout;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;

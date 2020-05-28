@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.MetricsSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
@@ -59,10 +59,10 @@ class TransactionLogsMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.homeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, true );
-        builder.setConfig( MetricsSettings.csvEnabled, true );
+        builder.setConfig( MetricsSettings.metrics_enabled, true );
+        builder.setConfig( MetricsSettings.csv_enabled, true );
         builder.setConfig( preallocate_logical_logs, false );
-        builder.setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

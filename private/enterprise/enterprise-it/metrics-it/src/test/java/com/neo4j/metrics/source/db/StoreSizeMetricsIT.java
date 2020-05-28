@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.source.db;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,8 +54,8 @@ class StoreSizeMetricsIT
     private void configure( TestDatabaseManagementServiceBuilder builder )
     {
         clock = new FakeClock();
-        builder.setConfig( MetricsSettings.metricsEnabled, true );
-        builder.setConfig( MetricsSettings.neoStoreSizeEnabled, true );
+        builder.setConfig( MetricsSettings.metrics_enabled, true );
+        builder.setConfig( MetricsSettings.neo_store_size_enabled, true );
         builder.setClock( clock );
     }
 

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.configuration.DiscoveryType;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -24,11 +25,11 @@ import org.neo4j.configuration.GraphDatabaseSettings.Mode;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_type;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.kubernetes_label_selector;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.kubernetes_service_port_name;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_akka_external_config;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.middleware_akka_external_config;
+import static com.neo4j.configuration.CausalClusteringSettings.discovery_type;
+import static com.neo4j.configuration.CausalClusteringSettings.initial_discovery_members;
+import static com.neo4j.configuration.CausalClusteringSettings.kubernetes_label_selector;
+import static com.neo4j.configuration.CausalClusteringSettings.kubernetes_service_port_name;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;

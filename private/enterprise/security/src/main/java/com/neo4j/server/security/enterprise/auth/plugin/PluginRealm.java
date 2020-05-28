@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperations;
@@ -15,7 +16,6 @@ import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.impl.enterprise.configuration;
+package com.neo4j.configuration;
 
 import java.util.Map;
 
@@ -12,7 +12,7 @@ import org.neo4j.configuration.SettingMigrator;
 import org.neo4j.configuration.SettingMigrators;
 import org.neo4j.logging.Log;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
+import static com.neo4j.configuration.OnlineBackupSettings.online_backup_listen_address;
 
 @ServiceProvider
 public class OnlineBackupSettingsMigrator implements SettingMigrator

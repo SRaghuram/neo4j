@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.protocol.handshake;
 
 import co.unruly.matchers.OptionalMatchers;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
+import com.neo4j.configuration.ApplicationProtocolVersion;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;

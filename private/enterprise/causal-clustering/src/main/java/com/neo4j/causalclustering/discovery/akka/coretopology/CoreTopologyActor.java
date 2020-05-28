@@ -12,7 +12,6 @@ import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.cluster.UniqueAddress;
 import akka.stream.javadsl.SourceQueueWithComplete;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
@@ -21,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
 import java.util.Set;

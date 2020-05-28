@@ -5,7 +5,7 @@
  */
 package com.neo4j.bolt;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.BoltConnectorInternalSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
@@ -139,7 +140,7 @@ class BoltThreadSchedulingIT
         managementService = dbFactory
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
-                .setConfig( BoltConnector.unsupported_thread_pool_queue_size, threadPoolQueueSize )
+                .setConfig( BoltConnectorInternalSettings.unsupported_thread_pool_queue_size, threadPoolQueueSize )
                 .setConfig( BoltConnector.thread_pool_min_size, threadPoolMinSize )
                 .setConfig( BoltConnector.thread_pool_max_size, threadPoolMaxSize )
                 .setConfig( GraphDatabaseSettings.auth_enabled, false )

@@ -5,8 +5,8 @@
  */
 package com.neo4j.fabric.driver;
 
+import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.fabric.auth.CredentialsProvider;
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;

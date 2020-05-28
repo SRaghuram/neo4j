@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.HashSet;
 import java.util.Set;

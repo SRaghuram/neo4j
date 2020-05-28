@@ -7,10 +7,10 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
@@ -32,11 +32,11 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.store_copy_chunk_size;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_frequency;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_strategy;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_rotation_size;
+import static com.neo4j.configuration.CausalClusteringSettings.state_machine_flush_window_size;
+import static com.neo4j.configuration.CausalClusteringSettings.store_copy_chunk_size;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;

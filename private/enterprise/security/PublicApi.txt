@@ -1,0 +1,32 @@
+com.neo4j.configuration.SecuritySettings public class extends java.lang.Object implements org.neo4j.configuration.SettingsDeclaration
+com.neo4j.configuration.SecuritySettings::LDAP_REALM_NAME java.lang.String public static final = ldap
+com.neo4j.configuration.SecuritySettings::NATIVE_REALM_NAME java.lang.String public static final = native
+com.neo4j.configuration.SecuritySettings::PLUGIN_REALM_NAME_PREFIX java.lang.String public static final = plugin-
+com.neo4j.configuration.SecuritySettings::SecuritySettings() void public
+com.neo4j.configuration.SecuritySettings::auth_cache_max_capacity org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.SecuritySettings::auth_cache_ttl org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.SecuritySettings::auth_cache_use_ttl org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.SecuritySettings::authentication_providers org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
+com.neo4j.configuration.SecuritySettings::authorization_providers org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authentication_cache_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authentication_mechanism org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authentication_use_samaccountname org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authentication_user_dn_template org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authorization_group_membership_attribute_names org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authorization_group_to_role_mapping org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authorization_system_password org.neo4j.graphdb.config.Setting<org.neo4j.string.SecureString> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authorization_system_username org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authorization_use_system_account org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authorization_user_search_base org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authorization_user_search_filter org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_connection_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.SecuritySettings::ldap_read_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.SecuritySettings::ldap_referral org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_server org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_use_starttls org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.SecuritySettings::security_log_filename org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
+com.neo4j.configuration.SecuritySettings::security_log_level org.neo4j.graphdb.config.Setting<org.neo4j.logging.Level> public static final
+com.neo4j.configuration.SecuritySettings::security_log_successful_authentication org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.SecuritySettings::store_security_log_max_archives org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.SecuritySettings::store_security_log_rotation_delay org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.SecuritySettings::store_security_log_rotation_threshold org.neo4j.graphdb.config.Setting<java.lang.Long> public static final

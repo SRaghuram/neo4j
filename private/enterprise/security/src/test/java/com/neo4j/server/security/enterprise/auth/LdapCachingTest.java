@@ -6,9 +6,9 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.google.common.testing.FakeTicker;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.authc.AuthenticationException;

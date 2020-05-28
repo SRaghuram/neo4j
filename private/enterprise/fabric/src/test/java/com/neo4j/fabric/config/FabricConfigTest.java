@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.config;
 
+import com.neo4j.configuration.FabricEnterpriseConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

@@ -11,8 +11,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.Level;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport.TCP;
+import static com.neo4j.configuration.CausalClusteringSettings.middleware_logging_level;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TypesafeConfigServiceTest

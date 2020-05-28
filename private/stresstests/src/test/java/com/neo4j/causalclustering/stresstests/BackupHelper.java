@@ -29,7 +29,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
+import static com.neo4j.configuration.CausalClusteringSettings.transaction_advertised_address;
 import static org.neo4j.internal.helpers.Exceptions.findCauseOrSuppressed;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 

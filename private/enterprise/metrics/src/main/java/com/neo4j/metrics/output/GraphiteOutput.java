@@ -18,22 +18,22 @@ import com.codahale.metrics.graphite.GraphiteReporter;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 
 public class GraphiteOutput implements Lifecycle, EventReporter
 {
-    private final HostnamePort hostnamePort;
+    private final SocketAddress socketAddress;
     private final long period;
     private final MetricRegistry registry;
     private final Log logger;
 
     private GraphiteReporter graphiteReporter;
 
-    GraphiteOutput( HostnamePort hostnamePort, long period, MetricRegistry registry, Log logger )
+    GraphiteOutput( SocketAddress socketAddress, long period, MetricRegistry registry, Log logger )
     {
-        this.hostnamePort = hostnamePort;
+        this.socketAddress = socketAddress;
         this.period = period;
         this.registry = registry;
         this.logger = logger;
@@ -43,7 +43,7 @@ public class GraphiteOutput implements Lifecycle, EventReporter
     public void init()
     {
         // Setup Graphite reporting
-        final Graphite graphite = new Graphite( hostnamePort.getHost(), hostnamePort.getPort() );
+        final Graphite graphite = new Graphite( socketAddress.getHostname(), socketAddress.getPort() );
 
         graphiteReporter = GraphiteReporter.forRegistry( registry )
                 .convertRatesTo( TimeUnit.SECONDS )
@@ -56,7 +56,7 @@ public class GraphiteOutput implements Lifecycle, EventReporter
     public void start()
     {
         graphiteReporter.start( period, TimeUnit.MILLISECONDS );
-        logger.info( "Sending metrics to Graphite server at " + hostnamePort );
+        logger.info( "Sending metrics to Graphite server at " + socketAddress );
     }
 
     @Override

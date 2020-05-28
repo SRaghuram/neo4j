@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
@@ -15,6 +13,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;

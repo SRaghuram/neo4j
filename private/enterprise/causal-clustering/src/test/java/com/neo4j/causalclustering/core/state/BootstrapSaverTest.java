@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -78,24 +78,24 @@ class BootstrapSaverTest
 
         // then: should have been moved to temp-save
         store.assertMissing();
-        assertTrue( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertTrue( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: restoring
         saver.restore( databaseLayout );
 
         // then: should be back in standard location
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: cleaning without anything to clean
         saver.clean( databaseLayout );
 
         // then: should have no effect
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
     }
 
     @ParameterizedTest
@@ -116,8 +116,8 @@ class BootstrapSaverTest
 
         // then: should have been moved
         store.assertMissing();
-        assertTrue( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertTrue( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: simulate a store copy and clean of temp-save
         store.create();
@@ -125,16 +125,16 @@ class BootstrapSaverTest
 
         // then: store should exist but not temp-save
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: restoring - typically after a restart
         saver.restore( databaseLayout );
 
         // then: this should not change anything
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
     }
 
     private static class FakeStore

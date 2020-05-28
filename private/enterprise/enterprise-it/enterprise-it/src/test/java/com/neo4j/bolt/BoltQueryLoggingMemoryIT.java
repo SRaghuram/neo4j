@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel;
@@ -46,7 +47,7 @@ public class BoltQueryLoggingMemoryIT
                 .withConfig( GraphDatabaseSettings.log_queries, LogQueryLevel.VERBOSE )
                 .withConfig( GraphDatabaseSettings.log_queries_allocation_logging_enabled, true )
                 .withConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true )
-                .withConfig( GraphDatabaseSettings.log_queries_heap_dump_enabled, true );
+                .withConfig( GraphDatabaseInternalSettings.log_queries_heap_dump_enabled, true );
     }
 
     @After

@@ -25,14 +25,14 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.global_session_tracker_state_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.last_flushed_state_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_membership_state_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.replicated_lease_state_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.term_state_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.vote_state_size;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;
+import static com.neo4j.configuration.CausalClusteringSettings.global_session_tracker_state_size;
+import static com.neo4j.configuration.CausalClusteringSettings.last_flushed_state_size;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_membership_state_size;
+import static com.neo4j.configuration.CausalClusteringSettings.replicated_lease_state_size;
+import static com.neo4j.configuration.CausalClusteringSettings.term_state_size;
+import static com.neo4j.configuration.CausalClusteringSettings.vote_state_size;
 import static java.util.Arrays.asList;
 
 /**

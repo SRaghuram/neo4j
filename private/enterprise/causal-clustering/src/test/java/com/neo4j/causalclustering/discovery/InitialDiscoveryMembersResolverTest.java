@@ -14,7 +14,7 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
+import static com.neo4j.configuration.CausalClusteringSettings.initial_discovery_members;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;

@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.log;
 
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.SecuritySettings;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +14,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -58,7 +59,7 @@ public class SecurityLog extends LifecycleAdapter implements Log
                     config.get( SecuritySettings.store_security_log_rotation_delay ).toMillis(),
                     config.get( SecuritySettings.store_security_log_max_archives ), executor );
 
-            builder.withFormat( config.get( GraphDatabaseSettings.log_format ) );
+            builder.withFormat( config.get( GraphDatabaseInternalSettings.log_format ) );
             FormattedLog formattedLog = builder.toOutputStream( rotatingSupplier );
             formattedLog.setLevel( config.get( SecuritySettings.security_log_level ) );
 

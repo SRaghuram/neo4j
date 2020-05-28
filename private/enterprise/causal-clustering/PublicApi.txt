@@ -1,0 +1,119 @@
+com.neo4j.configuration.ApplicationProtocolVersion public class extends java.lang.Object implements java.lang.Comparable<com.neo4j.configuration.ApplicationProtocolVersion>
+com.neo4j.configuration.ApplicationProtocolVersion::ApplicationProtocolVersion(int, int) void public
+com.neo4j.configuration.ApplicationProtocolVersion::compareTo(com.neo4j.configuration.ApplicationProtocolVersion) int public
+com.neo4j.configuration.ApplicationProtocolVersion::decode(io.netty.buffer.ByteBuf) com.neo4j.configuration.ApplicationProtocolVersion public static
+com.neo4j.configuration.ApplicationProtocolVersion::encode(io.netty.buffer.ByteBuf) void public
+com.neo4j.configuration.ApplicationProtocolVersion::equals(java.lang.Object) boolean public
+com.neo4j.configuration.ApplicationProtocolVersion::hashCode() int public
+com.neo4j.configuration.ApplicationProtocolVersion::major() int public
+com.neo4j.configuration.ApplicationProtocolVersion::minor() int public
+com.neo4j.configuration.ApplicationProtocolVersion::parse(java.lang.String) com.neo4j.configuration.ApplicationProtocolVersion public static
+com.neo4j.configuration.ApplicationProtocolVersion::toString() java.lang.String public
+com.neo4j.configuration.CausalClusteringSettings public class extends java.lang.Object implements org.neo4j.configuration.SettingsDeclaration
+com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies public static final enum extends java.lang.Enum<com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies>
+com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies::EQUAL_BALANCING com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies public static final
+com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies::NO_BALANCING com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies public static final
+com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies::valueOf(java.lang.String) com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies public static
+com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies::values() com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies[] public static
+com.neo4j.configuration.CausalClusteringSettings::CausalClusteringSettings() void public
+com.neo4j.configuration.CausalClusteringSettings::catch_up_client_inactivity_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::catchup_batch_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::catchup_implementations org.neo4j.graphdb.config.Setting<java.util.List<com.neo4j.configuration.ApplicationProtocolVersion>> public static final
+com.neo4j.configuration.CausalClusteringSettings::cluster_allow_reads_on_followers org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.CausalClusteringSettings::cluster_topology_refresh org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::command_applier_parallelism org.neo4j.graphdb.config.Setting<java.lang.Integer> public static
+com.neo4j.configuration.CausalClusteringSettings::compression_implementations org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
+com.neo4j.configuration.CausalClusteringSettings::connect_randomly_to_server_group_strategy org.neo4j.graphdb.config.Setting<java.util.List<com.neo4j.configuration.ServerGroupName>> public static final
+com.neo4j.configuration.CausalClusteringSettings::discovery_advertised_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.CausalClusteringSettings::discovery_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.CausalClusteringSettings::discovery_type org.neo4j.graphdb.config.Setting<com.neo4j.configuration.DiscoveryType> public static final
+com.neo4j.configuration.CausalClusteringSettings::enable_pre_voting org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.CausalClusteringSettings::failure_detection_window org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.DurationRange> public static final
+com.neo4j.configuration.CausalClusteringSettings::failure_resolution_window org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.DurationRange> public static final
+com.neo4j.configuration.CausalClusteringSettings::global_session_tracker_state_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::handshake_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::in_flight_cache_max_bytes org.neo4j.graphdb.config.Setting<java.lang.Long> public static final
+com.neo4j.configuration.CausalClusteringSettings::in_flight_cache_max_entries org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::in_flight_cache_type org.neo4j.graphdb.config.Setting<com.neo4j.configuration.InFlightCacheType> public static final
+com.neo4j.configuration.CausalClusteringSettings::initial_discovery_members org.neo4j.graphdb.config.Setting<java.util.List<org.neo4j.configuration.helpers.SocketAddress>> public static final
+com.neo4j.configuration.CausalClusteringSettings::join_catch_up_max_lag org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::join_catch_up_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::kubernetes_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.CausalClusteringSettings::kubernetes_ca_crt org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
+com.neo4j.configuration.CausalClusteringSettings::kubernetes_label_selector org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.CausalClusteringSettings::kubernetes_namespace org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
+com.neo4j.configuration.CausalClusteringSettings::kubernetes_service_port_name org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.CausalClusteringSettings::kubernetes_token org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
+com.neo4j.configuration.CausalClusteringSettings::last_flushed_state_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::leader_balancing org.neo4j.graphdb.config.Setting<com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies> public static final
+com.neo4j.configuration.CausalClusteringSettings::leader_election_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::load_balancing_plugin org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.CausalClusteringSettings::load_balancing_shuffle org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.CausalClusteringSettings::log_shipping_max_lag org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::log_shipping_retry_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::middleware_logging_level org.neo4j.graphdb.config.Setting<org.neo4j.logging.Level> public static final
+com.neo4j.configuration.CausalClusteringSettings::minimum_core_cluster_size_at_formation org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::minimum_core_cluster_size_at_runtime org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::multi_dc_license org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.CausalClusteringSettings::pull_interval org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_advertised_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_handler_parallelism org.neo4j.graphdb.config.Setting<java.lang.Integer> public static
+com.neo4j.configuration.CausalClusteringSettings::raft_implementations org.neo4j.graphdb.config.Setting<java.util.List<com.neo4j.configuration.ApplicationProtocolVersion>> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_in_queue_max_batch_bytes org.neo4j.graphdb.config.Setting<java.lang.Long> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_in_queue_max_bytes org.neo4j.graphdb.config.Setting<java.lang.Long> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_log_implementation org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_log_pruning_frequency org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_log_pruning_strategy org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_log_reader_pool_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_log_rotation_size org.neo4j.graphdb.config.Setting<java.lang.Long> public static final
+com.neo4j.configuration.CausalClusteringSettings::raft_membership_state_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::refuse_to_be_leader org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.CausalClusteringSettings::replicated_lease_state_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::replication_leader_await_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::replication_retry_timeout_base org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::replication_retry_timeout_limit org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::server_groups org.neo4j.graphdb.config.Setting<java.util.List<com.neo4j.configuration.ServerGroupName>> public static final
+com.neo4j.configuration.CausalClusteringSettings::state_machine_apply_max_batch_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::state_machine_flush_window_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::status_auth_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.CausalClusteringSettings::status_throughput_window org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::store_copy_chunk_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::store_copy_max_retry_time_per_request org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::term_state_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.CausalClusteringSettings::transaction_advertised_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.CausalClusteringSettings::transaction_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+com.neo4j.configuration.CausalClusteringSettings::unknown_address_logging_throttle org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::upstream_selection_strategy org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
+com.neo4j.configuration.CausalClusteringSettings::user_defined_upstream_selection_strategy org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.CausalClusteringSettings::vote_state_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+com.neo4j.configuration.DiscoveryType public final enum extends java.lang.Enum<com.neo4j.configuration.DiscoveryType>
+com.neo4j.configuration.DiscoveryType::DNS com.neo4j.configuration.DiscoveryType public static final
+com.neo4j.configuration.DiscoveryType::K8S com.neo4j.configuration.DiscoveryType public static final
+com.neo4j.configuration.DiscoveryType::LIST com.neo4j.configuration.DiscoveryType public static final
+com.neo4j.configuration.DiscoveryType::SRV com.neo4j.configuration.DiscoveryType public static final
+com.neo4j.configuration.DiscoveryType::valueOf(java.lang.String) com.neo4j.configuration.DiscoveryType public static
+com.neo4j.configuration.DiscoveryType::values() com.neo4j.configuration.DiscoveryType[] public static
+com.neo4j.configuration.InFlightCacheType public enum extends java.lang.Enum<com.neo4j.configuration.InFlightCacheType>
+com.neo4j.configuration.InFlightCacheType::CONSECUTIVE com.neo4j.configuration.InFlightCacheType public static final
+com.neo4j.configuration.InFlightCacheType::NONE com.neo4j.configuration.InFlightCacheType public static final
+com.neo4j.configuration.InFlightCacheType::UNBOUNDED com.neo4j.configuration.InFlightCacheType public static final
+com.neo4j.configuration.InFlightCacheType::valueOf(java.lang.String) com.neo4j.configuration.InFlightCacheType public static
+com.neo4j.configuration.InFlightCacheType::values() com.neo4j.configuration.InFlightCacheType[] public static
+com.neo4j.configuration.ServerGroupName public class extends java.lang.Object implements java.lang.CharSequence, java.lang.Comparable<com.neo4j.configuration.ServerGroupName>
+com.neo4j.configuration.ServerGroupName::EMPTY com.neo4j.configuration.ServerGroupName public static final
+com.neo4j.configuration.ServerGroupName::SERVER_GROUP_NAME org.neo4j.configuration.SettingValueParser<com.neo4j.configuration.ServerGroupName> public static final
+com.neo4j.configuration.ServerGroupName::ServerGroupName(java.lang.String) void public
+com.neo4j.configuration.ServerGroupName::charAt(int) char public
+com.neo4j.configuration.ServerGroupName::chars() java.util.stream.IntStream public
+com.neo4j.configuration.ServerGroupName::codePoints() java.util.stream.IntStream public
+com.neo4j.configuration.ServerGroupName::compareTo(com.neo4j.configuration.ServerGroupName) int public
+com.neo4j.configuration.ServerGroupName::equals(java.lang.Object) boolean public
+com.neo4j.configuration.ServerGroupName::getRaw() java.lang.String public
+com.neo4j.configuration.ServerGroupName::hashCode() int public
+com.neo4j.configuration.ServerGroupName::length() int public
+com.neo4j.configuration.ServerGroupName::listOf(java.lang.String...) java.util.List<com.neo4j.configuration.ServerGroupName> public static
+com.neo4j.configuration.ServerGroupName::setOf(java.lang.String...) java.util.Set<com.neo4j.configuration.ServerGroupName> public static
+com.neo4j.configuration.ServerGroupName::setOf(java.util.Collection<java.lang.String>) java.util.Set<com.neo4j.configuration.ServerGroupName> public static
+com.neo4j.configuration.ServerGroupName::subSequence(int, int) java.lang.CharSequence public
+com.neo4j.configuration.ServerGroupName::toString() java.lang.String public

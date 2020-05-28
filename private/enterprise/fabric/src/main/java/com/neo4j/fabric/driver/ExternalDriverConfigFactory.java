@@ -5,7 +5,8 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
+import com.neo4j.configuration.DriverApi;
+import com.neo4j.configuration.FabricEnterpriseConfig;
 
 import java.util.Map;
 import java.util.function.Function;

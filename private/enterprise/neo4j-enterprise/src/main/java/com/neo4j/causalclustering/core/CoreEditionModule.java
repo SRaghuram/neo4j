@@ -52,6 +52,8 @@ import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -107,7 +109,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
+import static com.neo4j.configuration.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
@@ -278,9 +280,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         RaftMessageLogger<MemberId> raftMessageLogger;
         var config = globalModule.getGlobalConfig();
-        if ( config.get( CausalClusteringSettings.raft_messages_log_enable ) )
+        if ( config.get( CausalClusteringInternalSettings.raft_messages_log_enable ) )
         {
-            var logFile = config.get( CausalClusteringSettings.raft_messages_log_path ).toFile();
+            var logFile = config.get( CausalClusteringInternalSettings.raft_messages_log_path ).toFile();
             var logger = new BetterRaftMessageLogger<>( myself, logFile, globalModule.getFileSystem(), globalModule.getGlobalClock() );
             raftMessageLogger = globalModule.getGlobalLife().add( logger );
         }
@@ -323,8 +325,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
         var globalOtherTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
-        var leaderTransferInterval = globalConfig.get( CausalClusteringSettings.leader_transfer_interval );
-        var leaderTransferBackoff = globalConfig.get( CausalClusteringSettings.leader_transfer_member_backoff );
+        var leaderTransferInterval = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_interval );
+        var leaderTransferBackoff = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_member_backoff );
 
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
                 raftMessageDispatcher, myIdentity, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService );

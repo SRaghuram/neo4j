@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.protocol.application;
 
 import com.neo4j.causalclustering.protocol.Protocol;
+import com.neo4j.configuration.ApplicationProtocolVersion;
 
 import java.util.List;
 import java.util.Optional;

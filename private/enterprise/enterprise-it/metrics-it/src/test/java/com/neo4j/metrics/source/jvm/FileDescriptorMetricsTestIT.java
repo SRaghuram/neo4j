@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.source.jvm;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import org.apache.commons.lang3.SystemUtils;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
@@ -45,8 +45,8 @@ class FileDescriptorMetricsTestIT
         metricsFolder = testDirectory.directory( "metrics" );
 
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() )
-                .setConfig( MetricsSettings.metricsEnabled, true )
-                .setConfig( MetricsSettings.jvmFileDescriptorsEnabled, true )
+                .setConfig( MetricsSettings.metrics_enabled, true )
+                .setConfig( MetricsSettings.jvm_file_descriptors_enabled, true )
                 .build();
     }
 

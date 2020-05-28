@@ -40,8 +40,8 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_detection_window;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_resolution_window;
+import static com.neo4j.configuration.CausalClusteringSettings.failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.failure_resolution_window;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;

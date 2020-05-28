@@ -7,8 +7,8 @@ package com.neo4j.metrics;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.MetricsSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.metrics.database.DatabaseMetricsExtension;
 import com.neo4j.metrics.database.DatabaseMetricsExtensionFactory;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
@@ -89,13 +89,13 @@ class DatabaseMetricsExtensionIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.homeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, true );
-        builder.setConfig( MetricsSettings.csvEnabled, true );
-        builder.setConfig( MetricsSettings.csvInterval, Duration.ofMillis( 30 ) );
+        builder.setConfig( MetricsSettings.metrics_enabled, true );
+        builder.setConfig( MetricsSettings.csv_enabled, true );
+        builder.setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 30 ) );
         builder.setConfig( cypher_min_replan_interval, Duration.ofMinutes( 0 ) );
-        builder.setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() );
         builder.setConfig( check_point_interval_time, Duration.ofMillis( 100 ) );
-        builder.setConfig( MetricsSettings.graphiteInterval, Duration.ofSeconds( 1 ) );
+        builder.setConfig( MetricsSettings.graphite_interval, Duration.ofSeconds( 1 ) );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

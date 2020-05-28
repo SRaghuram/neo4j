@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery.akka.system;
 
 import akka.cluster.UniqueAddress;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
@@ -38,6 +37,8 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.typesafe.config.ConfigFactory;
 
 import java.nio.file.Path;
@@ -80,7 +81,7 @@ public final class TypesafeConfigService
 
     public com.typesafe.config.Config generate()
     {
-        Path externalConfig = config.get( CausalClusteringSettings.middleware_akka_external_config );
+        Path externalConfig = config.get( CausalClusteringInternalSettings.middleware_akka_external_config );
         final com.typesafe.config.Config base;
         if ( externalConfig == null )
         {
@@ -127,13 +128,13 @@ public final class TypesafeConfigService
         configMap.put( "akka.remote.artery.bind.hostname", hostname( listenAddress ) );
         configMap.put( "akka.remote.artery.bind.port", listenAddress.getPort() );
 
-        Duration bindTimeout = config.get( CausalClusteringSettings.akka_bind_timeout );
+        Duration bindTimeout = config.get( CausalClusteringInternalSettings.akka_bind_timeout );
         configMap.put( "akka.remote.artery.bind.bind-timeout", bindTimeout.toMillis() + "ms" );
 
-        Duration connectionTimeout = config.get( CausalClusteringSettings.akka_connection_timeout );
+        Duration connectionTimeout = config.get( CausalClusteringInternalSettings.akka_connection_timeout );
         configMap.put( "akka.remote.artery.advanced.connection-timeout", connectionTimeout.toMillis() + "ms" );
 
-        Duration handshakeTimeout = config.get( CausalClusteringSettings.akka_handshake_timeout );
+        Duration handshakeTimeout = config.get( CausalClusteringInternalSettings.akka_handshake_timeout );
         configMap.put( "akka.remote.artery.advanced.handshake-timeout", handshakeTimeout.toMillis() + "ms" );
 
         return ConfigFactory.parseMap( configMap );
@@ -143,19 +144,19 @@ public final class TypesafeConfigService
     {
         Map<String,Object> configMap = new HashMap<>();
 
-        long heartbeatIntervalMillis = config.get( CausalClusteringSettings.akka_failure_detector_heartbeat_interval ).toMillis();
+        long heartbeatIntervalMillis = config.get( CausalClusteringInternalSettings.akka_failure_detector_heartbeat_interval ).toMillis();
         configMap.put( "akka.cluster.failure-detector.heartbeat-interval", heartbeatIntervalMillis + "ms" );
-        Double threshold = config.get( CausalClusteringSettings.akka_failure_detector_threshold );
+        Double threshold = config.get( CausalClusteringInternalSettings.akka_failure_detector_threshold );
         configMap.put( "akka.cluster.failure-detector.threshold", threshold );
-        Integer maxSampleSize = config.get( CausalClusteringSettings.akka_failure_detector_max_sample_size );
+        Integer maxSampleSize = config.get( CausalClusteringInternalSettings.akka_failure_detector_max_sample_size );
         configMap.put( "akka.cluster.failure-detector.max-sample-size", maxSampleSize );
-        long minStdDeviationMillis = config.get( CausalClusteringSettings.akka_failure_detector_min_std_deviation ).toMillis();
+        long minStdDeviationMillis = config.get( CausalClusteringInternalSettings.akka_failure_detector_min_std_deviation ).toMillis();
         configMap.put( "akka.cluster.failure-detector.min-std-deviation", minStdDeviationMillis + "ms" );
-        long acceptableHeartbeatPauseMillis = config.get( CausalClusteringSettings.akka_failure_detector_acceptable_heartbeat_pause ).toMillis();
+        long acceptableHeartbeatPauseMillis = config.get( CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause ).toMillis();
         configMap.put( "akka.cluster.failure-detector.acceptable-heartbeat-pause", acceptableHeartbeatPauseMillis + "ms" );
-        Integer monitoredByNrOfMembers = config.get( CausalClusteringSettings.akka_failure_detector_monitored_by_nr_of_members );
+        Integer monitoredByNrOfMembers = config.get( CausalClusteringInternalSettings.akka_failure_detector_monitored_by_nr_of_members );
         configMap.put( "akka.cluster.failure-detector.monitored-by-nr-of-members", monitoredByNrOfMembers );
-        long expectedResponseAfterMillis = config.get( CausalClusteringSettings.akka_failure_detector_expected_response_after ).toMillis();
+        long expectedResponseAfterMillis = config.get( CausalClusteringInternalSettings.akka_failure_detector_expected_response_after ).toMillis();
         configMap.put( "akka.cluster.failure-detector.expected-response-after", expectedResponseAfterMillis + "ms" );
 
         return ConfigFactory.parseMap( configMap );
@@ -164,7 +165,7 @@ public final class TypesafeConfigService
     private com.typesafe.config.Config dispatcherConfig()
     {
         // parallelism is processors * parallelism-factor, bounded between parallelism-min and parallelism-max
-        Integer parallelism = config.get( CausalClusteringSettings.middleware_akka_sink_parallelism_level );
+        Integer parallelism = config.get( CausalClusteringInternalSettings.middleware_akka_sink_parallelism_level );
 
         Map<String,Object> configMap = new HashMap<>();
         configMap.put( DISCOVERY_SINK_DISPATCHER + ".type", "Dispatcher" );

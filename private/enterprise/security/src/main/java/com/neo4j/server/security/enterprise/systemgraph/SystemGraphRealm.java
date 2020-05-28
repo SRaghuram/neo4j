@@ -6,10 +6,10 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -49,7 +49,6 @@ import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 
-import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.server.security.systemgraph.SystemGraphRealmHelper.IS_SUSPENDED;
 
 /**

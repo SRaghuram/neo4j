@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
@@ -17,6 +16,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Collections;
 import java.util.Map;

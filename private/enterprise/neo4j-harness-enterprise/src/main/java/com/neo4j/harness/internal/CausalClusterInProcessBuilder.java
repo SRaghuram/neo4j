@@ -5,10 +5,10 @@
  */
 package com.neo4j.harness.internal;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.helper.ErrorHandler;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.io.File;
 import java.nio.file.Path;

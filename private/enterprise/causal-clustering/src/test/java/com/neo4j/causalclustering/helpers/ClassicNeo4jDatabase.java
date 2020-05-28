@@ -5,12 +5,13 @@
  */
 package com.neo4j.causalclustering.helpers;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -130,7 +131,7 @@ public class ClassicNeo4jDatabase
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
-                    .setConfig( GraphDatabaseSettings.databases_root_path, databasesRootDirectoryAbsolute.toPath() )
+                    .setConfig( GraphDatabaseInternalSettings.databases_root_path, databasesRootDirectoryAbsolute.toPath() )
                     .build();
             GraphDatabaseService db = managementService.database( namedDatabaseId.name() );
 

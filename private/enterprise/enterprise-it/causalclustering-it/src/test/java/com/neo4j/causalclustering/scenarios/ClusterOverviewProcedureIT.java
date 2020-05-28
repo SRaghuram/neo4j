@@ -36,8 +36,8 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.drop
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.listDatabases;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.server_groups;
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+import static com.neo4j.configuration.CausalClusteringSettings.server_groups;
+import static com.neo4j.configuration.OnlineBackupSettings.online_backup_enabled;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MINUTES;

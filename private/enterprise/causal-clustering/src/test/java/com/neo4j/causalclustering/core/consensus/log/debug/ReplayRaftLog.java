@@ -26,10 +26,10 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_reader_pool_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_strategy;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_reader_pool_size;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_rotation_size;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 

@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.dynamic_setting_whitelist;
+import static com.neo4j.configuration.EnterpriseEditionSettings.dynamic_setting_whitelist;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 

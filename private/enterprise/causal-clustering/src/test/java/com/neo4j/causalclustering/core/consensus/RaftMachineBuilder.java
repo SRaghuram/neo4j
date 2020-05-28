@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -26,6 +25,7 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.Outbound;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.IOException;
 import java.time.Clock;

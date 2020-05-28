@@ -5,24 +5,24 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
+import java.lang.Boolean.TRUE
+import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.nio.file.Path
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase.MORSEL_SIZE
+import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase.WORKER_COUNT
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase.MORSEL_SIZE
-import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase.WORKER_COUNT
-import java.lang.Boolean.TRUE
-import java.lang.management.ManagementFactory
 
 object SchedulerTracerTestBase {
   def newTempCSVPath(): Path = Files.createTempFile("scheduler-trace", ".csv")
@@ -33,11 +33,11 @@ object SchedulerTracerTestBase {
 
 abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext], tempCSVPath: Path = SchedulerTracerTestBase.newTempCSVPath())
   extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.DEFAULT).copyWith(
-    GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKER_COUNT),
-    GraphDatabaseSettings.enable_pipelined_runtime_trace -> TRUE,
-    GraphDatabaseSettings.pipelined_scheduler_trace_filename -> tempCSVPath.toAbsolutePath
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(WORKER_COUNT),
+    GraphDatabaseInternalSettings.enable_pipelined_runtime_trace -> TRUE,
+    GraphDatabaseInternalSettings.pipelined_scheduler_trace_filename -> tempCSVPath.toAbsolutePath
   ), runtime) {
 
   override def stopTest(): Unit = {

@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
@@ -144,7 +145,7 @@ public class DatabaseRebuildTool
         File txRootDirectory = txRootDirectoryPath != null ? new File( txRootDirectoryPath ).getParentFile() : sourceDirectory.getParentFile();
 
         Config config = Config.newBuilder()
-                .set( GraphDatabaseSettings.databases_root_path, sourceDirectory.getParentFile().toPath().toAbsolutePath() )
+                .set( GraphDatabaseInternalSettings.databases_root_path, sourceDirectory.getParentFile().toPath().toAbsolutePath() )
                 .set( GraphDatabaseSettings.transaction_logs_root_path, txRootDirectory.toPath().toAbsolutePath() )
                 .build();
         return Neo4jLayout.of( config ).databaseLayout( sourceDirectory.getName() );
@@ -153,7 +154,7 @@ public class DatabaseRebuildTool
     private static DatabaseManagementServiceBuilder newDbBuilder( File storeDir, String databaseName, Args args )
     {
         DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.databases_root_path, storeDir.toPath() )
+                .setConfig( GraphDatabaseInternalSettings.databases_root_path, storeDir.toPath() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.toPath() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseName );
         Map<String, String> rawCfgValues = new HashMap<>();

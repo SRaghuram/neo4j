@@ -3,9 +3,8 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.config;
+package com.neo4j.configuration;
 
-import com.neo4j.fabric.driver.DriverConfigFactory;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.eclipse.collections.api.multimap.set.MutableSetMultimap;
 import org.eclipse.collections.impl.factory.Multimaps;
@@ -122,24 +121,24 @@ public class FabricEnterpriseConfig extends FabricConfig
     {
         var database = parseDatabase( config );
         var transactionTimeout = config.get( GraphDatabaseSettings.transaction_timeout );
-        var driverIdleTimeout = config.get( FabricEnterpriseSettings.driverIdleTimeout );
-        var driverIdleCheckInterval = config.get( FabricEnterpriseSettings.driverIdleCheckInterval );
-        var driverEventLoopCount = config.get( FabricEnterpriseSettings.driverEventLoopCount );
+        var driverIdleTimeout = config.get( FabricEnterpriseInternalSettings.driver_idle_timeout );
+        var driverIdleCheckInterval = config.get( FabricEnterpriseInternalSettings.driver_idle_check_interval );
+        var driverEventLoopCount = config.get( FabricEnterpriseInternalSettings.driver_event_loop_count );
 
-        var driverConfig = new DriverConfig( config.get( FabricEnterpriseSettings.driverLoggingLevel ),
-                config.get( FabricEnterpriseSettings.driverLogLeakedSessions ),
-                config.get( FabricEnterpriseSettings.driverMaxConnectionPoolSize ),
-                config.get( FabricEnterpriseSettings.driverIdleTimeBeforeConnectionTest ),
-                config.get( FabricEnterpriseSettings.driverMaxConnectionLifetime ),
-                config.get( FabricEnterpriseSettings.driverConnectionAcquisitionTimeout ),
-                config.get( FabricEnterpriseSettings.driverConnectTimeout ),
-                config.get( FabricEnterpriseSettings.driverApi ) );
+        var driverConfig = new DriverConfig( config.get( FabricEnterpriseSettings.driver_logging_level ),
+                config.get( FabricEnterpriseInternalSettings.driver_log_leaked_sessions ),
+                config.get( FabricEnterpriseSettings.driver_max_connection_pool_size ),
+                config.get( FabricEnterpriseSettings.driver_idle_time_before_connection_test ),
+                config.get( FabricEnterpriseSettings.driver_max_connection_lifetime ),
+                config.get( FabricEnterpriseSettings.driver_connection_acquisition_timeout ),
+                config.get( FabricEnterpriseSettings.driver_connect_timeout ),
+                config.get( FabricEnterpriseSettings.driver_api ) );
 
         var remoteGraphDriver = new GlobalDriverConfig( driverIdleTimeout, driverIdleCheckInterval, driverEventLoopCount, driverConfig );
 
-        var bufferLowWatermark = config.get( FabricEnterpriseSettings.bufferLowWatermarkSetting );
-        var bufferSize = config.get( FabricEnterpriseSettings.bufferSizeSetting );
-        var syncBatchSize = config.get( FabricSettings.batchSizeSetting );
+        var bufferLowWatermark = config.get( FabricEnterpriseSettings.buffer_low_watermark_setting );
+        var bufferSize = config.get( FabricEnterpriseSettings.buffer_size_setting );
+        var syncBatchSize = config.get( FabricSettings.batch_size_setting );
         var concurrency = config.get( FabricEnterpriseSettings.concurrency );
         if ( concurrency == null )
         {
@@ -151,11 +150,11 @@ public class FabricEnterpriseConfig extends FabricConfig
         boolean routingEnabled = config.get( connector_routing_enabled );
         if ( database.isPresent() )
         {
-            var serverAddresses = config.get( FabricEnterpriseSettings.fabricServersSetting );
-            var routingTtl = config.get( FabricEnterpriseSettings.routingTtlSetting );
+            var serverAddresses = config.get( FabricEnterpriseSettings.fabric_servers_setting );
+            var routingTtl = config.get( FabricEnterpriseSettings.routing_ttl_setting );
             var fabricConfig = new FabricEnterpriseConfig( database.get(), serverAddresses, routingTtl, transactionTimeout, remoteGraphDriver, dataStream,
                     routingEnabled );
-            config.addListener( FabricEnterpriseSettings.fabricServersSetting, ( oldValue, newValue ) -> fabricConfig.setFabricServers( newValue ) );
+            config.addListener( FabricEnterpriseSettings.fabric_servers_setting, ( oldValue, newValue ) -> fabricConfig.setFabricServers( newValue ) );
             return fabricConfig;
         }
         else
@@ -166,7 +165,7 @@ public class FabricEnterpriseConfig extends FabricConfig
 
     private static Optional<Database> parseDatabase( Config config )
     {
-        var databaseNameRaw = config.get( FabricEnterpriseSettings.databaseName );
+        var databaseNameRaw = config.get( FabricEnterpriseSettings.database_name );
 
         if ( databaseNameRaw == null )
         {
@@ -178,10 +177,10 @@ public class FabricEnterpriseConfig extends FabricConfig
         {
             var graphId = parseGraphId( entry.getKey() );
             var graphSetting = entry.getValue();
-            var driverConfig = new GraphDriverConfig( config.get( graphSetting.driverLoggingLevel ), config.get( graphSetting.driverLogLeakedSessions ),
-                    config.get( graphSetting.driverMaxConnectionPoolSize ), config.get( graphSetting.driverIdleTimeBeforeConnectionTest ),
-                    config.get( graphSetting.driverMaxConnectionLifetime ), config.get( graphSetting.driverConnectionAcquisitionTimeout ),
-                    config.get( graphSetting.driverConnectTimeout ), config.get( graphSetting.driverApi ), config.get( graphSetting.sslEnabled ) );
+            var driverConfig = new GraphDriverConfig( config.get( graphSetting.driver_logging_level ), config.get( graphSetting.driver_log_leaked_sessions ),
+                    config.get( graphSetting.driver_max_connection_pool_size ), config.get( graphSetting.driver_idle_time_before_connection_test ),
+                    config.get( graphSetting.driver_max_connection_lifetime ), config.get( graphSetting.driver_connection_acquisition_timeout ),
+                    config.get( graphSetting.driver_connect_timeout ), config.get( graphSetting.driver_api ), config.get( graphSetting.ssl_enabled ) );
 
             var remoteUri = new RemoteUri( config.get( graphSetting.uris ) );
             return new Graph( graphId, remoteUri, config.get( graphSetting.database ), config.get( graphSetting.name ), driverConfig );
@@ -338,11 +337,11 @@ public class FabricEnterpriseConfig extends FabricConfig
         private final Duration maxConnectionLifetime;
         private final Duration connectionAcquisitionTimeout;
         private final Duration connectTimeout;
-        private final DriverConfigFactory.DriverApi driverApi;
+        private final DriverApi driverApi;
 
         public DriverConfig( Level loggingLevel, Boolean logLeakedSessions, Integer maxConnectionPoolSize, Duration idleTimeBeforeConnectionTest,
                 Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Duration connectTimeout,
-                DriverConfigFactory.DriverApi driverApi )
+                DriverApi driverApi )
         {
             this.loggingLevel = loggingLevel;
             this.logLeakedSessions = logLeakedSessions;
@@ -389,7 +388,7 @@ public class FabricEnterpriseConfig extends FabricConfig
             return connectTimeout;
         }
 
-        public DriverConfigFactory.DriverApi getDriverApi()
+        public DriverApi getDriverApi()
         {
             return driverApi;
         }
@@ -413,7 +412,7 @@ public class FabricEnterpriseConfig extends FabricConfig
 
         public GraphDriverConfig( Level loggingLevel, Boolean logLeakedSessions, Integer maxConnectionPoolSize, Duration idleTimeBeforeConnectionTest,
                 Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Duration connectTimeout,
-                DriverConfigFactory.DriverApi driverApi, boolean sslEnabled )
+                DriverApi driverApi, boolean sslEnabled )
         {
             super( loggingLevel, logLeakedSessions, maxConnectionPoolSize, idleTimeBeforeConnectionTest, maxConnectionLifetime, connectionAcquisitionTimeout,
                     connectTimeout, driverApi );

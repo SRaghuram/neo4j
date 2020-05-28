@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.common;
 
-import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.configuration.OnlineBackupSettings;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
 import java.io.File;
@@ -69,7 +69,7 @@ public class Neo4jConfigBuilder
             while ( keys.hasNext() )
             {
                 String settingName = keys.next();
-                if ( settingName.startsWith( ExternalSettings.additionalJvm.name() ) )
+                if ( settingName.startsWith( ExternalSettings.additional_jvm.name() ) )
                 {
                     for ( Object settingValue : config.getList( settingName ) )
                     {
@@ -94,7 +94,7 @@ public class Neo4jConfigBuilder
     {
         List<String> lines = new ArrayList<>();
         neo4jConfig.toMap().forEach( ( key, value ) -> lines.add( key + "=" + value ) );
-        neo4jConfig.getJvmArgs().forEach( jvmArg -> lines.add( ExternalSettings.additionalJvm.name() + "=" + jvmArg ) );
+        neo4jConfig.getJvmArgs().forEach( jvmArg -> lines.add( ExternalSettings.additional_jvm.name() + "=" + jvmArg ) );
         String contents = String.join( "\n", lines ) + "\n";
         BenchmarkUtil.stringToFile( contents, file );
     }

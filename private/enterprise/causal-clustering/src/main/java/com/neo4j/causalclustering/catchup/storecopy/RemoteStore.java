@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.IOException;
 

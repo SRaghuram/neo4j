@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.io.IOException;
 import java.util.Set;

@@ -20,7 +20,7 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.maxNumberOfDatabases;
+import static com.neo4j.configuration.EnterpriseEditionSettings.max_number_of_databases;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
@@ -40,7 +40,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     {
         super( globalModule, edition, manageDatabasesOnStartAndStop );
         operationCounts = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounts.Counter.class );
-        maximumNumberOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
+        maximumNumberOfDatabases = globalModule.getGlobalConfig().get( max_number_of_databases );
         runtimeDatabaseDumper = new RuntimeDatabaseDumper( globalModule.getGlobalClock(), globalModule.getGlobalConfig(), globalModule.getFileSystem() );
     }
 

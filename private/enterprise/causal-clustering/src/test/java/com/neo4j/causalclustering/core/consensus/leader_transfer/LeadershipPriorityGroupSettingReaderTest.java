@@ -5,8 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
-import org.assertj.core.api.Assertions;
+import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

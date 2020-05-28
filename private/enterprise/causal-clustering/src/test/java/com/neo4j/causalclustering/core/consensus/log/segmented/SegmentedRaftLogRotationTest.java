@@ -25,7 +25,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_strategy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;

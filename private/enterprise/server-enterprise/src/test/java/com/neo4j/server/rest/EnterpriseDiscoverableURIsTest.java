@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -19,12 +19,12 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.server.configuration.ServerSettings;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
-import static org.neo4j.configuration.GraphDatabaseSettings.Mode.READ_REPLICA;
-import static org.neo4j.configuration.GraphDatabaseSettings.Mode.SINGLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.READ_REPLICA;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.SINGLE;
 
 class EnterpriseDiscoverableURIsTest
 {

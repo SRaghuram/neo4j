@@ -5,6 +5,8 @@
  */
 package com.neo4j.fabric.driver;
 
+import com.neo4j.configuration.DriverApi;
+
 import org.neo4j.driver.Config;
 import org.neo4j.driver.internal.security.SecurityPlan;
 import org.neo4j.fabric.executor.Location;
@@ -16,10 +18,4 @@ public interface DriverConfigFactory
     SecurityPlan createSecurityPlan( Location.Remote location );
 
     DriverApi getDriverApi( Location.Remote location );
-
-    enum DriverApi
-    {
-        RX,
-        ASYNC
-    }
 }

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -27,8 +26,9 @@ import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.configuration.ApplicationProtocolVersion;
+import com.neo4j.configuration.ServerGroupName;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;

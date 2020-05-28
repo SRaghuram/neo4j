@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.protocol.application;
 
+import com.neo4j.configuration.ApplicationProtocolVersion;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 

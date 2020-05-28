@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -62,7 +62,7 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
 
     if (!workerManager.hasWorkers) {
       throw new RuntimeUnsupportedException("There are no workers configured for the parallel runtime. " +
-        s"Change '${GraphDatabaseSettings.cypher_worker_count.name()}' to something other than -1 to use the parallel runtime.")
+        s"Change '${GraphDatabaseInternalSettings.cypher_worker_count.name()}' to something other than -1 to use the parallel runtime.")
     }
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")

@@ -14,7 +14,7 @@ import java.util.Optional;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
+import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
 import static java.util.Objects.requireNonNull;
 
 public class BootstrapState

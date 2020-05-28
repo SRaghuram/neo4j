@@ -6,10 +6,10 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.kubernetes.KubernetesType;
 import com.neo4j.causalclustering.discovery.kubernetes.ServiceList;
 import com.neo4j.causalclustering.discovery.kubernetes.Status;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpHeader;

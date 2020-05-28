@@ -57,7 +57,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+import static com.neo4j.configuration.OnlineBackupSettings.online_backup_enabled;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.BOLT;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.HTTP;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.HTTPS;

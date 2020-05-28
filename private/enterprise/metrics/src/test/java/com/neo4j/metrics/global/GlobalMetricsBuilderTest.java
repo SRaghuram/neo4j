@@ -6,7 +6,7 @@
 package com.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.source.server.ServerMetrics;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
@@ -70,7 +70,7 @@ class GlobalMetricsBuilderTest
     {
         return Config.newBuilder()
                 .set( HttpConnector.enabled, enabled )
-                .set( MetricsSettings.neoServerEnabled, true )
+                .set( MetricsSettings.neo_server_enabled, true )
                 .build();
     }
 }

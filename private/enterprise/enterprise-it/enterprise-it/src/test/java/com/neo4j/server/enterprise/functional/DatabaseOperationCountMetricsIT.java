@@ -6,7 +6,7 @@
 package com.neo4j.server.enterprise.functional;
 
 import com.neo4j.dbms.LocalDbmsOperator;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
@@ -45,9 +45,9 @@ class DatabaseOperationCountMetricsIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        builder.setConfig( MetricsSettings.metricsEnabled, true )
-                .setConfig( MetricsSettings.csvEnabled, true )
-                .setConfig( MetricsSettings.csvInterval, Duration.ofSeconds( 1 ) );
+        builder.setConfig( MetricsSettings.metrics_enabled, true )
+                .setConfig( MetricsSettings.csv_enabled, true )
+                .setConfig( MetricsSettings.csv_interval, Duration.ofSeconds( 1 ) );
     }
 
     @Test

@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.LoadBalancingPluginGroup;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.annotations.service.ServiceProvider;

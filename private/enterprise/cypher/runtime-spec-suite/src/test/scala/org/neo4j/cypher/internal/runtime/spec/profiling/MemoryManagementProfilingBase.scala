@@ -11,8 +11,9 @@ import java.lang.Boolean.TRUE
 import java.nio.file.Files
 import java.nio.file.Path
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings
+import com.neo4j.configuration.MetricsSettings
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.CommunityRuntimeContext
 import org.neo4j.cypher.internal.CommunityRuntimeContextManager
@@ -64,11 +65,11 @@ object MemoryManagementProfilingBase {
   // The configured max memory per transaction in Bytes (zero means unlimited)
   val maxMemory: Long = 0L
 
-  val DEFAULT_MORSEL_SIZE_BIG: Int = GraphDatabaseSettings.cypher_pipelined_batch_size_big.defaultValue()
-  val DEFAULT_MORSEL_SIZE_SMALL: Int = GraphDatabaseSettings.cypher_pipelined_batch_size_small.defaultValue()
+  val DEFAULT_MORSEL_SIZE_BIG: Int = GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big.defaultValue()
+  val DEFAULT_MORSEL_SIZE_SMALL: Int = GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small.defaultValue()
 
   def WITH_FUSING(edition: Edition[EnterpriseRuntimeContext]): Edition[EnterpriseRuntimeContext] =
-    edition.copyWith(GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED)
+    edition.copyWith(GraphDatabaseInternalSettings.cypher_operator_engine -> GraphDatabaseInternalSettings.CypherOperatorEngine.COMPILED)
 
   // Global heap dump settings
   val HEAP_DUMP_ENABLED: Boolean = true
@@ -135,9 +136,9 @@ object MemoryManagementProfilingBase {
       )
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(-1),
-    GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED,
-    MetricsSettings.metricsEnabled -> java.lang.Boolean.FALSE
+    GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(-1),
+    GraphDatabaseInternalSettings.cypher_operator_engine -> GraphDatabaseInternalSettings.CypherOperatorEngine.COMPILED,
+    MetricsSettings.metrics_enabled -> java.lang.Boolean.FALSE
   )
 
   private val communityProfilingEdition = new Edition[CommunityRuntimeContext](
@@ -151,9 +152,9 @@ object MemoryManagementProfilingBase {
       )
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(-1),
-    GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED,
-    MetricsSettings.metricsEnabled -> java.lang.Boolean.FALSE
+    GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(-1),
+    GraphDatabaseInternalSettings.cypher_operator_engine -> GraphDatabaseInternalSettings.CypherOperatorEngine.COMPILED,
+    MetricsSettings.metrics_enabled -> java.lang.Boolean.FALSE
   )
 
   val COMMUNITY_PROFILING: Edition[CommunityRuntimeContext] = communityProfilingEdition
@@ -238,8 +239,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
   extends RuntimeTestSuite[CONTEXT](edition.copyWith(
     GraphDatabaseSettings.track_query_allocation -> TRUE,
     GraphDatabaseSettings.memory_transaction_max_size -> Long.box(MemoryManagementProfilingBase.maxMemory),
-    GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(morselSize),
-    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(morselSize)), runtime
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(morselSize),
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(morselSize)), runtime
   ) with ProfilingInputStreams[CONTEXT] with TimeLimitedCypherTest {
 
   private val runtimeName = (if (runtime.isInstanceOf[PipelinedRuntime]) s"${runtime.name}_$morselSize" else runtime.name) +

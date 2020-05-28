@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.global;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +54,7 @@ class GlobalMetricsExtensionTest
     @Test
     void extensionCanBeStartedWithoutRegisteredReporters()
     {
-        Config config = Config.defaults( MetricsSettings.csvEnabled, false );
+        Config config = Config.defaults( MetricsSettings.csv_enabled, false );
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 
@@ -71,7 +71,7 @@ class GlobalMetricsExtensionTest
     void extensionCanBeStartedWhenMetricsDisabled()
     {
         Config config = Config.newBuilder()
-                .set( MetricsSettings.metricsEnabled, false )
+                .set( MetricsSettings.metrics_enabled, false )
                 .build();
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
@@ -88,7 +88,7 @@ class GlobalMetricsExtensionTest
     @Test
     void globalExtensionProvideMetricsRegistryAndReporter()
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, false );
+        Config config = Config.defaults( MetricsSettings.metrics_enabled, false );
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 

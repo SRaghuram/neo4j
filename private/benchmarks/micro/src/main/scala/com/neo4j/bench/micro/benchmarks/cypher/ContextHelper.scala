@@ -8,7 +8,7 @@ package com.neo4j.bench.micro.benchmarks.cypher
 import java.time.Clock
 
 import org.neo4j.configuration.Config
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.ConfigMemoryTrackingController
@@ -34,7 +34,7 @@ object ContextHelper extends MockitoSugar {
   // Always use the big morsel size here, since the generated plans do not have cardinality information
   // and we would otherwise end up using the small morsel size even though the micro benchmarks
   // typically have lots of result rows.
-  private val morselSize = GraphDatabaseSettings.cypher_pipelined_batch_size_big.defaultValue()
+  private val morselSize = GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big.defaultValue()
 
   private val runtimeConfig = CypherRuntimeConfiguration(
     pipelinedBatchSizeSmall = morselSize,
@@ -68,7 +68,7 @@ object ContextHelper extends MockitoSugar {
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
       operatorEngine = CypherOperatorEngineOption.compiled,
-      interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_pipelined_interpreted_pipes_fallback.defaultValue().toString),
+      interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseInternalSettings.cypher_pipelined_interpreted_pipes_fallback.defaultValue().toString),
       cachingExpressionCompilerTracer = CachingExpressionCompilerTracer.NONE
     )
   }

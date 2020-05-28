@@ -3,8 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.impl.enterprise.configuration;
+package com.neo4j.configuration;
 
+import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.SettingsDeclaration;
@@ -16,6 +17,7 @@ import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
 
 @ServiceProvider
+@PublicApi
 public class OnlineBackupSettings implements SettingsDeclaration
 {
     public static final String DEFAULT_BACKUP_HOST = "localhost";

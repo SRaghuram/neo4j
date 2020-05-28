@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
@@ -13,6 +12,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.net.URI;
 import java.util.ArrayList;

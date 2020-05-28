@@ -5,7 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.SecurityInternalSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -37,7 +38,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.ldap_authorization_group_to_role_mapping;
+import static com.neo4j.configuration.SecuritySettings.ldap_authorization_group_to_role_mapping;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,7 +71,7 @@ class LdapRealmTest
         when( config.get( SecuritySettings.ldap_authentication_cache_enabled ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 1 ) );
         when( config.get( SecuritySettings.ldap_read_timeout ) ).thenReturn( Duration.ofSeconds( 1 ) );
-        when( config.get( SecuritySettings.ldap_authorization_connection_pooling ) ).thenReturn( true );
+        when( config.get( SecurityInternalSettings.ldap_authorization_connection_pooling ) ).thenReturn( true );
         when( config.get( SecuritySettings.ldap_authentication_use_samaccountname ) ).thenReturn( false );
     }
 

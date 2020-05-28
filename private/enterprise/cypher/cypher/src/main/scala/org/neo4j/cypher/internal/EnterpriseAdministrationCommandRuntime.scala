@@ -9,8 +9,8 @@ import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
+import com.neo4j.configuration.EnterpriseEditionSettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
 import com.neo4j.server.security.enterprise.auth.Resource
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY
@@ -129,7 +129,7 @@ import scala.util.Try
  */
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
-  private val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(EnterpriseEditionSettings.maxNumberOfDatabases)
+  private val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(EnterpriseEditionSettings.max_number_of_databases)
 
   override def name: String = "enterprise administration-commands"
 

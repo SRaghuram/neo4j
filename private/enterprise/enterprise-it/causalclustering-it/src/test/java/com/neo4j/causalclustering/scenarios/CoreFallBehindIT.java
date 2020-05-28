@@ -31,18 +31,18 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.asse
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDiscoveryService;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDiscoveryService;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
+import static com.neo4j.configuration.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_frequency;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_strategy;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_rotation_size;
+import static com.neo4j.configuration.CausalClusteringSettings.state_machine_flush_window_size;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.conditions.Conditions.TRUE;
-import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension

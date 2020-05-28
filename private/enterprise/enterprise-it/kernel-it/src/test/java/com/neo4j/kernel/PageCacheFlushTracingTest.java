@@ -8,7 +8,7 @@ package com.neo4j.kernel;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -32,7 +32,7 @@ class PageCacheFlushTracingTest
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
         DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setInternalLogProvider( logProvider )
-                .setConfig( GraphDatabaseSettings.tracer, "verbose" )
+                .setConfig( GraphDatabaseInternalSettings.tracer, "verbose" )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )

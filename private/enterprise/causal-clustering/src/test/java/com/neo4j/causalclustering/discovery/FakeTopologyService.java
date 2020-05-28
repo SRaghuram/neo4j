@@ -6,12 +6,12 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.ArrayList;
 import java.util.Collections;

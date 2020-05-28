@@ -10,12 +10,13 @@ import java.lang.Boolean.TRUE
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import cypher.features.Phase
 import org.apache.commons.lang3.exception.ExceptionUtils
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.ResourceManager
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.util.Eagerly
@@ -72,9 +73,9 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
 
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
     Map(GraphDatabaseSettings.cypher_hints_error -> TRUE,
-      GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(4),
-      GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
-      GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(if (Configs.runOnlySafeScenarios) -1 else 0)
+      GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(4),
+      GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
+      GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(if (Configs.runOnlySafeScenarios) -1 else 0)
     )
 }
 

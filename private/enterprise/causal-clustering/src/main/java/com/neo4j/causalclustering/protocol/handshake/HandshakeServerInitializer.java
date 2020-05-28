@@ -21,7 +21,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.inbound_connection_initialization_logging_enabled;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.inbound_connection_initialization_logging_enabled;
 
 public class HandshakeServerInitializer extends ChannelInitializer<SocketChannel>
 {

@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -70,7 +70,7 @@ class BoltSnapshotQueryExecutionIT
                 .setExternalDependencies( dependencies )
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0  ) )
-                .setConfig( GraphDatabaseSettings.snapshot_query, true )
+                .setConfig( GraphDatabaseInternalSettings.snapshot_query, true )
                 //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
                 // If we don't remove these extensions, we might geb a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
                 // depending on when the extension marks it as dirty

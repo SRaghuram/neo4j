@@ -16,7 +16,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_STORE_COPY_DIRECTORY_NAME;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_STORE_COPY_DIRECTORY_NAME;
 
 public class TemporaryStoreDirectory implements AutoCloseable
 {

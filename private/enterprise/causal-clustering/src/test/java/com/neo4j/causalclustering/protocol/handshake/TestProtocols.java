@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.protocol.handshake;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
+import com.neo4j.configuration.ApplicationProtocolVersion;
 
 import java.util.Arrays;
 import java.util.Comparator;

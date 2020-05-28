@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;

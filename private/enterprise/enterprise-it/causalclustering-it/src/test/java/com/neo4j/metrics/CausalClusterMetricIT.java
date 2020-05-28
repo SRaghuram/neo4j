@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.MetricsTestHelper.TimerField;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -19,12 +19,11 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.util.concurrent.Callable;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_advertised_address;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
@@ -59,12 +58,12 @@ class CausalClusterMetricIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 1 )
-                .withSharedCoreParam( MetricsSettings.metricsEnabled, TRUE )
-                .withSharedReadReplicaParam( MetricsSettings.metricsEnabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.csvEnabled, TRUE )
-                .withSharedReadReplicaParam( MetricsSettings.csvEnabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.csvInterval, "100ms" )
-                .withSharedReadReplicaParam( MetricsSettings.csvInterval, "100ms" );
+                .withSharedCoreParam( MetricsSettings.metrics_enabled, TRUE )
+                .withSharedReadReplicaParam( MetricsSettings.metrics_enabled, TRUE )
+                .withSharedCoreParam( MetricsSettings.csv_enabled, TRUE )
+                .withSharedReadReplicaParam( MetricsSettings.csv_enabled, TRUE )
+                .withSharedCoreParam( MetricsSettings.csv_interval, "100ms" )
+                .withSharedReadReplicaParam( MetricsSettings.csv_interval, "100ms" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
@@ -177,7 +176,7 @@ class CausalClusterMetricIT
 
     private static File metricsFile( ClusterMember member, String databaseName, String metricName )
     {
-        var metricsDir = new File( member.homeDir(), MetricsSettings.csvPath.defaultValue().toString() );
+        var metricsDir = new File( member.homeDir(), MetricsSettings.csv_path.defaultValue().toString() );
         var metric = "neo4j." + databaseName + ".causal_clustering." + metricName;
         return metricsCsv( metricsDir, metric );
     }

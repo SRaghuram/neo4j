@@ -6,7 +6,7 @@
 package com.neo4j.metrics.database;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.source.causalclustering.CatchUpMetrics;
 import com.neo4j.metrics.source.causalclustering.CoreMetrics;
 import com.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
@@ -47,22 +47,22 @@ public class DatabaseMetricsExporter
     {
         String metricsPrefix = databaseMetricsPrefix();
 
-        if ( config.get( MetricsSettings.neoTxEnabled ) )
+        if ( config.get( MetricsSettings.neo_tx_enabled ) )
         {
             life.add( new TransactionMetrics( metricsPrefix, registry, dependencies.transactionIdStoreSupplier(), dependencies.transactionCounters() ) );
         }
 
-        if ( config.get( MetricsSettings.neoCheckPointingEnabled ) )
+        if ( config.get( MetricsSettings.neo_check_pointing_enabled ) )
         {
             life.add( new CheckPointingMetrics( metricsPrefix, registry, dependencies.checkpointCounters() ) );
         }
 
-        if ( config.get( MetricsSettings.neoTransactionLogsEnabled ) )
+        if ( config.get( MetricsSettings.neo_transaction_logs_enabled ) )
         {
             life.add( new TransactionLogsMetrics( metricsPrefix, registry, dependencies.transactionLogCounters() ) );
         }
 
-        if ( config.get( MetricsSettings.neoCountsEnabled ) )
+        if ( config.get( MetricsSettings.neo_counts_enabled ) )
         {
             if ( context.dbmsInfo().edition != Edition.COMMUNITY && context.dbmsInfo().edition != Edition.UNKNOWN )
             {
@@ -70,7 +70,7 @@ public class DatabaseMetricsExporter
             }
         }
 
-        if ( config.get( MetricsSettings.databaseCountsEnabled ) )
+        if ( config.get( MetricsSettings.database_counts_enabled ) )
         {
             if ( context.dbmsInfo().edition != Edition.COMMUNITY && context.dbmsInfo().edition != Edition.UNKNOWN )
             {
@@ -79,24 +79,24 @@ public class DatabaseMetricsExporter
             }
         }
 
-        if ( config.get( MetricsSettings.neoStoreSizeEnabled ) )
+        if ( config.get( MetricsSettings.neo_store_size_enabled ) )
         {
             life.add( new StoreSizeMetrics( metricsPrefix, registry, dependencies.scheduler(), dependencies.fileSystem(),
                     dependencies.database().getDatabaseLayout() ) );
         }
 
-        if ( config.get( MetricsSettings.cypherPlanningEnabled ) )
+        if ( config.get( MetricsSettings.cypher_planning_enabled ) )
         {
             life.add( new CypherMetrics( metricsPrefix, registry, dependencies.monitors() ) );
         }
 
-        if ( config.get( MetricsSettings.neoMemoryPoolsEnabled ) )
+        if ( config.get( MetricsSettings.neo_memory_pools_enabled ) )
         {
             life.add( new DatabaseMemoryPoolMetrics( metricsPrefix, registry, dependencies.memoryPools(),
                             dependencies.database().getNamedDatabaseId().name() ) );
         }
 
-        if ( config.get( MetricsSettings.causalClusteringEnabled ) )
+        if ( config.get( MetricsSettings.causal_clustering_enabled ) )
         {
             OperationalMode mode = context.dbmsInfo().operationalMode;
             if ( mode == OperationalMode.CORE )
@@ -114,6 +114,6 @@ public class DatabaseMetricsExporter
 
     private String databaseMetricsPrefix()
     {
-        return config.get( MetricsSettings.metricsPrefix ) + "." + dependencies.database().getNamedDatabaseId().name();
+        return config.get( MetricsSettings.metrics_prefix ) + "." + dependencies.database().getNamedDatabaseId().name();
     }
 }

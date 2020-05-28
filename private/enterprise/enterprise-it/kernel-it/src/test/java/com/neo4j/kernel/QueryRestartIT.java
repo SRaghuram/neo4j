@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -45,7 +45,7 @@ class QueryRestartIT
         dependencies.satisfyDependencies( testContextSupplier );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setExternalDependencies( dependencies )
-                .setConfig( GraphDatabaseSettings.snapshot_query, true )
+                .setConfig( GraphDatabaseInternalSettings.snapshot_query, true )
                 //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
                 // If we don't remove these extensions, we might geb a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
                 // depending on when the extension marks it as dirty

@@ -5,7 +5,7 @@
  */
 package cypher.features
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled
+import com.neo4j.configuration.MetricsSettings.metrics_enabled
 import cypher.features.Neo4jAdapter.defaultTestConfig
 import org.junit.Assert.fail
 import org.junit.jupiter.api.Test
@@ -20,7 +20,7 @@ abstract class EnterpriseBaseTCKTests extends BaseFeatureTest {
 
   lazy val scenarios: Seq[Scenario] = filterScenarios(BaseFeatureTestHolder.allTckScenarios, featureToRun, scenarioToRun)
 
-  val enterpriseDefaultTestConfig: collection.Map[Setting[_], AnyRef] = defaultTestConfig + (metricsEnabled -> java.lang.Boolean.FALSE)
+  val enterpriseDefaultTestConfig: collection.Map[Setting[_], AnyRef] = defaultTestConfig + (metrics_enabled -> java.lang.Boolean.FALSE)
 
   @Test
   def debugTokensNeedToBeEmpty(): Unit = {

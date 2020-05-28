@@ -7,15 +7,12 @@ package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.common.RaftLogImplementation;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.MonitoredRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
-import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheFactory;
 import com.neo4j.causalclustering.core.consensus.log.segmented.CoreLogPruningStrategy;
 import com.neo4j.causalclustering.core.consensus.log.segmented.CoreLogPruningStrategyFactory;
 import com.neo4j.causalclustering.core.consensus.log.segmented.SegmentedRaftLog;
@@ -38,6 +35,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.InFlightCacheFactory;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.io.File;
 import java.util.Map;
@@ -57,12 +58,12 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.catchup_batch_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_max_lag;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_timeout;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.log_shipping_max_lag;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.log_shipping_retry_timeout;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
+import static com.neo4j.configuration.CausalClusteringSettings.catchup_batch_size;
+import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_max_lag;
+import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_timeout;
+import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_max_lag;
+import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_retry_timeout;
+import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
 import static java.util.Set.copyOf;
 import static org.neo4j.time.Clocks.systemClock;
 
@@ -115,7 +116,7 @@ public class RaftGroup
 
         Supplier<Set<ServerGroupName>> serverGroupsSupplier = () -> copyOf( config.get( CausalClusteringSettings.server_groups ) );
 
-        var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringSettings.leader_transfer_timeout ), clock );
+        var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
 
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache,
                                    logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier, leaderTransfers );

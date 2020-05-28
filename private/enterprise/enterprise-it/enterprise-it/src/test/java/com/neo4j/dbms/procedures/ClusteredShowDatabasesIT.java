@@ -7,12 +7,12 @@ package com.neo4j.dbms.procedures;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.EnterpriseEditionSettings;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.dbms.ShowDatabasesHelpers;
 import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -455,10 +455,10 @@ class ClusteredShowDatabasesIT
             // one follower which refuses to be leader configured with a max # databases of 2
             // one rr configured with a max # databases of 2
             var misConfiguredCore = cluster.addCoreMemberWithId( additionalCoreId );
-            misConfiguredCore.updateConfig( EnterpriseEditionSettings.maxNumberOfDatabases, 2L );
+            misConfiguredCore.updateConfig( EnterpriseEditionSettings.max_number_of_databases, 2L );
             misConfiguredCore.updateConfig( CausalClusteringSettings.refuse_to_be_leader, true );
             var misConfiguredRR = cluster.addReadReplicaWithId( additionalRRId );
-            misConfiguredRR.updateConfig( EnterpriseEditionSettings.maxNumberOfDatabases, 2L );
+            misConfiguredRR.updateConfig( EnterpriseEditionSettings.max_number_of_databases, 2L );
 
             misConfiguredCore.start();
             misConfiguredRR.start();

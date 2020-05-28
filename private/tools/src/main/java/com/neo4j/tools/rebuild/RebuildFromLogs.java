@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.rebuild;
 
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -16,6 +16,7 @@ import java.util.List;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.InconsistentStoreException;
@@ -311,7 +312,7 @@ class RebuildFromLogs
                 .setExternalDependencies( dependencies )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
-                .setConfig( GraphDatabaseSettings.databases_root_path, neo4jLayout.databasesDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseInternalSettings.databases_root_path, neo4jLayout.databasesDirectory().toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.preallocate_logical_logs, false )
                 .build();

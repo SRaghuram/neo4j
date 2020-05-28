@@ -5,11 +5,10 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.hamcrest.Matchers;
+import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -29,12 +28,10 @@ import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyCollectionOf;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectRandomlyToServerGroupStrategyImplTest
 {

@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
+import com.neo4j.configuration.CausalClusteringSettings;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;

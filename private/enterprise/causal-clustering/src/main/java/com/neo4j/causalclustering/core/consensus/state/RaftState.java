@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -20,6 +19,7 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.io.IOException;
 import java.util.HashSet;

@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;

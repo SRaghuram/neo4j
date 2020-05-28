@@ -5,30 +5,19 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
-import com.neo4j.causalclustering.discovery.ClientConnector;
-import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.AddressCollector;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
-
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
-import static java.util.stream.Collectors.toList;
-import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 
 /**
  * Returns endpoints and their capabilities.

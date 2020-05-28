@@ -5,8 +5,9 @@
  */
 package com.neo4j.fabric.driver;
 
+import com.neo4j.configuration.DriverApi;
+import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.fabric.auth.CredentialsProvider;
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -24,7 +25,6 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.logging.Level;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -83,7 +83,7 @@ class DriverPoolTest
         var driverConfig = mock( FabricEnterpriseConfig.DriverConfig.class );
         when( driverConfig.getMaxConnectionPoolSize() ).thenReturn( 10 );
         when( driverConfig.getLoggingLevel() ).thenReturn( Level.INFO );
-        when( driverConfig.getDriverApi() ).thenReturn(  DriverConfigFactory.DriverApi.RX );
+        when( driverConfig.getDriverApi() ).thenReturn(  DriverApi.RX );
 
         var remoteGraphDriver = new FabricEnterpriseConfig.GlobalDriverConfig( idleTimeout, ofMinutes( 1 ), 1, driverConfig );
         when( fabricConfig.getGlobalDriverConfig() ).thenReturn( remoteGraphDriver );

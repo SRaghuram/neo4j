@@ -14,7 +14,6 @@ import akka.pattern.AskTimeoutException;
 import akka.pattern.Patterns;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyListenerService;
@@ -46,6 +45,7 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 
 import java.time.Clock;
 import java.util.Map;
@@ -222,7 +222,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
-            var timeout = config.get( CausalClusteringSettings.raft_id_publish_timeout );
+            var timeout = config.get( CausalClusteringInternalSettings.raft_id_publish_timeout );
             var request = new RaftIdSetRequest( raftId, myself, timeout );
 
             var idSetJob = Patterns.ask( coreTopologyActor, request, timeout )

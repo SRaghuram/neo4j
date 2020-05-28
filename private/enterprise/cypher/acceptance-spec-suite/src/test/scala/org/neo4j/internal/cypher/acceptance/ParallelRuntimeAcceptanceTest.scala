@@ -9,10 +9,10 @@ import java.lang.Boolean.TRUE
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.exceptions.RuntimeUnsupportedException
-import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
@@ -29,8 +29,8 @@ class ParallelRuntimeAcceptanceTest extends ExecutionEngineFunSuite with Enterpr
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
   )
 
   test("should produce results non-concurrently") {
@@ -86,7 +86,7 @@ class ParallelRuntimeAcceptanceTest extends ExecutionEngineFunSuite with Enterpr
 
 class NoWorkersParallelRuntimeTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
-    GraphDatabaseSettings.cypher_worker_count -> java.lang.Integer.valueOf(-1)
+    GraphDatabaseInternalSettings.cypher_worker_count -> java.lang.Integer.valueOf(-1)
   )
 
   test("should not use parallel runtime if there are no workers") {

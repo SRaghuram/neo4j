@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.localdb;
 
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
+import com.neo4j.configuration.FabricEnterpriseConfig;
 
 import java.util.UUID;
 import java.util.function.Function;

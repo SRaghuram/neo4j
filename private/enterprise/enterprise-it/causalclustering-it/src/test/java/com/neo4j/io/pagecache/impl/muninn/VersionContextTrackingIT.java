@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.util.concurrent.Callable;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
@@ -48,8 +48,8 @@ class VersionContextTrackingIT
     void beforeAll() throws Exception
     {
         var clusterConfig = clusterConfig()
-                .withSharedCoreParam( GraphDatabaseSettings.snapshot_query, TRUE )
-                .withSharedReadReplicaParam( GraphDatabaseSettings.snapshot_query, TRUE );
+                .withSharedCoreParam( GraphDatabaseInternalSettings.snapshot_query, TRUE )
+                .withSharedReadReplicaParam( GraphDatabaseInternalSettings.snapshot_query, TRUE );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

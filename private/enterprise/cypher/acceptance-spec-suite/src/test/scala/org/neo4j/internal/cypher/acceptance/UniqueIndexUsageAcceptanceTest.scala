@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.graphdb.config.Setting
@@ -186,7 +186,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   override def databaseConfig(): Map[Setting[_], Object] =
-    super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)
+    super.databaseConfig() ++ Map(GraphDatabaseInternalSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)
 
   private def assertNoLockingHappened(): Unit = {
     withClue("Should not lock indexes: ") { lockingIndexSearchCalled should equal(false) }

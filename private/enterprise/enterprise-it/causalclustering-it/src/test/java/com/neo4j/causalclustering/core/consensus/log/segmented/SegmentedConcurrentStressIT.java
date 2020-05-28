@@ -17,7 +17,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
+import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_strategy;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class SegmentedConcurrentStressIT extends ConcurrentStressIT

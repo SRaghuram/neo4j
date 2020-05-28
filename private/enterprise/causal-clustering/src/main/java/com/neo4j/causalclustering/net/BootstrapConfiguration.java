@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
@@ -37,7 +37,7 @@ public interface BootstrapConfiguration<TYPE extends Channel>
 
     static boolean preferNative( Config config )
     {
-        return config.get( CausalClusteringSettings.use_native_transport );
+        return config.get( CausalClusteringInternalSettings.use_native_transport );
     }
 
     static BootstrapConfiguration<? extends SocketChannel> clientConfig( Config config )

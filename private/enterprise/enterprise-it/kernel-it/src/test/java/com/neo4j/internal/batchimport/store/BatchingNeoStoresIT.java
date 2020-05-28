@@ -5,7 +5,7 @@
  */
 package com.neo4j.internal.batchimport.store;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +58,7 @@ class BatchingNeoStoresIT
     @Test
     void startBatchingNeoStoreWithMetricsPluginEnabled() throws Exception
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, true );
+        Config config = Config.defaults( MetricsSettings.metrics_enabled, true );
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
                 .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,

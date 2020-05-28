@@ -5,9 +5,9 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.junit.Before;
 import org.junit.Rule;

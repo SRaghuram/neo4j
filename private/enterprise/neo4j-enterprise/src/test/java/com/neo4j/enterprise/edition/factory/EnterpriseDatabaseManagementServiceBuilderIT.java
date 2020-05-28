@@ -5,8 +5,8 @@
  */
 package com.neo4j.enterprise.edition.factory;
 
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -26,11 +26,11 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
 import static org.neo4j.configuration.GraphDatabaseSettings.Mode.READ_REPLICA;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
 
 @Neo4jLayoutExtension

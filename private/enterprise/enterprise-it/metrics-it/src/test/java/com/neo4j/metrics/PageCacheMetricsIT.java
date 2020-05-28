@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.MetricsSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
@@ -47,11 +47,11 @@ class PageCacheMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         metricsDirectory = testDirectory.directory( "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, true  )
-                .setConfig( MetricsSettings.neoPageCacheEnabled, true  )
-                .setConfig( MetricsSettings.csvEnabled, true )
-                .setConfig( MetricsSettings.csvInterval, Duration.ofMillis( 10 ) )
-                .setConfig( MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() )
+        builder.setConfig( MetricsSettings.metrics_enabled, true  )
+                .setConfig( MetricsSettings.neo_page_cache_enabled, true  )
+                .setConfig( MetricsSettings.csv_enabled, true )
+                .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
+                .setConfig( MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

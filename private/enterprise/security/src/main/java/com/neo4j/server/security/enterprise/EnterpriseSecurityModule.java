@@ -6,6 +6,8 @@
 package com.neo4j.server.security.enterprise;
 
 import com.github.benmanes.caffeine.cache.Ticker;
+import com.neo4j.configuration.SecurityInternalSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
@@ -21,7 +23,6 @@ import com.neo4j.server.security.enterprise.auth.plugin.PluginRealm;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -421,8 +422,8 @@ public class EnterpriseSecurityModule extends SecurityModule
             pluginAuthentication = !pluginAuthenticationProviders.isEmpty();
             pluginAuthorization = !pluginAuthorizationProviders.isEmpty();
 
-            propertyAuthorization = config.get( SecuritySettings.property_level_authorization_enabled );
-            propertyAuthMapping = config.get( SecuritySettings.property_level_authorization_permissions );
+            propertyAuthorization = config.get( SecurityInternalSettings.property_level_authorization_enabled );
+            propertyAuthMapping = config.get( SecurityInternalSettings.property_level_authorization_permissions );
         }
 
         protected void validate()

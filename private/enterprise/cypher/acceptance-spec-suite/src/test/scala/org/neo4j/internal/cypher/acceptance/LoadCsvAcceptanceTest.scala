@@ -16,6 +16,7 @@ import java.nio.file.Files
 import java.util.Collections.emptyMap
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -703,7 +704,7 @@ class LoadCsvAcceptanceTest
     })
 
     val managementService = new TestEnterpriseDatabaseManagementServiceBuilder(acceptanceDbFolder)
-      .setConfig(GraphDatabaseSettings.cypher_enable_runtime_monitors, java.lang.Boolean.TRUE)
+      .setConfig(GraphDatabaseInternalSettings.cypher_enable_runtime_monitors, java.lang.Boolean.TRUE)
       .addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
       .impermanent()
       .build()
@@ -794,7 +795,7 @@ class LoadCsvAcceptanceTest
 
   test("should give nice error message when overflowing the buffer") {
     runWithConfig(GraphDatabaseSettings.csv_buffer_size -> java.lang.Long.valueOf(1 * 1024 * 1024),
-      GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE) { db =>
+      GraphDatabaseInternalSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE) { db =>
 
       trackResources(db)
 
@@ -819,7 +820,7 @@ class LoadCsvAcceptanceTest
 
   test("should be able to configure db to handle huge fields") {
     runWithConfig(GraphDatabaseSettings.csv_buffer_size -> java.lang.Long.valueOf(4 * 1024 * 1024),
-      GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)  { db =>
+      GraphDatabaseInternalSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)  { db =>
 
       trackResources(db)
 
@@ -883,7 +884,7 @@ class LoadCsvAcceptanceTest
 
   private def acceptanceTestDatabaseBuilder = {
     new TestEnterpriseDatabaseManagementServiceBuilder(acceptanceDbFolder).impermanent()
-      .setConfig(GraphDatabaseSettings.cypher_enable_runtime_monitors, java.lang.Boolean.TRUE)
+      .setConfig(GraphDatabaseInternalSettings.cypher_enable_runtime_monitors, java.lang.Boolean.TRUE)
   }
 
   private def acceptanceDbFolder = {

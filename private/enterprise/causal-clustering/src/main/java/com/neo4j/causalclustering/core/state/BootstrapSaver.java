@@ -16,7 +16,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.catchup.storecopy.StoreFiles.EXCLUDE_TEMPORARY_DIRS;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME;
 
 /**
  * Encapsulates a set of behaviours necessary during the binding of the system database in a cluster.

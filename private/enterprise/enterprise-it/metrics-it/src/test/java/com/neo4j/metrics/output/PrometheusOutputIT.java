@@ -16,16 +16,16 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEndpoint;
+import static com.neo4j.configuration.MetricsSettings.prometheus_enabled;
+import static com.neo4j.configuration.MetricsSettings.prometheus_endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -43,8 +43,8 @@ class PrometheusOutputIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( prometheusEnabled, true )
-                .setConfig( prometheusEndpoint, new HostnamePort( "localhost", 0 ) ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( prometheus_enabled, true )
+                .setConfig( prometheus_endpoint, new SocketAddress( "localhost", 0 ) ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

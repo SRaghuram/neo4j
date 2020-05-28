@@ -26,7 +26,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
+import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.junit.jupiter.api.Assertions.assertFalse;

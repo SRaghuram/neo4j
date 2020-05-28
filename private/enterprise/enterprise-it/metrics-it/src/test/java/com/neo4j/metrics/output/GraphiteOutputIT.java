@@ -27,15 +27,14 @@ import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteServer;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsPrefix;
+import static com.neo4j.configuration.MetricsSettings.graphite_enabled;
+import static com.neo4j.configuration.MetricsSettings.graphite_server;
+import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
+import static com.neo4j.configuration.MetricsSettings.metrics_prefix;
 import static io.netty.handler.codec.Delimiters.lineDelimiter;
 import static java.lang.Math.toIntExact;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -94,10 +93,10 @@ class GraphiteOutputIT
         var address = (InetSocketAddress) graphiteServerAddress;
 
         return new TestEnterpriseDatabaseManagementServiceBuilder( homeDir )
-                .setConfig( metricsEnabled, true )
-                .setConfig( metricsPrefix, CUSTOM_METRICS_PREFIX )
-                .setConfig( graphiteEnabled, true )
-                .setConfig( graphiteServer, new HostnamePort( address.getHostString(), address.getPort() ) )
+                .setConfig( metrics_enabled, true )
+                .setConfig( metrics_prefix, CUSTOM_METRICS_PREFIX )
+                .setConfig( graphite_enabled, true )
+                .setConfig( graphite_server, new org.neo4j.configuration.helpers.SocketAddress( address.getHostString(), address.getPort() ) )
                 .build();
     }
 

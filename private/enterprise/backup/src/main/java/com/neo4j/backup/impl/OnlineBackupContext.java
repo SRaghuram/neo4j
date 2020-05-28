@@ -5,7 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

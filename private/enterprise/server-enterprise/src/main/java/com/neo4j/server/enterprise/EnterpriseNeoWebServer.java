@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
 import com.neo4j.server.rest.ClusterModule;
 import com.neo4j.server.rest.LegacyManagementModule;

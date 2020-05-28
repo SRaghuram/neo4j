@@ -22,7 +22,7 @@ import java.util.function.IntFunction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.server_groups;
+import static com.neo4j.configuration.CausalClusteringSettings.server_groups;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;

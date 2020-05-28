@@ -7,7 +7,7 @@ package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
 import com.neo4j.causalclustering.catchup.storecopy.StoreResource;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import io.netty.channel.ChannelHandlerContext;
 
 import java.io.File;

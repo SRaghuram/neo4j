@@ -14,6 +14,7 @@ import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphC
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManager;
 import org.neo4j.dbms.database.SystemGraphComponents;
@@ -35,7 +36,7 @@ public interface AbstractEnterpriseEditionModule
     {
         // Create Cypher workers
         Config globalConfig = globalModule.getGlobalConfig();
-        int configuredWorkers = globalConfig.get( GraphDatabaseSettings.cypher_worker_count );
+        int configuredWorkers = globalConfig.get( GraphDatabaseInternalSettings.cypher_worker_count );
         // -1 => no Threads
         // 0  => `number of cores` Threads
         // n  => n Threads

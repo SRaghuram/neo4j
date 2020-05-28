@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.InputValues
@@ -30,9 +30,9 @@ object ParallelStressSuite {
 abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
     edition.copyWith(
-      GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
-      GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
-      GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKERS)),
+      GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
+      GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
+      GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(WORKERS)),
     runtime) {
 
   private val morselsPerGraph = 10

@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 
 class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
@@ -27,7 +27,7 @@ class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
     if (Configs.runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
-      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig + (GraphDatabaseSettings.cypher_worker_count -> java.lang.Integer.valueOf(0)))
+      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig + (GraphDatabaseInternalSettings.cypher_worker_count -> java.lang.Integer.valueOf(0)))
     }
   }
 

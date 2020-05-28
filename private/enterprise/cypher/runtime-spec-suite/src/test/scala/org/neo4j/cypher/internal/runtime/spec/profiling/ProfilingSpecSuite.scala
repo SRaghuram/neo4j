@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.profiling
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.internal.CommunityRuntimeContext
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.InterpretedRuntime
@@ -38,7 +38,7 @@ class PipelinedMemoryManagementCustomProfiling extends MemoryManagementProfiling
                                                                                      runtimeSuffix="after") with PipelinedSpecSuite
 
 class PipelinedMemoryManagementBigMorselNoFusingProfiling extends MemoryManagementProfilingBase(
-  ENTERPRISE_PROFILING.copyWith(GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.INTERPRETED),
+  ENTERPRISE_PROFILING.copyWith(GraphDatabaseInternalSettings.cypher_operator_engine -> GraphDatabaseInternalSettings.CypherOperatorEngine.INTERPRETED),
   PIPELINED,
   DEFAULT_MORSEL_SIZE_BIG,
   runtimeSuffix = "noFusing") with PipelinedSpecSuite

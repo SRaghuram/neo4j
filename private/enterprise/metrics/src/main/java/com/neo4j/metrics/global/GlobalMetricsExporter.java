@@ -6,7 +6,7 @@
 package com.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
 import com.neo4j.metrics.source.db.BoltMetrics;
 import com.neo4j.metrics.source.db.DatabaseOperationCountMetrics;
@@ -47,64 +47,64 @@ public class GlobalMetricsExporter
 
     public void export()
     {
-        String globalMetricsPrefix = config.get( MetricsSettings.metricsPrefix );
-        if ( config.get( MetricsSettings.neoPageCacheEnabled ) )
+        String globalMetricsPrefix = config.get( MetricsSettings.metrics_prefix );
+        if ( config.get( MetricsSettings.neo_page_cache_enabled ) )
         {
             life.add( new PageCacheMetrics( globalMetricsPrefix, registry, dependencies.pageCacheCounters() ) );
         }
 
-        if ( config.get( MetricsSettings.jvmGcEnabled ) )
+        if ( config.get( MetricsSettings.jvm_gc_enabled ) )
         {
             life.add( new GCMetrics( globalMetricsPrefix, registry ) );
         }
 
-        if ( config.get( MetricsSettings.jvmHeapEnabled ) )
+        if ( config.get( MetricsSettings.jvm_heap_enabled ) )
         {
             life.add( new HeapMetrics( globalMetricsPrefix, registry ) );
         }
 
-        if ( config.get( MetricsSettings.jvmThreadsEnabled ) )
+        if ( config.get( MetricsSettings.jvm_threads_enabled ) )
         {
             life.add( new ThreadMetrics( globalMetricsPrefix, registry ) );
         }
 
-        if ( config.get( MetricsSettings.jvmMemoryEnabled ) )
+        if ( config.get( MetricsSettings.jvm_memory_enabled ) )
         {
             life.add( new JVMMemoryPoolMetrics( globalMetricsPrefix, registry ) );
         }
 
-        if ( config.get( MetricsSettings.jvmBuffersEnabled ) )
+        if ( config.get( MetricsSettings.jvm_buffers_enabled ) )
         {
             life.add( new JVMMemoryBuffersMetrics( globalMetricsPrefix, registry ) );
         }
 
-        if ( config.get( MetricsSettings.jvmFileDescriptorsEnabled ) )
+        if ( config.get( MetricsSettings.jvm_file_descriptors_enabled ) )
         {
             life.add( new FileDescriptorMetrics( globalMetricsPrefix, registry ) );
         }
 
-        if ( config.get( MetricsSettings.jvmPauseTimeEnabled ) )
+        if ( config.get( MetricsSettings.jvm_pause_time_enabled ) )
         {
             life.add( new PauseMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
         }
 
-        if ( config.get( MetricsSettings.boltMessagesEnabled ) )
+        if ( config.get( MetricsSettings.bolt_messages_enabled ) )
         {
             life.add( new BoltMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
         }
 
-        if ( config.get( MetricsSettings.databaseOperationCountEnabled ) )
+        if ( config.get( MetricsSettings.database_operation_count_enabled ) )
         {
             life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.databaseOperationCounts() ) );
         }
 
-        if ( config.get( MetricsSettings.neoMemoryPoolsEnabled ) )
+        if ( config.get( MetricsSettings.neo_memory_pools_enabled ) )
         {
             life.add( new GlobalMemoryPoolMetrics( globalMetricsPrefix, registry, dependencies.memoryPools() ) );
         }
 
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );
-        if ( httpOrHttpsEnabled && config.get( MetricsSettings.neoServerEnabled ) )
+        if ( httpOrHttpsEnabled && config.get( MetricsSettings.neo_server_enabled ) )
         {
             life.add( new ServerMetrics( globalMetricsPrefix, registry, dependencies.webContainerThreadInfo() ) );
         }

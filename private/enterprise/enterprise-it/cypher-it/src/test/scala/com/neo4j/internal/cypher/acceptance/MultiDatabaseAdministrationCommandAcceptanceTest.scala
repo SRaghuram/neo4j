@@ -8,7 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
+import com.neo4j.configuration.EnterpriseEditionSettings
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -732,7 +732,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should create database in systemdb when max number of databases is not reached") {
 
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
+    config.set(EnterpriseEditionSettings.max_number_of_databases, java.lang.Long.valueOf(3L))
     setup(config)
 
     // WHEN
@@ -747,7 +747,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should fail to create database in systemdb when max number of databases is already reached") {
 
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L))
+    config.set(EnterpriseEditionSettings.max_number_of_databases, java.lang.Long.valueOf(2L))
     setup(config)
 
     // WHEN
@@ -981,7 +981,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should do nothing when creating an already existing database using if not exists with max number of databases reached") {
     // GIVEN
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
+    config.set(EnterpriseEditionSettings.max_number_of_databases, java.lang.Long.valueOf(3L))
     setup(config)
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
@@ -1038,7 +1038,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should replace existing database (even with max number of databases reached)") {
     // GIVEN
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
+    config.set(EnterpriseEditionSettings.max_number_of_databases, java.lang.Long.valueOf(3L))
     setup(config)
 
     // WHEN: creation
@@ -1073,7 +1073,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should fail to create database when max number of databases reached using replace") {
     // GIVEN
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L))
+    config.set(EnterpriseEditionSettings.max_number_of_databases, java.lang.Long.valueOf(2L))
     setup(config)
 
     the[DatabaseLimitReachedException] thrownBy {

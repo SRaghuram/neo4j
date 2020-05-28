@@ -5,7 +5,7 @@
  */
 package com.neo4j.bolt;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

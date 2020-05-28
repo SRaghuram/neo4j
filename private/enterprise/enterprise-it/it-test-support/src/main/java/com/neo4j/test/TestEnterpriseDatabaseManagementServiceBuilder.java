@@ -5,8 +5,8 @@
  */
 package com.neo4j.test;
 
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.util.Map;

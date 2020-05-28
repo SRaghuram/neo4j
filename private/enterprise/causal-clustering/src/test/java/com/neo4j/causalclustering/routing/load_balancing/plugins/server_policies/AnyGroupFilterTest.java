@@ -14,7 +14,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 
-import static com.neo4j.causalclustering.core.ServerGroupName.setOf;
+import static com.neo4j.configuration.ServerGroupName.setOf;
 import static org.junit.Assert.assertEquals;
 
 public class AnyGroupFilterTest

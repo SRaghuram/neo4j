@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
@@ -1276,8 +1276,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   test("Should keep order through correlated subquery with aggregation") {
     restartWithConfig(databaseConfig() ++  Map(
-      GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(13),
-      GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1024),
+      GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(13),
+      GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1024),
     ))
     val names = for (c <- 'a' to 'b'; i <- 0 until 100) yield {
       val name = f"$c$i%03d"

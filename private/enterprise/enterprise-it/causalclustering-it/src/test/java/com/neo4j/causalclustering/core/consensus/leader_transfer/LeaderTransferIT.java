@@ -6,10 +6,11 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.ServerGroupName;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
@@ -70,7 +71,7 @@ class LeaderTransferIT
                             }
                             return "";
                         } )
-                        .withSharedCoreParam( CausalClusteringSettings.leader_transfer_interval, "5s" ) );
+                        .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" ) );
 
         cluster.start();
         return cluster;
@@ -113,7 +114,7 @@ class LeaderTransferIT
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
                 .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).setting(), "prio" )
-                .withSharedCoreParam( CausalClusteringSettings.leader_transfer_interval, "5s" )
+                .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
                 .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" )
                 .withInstanceCoreParam( CausalClusteringSettings.server_groups, id -> id == systemDbLeader ? "prio" : "" );
         var cluster = clusterFactory.createCluster( config );

@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import java.util.concurrent.atomic.AtomicLong
 
-import org.neo4j.configuration.GraphDatabaseSettings.CypherExpressionEngine.COMPILED
-import org.neo4j.configuration.GraphDatabaseSettings.cypher_expression_engine
+import org.neo4j.configuration.GraphDatabaseInternalSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings.CypherExpressionEngine.COMPILED
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.LogicalQuery
@@ -21,8 +21,8 @@ object CompiledExpressionsTestBase {
 }
 
 abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](edition: Edition[CONTEXT],
-                                                                                runtime: CypherRuntime[CONTEXT]
-                                                                               ) extends RuntimeTestSuite[CONTEXT](edition.copyWith(cypher_expression_engine -> COMPILED), runtime) {
+              runtime: CypherRuntime[CONTEXT]
+            ) extends RuntimeTestSuite[CONTEXT](edition.copyWith(GraphDatabaseInternalSettings.cypher_expression_engine -> COMPILED), runtime) {
 
   private def newFilterQuery() =
     new LogicalQueryBuilder(this)

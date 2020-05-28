@@ -12,20 +12,19 @@ import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 
 import akka.actor.Address
-import akka.cluster.ClusterEvent.ClusterDomainEvent
-import akka.cluster.ClusterEvent.UnreachableMember
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent
+import akka.cluster.ClusterEvent.ClusterDomainEvent
+import akka.cluster.ClusterEvent.UnreachableMember
 import akka.cluster.Member
 import akka.cluster.MemberStatus
 import akka.testkit.TestProbe
-import com.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_acceptable_heartbeat_pause
-import com.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_heartbeat_interval
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterStateActor.ClusterMonitorRefresh
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest.createMember
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
-import org.hamcrest.Matchers.is
+import com.neo4j.configuration.CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause
+import com.neo4j.configuration.CausalClusteringInternalSettings.akka_failure_detector_heartbeat_interval
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.verify

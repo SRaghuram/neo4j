@@ -6,14 +6,14 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import co.unruly.matchers.OptionalMatchers;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses.ConnectorUri;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;

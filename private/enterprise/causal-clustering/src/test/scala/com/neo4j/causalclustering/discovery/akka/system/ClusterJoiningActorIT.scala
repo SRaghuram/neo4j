@@ -11,10 +11,11 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.Address
 import akka.cluster.Cluster
-import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.configuration.CausalClusteringInternalSettings
+import com.neo4j.configuration.CausalClusteringSettings
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito.atLeastOnce
@@ -104,7 +105,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
 
     val config = Config.newBuilder()
       .set(CausalClusteringSettings.initial_discovery_members, initialDiscoveryMembers.asJava)
-      .set(CausalClusteringSettings.cluster_binding_retry_timeout, java.time.Duration.ofSeconds(refresh.toSeconds))
+      .set(CausalClusteringInternalSettings.cluster_binding_retry_timeout, java.time.Duration.ofSeconds(refresh.toSeconds))
       .build()
     val resolver = NoOpHostnameResolver.resolver(config)
 

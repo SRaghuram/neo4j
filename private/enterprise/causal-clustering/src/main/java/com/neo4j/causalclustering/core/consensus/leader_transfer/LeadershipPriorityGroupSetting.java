@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Map;
 import java.util.Objects;
@@ -17,9 +17,8 @@ import org.neo4j.configuration.GroupSetting;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.collection.Pair;
 
-import static com.neo4j.causalclustering.core.ServerGroupName.SERVER_GROUP_NAME;
+import static com.neo4j.configuration.ServerGroupName.SERVER_GROUP_NAME;
 import static java.util.stream.Collectors.toMap;
-import static org.neo4j.configuration.SettingValueParsers.STRING;
 
 @ServiceProvider
 public class LeadershipPriorityGroupSetting extends GroupSetting

@@ -5,7 +5,7 @@
  */
 package com.neo4j.harness.internal;
 
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.SecuritySettings;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

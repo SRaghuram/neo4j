@@ -27,7 +27,7 @@ import org.neo4j.test.rule.concurrent.ThreadingRule;
 import org.neo4j.util.concurrent.Futures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.lock_manager;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 
 @ImpermanentDbmsExtension( configurationCallback = "configure" )

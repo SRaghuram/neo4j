@@ -3,9 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.consensus.leader_transfer;
+package com.neo4j.configuration;
 
-public enum SelectionStrategies
+import org.neo4j.annotations.api.PublicApi;
+
+@PublicApi
+public enum DriverApi
 {
-    NO_BALANCING, EQUAL_BALANCING
+    RX,
+    ASYNC
 }

@@ -5,8 +5,8 @@
  */
 package com.neo4j.harness.internal;
 
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.harness.EnterpriseNeo4jBuilders;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;

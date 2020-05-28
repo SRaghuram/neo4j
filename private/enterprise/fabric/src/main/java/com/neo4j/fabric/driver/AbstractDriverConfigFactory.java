@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
+import com.neo4j.configuration.FabricEnterpriseConfig;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;

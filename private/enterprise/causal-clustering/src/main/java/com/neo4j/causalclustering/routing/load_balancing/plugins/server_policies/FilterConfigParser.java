@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import com.neo4j.causalclustering.routing.load_balancing.filters.FilterChain;
 import com.neo4j.causalclustering.routing.load_balancing.filters.FirstValidRule;
 import com.neo4j.causalclustering.routing.load_balancing.filters.IdentityFilter;
 import com.neo4j.causalclustering.routing.load_balancing.filters.MinimumCountFilter;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.ArrayList;
 import java.util.Arrays;

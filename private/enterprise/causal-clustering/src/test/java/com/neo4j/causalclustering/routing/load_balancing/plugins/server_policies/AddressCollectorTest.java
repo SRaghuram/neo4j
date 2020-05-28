@@ -24,11 +24,11 @@ import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.load_balancing_shuffle;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.configuration.CausalClusteringSettings.load_balancing_shuffle;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.contains;

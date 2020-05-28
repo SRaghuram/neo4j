@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.configuration.ApplicationProtocolVersion;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;

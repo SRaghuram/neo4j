@@ -3,19 +3,17 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.config;
-
-import com.neo4j.fabric.driver.DriverConfigFactory;
+package com.neo4j.configuration;
 
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 
+import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.DocumentedDefaultValue;
 import org.neo4j.configuration.GroupSetting;
-import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
@@ -35,10 +33,11 @@ import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 
 @SuppressWarnings( "WeakerAccess" )
 @ServiceProvider
+@PublicApi
 public class FabricEnterpriseSettings implements SettingsDeclaration
 {
     private static final String DRIVER_LOGGING_LEVEL = "driver.logging.level";
-    private static final String DRIVER_LOG_LEAKED_SESSIONS = "driver.logging.leaked_sessions";
+    static final String DRIVER_LOG_LEAKED_SESSIONS = "driver.logging.leaked_sessions";
     private static final String DRIVER_MAX_CONNECTION_POOL_SIZE = "driver.connection.pool.max_size";
     private static final String DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST = "driver.connection.pool.idle_test";
     private static final String DRIVER_CONNECTION_ACQUISITION_TIMEOUT = "driver.connection.pool.acquisition_timeout";
@@ -49,45 +48,27 @@ public class FabricEnterpriseSettings implements SettingsDeclaration
     @Description( "A comma-separated list of Fabric instances that form a routing group. " +
             "A driver will route transactions to available routing group members.\n" +
             "A Fabric instance is represented by its Bolt connector address." )
-    public static final Setting<List<SocketAddress>> fabricServersSetting = newBuilder( "fabric.routing.servers",
+    public static final Setting<List<SocketAddress>> fabric_servers_setting = newBuilder( "fabric.routing.servers",
             SettingValueParsers.listOf( SettingValueParsers.SOCKET_ADDRESS ),
             List.of(new SocketAddress( "localhost", 7687 )))
             .dynamic()
             .build();
 
     @Description( "Name of the Fabric database. Only one Fabric database is currently supported per Neo4j instance." )
-    public static final Setting<String> databaseName = newBuilder( "fabric.database.name", DATABASENAME, null ).build();
+    public static final Setting<String> database_name = newBuilder( "fabric.database.name", DATABASENAME, null ).build();
 
     @Description( "The time to live (TTL) of a routing table for fabric routing group." )
-    public static final Setting<Duration> routingTtlSetting = newBuilder( "fabric.routing.ttl", DURATION, ofMinutes( 1 )  ).build();
-
-    @Description( "Time interval of inactivity after which a driver will be closed." )
-    @Internal
-    public static final Setting<Duration> driverIdleTimeout = newBuilder( "fabric.driver.timeout", DURATION, ofMinutes( 1 ) ).build();
-
-    @Description( "Time interval between driver idleness check." )
-    @Internal
-    public static final Setting<Duration> driverIdleCheckInterval = newBuilder( "fabric.driver.idle_check_interval", DURATION, ofMinutes( 1 ) ).build();
-
-    @Description( " Number of event loops used by drivers. Event loops are shard between drivers, so this is the total number of event loops created." )
-    @DocumentedDefaultValue( "Number of available processors" )
-    @Internal
-    public static final Setting<Integer> driverEventLoopCount =
-            newBuilder( "fabric.driver.event_loop_count", INT, Runtime.getRuntime().availableProcessors() ).build();
+    public static final Setting<Duration> routing_ttl_setting = newBuilder( "fabric.routing.ttl", DURATION, ofMinutes( 1 )  ).build();
 
     @Description( "Sets level for driver internal logging." )
     @DocumentedDefaultValue( "Value of dbms.logs.debug.level" )
-    public static final Setting<Level> driverLoggingLevel = newBuilder( "fabric." + DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
-
-    @Description( "Enables logging of leaked driver session" )
-    @Internal
-    public static final Setting<Boolean> driverLogLeakedSessions = newBuilder( "fabric." + DRIVER_LOG_LEAKED_SESSIONS, BOOL, false ).build();
+    public static final Setting<Level> driver_logging_level = newBuilder( "fabric." + DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
 
     @Description( "Maximum total number of connections to be managed by a connection pool.\n" +
             "The limit is enforced for a combination of a host and user. Negative values are allowed and result in unlimited pool. Value of 0" +
             "is not allowed." )
     @DocumentedDefaultValue( "Unlimited" )
-    public static final Setting<Integer> driverMaxConnectionPoolSize = newBuilder( "fabric." + DRIVER_MAX_CONNECTION_POOL_SIZE, INT, -1 ).build();
+    public static final Setting<Integer> driver_max_connection_pool_size = newBuilder( "fabric." + DRIVER_MAX_CONNECTION_POOL_SIZE, INT, -1 ).build();
 
     @Description( "Pooled connections that have been idle in the pool for longer than this timeout " +
             "will be tested before they are used again, to ensure they are still alive.\n" +
@@ -97,7 +78,8 @@ public class FabricEnterpriseSettings implements SettingsDeclaration
             "Normally, this parameter should not need tuning.\n" +
             "Value 0 means connections will always be tested for validity" )
     @DocumentedDefaultValue(  "No connection liveliness check is done by default." )
-    public static final Setting<Duration> driverIdleTimeBeforeConnectionTest = newBuilder( "fabric." + DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null )
+    public static final Setting<Duration>
+            driver_idle_time_before_connection_test = newBuilder( "fabric." + DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null )
             .build();
 
     @Description( "Pooled connections older than this threshold will be closed and removed from the pool.\n" +
@@ -105,7 +87,7 @@ public class FabricEnterpriseSettings implements SettingsDeclaration
             "It is recommended to set maximum lifetime to a slightly smaller value than the one configured in network\n" +
             "equipment (load balancer, proxy, firewall, etc. can also limit maximum connection lifetime).\n" +
             "Zero and negative values result in lifetime not being checked." )
-    public static final Setting<Duration> driverMaxConnectionLifetime =
+    public static final Setting<Duration> driver_max_connection_lifetime =
             newBuilder( "fabric." + DRIVER_MAX_CONNECTION_LIFETIME, DURATION, Duration.ofHours( 1 ) ).build();
 
     @Description( "Maximum amount of time spent attempting to acquire a connection from the connection pool.\n" +
@@ -114,24 +96,24 @@ public class FabricEnterpriseSettings implements SettingsDeclaration
             "Error is raised when connection can't be acquired within configured time.\n" +
             "Negative values are allowed and result in unlimited acquisition timeout. Value of 0 is allowed " +
             "and results in no timeout and immediate failure when connection is unavailable" )
-    public static final Setting<Duration> driverConnectionAcquisitionTimeout =
+    public static final Setting<Duration> driver_connection_acquisition_timeout =
             newBuilder( "fabric." + DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, ofSeconds( 60 ) ).build();
 
     @Description( "Socket connection timeout.\n" +
             "A timeout of zero is treated as an infinite timeout and will be bound by the timeout configured on the\n" +
             "operating system level." )
-    public static final Setting<Duration> driverConnectTimeout = newBuilder( "fabric." + DRIVER_CONNECT_TIMEOUT, DURATION, ofSeconds( 5 ) ).build();
+    public static final Setting<Duration> driver_connect_timeout = newBuilder( "fabric." + DRIVER_CONNECT_TIMEOUT, DURATION, ofSeconds( 5 ) ).build();
 
     @Description( "Maximal size of a buffer used for pre-fetching result records of remote queries.\n" +
             "To compensate for latency to remote databases, the Fabric execution engine pre-fetches records needed for local executions.\n" +
             "This limit is enforced per fabric query. If a fabric query uses multiple remote stream at the same time, " +
             "this setting represents the maximal number of pre-fetched records counted together for all such remote streams" )
-    public static final Setting<Integer> bufferSizeSetting = newBuilder( "fabric.stream.buffer.size", INT, 1000 )
+    public static final Setting<Integer> buffer_size_setting = newBuilder( "fabric.stream.buffer.size", INT, 1000 )
             .addConstraint( min(1) )
             .build();
 
     @Description( "Number of records in prefetching buffer that will trigger prefetching again. This is strongly related to fabric.stream.buffer.size" )
-    public static final Setting<Integer> bufferLowWatermarkSetting = newBuilder( "fabric.stream.buffer.low_watermark",
+    public static final Setting<Integer> buffer_low_watermark_setting = newBuilder( "fabric.stream.buffer.low_watermark",
             INT,
             300 )
             .addConstraint( min(0) )
@@ -147,9 +129,9 @@ public class FabricEnterpriseSettings implements SettingsDeclaration
             .build();
 
     @Description( "Determines which driver API will be used. ASYNC must be used when the remote instance is 3.5" )
-    public static final Setting<DriverConfigFactory.DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API,
-            ofEnum(DriverConfigFactory.DriverApi.class),
-            DriverConfigFactory.DriverApi.RX )
+    public static final Setting<DriverApi> driver_api = newBuilder( "fabric." + DRIVER_API,
+            ofEnum( DriverApi.class),
+            DriverApi.RX )
             .build();
 
     @ServiceProvider
@@ -169,22 +151,22 @@ public class FabricEnterpriseSettings implements SettingsDeclaration
         @Description( "Name assigned to the Fabric graph. The name can be used in Fabric queries." )
         public final Setting<NormalizedGraphName> name = getBuilder( "name", SettingValueParsers.GRAPHNAME, null ).build();
 
-        public final Setting<Level> driverLoggingLevel = getBuilder( DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
-        public final Setting<Boolean> driverLogLeakedSessions = getBuilder( DRIVER_LOG_LEAKED_SESSIONS, BOOL, null ).build();
-        public final Setting<Integer> driverMaxConnectionPoolSize = getBuilder( DRIVER_MAX_CONNECTION_POOL_SIZE, INT, null ).build();
-        public final Setting<Duration> driverIdleTimeBeforeConnectionTest = getBuilder( DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null ).build();
-        public final Setting<Duration> driverMaxConnectionLifetime = getBuilder( DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
-        public final Setting<Duration> driverConnectionAcquisitionTimeout = getBuilder( DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
-        public final Setting<Duration> driverConnectTimeout = getBuilder( DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
-        public final Setting<DriverConfigFactory.DriverApi> driverApi = getBuilder( DRIVER_API,
-                ofEnum( DriverConfigFactory.DriverApi.class ),
+        public final Setting<Level> driver_logging_level = getBuilder( DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
+        public final Setting<Boolean> driver_log_leaked_sessions = getBuilder( DRIVER_LOG_LEAKED_SESSIONS, BOOL, null ).build();
+        public final Setting<Integer> driver_max_connection_pool_size = getBuilder( DRIVER_MAX_CONNECTION_POOL_SIZE, INT, null ).build();
+        public final Setting<Duration> driver_idle_time_before_connection_test = getBuilder( DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null ).build();
+        public final Setting<Duration> driver_max_connection_lifetime = getBuilder( DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
+        public final Setting<Duration> driver_connection_acquisition_timeout = getBuilder( DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
+        public final Setting<Duration> driver_connect_timeout = getBuilder( DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
+        public final Setting<DriverApi> driver_api = getBuilder( DRIVER_API,
+                ofEnum( DriverApi.class ),
                 null )
                 .build();
 
         @Description( "SSL for Fabric drivers is configured using 'fabric' SSL policy." +
                 "This setting can be used to instruct the driver not to use SSL even though 'fabric' SSL policy is configured." +
                 "The driver will use SSL if 'fabric' SSL policy is configured and this setting is set to 'true'" )
-        public final Setting<Boolean> sslEnabled = getBuilder( "driver.ssl_enabled", BOOL, true ).build();
+        public final Setting<Boolean> ssl_enabled = getBuilder( "driver.ssl_enabled", BOOL, true ).build();
 
         public static GraphSetting of( String name )
         {

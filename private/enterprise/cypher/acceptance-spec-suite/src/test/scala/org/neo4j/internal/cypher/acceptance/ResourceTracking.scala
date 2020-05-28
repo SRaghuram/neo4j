@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.net.URL
 
 import org.neo4j.common.DependencyResolver
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.runtime.ResourceMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResource
@@ -24,7 +24,7 @@ trait ResourceTracking extends CypherFunSuite with GraphDatabaseTestSupport {
 
   var resourceMonitor: TrackingResourceMonitor = _
 
-  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseInternalSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)
 
   def trackResources(graph: GraphDatabaseService): Unit = trackResources(graph.asInstanceOf[GraphDatabaseAPI].getDependencyResolver)
 

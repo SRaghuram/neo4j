@@ -26,12 +26,12 @@ import java.util.stream.IntStream;
 import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA_UNCLEAN_SHUTDOWN;
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
+import static com.neo4j.configuration.CausalClusteringSettings.middleware_logging_level;
+import static com.neo4j.configuration.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toList;

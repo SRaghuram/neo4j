@@ -12,13 +12,13 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.SslSystemSettings;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.configuration.ssl.SslPolicyScope;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
 import org.neo4j.ssl.config.SslPolicyLoader;
-import org.neo4j.ssl.config.SslSystemSettings;
 
 public class SslContextFactory
 {

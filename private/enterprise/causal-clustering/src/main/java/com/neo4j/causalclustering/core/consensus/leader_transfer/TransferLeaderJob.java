@@ -5,10 +5,10 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.util.List;
 import java.util.Map;

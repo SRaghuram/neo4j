@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.configuration.ApplicationProtocolVersion;
 
 public class ApplicationProtocolRepository extends ProtocolRepository<ApplicationProtocolVersion,ApplicationProtocol>
 {

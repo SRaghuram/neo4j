@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.diagnostics;
 
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.SecuritySettings;
 
 import java.io.File;
 import java.util.Collections;

@@ -5,8 +5,8 @@
  */
 package com.neo4j.multidatabase.stresstest;
 
+import com.neo4j.configuration.EnterpriseEditionSettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -45,7 +45,7 @@ class MultiDatabaseCreationStressTesting
         ensureExistsAndEmpty( storeDirectory );
 
         DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( storeDirectory )
-                .setConfig( EnterpriseEditionSettings.maxNumberOfDatabases, Long.MAX_VALUE )
+                .setConfig( EnterpriseEditionSettings.max_number_of_databases, Long.MAX_VALUE )
                 .setConfig( GraphDatabaseSettings.preallocate_logical_logs, false )
                 .build();
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );

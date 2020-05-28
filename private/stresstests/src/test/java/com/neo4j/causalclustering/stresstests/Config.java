@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -238,7 +239,7 @@ public class Config
         params.put( CausalClusteringSettings.raft_log_rotation_size.name(), "10M" );
         params.put( CausalClusteringSettings.raft_log_pruning_frequency.name(), "1m" );
         // the following will override the test-default in CoreClusterMember
-        params.put( CausalClusteringSettings.raft_messages_log_enable.name(), Boolean.toString( raftMessagesLog ) );
+        params.put( CausalClusteringInternalSettings.raft_messages_log_enable.name(), Boolean.toString( raftMessagesLog ) );
     }
 
     public void populateReadReplicaParams( Map<String,String> params )

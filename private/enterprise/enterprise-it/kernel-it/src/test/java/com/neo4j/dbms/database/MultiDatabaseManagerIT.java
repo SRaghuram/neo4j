@@ -24,7 +24,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.maxNumberOfDatabases;
+import static com.neo4j.configuration.EnterpriseEditionSettings.max_number_of_databases;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -55,7 +55,7 @@ class MultiDatabaseManagerIT
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setInternalLogProvider( logProvider )
                 .setConfig( default_database, CUSTOM_DATABASE_NAME )
-                .setConfig( maxNumberOfDatabases, 5L )
+                .setConfig( max_number_of_databases, 5L )
                 .build();
     }
 
@@ -87,7 +87,7 @@ class MultiDatabaseManagerIT
             new TestEnterpriseDatabaseManagementServiceBuilder( new File( "testFileForMaxDbTest" ) )
                     .setInternalLogProvider( logProvider )
                     .setConfig( default_database, CUSTOM_DATABASE_NAME )
-                    .setConfig( maxNumberOfDatabases, 1L )
+                    .setConfig( max_number_of_databases, 1L )
                     .build();
         } );
 

@@ -19,7 +19,7 @@ import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 
@@ -29,16 +29,16 @@ import org.neo4j.logging.Log;
 public class PrometheusOutput implements Lifecycle, EventReporter
 {
     protected PrometheusHttpServer server;
-    private final HostnamePort hostnamePort;
+    private final SocketAddress socketAddress;
     private final MetricRegistry registry;
     private final Log logger;
     private final ConnectorPortRegister portRegister;
     private final Map<String,Object> registeredEvents = new ConcurrentHashMap<>();
     private final MetricRegistry eventRegistry;
 
-    PrometheusOutput( HostnamePort hostnamePort, MetricRegistry registry, Log logger, ConnectorPortRegister portRegister )
+    PrometheusOutput( SocketAddress socketAddress, MetricRegistry registry, Log logger, ConnectorPortRegister portRegister )
     {
-        this.hostnamePort = hostnamePort;
+        this.socketAddress = socketAddress;
         this.registry = registry;
         this.logger = logger;
         this.portRegister = portRegister;
@@ -60,7 +60,7 @@ public class PrometheusOutput implements Lifecycle, EventReporter
     {
         if ( server == null )
         {
-            server = new PrometheusHttpServer( hostnamePort.getHost(), hostnamePort.getPort() );
+            server = new PrometheusHttpServer( socketAddress.getHostname(), socketAddress.getPort() );
             portRegister.register( "prometheus", server.getAddress() );
             logger.info( "Started publishing Prometheus metrics at http://" + server.getAddress() + "/metrics" );
         }

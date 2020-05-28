@@ -18,8 +18,8 @@ import java.time.Duration;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_acceptable_heartbeat_pause;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_heartbeat_interval;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_failure_detector_heartbeat_interval;
 
 /**
  * Subscribes to events indicating a change in cluster state, maintains a view of current cluster state, and feeds it back to the {@link CoreTopologyActor}

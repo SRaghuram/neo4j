@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import akka.remote.artery.tcp.SSLEngineProvider;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
@@ -16,6 +15,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -97,7 +97,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 
     private static Executor executorService( Config config, JobScheduler jobScheduler )
     {
-        int parallelism = config.get( CausalClusteringSettings.middleware_akka_default_parallelism_level );
+        int parallelism = config.get( CausalClusteringInternalSettings.middleware_akka_default_parallelism_level );
         jobScheduler.setParallelism( Group.AKKA_TOPOLOGY_WORKER, parallelism );
         return jobScheduler.executor( Group.AKKA_TOPOLOGY_WORKER );
     }

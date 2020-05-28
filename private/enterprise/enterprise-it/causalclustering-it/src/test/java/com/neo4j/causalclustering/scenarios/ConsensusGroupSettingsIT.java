@@ -13,10 +13,10 @@ import org.junit.jupiter.api.TestInstance;
 
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_detection_window;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_resolution_window;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
+import static com.neo4j.configuration.CausalClusteringSettings.failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.failure_resolution_window;
+import static com.neo4j.configuration.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
+import static com.neo4j.configuration.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;

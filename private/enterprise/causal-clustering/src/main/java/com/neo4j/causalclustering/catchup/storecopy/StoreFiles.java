@@ -17,9 +17,9 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.storageengine.api.StoreId;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_STORE_COPY_DIRECTORY_NAME;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_STORE_COPY_DIRECTORY_NAME;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 public class StoreFiles

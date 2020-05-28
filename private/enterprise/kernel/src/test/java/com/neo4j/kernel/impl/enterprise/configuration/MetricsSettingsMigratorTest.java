@@ -16,7 +16,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.neoTransactionLogsEnabled;
+import static com.neo4j.configuration.MetricsSettings.neo_transaction_logs_enabled;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +35,7 @@ class MetricsSettingsMigratorTest
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
 
-        assertEquals( false, config.get( neoTransactionLogsEnabled ) );
+        assertEquals( false, config.get( neo_transaction_logs_enabled ) );
     }
 
     @Test
@@ -43,10 +43,10 @@ class MetricsSettingsMigratorTest
     {
         File confFile = testDirectory.createFile( "neo4j.conf" );
         Files.write( confFile.toPath(), asList( "metrics.neo4j.logrotation.enabled=false",
-                neoTransactionLogsEnabled.name() + "=true" ) );
+                neo_transaction_logs_enabled.name() + "=true" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
 
-        assertEquals( true, config.get( neoTransactionLogsEnabled ) );
+        assertEquals( true, config.get( neo_transaction_logs_enabled ) );
     }
 }

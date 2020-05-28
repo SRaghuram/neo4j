@@ -5,11 +5,12 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
+import com.neo4j.configuration.SecurityInternalSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import com.neo4j.server.security.enterprise.auth.plugin.LdapGroupHasUsersAuthPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapOperationErrorException;
 import org.apache.directory.server.annotations.CreateLdapServer;
@@ -323,7 +324,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         {
             startDatabaseWithSettings( Map.of(
                     SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ),
-                    SecuritySettings.ldap_authorization_connection_pooling, true,
+                    SecurityInternalSettings.ldap_authorization_connection_pooling, true,
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 
@@ -339,7 +340,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             startDatabaseWithSettings( Map.of(
                     // NOTE: Pooled connections from previous test runs will not be affected by this read timeout setting
                     SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ),
-                    SecuritySettings.ldap_authorization_connection_pooling, false,
+                    SecurityInternalSettings.ldap_authorization_connection_pooling, false,
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 

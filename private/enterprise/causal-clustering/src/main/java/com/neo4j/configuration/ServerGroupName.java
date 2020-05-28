@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core;
+package com.neo4j.configuration;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -14,10 +14,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 
+import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.SettingValueParser;
 
 import static org.neo4j.configuration.SettingValueParsers.STRING;
 
+@PublicApi
 public class ServerGroupName implements CharSequence, Comparable<ServerGroupName>
 {
     public static final ServerGroupName EMPTY = new ServerGroupName( "" );

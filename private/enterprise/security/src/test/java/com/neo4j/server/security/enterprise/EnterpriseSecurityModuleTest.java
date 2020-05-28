@@ -5,8 +5,9 @@
  */
 package com.neo4j.server.security.enterprise;
 
+import com.neo4j.configuration.SecurityInternalSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +24,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.exceptions.KernelException;
@@ -72,14 +74,14 @@ class EnterpriseSecurityModuleTest
         mockDependencies.satisfyDependency( mockProcedures );
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
+        when( config.get( SecurityInternalSettings.property_level_authorization_enabled ) ).thenReturn( false );
         when( config.get( SecuritySettings.auth_cache_ttl ) ).thenReturn( Duration.ZERO );
         when( config.get( SecuritySettings.auth_cache_max_capacity ) ).thenReturn( 10 );
         when( config.get( SecuritySettings.auth_cache_use_ttl ) ).thenReturn( true );
         when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false );
         when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 );
         when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
-        when( config.get( GraphDatabaseSettings.auth_store ) ).thenReturn( Path.of( "mock", "dir" ) );
+        when( config.get( GraphDatabaseInternalSettings.auth_store ) ).thenReturn( Path.of( "mock", "dir" ) );
         when( config.get( DatabaseManagementSystemSettings.auth_store_directory ) ).thenReturn( Path.of( "mock", "dir" ) );
     }
 
@@ -158,7 +160,7 @@ class EnterpriseSecurityModuleTest
         // When
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( SecuritySettings.ldap_read_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
-        when( config.get( SecuritySettings.ldap_authorization_connection_pooling ) ).thenReturn( false );
+        when( config.get( SecurityInternalSettings.ldap_authorization_connection_pooling ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_authentication_use_samaccountname ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_authentication_cache_enabled ) ).thenReturn( false );
 
@@ -179,7 +181,7 @@ class EnterpriseSecurityModuleTest
     void shouldFailIfPropertyLevelConfigEnabled()
     {
         providers( SecuritySettings.NATIVE_REALM_NAME );
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
+        when( config.get( SecurityInternalSettings.property_level_authorization_enabled ) ).thenReturn( true );
 
         assertIllegalArgumentException(
                 "Illegal configuration: Property level blacklisting through configuration setting has been replaced by privilege management on roles, e.g. " +
@@ -190,7 +192,7 @@ class EnterpriseSecurityModuleTest
     void shouldNotFailIfPropertyLevelConfigDisabled()
     {
         providers( SecuritySettings.NATIVE_REALM_NAME );
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
+        when( config.get( SecurityInternalSettings.property_level_authorization_enabled ) ).thenReturn( false );
 
         assertSuccess();
     }
@@ -199,7 +201,7 @@ class EnterpriseSecurityModuleTest
     void shouldFailIfPropertyLevelPermissionsConfigured()
     {
         providers( SecuritySettings.NATIVE_REALM_NAME );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smith=alias" );
+        when( config.get( SecurityInternalSettings.property_level_authorization_permissions ) ).thenReturn( "smith=alias" );
 
         assertIllegalArgumentException(
                 "Illegal configuration: Property level blacklisting through configuration setting has been replaced by privilege management on roles, e.g. " +
@@ -210,7 +212,7 @@ class EnterpriseSecurityModuleTest
     void shouldNotFailIfPropertyLevelPermissionsNotConfigured()
     {
         providers( SecuritySettings.NATIVE_REALM_NAME );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( null );
+        when( config.get( SecurityInternalSettings.property_level_authorization_permissions ) ).thenReturn( null );
 
         assertSuccess();
     }

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
+import com.neo4j.configuration.ApplicationProtocolVersion;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;

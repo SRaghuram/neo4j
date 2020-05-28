@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -68,7 +68,7 @@ class BootstrapConfigurationTest
     @Test
     void shouldChooseNioIfNativeIsNotPrefered()
     {
-        Config config = Config.defaults( CausalClusteringSettings.use_native_transport, false );
+        Config config = Config.defaults( CausalClusteringInternalSettings.use_native_transport, false );
         BootstrapConfiguration<? extends SocketChannel> cConfig = BootstrapConfiguration.clientConfig( config );
         BootstrapConfiguration<? extends ServerSocketChannel> sConfig = BootstrapConfiguration.serverConfig( config );
 

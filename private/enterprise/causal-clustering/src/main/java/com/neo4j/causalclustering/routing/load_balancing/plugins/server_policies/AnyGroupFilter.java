@@ -5,10 +5,9 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
+import com.neo4j.configuration.ServerGroupName;
 
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;

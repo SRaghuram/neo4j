@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoad
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForMultiDC;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForSingleDC;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.List;
 

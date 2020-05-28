@@ -7,7 +7,7 @@ package com.neo4j.metrics;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
@@ -49,9 +49,9 @@ class CausalClusterDatabaseOperationCountMetricIT
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( MetricsSettings.metricsEnabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.csvEnabled, TRUE )
-                .withSharedCoreParam( MetricsSettings.csvInterval, "1s" );
+                .withSharedCoreParam( MetricsSettings.metrics_enabled, TRUE )
+                .withSharedCoreParam( MetricsSettings.csv_enabled, TRUE )
+                .withSharedCoreParam( MetricsSettings.csv_interval, "1s" );
         var cluster = clusterFactory.createCluster( clusterConfig );
 
         // when start
@@ -108,7 +108,7 @@ class CausalClusterDatabaseOperationCountMetricIT
 
     private static void assertMetricsEqual( ClusterMember member, String metricsName, long count ) throws InterruptedException
     {
-        var metricsDir = new File( member.homeDir(), MetricsSettings.csvPath.defaultValue().toString() );
+        var metricsDir = new File( member.homeDir(), MetricsSettings.csv_path.defaultValue().toString() );
         File file = metricsCsv( metricsDir, metricsName );
         assertEventually( () -> readValue( file ), t ->  t == count, TIMEOUT, SECONDS );
     }

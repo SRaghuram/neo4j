@@ -5,14 +5,16 @@
  */
 package com.neo4j.kernel.stresstests.transaction.checkpoint;
 
+import com.neo4j.kernel.stresstests.transaction.checkpoint.tracers.TimerTransactionTracer;
+import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
+import org.junit.jupiter.api.Test;
+
 import java.io.File;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import com.neo4j.kernel.stresstests.transaction.checkpoint.tracers.TimerTransactionTracer;
-import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
-import org.junit.jupiter.api.Test;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
@@ -88,7 +90,7 @@ class CheckPointingLogRotationStressTesting
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pageCacheMemory )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, FALSE )
                 .setConfig( GraphDatabaseSettings.check_point_interval_time, Duration.ofMinutes( CHECK_POINT_INTERVAL_MINUTES ) )
-                .setConfig( GraphDatabaseSettings.tracer, "timer" ).build();
+                .setConfig( GraphDatabaseInternalSettings.tracer, "timer" ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         System.out.println("3/6\tWarm up db...");

@@ -9,7 +9,7 @@ import com.neo4j.backup.impl.BackupExecutionException;
 import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.io.OutputStream;
 import java.nio.file.Path;

@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogCommitIndexMonitor;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -37,7 +38,6 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

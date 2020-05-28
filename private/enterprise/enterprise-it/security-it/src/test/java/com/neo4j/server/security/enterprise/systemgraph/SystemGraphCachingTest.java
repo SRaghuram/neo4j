@@ -5,9 +5,9 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;

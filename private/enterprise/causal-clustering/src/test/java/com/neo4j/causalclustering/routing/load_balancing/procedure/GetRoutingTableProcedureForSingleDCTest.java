@@ -55,12 +55,12 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.discovery.TestTopology.readReplicaInfoMap;
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;

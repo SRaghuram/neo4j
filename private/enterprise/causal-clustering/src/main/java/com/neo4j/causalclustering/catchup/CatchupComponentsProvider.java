@@ -12,12 +12,13 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.util.List;
@@ -88,7 +89,7 @@ public final class CatchupComponentsProvider
         this.copiedStoreRecovery = globalLife.add(
                 new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
-                config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
+                config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
     }
 
     private CatchupClientFactory createCatchupClientFactory()

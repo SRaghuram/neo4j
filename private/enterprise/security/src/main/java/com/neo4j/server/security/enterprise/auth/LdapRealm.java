@@ -5,7 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.SecurityInternalSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -424,7 +425,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         contextFactory.setSystemUsername( config.get( SecuritySettings.ldap_authorization_system_username ) );
         SecureString password = config.get( SecuritySettings.ldap_authorization_system_password );
         contextFactory.setSystemPassword( password != null ? password.getString() : null );
-        contextFactory.setPoolingEnabled( config.get( SecuritySettings.ldap_authorization_connection_pooling ) );
+        contextFactory.setPoolingEnabled( config.get( SecurityInternalSettings.ldap_authorization_connection_pooling ) );
 
         setContextFactory( contextFactory );
 

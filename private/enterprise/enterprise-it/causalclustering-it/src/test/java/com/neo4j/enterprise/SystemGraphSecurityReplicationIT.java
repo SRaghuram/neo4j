@@ -6,7 +6,7 @@
 package com.neo4j.enterprise;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;

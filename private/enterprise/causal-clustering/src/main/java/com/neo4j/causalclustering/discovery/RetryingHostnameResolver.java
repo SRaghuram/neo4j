@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
@@ -26,8 +27,8 @@ public abstract class RetryingHostnameResolver implements HostnameResolver
 
     static RetryStrategy defaultRetryStrategy( Config config )
     {
-        long retryIntervalMillis = config.get( CausalClusteringSettings.discovery_resolution_retry_interval ).toMillis();
-        long clusterBindingTimeout = config.get( CausalClusteringSettings.discovery_resolution_timeout ).toMillis();
+        long retryIntervalMillis = config.get( CausalClusteringInternalSettings.discovery_resolution_retry_interval ).toMillis();
+        long clusterBindingTimeout = config.get( CausalClusteringInternalSettings.discovery_resolution_timeout ).toMillis();
         long numRetries = ( clusterBindingTimeout / retryIntervalMillis ) + 1;
         return new RetryStrategy( retryIntervalMillis, numRetries );
     }

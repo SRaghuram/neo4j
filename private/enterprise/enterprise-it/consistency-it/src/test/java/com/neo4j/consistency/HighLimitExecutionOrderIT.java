@@ -5,7 +5,7 @@
  */
 package com.neo4j.consistency;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
 
 import java.util.HashMap;

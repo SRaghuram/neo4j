@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
@@ -14,6 +13,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

@@ -5,8 +5,7 @@
  */
 package com.neo4j.server.enterprise.functional;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
-import org.assertj.core.api.Condition;
+import com.neo4j.configuration.MetricsSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -19,7 +18,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.extension.Inject;
@@ -36,7 +34,6 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -56,10 +53,10 @@ class ServerMetricsIT
         File metrics = directory.file( "metrics" );
         var webServerContainer = serverOnRandomPorts()
                                                   .usingDataDir( directory.homeDir().getAbsolutePath() )
-                                                  .withProperty( MetricsSettings.metricsEnabled.name(), TRUE )
-                                                  .withProperty( MetricsSettings.csvEnabled.name(), TRUE )
-                                                  .withProperty( MetricsSettings.csvPath.name(), metrics.getPath() )
-                                                  .withProperty( MetricsSettings.csvInterval.name(), "100ms" )
+                                                  .withProperty( MetricsSettings.metrics_enabled.name(), TRUE )
+                                                  .withProperty( MetricsSettings.csv_enabled.name(), TRUE )
+                                                  .withProperty( MetricsSettings.csv_path.name(), metrics.getPath() )
+                                                  .withProperty( MetricsSettings.csv_interval.name(), "100ms" )
                                                   .persistent()
                                                   .build();
         try

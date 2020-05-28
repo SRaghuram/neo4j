@@ -5,16 +5,15 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.ServerGroupName;
 
 import java.time.Instant;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;

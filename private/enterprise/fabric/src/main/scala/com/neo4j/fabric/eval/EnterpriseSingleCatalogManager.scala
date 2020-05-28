@@ -7,7 +7,7 @@ package com.neo4j.fabric.eval
 
 import java.util.UUID
 
-import com.neo4j.fabric.config.FabricEnterpriseConfig
+import com.neo4j.configuration.FabricEnterpriseConfig
 import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.fabric.eval.Catalog
 import org.neo4j.fabric.eval.Catalog.ExternalGraph

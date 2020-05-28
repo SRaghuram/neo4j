@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
+import static com.neo4j.configuration.CausalClusteringSettings.initial_discovery_members;
 
 public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
 {

@@ -5,6 +5,14 @@
  */
 package com.neo4j.storeupgrade;
 
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -22,14 +30,8 @@ import java.util.Set;
 import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -107,10 +109,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
@@ -465,7 +467,7 @@ public class StoreUpgradeIT
             TestDatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
-            builder.setConfig( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation.toPath().toAbsolutePath() );
+            builder.setConfig( GraphDatabaseInternalSettings.logical_logs_location, customTransactionLogsLocation.toPath().toAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
             String startedDatabaseName = database.databaseName();

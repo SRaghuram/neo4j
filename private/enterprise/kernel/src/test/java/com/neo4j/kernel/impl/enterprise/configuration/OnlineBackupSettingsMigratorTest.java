@@ -19,7 +19,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
+import static com.neo4j.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @TestDirectoryExtension

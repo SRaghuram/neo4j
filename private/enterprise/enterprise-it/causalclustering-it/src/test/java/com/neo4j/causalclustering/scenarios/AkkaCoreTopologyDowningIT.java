@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.scenarios;
 
 import akka.actor.Address;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
@@ -19,6 +18,8 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -239,7 +240,7 @@ class AkkaCoreTopologyDowningIT
 
         LogProvider logProvider = NullLogProvider.getInstance();
 
-        int parallelism = config.get( CausalClusteringSettings.middleware_akka_default_parallelism_level );
+        int parallelism = config.get( CausalClusteringInternalSettings.middleware_akka_default_parallelism_level );
         ForkJoinPool pool = new ForkJoinPool( parallelism, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true );
         ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), pool, config, logProvider  );
         TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );

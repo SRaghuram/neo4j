@@ -16,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Entity;
@@ -85,7 +86,7 @@ class DatabaseRebuildToolTest
                 "--fromTx", fromLayout.getTransactionLogsDirectory().getAbsolutePath(),
                 "--to", toLayout.databaseDirectory().getAbsolutePath(),
                 "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toNeoLayout.transactionLogsRootDirectory().getAbsolutePath(),
-                "-D" + GraphDatabaseSettings.databases_root_path.name(), toNeoLayout.databasesDirectory().getAbsolutePath(),
+                "-D" + GraphDatabaseInternalSettings.databases_root_path.name(), toNeoLayout.databasesDirectory().getAbsolutePath(),
                 "apply last" );
 
         // THEN
@@ -210,7 +211,7 @@ class DatabaseRebuildToolTest
         Neo4jLayout layout = databaseLayout.getNeo4jLayout();
         DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( layout.homeDirectory() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, layout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.databases_root_path, layout.databasesDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseInternalSettings.databases_root_path, layout.databasesDirectory().toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .build();
         GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );

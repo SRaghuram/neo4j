@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.TxCounts
 import org.neo4j.cypher.internal.RewindableExecutionResult
@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
 import org.neo4j.cypher.internal.plandescription.Arguments.Rows
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription.TotalHits
-import org.neo4j.cypher.internal.plandescription.LogicalPlan2PlanDescriptionTest.anonVar
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
@@ -59,7 +58,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("pipelined profile should include expected profiling data with non-fused operators") {
-    restartWithConfig(Map(GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.INTERPRETED))
+    restartWithConfig(Map(GraphDatabaseInternalSettings.cypher_operator_engine -> GraphDatabaseInternalSettings.CypherOperatorEngine.INTERPRETED))
 
     createNode()
     val result = profileSingle("CYPHER runtime=pipelined MATCH (n) RETURN n")

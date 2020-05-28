@@ -5,11 +5,11 @@
  */
 package cypher.features
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled
+import com.neo4j.configuration.MetricsSettings.metrics_enabled
 import cypher.features.Neo4jAdapter.defaultTestConfig
 import org.junit.Assert.fail
 import org.junit.jupiter.api.Test
-import org.neo4j.configuration.GraphDatabaseSettings.cypher_worker_count
+import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_worker_count
 import org.neo4j.graphdb.config.Setting
 import org.opencypher.tools.tck.api.Scenario
 
@@ -20,7 +20,7 @@ abstract class EnterpriseBaseAcceptanceTest extends BaseFeatureTest {
   val scenarioToRun = ""
 
   val enterpriseDefaultTestConfig: collection.Map[Setting[_], AnyRef] = defaultTestConfig +
-    (metricsEnabled -> java.lang.Boolean.FALSE) +
+    (metrics_enabled -> java.lang.Boolean.FALSE) +
     (cypher_worker_count -> java.lang.Integer.valueOf(-1))
 
   lazy val scenarios: Seq[Scenario] =  filterScenarios(BaseFeatureTestHolder.allAcceptanceScenarios, featureToRun, scenarioToRun)

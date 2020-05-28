@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -24,7 +24,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
-import static com.neo4j.causalclustering.discovery.ResolutionResolverFactory.chooseResolver;
+import static com.neo4j.configuration.ResolutionResolverFactory.chooseResolver;
 
 public class DiscoveryModule
 {

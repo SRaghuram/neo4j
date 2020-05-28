@@ -7,7 +7,7 @@ package com.neo4j.metrics.database;
 
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.metrics.global.MetricsManager;
@@ -78,7 +78,7 @@ class DatabaseMetricsExtensionTest
     @Test
     void extensionCanBeStartedWithoutRegisteredReporters()
     {
-        Config config = Config.defaults( MetricsSettings.csvEnabled, false );
+        Config config = Config.defaults( MetricsSettings.csv_enabled, false );
         DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config );
         DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
 
@@ -94,7 +94,7 @@ class DatabaseMetricsExtensionTest
     @Test
     void extensionCanBeStartedWhenMetricsDisabled()
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, false );
+        Config config = Config.defaults( MetricsSettings.metrics_enabled, false );
         DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config );
         DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
 

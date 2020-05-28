@@ -7,10 +7,10 @@ package com.neo4j.kernel;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.upstream.strategies.LeaderOnlyStrategy;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitorAdapter;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;

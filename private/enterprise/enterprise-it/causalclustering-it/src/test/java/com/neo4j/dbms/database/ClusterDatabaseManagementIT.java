@@ -7,10 +7,10 @@ package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -18,10 +18,8 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -41,7 +39,6 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.asse
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabase;
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabaseDumpData;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;

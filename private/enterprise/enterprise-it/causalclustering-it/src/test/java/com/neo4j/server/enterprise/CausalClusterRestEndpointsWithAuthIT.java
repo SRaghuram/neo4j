@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;

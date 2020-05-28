@@ -10,7 +10,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
 
 import static com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLocksFactory.KEY;
-import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.lock_manager;
 
 class KernelTransactionTimeoutMonitorWithForsetiIT extends KernelTransactionTimeoutMonitorIT
 {

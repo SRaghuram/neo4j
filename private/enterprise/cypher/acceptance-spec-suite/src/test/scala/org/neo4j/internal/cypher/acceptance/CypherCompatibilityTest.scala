@@ -9,6 +9,7 @@ import java.lang.Boolean.FALSE
 import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.RunWithConfigTestSupport
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_35
 import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_40
@@ -185,7 +186,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   test("should use settings without regard of case") {
-    runWithConfig(GraphDatabaseSettings.cypher_runtime -> GraphDatabaseSettings.CypherRuntime.SLOTTED) {
+    runWithConfig(GraphDatabaseInternalSettings.cypher_runtime -> GraphDatabaseInternalSettings.CypherRuntime.SLOTTED) {
       db =>
         db.withTx(tx => {
           val result = tx.execute(QUERY)

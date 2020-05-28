@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.batching;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
@@ -13,6 +12,8 @@ import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -57,10 +58,10 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     public static ComposableMessageHandler composable( Config config,
             JobScheduler jobScheduler, LogProvider logProvider )
     {
-        var inQueueConfig = new BoundedPriorityQueue.Config( config.get( CausalClusteringSettings.raft_in_queue_size ),
+        var inQueueConfig = new BoundedPriorityQueue.Config( config.get( CausalClusteringInternalSettings.raft_in_queue_size ),
                                                              config.get( CausalClusteringSettings.raft_in_queue_max_bytes ) );
 
-        var batchConfig = new BatchingConfig( config.get( CausalClusteringSettings.raft_in_queue_max_batch ),
+        var batchConfig = new BatchingConfig( config.get( CausalClusteringInternalSettings.raft_in_queue_max_batch ),
                                               config.get( CausalClusteringSettings.raft_in_queue_max_batch_bytes ) );
 
         return delegate -> new BatchingMessageHandler( delegate, inQueueConfig, batchConfig,

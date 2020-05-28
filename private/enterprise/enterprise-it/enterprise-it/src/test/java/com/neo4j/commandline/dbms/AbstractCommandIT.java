@@ -31,7 +31,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.Config.DEFAULT_CONFIG_FILE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
 
 @ExtendWith( SuppressOutputExtension.class )
 @EnterpriseDbmsExtension( configurationCallback = "configuration" )

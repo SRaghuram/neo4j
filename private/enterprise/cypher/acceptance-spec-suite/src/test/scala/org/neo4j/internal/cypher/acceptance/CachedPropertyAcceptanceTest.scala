@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Relationship
@@ -299,7 +299,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
-    Map(GraphDatabaseSettings.cypher_read_properties_from_cursor -> java.lang.Boolean.TRUE
+    Map(GraphDatabaseInternalSettings.cypher_read_properties_from_cursor -> java.lang.Boolean.TRUE
     )
 }
 

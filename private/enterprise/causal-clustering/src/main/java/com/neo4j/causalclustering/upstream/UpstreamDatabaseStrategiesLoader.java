@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.upstream;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
 import java.util.Iterator;

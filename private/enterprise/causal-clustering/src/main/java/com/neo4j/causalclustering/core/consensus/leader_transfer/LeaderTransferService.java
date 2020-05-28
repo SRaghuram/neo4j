@@ -28,7 +28,7 @@ import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.VisibleForTesting;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_balancing;
+import static com.neo4j.configuration.CausalClusteringSettings.leader_balancing;
 
 public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferHandler
 {
@@ -97,11 +97,9 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         try
         {
             this.jobHandle.waitTermination();
-            return;
         }
-        catch ( CancellationException e )
+        catch ( CancellationException ignored )
         {
-            return;
         }
         catch ( ExecutionException | InterruptedException e )
         {
@@ -109,8 +107,8 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         }
     }
 
-    private SelectionStrategy pickSelectionStrategy( Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
-                                                     LeaderService leaderService, MemberId myself )
+    private static SelectionStrategy pickSelectionStrategy( Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
+            LeaderService leaderService, MemberId myself )
     {
         var strategyChoice = config.get( leader_balancing );
         switch ( strategyChoice )

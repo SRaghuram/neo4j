@@ -30,7 +30,7 @@ import static com.neo4j.backup.BackupTestUtil.backupArguments;
 import static com.neo4j.backup.BackupTestUtil.createSomeData;
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+import static com.neo4j.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

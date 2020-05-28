@@ -5,8 +5,8 @@
  */
 package com.neo4j.fabric.driver;
 
+import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.fabric.auth.CredentialsProvider;
-import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
 import java.net.URI;

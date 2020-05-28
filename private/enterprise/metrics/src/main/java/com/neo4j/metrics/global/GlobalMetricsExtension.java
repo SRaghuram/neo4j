@@ -18,7 +18,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled;
+import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
 
 public class GlobalMetricsExtension implements Lifecycle, MetricsManager
 {
@@ -47,7 +47,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
         configured = !reporter.isEmpty();
         Config config = dependencies.configuration();
 
-        if ( !config.get( metricsEnabled ) )
+        if ( !config.get( metrics_enabled ) )
         {
             return;
         }

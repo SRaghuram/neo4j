@@ -20,13 +20,13 @@ import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor.MetricsRefresh
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
+import com.neo4j.configuration.CausalClusteringSettings
 import org.assertj.core.api.Condition
 import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
