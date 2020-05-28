@@ -61,7 +61,6 @@ class MultiDatabaseDiagnosticsLoggingIT
     void dumpDbInformationOnCreation() throws DatabaseExistsException
     {
         provider.clear();
-        assertThat( provider ).doesNotHaveAnyLogs();
 
         managementService.createDatabase( "NewDatabase" );
         assertThat( provider ).containsMessages( "Database: newdatabase",
