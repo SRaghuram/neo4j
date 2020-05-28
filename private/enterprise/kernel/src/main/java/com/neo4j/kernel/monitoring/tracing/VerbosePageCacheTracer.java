@@ -146,8 +146,8 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
     {
         private final Stopwatch startTime;
         private final String fileName;
-        private long flushesOnStart;
-        private long bytesWrittenOnStart;
+        private final long flushesOnStart;
+        private final long bytesWrittenOnStart;
 
         FileFlushEvent( String fileName, long flushesOnStart, long bytesWrittenOnStart, Stopwatch startTime )
         {
@@ -222,7 +222,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
         }
 
         @Override
-        public FlushEvent beginFlush( long filePageId, long cachePageId, PageSwapper swapper )
+        public FlushEvent beginFlush( long filePageId, long cachePageId, PageSwapper swapper, int pagesToFlush, int mergedPages )
         {
             if ( lastReportingTime.hasTimedOut( SPEED_REPORTING_TIME_THRESHOLD, TimeUnit.SECONDS ) )
             {
@@ -232,6 +232,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
                 lastReportingTime = clock.startStopWatch();
                 lastReportedBytesWritten = writtenBytes;
             }
+            log.info( "Flushing %d pages. %d are merged.", pagesToFlush, mergedPages );
             return flushEvent;
         }
     }

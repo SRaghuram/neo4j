@@ -55,7 +55,7 @@ class VerbosePageCacheTracerTest
         try ( MajorFlushEvent majorFlushEvent = tracer.beginCacheFlush() )
         {
             FlushEventOpportunity flushEventOpportunity = majorFlushEvent.flushEventOpportunity();
-            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, mock( PageSwapper.class) );
+            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, mock( PageSwapper.class), 4, 3 );
             flushEvent.addBytesWritten( 2 );
             flushEvent.addPagesFlushed( 7 );
             flushEvent.done();
@@ -72,7 +72,7 @@ class VerbosePageCacheTracerTest
         try ( MajorFlushEvent majorFlushEvent = tracer.beginCacheFlush() )
         {
             FlushEventOpportunity flushEventOpportunity = majorFlushEvent.flushEventOpportunity();
-            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, mock( PageSwapper.class ) );
+            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, mock( PageSwapper.class ), 4, 3 );
             clock.forward( 2, TimeUnit.MILLISECONDS );
 
             try ( EvictionRunEvent evictionRunEvent = tracer.beginPageEvictions( 5 ) )
@@ -80,7 +80,7 @@ class VerbosePageCacheTracerTest
                 try ( EvictionEvent evictionEvent = evictionRunEvent.beginEviction() )
                 {
                     FlushEventOpportunity evictionEventOpportunity = evictionEvent.flushEventOpportunity();
-                    FlushEvent evictionFlush = evictionEventOpportunity.beginFlush( 2, 3, mock( PageSwapper.class ) );
+                    FlushEvent evictionFlush = evictionEventOpportunity.beginFlush( 2, 3, mock( PageSwapper.class ), 4, 3 );
                     evictionFlush.addPagesFlushed( 10 );
                     evictionFlush.addPagesFlushed( 100 );
                 }
@@ -103,12 +103,12 @@ class VerbosePageCacheTracerTest
         try ( MajorFlushEvent fileToFlush = tracer.beginFileFlush( swapper ) )
         {
             FlushEventOpportunity flushEventOpportunity = fileToFlush.flushEventOpportunity();
-            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, swapper );
+            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, swapper, 4, 3 );
             flushEvent.addPagesFlushed( 100 );
             flushEvent.addBytesWritten( ByteUnit.ONE_MEBI_BYTE );
             flushEvent.done();
             clock.forward( 1, TimeUnit.SECONDS );
-            FlushEvent flushEvent2 = flushEventOpportunity.beginFlush( 1, 2, swapper );
+            FlushEvent flushEvent2 = flushEventOpportunity.beginFlush( 1, 2, swapper, 4, 3 );
             flushEvent2.addPagesFlushed( 10 );
             flushEvent2.addBytesWritten( ByteUnit.ONE_MEBI_BYTE );
             flushEvent2.done();
