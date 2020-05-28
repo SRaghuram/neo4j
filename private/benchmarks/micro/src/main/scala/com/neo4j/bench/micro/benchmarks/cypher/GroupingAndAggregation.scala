@@ -17,7 +17,7 @@ import com.neo4j.bench.micro.data.TypeParamValues.DBL
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.micro.data.TypeParamValues.mapValuesOfList
-import com.neo4j.bench.micro.data.TypeParamValues.randomListOf
+import com.neo4j.bench.micro.data.TypeParamValues.shuffledListOf
 import org.neo4j.cypher.internal.ast.ASTAnnotationMap
 import org.neo4j.cypher.internal.ast.semantics.ExpressionTypeInfo
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
@@ -97,7 +97,7 @@ class GroupingAndAggregationThreadState {
   def setUp(benchmarkState: GroupingAndAggregation): Unit = {
     benchmarkState.params = mapValuesOfList(
       "list",
-      randomListOf(benchmarkState.propertyType, benchmarkState.VALUE_COUNT, benchmarkState.distinctCount))
+      shuffledListOf(benchmarkState.propertyType, benchmarkState.VALUE_COUNT, benchmarkState.distinctCount))
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }

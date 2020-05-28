@@ -9,11 +9,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
 import java.util
+import java.util.Collections
 
-import com.neo4j.bench.micro.benchmarks.RNGState
-import com.neo4j.bench.micro.data.ConstantGenerator.constant
-import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
-import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian
 import org.neo4j.values.storable.DateTimeValue
@@ -23,9 +20,10 @@ import org.neo4j.values.storable.TimeValue
 import org.neo4j.values.storable.Values.pointValue
 import org.neo4j.values.virtual.MapValue
 
-import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 object TypeParamValues {
   final val INT = "int"
@@ -48,70 +46,77 @@ object TypeParamValues {
   final val STR_SML_ARR = "small_string[]"
   final val STR_BIG_ARR = "big_string[]"
 
-  def randomListOf[T](valueType: String, valueCount: Int, distinctCount: Int): util.List[T] = {
-    val rng = RNGState.newRandom(42)
-    val valuesFun = valuesFunFor(valueType, distinctCount)
-    // wrap in ArrayList because whatever asJava returns does not support shuffling
-    valueType match {
-      case LNG =>
-        new util.ArrayList[Long](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[Long]).asJava).asInstanceOf[util.List[T]]
-      case DBL =>
-        new util.ArrayList[Double](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[Double]).asJava).asInstanceOf[util.List[T]]
-      case STR_SML =>
-        new util.ArrayList[String](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[String]).asJava).asInstanceOf[util.List[T]]
-      case _ => throw new IllegalArgumentException(s"Invalid type: $valueType")
+  def shuffledListOf[T](valueType: String, valueCount: Int, distinctCount: Int): util.List[T] = {
+    assert(distinctCount <= valueCount)
+    val baseList = ascendingListOf(valueType, distinctCount)
+    val list = new ArrayBuffer[T]()
+    var listLength = list.size
+    while (listLength < valueCount) {
+      val difference = valueCount - listLength
+      if (difference >= distinctCount) {
+        list ++= baseList
+      } else {
+        val toAdd = baseList.take(difference)
+        list ++= toAdd
+      }
+      listLength = list.size
     }
-  }
-
-  private def valuesFunFor(valueType: String, distinctCount: Int): ValueGeneratorFun[_] = {
-    val buckets = List.range(0, distinctCount).map(value => new Bucket(1, constant(valueType, value)))
-    discrete(buckets: _*).create()
+    val javaList = toArrayList(list)
+    Collections.shuffle(javaList)
+    javaList
   }
 
   def listOf(valueType: String, valueCount: Int): util.List[_] = {
-    val toObj: (Int) => Any = valueType match {
-      case LNG => i => i.toLong
-      case DBL => i => i.toDouble
-      case STR_SML => i => i.toString
-      case DATE_TIME => i => {
-        val epochSecondUTC = i
-        val nanos = 0
-        val ids = TemporalGenerator.ZONE_IDS
-        DateTimeValue.datetime(epochSecondUTC, nanos, ids(epochSecondUTC % ids.length)).asObjectCopy()
-      }
-      case LOCAL_DATE_TIME => i => {
-        val epochSecond = i
-        val nano = i % 1000000000
-        LocalDateTimeValue.localDateTime(epochSecond, nano).asObjectCopy()
-      }
-      case TIME => i => {
-        val nanosOfDayUTC = i
-        val hourRange = 2 * 18 + 1
-        // time-zone offset in hours, from -18 to +18
-        val hours = i % hourRange - 18
-        TimeValue.time(nanosOfDayUTC, ZoneOffset.ofHours(hours)).asObjectCopy()
-      }
-      case LOCAL_TIME => i => LocalTime.of(i % 24, i % 60, i % 60, i % 1000000000)
-      case DATE => i =>
-        val year = i
-        val month = i % 12 + 1
-        val dayOfMonth = i % 28 + 1
-        LocalDate.of(year, month, dayOfMonth)
-      case DURATION => i =>
-        val months = i
-        val days = i
-        val seconds = i
-        val nanos = i
-        DurationValue.duration(months, days, seconds, nanos)
-      case POINT => i => pointValue(Cartesian, i, i);
-      case _ => _ => throw new IllegalArgumentException(s"Invalid type: $valueType")
-    }
     // wrap in ArrayList because whatever asJava returns does not support shuffling
-    toArrayList(valueCount, toObj)
+    toArrayList(ascendingListOf(valueType, valueCount))
   }
 
-  private def toArrayList[T](valueCount: Int, intToObj: (Int) => T): util.ArrayList[T] = {
-    new util.ArrayList(List.range(0, valueCount).map(intToObj).asJava)
+  private def ascendingListOf[T](valueType: String, valueCount: Int): List[T] = {
+    def intToT(i: Int): T = {
+      val intToObj: Int => Any = valueType match {
+        case LNG => i => i.toLong
+        case DBL => i => i.toDouble
+        case STR_SML => i => i.toString
+        case DATE_TIME => i => {
+          val epochSecondUTC = i
+          val nanos = 0
+          val ids = TemporalGenerator.ZONE_IDS
+          DateTimeValue.datetime(epochSecondUTC, nanos, ids(epochSecondUTC % ids.length)).asObjectCopy()
+        }
+        case LOCAL_DATE_TIME => i => {
+          val epochSecond = i
+          val nano = i % 1000000000
+          LocalDateTimeValue.localDateTime(epochSecond, nano).asObjectCopy()
+        }
+        case TIME => i => {
+          val nanosOfDayUTC = i
+          val hourRange = 2 * 18 + 1
+          // time-zone offset in hours, from -18 to +18
+          val hours = i % hourRange - 18
+          TimeValue.time(nanosOfDayUTC, ZoneOffset.ofHours(hours)).asObjectCopy()
+        }
+        case LOCAL_TIME => i => LocalTime.of(i % 24, i % 60, i % 60, i % 1000000000)
+        case DATE => i =>
+          val year = i
+          val month = i % 12 + 1
+          val dayOfMonth = i % 28 + 1
+          LocalDate.of(year, month, dayOfMonth)
+        case DURATION => i =>
+          val months = i
+          val days = i
+          val seconds = i
+          val nanos = i
+          DurationValue.duration(months, days, seconds, nanos)
+        case POINT => i => pointValue(Cartesian, i, i);
+        case _ => _ => throw new IllegalArgumentException(s"Invalid type: $valueType")
+      }
+      intToObj(i).asInstanceOf[T]
+    }
+    List.range(0, valueCount).map(intToT)
+  }
+
+  private def toArrayList[T](seq: Seq[T]): util.ArrayList[T] = {
+    new util.ArrayList(seq.asJava)
   }
 
   def mapValuesOfList(key: String, value: java.util.List[_]): MapValue = {

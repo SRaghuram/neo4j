@@ -20,7 +20,7 @@ import com.neo4j.bench.micro.data.TypeParamValues.DBL
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.micro.data.TypeParamValues.listOf
-import com.neo4j.bench.micro.data.TypeParamValues.randomListOf
+import com.neo4j.bench.micro.data.TypeParamValues.shuffledListOf
 import org.neo4j.cypher.internal.ast.ASTAnnotationMap
 import org.neo4j.cypher.internal.ast.semantics.ExpressionTypeInfo
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
@@ -129,7 +129,7 @@ class PartialTopThreadState {
   @Setup
   def setUp(benchmarkState: PartialTop): Unit = {
     // A list with a certain number of distinct values
-    val listA = randomListOf[java.lang.Comparable[Any]](benchmarkState.propertyType, benchmarkState.LIST_ITEM_COUNT, benchmarkState.distinctCount)
+    val listA = shuffledListOf[java.lang.Comparable[Any]](benchmarkState.propertyType, benchmarkState.LIST_ITEM_COUNT, benchmarkState.distinctCount)
     // Sort this list
     listA.sort(util.Comparator.naturalOrder())
 
