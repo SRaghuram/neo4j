@@ -66,5 +66,5 @@ class ClusterCatalogManager(
     routingFailed("Unable to get bolt address of LEADER for database %s", dbName)
   
   private def routingFailed(msg: String, dbName: String): Nothing =
-    throw new FabricException(Status.Fabric.Routing, msg, dbName)
+    throw new FabricException(Status.Cluster.Routing, msg, dbName)
 }

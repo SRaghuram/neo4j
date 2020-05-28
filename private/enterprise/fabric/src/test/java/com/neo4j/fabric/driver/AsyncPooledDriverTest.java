@@ -168,7 +168,7 @@ class AsyncPooledDriverTest
         }
         catch ( FabricException e )
         {
-            assertEquals( Status.Fabric.RemoteExecutionFailed, e.status() );
+            assertEquals( Status.Statement.RemoteExecutionFailed, e.status() );
             assertEquals( "Remote execution failed with code SomeCode and message 'Something went wrong'", e.getMessage() );
         }
         catch ( Exception e )
@@ -193,7 +193,7 @@ class AsyncPooledDriverTest
         }
         catch ( FabricException e )
         {
-            assertEquals( Status.Fabric.RemoteExecutionFailed, e.status() );
+            assertEquals( Status.Statement.RemoteExecutionFailed, e.status() );
             assertEquals( "Remote execution failed with code Neo.DatabaseError.Statement.ExecutionFailed and message 'Something went wrong'", e.getMessage() );
         }
         catch ( Exception e )
@@ -218,7 +218,7 @@ class AsyncPooledDriverTest
         }
         catch ( FabricException e )
         {
-            assertEquals( Status.Fabric.RemoteExecutionFailed, e.status() );
+            assertEquals( Status.Statement.RemoteExecutionFailed, e.status() );
             assertEquals( "Remote execution failed with code SomeCode and message 'Something went wrong'", e.getMessage() );
         }
         catch ( Exception e )
