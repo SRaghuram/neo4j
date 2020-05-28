@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 /**
   * Basic buffer (put things and then take them in FIFO order).
   */
-trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] {
+trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] with AutoCloseable {
 
   /**
     * Perform {{{f}}} on each element in the buffer.
@@ -24,6 +24,8 @@ trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] {
    * @return an iterator of the contents of the buffer. Does not modify the buffer.
    */
   def iterator: java.util.Iterator[T]
+
+  override def close(): Unit = {}
 }
 
 trait SingletonBuffer[T <: AnyRef] extends Buffer[T] {

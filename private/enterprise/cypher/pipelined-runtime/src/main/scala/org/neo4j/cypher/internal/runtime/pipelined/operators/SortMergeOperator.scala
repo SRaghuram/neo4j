@@ -14,7 +14,6 @@ import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
@@ -22,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Reducing operator which collects pre-sorted input morsels until it
@@ -45,11 +45,13 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                            state: PipelinedQueryState,
                            resources: QueryResources): AccumulatorsInputOperatorState[Morsel, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
-    this
+    new MemoryTrackingAccumulatorsInputOperatorState(this, id.x, stateFactory)
   }
 
-  override def nextTasks(input: IndexedSeq[ArgumentStateBuffer]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer]] = {
-    singletonIndexedSeq(new OTask(input))
+  override def nextTasks(state: PipelinedQueryState,
+                         input: IndexedSeq[ArgumentStateBuffer],
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer]] = {
+    singletonIndexedSeq(new OTask(input, resources.memoryTracker))
   }
 
   /*
@@ -57,7 +59,8 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   produced, we remove the first morsel and consume the current row. If there is more data left, we re-insert
   the morsel, now pointing to the next row.
    */
-  class OTask(override val accumulators: IndexedSeq[ArgumentStateBuffer]) extends ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer] {
+  class OTask(override val accumulators: IndexedSeq[ArgumentStateBuffer], memoryTracker: MemoryTracker)
+    extends ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer] {
 
     override def workIdentity: WorkIdentity = SortMergeOperator.this.workIdentity
 
@@ -71,7 +74,10 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                          state: PipelinedQueryState,
                          resources: QueryResources): Unit = {
       if (sortedInputPerArgument == null) {
-        sortedInputPerArgument = new DefaultComparatorSortTable(comparator, accumulators.size)
+        sortedInputPerArgument = new DefaultComparatorSortTable(comparator, 16, memoryTracker)
+        // Since we retain the memory of every morsel until the complete sort is finished,
+        // and they are already tracked by the inner buffer inside the accumulator, we do not take() the morsels here (which would release the heap usage).
+        // Instead we close() the accumulator when we are done with all of them (in closeInput below).
         accumulator.foreach { morsel =>
           if (morsel.hasData) {
             sortedInputPerArgument.add(morsel.readCursor(onFirstRow = true))
@@ -98,6 +104,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
     override def closeInput(operatorCloser: OperatorCloser): Unit = {
       super.closeInput(operatorCloser)
+      accumulator.close()
       if (sortedInputPerArgument != null) {
         sortedInputPerArgument.close()
         sortedInputPerArgument = null;

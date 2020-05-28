@@ -65,4 +65,12 @@ class MemoryTrackingStandardBuffer[T <: Measurable](memoryTracker: MemoryTracker
     }
     t
   }
+
+  override def close(): Unit = {
+    super.close()
+    super.foreach(t => {
+      val heapUsage = t.estimatedHeapUsage
+      memoryTracker.releaseHeap(heapUsage)
+    })
+  }
 }

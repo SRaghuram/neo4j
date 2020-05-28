@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -38,6 +37,10 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
 
   override def iterator: java.util.Iterator[Morsel] = {
     inner.iterator
+  }
+
+  override def close(): Unit = {
+    inner.close()
   }
 
   override def toString: String = {

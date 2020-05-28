@@ -161,11 +161,11 @@ trait OperatorState {
 class MemoryTrackingOperatorState(delegate: OperatorState, operatorId: Int, stateFactory: StateFactory) extends OperatorState {
   private val memoryTracker = stateFactory.newMemoryTracker(operatorId)
 
-  override def nextTasks(state: PipelinedQueryState,
-                         operatorInput: OperatorInput,
-                         parallelism: Int,
-                         resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+  final override def nextTasks(state: PipelinedQueryState,
+                               operatorInput: OperatorInput,
+                               parallelism: Int,
+                               resources: QueryResources,
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
 
     resources.setMemoryTracker(memoryTracker)
     try {
@@ -207,6 +207,30 @@ trait MorselInputOperatorState extends OperatorState {
 }
 
 /**
+ * A memory tracking version of the execution state of an operator.
+ * One instance of this is created for every query execution that requires memory tracking.
+ */
+class MemoryTrackingAccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](delegate: AccumulatorsInputOperatorState[DATA, ACC],
+                                                                                                   operatorId: Int,
+                                                                                                   stateFactory: StateFactory)
+  extends AccumulatorsInputOperatorState[DATA, ACC] {
+  private val memoryTracker = stateFactory.newMemoryTracker(operatorId)
+
+  final override def nextTasks(state: PipelinedQueryState,
+                               input: IndexedSeq[ACC],
+                               resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]] = {
+    resources.setMemoryTracker(memoryTracker)
+    try {
+      delegate.nextTasks(state, input, resources)
+    } finally {
+      resources.resetMemoryTracker()
+    }
+  }
+
+  override def accumulatorsPerTask(morselSize: Int): Int = delegate.accumulatorsPerTask(morselSize)
+}
+
+/**
  * The execution state of a reduce operator. One instance of this is created for every query execution.
  */
 trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
@@ -221,7 +245,7 @@ trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DA
     val input = operatorInput.takeAccumulators[DATA, ACC](accumulatorsPerTask(state.morselSize))
     if (input != null) {
       try {
-        nextTasks(input)
+        nextTasks(state, input, resources)
       } catch {
         case NonFatalCypherError(t) =>
           throw SchedulingInputException(MorselAccumulatorsInput(input), t)
@@ -231,7 +255,9 @@ trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DA
     }
   }
 
-  def nextTasks(input: IndexedSeq[ACC]): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
+  def nextTasks(state: PipelinedQueryState,
+                input: IndexedSeq[ACC],
+                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
 }
 
 trait AccumulatorsAndMorselInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
