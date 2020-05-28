@@ -182,6 +182,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                                resultsStorePassword,
                                                                resultsStoreUri,
                                                                workDir,
+                                                               resultsJson,
                                                                awsEndpointURL );
 
         resultsReporter.report();

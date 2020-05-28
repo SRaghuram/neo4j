@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.ReportCommand;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.micro.RunExportParams;
 import com.neo4j.bench.model.options.Edition;
@@ -209,7 +210,11 @@ public abstract class BaseRunExportCommand implements Runnable
             ErrorReporter.ErrorPolicy errorPolicy,
             Jvm jvm,
             String triggeredBy,
-            List<ProfilerType> profilers )
+            List<ProfilerType> profilers,
+            String resultStoreUri,
+            String resultStoreUser,
+            String resultStorePass,
+            String s3Bucket )
     {
         ArrayList<String> commandArgs = Lists.newArrayList(
                 "run-export",
@@ -252,7 +257,16 @@ public abstract class BaseRunExportCommand implements Runnable
                 CMD_TRIGGERED_BY,
                 triggeredBy,
                 CMD_PROFILERS,
-                ProfilerType.serializeProfilers( profilers ) );
+                ProfilerType.serializeProfilers( profilers ),
+                ReportCommand.CMD_RESULTS_STORE_PASSWORD,
+                resultStorePass,
+                ReportCommand.CMD_RESULTS_STORE_USER,
+                resultStoreUser,
+                RunExportCommand.CMD_S3_BUCKET,
+                s3Bucket,
+                ReportCommand.CMD_RESULTS_STORE_URI,
+                resultStoreUri
+        );
         if ( jvm.hasPath() )
         {
             commandArgs.add( CMD_JVM_PATH );

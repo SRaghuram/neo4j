@@ -6,6 +6,9 @@
 package com.neo4j.bench.micro;
 
 import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
@@ -29,9 +32,11 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.util.JsonUtil;
+import com.neo4j.bench.reporter.ResultsReporter;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -46,6 +51,52 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 @Command( name = "run-export", description = "runs benchmarks and exports results as JSON" )
 public class RunExportCommand extends BaseRunExportCommand
 {
+    @Option(
+            type = OptionType.COMMAND,
+            name = {"--aws-endpoint-url"},
+            description = "AWS endpoint URL, used during testing",
+            title = "AWS endpoint URL" )
+    private String awsEndpointURL;
+
+    @Option(
+            type = OptionType.COMMAND,
+            name = "--aws-region",
+            description = "AWS region",
+            title = "AWS region" )
+    private String awsRegion = "eu-north-1";
+
+    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_USER},
+             description = "Username for Neo4j database server that stores benchmarking results",
+             title = "Results Store Username" )
+    @Required
+    private String resultsStoreUsername;
+
+    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_PASSWORD},
+             description = "Password for Neo4j database server that stores benchmarking results",
+             title = "Results Store Password" )
+    @Required
+    private String resultsStorePassword;
+
+    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_URI},
+             description = "URI to Neo4j database server for storing benchmarking results",
+             title = "Results Store" )
+    @Required
+    private URI resultsStoreUri;
+
+    public static final String CMD_S3_BUCKET = "--s3-bucket";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_S3_BUCKET},
+             description = "S3 bucket profiles were uploaded to",
+             title = "S3 bucket" )
+    @Required
+    private String s3Bucket;
+
     private static final int[] DEFAULT_THREAD_COUNTS = new int[]{1, Runtime.getRuntime().availableProcessors()};
 
     static final Neo4jConfig ADDITIONAL_CONFIG = Neo4jConfigBuilder.empty()
@@ -54,6 +105,22 @@ public class RunExportCommand extends BaseRunExportCommand
 
     @Override
     public void doRun( RunExportParams runExportParams )
+    {
+        TestRunReport testRunReport = runReport( runExportParams );
+        ResultsReporter resultsReporter = new ResultsReporter( runExportParams.profilerOutput(),
+                                                               testRunReport,
+                                                               s3Bucket,
+                                                               true,
+                                                               resultsStoreUsername,
+                                                               resultsStorePassword,
+                                                               resultsStoreUri,
+                                                               runExportParams.storesDir(),
+                                                               runExportParams.jsonPath(),
+                                                               awsEndpointURL );
+        resultsReporter.report();
+    }
+
+    private static TestRunReport runReport( RunExportParams runExportParams )
     {
         List<ParameterizedProfiler> profilers = ParameterizedProfiler.parse( runExportParams.parameterizedProfilers() );
         for ( ParameterizedProfiler profiler : profilers )
@@ -143,7 +210,6 @@ public class RunExportCommand extends BaseRunExportCommand
                 Lists.newArrayList(),
                 errorReporter.errors() );
 
-        System.out.println( "Exporting results as JSON to: " + runExportParams.jsonPath().getAbsolutePath() );
-        JsonUtil.serializeJson( runExportParams.jsonPath().toPath(), testRunReport );
+        return testRunReport;
     }
 }

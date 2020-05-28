@@ -50,6 +50,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-results-reporter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
         </dependency>
