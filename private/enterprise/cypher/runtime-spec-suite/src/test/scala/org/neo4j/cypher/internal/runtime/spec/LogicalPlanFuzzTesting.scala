@@ -76,7 +76,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
   private val logProvider: AssertableLogProvider = new AssertableLogProvider()
 
 
-  // Used for setup and all runtimes except when wo want to force no fusion
+  // Used for setup and all runtimes except when we want to force no fusion
   private val runtimeTestSupport = new RuntimeTestSupport[EnterpriseRuntimeContext](graphDb, ENTERPRISE.WITH_FUSING(edition), false, logProvider) with GraphCreation[EnterpriseRuntimeContext] {
     override protected def runtimeTestSupport: RuntimeTestSupport[EnterpriseRuntimeContext] = this
   }
