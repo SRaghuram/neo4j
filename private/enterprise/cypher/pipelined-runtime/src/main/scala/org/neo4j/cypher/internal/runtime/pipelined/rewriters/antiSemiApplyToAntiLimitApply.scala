@@ -6,17 +6,15 @@
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
-import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.AntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
+import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
-import org.neo4j.cypher.internal.util.Cardinality
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.IdGen
@@ -41,6 +39,18 @@ case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
       updateAttributes(limit)
       updateAttributes(anti)
       Apply(lhs, anti)(SameId(o.id))
+
+    case o@SelectOrAntiSemiApply(lhs: LogicalPlan, rhs: LogicalPlan, _) =>
+      val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
+      val anti = Anti(limit)(idGen)
+      val lhsCardinality = cardinalities.get(lhs.id)
+      def updateAttributes(newPlan: LogicalPlan): Unit = {
+        cardinalities.set(newPlan.id, lhsCardinality)
+        providedOrders.copy(rhs.id, newPlan.id)
+      }
+      updateAttributes(limit)
+      updateAttributes(anti)
+      o.copy(right = anti)(SameId(o.id))
   })
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)

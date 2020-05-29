@@ -14,6 +14,8 @@ import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
+import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
+import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
@@ -428,7 +430,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             cachedPropertiesToCopy)(id)
         }
 
-      case _: ConditionalApply | _: AntiConditionalApply =>
+      case _: ConditionalApply |
+           _: AntiConditionalApply |
+           _: SelectOrSemiApply |
+           _: SelectOrAntiSemiApply =>
         new ConditionalApplyOperator(WorkIdentity.fromPlan(plan),
           physicalPlan.slotConfigurations.get(plan.lhs.get.id),
           physicalPlan.slotConfigurations.get(plan.rhs.get.id))

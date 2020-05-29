@@ -611,8 +611,10 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 SlottedPipeMapper.computeUnionSlotMappings(lhsSlots, slots),
                 SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(ctx.expressionCompiler.asInstanceOf[BinaryOperatorExpressionCompiler])
 
-        case _: plans.ConditionalApply | _: plans.AntiConditionalApply if isHeadOperator =>
-
+        case plan@(_: plans.ConditionalApply |
+                   _: plans.AntiConditionalApply |
+                   _: plans.SelectOrSemiApply |
+                   _: plans.SelectOrAntiSemiApply ) if isHeadOperator =>
           ctx: TemplateContext =>
             val lhsSlots = ctx.slotConfigurations(plan.lhs.get.id)
             val rhsSlots = ctx.slotConfigurations(plan.rhs.get.id)
@@ -640,19 +642,19 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
   def computeInequalityRange(ctx: TemplateContext, inequality: InequalitySeekRange[Expression], property: IndexedProperty): SeekExpression = inequality match {
     case RangeLessThan(bounds) =>
       val (expressions, inclusive) = bounds.map(e => (ctx.compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
-      val call = if (expressions.size == 1)
+      val call = if (expressions.size == 1) {
         (in: Seq[IntermediateRepresentation]) => lessThanSeek(property.propertyKeyId, inclusive.head, in.head)
-      else
+      } else {
         (in: Seq[IntermediateRepresentation]) => multipleLessThanSeek(property.propertyKeyId, in, inclusive)
-      SeekExpression(expressions, call, single = true)
+      }SeekExpression(expressions, call, single = true)
 
     case RangeGreaterThan(bounds) =>
       val (expressions, inclusive) = bounds.map(e => (ctx.compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
-      val call = if (expressions.size == 1)
+      val call = if (expressions.size == 1) {
         (in: Seq[IntermediateRepresentation]) => greaterThanSeek(property.propertyKeyId, inclusive.head, in.head)
-      else
+      } else {
         (in: Seq[IntermediateRepresentation]) => multipleGreaterThanSeek(property.propertyKeyId, in, inclusive)
-      SeekExpression(expressions, call, single = true)
+      }SeekExpression(expressions, call, single = true)
 
     case RangeBetween(RangeGreaterThan(gtBounds), RangeLessThan(ltBounds)) =>
       val (gtExpressions, gtInclusive) = gtBounds.map(e => (ctx.compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
@@ -814,8 +816,9 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           case (e, p) => computeCompositeQueries(e, p)
         }
 
-        if (predicates.size != properties.length) None
-        else {
+        if (predicates.size != properties.length) {
+          None
+        } else {
           ctx: TemplateContext =>
             val slottedIndexedProperties = properties.map(SlottedIndexedProperty(node, _, ctx.slots))
             new CompositeNodeIndexSeekTaskTemplate(ctx.inner,

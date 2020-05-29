@@ -650,12 +650,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // All the slots are allocated by it's left and right children
         rhs
 
-      case _: AbstractSemiApply |
-           _: AbstractSelectOrSemiApply =>
+      case _: AbstractSemiApply =>
         lhs
 
       case _: AntiConditionalApply |
-           _: ConditionalApply =>
+           _: ConditionalApply |
+           _: AbstractSelectOrSemiApply =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
         breakingPolicy.invoke(lp, rhs, argument.slotConfiguration, applyPlans(lp.id))

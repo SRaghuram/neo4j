@@ -40,4 +40,27 @@ abstract class SemiApplyRewriterTestBase[CONTEXT <: RuntimeContext](
 
     runtimeResult should beColumns("x").withRows(inputRows)
   }
+
+  test("rewrites select-or-semi-apply into limit and select-or-semi-apply") {
+    val inputRows = (0 until sizeHint).map { i =>
+      Array[Any](i.toLong)
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .selectOrSemiApply("TRUE")
+      .|.argument("x")
+      .input(variables = Seq("x"))
+      .build()
+
+    // then
+    val (runtimeResult, executionPlanDescription) = executeAndExplain(logicalQuery, runtime, inputValues(inputRows: _*))
+
+    executionPlanDescription should includeSomewhere.nTimes(1, aPlan("SelectOrSemiApply"))
+    executionPlanDescription should includeSomewhere.nTimes(1, aPlan("Limit"))
+    executionPlanDescription shouldNot includeSomewhere.aPlan("SemiApply")
+
+    runtimeResult should beColumns("x").withRows(inputRows)
+  }
 }
