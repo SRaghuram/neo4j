@@ -9,6 +9,7 @@ import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Anti
+import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
@@ -124,7 +125,8 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
            _: ValueHashJoin |
            _: CartesianProduct |
            _: Union |
-           _: ConditionalApply
+           _: ConditionalApply |
+           _: AntiConditionalApply
       => true
 
       case plan =>

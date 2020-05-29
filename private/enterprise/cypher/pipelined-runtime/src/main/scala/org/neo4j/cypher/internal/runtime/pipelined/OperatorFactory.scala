@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
@@ -427,10 +428,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             cachedPropertiesToCopy)(id)
         }
 
-      case conditional: ConditionalApply =>
+      case _: ConditionalApply | _: AntiConditionalApply =>
         new ConditionalApplyOperator(WorkIdentity.fromPlan(plan),
-          physicalPlan.slotConfigurations.get(conditional.left.id),
-          physicalPlan.slotConfigurations.get(conditional.right.id))
+          physicalPlan.slotConfigurations.get(plan.lhs.get.id),
+          physicalPlan.slotConfigurations.get(plan.rhs.get.id))
 
       case joinPlan: plans.ValueHashJoin =>
 

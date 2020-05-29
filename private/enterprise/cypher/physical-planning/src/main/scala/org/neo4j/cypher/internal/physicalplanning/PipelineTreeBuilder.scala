@@ -9,6 +9,7 @@ import org.eclipse.collections.api.map.primitive.MutableObjectIntMap
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.IsNull
+import org.neo4j.cypher.internal.expressions.Not
 import org.neo4j.cypher.internal.expressions.Ors
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.Aggregation
@@ -719,6 +720,18 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val expression = if (vars.size == 1) vars.head else Ors(vars.toSet)(InputPosition.NONE)
         outputToConditionalSink(expression, lhs, argumentSlotOffset, plan)
 
+      case plans.AntiConditionalApply(_, _, items) =>
+        val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
+        val slots = slotConfigurations.get(plan.id)
+        val vars = items.collect {
+          case i => slots(i) match {
+            case LongSlot(offset, _, _) => Not(IsPrimitiveNull(offset))(InputPosition.NONE)
+            case RefSlot(offset, _, _) => Not(IsNull(ReferenceFromSlot(offset, i))(InputPosition.NONE))(InputPosition.NONE)
+          }
+        }
+        val expression = if (vars.size == 1) vars.head else Ors(vars.toSet)(InputPosition.NONE)
+        outputToConditionalSink(expression, lhs, argumentSlotOffset, plan)
+
       case _: plans.CartesianProduct =>
         val rhsSlots = slotConfigurations(plan.rhs.get.id)
         val argumentSlotOffset = rhsSlots.getArgumentLongOffsetFor(plan.id)
@@ -751,7 +764,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         applyRhsPlans(apply.id.x) = applyRhsPlan.id.x
         rhs
 
-      case _: plans.ConditionalApply =>
+      case _: plans.ConditionalApply | _: plans.AntiConditionalApply =>
         /*
          * This part will connect the rhs with the output buffer
          *

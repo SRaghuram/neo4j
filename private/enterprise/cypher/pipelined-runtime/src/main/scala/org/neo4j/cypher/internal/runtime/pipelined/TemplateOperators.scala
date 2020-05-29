@@ -623,6 +623,15 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               rhsConfiguration
             )(ctx.expressionCompiler.asInstanceOf[BinaryOperatorExpressionCompiler])
 
+        case plan@plans.AntiConditionalApply(_, rhs, _) if isHeadOperator =>
+          ctx: TemplateContext =>
+            new ConditionalOperatorTaskTemplate(ctx.inner,
+              plan.id,
+              ctx.innermost,
+              ctx.argumentSizes(plan.id),
+              ctx.slotConfigurations(rhs.id).size(),
+            )(ctx.expressionCompiler)
+
         case _ => None
       }
 

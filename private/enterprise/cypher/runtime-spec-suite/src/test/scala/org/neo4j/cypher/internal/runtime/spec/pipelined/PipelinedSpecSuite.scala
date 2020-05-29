@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AntiConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
@@ -353,6 +354,10 @@ class PipelinedSemiApplyRewriterNoFusingTest extends SemiApplyRewriterTestBase(N
 //CONDITIONAL APPLY
 class PipelinedConditionalApplyTest extends ConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedConditionalApplyNoFusingTest extends ConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+//ANTI ITIONAL APPLY
+class PipelinedAntiConditionalApplyTest extends AntiConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedAntiConditionalApplyNoFusingTest extends AntiConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 // ROLLUP APPLY
 class PipelinedRollupApplyTest extends RollupApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
