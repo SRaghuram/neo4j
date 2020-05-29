@@ -90,8 +90,10 @@ public class CausalClusteringSettings implements SettingsDeclaration
         NO_BALANCING, EQUAL_BALANCING
     }
 
-    @Description( "Whether or not the cluster should attempt to automatically ensure each cluster member holds the leader role for an equal number of " +
-                  "databases. Note that if a `leadership_priority_group` is specified for a given database, it will be ignored by this automatic process." )
+    @Description( "Which strategy to use when transferring database leaderships around a cluster. This can be one of `equal_balancing` or `no_balancing`. " +
+                  "`equal_balancing` automatically ensures that each Core server holds the leader role for an equal number of databases." +
+                  "`no_balancing` prevents any automatic balancing of the leader role." +
+                  "Note that if a `leadership_priority_group` is specified for a given database, the value of this setting will be ignored for that database." )
     public static final Setting<SelectionStrategies> leader_balancing =
             newBuilder( "causal_clustering.leadership_balancing", ofEnum( SelectionStrategies.class ), SelectionStrategies.EQUAL_BALANCING ).build();
 
