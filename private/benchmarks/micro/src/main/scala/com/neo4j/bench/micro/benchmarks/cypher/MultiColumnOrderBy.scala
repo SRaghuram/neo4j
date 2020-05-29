@@ -47,7 +47,7 @@ import scala.util.Random
 class MultiColumnOrderBy extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
-    base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
+    base = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
