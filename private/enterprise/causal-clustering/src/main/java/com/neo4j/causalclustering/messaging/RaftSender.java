@@ -34,8 +34,13 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
     @Override
     public void send( SocketAddress to, RaftMessages.OutboundRaftMessageContainer<?> message, boolean block )
     {
-        CompletableFuture<Void> fOperation = channels.acquire( to )
-                .thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
+        // Wait for channel because Raft relies on messages being sent in order on the channel, otherwise they may have to be re-sent.
+        var pooledChannel = waitForPooledChannel( to );
+        if ( pooledChannel == null )
+        {
+            return;
+        }
+        var fOperation = sendMessage( pooledChannel, message );
 
         if ( block )
         {
@@ -45,12 +50,12 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
             }
             catch ( ExecutionException e )
             {
-                log.error( "Exception while sending to: " + to, e );
+                log.error( "Exception while sending " + printAddress( to ), e );
             }
             catch ( InterruptedException e )
             {
                 fOperation.cancel( true );
-                log.info( "Interrupted while sending", e );
+                log.info( "Interrupted while sending " + printAddress( to ), e );
             }
         }
         else
@@ -59,10 +64,32 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
             {
                 if ( throwable != null )
                 {
-                    log.warn( "Raft sender failed exceptionally [Address: " + to + "]", throwable );
+                    log.warn( "Raft sender failed exceptionally " + printAddress( to ), throwable );
                 }
             } );
         }
+    }
+
+    private PooledChannel waitForPooledChannel( SocketAddress to )
+    {
+        try
+        {
+            return channels.acquire( to ).get();
+        }
+        catch ( InterruptedException e )
+        {
+            log.info( "Failed to acquire channel because the request was interrupted " + printAddress( to ), e );
+        }
+        catch ( ExecutionException e )
+        {
+            log.warn( "Failed to acquire channel " + printAddress( to ), e );
+        }
+        return null;
+    }
+
+    private static String printAddress( SocketAddress to )
+    {
+        return "[Address: " + to + "]";
     }
 
     private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, RaftMessages.OutboundRaftMessageContainer<?> message )
