@@ -91,7 +91,7 @@ class StandardAggregationMap(override val argumentRowId: Long,
       val reducers = new Array[StandardReducer](aggLength)
       var i = 0
       while (i < aggLength) {
-        reducers(i) = aggregators(i).newStandardReducer(memoryTracker)
+        reducers(i) = aggregators(i).newStandardReducer(scopedMemoryTracker)
         i += 1
       }
       new StandardAggregators(reducers)
