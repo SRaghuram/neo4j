@@ -92,8 +92,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
       val slots = SlotConfiguration.empty
       for(i <- 0 until longSlots) slots.newLong(s"long$i", nullable = false, CTNode)
       for(i <- 0 until refSlots) slots.newReference(s"ref$i", nullable = true, CTAny)
-      val context = Morsel(longs, refs, slots, rows)
-      context
+      new Morsel(longs, refs, slots, rows, 0, rows)
     }
   }
 
@@ -102,9 +101,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
       val slots = SlotConfiguration.empty
       for(i <- 0 until longSlots) slots.newLong(s"long$i", nullable = false, CTNode)
       for(i <- 0 until refSlots) slots.newReference(s"ref$i", nullable = true, CTAny)
-      val context = Morsel(longs, refs, slots, rows)
-      val filteringContext = FilteringMorsel(context)
-      filteringContext
+      new FilteringMorsel(longs, refs, slots, rows, 0, rows)
     }
   }
 

@@ -17,9 +17,6 @@ import scala.collection.mutable
 object FilteringMorsel {
   final val INSTANCE_SIZE = shallowSizeOfInstance(classOf[FilteringMorsel])
   final val BITSET_INSTANCE_SIZE = shallowSizeOfInstance(classOf[java.util.BitSet])
-
-  def apply(source: Morsel) =
-    new FilteringMorsel(source.longs, source.refs, source.slots, source.maxNumberOfRows, source.startRow, source.endRow, source.producingWorkUnitEvent)
 }
 
 class FilteringMorsel(longs: Array[Long],
@@ -138,6 +135,8 @@ class FilteringMorsel(longs: Array[Long],
 
   override def shallowCopy(): FilteringMorsel =
     new FilteringMorsel(longs, refs, slots, maxNumberOfRows, startRow, endRow, producingWorkUnitEvent = null, cancelledRows)
+
+  override def filteringShallowCopy(): FilteringMorsel = shallowCopy()
 
   @inline
   override def numberOfRows: Int = super.numberOfRows - numberOfCancelledRows // NOTE: This assumes cancelledRows are always cropped by startRow and endRow

@@ -32,9 +32,6 @@ import scala.collection.mutable.ArrayBuffer
 object Morsel {
   final val INSTANCE_SIZE = shallowSizeOfInstance(classOf[Morsel])
 
-  def apply(longs: Array[Long], refs: Array[AnyValue], slots: SlotConfiguration, maxNumberOfRows: Int) =
-    new Morsel(longs, refs, slots, maxNumberOfRows, 0, maxNumberOfRows)
-
   val empty: Morsel = new Morsel(Array.empty, Array.empty, SlotConfiguration.empty, 0)
 
   def createInitialRow(): FilteringMorsel =
@@ -296,6 +293,8 @@ class Morsel(private[execution] final val longs: Array[Long],
   // ====================
 
   def shallowCopy(): Morsel = new Morsel(longs, refs, slots, maxNumberOfRows, startRow, endRow)
+
+  def filteringShallowCopy(): FilteringMorsel = new FilteringMorsel(longs, refs, slots, maxNumberOfRows, startRow, endRow)
 
   /**
     * Adapt the valid rows of the morsel so that the last valid row is the previous one according to the current position.

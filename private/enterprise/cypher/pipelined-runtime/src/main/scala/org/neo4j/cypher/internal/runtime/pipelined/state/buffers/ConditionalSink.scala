@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -38,8 +37,8 @@ class ConditionalSink(predicate: Expression,
     }
     val expressionState = queryState.queryStateForExpressionEvaluation(resources)
     if (morsel.hasData) {
-      val onTrueMorsel = FilteringMorsel(morsel)
-      val onFalseMorsel = FilteringMorsel(morsel)
+      val onTrueMorsel = morsel.filteringShallowCopy()
+      val onFalseMorsel = morsel.filteringShallowCopy()
       val readCursor = morsel.readCursor()
       while (readCursor.next()) {
         if (predicate.apply(readCursor, expressionState) eq Values.TRUE) {
@@ -49,7 +48,7 @@ class ConditionalSink(predicate: Expression,
         }
       }
       //NOTE: morsel has the slot configuration of the lhs, so if the lhs slot configuration is not a
-      // strict prefix of the rhs slot configuration things might break in horrible ways
+      //      strict prefix of the rhs slot configuration things might break in horrible ways
       onTrue.put(onTrueMorsel, resources)
       onFalse.put(onFalseMorsel, resources)
     }
