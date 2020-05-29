@@ -357,14 +357,15 @@ class CoreDatabaseFactory
             BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory,
             DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker )
     {
-        DatabasePageCache pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
+        var pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, pageCache, fileSystem, debugLog,
                 storageEngineFactory, config, bootstrapSaver, pageCacheTracer, memoryTracker );
 
-        int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-        Duration clusterBindingTimeout = config.get( CausalClusteringInternalSettings.cluster_binding_timeout );
+        var minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
+        var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
+        var clusterBindingTimeout = config.get( CausalClusteringInternalSettings.cluster_binding_timeout );
         return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, Clocks.systemClock(), () -> sleep( 100 ),
-                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors );
+                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, refuseToBeLeader, monitors );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

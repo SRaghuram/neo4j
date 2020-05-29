@@ -103,14 +103,14 @@ class RaftBinderTest
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, emptySet() );
         return new RaftBinder( SOME_NAMED_DATABASE_ID, myIdentity, raftIdStorage, topologyService, systemGraph, clock,
                 () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
+                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, false, new Monitors() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService, NamedDatabaseId namedDatabaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
         return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
+                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, false, new Monitors() );
     }
 
     @Test
