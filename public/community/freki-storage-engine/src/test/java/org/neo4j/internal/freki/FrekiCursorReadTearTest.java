@@ -21,14 +21,17 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.stream.LongStream;
 
+import org.neo4j.storageengine.api.RelationshipSelection;
+import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.neo4j.internal.freki.Record.recordDataSize;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
@@ -55,7 +58,6 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         }
     }
 
-    @Disabled
     @Test
     void shouldSeeLabelsMovingLeft()
     {
@@ -107,7 +109,6 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         }
     }
 
-    @Disabled
     @Test
     void shouldSeePropertiesMovingLeft()
     {
@@ -143,6 +144,98 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
 
     // TODO shouldSeePropertiesMovedLeftAfterReturningSome
     // TODO shouldSeePropertiesMovedRightAfterReturningSome
+
+    @Test
+    void shouldSeePropertiesInXLChain()
+    {
+        // given
+        int x8Size = stores.mainStore( 3 ).recordDataSize();
+        MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
+        Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+        int sizePerProp = 10;
+        int propSize = (int) (x8Size * 1.5);
+        int nextPropKey = 0;
+        for ( int i = 0; i < propSize / sizePerProp; i++ )
+        {
+            properties.put( nextPropKey++, prop );
+        }
+
+        int checkKey = nextPropKey;
+        TextValue hello = stringValue( "hello" );
+        properties.put( checkKey, hello );
+
+        FrekiNodeCursor nodeCursorAtV1 = node().properties( properties ).storeAndPlaceNodeCursorAt();
+        long nodeId = nodeCursorAtV1.entityReference();
+        PhysicalLayout layout = capturePhysicalLayout( nodeId );
+
+        int deletePropertyKey = 0;
+        try ( FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL, INSTANCE ) )
+        {
+            nodeCursorAtV1.properties( propertyCursor );
+            for ( int i = 0; i < 5; i++ )
+            {
+                propertyCursor.next(); //Traverse a bit
+            }
+
+            while ( matchesPhysicalLayout( nodeId, layout ) )
+            {
+                existingNode( nodeId ).removeProperty( deletePropertyKey++ ).storeAndPlaceNodeCursorAt();
+            }
+
+            //TODO For now we expect this to throw. But eventually we need to support this.
+            assertThatThrownBy( () -> readProperties( propertyCursor ) ).hasMessageContaining( "Reading split data from records with different version." );
+            //assertThat( readProperties( propertyCursor ) ).contains( hello ); ← This is what we want! But for now ↑
+        }
+    }
+
+    @Test
+    void shouldSeeAllDataWhenMovingMultipleParts()
+    {
+        // given
+        int[] labels = new int[256];
+        for ( int i = 0; i < labels.length; i++ )
+        {
+            labels[i] = i;
+        }
+
+        Node node = node();
+        Node otherNode = node();
+        node.labels( labels );
+        for ( int i = 0; i < 10; i++ )
+        {
+            node.relationship( i % 3, node );
+        }
+        FrekiNodeCursor nodeCursorAtV1 = node.storeAndPlaceNodeCursorAt();
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
+        {
+            nodeCursorAtV1.relationships( relationshipCursor, RelationshipSelection.ALL_RELATIONSHIPS );
+            relationshipCursor.next();
+            node = existingNode( node.id() );
+            node.removeLabels( labels ).store(); //delete labels  XL -> deleted
+            for ( int i = 0; i < 1000; i++ )
+            {
+                node.relationship( i % 3, otherNode );
+            }
+
+            nodeCursorAtV1 = node.storeAndPlaceNodeCursorAt();
+
+            assertThat( nodeCursorAtV1.labels() ).isEmpty();
+            //Here we should only see the first 10
+            for ( int i = 0; i < 9; i++ )
+            {
+                assertThat( relationshipCursor.next() ).isTrue();
+            }
+            assertThat( relationshipCursor.next() ).isFalse();
+
+            //And here we see them all
+            nodeCursorAtV1.relationships( relationshipCursor, RelationshipSelection.ALL_RELATIONSHIPS );
+            for ( int i = 0; i < 1010; i++ )
+            {
+                assertThat( relationshipCursor.next() ).isTrue();
+            }
+            assertThat( relationshipCursor.next() ).isFalse();
+        }
+    }
 
     private int[] intArray( int from, int to )
     {

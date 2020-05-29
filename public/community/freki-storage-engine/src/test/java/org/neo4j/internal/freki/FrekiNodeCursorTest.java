@@ -20,7 +20,6 @@
 package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.commons.lang3.tuple.Triple;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.multimap.MutableMultimap;
@@ -942,7 +941,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         {
             properties.put( nextKey++, stringValue( "Some string " + i ) );
         }
-        MutableLong lastX8Id = new MutableLong();
+        Set<Long> x8Ids = new HashSet<>();
         long nodeId = node().properties( properties ).store( new FrekiCommand.Dispatcher.Adapter()
         {
             @Override
@@ -951,7 +950,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
                 FrekiCommand.RecordChange change = node.change( largeStore.recordSizeExponential() );
                 while ( change != null )
                 {
-                    lastX8Id.setValue( change.recordId() );
+                    x8Ids.add( change.recordId() );
                     change = change.next();
                 }
             }
@@ -965,8 +964,11 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             public void handle( FrekiCommand.SparseNode node )
             {
                 FrekiCommand.RecordChange change = node.change( largeStore.recordSizeExponential() );
-                assertThat( change.recordId() ).isEqualTo( lastX8Id.longValue() );
-                assertThat( change.next() ).isNull();
+                while ( change != null )
+                {
+                    assertThat( x8Ids ).contains( change.recordId() );
+                    change = change.next();
+                }
             }
         } );
         assertThat( largeStore.getHighId() ).isEqualTo( startingLargeXHighId + 2 );

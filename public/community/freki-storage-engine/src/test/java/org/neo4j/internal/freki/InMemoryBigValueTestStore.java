@@ -71,7 +71,7 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     @Override
     public List<Record> allocate( ByteBuffer data, PageCursorTracer cursorTracer )
     {
-        return singletonList( new Record( (byte) FLAG_IN_USE, highId.getAndIncrement(), data ) );
+        return singletonList( new Record( (byte) FLAG_IN_USE, highId.getAndIncrement(), Record.UNVERSIONED, data ) );
     }
 
     @Override

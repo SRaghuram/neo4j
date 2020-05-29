@@ -1684,8 +1684,9 @@ class FrekiStorageEngineGraphWritesIT
             assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( nodeCursor.data.xLChainNextLinkPointer ); //we have not yet loaded the chain
 
             int actualChainLength = 0;
-            while ( nodeCursor.loadNextChainLink() )
+            while ( nodeCursor.hasMoreChainLinks() )
             {
+                assertThat( nodeCursor.loadNextChainLink() ).as( "No concurrent readers/writers" ).isTrue();
                 actualChainLength++;
             }
             if ( exactLengthMatch )

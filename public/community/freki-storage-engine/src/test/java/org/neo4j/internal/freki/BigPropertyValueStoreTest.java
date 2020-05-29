@@ -220,7 +220,7 @@ class BigPropertyValueStoreTest
             List<Record> records = new ArrayList<>();
             try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
             {
-                store.visitRecordChainIds( cursor, firstIds[indexToRemove], chainId -> records.add( new Record( (byte) 0, chainId, null ) ) );
+                store.visitRecordChainIds( cursor, firstIds[indexToRemove], chainId -> records.add( Record.deletedRecord( (byte) 0, chainId ) ) );
             }
             try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {

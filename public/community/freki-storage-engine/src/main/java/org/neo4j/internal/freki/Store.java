@@ -61,7 +61,7 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     @Override
     public Record newRecord( long id )
     {
-        return new Record( sizeExp, id );
+        return new Record( sizeExp, id, Record.UNVERSIONED );
     }
 
     @Override

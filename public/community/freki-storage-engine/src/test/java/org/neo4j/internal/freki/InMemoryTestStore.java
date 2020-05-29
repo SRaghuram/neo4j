@@ -33,6 +33,7 @@ import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.lang.String.format;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.internal.freki.Record.UNVERSIONED;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 
 class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
@@ -61,7 +62,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     @Override
     public Record newRecord( long id )
     {
-        return new Record( sizeExp, id );
+        return new Record( sizeExp, id, UNVERSIONED );
     }
 
     @Override
@@ -75,7 +76,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     {
         if ( record.hasFlag( FLAG_IN_USE ) )
         {
-            Record copy = new Record( record.sizeExp(), record.id );
+            Record copy = new Record( record.sizeExp() );
             copy.copyContentsFrom( record );
             data.put( record.id, copy );
         }

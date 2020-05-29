@@ -98,12 +98,14 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
 
             // Read header safely
             byte header;
+            byte version;
             int totalLength;
             int recordDataLength;
             do
             {
                 cursor.setOffset( offset );
                 header = cursor.getByte();
+                version = cursor.getByte();
                 totalLength = readTotalLength( cursor, header );
                 nextId = readNextId( cursor, header );
                 recordDataLength = isLast( header ) ? isFirst( header ) ? totalLength : cursor.getByte() & 0xFF : RECORD_SIZE - (cursor.getOffset() - offset);
@@ -203,7 +205,7 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
                 buffer.put( data );
                 data.limit( prevLimit );
             }
-            records.add( new Record( header, recordId, buffer ) );
+            records.add( new Record( header, recordId, Record.UNVERSIONED, buffer ) ); //TODO versioning here? if not then we waste 1 byte :(
             isFirst = false;
         }
         return records;
@@ -224,6 +226,7 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
                 {
                     cursor.setOffset( offset );
                     byte header = cursor.getByte();
+                    byte version = cursor.getByte();
                     readTotalLength( cursor, header ); // just get it out of the way, so that we can read nextId
                     id = readNextId( cursor, header );
                 }

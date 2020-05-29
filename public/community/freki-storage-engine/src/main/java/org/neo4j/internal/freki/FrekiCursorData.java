@@ -46,6 +46,7 @@ class FrekiCursorData
     Header header = new Header();
 
     long nodeId = NULL;
+    byte version = Record.UNVERSIONED;
     boolean x1Loaded;
     long xLChainStartPointer = NULL;
     long xLChainNextLinkPointer = NULL;
@@ -76,6 +77,7 @@ class FrekiCursorData
     void gatherDataFromX1( Record record )
     {
         x1Loaded = true;
+        version = record.version;
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
@@ -92,8 +94,12 @@ class FrekiCursorData
         }
     }
 
-    void gatherDataFromXL( Record record )
+    boolean gatherDataFromXL( Record record )
     {
+        if ( record.version != version )
+        {
+            return false;
+        }
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
@@ -101,6 +107,7 @@ class FrekiCursorData
         long[] pointers = readRecordPointers( buffer );
         xLChainNextLinkPointer = forwardPointer( pointers, true );
         xLChainLoaded = xLChainNextLinkPointer == NULL;
+        return true;
     }
 
     private void assignDataOffsets( ByteBuffer buffer )
@@ -169,6 +176,7 @@ class FrekiCursorData
     {
         assert refCount == 1;
         nodeId = NULL;
+        version = Record.UNVERSIONED;
         x1Loaded = false;
         xLChainStartPointer = NULL;
         xLChainNextLinkPointer = NULL;

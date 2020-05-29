@@ -322,7 +322,7 @@ abstract class FrekiCursorsTest
         return expectedLayout.isDense == null || expectedLayout.isDense.equals( actualLayout.isDense );
     }
 
-    private PhysicalLayout capturePhysicalLayout( long nodeId )
+    PhysicalLayout capturePhysicalLayout( long nodeId )
     {
         PhysicalLayout actualLayout = new PhysicalLayout();
         analysis.visitPhysicalPartsLayout( nodeId, new FrekiAnalysis.PhysicalPartsLayoutVisitor()

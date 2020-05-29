@@ -30,7 +30,6 @@ import org.eclipse.collections.impl.factory.primitive.LongLists;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -162,12 +161,14 @@ class GraphUpdates
         // the before-state
         private RecordChain firstBeforeRecord;
         private RecordChain lastBeforeRecord;
+        private byte version = Record.UNVERSIONED;
 
         // the after-state
         private final SparseRecordAndData sparse;
         private DenseRecordAndData dense;
         private boolean deleted;
         private MutableLongList deletedBigValueIds;
+        private byte nextVersion = nextVersion( version );
 
         NodeUpdates( long nodeId, MainStores stores, Consumer<FrekiCommand.BigPropertyValue> bigValueCreations,
                 Consumer<FrekiCommand.BigPropertyValue> bigValueDeletions, PageCursorTracer cursorTracer )
@@ -178,6 +179,16 @@ class GraphUpdates
             this.bigValueDeletions = bigValueDeletions;
             this.cursorTracer = cursorTracer;
             this.sparse = new SparseRecordAndData( nodeId, stores, this::keepTrackOfDeletedBigValueIds, cursorTracer );
+        }
+
+        private byte nextVersion( byte version )
+        {
+            do
+            {
+                version = (byte) (version + 1);
+            }
+            while ( version == Record.UNVERSIONED );
+            return version;
         }
 
         long nodeId()
@@ -192,6 +203,8 @@ class GraphUpdates
             {
                 throw new IllegalStateException( "Node[" + nodeId + "] should have existed" );
             }
+            version = x1.version;
+            nextVersion = nextVersion( x1.version );
 
             MutableNodeData data = sparse.add( x1 );
             firstBeforeRecord = lastBeforeRecord = new RecordChain( x1 );
@@ -202,6 +215,11 @@ class GraphUpdates
                 if ( xL == null )
                 {
                     throw new IllegalStateException( x1 + " points to " + recordPointerToString( fwPointer ) + " that isn't in use" );
+                }
+                if ( version != xL.version )
+                {
+                    throw new IllegalStateException( String.format( "Node[%s,%s] has mismatching versions in chain. sizeExp:%s, id:%s version:%s ", nodeId,
+                            version, xL.id, xL.sizeExp(), xL.version ) );
                 }
                 sparse.add( xL );
                 RecordChain chain = new RecordChain( xL );
@@ -504,7 +522,7 @@ class GraphUpdates
                     {
                         List<Record> records = new ArrayList<>();
                         stores.bigPropertyValueStore.visitRecordChainIds( cursor, deletedBigValueId,
-                                recordId -> records.add( new Record( (byte) 0, recordId, null ) ) );
+                                recordId -> records.add( Record.deletedRecord( (byte) 0, recordId ) ) );
                         bigValueDeletions.accept( new FrekiCommand.BigPropertyValue( records ) );
                     } );
                 }
@@ -662,7 +680,7 @@ class GraphUpdates
             if ( xLBefore != null && xLBefore.sizeExp() == sizeExp )
             {
                 // There was a large record before and we're just modifying it
-                after = recordForData( xLBefore.id, maxBuffer, sizeExp );
+                after = recordForData( xLBefore.id, maxBuffer, sizeExp, nextVersion );
                 if ( contentsDiffer( xLBefore, after ) )
                 {
                     command.addChange( xLBefore, after );
@@ -673,13 +691,13 @@ class GraphUpdates
                 // There was a large record before, but this time it'll be of a different size, so a different one
                 command.addChange( xLBefore, null );
                 long recordId = store.nextId( cursorTracer );
-                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, nextVersion ) );
             }
             else
             {
                 // There was no large record before at all
                 long recordId = store.nextId( cursorTracer );
-                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, nextVersion ) );
             }
 
             return buildRecordPointer( after.sizeExp(), after.id );
@@ -687,7 +705,7 @@ class GraphUpdates
 
         private void addX1Record( ByteBuffer smallBuffer, FrekiCommand.SparseNode node )
         {
-            Record after = recordForData( nodeId, smallBuffer, 0 );
+            Record after = recordForData( nodeId, smallBuffer, 0, nextVersion );
             Record before = takeBeforeRecord( sizeExp -> sizeExp == 0 );
             if ( before == null || contentsDiffer( before, after ) )
             {
@@ -724,13 +742,14 @@ class GraphUpdates
 
         private boolean contentsDiffer( Record before, Record after )
         {
-            if ( before.data().limit() != after.data().limit() )
-            {
-                return true;
-            }
-            return !Arrays.equals(
-                    before.data().array(), 0, before.data().limit(),
-                    after.data().array(), 0, after.data().limit() );
+            return true; //TODO what do we do when we dont really wanna update the record but version needs to be updated anyway?
+//            if ( before.data().limit() != after.data().limit() )
+//            {
+//                return true;
+//            }
+//            return !Arrays.equals(
+//                    before.data().array(), 0, before.data().limit(),
+//                    after.data().array(), 0, after.data().limit() );
         }
     }
 
@@ -1004,9 +1023,9 @@ class GraphUpdates
         }
     }
 
-    private static Record recordForData( long recordId, ByteBuffer buffer, int sizeExp )
+    private static Record recordForData( long recordId, ByteBuffer buffer, int sizeExp, byte newVersion )
     {
-        Record after = new Record( sizeExp, recordId );
+        Record after = new Record( sizeExp, recordId, newVersion );
         after.setFlag( FLAG_IN_USE, true );
         ByteBuffer byteBuffer = after.data();
         byteBuffer.put( buffer.array(), 0, buffer.limit() );

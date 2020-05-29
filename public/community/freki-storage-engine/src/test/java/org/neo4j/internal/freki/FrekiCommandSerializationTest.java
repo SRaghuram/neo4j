@@ -146,7 +146,7 @@ public class FrekiCommandSerializationTest
         {
             byte[] data = new byte[random.nextInt( 20, 400 )];
             random.nextBytes( data );
-            records.add( new Record( (byte) FLAG_IN_USE, randomLargeId(), ByteBuffer.wrap( data ) ) );
+            records.add( new Record( (byte) FLAG_IN_USE, randomLargeId(), Record.UNVERSIONED, ByteBuffer.wrap( data ) ) );
         }
         FrekiCommand.BigPropertyValue command = new FrekiCommand.BigPropertyValue( records );
 
@@ -284,7 +284,7 @@ public class FrekiCommandSerializationTest
 
     private Record recordWithRandomData( int sizeExp, long id )
     {
-        Record after = new Record( sizeExp, id );
+        Record after = new Record( sizeExp, id, (byte) random.nextInt() );
         after.setFlag( FLAG_IN_USE, true );
         fillWithRandomData( after );
         return after;
