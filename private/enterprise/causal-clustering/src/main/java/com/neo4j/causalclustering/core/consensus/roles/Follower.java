@@ -84,7 +84,7 @@ class Follower implements RaftMessageHandler
             if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
             {
                 outcomeBuilder.setRole( CANDIDATE );
-                log.info( "Moving to CANDIDATE state after receiving leadership transfer request %s", request );
+                log.info( "Moving to CANDIDATE state after receiving %s", request );
             }
         }
         else
