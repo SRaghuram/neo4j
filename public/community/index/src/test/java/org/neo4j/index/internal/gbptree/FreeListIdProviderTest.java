@@ -91,7 +91,7 @@ class FreeListIdProviderTest
         {
             ids.releaseId( GENERATION_ONE, GENERATION_TWO, releasedId );
             acquiredId = ids.acquireNewId( GENERATION_TWO, GENERATION_THREE, cursor.duplicate() );
-        };
+        }
 
         // THEN
         assertEquals( releasedId, acquiredId );
@@ -111,7 +111,7 @@ class FreeListIdProviderTest
             {
                 ids.releaseId( GENERATION_ONE, GENERATION_TWO, baseId + i );
             }
-        };
+        }
 
         // WHEN/THEN
         try ( IdProvider.Writer ids = freelist.writer( NULL ) )
@@ -244,7 +244,7 @@ class FreeListIdProviderTest
                 long acquiredId = ids.acquireNewId( GENERATION_TWO, GENERATION_THREE, cursor.duplicate() );
                 assertTrue( expected.remove( acquiredId ) );
             }
-        };
+        }
 
         // WHEN/THEN
         freelist.visitFreelist( new IdProvider.IdProviderVisitor.Adaptor()
