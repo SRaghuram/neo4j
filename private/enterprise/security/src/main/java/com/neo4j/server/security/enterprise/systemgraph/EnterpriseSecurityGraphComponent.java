@@ -46,6 +46,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
             new KnownSystemComponentVersions<>( new NoEnterpriseComponentVersion() );
     private final CustomSecurityInitializer customSecurityInitializer;
+    private final Log log;
     public static final int LATEST_VERSION = 4;
     public static final String COMPONENT = "security-privileges";
 
@@ -54,6 +55,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         super( config );
         this.defaultAdminRepository = defaultAdminRepository;
         this.customSecurityInitializer = new CustomSecurityInitializer( config, log );
+        this. log = log;
         knownSecurityComponentVersions.add( new EnterpriseVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_1_36( log, config ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_2_40( log ) );
@@ -77,7 +79,14 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     @Override
     public void initializeSystemGraphModel( Transaction tx ) throws Exception
     {
+        final KnownEnterpriseSecurityComponentVersion componentBeforeInit = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        log.info( "Initializing system graph model for component '%s' with version %d and status %s",
+                COMPONENT, componentBeforeInit.version, componentBeforeInit.getStatus() );
         initializeLatestSystemGraph( tx );
+        KnownEnterpriseSecurityComponentVersion componentAfterInit = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        log.info( "After initialization of system graph model component '%s' have version %d and status %s",
+                COMPONENT, componentAfterInit.version, componentAfterInit.getStatus() );
+
     }
 
     @Override
@@ -92,14 +101,19 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         return SystemGraphComponent.executeWithFullAccess( system, tx ->
         {
             KnownEnterpriseSecurityComponentVersion currentVersion = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+            log.info( "Upgrading component '%s' with version %d and status %s to latest version",
+                    COMPONENT, currentVersion.version, currentVersion.getStatus() );
+
             if ( currentVersion.version == NoEnterpriseComponentVersion.VERSION )
             {
+                log.info( "The current version did not have any security graph, doing a full initialization" );
                 initializeLatestSystemGraph( tx );
             }
             else
             {
                 if ( currentVersion.migrationSupported() )
                 {
+                    log.info( "Upgrading security graph to latest version" );
                     currentVersion.upgradeSecurityGraph( tx, knownSecurityComponentVersions.latestSecurityGraphVersion() );
                 }
                 else
