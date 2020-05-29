@@ -287,7 +287,7 @@ class Morsel(private[execution] final val longs: Array[Long],
   }
 
   object Cursor {
-    private final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
+    final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
   }
 
   // ====================
