@@ -30,7 +30,6 @@ import org.neo4j.logging.Level;
 
 import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
 import static org.apache.commons.lang3.builder.HashCodeBuilder.reflectionHashCode;
-import static org.neo4j.configuration.connectors.BoltConnector.connector_routing_enabled;
 
 public class FabricEnterpriseConfig extends FabricConfig
 {
@@ -147,7 +146,7 @@ public class FabricEnterpriseConfig extends FabricConfig
 
         var dataStream = new DataStream( bufferLowWatermark, bufferSize, syncBatchSize, concurrency );
 
-        boolean routingEnabled = config.get( connector_routing_enabled );
+        boolean routingEnabled = config.get( GraphDatabaseSettings.routing_enabled );
         if ( database.isPresent() )
         {
             var serverAddresses = config.get( FabricEnterpriseSettings.fabric_servers_setting );

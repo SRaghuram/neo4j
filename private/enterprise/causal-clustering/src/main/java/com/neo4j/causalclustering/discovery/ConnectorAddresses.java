@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
@@ -98,9 +99,9 @@ public class ConnectorAddresses
 
         clientBoltAddress = new ConnectorUri( bolt, config.get( BoltConnector.advertised_address ) );
 
-        if ( config.get( BoltConnector.connector_routing_enabled ) )
+        if ( config.get( GraphDatabaseSettings.routing_enabled ) )
         {
-            intraClusterBoltAddress = new ConnectorUri( bolt, config.get( BoltConnector.connector_routing_advertised_address ) );
+            intraClusterBoltAddress = new ConnectorUri( bolt, config.get( GraphDatabaseSettings.routing_advertised_address ) );
         }
 
         if ( config.get( HttpConnector.enabled ) )

@@ -23,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.v41.messaging.RoutingContext;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.SessionConfig;
@@ -40,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.connectors.BoltConnector.connector_routing_enabled;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 @TestDirectoryExtension
@@ -67,9 +67,9 @@ class CypherInClusterTest extends ClusterTestSupport
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                                                    .withNumberOfCoreMembers( 2 )
-                                                   .withSharedCoreParam( connector_routing_enabled, "true" )
+                                                   .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "true" )
                                                    .withNumberOfReadReplicas( 1 )
-                                                   .withSharedReadReplicaParam( connector_routing_enabled, "true" );
+                                                   .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, "true" );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

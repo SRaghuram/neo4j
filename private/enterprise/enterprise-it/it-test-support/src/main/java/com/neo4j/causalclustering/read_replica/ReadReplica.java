@@ -96,8 +96,8 @@ public class ReadReplica implements ClusterMember
         config.set( BoltConnector.enabled, TRUE );
         config.set( BoltConnector.listen_address, new SocketAddress( listenAddress, boltPort ) );
         config.set( BoltConnector.advertised_address, new SocketAddress( advertisedAddress, boltPort ) );
-        config.set( BoltConnector.connector_routing_listen_address, new SocketAddress( listenAddress, intraClusterBoltPort ) );
-        config.set( BoltConnector.connector_routing_advertised_address, new SocketAddress( advertisedAddress, intraClusterBoltPort ) );
+        config.set( GraphDatabaseSettings.routing_listen_address, new SocketAddress( listenAddress, intraClusterBoltPort ) );
+        config.set( GraphDatabaseSettings.routing_advertised_address, new SocketAddress( advertisedAddress, intraClusterBoltPort ) );
         config.set( BoltConnector.encryption_level, DISABLED );
         config.set( HttpConnector.enabled, TRUE );
         config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );

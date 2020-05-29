@@ -28,7 +28,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -63,8 +63,8 @@ class ClusterDiscoveryIT
         var config = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withSharedCoreParam( BoltConnector.connector_routing_enabled, "true" )
-                .withSharedReadReplicaParam( BoltConnector.connector_routing_enabled, "true" );
+                .withSharedCoreParam( GraphDatabaseSettings.routing_enabled, "true" )
+                .withSharedReadReplicaParam( GraphDatabaseSettings.routing_enabled, "true" );
 
         var cluster = clusterFactory.createCluster( config );
         cluster.start();

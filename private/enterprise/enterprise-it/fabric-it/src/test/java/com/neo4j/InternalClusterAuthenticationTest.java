@@ -88,8 +88,8 @@ class InternalClusterAuthenticationTest
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true",
-                "dbms.connector.bolt.routing.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.routing.enabled", "true",
+                "dbms.routing.listen_address", "0.0.0.0:0",
+                "dbms.routing.enabled", "true",
                 "dbms.security.auth_enabled", "true"
         );
 

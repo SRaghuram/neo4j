@@ -53,7 +53,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
-import static org.neo4j.configuration.connectors.BoltConnector.connector_routing_enabled;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
@@ -100,14 +99,14 @@ class SecureServerRoutingTest extends ClusterTestSupport
                 GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
-                connector_routing_enabled.name(), "true"
+                GraphDatabaseSettings.routing_enabled.name(), TRUE
         );
         var readReplicaParams = Map.of(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
-                connector_routing_enabled.name(), "true"
+                GraphDatabaseSettings.routing_enabled.name(), TRUE
         );
 
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
