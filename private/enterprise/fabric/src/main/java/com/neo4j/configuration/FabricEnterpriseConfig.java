@@ -19,7 +19,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings.DriverApi;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -120,20 +122,32 @@ public class FabricEnterpriseConfig extends FabricConfig
     {
         var database = parseDatabase( config );
         var transactionTimeout = config.get( GraphDatabaseSettings.transaction_timeout );
-        var driverIdleTimeout = config.get( FabricEnterpriseInternalSettings.driver_idle_timeout );
-        var driverIdleCheckInterval = config.get( FabricEnterpriseInternalSettings.driver_idle_check_interval );
-        var driverEventLoopCount = config.get( FabricEnterpriseInternalSettings.driver_event_loop_count );
 
-        var driverConfig = new DriverConfig( config.get( FabricEnterpriseSettings.driver_logging_level ),
-                config.get( FabricEnterpriseInternalSettings.driver_log_leaked_sessions ),
-                config.get( FabricEnterpriseSettings.driver_max_connection_pool_size ),
-                config.get( FabricEnterpriseSettings.driver_idle_time_before_connection_test ),
-                config.get( FabricEnterpriseSettings.driver_max_connection_lifetime ),
-                config.get( FabricEnterpriseSettings.driver_connection_acquisition_timeout ),
-                config.get( FabricEnterpriseSettings.driver_connect_timeout ),
-                config.get( FabricEnterpriseSettings.driver_api ) );
+        var internalGraphDriver = new GlobalDriverConfig(
+                config.get( GraphDatabaseInternalSettings.routing_driver_idle_timeout ),
+                config.get( GraphDatabaseInternalSettings.routing_driver_idle_check_interval ),
+                config.get( GraphDatabaseInternalSettings.routing_driver_event_loop_count ),
+                new DriverConfig( config.get( GraphDatabaseSettings.routing_driver_logging_level ),
+                                  config.get( GraphDatabaseInternalSettings.routing_driver_log_leaked_sessions ),
+                                  config.get( GraphDatabaseSettings.routing_driver_max_connection_pool_size ),
+                                  config.get( GraphDatabaseSettings.routing_driver_idle_time_before_connection_test ),
+                                  config.get( GraphDatabaseSettings.routing_driver_max_connection_lifetime ),
+                                  config.get( GraphDatabaseSettings.routing_driver_connection_acquisition_timeout ),
+                                  config.get( GraphDatabaseSettings.routing_driver_connect_timeout ),
+                                  config.get( GraphDatabaseSettings.routing_driver_api ) ) );
 
-        var remoteGraphDriver = new GlobalDriverConfig( driverIdleTimeout, driverIdleCheckInterval, driverEventLoopCount, driverConfig );
+        var externalGraphDriver = new GlobalDriverConfig(
+                config.get( FabricEnterpriseInternalSettings.driver_idle_timeout ),
+                config.get( FabricEnterpriseInternalSettings.driver_idle_check_interval ),
+                config.get( FabricEnterpriseInternalSettings.driver_event_loop_count ),
+                new DriverConfig( config.get( FabricEnterpriseSettings.driver_logging_level ),
+                                  config.get( FabricEnterpriseInternalSettings.driver_log_leaked_sessions ),
+                                  config.get( FabricEnterpriseSettings.driver_max_connection_pool_size ),
+                                  config.get( FabricEnterpriseSettings.driver_idle_time_before_connection_test ),
+                                  config.get( FabricEnterpriseSettings.driver_max_connection_lifetime ),
+                                  config.get( FabricEnterpriseSettings.driver_connection_acquisition_timeout ),
+                                  config.get( FabricEnterpriseSettings.driver_connect_timeout ),
+                                  config.get( FabricEnterpriseSettings.driver_api ) ) );
 
         var bufferLowWatermark = config.get( FabricEnterpriseSettings.buffer_low_watermark_setting );
         var bufferSize = config.get( FabricEnterpriseSettings.buffer_size_setting );
@@ -151,14 +165,14 @@ public class FabricEnterpriseConfig extends FabricConfig
         {
             var serverAddresses = config.get( FabricEnterpriseSettings.fabric_servers_setting );
             var routingTtl = config.get( FabricEnterpriseSettings.routing_ttl_setting );
-            var fabricConfig = new FabricEnterpriseConfig( database.get(), serverAddresses, routingTtl, transactionTimeout, remoteGraphDriver, dataStream,
+            var fabricConfig = new FabricEnterpriseConfig( database.get(), serverAddresses, routingTtl, transactionTimeout, externalGraphDriver, dataStream,
                     routingEnabled );
             config.addListener( FabricEnterpriseSettings.fabric_servers_setting, ( oldValue, newValue ) -> fabricConfig.setFabricServers( newValue ) );
             return fabricConfig;
         }
         else
         {
-            return new FabricEnterpriseConfig( null, List.of(), null, transactionTimeout, remoteGraphDriver, dataStream, routingEnabled );
+            return new FabricEnterpriseConfig( null, List.of(), null, transactionTimeout, internalGraphDriver, dataStream, routingEnabled );
         }
     }
 

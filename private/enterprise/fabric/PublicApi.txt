@@ -1,14 +1,9 @@
-com.neo4j.configuration.DriverApi public final enum extends java.lang.Enum<com.neo4j.configuration.DriverApi>
-com.neo4j.configuration.DriverApi::ASYNC com.neo4j.configuration.DriverApi public static final
-com.neo4j.configuration.DriverApi::RX com.neo4j.configuration.DriverApi public static final
-com.neo4j.configuration.DriverApi::valueOf(java.lang.String) com.neo4j.configuration.DriverApi public static
-com.neo4j.configuration.DriverApi::values() com.neo4j.configuration.DriverApi[] public static
 com.neo4j.configuration.FabricEnterpriseSettings public class extends java.lang.Object implements org.neo4j.configuration.SettingsDeclaration
 com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting public static class extends org.neo4j.configuration.GroupSetting
 com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::GraphSetting() void public
 com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::GraphSetting(java.lang.String) void protected
 com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::database org.neo4j.graphdb.config.Setting<java.lang.String> public final
-com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::driver_api org.neo4j.graphdb.config.Setting<com.neo4j.configuration.DriverApi> public final
+com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::driver_api org.neo4j.graphdb.config.Setting<org.neo4j.configuration.GraphDatabaseSettings.DriverApi> public final
 com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::driver_connect_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public final
 com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::driver_connection_acquisition_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public final
 com.neo4j.configuration.FabricEnterpriseSettings.GraphSetting::driver_idle_time_before_connection_test org.neo4j.graphdb.config.Setting<java.time.Duration> public final
@@ -26,7 +21,7 @@ com.neo4j.configuration.FabricEnterpriseSettings::buffer_low_watermark_setting o
 com.neo4j.configuration.FabricEnterpriseSettings::buffer_size_setting org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.FabricEnterpriseSettings::concurrency org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.FabricEnterpriseSettings::database_name org.neo4j.graphdb.config.Setting<java.lang.String> public static final
-com.neo4j.configuration.FabricEnterpriseSettings::driver_api org.neo4j.graphdb.config.Setting<com.neo4j.configuration.DriverApi> public static final
+com.neo4j.configuration.FabricEnterpriseSettings::driver_api org.neo4j.graphdb.config.Setting<org.neo4j.configuration.GraphDatabaseSettings.DriverApi> public static final
 com.neo4j.configuration.FabricEnterpriseSettings::driver_connect_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 com.neo4j.configuration.FabricEnterpriseSettings::driver_connection_acquisition_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 com.neo4j.configuration.FabricEnterpriseSettings::driver_idle_time_before_connection_test org.neo4j.graphdb.config.Setting<java.time.Duration> public static final

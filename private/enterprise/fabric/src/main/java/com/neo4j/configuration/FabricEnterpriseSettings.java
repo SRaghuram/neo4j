@@ -13,6 +13,7 @@ import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.DocumentedDefaultValue;
+import org.neo4j.configuration.GraphDatabaseSettings.DriverApi;
 import org.neo4j.configuration.GroupSetting;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.SettingsDeclaration;

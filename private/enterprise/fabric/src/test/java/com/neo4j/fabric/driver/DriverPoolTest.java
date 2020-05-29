@@ -5,7 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.configuration.DriverApi;
 import com.neo4j.configuration.FabricEnterpriseConfig;
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
@@ -20,6 +19,7 @@ import java.time.Clock;
 import java.time.Duration;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings.DriverApi;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.fabric.executor.Location;
@@ -83,7 +83,7 @@ class DriverPoolTest
         var driverConfig = mock( FabricEnterpriseConfig.DriverConfig.class );
         when( driverConfig.getMaxConnectionPoolSize() ).thenReturn( 10 );
         when( driverConfig.getLoggingLevel() ).thenReturn( Level.INFO );
-        when( driverConfig.getDriverApi() ).thenReturn(  DriverApi.RX );
+        when( driverConfig.getDriverApi() ).thenReturn( DriverApi.RX );
 
         var remoteGraphDriver = new FabricEnterpriseConfig.GlobalDriverConfig( idleTimeout, ofMinutes( 1 ), 1, driverConfig );
         when( fabricConfig.getGlobalDriverConfig() ).thenReturn( remoteGraphDriver );

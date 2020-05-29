@@ -85,7 +85,7 @@ class InternalClusterAuthenticationTest
     static void beforeAll() throws IOException
     {
         var configProperties = Map.of(
-                "fabric.driver.connection.encrypted", "false",
+                "dbms.routing.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true",
                 "dbms.routing.listen_address", "0.0.0.0:0",
