@@ -19,8 +19,11 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
+import org.eclipse.collections.impl.factory.primitive.IntLists;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
@@ -49,6 +52,7 @@ import org.neo4j.values.storable.Value;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.freki.MinimalTestFrekiTransactionApplier.NO_MONITOR;
 import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
@@ -60,13 +64,15 @@ abstract class FrekiCursorsTest
     @Inject
     RandomRule random;
 
-    InMemoryTestStore store = new InMemoryTestStore( 0 );
-    InMemoryTestStore largeStore = new InMemoryTestStore( 3 );
+    InMemoryTestStore[] mainStores = new InMemoryTestStore[]{new InMemoryTestStore( 0 ), new InMemoryTestStore( 1 ), null, new InMemoryTestStore( 3 )};
+    InMemoryTestStore store = mainStores[0];
+    InMemoryTestStore largeStore = mainStores[3];
     InMemoryBigValueTestStore bigPropertyValueStore = new InMemoryBigValueTestStore();
     InMemoryDenseRelationshipTestStore denseStore = new InMemoryDenseRelationshipTestStore( bigPropertyValueStore );
-    MainStores stores = new MainStores( new SimpleStore[]{store, null, null, largeStore}, bigPropertyValueStore, denseStore );
+    MainStores stores = new MainStores( mainStores, bigPropertyValueStore, denseStore );
     SingleThreadedCursorAccessPatternTracer accessPatternTracer = new SingleThreadedCursorAccessPatternTracer();
     FrekiCursorFactory cursorFactory = new FrekiCursorFactory( stores, accessPatternTracer );
+    FrekiAnalysis analysis = new FrekiAnalysis( stores );
 
     static long[] toLongArray( int[] labelIds )
     {
@@ -140,10 +146,21 @@ abstract class FrekiCursorsTest
 
         Node labels( int... labelIds )
         {
+            updates.updateLabels( intsAsLongSet( labelIds ), LongSets.immutable.empty() );
+            return this;
+        }
+
+        Node removeLabels( int... labelIds )
+        {
+            updates.updateLabels( LongSets.immutable.empty(), intsAsLongSet( labelIds ) );
+            return this;
+        }
+
+        private MutableLongSet intsAsLongSet( int[] labelIds )
+        {
             MutableLongSet addedLabels = LongSets.mutable.empty();
             IntStream.of( labelIds ).forEach( addedLabels::add );
-            updates.updateLabels( addedLabels, LongSets.immutable.empty() );
-            return this;
+            return addedLabels;
         }
 
         Node property( int propertyKeyId, Value value )
@@ -155,6 +172,12 @@ abstract class FrekiCursorsTest
         Node properties( IntObjectMap<Value> properties )
         {
             updates.updateNodeProperties( convertPropertiesMap( properties ), emptyList(), IntSets.immutable.empty() );
+            return this;
+        }
+
+        Node removeProperty( int key )
+        {
+            updates.updateNodeProperties( emptyList(), emptyList(), IntSets.immutable.of( key ) );
             return this;
         }
 
@@ -263,5 +286,125 @@ abstract class FrekiCursorsTest
                 };
 
         abstract void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor, RelationshipSelection selection );
+    }
+
+    static PhysicalLayout layout()
+    {
+        return new PhysicalLayout();
+    }
+
+    void assertPhysicalLayout( long nodeId, PhysicalLayout expectedLayout )
+    {
+        PhysicalLayout actualLayout = capturePhysicalLayout( nodeId );
+        for ( int slot = 0; slot < expectedLayout.lists.length; slot++ )
+        {
+            if ( expectedLayout.lists[slot] != null )
+            {
+                assertThat( actualLayout.lists[slot] ).isEqualTo( expectedLayout.lists[slot] );
+            }
+        }
+        if ( expectedLayout.isDense != null )
+        {
+            assertThat( actualLayout.isDense ).isEqualTo( expectedLayout.isDense );
+        }
+    }
+
+    boolean matchesPhysicalLayout( long nodeId, PhysicalLayout expectedLayout )
+    {
+        PhysicalLayout actualLayout = capturePhysicalLayout( nodeId );
+        for ( int slot = 0; slot < expectedLayout.lists.length; slot++ )
+        {
+            if ( expectedLayout.lists[slot] != null && !expectedLayout.lists[slot].equals( actualLayout.lists[slot] ) )
+            {
+                return false;
+            }
+        }
+        return expectedLayout.isDense == null || expectedLayout.isDense.equals( actualLayout.isDense );
+    }
+
+    private PhysicalLayout capturePhysicalLayout( long nodeId )
+    {
+        PhysicalLayout actualLayout = new PhysicalLayout();
+        analysis.visitPhysicalPartsLayout( nodeId, new FrekiAnalysis.PhysicalPartsLayoutVisitor()
+        {
+            @Override
+            public void xRecord( int sizeExp, long id, Header header, boolean first, boolean last )
+            {
+                note( PhysicalLayout.LABELS, header.hasMark( Header.FLAG_LABELS ), sizeExp );
+                note( PhysicalLayout.PROPERTIES, header.hasMark( Header.OFFSET_PROPERTIES ), sizeExp );
+                note( PhysicalLayout.DEGREES, header.hasMark( Header.OFFSET_DEGREES ), sizeExp );
+                note( PhysicalLayout.RELATIONSHIPS, header.hasMark( Header.OFFSET_RELATIONSHIPS ), sizeExp );
+            }
+
+            private void note( int slot, boolean hasMark, int sizeExp )
+            {
+                if ( hasMark )
+                {
+                    actualLayout.add( slot, sizeExp );
+                }
+            }
+        } );
+        return actualLayout;
+    }
+
+    static class PhysicalLayout
+    {
+        private static final int LABELS = 0;
+        private static final int PROPERTIES = 1;
+        private static final int DEGREES = 2;
+        private static final int RELATIONSHIPS = 3;
+
+        private MutableIntList[] lists = new MutableIntList[4];
+        private Boolean isDense;
+
+        private MutableIntList list( int index )
+        {
+            if ( lists[index] == null )
+            {
+                lists[index] = IntLists.mutable.empty();
+            }
+            return lists[index];
+        }
+
+        PhysicalLayout labels( int... sizeExp )
+        {
+            return add( LABELS, sizeExp );
+        }
+
+        PhysicalLayout properties( int... sizeExp )
+        {
+            return add( PROPERTIES, sizeExp );
+        }
+
+        PhysicalLayout degrees( int... sizeExp )
+        {
+            return add( DEGREES, sizeExp );
+        }
+
+        PhysicalLayout relationships( int... sizeExp )
+        {
+            return add( RELATIONSHIPS, sizeExp );
+        }
+
+        private PhysicalLayout add( int slot, int... sizeExp )
+        {
+            list( slot ).addAll( sizeExp );
+            return this;
+        }
+
+        PhysicalLayout isDense( boolean shouldBeDense )
+        {
+            return this;
+        }
+    }
+
+    MutableIntObjectMap<Value> readProperties( FrekiPropertyCursor propertyCursor )
+    {
+        MutableIntObjectMap<Value> readProperties = IntObjectMaps.mutable.empty();
+        while ( propertyCursor.next() )
+        {
+            readProperties.put( propertyCursor.propertyKey(), propertyCursor.propertyValue() );
+        }
+        return readProperties;
     }
 }

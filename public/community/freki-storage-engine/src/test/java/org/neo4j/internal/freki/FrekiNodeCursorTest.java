@@ -1294,16 +1294,6 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
     // TODO other randomized testing
 
-    private MutableIntObjectMap<Value> readProperties( FrekiPropertyCursor propertyCursor )
-    {
-        MutableIntObjectMap<Value> readProperties = IntObjectMaps.mutable.empty();
-        while ( propertyCursor.next() )
-        {
-            readProperties.put( propertyCursor.propertyKey(), propertyCursor.propertyValue() );
-        }
-        return readProperties;
-    }
-
     static Iterable<Arguments> allRelationshipsAndPropertyConnector()
     {
         Collection<Arguments> permutations = new ArrayList<>();

@@ -223,40 +223,28 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    // e.g. X1(12):L -> X8(19):R -> X4(243):P -> DENSE
     public void dumpPhysicalPartsLayout( long nodeId )
     {
-        StringBuilder builder = new StringBuilder();
+        visitPhysicalPartsLayout( nodeId, new PhysicalPartsLayoutPrinter( out ) );
+    }
+
+    public <V extends PhysicalPartsLayoutVisitor> V visitPhysicalPartsLayout( long nodeId, V visitor )
+    {
         Header header = new Header();
         long pointer = buildRecordPointer( 0, nodeId );
+        boolean first = true;
         while ( pointer != NULL )
         {
-            Record record = loadRecord( idFromRecordPointer( pointer ), sizeExponentialFromRecordPointer( pointer ) );
-            appendPhysicalPartsLayout( builder, header, record );
+            int sizeExp = sizeExponentialFromRecordPointer( pointer );
+            long id = idFromRecordPointer( pointer );
+            Record record = loadRecord( id, sizeExp );
+            header.deserialize( record.data( 0 ) );
             pointer = header.hasMark( OFFSET_RECORD_POINTER ) ?
                       forwardPointer( readRecordPointers( record.data( header.getOffset( OFFSET_RECORD_POINTER ) ) ), record.sizeExp() > 0 ) : NULL;
-            builder.append( pointer != NULL ? " -> " : "" );
+            visitor.xRecord( sizeExp, id, header, first, pointer == NULL );
+            first = false;
         }
-        builder.append( header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) ? " -> DENSE" : "" );
-        out.println( builder );
-    }
-
-    private void appendPhysicalPartsLayout( StringBuilder builder, Header header, Record record )
-    {
-        builder.append( format( "X%d(%d):", recordXFactor( record.sizeExp() ), record.id ) );
-        header.deserialize( record.data( 0 ) );
-        appendPhysicalPart( builder, header, FLAG_LABELS, 'L' );
-        appendPhysicalPart( builder, header, OFFSET_PROPERTIES, 'P' );
-        appendPhysicalPart( builder, header, OFFSET_RELATIONSHIPS, 'R' );
-        appendPhysicalPart( builder, header, OFFSET_DEGREES, 'D' );
-    }
-
-    private void appendPhysicalPart( StringBuilder builder, Header header, int slot, char part )
-    {
-        if ( header.hasMark( slot ) )
-        {
-            builder.append( part );
-        }
+        return visitor;
     }
 
     void printRawRecordContents( Record record, long nodeId )
@@ -577,6 +565,49 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         StoreStats( int sizeExp )
         {
             this.sizeExp = sizeExp;
+        }
+    }
+
+    public interface PhysicalPartsLayoutVisitor
+    {
+        void xRecord( int sizeExp, long id, Header header, boolean first, boolean last );
+    }
+
+    // e.g. X1(12):L -> X8(19):R -> X4(243):P -> DENSE
+    private static class PhysicalPartsLayoutPrinter implements PhysicalPartsLayoutVisitor
+    {
+        private final StringBuilder builder = new StringBuilder();
+        private final PrintStream out;
+        private boolean isDense;
+
+        PhysicalPartsLayoutPrinter( PrintStream out )
+        {
+            this.out = out;
+        }
+
+        @Override
+        public void xRecord( int sizeExp, long id, Header header, boolean first, boolean last )
+        {
+            builder.append( !first ? " -> " : "" );
+            builder.append( format( "X%d(%d):", recordXFactor( sizeExp ), id ) );
+            appendPhysicalPart( builder, header, FLAG_LABELS, 'L' );
+            appendPhysicalPart( builder, header, OFFSET_PROPERTIES, 'P' );
+            appendPhysicalPart( builder, header, OFFSET_RELATIONSHIPS, 'R' );
+            appendPhysicalPart( builder, header, OFFSET_DEGREES, 'D' );
+            isDense = header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS );
+            if ( last )
+            {
+                builder.append( isDense ? " -> DENSE" : "" );
+                out.println( builder );
+            }
+        }
+
+        private void appendPhysicalPart( StringBuilder builder, Header header, int slot, char part )
+        {
+            if ( header.hasMark( slot ) )
+            {
+                builder.append( part );
+            }
         }
     }
 }

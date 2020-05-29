@@ -246,7 +246,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                 if ( !loadNextChainLink() )
                 {
                     //We traversed the rest of the chain. Either the header/store is corrupt or we did not start at the beginning of the chain.
-                    throw new IllegalStateException( String.format( "Should have found %d in record chain", headerSlot ) );
+                    throw new IllegalStateException( String.format( "Should have found header slot %d in record chain for node %d", headerSlot, data.nodeId ) );
                 }
             }
         }
