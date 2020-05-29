@@ -680,7 +680,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( adminSubject, "CALL dbms.listPools()", r ->
         {
             List<Map<String,Object>> maps = collectResults( r );
-            assertEquals( 8, maps.size() );
+            assertEquals( 9, maps.size() );
             assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "system".equals( map.get( "databaseName" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "neo4j".equals( map.get( "databaseName" ) ) ) );
@@ -689,6 +689,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             assertTrue( maps.stream().anyMatch( map -> "Other".equals( map.get( "group" ) ) && "neo4j".equals( map.get( "databaseName" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Netty".equals( map.get( "group" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Page Cache".equals( map.get( "group" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Recent Query Buffer".equals( map.get( "group" ) ) ) );
         } );
     }
 
