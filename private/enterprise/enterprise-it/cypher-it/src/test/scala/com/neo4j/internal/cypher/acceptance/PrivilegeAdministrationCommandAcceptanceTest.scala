@@ -10,7 +10,6 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
@@ -306,6 +305,43 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD access, resource, role, segment WHERE role = 'PUBLIC'")
       .toList should be (expected)
+  }
+
+  test("should not show privileges when WHERE references column omitted from YIELD") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USER neo4j PRIVILEGES YIELD access, resource WHERE role = 'PUBLIC'").toList
+    }
+    exception.getMessage should startWith("Variable `role` not defined (line 1, column 57 (offset: 56))")
+  }
+
+  test("should not show privileges when ORDER BY references column omitted from YIELD'") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USER neo4j PRIVILEGES YIELD access, resource ORDER BY role").toList
+    }
+    exception.getMessage should startWith("Variable `role` not defined (line 1, column 60 (offset: 59))")
+  }
+
+  test("should not show privileges for specific user YIELD foo, bar") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USER neo4j PRIVILEGES YIELD foo, bar").toList
+    }
+    exception.getMessage should startWith("Variable `foo` not defined (line 1, column 34 (offset: 33))")
+  }
+
+  test("should not show privileges for specific user with aliased items in YIELD") {
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USER neo4j PRIVILEGES YIELD access as foo, resource, role as bar where bar = 'public'").toList
+    }
+    exception.getMessage should startWith("Invalid input 'a': expected whitespace, comment, ',', ORDER, SKIP, LIMIT, WHERE, ';' or end of input (line 1, column 41 (offset: 40))")
+
   }
 
   test("should show user privileges for current user as non admin") {
