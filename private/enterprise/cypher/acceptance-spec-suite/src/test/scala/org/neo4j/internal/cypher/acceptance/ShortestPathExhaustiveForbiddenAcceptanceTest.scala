@@ -5,8 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Boolean.TRUE
 import java.lang.Boolean.FALSE
+import java.lang.Boolean.TRUE
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -38,7 +38,7 @@ class ShortestPathExhaustiveForbiddenAcceptanceTest extends ExecutionEngineFunSu
 
   test("should warn if shortest path fallback is planned") {
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"""EXPLAIN MATCH p = shortestPath((src:$topLeft)-[*0..]-(dst:$topLeft))
          |WHERE ANY(n in nodes(p) WHERE n:$topRight)
          |RETURN nodes(p) AS nodes""".stripMargin)

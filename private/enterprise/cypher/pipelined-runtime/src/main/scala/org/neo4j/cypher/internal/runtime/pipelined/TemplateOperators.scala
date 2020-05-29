@@ -632,7 +632,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.slotConfigurations(rhs.id).size(),
             )(ctx.expressionCompiler)
 
-        case _ => None
+        case _ =>
+          None
       }
 
     template
