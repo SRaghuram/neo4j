@@ -21,6 +21,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
@@ -50,7 +51,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumDistinctAggregator
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
@@ -142,7 +142,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
           var i = 0
           while (i < aggregations.length) {
             val value = expressionValues(i)(readCursor, queryState)
-            update.updater(i).add(value)
+            update.addUpdate(i, value)
             i += 1
           }
         }
@@ -253,6 +253,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def toString: String = "AggregationMapperOperatorTaskTemplate"
 
+  private val needToApplyUpdates = !Aggregator.allDirect(aggregators)
+
   private val asmField: Field =
     field[ArgumentStateMap[AggregatedRowMap]](codeGen.namer.nextVariableName("aggregatedRowMaps"),
                                               argumentStateMap[AggregatedRowMap](argumentStateMapId))
@@ -312,10 +314,10 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
      *   // ----- aggregate -----
      *
      *   {
-     *     updaters.updater(0).add(aggregationExpression[0]())
-     *     updaters.updater(1).add(aggregationExpression[1]())
+     *     updaters.addUpdate(0, aggregationExpression[0]())
+     *     updaters.addUpdate(1, aggregationExpression[1]())
      *     ...
-     *     updaters.updater(n-1).add(aggregationExpression[n-1]())
+     *     updaters.addUpdate(n-1, aggregationExpression[n-1]())
      *   }
      * }}}
      *
@@ -332,9 +334,9 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       /*
        * val arg = ArgumentSlots.getArgumentAt(readCursor, argumentSlotOffset)
        * if (arg != argumentRowId) {
-       *   if (aggregatedRowMap != null) {
-       *     aggregatedRowMap.applyUpdates(workerId)
-       *   }
+       *   if (aggregatedRowMap != null) {           // ---
+       *     aggregatedRowMap.applyUpdates(workerId) // If all aggregators are direct we skip this code
+       *   }                                         // ---
        *   aggregatedRowMap = aggregatedRowMaps.peek(arg)
        *   argumentRowId = arg
        * }
@@ -365,17 +367,16 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         invoke(load(aggregatedRow), method[AggregatedRow, AggregatedRowUpdaters, Int]("updaters"), load(workerIdVar))),
 
       /*
-       * updaters.updater(0).add(aggregationExpression[0]())
-       * updaters.updater(1).add(aggregationExpression[1]())
+       * updaters.addUpdate(0, aggregationExpression[0]())
+       * updaters.addUpdate(1, aggregationExpression[1]())
        * ...
-       * updaters.updater(n-1).add(aggregationExpression[n-1]())
+       * updaters.addUpdate(n-1, aggregationExpression[n-1]())
        */
       block(
         compiledAggregationExpressions.indices.map(i => {
-          invokeSideEffect(
-            invoke(load(updaters), method[AggregatedRowUpdaters, Updater, Int]("updater"), constant(i)),
-            method[Updater, Unit, AnyValue]("add"),
-            nullCheckIfRequired(compiledAggregationExpressions(i)))
+          invokeSideEffect(load(updaters), method[AggregatedRowUpdaters, Unit, Int, AnyValue]("addUpdate"),
+                           constant(i),
+                           nullCheckIfRequired(compiledAggregationExpressions(i)))
         }): _ *
       ),
 
@@ -390,10 +391,15 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     )
   }
 
-  private def genApplyUpdates =
-    condition(isNotNull(load(aggregatedRowMapVar)))(
-      invokeSideEffect(load(aggregatedRowMapVar), method[AggregatedRowMap, Unit, Int]("applyUpdates"), load(workerIdVar))
-    )
+  private def genApplyUpdates: IntermediateRepresentation = {
+    if (needToApplyUpdates) {
+      condition(isNotNull(load(aggregatedRowMapVar)))(
+        invokeSideEffect(load(aggregatedRowMapVar), method[AggregatedRowMap, Unit, Int]("applyUpdates"), load(workerIdVar))
+      )
+    } else {
+      noop()
+    }
+  }
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = None
 

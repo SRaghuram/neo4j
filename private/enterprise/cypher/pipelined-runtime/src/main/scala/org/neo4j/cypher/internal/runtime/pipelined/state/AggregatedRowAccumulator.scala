@@ -28,6 +28,7 @@ object AggregatedRowAccumulator {
   class Factory(aggregators: Array[Aggregator],
                 memoryTracker: MemoryTracker,
                 numberOfWorkers: Int) extends ArgumentStateFactory[AggregatedRowAccumulator] {
+    private[this] val needToApplyUpdates = !Aggregator.allDirect(aggregators)
 
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
@@ -36,7 +37,11 @@ object AggregatedRowAccumulator {
         argumentRowId,
         argumentRowIdsForReducers,
         argumentMorsel.snapshot(),
-        new StandardAggregators(aggregators.map(_.newStandardReducer(memoryTracker))))
+        if (needToApplyUpdates)
+          new StandardAggregators(aggregators.map(_.newStandardReducer(memoryTracker)))
+        else
+          new StandardDirectAggregators(aggregators.map(_.newStandardReducer(memoryTracker)))
+      )
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
