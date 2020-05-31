@@ -248,12 +248,13 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             aggregators: Array[Aggregator],
                                             argumentStateMapId: ArgumentStateMapId,
                                             aggregationExpressionsCreator : () => Array[IntermediateExpression],
-                                            groupingKeyExpressionCreator: () => IntermediateExpression)
+                                            groupingKeyExpressionCreator: () => IntermediateExpression,
+                                            serialExecutionOnly: Boolean = false)
                                            (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   override def toString: String = "AggregationMapperOperatorTaskTemplate"
 
-  private val needToApplyUpdates = !Aggregator.allDirect(aggregators)
+  private val needToApplyUpdates = !Aggregator.allDirect(aggregators) || !serialExecutionOnly
 
   private val asmField: Field =
     field[ArgumentStateMap[AggregatedRowMap]](codeGen.namer.nextVariableName("aggregatedRowMaps"),

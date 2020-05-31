@@ -198,12 +198,13 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
                                                       argumentSlotOffset: Int,
                                                       aggregators: Array[Aggregator],
                                                       argumentStateMapId: ArgumentStateMapId,
-                                                      aggregationExpressionsCreator: () => Array[IntermediateExpression])
+                                                      aggregationExpressionsCreator: () => Array[IntermediateExpression],
+                                                      serialExecutionOnly: Boolean = false)
                                                      (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   override def toString: String = "AggregationMapperNoGroupingOperatorTaskTemplate"
 
-  private val needToApplyUpdates = !Aggregator.allDirect(aggregators)
+  private val needToApplyUpdates = !Aggregator.allDirect(aggregators) || !serialExecutionOnly
 
   private val asmField: Field =
     field[ArgumentStateMap[AggregatedRowAccumulator]](codeGen.namer.nextVariableName("aggregatedRows"),

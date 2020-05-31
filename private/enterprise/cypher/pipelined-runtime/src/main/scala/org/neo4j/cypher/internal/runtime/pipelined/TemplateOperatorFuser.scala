@@ -170,14 +170,16 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                 aggregators.result(),
                 argumentStateMapId,
                 aggregationExpressionsCreator,
-                compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty))(ctx.expressionCompiler)
+                compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
+                serialExecutionOnly)(ctx.expressionCompiler)
             } else {
               new AggregationMapperOperatorNoGroupingTaskTemplate(ctx.innermost,
                 p.id,
                 argumentSlotOffset,
                 aggregators.result(),
                 argumentStateMapId,
-                aggregationExpressionsCreator)(ctx.expressionCompiler)
+                aggregationExpressionsCreator,
+                serialExecutionOnly)(ctx.expressionCompiler)
             }
           })
         case _ => None
