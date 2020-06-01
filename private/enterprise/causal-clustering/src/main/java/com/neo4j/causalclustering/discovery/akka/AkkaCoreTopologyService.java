@@ -52,7 +52,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
@@ -224,32 +226,36 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         {
             var timeout = config.get( CausalClusteringInternalSettings.raft_id_publish_timeout );
             var request = new RaftIdSetRequest( raftId, myself, timeout );
-
             var idSetJob = Patterns.ask( coreTopologyActor, request, timeout )
-                    .thenApply( response ->
-                    {
-                        if ( !(response instanceof PublishRaftIdOutcome ) )
-                        {
-                            throw new IllegalArgumentException( format( "Unexpected response when attempting to publish raftId. " +
-                                            "Expected %s, received %s", PublishRaftIdOutcome.class.getSimpleName(), response.getClass().getCanonicalName() ) );
-                        }
-                        return (PublishRaftIdOutcome) response;
-                    } ).toCompletableFuture();
-
+                                   .thenApplyAsync( this::checkOutcome, executor )
+                                   .toCompletableFuture();
             try
             {
-                return idSetJob.join();
+                // Although the idSetJob has a timeout it needs the actor system to enforce it.
+                // We have observed that the Akka system can hang and then the timeout never throws.
+                // So we timeout fetching this future because enforcing this timeout doesn't depend on Akka.
+                return idSetJob.get( timeout.toNanos(), TimeUnit.NANOSECONDS );
             }
-            catch ( CompletionException e )
+            catch ( CompletionException | InterruptedException | ExecutionException e )
             {
                 if ( e.getCause() instanceof AskTimeoutException )
                 {
-                    throw new TimeoutException( "Could not publsh raft id within " + timeout.toSeconds() + " seconds" );
+                    throw new TimeoutException( "Could not publish raft id within " + timeout.toSeconds() + " seconds" );
                 }
                 throw new RuntimeException( e.getCause() );
             }
         }
         return PublishRaftIdOutcome.FAILED_PUBLISH;
+    }
+
+    private PublishRaftIdOutcome checkOutcome( Object response )
+    {
+        if ( !(response instanceof PublishRaftIdOutcome) )
+        {
+            throw new IllegalArgumentException( format( "Unexpected response when attempting to publish raftId. Expected %s, received %s",
+                                                        PublishRaftIdOutcome.class.getSimpleName(), response.getClass().getCanonicalName() ) );
+        }
+        return (PublishRaftIdOutcome) response;
     }
 
     @Override

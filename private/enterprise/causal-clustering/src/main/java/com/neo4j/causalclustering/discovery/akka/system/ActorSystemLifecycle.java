@@ -149,7 +149,8 @@ public class ActorSystemLifecycle
 
     private CompletionStage<Done> gracefulShutdown( ActorRef actor )
     {
-        return Patterns.gracefulStop( actor, Duration.ofSeconds( ACTOR_SHUTDOWN_TIMEOUT_S ) ).thenApply( ignored -> Done.done() );
+        return Patterns.gracefulStop( actor, Duration.ofSeconds( ACTOR_SHUTDOWN_TIMEOUT_S ) )
+                       .thenApplyAsync( ignored -> Done.done(), this.actorSystemComponents.actorSystem().dispatcher() );
     }
 
     public EventStream eventStream()
