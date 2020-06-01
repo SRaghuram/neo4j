@@ -5,13 +5,13 @@
     <parent>
         <artifactId>enterprise-parent</artifactId>
         <groupId>com.neo4j</groupId>
-        <version>4.1.0-SNAPSHOT</version>
+        <version>4.2.0-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>neo4j-dbms-enterprise</artifactId>
-    <version>4.1.0-SNAPSHOT</version>
+    <version>4.2.0-SNAPSHOT</version>
 
     <name>Neo4j - DBMS Enterprise</name>
     <packaging>jar</packaging>

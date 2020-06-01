@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.neo4j</groupId>
         <artifactId>enterprise-parent</artifactId>
-        <version>4.1.0-SNAPSHOT</version>
+        <version>4.2.0-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>enterprise-integration-tests</artifactId>
-    <version>4.1.0-SNAPSHOT</version>
+    <version>4.2.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Neo4j - Enterprise Integration Tests</name>
