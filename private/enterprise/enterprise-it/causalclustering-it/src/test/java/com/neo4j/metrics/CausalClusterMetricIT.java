@@ -46,7 +46,7 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 @ClusterExtension
 class CausalClusterMetricIT
 {
-    private static final int TIMEOUT = 30;
+    private static final int TIMEOUT = 60;
 
     @Inject
     private ClusterFactory clusterFactory;
