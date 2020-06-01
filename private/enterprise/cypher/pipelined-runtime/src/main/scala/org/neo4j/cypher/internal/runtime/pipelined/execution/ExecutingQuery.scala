@@ -36,5 +36,10 @@ class ExecutingQuery(val executionState: ExecutionState,
     flowControl.await()
   }
 
+  //noinspection AccessorLikeMethodIsEmptyParen
+  def hasSucceeded(): Boolean = {
+    executionState.hasSucceeded
+  }
+
   override def toString: String = s"ExecutingQuery ${System.identityHashCode(this)}"
 }

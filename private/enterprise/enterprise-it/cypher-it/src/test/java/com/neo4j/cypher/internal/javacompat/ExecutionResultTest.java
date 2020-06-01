@@ -15,6 +15,7 @@ import java.util.Map;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
@@ -27,6 +28,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.IsNull.notNullValue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @EnterpriseDbmsExtension
 class ExecutionResultTest
@@ -196,6 +198,73 @@ class ExecutionResultTest
                 // Then
                 assertThat( listResult, hasSize( 2 ) );
                 transaction.commit();
+            }
+        }
+    }
+
+    @Test
+    void shouldNotBePossibleToGetProfileOfNonExhaustedResult()
+    {
+        // When
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED", "PARALLEL" ) )
+        {
+            try ( Transaction transaction = db.beginTx() )
+            {
+                // Even 10 rows (less than a Morsel) should work, as long as they are not all retrieved.
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s PROFILE UNWIND range(0, 10) AS i RETURN i", runtime ) ) )
+                {
+                    if ( result.hasNext() )
+                    {
+                        result.next();
+                    }
+                    try
+                    {
+                        result.getExecutionPlanDescription();
+                        fail("No exception thrown.");
+                    }
+                    catch ( QueryExecutionException e )
+                    {
+                        assertThat( e.getMessage(), equalTo( "This result has not been materialised yet. Iterate over it to get profiler stats." ) );
+                    }
+                    finally
+                    {
+                        result.close();
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void shouldNotBePossibleToGetProfileOfCancelledResult()
+    {
+        // When
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED", "PARALLEL" ) )
+        {
+            try ( Transaction transaction = db.beginTx() )
+            {
+                // Even 10 rows (less than a Morsel) should work, as long as they are not all retrieved.
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s PROFILE UNWIND range(0, 10) AS i RETURN i", runtime ) ) )
+                {
+                    if ( result.hasNext() )
+                    {
+                        result.next();
+                        result.close();
+                    }
+                    try
+                    {
+                        result.getExecutionPlanDescription();
+                        fail("No exception thrown.");
+                    }
+                    catch ( QueryExecutionException e )
+                    {
+                        assertThat( e.getMessage(), equalTo( "This result has not been materialised yet. Iterate over it to get profiler stats." ) );
+                    }
+                    finally
+                    {
+                        result.close();
+                    }
+                }
             }
         }
     }

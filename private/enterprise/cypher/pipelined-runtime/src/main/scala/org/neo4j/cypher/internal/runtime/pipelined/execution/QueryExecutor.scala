@@ -48,4 +48,4 @@ trait QueryExecutor {
   def assertAllReleased(): Unit
 }
 
-case class ProfiledQuerySubscription(subscription: QuerySubscription, profile: QueryProfile, memoryTracker: QueryMemoryTracker)
+case class ProfiledQuerySubscription(subscription: ExecutingQuery, profile: QueryProfile, memoryTracker: QueryMemoryTracker)

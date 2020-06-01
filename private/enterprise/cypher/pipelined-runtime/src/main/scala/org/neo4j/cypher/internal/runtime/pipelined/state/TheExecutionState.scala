@@ -314,6 +314,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def hasEnded: Boolean = tracker.hasEnded
 
+  override def hasSucceeded: Boolean = tracker.hasSucceeded
+
   override def prettyString(pipeline: ExecutablePipeline): String = {
     s"""continuations: ${continuations(pipeline.id.x)}
        |""".stripMargin

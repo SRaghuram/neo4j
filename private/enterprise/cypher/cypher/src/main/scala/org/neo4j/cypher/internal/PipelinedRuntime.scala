@@ -51,6 +51,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.PipelineCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedPipelineBreakingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperatorPolicy
+import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutingQuery
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutionGraphSchedulingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.execution.LazyScheduling
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ProfiledQuerySubscription
@@ -324,7 +325,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         nExpressionSlots,
         prePopulateResults,
         inputDataStream,
-        logicalPlan,
         queryContext,
         createParameterArray(params, parameterMapping),
         fieldNames,
@@ -390,7 +390,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                nExpressionSlots: Int,
                                prePopulateResults: Boolean,
                                inputDataStream: InputDataStream,
-                               logicalPlan: LogicalPlan,
                                queryContext: QueryContext,
                                params: Array[AnyValue],
                                override val fieldNames: Array[String],
@@ -402,7 +401,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                memoryTracking: MemoryTracking,
                                executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
 
-    private var querySubscription: QuerySubscription = _
+    private var querySubscription: ExecutingQuery = _
     private var _queryProfile: QueryProfile = _
     private var _memoryTracker: QueryMemoryTracker = _
 
@@ -415,6 +414,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     override def consumptionState: RuntimeResult.ConsumptionState =
       if (querySubscription == null) ConsumptionState.NOT_STARTED
+      else if (!querySubscription.hasSucceeded()) ConsumptionState.HAS_MORE // Not exactly true, but EXHAUSTED would be mor wrong.
       else ConsumptionState.EXHAUSTED
 
     override def close(): Unit = {}

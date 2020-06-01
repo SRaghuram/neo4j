@@ -251,6 +251,14 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def hasEnded: Boolean
 
   /**
+   * Checks if the query has ended. Non-blocking. This method can return
+   * true if all query work is done.
+   *
+   * If the query was cancelled, or if an exception occurred, return false.
+   */
+  def hasSucceeded: Boolean
+
+  /**
    * Return a string representation of the state related to the given pipeline. Meant for debugging.
    */
   def prettyString(pipeline: ExecutablePipeline): String

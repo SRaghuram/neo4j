@@ -58,6 +58,14 @@ trait QueryCompletionTracker extends FlowControl {
   def hasEnded: Boolean
 
   /**
+   * Checks if the query has ended. Non-blocking. This method can return
+   * true if all query work is done.
+   *
+   * If the query was cancelled, or if an exception occurred, return false.
+   */
+  def hasSucceeded: Boolean
+
+  /**
    * Add an assertion to be run when the query is completed.
    */
   def addCompletionAssertion(assertion: () => Unit): Boolean = {
@@ -184,6 +192,8 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def hasEnded: Boolean = _hasEnded
+
+  override def hasSucceeded: Boolean = _hasEnded && !cancelled && throwable == null
 
   // -------- Subscription Methods --------
 
@@ -333,6 +343,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def hasEnded: Boolean = _hasEnded
+
+  override def hasSucceeded: Boolean = _hasEnded && !_cancelledOrFailed
 
   // -------- Flow control methods --------
 

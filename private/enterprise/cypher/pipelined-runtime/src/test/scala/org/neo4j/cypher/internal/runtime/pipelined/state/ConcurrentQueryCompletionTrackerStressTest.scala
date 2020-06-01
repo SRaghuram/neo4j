@@ -155,6 +155,7 @@ object ConcurrentQueryCompletionTrackerStressTest {
     override def decrementBy(n: Long): Unit = fail()
     override def error(throwable: Throwable): Unit = fail()
     override def hasEnded: Boolean = fail()
+    override def hasSucceeded: Boolean = fail()
     override def getDemandUnlessCancelled: Long = fail()
     override def hasDemand: Boolean = fail()
     override def addServed(newlyServed: Long): Unit = fail()
