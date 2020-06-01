@@ -39,10 +39,10 @@ public class EnterpriseSecurityStressIT extends SecurityStressTestBase
     }
 
     // Expected if the user is dropped before or during authorization
-    private String userAuthorizationError = "Database access is not allowed for user 'alice' with roles [].";
+    private static final String userAuthorizationError = "Database access is not allowed for user 'alice' with roles [].";
 
     // Expected if the role is dropped during authorization privilege lookup.
-    private String roleAuthorizationError = "Database access is not allowed for user 'alice' with roles [custom].";
+    private static final String roleAuthorizationError = "Database access is not allowed for user 'alice' with roles [custom].";
 
     // Concurrency tests for authentication
 
