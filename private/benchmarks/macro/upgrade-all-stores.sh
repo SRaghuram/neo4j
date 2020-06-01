@@ -52,14 +52,11 @@ for i in "${db_and_workloads[@]}"; do
     echo Working on file: "${zip_file}"
     echo With workload: "${workload}"
     aws s3 cp s3://benchmarking.neo4j.com/datasets/macro/"${old_neo4j_version}"-enterprise-datasets/"${zip_file}" ./ --no-progress
-    rm -rf old
-    mkdir old
-    tar xzvf "${zip_file}" -C old
+    tar xzvf "${zip_file}"
     rm "${zip_file}"
 
     "${JAVA_HOME}/bin/java"  -jar target/macro.jar upgrade-store \
                                --original-db old/"${db_name}"/ \
-                               --upgraded-db "${db_name}"/ \
                                --workload "${workload}" \
                                --db-edition ENTERPRISE
 

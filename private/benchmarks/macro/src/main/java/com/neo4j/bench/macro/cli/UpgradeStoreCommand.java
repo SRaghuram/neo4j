@@ -39,14 +39,6 @@ public class UpgradeStoreCommand implements Runnable
     @Required
     private File originalDbDir;
 
-    private static final String CMD_UPGRADED_DB = "--upgraded-db";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_UPGRADED_DB},
-            description = "Neo4j database to copy into working directory. E.g. 'new_accesscontrol/' not 'new_accesscontrol/graph.db/'",
-            title = "Upgraded Neo4j database" )
-    @Required
-    private File upgradedDbDir;
-
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WORKLOAD},
@@ -73,11 +65,9 @@ public class UpgradeStoreCommand implements Runnable
     public void run()
     {
         System.out.println( format( "Upgrading store for workload `%s`\n" +
-                                    "Old store: `%s`\n" +
-                                    "New store: `%s`",
+                                    "In: `%s`\n",
                                     workloadName,
-                                    originalDbDir.getAbsolutePath(),
-                                    upgradedDbDir.getAbsolutePath() ) );
+                                    originalDbDir.getAbsolutePath() ) );
 
         Path workDir = Paths.get( System.getProperty( "user.dir" ) );
         try ( Store originalStore = AutoDetectStore.createFrom( originalDbDir.toPath() );
@@ -103,13 +93,7 @@ public class UpgradeStoreCommand implements Runnable
             System.out.println( "Checking schema..." );
             EmbeddedDatabase.verifySchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
 
-            System.out.println( "Copying store\n" +
-                                "From: " + originalDbDir.getAbsolutePath() + "\n" +
-                                "To:   " + upgradedDbDir.getAbsolutePath() );
-            try ( Store upgradedStore = originalStore.makeCopyAt( upgradedDbDir.toPath() ) )
-            {
-                EmbeddedDatabase.recreateSchema( upgradedStore, edition, neo4jConfigPath, workload.expectedSchema() );
-            }
+            EmbeddedDatabase.recreateSchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
             System.out.println( "Upgrade complete" );
         }
     }
