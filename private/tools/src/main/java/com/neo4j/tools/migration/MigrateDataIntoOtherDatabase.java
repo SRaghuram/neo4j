@@ -35,6 +35,7 @@ import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -52,10 +53,10 @@ public class MigrateDataIntoOtherDatabase
     {
         Path fromHome = Path.of( args[0] );
         Path toHome = Path.of( args[1] );
-        migrate( fromHome, toHome, true );
+        migrate( fromHome, toHome, true, true );
     }
 
-    public static void migrate( Path fromHome, Path toHome, boolean validate )
+    public static void migrate( Path fromHome, Path toHome, boolean validate, boolean statistics )
     {
         checkArgument( !fromHome.equals( toHome ), "From directory same as to: %s", fromHome );
         System.out.println( format( "Migrating %s to Freki store: %s", fromHome, toHome ) );
@@ -77,8 +78,13 @@ public class MigrateDataIntoOtherDatabase
         try
         {
             GraphDatabaseService fromDb = fromDbms.database( DEFAULT_DATABASE_NAME );
-            GraphDatabaseService toDb = toDbms.database( DEFAULT_DATABASE_NAME );
+            GraphDatabaseAPI toDb = (GraphDatabaseAPI) toDbms.database( DEFAULT_DATABASE_NAME );
             copyDatabase( fromDb, toDb, validate );
+            if ( statistics )
+            {
+                System.out.println( "Printing statistics for migrated store." );
+                toDb.getDependencyResolver().resolveDependency( FrekiStorageEngine.class ).analysis().dumpStoreStats();
+            }
         }
         finally
         {
