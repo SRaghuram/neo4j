@@ -11,8 +11,6 @@ import org.neo4j.cypher.internal.expressions.Equals
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.AbstractSelectOrSemiApply
-import org.neo4j.cypher.internal.logical.plans.AbstractSemiApply
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
@@ -60,6 +58,8 @@ import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.RemoveLabels
 import org.neo4j.cypher.internal.logical.plans.RollUpApply
+import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
+import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.SetLabels
 import org.neo4j.cypher.internal.logical.plans.SetNodePropertiesFromMap
@@ -165,6 +165,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedPri
 import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedSinglePrimitivePipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ProduceResultSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.RollUpApplySlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.SelectOrSemiApplySlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnwindSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ValueHashJoinSlottedPipe
@@ -500,9 +501,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Apply(_, _) =>
         ApplySlottedPipe(lhs, rhs)(id)
 
-      case _: AbstractSemiApply |
-           _: AbstractSelectOrSemiApply =>
-        fallback.onTwoChildPlan(plan, lhs, rhs)
+//      case _: AbstractSemiApply |
+//           _: AbstractSelectOrSemiApply =>
+//        fallback.onTwoChildPlan(plan, lhs, rhs)
 
       case RollUpApply(_, rhsPlan, collectionName, identifierToCollect, nullables) =>
         val rhsSlots = slotConfigs(rhsPlan.id)
@@ -575,6 +576,12 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case ForeachApply(_, _, variable, expression) =>
         val innerVariableSlot = slots.get(variable).getOrElse(throw new InternalException(s"Foreach variable '$variable' has no slot"))
         ForeachSlottedPipe(lhs, rhs, innerVariableSlot, convertExpressions(expression))(id)
+
+      case SelectOrSemiApply(_, _, expression) =>
+        SelectOrSemiApplySlottedPipe(lhs, rhs, expressionConverters.toCommandExpression(id, expression), negated = false, slots)(id)
+
+      case SelectOrAntiSemiApply(_, _, expression) =>
+        SelectOrSemiApplySlottedPipe(lhs, rhs, expressionConverters.toCommandExpression(id, expression), negated = true, slots)(id)
 
       case Union(_, _) =>
         val lhsSlots = slotConfigs(lhs.id)
