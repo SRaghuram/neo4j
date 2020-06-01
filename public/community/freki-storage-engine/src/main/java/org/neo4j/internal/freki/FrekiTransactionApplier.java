@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 import org.neo4j.common.EntityType;
@@ -75,10 +76,11 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiPropertyCursor propertyCursorBefore;
     private final FrekiPropertyCursor propertyCursorAfter;
     private CountsAccessor.Updater countsApplier;
-    private DenseRelationshipsWorkSync.Batch denseRelationshipUpdates;
+    private DenseRelationshipsWorkSync.Batch denseRelationshipsUpdates;
 
     // State used for generating index updates
     private boolean hasAnySchema;
+    private AsyncApply denseRelationshipsApply;
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
@@ -124,14 +126,17 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public boolean visit( StorageCommand command ) throws IOException
     {
-        // TODO DUDE, we gotta handle reverse recovery at some point!!
-
         return ((FrekiCommand) command).accept( this );
     }
 
     @Override
     public void handle( FrekiCommand.SparseNode node ) throws IOException
     {
+        // Seeing a SparseNode signals that dense command section is over, so let's start applying them, and also wait for them to prevent readers
+        // from having a chance to observe this node w/o relationships. This really only affects nodes that moves relationshisp to dense store,
+        // but it's more efficient to apply all dense commands in the same go anyway and therefore they are grouped in the beginning like this.
+        endOfDenseCommands();
+        awaitDenseCommandsApplied();
         writeSparseNode( node, stores, idUpdates, cursorTracer );
         if ( indexUpdates != null )
         {
@@ -255,6 +260,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
     {
+        // Seeing a BigPropertyValue signals that dense command section is over, so let's start applying them
+        endOfDenseCommands();
         writeBigValue( value, stores.bigPropertyValueStore, idUpdates, cursorTracer );
     }
 
@@ -270,11 +277,11 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.DenseNode node ) throws IOException
     {
-        if ( denseRelationshipUpdates == null )
+        if ( denseRelationshipsUpdates == null )
         {
-            denseRelationshipUpdates = denseRelationshipsWorkSync.newBatch();
+            denseRelationshipsUpdates = denseRelationshipsWorkSync.newBatch();
         }
-        denseRelationshipUpdates.add( node );
+        denseRelationshipsUpdates.add( node );
     }
 
     static void writeDenseNode( List<FrekiCommand.DenseNode> nodes, SimpleDenseRelationshipStore store, PageCursorTracer cursorTracer ) throws IOException
@@ -299,6 +306,39 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                         }
                     } );
                 }
+            }
+        }
+    }
+
+    private void endOfDenseCommands()
+    {
+        if ( denseRelationshipsUpdates != null )
+        {
+            denseRelationshipsApply = denseRelationshipsUpdates.applyAsync( pageCacheTracer );
+            denseRelationshipsUpdates = null;
+        }
+    }
+
+    private void awaitDenseCommandsApplied() throws IOException
+    {
+        if ( denseRelationshipsApply != null )
+        {
+            try
+            {
+                denseRelationshipsApply.await();
+            }
+            catch ( ExecutionException e )
+            {
+                Throwable cause = e.getCause();
+                if ( cause instanceof IOException )
+                {
+                    throw (IOException) cause;
+                }
+                if ( cause instanceof RuntimeException )
+                {
+                    throw (RuntimeException) cause;
+                }
+                throw new RuntimeException( cause );
             }
         }
     }
@@ -400,14 +440,17 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             }
             AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
             AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
-            AsyncApply denseAsyncApply = denseRelationshipUpdates != null ? denseRelationshipUpdates.applyAsync( pageCacheTracer ) : AsyncApply.EMPTY;
             if ( idUpdates != null )
             {
                 idUpdates.apply( pageCacheTracer );
             }
             labelUpdatesAsyncApply.await();
             indexUpdatesAsyncApply.await();
-            denseAsyncApply.await();
+            endOfDenseCommands();
+            if ( denseRelationshipsApply != null )
+            {
+                denseRelationshipsApply.await();
+            }
         };
         closeAll( nodeCursor, propertyCursorBefore, propertyCursorAfter, indexesCloser );
     }

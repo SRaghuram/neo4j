@@ -20,16 +20,20 @@
 package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.tuple.Triple;
+import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 
 import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.indexed.IndexedIdGenerator;
@@ -49,9 +53,12 @@ import org.neo4j.util.concurrent.AsyncApply;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 @EphemeralPageCacheExtension
 class FrekiTransactionApplierTest
@@ -66,6 +73,7 @@ class FrekiTransactionApplierTest
     private LifeSupport life = new LifeSupport();
     private Stores stores;
     private RecordingIdGeneratorWorkSync idUpdates;
+    private DenseRelationshipsWorkSync denseUpdates;
 
     @BeforeEach
     void setUp() throws IOException
@@ -74,6 +82,7 @@ class FrekiTransactionApplierTest
                 PageCacheTracer.NULL, immediate(), true, new StandardConstraintRuleAccessor(), index -> index, EmptyMemoryTracker.INSTANCE ) );
         life.start();
         idUpdates = new RecordingIdGeneratorWorkSync();
+        denseUpdates = new DenseRelationshipsWorkSync( stores.denseStore );
         stores.idGenerators( idUpdates::add );
     }
 
@@ -93,7 +102,7 @@ class FrekiTransactionApplierTest
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) );
+            applySparseCommand( applier, nodeId, null, usedRecord( sizeExp, nodeId ) );
         }
 
         // then
@@ -110,7 +119,7 @@ class FrekiTransactionApplierTest
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) );
+            applySparseCommand( applier, nodeId, null, usedRecord( sizeExp, nodeId ) );
         }
 
         // then
@@ -123,12 +132,12 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 0;
         long nodeId = 0;
-        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+        preState( applier -> applySparseCommand( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), null );
+            applySparseCommand( applier, nodeId, usedRecord( sizeExp, nodeId ), null );
         }
 
         // then
@@ -141,12 +150,12 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 1;
         long nodeId = 0;
-        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+        preState( applier -> applySparseCommand( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), null );
+            applySparseCommand( applier, nodeId, usedRecord( sizeExp, nodeId ), null );
         }
 
         // then
@@ -159,12 +168,12 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 1;
         long nodeId = 0;
-        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+        preState( applier -> applySparseCommand( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) );
+            applySparseCommand( applier, nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) );
         }
 
         // then
@@ -178,12 +187,12 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 3;
         long nodeId = 0;
-        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+        preState( applier -> applySparseCommand( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) );
+            applySparseCommand( applier, nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) );
         }
 
         // then
@@ -191,7 +200,75 @@ class FrekiTransactionApplierTest
         assertThat( idUpdates.hasEvent( sizeExp, nodeId, false ) ).isFalse();
     }
 
-    private void apply( FrekiTransactionApplier applier, long nodeId, Record before, Record after ) throws IOException
+    @Test
+    void shouldStartApplyingDenseCommandsOnFirstBigValueCommand() throws Exception
+    {
+        // given
+        long nodeId = 10;
+        try ( FrekiTransactionApplier applier = applier() )
+        {
+            TreeMap<Integer,DenseRelationships> relationships = new TreeMap<>();
+            long otherNodeId = 99;
+            relationships.computeIfAbsent( 0, t -> new DenseRelationships( nodeId, t ) ).add( new DenseRelationships.DenseRelationship( 1, otherNodeId, true,
+                    IntObjectMaps.immutable.empty(), false ) );
+            applier.handle( new FrekiCommand.DenseNode( nodeId, relationships ) );
+
+            // At this point the dense node changes should not yet have been applied
+            try ( ResourceIterator<SimpleDenseRelationshipStore.RelationshipData> readRelationships = stores.denseStore.getRelationships( nodeId,
+                    ANY_RELATIONSHIP_TYPE, BOTH, NULL ) )
+            {
+                assertThat( readRelationships.hasNext() ).isFalse();
+            }
+
+            // when
+            applier.handle( new FrekiCommand.BigPropertyValue( stores.bigPropertyValueStore.allocate( ByteBuffer.wrap( new byte[100] ), NULL ) ) );
+
+            // then, since WorkSync works by applying itself if this is the only thread applying right now we can assert that the dense changes
+            //       are now present after applying the big value.
+            try ( ResourceIterator<SimpleDenseRelationshipStore.RelationshipData> readRelationships = stores.denseStore.getRelationships( nodeId,
+                    ANY_RELATIONSHIP_TYPE, BOTH, NULL ) )
+            {
+                assertThat( readRelationships.hasNext() ).isTrue();
+                assertThat( readRelationships.next().neighbourNodeId() ).isEqualTo( otherNodeId );
+            }
+        }
+    }
+
+    @Test
+    void shouldCompleteApplyingDenseCommandsOnFirstSparseCommand() throws Exception
+    {
+        // given
+        long nodeId = 10;
+        try ( FrekiTransactionApplier applier = applier() )
+        {
+            TreeMap<Integer,DenseRelationships> relationships = new TreeMap<>();
+            long otherNodeId = 99;
+            relationships.computeIfAbsent( 0, t -> new DenseRelationships( nodeId, t ) ).add( new DenseRelationships.DenseRelationship( 1, otherNodeId, true,
+                    IntObjectMaps.immutable.empty(), false ) );
+            applier.handle( new FrekiCommand.DenseNode( nodeId, relationships ) );
+
+            // At this point the dense node changes should not yet have been applied
+            try ( ResourceIterator<SimpleDenseRelationshipStore.RelationshipData> readRelationships = stores.denseStore.getRelationships( nodeId,
+                    ANY_RELATIONSHIP_TYPE, BOTH, NULL ) )
+            {
+                assertThat( readRelationships.hasNext() ).isFalse();
+            }
+
+            // when
+            applySparseCommand( applier, 1, usedRecord( 0, 1 ), usedRecord( 0, 1 ) );
+
+            // then, since WorkSync works by applying itself if this is the only thread applying right now we can assert that the dense changes
+            //       are now present after applying the big value.
+            try ( ResourceIterator<SimpleDenseRelationshipStore.RelationshipData> readRelationships = stores.denseStore.getRelationships( nodeId,
+                    ANY_RELATIONSHIP_TYPE, BOTH, NULL ) )
+            {
+                assertThat( readRelationships.hasNext() ).isTrue();
+                assertThat( readRelationships.next().neighbourNodeId() ).isEqualTo( otherNodeId );
+            }
+        }
+    }
+
+    private void applySparseCommand( FrekiTransactionApplier applier, long nodeId, Record before, Record after ) throws IOException
     {
         FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId );
         command.addChange( before, after );
@@ -217,7 +294,7 @@ class FrekiTransactionApplierTest
     private FrekiTransactionApplier applier()
     {
         return new FrekiTransactionApplier( stores, new FrekiStorageReader( stores, NO_TRACING, null /*should not be required*/ ), null, null, EXTERNAL,
-                idUpdates, null, null, null, PageCacheTracer.NULL, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+                idUpdates, null, null, denseUpdates, PageCacheTracer.NULL, NULL, EmptyMemoryTracker.INSTANCE );
     }
 
     private static class RecordingIdGeneratorWorkSync extends IdGeneratorUpdatesWorkSync

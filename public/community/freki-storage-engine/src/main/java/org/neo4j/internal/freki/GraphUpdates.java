@@ -68,8 +68,9 @@ class GraphUpdates
 {
     private static final int WORST_CASE_HEADER_AND_STUFF_SIZE = Header.WORST_CASE_SIZE + DUAL_VLONG_MAX_SIZE;
 
-    private final Collection<StorageCommand> bigValueCreationCommands = new ArrayList<>();
-    private final Collection<StorageCommand> bigValueDeletionCommands = new ArrayList<>();
+    private final Collection<FrekiCommand.BigPropertyValue> bigValueCreationCommands = new ArrayList<>();
+    private final Collection<FrekiCommand.BigPropertyValue> bigValueDeletionCommands = new ArrayList<>();
+    private final Collection<FrekiCommand.DenseNode> denseCommands = new ArrayList<>();
     private final MemoryTracker memoryTracker;
     private final TreeMap<Long,NodeUpdates> mutations = new TreeMap<>();
     private final MainStores stores;
@@ -127,8 +128,9 @@ class GraphUpdates
         Header xLHeader = new Header();
         for ( NodeUpdates mutation : mutations.values() )
         {
-            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, recordPointersBuffer, otherCommands::add, x1Header, xLHeader );
+            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, recordPointersBuffer, denseCommands::add, otherCommands::add, x1Header, xLHeader );
         }
+        denseCommands.forEach( commands );
         bigValueCreationCommands.forEach( commands );
         otherCommands.forEach( commands );
         bigValueDeletionCommands.forEach( commands );
@@ -319,7 +321,8 @@ class GraphUpdates
         }
 
         void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, IntermediateBuffer[] intermediateBuffers, ByteBuffer recordPointersBuffer,
-                Consumer<StorageCommand> otherCommands, Header x1Header, Header xLHeader ) throws ConstraintViolationTransactionFailureException
+                Consumer<FrekiCommand.DenseNode> denseCommands, Consumer<StorageCommand> otherCommands,
+                Header x1Header, Header xLHeader ) throws ConstraintViolationTransactionFailureException
         {
             prepareForCommandExtraction();
             addDeletedBigValueCommands();
@@ -357,7 +360,7 @@ class GraphUpdates
                     sparse.data.serializeDegrees( intermediateBuffers[DEGREES].clear() );
                     intermediateBuffers[DEGREES].flip();
                 }
-                dense.createCommands( otherCommands );
+                dense.createCommands( denseCommands );
             }
 
             // X LEGO TIME
@@ -987,7 +990,7 @@ class GraphUpdates
             }
         }
 
-        void createCommands( Consumer<StorageCommand> commands )
+        void createCommands( Consumer<FrekiCommand.DenseNode> commands )
         {
             commands.accept( new FrekiCommand.DenseNode( nodeId(), relationshipUpdates ) );
         }

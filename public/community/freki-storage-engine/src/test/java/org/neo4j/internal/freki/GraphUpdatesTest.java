@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
@@ -216,6 +217,49 @@ class GraphUpdatesTest
         // then
         assertThat( monitor.numCreated.intValue() ).isGreaterThan( 0 );
         assertThat( monitor.numDeleted.intValue() ).isEqualTo( monitor.numCreated.intValue() );
+    }
+
+    @Test
+    void shouldPlaceDenseNodeCommandsFirst() throws ConstraintViolationTransactionFailureException
+    {
+        // given
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+
+        // when
+        for ( int i = 0; i < 5; i++ )
+        {
+            long nodeId = mainStores.mainStore.nextId( NULL );
+            updates.create( nodeId );
+            updates.getOrLoad( nodeId ).updateNodeProperties( singletonList( new PropertyKeyValue( 9, random.nextValue() ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }
+        long denseNodeId = mainStores.mainStore.nextId( NULL );
+        updates.create( denseNodeId );
+        GraphUpdates.NodeUpdates denseNode = updates.getOrLoad( denseNodeId );
+        for ( int i = 0; i < 200; i++ )
+        {
+            denseNode.createRelationship( i + 1, mainStores.mainStore.nextId( NULL ), 0, true, singletonList( new PropertyKeyValue( 0, intValue( 100 ) ) ) );
+        }
+
+        // then
+        MutableBoolean hasSeenDense = new MutableBoolean();
+        MutableBoolean hasSeenOther = new MutableBoolean();
+        updates.extractUpdates( command ->
+        {
+            boolean isDenseCommand = command instanceof FrekiCommand.DenseNode;
+            if ( isDenseCommand )
+            {
+                hasSeenDense.setTrue();
+                assertThat( hasSeenOther.booleanValue() ).isFalse();
+            }
+            else
+            {
+                hasSeenOther.setTrue();
+                assertThat( hasSeenDense.booleanValue() ).isTrue();
+            }
+        } );
+        assertThat( hasSeenDense.booleanValue() ).isTrue();
+        assertThat( hasSeenOther.booleanValue() ).isTrue();
     }
 
     private StorageProperty randomPropertyValue( int propertyKey )
