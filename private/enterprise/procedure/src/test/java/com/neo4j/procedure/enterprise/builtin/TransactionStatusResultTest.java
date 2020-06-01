@@ -52,7 +52,6 @@ import org.neo4j.kernel.internal.event.DatabaseTransactionEventListeners;
 import org.neo4j.lock.ResourceTypes;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.resources.CpuClock;
-import org.neo4j.resources.HeapAllocation;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
@@ -141,7 +140,7 @@ class TransactionStatusResultTest
         assertEquals( Long.valueOf( 1L ), statusResult.cpuTimeMillis );
         assertEquals( 0L, statusResult.waitTimeMillis );
         assertEquals( Long.valueOf( 1809 ), statusResult.idleTimeMillis );
-        assertEquals( Long.valueOf( 1 ), statusResult.allocatedBytes );
+        assertEquals( Long.valueOf( 0 ), statusResult.allocatedBytes );
         assertEquals( Long.valueOf( 0 ), statusResult.allocatedDirectBytes );
         assertEquals( 0L, statusResult.pageHits );
         assertEquals( 0L, statusResult.pageFaults );
@@ -167,7 +166,7 @@ class TransactionStatusResultTest
         assertEquals( Long.valueOf( 1 ), statusResult.cpuTimeMillis );
         assertEquals( 0L, statusResult.waitTimeMillis );
         assertEquals( Long.valueOf( 1809 ), statusResult.idleTimeMillis );
-        assertEquals( Long.valueOf( 1 ), statusResult.allocatedBytes );
+        assertEquals( Long.valueOf( 0 ), statusResult.allocatedBytes );
         assertEquals( Long.valueOf( 0 ), statusResult.allocatedDirectBytes );
         assertEquals( 0, statusResult.pageHits );
         assertEquals( 0, statusResult.pageFaults );
@@ -241,7 +240,7 @@ class TransactionStatusResultTest
                     mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ),
                     mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
                     mock( Pool.class ), Clocks.fakeClock(),
-                    new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),
+                    new AtomicReference<>( CpuClock.NOT_AVAILABLE ),
                     mock( DatabaseTracers.class, RETURNS_MOCKS ),
                     mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                     EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class ),
@@ -252,8 +251,7 @@ class TransactionStatusResultTest
                 @Override
                 public Statistics getStatistics()
                 {
-                    TestStatistics statistics = new TestStatistics( this, new AtomicReference<>( new CountingCpuClock() ),
-                                    new AtomicReference<>( new CountingHeapAllocation() ) );
+                    TestStatistics statistics = new TestStatistics( this, new AtomicReference<>( new CountingCpuClock() ) );
                     statistics.init( Thread.currentThread().getId(), PageCursorTracer.NULL );
                     return statistics;
                 }
@@ -276,10 +274,9 @@ class TransactionStatusResultTest
             super.init( threadId, pageCursorTracer );
         }
 
-        TestStatistics( KernelTransactionImplementation transaction, AtomicReference<CpuClock> cpuClockRef,
-                AtomicReference<HeapAllocation> heapAllocationRef )
+        TestStatistics( KernelTransactionImplementation transaction, AtomicReference<CpuClock> cpuClockRef )
         {
-            super( transaction, cpuClockRef, heapAllocationRef );
+            super( transaction, cpuClockRef );
         }
     }
 
@@ -304,17 +301,6 @@ class TransactionStatusResultTest
         {
             cpuTime += MILLISECONDS.toNanos( 1 );
             return cpuTime;
-        }
-    }
-
-    private static class CountingHeapAllocation extends HeapAllocation
-    {
-        private long allocatedBytes;
-
-        @Override
-        public long allocatedBytes( long threadId )
-        {
-            return allocatedBytes++;
         }
     }
 }
