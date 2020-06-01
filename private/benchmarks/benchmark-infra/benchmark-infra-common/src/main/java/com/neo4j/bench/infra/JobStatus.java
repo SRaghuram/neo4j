@@ -14,11 +14,11 @@ import static java.lang.String.format;
 
 public class JobStatus
 {
-    private final String jobId;
+    private final JobId jobId;
     private final String status;
     private final String logStreamName;
 
-    public JobStatus( String jobId, String status, String logStreamName )
+    public JobStatus( JobId jobId, String status, String logStreamName )
     {
         super();
         this.jobId = jobId;
@@ -26,7 +26,7 @@ public class JobStatus
         this.logStreamName = logStreamName;
     }
 
-    public String getJobId()
+    public JobId getJobId()
     {
         return jobId;
     }
@@ -98,5 +98,4 @@ public class JobStatus
                .append( "]" );
         return builder.toString();
     }
-
 }

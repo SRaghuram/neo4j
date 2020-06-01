@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.infra.scheduler;
 
+import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.InfraParams;
@@ -25,10 +27,16 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
+import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class BenchmarkJobScheduler
 {
@@ -40,18 +48,43 @@ public class BenchmarkJobScheduler
         return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, jobQueue, jobDefinition, batchStack ), awsCredentials );
     }
 
-    private static List<JobStatus> jobStatuses( JobScheduler jobScheduler, String awsRegion, List<JobId> jobIds )
+    private static List<JobStatus> jobStatuses( JobScheduler jobScheduler,
+                                                String awsRegion,
+                                                Map<JobId,String> scheduledJobIds,
+                                                Map<JobId,JobStatus> prevJobStatusMap )
     {
-        List<JobStatus> jobStatuses = jobScheduler.jobsStatuses( jobIds );
-        LOG.info( "current jobs statuses:\n{}",
-                  jobStatuses.stream()
-                             .map( status -> status.toStatusLine( awsRegion ) ).collect( joining( "\n" ) ) );
+        List<JobStatus> jobStatuses = jobScheduler.jobsStatuses( Lists.newArrayList( scheduledJobIds.keySet() ) );
+
+        Collection<JobStatus> prevJobStatus = prevJobStatusMap.values();
+
+        // filter out job statuses which didn't change
+        List<JobStatus> updatedJobsStatus = jobStatuses.stream().filter( Predicates.not( prevJobStatus::contains ) ).collect( toList() );
+
+        // update job statuses
+        prevJobStatusMap.putAll(
+                updatedJobsStatus.stream().collect( toMap( status -> status.getJobId(), Function.identity() ) )
+        );
+
+        if ( !updatedJobsStatus.isEmpty() )
+        {
+            LOG.info( "updated jobs statuses:\n{}",
+                      updatedJobsStatus.stream()
+                                       .map( status -> jobStatusPrintout( awsRegion, scheduledJobIds, status ) )
+                                       .collect( joining( "\t\n" ) ) );
+        }
+
         return jobStatuses;
+    }
+
+    private static String jobStatusPrintout( String awsRegion, Map<JobId,String> scheduledJobIds, JobStatus status )
+    {
+        return format( "%s - %s", scheduledJobIds.get( status.getJobId() ), status.toStatusLine( awsRegion ) );
     }
 
     private final AWSCredentials awsCredentials;
     private final JobScheduler jobScheduler;
-    private final List<JobId> scheduledJobsId = new ArrayList<>();
+    // keeps map of scheduled job ids to job name
+    private final Map<JobId,String> scheduledJobsId = new HashMap<>();
 
     private BenchmarkJobScheduler( JobScheduler awsBatchJobScheduler, AWSCredentials awsCredentials )
     {
@@ -82,7 +115,7 @@ public class BenchmarkJobScheduler
 
         JobId jobId = jobScheduler.schedule( artifactWorkerUri, artifactBaseURI, sanitizedJobName );
         LOG.info( "job scheduled, with id {}", jobId.id() );
-        scheduledJobsId.add( jobId );
+        scheduledJobsId.put( jobId, sanitizedJobName );
     }
 
     public void awaitFinished()
@@ -98,9 +131,15 @@ public class BenchmarkJobScheduler
                 .withDelay( Duration.ofMinutes( 5 ) )
                 .withMaxAttempts( -1 );
 
+        Map<JobId,JobStatus> prevJobsStatus = new HashMap<>();
         List<JobStatus> jobsStatuses =
-                Failsafe.with( retries ).get( () -> BenchmarkJobScheduler.jobStatuses( jobScheduler, awsCredentials.awsRegion(), scheduledJobsId ) );
-        LOG.info( "jobs are done with following statuses {}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
+                Failsafe.with( retries )
+                        .get( () -> BenchmarkJobScheduler
+                                .jobStatuses( jobScheduler, awsCredentials.awsRegion(), scheduledJobsId, prevJobsStatus ) );
+        LOG.info( "jobs are done with following statuses\n{}",
+                  jobsStatuses.stream()
+                              .map( status -> jobStatusPrintout( awsCredentials.awsRegion(), scheduledJobsId, status ) )
+                              .collect( joining( "\n\t" ) ) );
 
         // if any of the jobs failed, fail whole run
         if ( jobsStatuses.stream().anyMatch( JobStatus::isFailed ) )

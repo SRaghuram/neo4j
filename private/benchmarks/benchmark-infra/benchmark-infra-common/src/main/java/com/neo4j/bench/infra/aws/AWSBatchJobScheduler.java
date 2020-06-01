@@ -44,6 +44,7 @@ public class AWSBatchJobScheduler implements JobScheduler
 {
 
     private static final Logger LOG = LoggerFactory.getLogger( AWSBatchJobScheduler.class );
+
     /**
      * Create AWS batch job scheduler using default credentials chain, https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html.
      *
@@ -210,7 +211,7 @@ public class AWSBatchJobScheduler implements JobScheduler
 
     private static JobStatus jobStatus( JobDetail jobDetail )
     {
-        return new JobStatus( jobDetail.getJobId(), jobDetail.getStatus(), jobDetail.getContainer().getLogStreamName() );
+        return new JobStatus( new JobId( jobDetail.getJobId() ), jobDetail.getStatus(), jobDetail.getContainer().getLogStreamName() );
     }
 
     private static void assertJobName( String jobName )

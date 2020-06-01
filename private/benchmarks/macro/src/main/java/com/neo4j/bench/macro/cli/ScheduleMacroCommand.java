@@ -133,7 +133,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
     private static String getJobName( String tool, String benchmark, String queryName, String version, String triggered )
     {
-        return format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
+        return format( "%s-%s-%s-%s-%s", tool, benchmark, queryName, version, triggered );
     }
 
     @Override
