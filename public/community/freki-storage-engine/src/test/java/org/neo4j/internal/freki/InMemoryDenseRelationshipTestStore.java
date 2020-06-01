@@ -44,6 +44,7 @@ import org.neo4j.values.storable.Value;
 
 import static org.neo4j.internal.helpers.collection.Iterators.emptyResourceIterator;
 import static org.neo4j.internal.helpers.collection.Iterators.resourceIterator;
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements SimpleDenseRelationshipStore
 {
@@ -103,12 +104,20 @@ class InMemoryDenseRelationshipTestStore extends LifecycleAdapter implements Sim
                     IntObjectMap<PropertyUpdate> properties, Function<PropertyUpdate,ByteBuffer> version )
             {
                 ConcurrentMap<Integer,DenseRelationships> nodeData = data.computeIfAbsent( sourceNodeId, nodeId -> new ConcurrentHashMap<>() );
-                DenseRelationships relationships = nodeData.computeIfAbsent( type, t -> new DenseRelationships( sourceNodeId, t ) );
-                relationships.add( new InternalRelationship( sourceNodeId, internalId, type, targetNodeId, outgoing, properties ) );
+                InternalRelationship relationship = new InternalRelationship( sourceNodeId, internalId, type, targetNodeId, outgoing, properties );
+                nodeData.computeIfAbsent( ANY_RELATIONSHIP_TYPE, t -> new DenseRelationships( sourceNodeId, t ) ).add( relationship );
+                nodeData.computeIfAbsent( type, t -> new DenseRelationships( sourceNodeId, t ) ).add( relationship );
             }
 
             @Override
             public void deleteRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing )
+            {
+                assert type != ANY_RELATIONSHIP_TYPE;
+                deleteRelationshipInternal( internalId, sourceNodeId, type, targetNodeId, outgoing );
+                deleteRelationshipInternal( internalId, sourceNodeId, ANY_RELATIONSHIP_TYPE, targetNodeId, outgoing );
+            }
+
+            private void deleteRelationshipInternal( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing )
             {
                 DenseRelationships relationships = existingRelationshipsByType( sourceNodeId, type, true );
                 DenseRelationships.DenseRelationship relationship = findRelationship( relationships, sourceNodeId, internalId, targetNodeId, outgoing );
