@@ -262,7 +262,8 @@ class Record
             dataString = Arrays.toString( Arrays.copyOf( data.array(), data.limit() ) );
             dataLength = data.limit();
         }
-        return format( "Record{x%d(%d)%s,len=%d, %s}", recordXFactor( sizeExp() ), id, hasFlag( FLAG_IN_USE ) ? "" : " UNUSED ", dataLength, dataString );
+        return format( "Record{x%d(%d)%s,len=%d,ver=%d, %s}", recordXFactor( sizeExp() ), id, hasFlag( FLAG_IN_USE ) ? "" : " UNUSED ", dataLength, version,
+                dataString );
     }
 
     boolean hasSameContentsAs( Record other )
