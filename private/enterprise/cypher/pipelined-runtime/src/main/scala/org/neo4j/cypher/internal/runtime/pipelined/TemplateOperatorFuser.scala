@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -28,13 +29,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorNoGroupingTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselGenerator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -79,10 +80,10 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
 
     val expressionCompiler =
       _fusedPlans.head match {
-        case Union(left, right) =>
-          val leftSlots = physicalPlan.slotConfigurations(left.id)
-          val rightSlots = physicalPlan.slotConfigurations(right.id)
-          new UnionOperatorExpressionCompiler(slots, inputSlotConfiguration, leftSlots, rightSlots, readOnly, namer)
+        case plan@(_: Union| _: ConditionalApply) =>
+          val leftSlots = physicalPlan.slotConfigurations(plan.lhs.get.id)
+          val rightSlots = physicalPlan.slotConfigurations(plan.rhs.get.id)
+          new BinaryOperatorExpressionCompiler(slots, inputSlotConfiguration, leftSlots, rightSlots, readOnly, namer)
         case _ =>
           new OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) // NOTE: We assume slots is the same within an entire pipeline
       }

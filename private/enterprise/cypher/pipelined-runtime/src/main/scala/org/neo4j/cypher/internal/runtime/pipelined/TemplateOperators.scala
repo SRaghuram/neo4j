@@ -49,6 +49,7 @@ import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalOperatorTaskTemplate
@@ -95,7 +96,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNodeScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabelScanTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTaskTemplate
@@ -609,16 +609,19 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 lhsSlots,
                 rhsSlots,
                 SlottedPipeMapper.computeUnionSlotMappings(lhsSlots, slots),
-                SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(ctx.expressionCompiler.asInstanceOf[UnionOperatorExpressionCompiler])
+                SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(ctx.expressionCompiler.asInstanceOf[BinaryOperatorExpressionCompiler])
 
-        case plan@plans.ConditionalApply(_, rhs, _) if isHeadOperator =>
+        case plan@plans.ConditionalApply(lhs, rhs, _) if isHeadOperator =>
+
           ctx: TemplateContext =>
+            val lhsConf = ctx.slotConfigurations(lhs.id)
+            val rhsConfiguration = ctx.slotConfigurations(rhs.id)
             new ConditionalOperatorTaskTemplate(ctx.inner,
               plan.id,
               ctx.innermost,
-              ctx.argumentSizes(plan.id),
-              ctx.slotConfigurations(rhs.id).size(),
-            )(ctx.expressionCompiler)
+              lhsConf,
+              rhsConfiguration
+            )(ctx.expressionCompiler.asInstanceOf[BinaryOperatorExpressionCompiler])
 
         case _ => None
       }

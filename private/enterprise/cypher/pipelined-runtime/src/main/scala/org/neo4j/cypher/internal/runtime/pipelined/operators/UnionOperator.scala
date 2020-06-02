@@ -10,7 +10,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.constructor
 import org.neo4j.codegen.api.IntermediateRepresentation.declare
@@ -20,7 +19,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
@@ -28,7 +26,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
-import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.staticConstant
@@ -37,13 +34,10 @@ import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.StaticField
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -63,7 +57,6 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
-import org.neo4j.util.Preconditions
 import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.RelationshipValue
 
@@ -123,61 +116,7 @@ class UnionTask(val inputMorsel: Morsel,
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 }
 
-class UnionOperatorExpressionCompiler(unionSlotConfigurationFromOperator: SlotConfiguration,
-                                      unionSlotConfigurationFromBuffer: SlotConfiguration,
-                                      lhsSlotConfiguration: SlotConfiguration,
-                                      rhsSlotConfiguration: SlotConfiguration,
-                                      readOnly: Boolean,
-                                      namer: VariableNamer
-                                     ) extends OperatorExpressionCompiler(unionSlotConfigurationFromOperator, unionSlotConfigurationFromBuffer, readOnly, namer) {
-  Preconditions.checkArgument(unionSlotConfigurationFromOperator == unionSlotConfigurationFromBuffer, "Union must have the same slot configuration as its input buffer.")
 
-  val fromLHSName: String = namer.nextVariableName("fromLHS")
-
-  /**
-   * Union needs to influence how cached properties in the same pipeline are compiled.
-   *
-   * Since we allocate slots for cached properties that may not exist on both sides and may have different slot offsets on both sides,
-   * we have to make decisions if and where to read a cached property from the inputCursor at runtime.
-   */
-  override def getPropertyCacherAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): PropertyCacher =
-    new PropertyCacher(property, getFromStore) {
-      // Does the LHS have a slot for this cached property and if so, what is the offset
-      private val maybeCachedPropertyOffsetInLHS = lhsSlotConfiguration.getCachedPropertySlot(property).map(_.offset).getOrElse(-1)
-      // Does the RHS have a slot for this cached property and if so, what is the offset
-      private val maybeCachedPropertyOffsetInRHS = rhsSlotConfiguration.getCachedPropertySlot(property).map(_.offset).getOrElse(-1)
-      // The offset (or -1) depending on whether we currently read a morsel from the LHS or from the RHS
-      private val maybeOffsetInInputName = namer.nextVariableName("maybeCachedPropertyOffsetInInput")
-
-
-      // Assign `maybeCachedPropertyOffsetInInput` depending on `fromLHSName`
-      override def assignLocalVariables: IntermediateRepresentation = block(
-        declare[Int](maybeOffsetInInputName),
-        ifElse(load(fromLHSName)) {
-          assign(maybeOffsetInInputName, constant(maybeCachedPropertyOffsetInLHS))
-        } {
-          assign(maybeOffsetInInputName, constant(maybeCachedPropertyOffsetInRHS))
-        }
-      )
-
-      /**
-       * Only try to read from the input cursor of that cursor has a slot for it.
-       * Pass in the offset dynamically.
-       */
-      private def initializeFromContextOrStore: IntermediateRepresentation = {
-        block(
-          condition(notEqual(load(maybeOffsetInInputName), constant(-1))) {
-            assign(local, getCachedPropertyFromExecutionContextWithDynamicOffset(load(maybeOffsetInInputName), INPUT_CURSOR))
-          },
-          condition(isNull(load(local)))(initializeFromStore)
-        )
-      }
-
-      override def initializeIfLocalDoesNotExist: IntermediateRepresentation = initializeFromContextOrStore
-
-      override def initializeIfLocalExists: IntermediateRepresentation = initializeFromContextOrStore
-    }
-}
 
 class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
                             override val id: Id,
@@ -186,7 +125,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
                             rhsSlotConfig: SlotConfiguration,
                             lhsMapping: Iterable[UnionSlotMapping],
                             rhsMapping: Iterable[UnionSlotMapping])
-                           (protected val codeGen: UnionOperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+                           (protected val codeGen: BinaryOperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
 
 
   // Union does not support fusing over pipelines, so it is always gonna be the head operator

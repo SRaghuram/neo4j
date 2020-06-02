@@ -8,28 +8,42 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.constructor
+import org.neo4j.codegen.api.IntermediateRepresentation.declare
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.fail
+import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.self
+import org.neo4j.codegen.api.IntermediateRepresentation.staticConstant
 import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.codegen.api.StaticField
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_FIELD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
@@ -41,6 +55,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.values.storable.Values.NO_VALUE
+
+import scala.collection.mutable
 
 /**
  * ConditionalApplyOperator is not really a full operator, most of the heavy lifting is done
@@ -141,9 +157,12 @@ class ConditionalApplyRHSTask(inputMorsel: Morsel,
 class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
                                       override val id: Id,
                                       innermost: DelegateOperatorTaskTemplate,
-                                      lhsSize: SlotConfiguration.Size,
-                                      rhsSize: SlotConfiguration.Size)
-                                     (protected val codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+                                      lhsSize: SlotConfiguration,
+                                      rhsSize: SlotConfiguration)
+                                     (protected val codeGen: BinaryOperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+
+  private val lhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("lhsSlotConfig"), lhsSize)
+  private val rhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("rhsSlotConfig"), rhsSize)
 
   override protected val isHead: Boolean = true
 
@@ -151,26 +170,60 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
+
   override def genInit: IntermediateRepresentation = inner.genInit
+  /**
+   * {{{
+   *   boolean fromLHS;
+   *   if ( (this.inputMorsel().slots()) == (lhsSlotConfig) )
+   *       fromLHS = true;
+   *   else if ( (this.inputMorsel().slots()) == (rhsSlotConfig) )
+   *       fromLHS = false;
+   *   else
+   *       throw new java.lang.IllegalStateException( "Unknown slot configuration in ConditionalApplyOperator." );
+   *   while(this.canContinue()) {
+   *     if (!fromLhs) {
+   *        //copy over all data and all cached properties
+   *     } else {
+   *       //copy over all data that is on the lhs
+   *       //all data is on the rhs but not in lhs is set to NO_VALUE or -1
+   *       //(note don't touch cached properties that are only on the RHS)
+   *     }
+   * }}}
+   */
   override protected def genOperateHead: IntermediateRepresentation = {
+    val inputSlotConfig = invoke(INPUT_MORSEL, method[Morsel, SlotConfiguration]("slots"))
+    val (refsToCopy, cachedPropertiesToCopy) = computeWhatToCopy()
+    val (refsToCopyLhs, refsToCopyRhs) = refsToCopy.partition(_ < lhsSize.size().nReferences)
+    val (cachedPropertiesToCopyLhs, _) = cachedPropertiesToCopy.partition(_ < lhsSize.size().nReferences)
     block(
+      declare[Boolean](codeGen.fromLHSName),
+      ifElse(equal(inputSlotConfig, getStatic(lhsSlotsConfigsFused))) {
+        assign(codeGen.fromLHSName, constant(true))
+      } {
+        ifElse(equal(inputSlotConfig, getStatic(rhsSlotsConfigsFused))) {
+          assign(codeGen.fromLHSName, constant(false))
+        } {
+          fail(newInstance(constructor[IllegalStateException, String], constant("Unknown slot configuration in ConditionalApplyOperator.")))
+        }
+      },
       genAdvanceOnCancelledRow,
       loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
-          ifElse(invokeStatic(
-            method[ConditionalOperatorTaskTemplate, Boolean, Morsel, Int, Int]("compareSize"),
-            loadField(INPUT_MORSEL_FIELD), constant(lhsSize.nLongs), constant(lhsSize.nReferences))){
+          ifElse(not(load(codeGen.fromLHSName))) {
             block(
-              block((0 until lhsSize.nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
-              block((0 until lhsSize.nReferences).map(offset => codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, INPUT_CURSOR))): _*),
-              block((lhsSize.nLongs until rhsSize.nLongs).map(offset => codeGen.setLongAt(offset, constant(-1L))): _*),
-              block((lhsSize.nReferences until rhsSize.nReferences).map(offset => codeGen.setRefAt(offset, noValue)): _*)
+              block((0 until rhsSize.size().nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
+              block(refsToCopy.map(offset => codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, INPUT_CURSOR))): _*),
+              block(cachedPropertiesToCopy.map(offset => codeGen.setCachedPropertyAt(offset, codeGen.getCachedPropertyFromExecutionContext(offset, INPUT_CURSOR))): _*)
             )
-          }{
+          } {
             block(
-              block((0 until rhsSize.nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
-              block((0 until rhsSize.nReferences).map(offset => codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, INPUT_CURSOR))): _*)
+              block((0 until lhsSize.size().nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
+              block(refsToCopyLhs.map(offset => codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, INPUT_CURSOR))): _*),
+              block(cachedPropertiesToCopyLhs.map(offset => codeGen.setRefAt(offset, codeGen.getCachedPropertyFromExecutionContext(offset, INPUT_CURSOR))): _*),
+              block((lhsSize.size().nLongs until rhsSize.size().nLongs).map(offset => codeGen.setLongAt(offset, constant(-1L))): _*),
+              block(refsToCopyRhs.map(offset => codeGen.setRefAt(offset, noValue)): _*)
             )
           },
           inner.genOperateWithExpressions,
@@ -188,7 +241,7 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty[IntermediateExpression]
 
-  override def genFields: Seq[Field] = Seq(INPUT_MORSEL_FIELD)
+  override def genFields: Seq[Field] = Seq(INPUT_MORSEL_FIELD, lhsSlotsConfigsFused, rhsSlotsConfigsFused)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty[LocalVariable]
 
@@ -199,6 +252,20 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
+
+  private def computeWhatToCopy(): (Array[Int], Array[Int]) = {
+    val refsToCopy = mutable.ArrayBuilder.make[Int]
+    val cachedPropertiesToCopy = mutable.ArrayBuilder.make[Int]
+    rhsSize.foreachSlotAndAliasesOrdered {
+      case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) =>
+        refsToCopy += offset
+      case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), _, _) =>
+        val offset = rhsSize.getCachedPropertyOffsetFor(cnp)
+        cachedPropertiesToCopy += offset
+      case _ =>
+    }
+    (refsToCopy.result(), cachedPropertiesToCopy.result())
+  }
 }
 
 object ConditionalOperatorTaskTemplate {
