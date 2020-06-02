@@ -129,7 +129,7 @@ public final class StoreMigration
             Stopwatch startTime = Stopwatch.start();
             DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService, deps, pageCache,  jobScheduler, databaseLayout,
                     storageEngineFactory, pageCacheTracer, memoryTracker );
-            migrator.migrate();
+            migrator.migrate( true );
 
             // Append checkpoint so the last log entry will have the latest version
             appendCheckpoint( logFiles, tailScanner );
