@@ -429,8 +429,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case conditional: ConditionalApply =>
         new ConditionalApplyOperator(WorkIdentity.fromPlan(plan),
-          physicalPlan.argumentSizes(id),
-          physicalPlan.slotConfigurations.get(conditional.right.id).size())
+          physicalPlan.slotConfigurations.get(conditional.left.id),
+          physicalPlan.slotConfigurations.get(conditional.right.id))
 
       case joinPlan: plans.ValueHashJoin =>
 

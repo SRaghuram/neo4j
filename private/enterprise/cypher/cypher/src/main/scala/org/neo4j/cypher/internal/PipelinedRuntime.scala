@@ -278,7 +278,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
         context.log.debug(CODE_GEN_FAILED_MESSAGE, e)
         DebugLog.log("Could not compile pipeline because of %s", e)
-
         val warning = CodeGenerationFailedNotification(e.getMessage)
 
         val nextOperatorFusionPolicy =

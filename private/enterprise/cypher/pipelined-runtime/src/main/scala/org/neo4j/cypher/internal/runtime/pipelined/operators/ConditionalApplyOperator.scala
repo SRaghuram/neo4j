@@ -48,8 +48,8 @@ import org.neo4j.values.storable.Values.NO_VALUE
  * sets all RHS-introduced identifiers to NO_VALUE on the LHS morsel.
  */
 class ConditionalApplyOperator(val workIdentity: WorkIdentity,
-                               lhsSize: SlotConfiguration.Size,
-                               rhsSize: SlotConfiguration.Size) extends StreamingOperator {
+                               lhsSlotConfig: SlotConfiguration,
+                               rhsSlotConfig: SlotConfiguration) extends StreamingOperator {
 
   override def toString: String = "ConditionalApply"
 
@@ -57,48 +57,84 @@ class ConditionalApplyOperator(val workIdentity: WorkIdentity,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
-                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
-    singletonIndexedSeq(new OTask(inputMorsel.nextCopy))
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-  class OTask(val inputMorsel: Morsel) extends ContinuableOperatorTaskWithMorsel {
+    val morsel = inputMorsel.nextCopy
+    val task =
+      if (morsel.slots eq lhsSlotConfig) new ConditionalApplyLHSTask(morsel, workIdentity, lhsSlotConfig, rhsSlotConfig)
+      else if (morsel.slots eq rhsSlotConfig) new ConditionalApplyRHSTask(morsel, workIdentity, rhsSlotConfig.size())
+      else throw new IllegalStateException(s"Unknown slot configuration in UnionOperator. Got: ${morsel.slots}. LHS: $lhsSlotConfig. RHS: $rhsSlotConfig")
 
-    override def workIdentity: WorkIdentity = ConditionalApplyOperator.this.workIdentity
+    singletonIndexedSeq(task)
+  }
+}
 
-    override def toString: String = "ConditionalApplyTask"
+abstract class ConditionalApplyTask(val inputMorsel: Morsel,
+                                    val workIdentity: WorkIdentity) extends ContinuableOperatorTaskWithMorsel {
+  override def toString: String = "ConditionalApplyTask"
+  override def canContinue: Boolean = false
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+  override protected def closeCursors(resources: QueryResources): Unit = {}
+}
 
-    override def operate(outputMorsel: Morsel,
-                         state: PipelinedQueryState,
-                         resources: QueryResources): Unit = {
+class ConditionalApplyLHSTask(inputMorsel: Morsel,
+                              workIdentity: WorkIdentity,
+                              lhsSlotConfig: SlotConfiguration,
+                              rhsSlotConfig: SlotConfiguration) extends ConditionalApplyTask(inputMorsel, workIdentity){
 
-      val inputCursor = inputMorsel.readCursor()
-      val outputCursor = outputMorsel.writeCursor()
 
-      if (inputMorsel.slots.size() == rhsSize) {
-        while (outputCursor.next() && inputCursor.next()) {
-          outputCursor.copyFrom(inputCursor, rhsSize.nLongs, rhsSize.nReferences)
-        }
-      } else if (inputMorsel.slots.size() == lhsSize) {
-        while (outputCursor.next() && inputCursor.next()) {
-          outputCursor.copyFrom(inputCursor, lhsSize.nLongs, lhsSize.nReferences)
-          var offset = lhsSize.nLongs
-          while (offset < rhsSize.nLongs) {
-            outputCursor.setLongAt(offset, -1)
-            offset += 1
-          }
-          offset = lhsSize.nReferences
-          while (offset < rhsSize.nReferences) {
-            outputCursor.setRefAt(offset, NO_VALUE)
-            offset += 1
-          }
-        }
-      } else {
-        throw new IllegalStateException("must either come from the lhs or rhs")
+  private val refsToCopy = computeRefsToCopy()
+
+  override def operate(outputMorsel: Morsel,
+                       state: PipelinedQueryState,
+                       resources: QueryResources): Unit = {
+
+    val inputCursor = inputMorsel.readCursor()
+    val outputCursor = outputMorsel.writeCursor()
+    val lhsSize = lhsSlotConfig.size()
+    val rhsSize = lhsSlotConfig.size()
+
+    while (outputCursor.next() && inputCursor.next()) {
+      outputCursor.copyFrom(inputCursor, lhsSize.nLongs, lhsSize.nReferences)
+      var offset = lhsSize.nLongs
+      while (offset < rhsSize.nLongs) {
+        outputCursor.setLongAt(offset, -1)
+        offset += 1
       }
-      outputCursor.truncate()
+      var i = 0
+      while (i < refsToCopy.length) {
+        outputCursor.setRefAt(refsToCopy(i), NO_VALUE)
+        i += 1
+      }
     }
-    override def canContinue: Boolean = false
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
-    override protected def closeCursors(resources: QueryResources): Unit = {}
+    outputCursor.truncate()
+  }
+
+  private def computeRefsToCopy(): Array[Int] = {
+    val refsToCopy = mutable.ArrayBuilder.make[Int]
+    rhsSlotConfig.foreachSlotAndAliasesOrdered {
+      case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) if offset >= lhsSlotConfig.size().nReferences =>
+        refsToCopy += offset
+      case _ => //Do nothing
+    }
+    refsToCopy.result()
+  }
+}
+
+class ConditionalApplyRHSTask(inputMorsel: Morsel,
+                              workIdentity: WorkIdentity,
+                              rhsSize: Size) extends ConditionalApplyTask(inputMorsel, workIdentity) {
+
+  override def operate(outputMorsel: Morsel,
+                       state: PipelinedQueryState,
+                       resources: QueryResources): Unit = {
+    val inputCursor = inputMorsel.readCursor()
+    val outputCursor = outputMorsel.writeCursor()
+
+    while (outputCursor.next() && inputCursor.next()) {
+      outputCursor.copyFrom(inputCursor, rhsSize.nLongs, rhsSize.nReferences)
+    }
+    outputCursor.truncate()
   }
 }
 
