@@ -55,6 +55,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DropResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
@@ -67,7 +68,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTest
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeCountFromCountStoreTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexContainsScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBase
@@ -96,6 +96,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
@@ -335,6 +336,10 @@ class ParallelAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING,
 // ROLLUP APPLY
 class ParallelRuntimeRollupApplyTest extends RollupApplyTestBase(FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
+
+// DROP RESULT
+class ParallelRuntimeDropResultTest extends DropResultTestBase(FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite

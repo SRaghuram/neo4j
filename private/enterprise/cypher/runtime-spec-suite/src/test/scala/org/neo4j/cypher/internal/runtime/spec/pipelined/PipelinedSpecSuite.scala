@@ -38,6 +38,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DropResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
@@ -395,6 +396,10 @@ class PipelinedAntiConditionalApplyNoFusingTest extends AntiConditionalApplyTest
 // ROLLUP APPLY
 class PipelinedRollupApplyTest extends RollupApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+// DROP RESULT
+class PipelinedDropResultTest extends DropResultTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
