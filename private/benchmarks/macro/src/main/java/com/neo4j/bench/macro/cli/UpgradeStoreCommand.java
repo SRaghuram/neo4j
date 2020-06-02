@@ -92,7 +92,7 @@ public class UpgradeStoreCommand implements Runnable
 
             System.out.println( "Checking schema..." );
             EmbeddedDatabase.verifySchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
-
+            System.out.println( "Recreating schema..." );
             EmbeddedDatabase.recreateSchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
             System.out.println( "Upgrade complete" );
         }

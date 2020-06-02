@@ -56,7 +56,7 @@ for i in "${db_and_workloads[@]}"; do
     rm "${zip_file}"
 
     "${JAVA_HOME}/bin/java"  -jar target/macro.jar upgrade-store \
-                               --original-db old/"${db_name}"/ \
+                               --original-db old/"${db_name}" \
                                --workload "${workload}" \
                                --db-edition ENTERPRISE
 
