@@ -106,14 +106,14 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
 
             if ( currentVersion.version == NoEnterpriseComponentVersion.VERSION )
             {
-                log.info( "The current version did not have any security graph, doing a full initialization" );
+                log.debug( "The current version did not have any security graph, doing a full initialization" );
                 initializeLatestSystemGraph( tx );
             }
             else
             {
                 if ( currentVersion.migrationSupported() )
                 {
-                    log.info( "Upgrading security graph to latest version" );
+                    log.debug( "Upgrading security graph to latest version" );
                     currentVersion.upgradeSecurityGraph( tx, knownSecurityComponentVersions.latestSecurityGraphVersion() );
                 }
                 else
