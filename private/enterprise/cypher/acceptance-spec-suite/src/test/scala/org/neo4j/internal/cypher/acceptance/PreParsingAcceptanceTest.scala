@@ -71,12 +71,19 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
   }
 
   test("should fallback if pipelined doesn't support query") {
-    val query = "MATCH (n)-[*]->(m) RETURN n SKIP 1"
-    execute(query).executionPlanDescription() should not equal "PIPELINED"
+    val query = "CREATE (n:L)"
+    execute(query).executionPlanDescription() shouldNot haveRuntime("PIPELINED")
+  }
+
+  test("should handle interpretedPipesFallback=all") {
+    val query1 = "CYPHER runtime=pipelined interpretedPipesFallback=all CREATE (n:L) RETURN n"
+    val query2 = "CYPHER runtime=pipelined CREATE (n:L) RETURN n"
+
+    execute(query1).executionPlanDescription() should haveRuntime("PIPELINED")
+    execute(query2).executionPlanDescription() shouldNot haveRuntime("PIPELINED")
   }
 
   for (runtime <- Seq("interpreted", "slotted", "pipelined", "legacy_compiled", "parallel")) {
-
     test(s"runtime=$runtime is selectable") {
       val query = s"CYPHER runtime=$runtime RETURN 1"
 
