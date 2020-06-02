@@ -84,7 +84,6 @@ Feature "ListOperations": Scenario "Collect and extract using a list comprehensi
 Feature "ListOperations": Scenario "Collect and filter using a list comprehension"
 Feature "ListOperations": Scenario "Returning nested expressions based on list property"
 Feature "ListOperations": Scenario "Setting and returning the size of a list property"
-Feature "MatchAcceptance": Scenario "Accept skip zero"
 Feature "MatchAcceptance2": Scenario "Counting rows after MATCH, MERGE, OPTIONAL MATCH"
 Feature "MatchAcceptance2": Scenario "Variable length pattern checking labels on endnodes"
 Feature "MatchingSelfRelationships": Scenario "Counting distinct undirected self-relationships in self-relationship graph"

@@ -73,7 +73,7 @@ object Configs {
   val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime +  Pipelined
-  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime +  Pipelined
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
