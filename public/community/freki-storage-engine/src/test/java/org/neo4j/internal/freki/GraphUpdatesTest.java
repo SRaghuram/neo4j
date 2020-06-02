@@ -22,13 +22,17 @@ package org.neo4j.internal.freki;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
+import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
+import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.storageengine.api.PropertyKeyValue;
@@ -262,6 +266,74 @@ class GraphUpdatesTest
         assertThat( hasSeenOther.booleanValue() ).isTrue();
     }
 
+    @Test
+    void shouldNotUpdateVersionOnChangesInsideX1Record() throws ConstraintViolationTransactionFailureException
+    {
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        updates.create( nodeId );
+
+        extractAndApplyUpdates( updates, new VersionUpdate( false ) );
+
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        updates.getOrLoad( nodeId ).updateLabels( LongSets.immutable.of( 1,2,3 ), LongSets.immutable.empty() );
+        updates.getOrLoad( nodeId )
+                .updateNodeProperties( singletonList( new PropertyKeyValue( 9, random.nextValue() ) ), emptyList(), IntSets.immutable.empty() );
+
+        extractAndApplyUpdates( updates, new VersionUpdate( false ) );
+    }
+
+    @Test
+    void shouldNotUpdateVersionOnChangesInsideXLRecord() throws ConstraintViolationTransactionFailureException
+    {
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        updates.create( nodeId );
+        MutableLongSet manyLabels = LongSets.mutable.empty();
+        for ( int i = 0; i < 200; i++ )
+        {
+            manyLabels.add( i + 4 );
+        }
+        updates.getOrLoad( nodeId ).updateLabels( manyLabels, LongSets.immutable.empty() );
+
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {}, new int[] {1,4} ) );
+
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        updates.getOrLoad( nodeId ).updateLabels( LongSets.immutable.of( 1,2,3 ), LongSets.immutable.empty() );
+
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {4}, new int[] {4} ) ); // <-- No change means x1 is skipped!
+
+    }
+
+    @Test
+    void shouldUpdateVersionOnChangesSwitchingRecord() throws ConstraintViolationTransactionFailureException
+    {
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        updates.create( nodeId );
+
+        updates.getOrLoad( nodeId ).updateLabels( LongSets.immutable.of( 1,2,3 ), LongSets.immutable.empty() );
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {}, new int[] {1} ) );
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+
+        MutableLongSet manyLabels = LongSets.mutable.empty();
+        for ( int i = 0; i < 200; i++ )
+        {
+            manyLabels.add( i + 4 );
+        }
+        updates.getOrLoad( nodeId ).updateLabels( manyLabels, LongSets.immutable.of( 1,2,3 ) );
+        extractAndApplyUpdates( updates, layoutChange( true, new int[] {1}, new int[] {1, 4} ) ); // this should not get a version change!
+
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        MutableLongSet moreLabels = LongSets.mutable.empty();
+        for ( int i = 0; i < 400; i++ )
+        {
+            moreLabels.add( i + 300 );
+        }
+        updates.getOrLoad( nodeId ).updateLabels( moreLabels, LongSets.immutable.empty() );
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {1, 4}, new int[] {1, 8} ) );
+    }
+
     private StorageProperty randomPropertyValue( int propertyKey )
     {
         return new PropertyKeyValue( propertyKey, random.nextValue() );
@@ -270,6 +342,98 @@ class GraphUpdatesTest
     private void extractAndApplyUpdates( GraphUpdates updates, FrekiCommand.Dispatcher monitor ) throws ConstraintViolationTransactionFailureException
     {
         updates.extractUpdates( new MinimalTestFrekiTransactionApplier( mainStores, monitor ) );
+    }
+
+    static FrekiCommand.Dispatcher.Adapter layoutChange( boolean expectVersionChange, int[] beforeSizeX, int[] afterSizeX )
+    {
+        return new FrekiCommand.Dispatcher.Adapter()
+        {
+            private final Adapter[] adapters = new Adapter[] {new VersionUpdate( expectVersionChange ), new LayoutUpdate( beforeSizeX, afterSizeX )};
+            @Override
+            public void handle( FrekiCommand.SparseNode node ) throws IOException
+            {
+                for ( Adapter adapter : adapters )
+                {
+                    adapter.handle( node );
+                }
+            }
+        };
+    }
+
+    private static class LayoutUpdate extends FrekiCommand.Dispatcher.Adapter
+    {
+        private final Integer[] beforeRecordsSizeX;
+        private final Integer[] afterRecordsSizeX;
+
+        LayoutUpdate( int[] beforeRecordsSizeX, int[] afterRecordsSizeX )
+        {
+            this.beforeRecordsSizeX = IntStream.of( beforeRecordsSizeX ).boxed().toArray( Integer[]::new );
+            this.afterRecordsSizeX = IntStream.of( afterRecordsSizeX ).boxed().toArray( Integer[]::new );
+        }
+
+        @Override
+        public void handle( FrekiCommand.SparseNode node )
+        {
+            List<Integer> actualBefore = new ArrayList<>();
+            List<Integer> actualAfter = new ArrayList<>();
+            for ( FrekiCommand.RecordChange recordChange : node )
+            {
+                if ( recordChange.before != null )
+                {
+                    actualBefore.add( Record.recordXFactor( recordChange.before.sizeExp() ) );
+                }
+                if ( recordChange.after != null )
+                {
+                    actualAfter.add( Record.recordXFactor( recordChange.after.sizeExp() ) );
+                }
+            }
+            assertThat( actualBefore ).containsExactlyInAnyOrder( beforeRecordsSizeX );
+            assertThat( actualAfter ).containsExactlyInAnyOrder( afterRecordsSizeX );
+        }
+    }
+
+    private static class VersionUpdate extends FrekiCommand.Dispatcher.Adapter
+    {
+        private final boolean expectVersionChange;
+
+        VersionUpdate( boolean expectVersionChange )
+        {
+            this.expectVersionChange = expectVersionChange;
+        }
+
+        @Override
+        public void handle( FrekiCommand.SparseNode node )
+        {
+            int chainVerson = Integer.MAX_VALUE;
+            for ( FrekiCommand.RecordChange recordChange : node )
+            {
+                if ( chainVerson == Integer.MAX_VALUE && recordChange.after != null )
+                {
+                    chainVerson = recordChange.after.version;
+                }
+
+                if ( recordChange.before != null && recordChange.after != null )
+                {
+                    if ( expectVersionChange )
+                    {
+                        assertThat( recordChange.after.version ).as( "Version expected to be updated" ).isNotEqualTo( recordChange.before.version );
+                    }
+                    else
+                    {
+                        assertThat( recordChange.after.version ).as( "Version expected to NOT be updated" ).isEqualTo( recordChange.before.version );
+                    }
+                }
+            }
+
+            //All existing after states should have matching version
+            for ( FrekiCommand.RecordChange recordChange : node )
+            {
+                if ( recordChange.after != null )
+                {
+                    assertThat( recordChange.after.version ).isEqualTo( (byte) chainVerson );
+                }
+            }
+        }
     }
 
     private static class BigValueCounter extends FrekiCommand.Dispatcher.Adapter
