@@ -506,6 +506,184 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
+  test("should give a custom error message when returning already declared variable from uncorrelated subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  RETURN 2 AS x // error here
+        |}
+        |RETURN x
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `x` already declared in outer scope (line 3, column 15 (offset: 33))""",
+      """"  RETURN 2 AS x // error here"""",
+      """               ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
+  test("should give a custom error message when returning already declared variable from nested uncorrelated subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  WITH 2 AS y
+        |  CALL {
+        |    RETURN 3 AS y // error here
+        |  }
+        |  RETURN y
+        |}
+        |RETURN x, y
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `y` already declared in outer scope (line 5, column 17 (offset: 58))""",
+      """"    RETURN 3 AS y // error here"""",
+      """                 ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
+  test("should give a custom error message when returning already declared variable from correlated subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  WITH x
+        |  RETURN x // error here
+        |}
+        |RETURN x, y
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `x` already declared in outer scope (line 4, column 10 (offset: 38))""",
+      """"  RETURN x // error here"""",
+      """           ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
+  test("should give a custom error message when returning already declared variable from nested correlated subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  WITH x
+        |  CALL {
+        |    WITH x
+        |    RETURN x // error here
+        |  }
+        |  RETURN x AS y
+        |}
+        |RETURN x, y
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `x` already declared in outer scope (line 6, column 12 (offset: 60))""",
+      """"    RETURN x // error here"""",
+      """             ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
+  test("should give a custom error message when returning already declared variable from uncorrelated union subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  RETURN 2 AS x
+        |  UNION
+        |  RETURN 3 AS x
+        |  UNION
+        |  RETURN 4 AS x // error here
+        |}
+        |RETURN x
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `x` already declared in outer scope (line 7, column 15 (offset: 81))""",
+      """"  RETURN 4 AS x // error here"""",
+      """               ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
+  test("should give a custom error message when returning already declared variable from correlated union subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  RETURN 2 AS x
+        |  UNION
+        |  WITH x RETURN x
+        |  UNION
+        |  WITH x RETURN x // error here
+        |}
+        |RETURN x
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `x` already declared in outer scope (line 7, column 17 (offset: 86))""",
+      """"  WITH x RETURN x // error here"""",
+      """                  ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
+  test("should give a custom error message when returning already declared variable from nested uncorrelated union subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  WITH 2 AS y
+        |  CALL {
+        |    RETURN 2 AS y
+        |    UNION
+        |    RETURN 3 AS y
+        |    UNION
+        |    RETURN 4 AS y // error here
+        |  }
+        |  RETURN y
+        |}
+        |RETURN x, y
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `y` already declared in outer scope (line 9, column 17 (offset: 114))""",
+      """"    RETURN 4 AS y // error here"""",
+      """                 ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
+  test("should give a custom error message when returning already declared variable from nested correlated union subquery") {
+    val query =
+      """WITH 1 AS x
+        |CALL {
+        |  WITH 2 AS y
+        |  CALL {
+        |    WITH y RETURN y
+        |    UNION
+        |    RETURN 3 AS y
+        |    UNION
+        |    WITH y RETURN y // error here
+        |  }
+        |  RETURN y
+        |}
+        |RETURN x, y
+        |""".stripMargin
+
+    val expectedErrorLines = Seq(
+      """Variable `y` already declared in outer scope (line 9, column 19 (offset: 119))""",
+      """"    WITH y RETURN y // error here"""",
+      """                    ^"""
+    )
+
+    executeAndMatchErrorMessageLines(query, expectedErrorLines)
+  }
+
   private def executeAndEnsureErrorForAllRuntimes(query: String, expected: String, params: (String,Any)*): Unit = {
     executeAndEnsureErrorForAllRuntimes(query, List(expected), params:_*)
   }
@@ -541,5 +719,10 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   private def correctError(actualError: String, possibleErrors: Seq[String]): Boolean = {
     possibleErrors == Seq.empty || (actualError != null && possibleErrors.exists(s => actualError.replaceAll("\\r", "").contains(s.replaceAll("\\r", ""))))
+  }
+
+  private def executeAndMatchErrorMessageLines(query: String, expectedErrorMessageLines: Seq[String]): Unit = {
+    val error = intercept[QueryExecutionException](graph.withTx(_.execute(query)))
+    error.getMessage.linesIterator.toSeq shouldEqual expectedErrorMessageLines
   }
 }
