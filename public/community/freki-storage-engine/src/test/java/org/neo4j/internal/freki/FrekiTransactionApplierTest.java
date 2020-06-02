@@ -286,7 +286,7 @@ class FrekiTransactionApplierTest
 
     private Record usedRecord( int sizeExp, long id )
     {
-        Record record = new Record( sizeExp, id, Record.UNVERSIONED );
+        Record record = new Record( sizeExp, id, Record.FIRST_VERSION );
         record.setFlag( Record.FLAG_IN_USE, true );
         return record;
     }

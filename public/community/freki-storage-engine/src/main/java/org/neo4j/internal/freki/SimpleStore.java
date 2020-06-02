@@ -40,6 +40,8 @@ public interface SimpleStore extends SingleFileStore
 
     void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException;
 
+    void writeHeaderOnly( PageCursor cursor, Record record ) throws IOException;
+
     boolean read( PageCursor cursor, Record record, long id );
 
     long nextId( PageCursorTracer cursorTracer );

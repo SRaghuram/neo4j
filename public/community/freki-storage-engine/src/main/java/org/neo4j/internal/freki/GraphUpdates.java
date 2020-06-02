@@ -30,6 +30,7 @@ import org.eclipse.collections.impl.factory.primitive.LongLists;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -68,14 +69,6 @@ class GraphUpdates
 {
     private static final int WORST_CASE_HEADER_AND_STUFF_SIZE = Header.WORST_CASE_SIZE + DUAL_VLONG_MAX_SIZE;
 
-    private final Collection<FrekiCommand.BigPropertyValue> bigValueCreationCommands = new ArrayList<>();
-    private final Collection<FrekiCommand.BigPropertyValue> bigValueDeletionCommands = new ArrayList<>();
-    private final Collection<FrekiCommand.DenseNode> denseCommands = new ArrayList<>();
-    private final MemoryTracker memoryTracker;
-    private final TreeMap<Long,NodeUpdates> mutations = new TreeMap<>();
-    private final MainStores stores;
-    private final PageCursorTracer cursorTracer;
-
     //Intermediate buffer slots
     static final int PROPERTIES = 0;
     static final int RELATIONSHIPS = 1;
@@ -84,6 +77,14 @@ class GraphUpdates
     static final int NEXT_INTERNAL_RELATIONSHIP_ID = 4;
     static final int LABELS = 5;
     static final int NUM_BUFFERS = LABELS + 1;
+
+    private final Collection<FrekiCommand.BigPropertyValue> bigValueCreationCommands = new ArrayList<>();
+    private final Collection<FrekiCommand.BigPropertyValue> bigValueDeletionCommands = new ArrayList<>();
+    private final Collection<FrekiCommand.DenseNode> denseCommands = new ArrayList<>();
+    private final MemoryTracker memoryTracker;
+    private final TreeMap<Long,NodeUpdates> mutations = new TreeMap<>();
+    private final MainStores stores;
+    private final PageCursorTracer cursorTracer;
 
     GraphUpdates( MainStores stores, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
@@ -126,9 +127,11 @@ class GraphUpdates
         ByteBuffer maxBuffer = ByteBuffer.wrap( new byte[x8Size] );
         Header x1Header = new Header();
         Header xLHeader = new Header();
+        Header tempBeforeHeader = new Header();
         for ( NodeUpdates mutation : mutations.values() )
         {
-            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, recordPointersBuffer, denseCommands::add, otherCommands::add, x1Header, xLHeader );
+            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, recordPointersBuffer, denseCommands::add, otherCommands::add, x1Header, xLHeader,
+                    tempBeforeHeader );
         }
         denseCommands.forEach( commands );
         bigValueCreationCommands.forEach( commands );
@@ -163,14 +166,15 @@ class GraphUpdates
         // the before-state
         private RecordChain firstBeforeRecord;
         private RecordChain lastBeforeRecord;
-        private byte version = Record.UNVERSIONED;
+        private byte version = Record.FIRST_VERSION;
 
         // the after-state
         private final SparseRecordAndData sparse;
         private DenseRecordAndData dense;
         private boolean deleted;
         private MutableLongList deletedBigValueIds;
-        private byte nextVersion = nextVersion( version );
+        private boolean needsVersionBump;
+        private RecordChain firstUnchangedAfterRecord;
 
         NodeUpdates( long nodeId, MainStores stores, Consumer<FrekiCommand.BigPropertyValue> bigValueCreations,
                 Consumer<FrekiCommand.BigPropertyValue> bigValueDeletions, PageCursorTracer cursorTracer )
@@ -181,16 +185,6 @@ class GraphUpdates
             this.bigValueDeletions = bigValueDeletions;
             this.cursorTracer = cursorTracer;
             this.sparse = new SparseRecordAndData( nodeId, stores, this::keepTrackOfDeletedBigValueIds, cursorTracer );
-        }
-
-        private byte nextVersion( byte version )
-        {
-            do
-            {
-                version = (byte) (version + 1);
-            }
-            while ( version == Record.UNVERSIONED );
-            return version;
         }
 
         long nodeId()
@@ -206,10 +200,9 @@ class GraphUpdates
                 throw new IllegalStateException( "Node[" + nodeId + "] should have existed" );
             }
             version = x1.version;
-            nextVersion = nextVersion( x1.version );
 
             MutableNodeData data = sparse.add( x1 );
-            firstBeforeRecord = lastBeforeRecord = new RecordChain( x1 );
+            firstBeforeRecord = lastBeforeRecord = new RecordChain( null, x1 );
             long fwPointer;
             while ( (fwPointer = data.getLastLoadedForwardPointer()) != NULL )
             {
@@ -224,7 +217,7 @@ class GraphUpdates
                             version, xL.id, xL.sizeExp(), xL.version ) );
                 }
                 sparse.add( xL );
-                RecordChain chain = new RecordChain( xL );
+                RecordChain chain = new RecordChain( null, xL );
                 chain.next = firstBeforeRecord;
                 firstBeforeRecord = chain;
             }
@@ -322,7 +315,7 @@ class GraphUpdates
 
         void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, IntermediateBuffer[] intermediateBuffers, ByteBuffer recordPointersBuffer,
                 Consumer<FrekiCommand.DenseNode> denseCommands, Consumer<StorageCommand> otherCommands,
-                Header x1Header, Header xLHeader ) throws ConstraintViolationTransactionFailureException
+                Header x1Header, Header xLHeader, Header tempBeforeHeader ) throws ConstraintViolationTransactionFailureException
         {
             prepareForCommandExtraction();
             addDeletedBigValueCommands();
@@ -389,6 +382,7 @@ class GraphUpdates
             {
                 anyBufferIsSplit = intermediateBuffers[i].isSplit();
             }
+            needsVersionBump |= anyBufferIsSplit;
 
             FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId );
             if ( !anyBufferIsSplit && x1Header.spaceNeeded() + intermediateBuffers[LABELS].currentSize() + intermediateBuffers[PROPERTIES].currentSize() +
@@ -396,7 +390,7 @@ class GraphUpdates
             {
                 //WE FIT IN x1
                 serializeParts( smallBuffer, intermediateBuffers, recordPointersBuffer, x1Header );
-                addX1Record( smallBuffer, command );
+                addX1Record( smallBuffer, tempBeforeHeader, x1Header, command );
                 deleteRemainingBeforeRecords( command );
                 otherCommands.accept( command );
                 return;
@@ -496,7 +490,7 @@ class GraphUpdates
                     linkHeader.setReference( x1Header );
                     serializeParts( maxBuffer, intermediateBuffers, recordPointersBuffer, linkHeader );
                     SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    forwardPointer = addXLRecords( maxBuffer, xLStore, command );
+                    forwardPointer = addXLRecord( maxBuffer, xLStore, tempBeforeHeader, linkHeader, command );
                 }
             }
             else
@@ -504,14 +498,33 @@ class GraphUpdates
                 prepareRecordPointer( xLHeader, recordPointersBuffer, backwardPointer );
                 serializeParts( maxBuffer, intermediateBuffers, recordPointersBuffer, xLHeader );
                 SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                forwardPointer = addXLRecords( maxBuffer, xLStore, command );
+                forwardPointer = addXLRecord( maxBuffer, xLStore, tempBeforeHeader, xLHeader, command );
             }
 
             // serialize x1
             prepareRecordPointer( x1Header, recordPointersBuffer, forwardPointer );
             serializeParts( smallBuffer, intermediateBuffers, recordPointersBuffer, x1Header );
-            addX1Record( smallBuffer, command );
+            addX1Record( smallBuffer, tempBeforeHeader, x1Header, command );
             deleteRemainingBeforeRecords( command );
+
+            if ( needsVersionBump )
+            {
+                byte nextVersion = (byte) (version + 1);
+                for ( FrekiCommand.RecordChange change : command )
+                {
+                    if ( change.after != null )
+                    {
+                        change.after.setVersion( nextVersion );
+                    }
+                }
+                RecordChain unchanged = firstUnchangedAfterRecord;
+                while ( unchanged != null )
+                {
+                    command.addChange( unchanged.before, unchanged.record ).updateVersion( nextVersion );
+                    unchanged = unchanged.next;
+                }
+            }
+
             otherCommands.accept( command );
         }
 
@@ -675,44 +688,64 @@ class GraphUpdates
         /**
          * @return the existing or allocated xL ID into sparse.data so that X1 can be serialized afterwards
          */
-        private long addXLRecords( ByteBuffer maxBuffer, SimpleStore store, FrekiCommand.SparseNode command )
+        private long addXLRecord( ByteBuffer maxBuffer, SimpleStore store, Header tempBeforeHeader, Header afterHeader, FrekiCommand.SparseNode command )
         {
             Record after;
             int sizeExp = store.recordSizeExponential();
-            Record xLBefore = takeBeforeRecord( s -> s == sizeExp );
-            if ( xLBefore != null && xLBefore.sizeExp() == sizeExp )
+            Record before = takeBeforeRecord( s -> s == sizeExp );
+            if ( before != null && before.sizeExp() == sizeExp )
             {
                 // There was a large record before and we're just modifying it
-                after = recordForData( xLBefore.id, maxBuffer, sizeExp, nextVersion );
-                if ( contentsDiffer( xLBefore, after ) )
-                {
-                    command.addChange( xLBefore, after );
-                }
+                after = recordForData( before.id, maxBuffer, sizeExp, version );
+                addIfChanged( command, before, after, tempBeforeHeader, afterHeader );
             }
-            else if ( xLBefore != null && xLBefore.sizeExp() != sizeExp )
+            else if ( before != null && before.sizeExp() != sizeExp )
             {
                 // There was a large record before, but this time it'll be of a different size, so a different one
-                command.addChange( xLBefore, null );
+                command.addChange( before, null );
                 long recordId = store.nextId( cursorTracer );
-                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, nextVersion ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, version ) );
             }
             else
             {
                 // There was no large record before at all
                 long recordId = store.nextId( cursorTracer );
-                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, nextVersion ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, version ) );
             }
 
             return buildRecordPointer( after.sizeExp(), after.id );
         }
 
-        private void addX1Record( ByteBuffer smallBuffer, FrekiCommand.SparseNode node )
+        private void addX1Record( ByteBuffer smallBuffer, Header tempBeforeHeader, Header afterHeader, FrekiCommand.SparseNode node )
         {
-            Record after = recordForData( nodeId, smallBuffer, 0, nextVersion );
+            Record after = recordForData( nodeId, smallBuffer, 0, version );
             Record before = takeBeforeRecord( sizeExp -> sizeExp == 0 );
-            if ( before == null || contentsDiffer( before, after ) )
+            if ( before == null )
             {
-                node.addChange( before, after );
+                node.addChange( null, after );
+            }
+            else
+            {
+                addIfChanged( node, before, after, tempBeforeHeader, afterHeader );
+            }
+        }
+
+        private void addIfChanged( FrekiCommand.SparseNode command, Record before, Record after, Header tempBeforeHeader, Header afterHeader )
+        {
+            if ( contentsDiffer( before, after ) )
+            {
+                if ( !needsVersionBump )
+                {
+                    tempBeforeHeader.deserializeMarkers( before.data( 0 ) );
+                    needsVersionBump = !afterHeader.hasSameMarkersAs( tempBeforeHeader );
+                }
+                command.addChange( before, after );
+            }
+            else
+            {
+                RecordChain chainItem = new RecordChain( before, after );
+                chainItem.next = firstUnchangedAfterRecord;
+                firstUnchangedAfterRecord = chainItem;
             }
         }
 
@@ -745,24 +778,25 @@ class GraphUpdates
 
         private boolean contentsDiffer( Record before, Record after )
         {
-            return true; //TODO what do we do when we dont really wanna update the record but version needs to be updated anyway?
-//            if ( before.data().limit() != after.data().limit() )
-//            {
-//                return true;
-//            }
-//            return !Arrays.equals(
-//                    before.data().array(), 0, before.data().limit(),
-//                    after.data().array(), 0, after.data().limit() );
+            if ( before.data().limit() != after.data().limit() )
+            {
+                return true;
+            }
+            return !Arrays.equals(
+                    before.data().array(), 0, before.data().limit(),
+                    after.data().array(), 0, after.data().limit() );
         }
     }
 
     private static class RecordChain
     {
+        private final Record before;
         private final Record record;
         private RecordChain next;
 
-        RecordChain( Record record )
+        RecordChain( Record before, Record record )
         {
+            this.before = before;
             this.record = record;
         }
     }
@@ -1026,9 +1060,9 @@ class GraphUpdates
         }
     }
 
-    private static Record recordForData( long recordId, ByteBuffer buffer, int sizeExp, byte newVersion )
+    private static Record recordForData( long recordId, ByteBuffer buffer, int sizeExp, byte version )
     {
-        Record after = new Record( sizeExp, recordId, newVersion );
+        Record after = new Record( sizeExp, recordId, version );
         after.setFlag( FLAG_IN_USE, true );
         ByteBuffer byteBuffer = after.data();
         byteBuffer.put( buffer.array(), 0, buffer.limit() );

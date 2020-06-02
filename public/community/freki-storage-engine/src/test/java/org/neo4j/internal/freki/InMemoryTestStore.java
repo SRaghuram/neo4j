@@ -32,8 +32,8 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.freki.Record.FIRST_VERSION;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
-import static org.neo4j.internal.freki.Record.UNVERSIONED;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 
 class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
@@ -62,7 +62,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     @Override
     public Record newRecord( long id )
     {
-        return new Record( sizeExp, id, UNVERSIONED );
+        return new Record( sizeExp, id, FIRST_VERSION );
     }
 
     @Override
@@ -84,6 +84,12 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
         {
             data.remove( record.id );
         }
+    }
+
+    @Override
+    public void writeHeaderOnly( PageCursor cursor, Record record )
+    {
+        data.get( record.id ).setVersion( record.version );
     }
 
     @Override

@@ -169,13 +169,18 @@ class Header
         referenceMarkers |= (referenceHeader.markers | referenceHeader.referenceMarkers) & ~markers; //what is found in reference, or elsewhere, but not here
     }
 
-    void deserialize( ByteBuffer buffer )
+    void deserializeMarkers( ByteBuffer buffer )
     {
         int markersLsb = buffer.get() & 0xFF;
         int referenceMarkersLsb = buffer.get() & 0xFF;
         int highMarks = buffer.get() & 0xFF;
         markers = markersLsb | (highMarks & 0xF) << Byte.SIZE;
         referenceMarkers = referenceMarkersLsb | (highMarks & 0xF0) << 4;
+    }
+
+    void deserialize( ByteBuffer buffer )
+    {
+        deserializeMarkers( buffer );
         int bytesNeeded = offsetBytesNeeded();
         long data = 0;
         for ( int i = 0; i < bytesNeeded; i++ )
@@ -220,7 +225,12 @@ class Header
         referenceMarkers = 0;
     }
 
-    public boolean hasMarkers()
+    boolean hasSameMarkersAs( Header header )
+    {
+        return markers == header.markers;
+    }
+
+    boolean hasMarkers()
     {
         return markers != 0;
     }

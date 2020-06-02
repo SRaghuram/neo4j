@@ -92,7 +92,7 @@ abstract class FrekiCommand implements StorageCommand
             this.lowestChange = lowestChange;
         }
 
-        void addChange( Record before, Record after )
+        RecordChange addChange( Record before, Record after )
         {
             assert before != null || after != null : "Both before and after records cannot be null";
             RecordChange change = new RecordChange( before, after );
@@ -121,6 +121,7 @@ abstract class FrekiCommand implements StorageCommand
                     prev.next = change;
                 }
             }
+            return change;
         }
 
         RecordChange change()
@@ -238,6 +239,7 @@ abstract class FrekiCommand implements StorageCommand
 
         final Record before;
         final Record after;
+        boolean onlyVersionChange;
         private RecordChange next;
 
         RecordChange( Record before, Record after )
@@ -256,6 +258,12 @@ abstract class FrekiCommand implements StorageCommand
             return after != null ? before == null ? Mode.CREATE : Mode.UPDATE : Mode.DELETE;
         }
 
+        void updateVersion( byte version )
+        {
+            onlyVersionChange = true;
+            after.setVersion( version );
+        }
+
         byte sizeExp()
         {
             return anyUsed().sizeExp();
@@ -270,15 +278,30 @@ abstract class FrekiCommand implements StorageCommand
         {
             int sizeExp = sizeExp();
             long recordIdToWrite = sizeExp > 0 ? recordId() : 0;
-            channel.put( (byte) (longSizeCode( recordIdToWrite ) | (before != null ? 0x4 : 0) | (after != null ? 0x8 : 0) | (next != null ? 0x10 : 0)) );
+            byte header = (byte) (longSizeCode( recordIdToWrite )
+                    | (before != null ? 0x4 : 0)
+                    | (after != null ? 0x8 : 0)
+                    | (next != null ? 0x10 : 0)
+                    | (onlyVersionChange ? 0x20 : 0));
+            channel.put( header );
             putCompactLong( channel, recordIdToWrite );
-            if ( before != null )
+            if ( onlyVersionChange )
             {
-                before.serialize( channel );
+                channel.put( before.flags );
+                channel.put( before.version );
+                channel.put( after.flags );
+                channel.put( after.version );
             }
-            if ( after != null )
+            else
             {
-                after.serialize( channel );
+                if ( before != null )
+                {
+                    before.serialize( channel );
+                }
+                if ( after != null )
+                {
+                    after.serialize( channel );
+                }
             }
         }
 
@@ -287,9 +310,23 @@ abstract class FrekiCommand implements StorageCommand
             byte header = channel.get();
             int idSizeCode = header & 0x3;
             long id = idSizeCode == 0 ? nodeId : getCompactLong( channel, idSizeCode );
-            Record before = (header & 0x4) != 0 ? Record.deserialize( channel, id ) : null;
-            Record after = (header & 0x8) != 0 ? Record.deserialize( channel, id ) : null;
-            RecordChange change = new RecordChange( before, after );
+            boolean onlyVersionChange = (header & 0x20) != 0;
+            RecordChange change;
+            if ( onlyVersionChange )
+            {
+                byte beforeFlags = channel.get();
+                byte beforeVersion = channel.get();
+                byte afterFlags = channel.get();
+                byte afterVersion = channel.get();
+                change = new RecordChange( new Record( beforeFlags, id, beforeVersion, null ), new Record( afterFlags, id, afterVersion, null ) );
+            }
+            else
+            {
+                Record before = (header & 0x4) != 0 ? Record.deserialize( channel, id ) : null;
+                Record after = (header & 0x8) != 0 ? Record.deserialize( channel, id ) : null;
+                change = new RecordChange( before, after );
+            }
+            change.onlyVersionChange = onlyVersionChange;
             if ( (header & 0x10) != 0 )
             {
                 change.next = DESERIALIZATION_HAS_NEXT_MARKER;

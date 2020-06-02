@@ -153,9 +153,16 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             SimpleStore store = stores.mainStore( sizeExp );
             try ( PageCursor cursor = store.openWriteCursor( cursorTracer ) )
             {
-                boolean updated = change.mode() == Mode.UPDATE;
-                Record afterRecord = change.after != null ? change.after : deletedRecord( sizeExp, change.recordId() );
-                store.write( cursor, afterRecord, idUpdateListener == null || updated ? IGNORE : idUpdateListener, cursorTracer );
+                if ( change.onlyVersionChange )
+                {
+                    store.writeHeaderOnly( cursor, change.after );
+                }
+                else
+                {
+                    boolean updated = change.mode() == Mode.UPDATE;
+                    Record afterRecord = change.after != null ? change.after : deletedRecord( sizeExp, change.recordId() );
+                    store.write( cursor, afterRecord, idUpdateListener == null || updated ? IGNORE : idUpdateListener, cursorTracer );
+                }
             }
         }
     }
@@ -234,7 +241,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         nodeCursor.single( node.nodeId, ( sizeExp, id ) ->
         {
             FrekiCommand.RecordChange change = node.change( sizeExp, id );
-            if ( change != null )
+            if ( change != null && !change.onlyVersionChange )
             {
                 Record record = recordFunction.apply( change );
                 return record != null ? record : stores.deletedReferenceRecord( sizeExp );

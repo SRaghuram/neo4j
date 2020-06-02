@@ -44,7 +44,7 @@ class Record
     static final int SIZE_BASE = 128;
     static final int HEADER_SIZE = 2;
 
-    static final byte UNVERSIONED = -1;
+    static final byte FIRST_VERSION = 0;
 
     // not stored
     long id;
@@ -57,7 +57,7 @@ class Record
 
     Record( int sizeExp )
     {
-        this( sizeExp, -1, UNVERSIONED );
+        this( sizeExp, -1, FIRST_VERSION );
     }
 
     Record( int sizeExp, long id, byte version )
@@ -76,7 +76,7 @@ class Record
 
     static Record deletedRecord( int sizeExp, long id )
     {
-        return new Record( sizeExpAsFlagsByte( sizeExp ), id, UNVERSIONED, null );
+        return new Record( sizeExpAsFlagsByte( sizeExp ), id, FIRST_VERSION, null );
     }
 
     static int recordSize( int sizeExp )
@@ -166,7 +166,7 @@ class Record
             buffer.position( length ).flip();
             return new Record( flags, id, version, buffer );
         }
-        return new Record( (byte) 0, id, UNVERSIONED, null );
+        return new Record( (byte) 0, id, FIRST_VERSION, null );
     }
 
     void serialize( PageCursor cursor )
@@ -184,10 +184,16 @@ class Record
         }
     }
 
+    void serializeHeader( PageCursor cursor )
+    {
+        cursor.putByte( flags );
+        cursor.putByte( version );
+    }
+
     void clear()
     {
         flags = 0;
-        version = UNVERSIONED;
+        version = FIRST_VERSION;
         if ( data != null )
         {
             data.clear();
@@ -263,5 +269,10 @@ class Record
     {
         return other.id == id && other.flags == flags && other.version == version &&
                 ((data == null && other.data == null) || Arrays.equals( other.data.array(), data.array() ));
+    }
+
+    void setVersion( byte version )
+    {
+        this.version = version;
     }
 }

@@ -46,7 +46,7 @@ class FrekiCursorData
     Header header = new Header();
 
     long nodeId = NULL;
-    byte version = Record.UNVERSIONED;
+    byte version = Record.FIRST_VERSION;
     boolean x1Loaded;
     long xLChainStartPointer = NULL;
     long xLChainNextLinkPointer = NULL;
@@ -176,7 +176,7 @@ class FrekiCursorData
     {
         assert refCount == 1;
         nodeId = NULL;
-        version = Record.UNVERSIONED;
+        version = Record.FIRST_VERSION;
         x1Loaded = false;
         xLChainStartPointer = NULL;
         xLChainNextLinkPointer = NULL;

@@ -205,7 +205,8 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
                 buffer.put( data );
                 data.limit( prevLimit );
             }
-            records.add( new Record( header, recordId, Record.UNVERSIONED, buffer ) ); //TODO versioning here? if not then we waste 1 byte :(
+            // TODO consider bumping the existing version in it
+            records.add( new Record( header, recordId, Record.FIRST_VERSION, buffer ) ); //TODO versioning here? if not then we waste 1 byte :(
             isFirst = false;
         }
         return records;
