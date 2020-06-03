@@ -401,7 +401,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                memoryTracking: MemoryTracking,
                                executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
 
-    private var querySubscription: ExecutingQuery = _
+    private var executingQuery: ExecutingQuery = _
     private var _queryProfile: QueryProfile = _
     private var _memoryTracker: QueryMemoryTracker = _
 
@@ -413,8 +413,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     }
 
     override def consumptionState: RuntimeResult.ConsumptionState =
-      if (querySubscription == null) ConsumptionState.NOT_STARTED
-      else if (!querySubscription.hasSucceeded()) ConsumptionState.HAS_MORE // Not exactly true, but EXHAUSTED would be mor wrong.
+      if (executingQuery == null) ConsumptionState.NOT_STARTED
+      else if (!executingQuery.hasSucceeded) ConsumptionState.HAS_MORE // Not exactly true, but EXHAUSTED would be more wrong.
       else ConsumptionState.EXHAUSTED
 
     override def close(): Unit = {}
@@ -423,21 +423,21 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     override def request(numberOfRecords: Long): Unit = {
       ensureQuerySubscription()
-      querySubscription.request(numberOfRecords)
+      executingQuery.request(numberOfRecords)
     }
 
     override def cancel(): Unit = {
       ensureQuerySubscription()
-      querySubscription.cancel()
+      executingQuery.cancel()
     }
 
     override def await(): Boolean = {
       ensureQuerySubscription()
-      querySubscription.await()
+      executingQuery.await()
     }
 
     private def ensureQuerySubscription(): Unit = {
-      if (querySubscription == null) {
+      if (executingQuery == null) {
         // Only call onResult on first call. Having this callback before execute()
         // ensure that we do not leave any inconsistent state around if onResult
         // throws an exception.
@@ -459,7 +459,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
           memoryTracking,
           executionGraphSchedulingPolicy)
 
-        querySubscription = sub
+        executingQuery = sub
         _queryProfile = prof
         _memoryTracker = memTrack
       }

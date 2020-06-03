@@ -28,7 +28,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.IsNull.notNullValue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @EnterpriseDbmsExtension
 class ExecutionResultTest
@@ -217,19 +217,8 @@ class ExecutionResultTest
                     {
                         result.next();
                     }
-                    try
-                    {
-                        result.getExecutionPlanDescription();
-                        fail("No exception thrown.");
-                    }
-                    catch ( QueryExecutionException e )
-                    {
-                        assertThat( e.getMessage(), equalTo( "This result has not been materialised yet. Iterate over it to get profiler stats." ) );
-                    }
-                    finally
-                    {
-                        result.close();
-                    }
+                    QueryExecutionException e = assertThrows( QueryExecutionException.class, result::getExecutionPlanDescription );
+                    assertThat( e.getMessage(), equalTo( "This result has not been materialised yet. Iterate over it to get profiler stats." ) );
                 }
             }
         }
@@ -251,19 +240,8 @@ class ExecutionResultTest
                         result.next();
                         result.close();
                     }
-                    try
-                    {
-                        result.getExecutionPlanDescription();
-                        fail("No exception thrown.");
-                    }
-                    catch ( QueryExecutionException e )
-                    {
-                        assertThat( e.getMessage(), equalTo( "This result has not been materialised yet. Iterate over it to get profiler stats." ) );
-                    }
-                    finally
-                    {
-                        result.close();
-                    }
+                    QueryExecutionException e = assertThrows( QueryExecutionException.class, result::getExecutionPlanDescription );
+                    assertThat( e.getMessage(), equalTo( "This result has not been materialised yet. Iterate over it to get profiler stats." ) );
                 }
             }
         }

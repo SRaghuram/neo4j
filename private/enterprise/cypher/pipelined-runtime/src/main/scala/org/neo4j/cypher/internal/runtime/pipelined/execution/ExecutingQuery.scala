@@ -36,8 +36,7 @@ class ExecutingQuery(val executionState: ExecutionState,
     flowControl.await()
   }
 
-  //noinspection AccessorLikeMethodIsEmptyParen
-  def hasSucceeded(): Boolean = {
+  def hasSucceeded: Boolean = {
     executionState.hasSucceeded
   }
 
