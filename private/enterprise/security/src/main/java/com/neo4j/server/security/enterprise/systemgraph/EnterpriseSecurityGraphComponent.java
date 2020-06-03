@@ -55,7 +55,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         super( config );
         this.defaultAdminRepository = defaultAdminRepository;
         this.customSecurityInitializer = new CustomSecurityInitializer( config, log );
-        this. log = log;
+        this.log = log;
         knownSecurityComponentVersions.add( new EnterpriseVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_1_36( log, config ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_2_40( log ) );
@@ -106,7 +106,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
 
             if ( currentVersion.version == NoEnterpriseComponentVersion.VERSION )
             {
-                log.debug( "The current version did not have any security graph, doing a full initialization" );
+                log.debug( "The current version does not have a security graph, doing a full initialization" );
                 initializeLatestSystemGraph( tx );
             }
             else
