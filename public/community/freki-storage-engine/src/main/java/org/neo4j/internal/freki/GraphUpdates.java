@@ -737,7 +737,8 @@ class GraphUpdates
                 if ( !needsVersionBump )
                 {
                     tempBeforeHeader.deserializeMarkers( before.data( 0 ) );
-                    needsVersionBump = !afterHeader.hasSameMarkersAs( tempBeforeHeader );
+                    //We only need to update version if any existing record has "gained" a part. (Moved or created)
+                    needsVersionBump = !tempBeforeHeader.hasSameOrMoreMarkers( afterHeader, Header.MARKERS_FILTER_SKIP_NON_ESSENTIAL );
                 }
                 command.addChange( before, after );
             }

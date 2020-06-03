@@ -120,6 +120,7 @@ abstract class FrekiCursorsTest
         {
             try
             {
+
                 graphUpdates.extractUpdates( new MinimalTestFrekiTransactionApplier( stores, monitor ) );
                 return updates.nodeId();
             }

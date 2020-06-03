@@ -32,7 +32,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.storageengine.api.PropertyKeyValue;
@@ -306,6 +308,28 @@ class GraphUpdatesTest
     }
 
     @Test
+    void shouldNotUpdateVersionOnPartRemoval() throws ConstraintViolationTransactionFailureException
+    {
+        GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        long nodeId = mainStores.mainStore.nextId( NULL );
+        updates.create( nodeId );
+        MutableLongSet manyLabels = LongSets.mutable.empty();
+        for ( int i = 0; i < 200; i++ )
+        {
+            manyLabels.add( i + 4 );
+        }
+        updates.getOrLoad( nodeId ).updateLabels( manyLabels, LongSets.immutable.empty() );
+
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {}, new int[] {1,4} ) );
+
+        updates = new GraphUpdates( mainStores, NULL, INSTANCE );
+        updates.getOrLoad( nodeId ).updateLabels( LongSets.immutable.empty(), manyLabels );
+
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {1,4}, new int[] {1} ) ); // <-- No change means x1 is skipped!
+
+    }
+
+    @Test
     void shouldUpdateVersionOnChangesSwitchingRecord() throws ConstraintViolationTransactionFailureException
     {
         GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
@@ -322,7 +346,7 @@ class GraphUpdatesTest
             manyLabels.add( i + 4 );
         }
         updates.getOrLoad( nodeId ).updateLabels( manyLabels, LongSets.immutable.of( 1,2,3 ) );
-        extractAndApplyUpdates( updates, layoutChange( true, new int[] {1}, new int[] {1, 4} ) ); // this should not get a version change!
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {1}, new int[] {1, 4} ) ); // this should not get a version change!
 
         updates = new GraphUpdates( mainStores, NULL, INSTANCE );
         MutableLongSet moreLabels = LongSets.mutable.empty();
@@ -387,8 +411,8 @@ class GraphUpdatesTest
                     actualAfter.add( Record.recordXFactor( recordChange.after.sizeExp() ) );
                 }
             }
-            assertThat( actualBefore ).containsExactlyInAnyOrder( beforeRecordsSizeX );
-            assertThat( actualAfter ).containsExactlyInAnyOrder( afterRecordsSizeX );
+            assertThat( actualBefore ).as( "Should have correct before layout" ).containsExactlyInAnyOrder( beforeRecordsSizeX );
+            assertThat( actualAfter ).as( "Should have correct after layout" ).containsExactlyInAnyOrder( afterRecordsSizeX );
         }
     }
 
@@ -404,14 +428,11 @@ class GraphUpdatesTest
         @Override
         public void handle( FrekiCommand.SparseNode node )
         {
-            int chainVerson = Integer.MAX_VALUE;
+            byte chainVersion = StreamSupport.stream( node.spliterator(), false )
+                    .map( r -> r.after ).filter( Objects::nonNull ).map( r -> r.version ).findFirst().orElse( Record.FIRST_VERSION );
+
             for ( FrekiCommand.RecordChange recordChange : node )
             {
-                if ( chainVerson == Integer.MAX_VALUE && recordChange.after != null )
-                {
-                    chainVerson = recordChange.after.version;
-                }
-
                 if ( recordChange.before != null && recordChange.after != null )
                 {
                     if ( expectVersionChange )
@@ -423,14 +444,10 @@ class GraphUpdatesTest
                         assertThat( recordChange.after.version ).as( "Version expected to NOT be updated" ).isEqualTo( recordChange.before.version );
                     }
                 }
-            }
 
-            //All existing after states should have matching version
-            for ( FrekiCommand.RecordChange recordChange : node )
-            {
                 if ( recordChange.after != null )
                 {
-                    assertThat( recordChange.after.version ).isEqualTo( (byte) chainVerson );
+                    assertThat( recordChange.after.version ).as( "Chain should have have matching version" ).isEqualTo( (byte) chainVersion );
                 }
             }
         }

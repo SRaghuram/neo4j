@@ -261,8 +261,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             {
                 if ( !hasMoreChainLinks() )
                 {
-                    //We traversed the rest of the chain. Either the header/store is corrupt or we did not start at the beginning of the chain.
-                    throw new IllegalStateException( String.format( "Should have found header slot %d in record chain for node %d", headerSlot, data.nodeId ) );
+                    //We traversed the rest of the chain.
+                    //      Either the header/store is corrupt / we did not start at the beginning of the chain.
+                    //      Or we moved the part.
+                    // We retry, if its corruption we'll get retry timeout.
+                    return false;
                 }
                 if ( !loadNextChainLink() )
                 {

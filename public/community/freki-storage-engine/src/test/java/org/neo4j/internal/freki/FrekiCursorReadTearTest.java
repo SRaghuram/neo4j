@@ -237,6 +237,61 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         }
     }
 
+    @Test
+    void shouldFindDataWhenRemovedDataAndRecord()
+    {
+        //Given
+        Node node = node();
+
+        int[] labels = new int[200];
+        for ( int i = 0; i < labels.length; i++ )
+        {
+            labels[i] = i;
+        }
+        node.labels( labels );
+
+        FrekiNodeCursor nodeCursorAtV1 = node.storeAndPlaceNodeCursorAt();
+
+        //when
+        node = existingNode( node.id() );
+        node.removeLabels( labels );
+        FrekiNodeCursor nodeCursorAtV2 = node.storeAndPlaceNodeCursorAt();
+
+        //then
+        assertThat( nodeCursorAtV1.labels() ).isEmpty();
+        assertThat( nodeCursorAtV2.labels() ).isEmpty();
+    }
+
+    @Test
+    void shouldFindDataWhenMovedToNewRecord()
+    {
+        //Given
+        Node node = node();
+
+        int[] labels = new int[200];
+        int[] moreLabels = new int[200];
+
+        for ( int i = 0; i < labels.length; i++ )
+        {
+            labels[i] = i;
+            moreLabels[i] = labels.length + i;
+            node.relationship( 0, node );
+        }
+        node.labels( labels );
+
+        FrekiNodeCursor nodeCursorAtV1 = node.storeAndPlaceNodeCursorAt();
+
+        //when
+        node = existingNode( node.id() );
+        node.labels( moreLabels );
+        FrekiNodeCursor nodeCursorAtV2 = node.storeAndPlaceNodeCursorAt();
+
+        //then
+
+        assertThat( nodeCursorAtV1.labels() ).hasSize( 400 );
+        assertThat( nodeCursorAtV2.labels() ).hasSize( 400 );
+    }
+
     private int[] intArray( int from, int to )
     {
         int[] labelsLargerThanX1 = new int[to - from];

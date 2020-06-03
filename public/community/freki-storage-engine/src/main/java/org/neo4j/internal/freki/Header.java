@@ -50,10 +50,12 @@ class Header
     static final int FLAG_LABELS = 7;
     static final int FLAG_HAS_DENSE_RELATIONSHIPS = 8;
 
+    static final int MARKERS_FILTER_SKIP_NON_ESSENTIAL = slotBit( OFFSET_RECORD_POINTER ) | slotBit( OFFSET_END ) | slotBit( FLAG_HAS_DENSE_RELATIONSHIPS );
+
     private int markers;
     private int referenceMarkers;
-    private int[] offsets = new int[NUM_OFFSETS];
-    private int[] sizes = new int[NUM_OFFSETS + 1/*labels*/];
+    private final int[] offsets = new int[NUM_OFFSETS];
+    private final int[] sizes = new int[NUM_OFFSETS + 1/*labels*/];
 
     static Header shallowCopy( Header from )
     {
@@ -80,7 +82,7 @@ class Header
                   : markers & ~slotBit( slot );
     }
 
-    private static int slotBit( int slot )
+    static int slotBit( int slot )
     {
         return 1 << slot;
     }
@@ -225,9 +227,9 @@ class Header
         referenceMarkers = 0;
     }
 
-    boolean hasSameMarkersAs( Header header )
+    boolean hasSameOrMoreMarkers( Header header, int filter )
     {
-        return markers == header.markers;
+        return ((markers ^ header.markers) & ~filter & ~markers) == 0;
     }
 
     boolean hasMarkers()
