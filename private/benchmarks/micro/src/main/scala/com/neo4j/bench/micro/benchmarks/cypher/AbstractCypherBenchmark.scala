@@ -125,10 +125,12 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO RoleWithGrants")
       labels.foreach { label =>
         systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
+        systemDb().executeTransactionally(s"GRANT CREATE ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
         nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES ${label.name()} TO RoleWithGrants"))
       }
       if (labels.isEmpty) {
         systemDb().executeTransactionally("GRANT TRAVERSE ON GRAPH * NODES * TO RoleWithGrants")
+        systemDb().executeTransactionally(s"GRANT CREATE ON GRAPH * NODES * TO RoleWithGrants")
         nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES * TO RoleWithGrants"))
         if (nodeProperties.isEmpty) {
           nodeProperties.foreach(_ => systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES * TO RoleWithGrants"))
@@ -144,6 +146,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       systemDb().executeTransactionally("CREATE ROLE RoleWithDenies IF NOT EXISTS")
       systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO RoleWithDenies")
       systemDb().executeTransactionally("DENY TRAVERSE ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
+      systemDb().executeTransactionally("DENY CREATE ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
       systemDb().executeTransactionally("DENY READ {deniedProp} ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
 
       // User with grants

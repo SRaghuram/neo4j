@@ -31,16 +31,21 @@ public class TxBatch
     {
         if ( null == tx )
         {
-            tx = db.beginTx();
+            tx = beginTransaction();
             return true;
         }
         if ( ++txSize == txBatchSize )
         {
-            tx = commitAndNew( db, tx );
+            tx = commitAndNew( tx );
             txSize = 0;
             return true;
         }
         return false;
+    }
+
+    protected Transaction beginTransaction()
+    {
+        return db.beginTx();
     }
 
     public void close()
@@ -48,10 +53,10 @@ public class TxBatch
         commit( tx );
     }
 
-    private Transaction commitAndNew( GraphDatabaseService db, Transaction oldTx )
+    private Transaction commitAndNew( Transaction oldTx )
     {
         commit( oldTx );
-        return db.beginTx();
+        return beginTransaction();
     }
 
     private void commit( Transaction oldTx )
