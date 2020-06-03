@@ -185,7 +185,6 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 pageCache,
                 indexFile,
                 layout,
-                pageCache.pageSize(),
                 NO_MONITOR,
                 NO_HEADER_READER,
                 NO_HEADER_WRITER,
