@@ -36,101 +36,121 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    new PartialSortState(stateFactory.newMemoryTracker(id.x))
+    new PartialSortState(stateFactory.newMemoryTracker(id.x), prefixComparator, suffixComparator, workIdentity)
   }
 
   override def toString: String = "PartialSortOperator"
+}
 
-  private class PartialSortState(val memoryTracker: MemoryTracker) extends DataInputOperatorState[MorselData] {
-    var lastSeen: MorselRow = _
-    val resultsBuffer: HeapTrackingArrayList[MorselRow] = HeapTrackingArrayList.newArrayList(16, memoryTracker)
-    var remainingResultsIndex: Int = -1
-    var currentMorselHeapUsage: Long = 0
+class PartialSortTask(morselData: MorselData,
+                      override val workIdentity: WorkIdentity,
+                      taskState: PartialSortState) extends InputLoopWithMorselDataTask(morselData) {
 
-    // Memory for morsels is released in one go after all output rows for completed chunk have been written
-    val morselMemoryTracker: MemoryTracker = memoryTracker.getScopedMemoryTracker
+  override def toString: String = "PartialSortTask"
 
-    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new PartialSortTask(input, this))
+  override def initialize(state: PipelinedQueryState, resources: QueryResources): Unit = ()
+
+  override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit =
+    taskState.onNewInputMorsel(inputCursor)
+
+  override def processRow(outputCursor: MorselWriteCursor,
+                          inputCursor: MorselReadCursor): Unit =
+    taskState.onRow(outputCursor, inputCursor)
+
+  override def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit =
+    morselData.argumentStream match {
+      case EndOfNonEmptyStream =>
+        taskState.onEndOfStream()
+      case _ =>
+      // Do nothing
+    }
+
+  override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit =
+    taskState.tryWriteOutstandingResults(outputCursor)
+
+  override def canContinue: Boolean = super.canContinue || taskState.hasOutputToWrite
+}
+
+class PartialSortState(memoryTracker: MemoryTracker,
+                       prefixComparator: Comparator[ReadableRow],
+                       suffixComparator: Comparator[ReadableRow],
+                       workIdentity: WorkIdentity) extends DataInputOperatorState[MorselData] {
+
+  private[this] val buffer: HeapTrackingArrayList[MorselRow] = HeapTrackingArrayList.newArrayList(16, memoryTracker)
+  private[this] var lastSeen: MorselRow = _
+  private[this] var outputIndex: Int = -1
+
+  private[this] var currentMorselHeapUsage: Long = 0
+  // Memory for morsels is released in one go after all output rows for completed chunk have been written
+  private[this] val morselMemoryTracker: MemoryTracker = memoryTracker.getScopedMemoryTracker
+
+  def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = {
+    val heapUsage = inputCursor.morsel.estimatedHeapUsage
+    currentMorselHeapUsage = heapUsage
+    morselMemoryTracker.allocateHeap(heapUsage)
   }
 
-  class PartialSortTask(morselData: MorselData,
-                        taskState: PartialSortState) extends InputLoopWithMorselDataTask(morselData) {
-
-    override def workIdentity: WorkIdentity = PartialSortOperator.this.workIdentity
-
-    override def toString: String = "PartialSortTask"
-
-    override def initialize(state: PipelinedQueryState, resources: QueryResources): Unit = ()
-
-    override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = {
-      val heapUsage = inputCursor.morsel.estimatedHeapUsage
-      taskState.currentMorselHeapUsage = heapUsage
-      taskState.morselMemoryTracker.allocateHeap(heapUsage)
-    }
-
-    override def processRow(outputCursor: MorselWriteCursor,
-                            inputCursor: MorselReadCursor): Unit = {
-      // if new chunk
-      if (taskState.lastSeen != null && prefixComparator.compare(taskState.lastSeen, inputCursor) != 0) {
-        completeCurrentChunk()
-        tryWriteOutstandingResults(outputCursor)
-      }
-      taskState.lastSeen = inputCursor.snapshot()
-      if (taskState.remainingResultsIndex == -1)
-        taskState.resultsBuffer.add(taskState.lastSeen)
-      taskState.memoryTracker.allocateHeap(taskState.lastSeen.shallowInstanceHeapUsage)
-    }
-
-    override def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit =
-      morselData.argumentStream match {
-        case EndOfNonEmptyStream =>
-          taskState.currentMorselHeapUsage = 0
-          if (taskState.lastSeen != null)
-            completeCurrentChunk()
-        case _ =>
-        // Do nothing
-      }
-
-    override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit =
+  def onRow(outputCursor: MorselWriteCursor,
+            inputCursor: MorselReadCursor): Unit = {
+    // if new chunk
+    if (lastSeen != null && prefixComparator.compare(lastSeen, inputCursor) != 0) {
+      completeCurrentChunk()
       tryWriteOutstandingResults(outputCursor)
-
-    override def canContinue: Boolean = super.canContinue || taskState.remainingResultsIndex >= 0
-
-    private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor): Unit = {
-      while (taskState.remainingResultsIndex >= 0 && outputCursor.onValidRow()) {
-        val idx = taskState.remainingResultsIndex
-        val buf = taskState.resultsBuffer
-        if (idx >= buf.size()) {
-          buf.clear()
-          taskState.remainingResultsIndex = -1
-          if (taskState.lastSeen != null)
-            buf.add(taskState.lastSeen)
-
-          // current morsel might contain more chunks, so we don't know if it should be released just yet
-          taskState.morselMemoryTracker.reset()
-          if (taskState.currentMorselHeapUsage > 0)
-            taskState.morselMemoryTracker.allocateHeap(taskState.currentMorselHeapUsage)
-        } else {
-          val morselRow = buf.get(idx)
-          outputCursor.copyFrom(morselRow)
-
-          taskState.memoryTracker.releaseHeap(morselRow.shallowInstanceHeapUsage)
-          buf.set(idx, null)
-          taskState.remainingResultsIndex += 1
-          outputCursor.next()
-        }
-      }
     }
 
-    private def completeCurrentChunk(): Unit = {
-      val buffer = taskState.resultsBuffer
+    lastSeen = inputCursor.snapshot()
+    memoryTracker.allocateHeap(lastSeen.shallowInstanceHeapUsage)
 
-      if (buffer.size() > 1) {
-        buffer.sort(suffixComparator)
+    if (!hasOutputToWrite) // if there _is_ output, add it after we're done writing
+      buffer.add(lastSeen)
+  }
+
+  def onEndOfStream(): Unit = {
+    currentMorselHeapUsage = 0
+    if (lastSeen != null)
+      completeCurrentChunk()
+  }
+
+  def tryWriteOutstandingResults(outputCursor: MorselWriteCursor): Unit = {
+    while (outputIndex >= 0 && outputCursor.onValidRow()) {
+      if (outputIndex >= buffer.size()) {
+        resetBuffer()
+        outputIndex = -1
+      } else {
+        val morselRow = buffer.get(outputIndex)
+        outputCursor.copyFrom(morselRow)
+
+        memoryTracker.releaseHeap(morselRow.shallowInstanceHeapUsage)
+        buffer.set(outputIndex, null)
+        outputIndex += 1
+        outputCursor.next()
       }
-
-      taskState.remainingResultsIndex = 0
-      taskState.lastSeen = null
     }
   }
+
+  def hasOutputToWrite: Boolean = outputIndex >= 0
+
+  private def completeCurrentChunk(): Unit = {
+    if (buffer.size() > 1)
+      buffer.sort(suffixComparator)
+
+    outputIndex = 0
+    lastSeen = null
+  }
+
+  private def resetBuffer(): Unit = {
+    buffer.clear()
+
+    // add pending row from next chunk
+    if (lastSeen != null)
+      buffer.add(lastSeen)
+
+    // current morsel might contain more chunks, so we don't know if it should be released just yet
+    morselMemoryTracker.reset()
+    if (currentMorselHeapUsage > 0)
+      morselMemoryTracker.allocateHeap(currentMorselHeapUsage)
+  }
+
+  override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] =
+    singletonIndexedSeq(new PartialSortTask(input, workIdentity, this))
 }
