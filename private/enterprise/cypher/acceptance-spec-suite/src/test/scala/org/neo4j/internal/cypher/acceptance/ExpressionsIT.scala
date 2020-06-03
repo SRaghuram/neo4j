@@ -35,7 +35,6 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.expressions.SingleRelationshipPathStep
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.plans.CoerceToPredicate
-import org.neo4j.cypher.internal.logical.plans.CypherValue
 import org.neo4j.cypher.internal.logical.plans.FieldSignature
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
@@ -4280,7 +4279,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       Array.empty, None, isAggregate = false, id = id)
 
   private def fieldSignature(name: String, cypherType: CypherType = symbols.CTAny, default: Option[AnyRef] = None) =
-    FieldSignature(name, cypherType, default = default.map(CypherValue(_, cypherType)))
+    FieldSignature(name, cypherType, default = default.map(ValueUtils.of))
 
   private def qualifiedName(name: String) = new procs.QualifiedName(Array.empty[String], name)
 

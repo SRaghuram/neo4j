@@ -10,11 +10,11 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.interpreted.ValueConversion.asValue
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.Value
 import org.scalatest.mockito.MockitoSugar
 
@@ -39,10 +39,10 @@ case class FakeSlottedPipe(data: Iterable[Map[Any, Any]],
               result.setLongAt(offset, value.asInstanceOf[Number].longValue())
 
             case RefSlot(offset, _, _) =>
-              result.setRefAt(offset, asValue(value))
+              result.setRefAt(offset, ValueUtils.of(value))
           }
         case (cachedProp: ASTCachedProperty, value) =>
-          slots.getCachedPropertySlot(cachedProp).foreach(refSlot =>result.setCachedPropertyAt(refSlot.offset, asValue(value).asInstanceOf[Value]))
+          slots.getCachedPropertySlot(cachedProp).foreach(refSlot =>result.setCachedPropertyAt(refSlot.offset, ValueUtils.of(value).asInstanceOf[Value]))
       }
       result
     }

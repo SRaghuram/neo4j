@@ -1579,7 +1579,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
       val inputArgs = args.map(Some(_))
-        .zipAll(signature.inputSignature.map(_.default.map(_.value)), None, None).flatMap {
+        .zipAll(signature.inputSignature.map(_.default), None, None).flatMap {
         case (Some(given), _) => compileExpression(given)
         case (_, Some(default)) =>
           val constant = staticConstant[AnyValue](namer.nextVariableName().toUpperCase(), asAnyValue(default))

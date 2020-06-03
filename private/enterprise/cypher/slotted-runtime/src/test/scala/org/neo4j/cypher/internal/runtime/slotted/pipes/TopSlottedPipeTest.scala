@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
+import org.neo4j.cypher.internal.runtime.interpreted.commands.LiteralHelper.literal
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Top1Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Top1WithTiesPipe
@@ -17,8 +17,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.TopNPipe
 import org.neo4j.cypher.internal.runtime.slotted.Ascending
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.slotted.Descending
-import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContextOrdering
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.AscendingOrder
 import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.DescendingOrder
 import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.list
@@ -239,7 +239,7 @@ object TopSlottedPipeTestSupport {
       Top1Pipe(source, comparator)()
     }
     else {
-      TopNPipe(source, Literal(limit), comparator)()
+      TopNPipe(source, literal(limit), comparator)()
     }
   }
 

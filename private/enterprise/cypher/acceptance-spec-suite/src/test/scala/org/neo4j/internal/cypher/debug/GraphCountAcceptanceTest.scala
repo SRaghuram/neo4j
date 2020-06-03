@@ -16,7 +16,6 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.frontend.phases.devNullLogger
-import org.neo4j.cypher.internal.logical.plans.CypherValue
 import org.neo4j.cypher.internal.logical.plans.FieldSignature
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
@@ -41,6 +40,7 @@ import org.neo4j.kernel.api.KernelTransaction.Type.EXPLICIT
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
 import org.neo4j.logging.Log
+import org.neo4j.values.storable.Values.stringValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
@@ -67,7 +67,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
       // Add UDFs for temporal functions
       context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "datetime"),
         IndexedSeq(FieldSignature("Input", CTAny,
-          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+          Some(stringValue( "DEFAULT_TEMPORAL_ARGUMENT"))
         )),
         CTDateTime, None, Array.empty, Some("Create a DateTime instant"), isAggregate = false,
         getUserFunctionHandle("datetime").id())
@@ -75,7 +75,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
 
       context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "date"),
         IndexedSeq(FieldSignature("Input", CTAny,
-          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+          Some(stringValue( "DEFAULT_TEMPORAL_ARGUMENT"))
         )),
         CTDate, None, Array.empty, Some("Create a Date instant"), isAggregate = false,
         getUserFunctionHandle("date").id())
@@ -83,7 +83,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
 
       context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "time"),
         IndexedSeq(FieldSignature("Input", CTAny,
-          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+          Some(stringValue( "DEFAULT_TEMPORAL_ARGUMENT"))
         )),
         CTTime, None, Array.empty, Some("Create a Time instant"), isAggregate = false,
         getUserFunctionHandle("time").id())
@@ -91,7 +91,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
 
       context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "localdatetime"),
         IndexedSeq(FieldSignature("Input", CTAny,
-          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+          Some(stringValue( "DEFAULT_TEMPORAL_ARGUMENT"))
         )),
         CTLocalDateTime, None, Array.empty, Some("Create a LocalDateTime instant"), isAggregate = false,
         getUserFunctionHandle("localdatetime").id())
@@ -99,7 +99,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
 
       context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "localtime"),
         IndexedSeq(FieldSignature("Input", CTAny,
-          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+          Some(stringValue( "DEFAULT_TEMPORAL_ARGUMENT"))
         )),
         CTLocalTime, None, Array.empty, Some("Create a LocalTime instant"), isAggregate = false,
         getUserFunctionHandle("localtime").id())

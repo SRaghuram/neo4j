@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
+import org.neo4j.cypher.internal.runtime.interpreted.commands.LiteralHelper.literal
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
@@ -33,7 +33,7 @@ class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
   test(s"concurrent slotted produce result execution should not crash") {
 
     // Given
-    val produceResults = ProduceResultSlottedPipe(sourcePipe, List(column -> Literal(42)))(Id.INVALID_ID)
+    val produceResults = ProduceResultSlottedPipe(sourcePipe, List(column -> literal(42)))(Id.INVALID_ID)
     val expected = execute(produceResults)
 
     // When

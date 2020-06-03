@@ -58,10 +58,10 @@ import org.neo4j.cypher.internal.runtime.RelationshipOperations
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.commands.LiteralHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.FakeEntityTestSupport
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.EagerAggregationPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.FilterPipe
@@ -151,7 +151,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     pipe should equal(
       LimitPipe(
         AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
-        Literal(1)
+        LiteralHelper.literal(1)
       )()
     )
   }
@@ -374,7 +374,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     pipe should equal(OptionalSlottedPipe(
       ProjectionPipe(
         ArgumentSlottedPipe(expectedSlots, Size.zero)(),
-        SlottedCommandProjection(Map(0 -> Literal(1)))
+        SlottedCommandProjection(Map(0 -> LiteralHelper.literal(1)))
       )(),
       Array(refSlot),
       expectedSlots,
@@ -515,7 +515,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     pipe should equal(SkipPipe(
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
-      commands.expressions.Literal(42)
+      LiteralHelper.literal(42)
     )())
   }
 
@@ -532,7 +532,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     pipe should equal(ApplySlottedPipe(
       NodesByLabelScanSlottedPipe("x", LazyLabel("label"), X_NODE_SLOTS, Size.zero, IndexOrderNone)(),
-      NodeIndexSeekSlottedPipe("z", labelToken, Vector(SlottedIndexedProperty(0,None)), 0, SingleQueryExpression(commands.expressions.Literal(42)), org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek,
+      NodeIndexSeekSlottedPipe("z", labelToken, Vector(SlottedIndexedProperty(0,None)), 0, SingleQueryExpression(LiteralHelper.literal(42)), org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek,
         IndexOrderNone,
         SlotConfiguration.empty
           .newLong("x", false, CTNode)
@@ -626,7 +626,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       NodesByLabelScanSlottedPipe("x", LazyLabel("label1"), lhsSlots, Size.zero, IndexOrderNone)(),
       NodesByLabelScanSlottedPipe("y", LazyLabel("label2"), rhsSlots, Size(nLongs = 1, nReferences = 1), IndexOrderNone)(),
       lhsSlots("z"),
-      commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2)))()
+      commands.expressions.ListLiteral(LiteralHelper.literal(1), LiteralHelper.literal(2)))()
     )
   }
 
@@ -688,7 +688,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
 
     // then
     pipe should equal(
-      NodeIndexSeekSlottedPipe("z", label, IndexedSeq.empty, 0, SingleQueryExpression(commands.expressions.Literal(42)), UniqueIndexSeek, IndexOrderNone,
+      NodeIndexSeekSlottedPipe("z", label, IndexedSeq.empty, 0, SingleQueryExpression(LiteralHelper.literal(42)), UniqueIndexSeek, IndexOrderNone,
         SlotConfiguration.empty.newLong("z", false, CTNode), Size.zero)()
     )
   }
@@ -710,12 +710,13 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val expectedSlots2 = SlotConfiguration.empty
       .newReference("x", xSlot.nullable, xSlot.typ)
 
+    LiteralHelper.literal(1)
     // We have to use mathPattern to ignore equality on the comparator, which does not implement equals in a sensible way.
     pipe should matchPattern {
       case SortPipe(
       UnwindSlottedPipe(
       ArgumentSlottedPipe(`expectedSlots1`, Size.zero),
-      commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2), commands.expressions.Literal(3)), 0, `expectedSlots2`
+      commands.expressions.ListLiteral(commands.expressions.Literal(_), commands.expressions.Literal(_), commands.expressions.Literal(_)), 0, `expectedSlots2`
       ), _) =>
 
     }
