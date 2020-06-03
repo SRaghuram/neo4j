@@ -47,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionWithTxStateChanges
 import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
@@ -350,6 +351,10 @@ class PipelinedAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING
 
 class PipelinedSemiApplyRewriterTest extends SemiApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSemiApplyRewriterNoFusingTest extends SemiApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// LET SEMI APPLY
+class PipelinedLetSemiApplyTest extends LetSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedLetSemiApplyNoFusingTest extends LetSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 //CONDITIONAL APPLY
 class PipelinedConditionalApplyTest extends ConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT)

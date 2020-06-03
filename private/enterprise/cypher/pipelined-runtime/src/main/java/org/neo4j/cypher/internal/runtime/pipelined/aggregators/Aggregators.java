@@ -23,4 +23,5 @@ public class Aggregators
     public static final Aggregator COLLECT = CollectAggregator$.MODULE$;
     public static final Aggregator COLLECT_ALL = CollectAllAggregator$.MODULE$;
     public static final Aggregator COLLECT_DISTINCT = CollectDistinctAggregator$.MODULE$;
+    public static final Aggregator NON_EMPTY = NonEmptyAggregator$.MODULE$;
 }
