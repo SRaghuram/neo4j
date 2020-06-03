@@ -11,7 +11,6 @@ import org.neo4j.collection.trackable.HeapTrackingArrayList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
@@ -32,9 +31,6 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           suffixComparator: Comparator[ReadableRow])
                          (val id: Id = Id.INVALID_ID) extends Operator {
 
-  private type ResultsBuffer = HeapTrackingArrayList[MorselRow]
-  private class ResultsBufferAndIndex(val buffer: ResultsBuffer, var currentIndex: Int)
-
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
@@ -47,8 +43,8 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
   private class PartialSortState(val memoryTracker: MemoryTracker) extends DataInputOperatorState[MorselData] {
     var lastSeen: MorselRow = _
-    var resultsBuffer: ResultsBuffer = HeapTrackingArrayList.newArrayList(16, memoryTracker)
-    var remainingResults: ResultsBufferAndIndex = _
+    val resultsBuffer: HeapTrackingArrayList[MorselRow] = HeapTrackingArrayList.newArrayList(16, memoryTracker)
+    var remainingResultsIndex: Int = -1
     var currentMorselHeapUsage: Long = 0
 
     // Memory for morsels is released in one go after all output rows for completed chunk have been written
@@ -80,7 +76,8 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
         tryWriteOutstandingResults(outputCursor)
       }
       taskState.lastSeen = inputCursor.snapshot()
-      taskState.resultsBuffer.add(taskState.lastSeen)
+      if (taskState.remainingResultsIndex == -1)
+        taskState.resultsBuffer.add(taskState.lastSeen)
       taskState.memoryTracker.allocateHeap(taskState.lastSeen.shallowInstanceHeapUsage)
     }
 
@@ -97,26 +94,29 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
     override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit =
       tryWriteOutstandingResults(outputCursor)
 
-    override def canContinue: Boolean = super.canContinue || taskState.remainingResults != null
+    override def canContinue: Boolean = super.canContinue || taskState.remainingResultsIndex >= 0
 
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor): Unit = {
-      while (taskState.remainingResults != null && outputCursor.onValidRow()) {
-        val resultsBufferAndIndex = taskState.remainingResults
-        if (resultsBufferAndIndex.currentIndex >= resultsBufferAndIndex.buffer.size()) {
-          taskState.remainingResults.buffer.close()
-          taskState.remainingResults = null
+      while (taskState.remainingResultsIndex >= 0 && outputCursor.onValidRow()) {
+        val idx = taskState.remainingResultsIndex
+        val buf = taskState.resultsBuffer
+        if (idx >= buf.size()) {
+          buf.clear()
+          taskState.remainingResultsIndex = -1
+          if (taskState.lastSeen != null)
+            buf.add(taskState.lastSeen)
 
           // current morsel might contain more chunks, so we don't know if it should be released just yet
           taskState.morselMemoryTracker.reset()
           if (taskState.currentMorselHeapUsage > 0)
             taskState.morselMemoryTracker.allocateHeap(taskState.currentMorselHeapUsage)
         } else {
-          val morselRow = resultsBufferAndIndex.buffer.get(resultsBufferAndIndex.currentIndex)
+          val morselRow = buf.get(idx)
           outputCursor.copyFrom(morselRow)
 
           taskState.memoryTracker.releaseHeap(morselRow.shallowInstanceHeapUsage)
-          resultsBufferAndIndex.buffer.set(resultsBufferAndIndex.currentIndex, null)
-          resultsBufferAndIndex.currentIndex += 1
+          buf.set(idx, null)
+          taskState.remainingResultsIndex += 1
           outputCursor.next()
         }
       }
@@ -129,9 +129,8 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
         buffer.sort(suffixComparator)
       }
 
-      taskState.remainingResults = new ResultsBufferAndIndex(buffer, 0)
+      taskState.remainingResultsIndex = 0
       taskState.lastSeen = null
-      taskState.resultsBuffer = HeapTrackingArrayList.newArrayList(16, taskState.memoryTracker)
     }
   }
 }
