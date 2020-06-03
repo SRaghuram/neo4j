@@ -23,7 +23,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 
 import static com.neo4j.tools.input.ConsoleUtil.staticPrompt;
@@ -44,12 +43,12 @@ public class GBPTreePlayground
     {
         this.indexFile = indexFile;
         this.layout = SimpleLongLayout.longLayout().build();
-        this.pageCache = StandalonePageCacheFactory.createPageCache( fs, createInitialisedScheduler(), PageCacheTracer.NULL );
+        this.pageCache = StandalonePageCacheFactory.createPageCache( fs, createInitialisedScheduler(), pageSize );
     }
 
     private void setupIndex()
     {
-        tree = new GBPTreeBuilder<>( pageCache, indexFile, layout ).withIndexPageSize( pageSize ).build();
+        tree = new GBPTreeBuilder<>( pageCache, indexFile, layout ).build();
     }
 
     private void run() throws InterruptedException
