@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -465,13 +466,12 @@ class CausalClusterRestEndpointsIT
     {
         try
         {
-
             var cores = cluster.getCores();
             assertThat( cores, hasSize( greaterThan( 1 ) ) );
             var leader = awaitLeader( cluster, KNOWN_DB );
             // stop all cores except the leader
-            cores.stream().filter( core -> !core.equals( leader ) ).forEach( core -> core.close() );
-            assertEventually( canVote( statusEndpoint( leader, KNOWN_DB ) ), FALSE, 1, MINUTES );
+            cores.stream().filter( core -> !core.equals( leader ) ).forEach( InProcessNeo4j::close );
+            assertEventually( canVote( statusEndpoint( leader, KNOWN_DB ) ), FALSE, 2, MINUTES );
         }
         finally
         {
