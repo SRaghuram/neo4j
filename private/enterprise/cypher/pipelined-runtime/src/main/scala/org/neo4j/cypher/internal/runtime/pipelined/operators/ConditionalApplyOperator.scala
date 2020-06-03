@@ -77,11 +77,23 @@ class ConditionalApplyOperator(val workIdentity: WorkIdentity,
 
     val morsel = inputMorsel.nextCopy
     val task =
-      if (morsel.slots eq lhsSlotConfig) new ConditionalApplyLHSTask(morsel, workIdentity, lhsSlotConfig, rhsSlotConfig)
+      if (morsel.slots eq lhsSlotConfig) new ConditionalApplyLHSTask(morsel, workIdentity, lhsSlotConfig, computeRefsToNullOnLHS())
       else if (morsel.slots eq rhsSlotConfig) new ConditionalApplyRHSTask(morsel, workIdentity, rhsSlotConfig.size())
       else throw new IllegalStateException(s"Unknown slot configuration in UnionOperator. Got: ${morsel.slots}. LHS: $lhsSlotConfig. RHS: $rhsSlotConfig")
 
     singletonIndexedSeq(task)
+  }
+
+  //This computes the reference on the RHS that are not on the lhs that needs to be nulled.
+  //NOTE: we should not include cached properties here since that will break cached property lookup
+  private def computeRefsToNullOnLHS(): Array[Int] = {
+    val refsToCopy = mutable.ArrayBuilder.make[Int]
+    rhsSlotConfig.foreachSlotAndAliasesOrdered {
+      case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) if offset >= lhsSlotConfig.size().nReferences =>
+        refsToCopy += offset
+      case _ => //Do nothing
+    }
+    refsToCopy.result()
   }
 }
 
@@ -96,10 +108,7 @@ abstract class ConditionalApplyTask(val inputMorsel: Morsel,
 class ConditionalApplyLHSTask(inputMorsel: Morsel,
                               workIdentity: WorkIdentity,
                               lhsSlotConfig: SlotConfiguration,
-                              rhsSlotConfig: SlotConfiguration) extends ConditionalApplyTask(inputMorsel, workIdentity){
-
-
-  private val refsToCopy = computeRefsToCopy()
+                              refsToNull: Array[Int]) extends ConditionalApplyTask(inputMorsel, workIdentity){
 
   override def operate(outputMorsel: Morsel,
                        state: PipelinedQueryState,
@@ -118,22 +127,12 @@ class ConditionalApplyLHSTask(inputMorsel: Morsel,
         offset += 1
       }
       var i = 0
-      while (i < refsToCopy.length) {
-        outputCursor.setRefAt(refsToCopy(i), NO_VALUE)
+      while (i < refsToNull.length) {
+        outputCursor.setRefAt(refsToNull(i), NO_VALUE)
         i += 1
       }
     }
     outputCursor.truncate()
-  }
-
-  private def computeRefsToCopy(): Array[Int] = {
-    val refsToCopy = mutable.ArrayBuilder.make[Int]
-    rhsSlotConfig.foreachSlotAndAliasesOrdered {
-      case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) if offset >= lhsSlotConfig.size().nReferences =>
-        refsToCopy += offset
-      case _ => //Do nothing
-    }
-    refsToCopy.result()
   }
 }
 
@@ -157,12 +156,12 @@ class ConditionalApplyRHSTask(inputMorsel: Morsel,
 class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
                                       override val id: Id,
                                       innermost: DelegateOperatorTaskTemplate,
-                                      lhsSize: SlotConfiguration,
-                                      rhsSize: SlotConfiguration)
+                                      lhsSlots: SlotConfiguration,
+                                      rhsSlots: SlotConfiguration)
                                      (protected val codeGen: BinaryOperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
 
-  private val lhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("lhsSlotConfig"), lhsSize)
-  private val rhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("rhsSlotConfig"), rhsSize)
+  private val lhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("lhsSlotConfig"), lhsSlots)
+  private val rhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("rhsSlotConfig"), rhsSlots)
 
   override protected val isHead: Boolean = true
 
@@ -194,8 +193,8 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
   override protected def genOperateHead: IntermediateRepresentation = {
     val inputSlotConfig = invoke(INPUT_MORSEL, method[Morsel, SlotConfiguration]("slots"))
     val (refsToCopy, cachedPropertiesToCopy) = computeWhatToCopy()
-    val (refsToCopyLhs, refsToCopyRhs) = refsToCopy.partition(_ < lhsSize.size().nReferences)
-    val (cachedPropertiesToCopyLhs, _) = cachedPropertiesToCopy.partition(_ < lhsSize.size().nReferences)
+    val (refsToCopyLhs, refsToCopyRhs) = refsToCopy.partition(_ < lhsSlots.size().nReferences)
+    val (cachedPropertiesToCopyLhs, _) = cachedPropertiesToCopy.partition(_ < lhsSlots.size().nReferences)
     block(
       declare[Boolean](codeGen.fromLHSName),
       ifElse(equal(inputSlotConfig, getStatic(lhsSlotsConfigsFused))) {
@@ -213,16 +212,16 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
           innermost.resetBelowLimitAndAdvanceToNextArgument,
           ifElse(not(load(codeGen.fromLHSName))) {
             block(
-              block((0 until rhsSize.size().nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
+              block((0 until rhsSlots.size().nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
               block(refsToCopy.map(offset => codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, INPUT_CURSOR))): _*),
               block(cachedPropertiesToCopy.map(offset => codeGen.setCachedPropertyAt(offset, codeGen.getCachedPropertyFromExecutionContext(offset, INPUT_CURSOR))): _*)
             )
           } {
             block(
-              block((0 until lhsSize.size().nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
+              block((0 until lhsSlots.size().nLongs).map(offset => codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))): _*),
               block(refsToCopyLhs.map(offset => codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, INPUT_CURSOR))): _*),
               block(cachedPropertiesToCopyLhs.map(offset => codeGen.setRefAt(offset, codeGen.getCachedPropertyFromExecutionContext(offset, INPUT_CURSOR))): _*),
-              block((lhsSize.size().nLongs until rhsSize.size().nLongs).map(offset => codeGen.setLongAt(offset, constant(-1L))): _*),
+              block((lhsSlots.size().nLongs until rhsSlots.size().nLongs).map(offset => codeGen.setLongAt(offset, constant(-1L))): _*),
               block(refsToCopyRhs.map(offset => codeGen.setRefAt(offset, noValue)): _*)
             )
           },
@@ -256,11 +255,11 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
   private def computeWhatToCopy(): (Array[Int], Array[Int]) = {
     val refsToCopy = mutable.ArrayBuilder.make[Int]
     val cachedPropertiesToCopy = mutable.ArrayBuilder.make[Int]
-    rhsSize.foreachSlotAndAliasesOrdered {
+    rhsSlots.foreachSlotAndAliasesOrdered {
       case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) =>
         refsToCopy += offset
       case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), _, _) =>
-        val offset = rhsSize.getCachedPropertyOffsetFor(cnp)
+        val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
         cachedPropertiesToCopy += offset
       case _ =>
     }
