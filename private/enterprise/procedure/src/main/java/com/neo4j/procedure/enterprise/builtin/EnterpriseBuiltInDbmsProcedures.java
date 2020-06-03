@@ -1078,7 +1078,7 @@ public class EnterpriseBuiltInDbmsProcedures
     public static class MemoryPoolResult
     {
         private static final String UNBOUNDED = "Unbounded";
-        public final String group;
+        public final String pool;
         public final String databaseName;
         public final String heapMemoryUsed;
         public final String heapMemoryUsedBytes;
@@ -1091,7 +1091,7 @@ public class EnterpriseBuiltInDbmsProcedures
 
         public MemoryPoolResult( ScopedMemoryPool memoryPool )
         {
-            this.group = memoryPool.group().getName();
+            this.pool = memoryPool.group().getName();
             this.databaseName = memoryPool.databaseName();
             this.heapMemoryUsed = bytesToString( memoryPool.usedHeap() );
             this.heapMemoryUsedBytes = valueOf( memoryPool.usedHeap() );
