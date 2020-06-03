@@ -67,6 +67,21 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.await() shouldBe false
     x.hasEnded shouldBe true
+    x.hasSucceeded shouldBe true
+  }
+
+  test("hasSucceeded should be true if cancelled after finished") {
+    val x = newTracker()
+
+    // when
+    x.increment()
+    x.decrement()
+    x.await()
+    x.cancel()
+
+    // then
+    x.hasEnded shouldBe true
+    x.hasSucceeded shouldBe true
   }
 
   test("should behave correctly on query cancel") {
@@ -93,6 +108,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.await() shouldBe false
     x.hasEnded shouldBe true
+    x.hasSucceeded shouldBe false
   }
 
   test("should behave correctly if query has no demand") {
@@ -110,6 +126,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(transaction, never()).thawLocks()
     x.await() shouldBe true
     x.hasEnded shouldBe false
+    x.hasSucceeded shouldBe false
   }
 
   test("should behave correctly if query has failed") {
@@ -126,6 +143,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(tracer, never()).stopQuery()
     verify(transaction, never()).thawLocks()
     x.hasEnded shouldBe false
+    x.hasSucceeded shouldBe false
 
     // when
     x.decrement()
@@ -136,6 +154,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(tracer).stopQuery()
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.hasEnded shouldBe true
+    x.hasSucceeded shouldBe false
     intercept[IllegalArgumentException] {
       x.await()
     }
@@ -156,6 +175,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(tracer).stopQuery()
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.hasEnded shouldBe true
+    x.hasSucceeded shouldBe false
     intercept[ReferenceCountingException] {
       x.await()
     }
@@ -168,6 +188,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.increment()
 
     // then
-    x.hasEnded should be(false)
+    x.hasEnded shouldBe false
+    x.hasSucceeded shouldBe false
   }
 }

@@ -121,6 +121,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   private var demand = 0L
   private var cancelled = false
   private var _hasEnded = false
+  private var _hasSucceeded = false
 
   override def increment(): Unit = {
     count += 1
@@ -169,6 +170,9 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
         }
         tracer.stopQuery()
         _hasEnded = true
+        if (!cancelled && throwable == null) {
+          _hasSucceeded = true
+        }
       }
     }
   }
@@ -193,7 +197,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def hasEnded: Boolean = _hasEnded
 
-  override def hasSucceeded: Boolean = _hasEnded && !cancelled && throwable == null
+  override def hasSucceeded: Boolean = _hasSucceeded
 
   // -------- Subscription Methods --------
 
@@ -248,6 +252,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   @volatile private var _cancelledOrFailed = false
   @volatile private var _hasEnded = false
+  @volatile private var _hasSucceeded = false
 
   // Requested number of rows
   private val requested = new AtomicLong(0)
@@ -295,7 +300,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(newCount: Long): Unit = {
     if (newCount <= 0) {
       if (newCount < 0) {
-        errors.add(new ReferenceCountingException("Cannot count below 0, but got count " + newCount))
+        error(new ReferenceCountingException("Cannot count below 0, but got count " + newCount))
       }
       if (!_hasEnded) {
         reportQueryEndToSubscriber()
@@ -303,6 +308,9 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
         // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
         _hasEnded = true
+        if (!_cancelledOrFailed) {
+          _hasSucceeded = true
+        }
 
         waiters.forEach(waitState => waitState.latch.countDown())
         waiters.clear()
@@ -318,7 +326,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       case _: LocksNotFrozenException =>
       // locks are already thawed, nothing more to do
       case thawException: Exception => // unexpected, stash and continue
-        errors.add(thawException)
+        error(thawException)
     }
   }
 
@@ -333,7 +341,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       }
     } catch {
       case reportException: Exception =>
-        errors.add(reportException)
+        error(reportException)
     }
   }
 
@@ -344,7 +352,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def hasEnded: Boolean = _hasEnded
 
-  override def hasSucceeded: Boolean = _hasEnded && !_cancelledOrFailed
+  override def hasSucceeded: Boolean = _hasSucceeded
 
   // -------- Flow control methods --------
 
