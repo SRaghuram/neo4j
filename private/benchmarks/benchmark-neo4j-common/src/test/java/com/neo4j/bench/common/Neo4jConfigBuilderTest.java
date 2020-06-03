@@ -41,7 +41,8 @@ public class Neo4jConfigBuilderTest
     {
         assertSerialization( Neo4jConfigBuilder.withDefaults().build() );
         assertSerialization( Neo4jConfigBuilder.empty().setBoltUri( "http://localhost:7678" ).build() );
-        assertSerialization( Neo4jConfigBuilder.empty().setDense( false ).setTransactionMemory( "native" ).build() );
+        assertSerialization( Neo4jConfigBuilder.empty().setDense( false ).setTransactionMemory( MemorySetting.DEFAULT.name() ).build() );
+        assertSerialization( Neo4jConfigBuilder.empty().setTransactionMemory( MemorySetting.OFF_HEAP.name() ).build() );
         assertSerialization( Neo4jConfigBuilder.empty().addJvmArgs( asList( "-Xmx4g", "-Xms4g" ) ).build() );
         assertSerialization( Neo4jConfigBuilder.fromFile( defaultNeo4jConfigFile ).build() );
     }

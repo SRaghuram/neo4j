@@ -133,20 +133,17 @@ public class Neo4jConfigBuilder
 
     public Neo4jConfigBuilder setTransactionMemory( String setting )
     {
-        String translatedValue;
-        if ( setting.equals( "on_heap" ) )
+        switch ( MemorySetting.getSetting( setting ) )
         {
-            translatedValue = GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name();
+        case OFF_HEAP:
+            return withSetting( tx_state_memory_allocation, GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name() );
+        case ON_HEAP:
+            return withSetting( tx_state_memory_allocation, GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name() );
+        case DEFAULT:
+            return this;
+        default:
+            throw new IllegalStateException( "Unexpected value: " + setting );
         }
-        else if ( setting.equals( "off_heap" ) )
-        {
-            translatedValue = GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
-        }
-        else
-        {
-            translatedValue = GraphDatabaseSettings.tx_state_memory_allocation.defaultValue().name();
-        }
-        return withSetting( tx_state_memory_allocation, translatedValue );
     }
 
     public Neo4jConfigBuilder setBoltUri( String boltUri )
