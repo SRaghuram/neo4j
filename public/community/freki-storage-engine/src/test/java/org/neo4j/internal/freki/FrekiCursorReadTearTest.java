@@ -19,10 +19,20 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.function.Executable;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.stream.LongStream;
 
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -290,6 +300,186 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
 
         assertThat( nodeCursorAtV1.labels() ).hasSize( 400 );
         assertThat( nodeCursorAtV2.labels() ).hasSize( 400 );
+    }
+
+    @TestFactory
+    Collection<DynamicTest> permutationTestShouldReadConsistentDataWhenMovingParts()
+    {
+        List<DynamicTest> tests = new ArrayList<>();
+        //part  / -> X1
+        //part  / -> XL
+        //part X1 -> XL
+        //part XL -> X1
+        //part X1 -> /
+        //part XL -> /
+        //part XL1 -> XL2
+        //part XL2 -> XL1
+        //parts {labels/properties/rel}
+
+        int[] sizes = new int[]{0,1,2,6};
+        for ( int labelsSizeBefore : sizes )
+        {
+            for ( int labelsSizeAfter : sizes )
+            {
+                for ( int propertiesSizeBefore : sizes )
+                {
+                    for ( int propertiesSizeAfter : sizes )
+                    {
+                        if ( labelsSizeBefore != labelsSizeAfter || propertiesSizeBefore != propertiesSizeAfter )
+                        {
+                            tests.add( createPermutation( labelsSizeBefore, labelsSizeAfter, propertiesSizeBefore, propertiesSizeAfter ) );
+                        }
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
+    private DynamicTest createPermutation( int labelsSizeBefore, int labelsSizeAfter, int propertiesSizeBefore, int propertiesSizeAfter )
+    {
+        Executable test = new Executable()
+        {
+            private final int[] NO_LABELS = new int[0];
+
+            @Override
+            public void execute()
+            {
+                int x1Size = mainStores[0].recordDataSize() * 2 / 3;
+                int[] labelsBefore = intArray( 0, x1Size * labelsSizeBefore );
+                int[] labelsAfter = labelsSizeAfter > labelsSizeBefore ? intArray( x1Size * labelsSizeBefore, x1Size * labelsSizeAfter ) : NO_LABELS;
+                int[] labelsAfterRemove =
+                        labelsSizeAfter < labelsSizeBefore ? labelsSizeAfter == 0 ? labelsBefore : intArray( 0, x1Size * (labelsSizeBefore - labelsSizeAfter) )
+                                                           : NO_LABELS;
+
+                MutableIntObjectMap<Value> propertiesBefore = IntObjectMaps.mutable.empty();
+                MutableIntObjectMap<Value> propertiesAfter = IntObjectMaps.mutable.empty();
+                MutableIntSet propertiesAfterRemove = IntSets.mutable.empty();
+                Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+                int sizePerProp = 10;
+                int nextPropKey = 0;
+                for ( int i = 0; i < x1Size * propertiesSizeBefore / sizePerProp; i++ )
+                {
+                    propertiesBefore.put( nextPropKey++, prop );
+                }
+                if ( propertiesSizeAfter > propertiesSizeBefore )
+                {
+                    for ( int i = 0; i < x1Size * (propertiesSizeAfter - propertiesSizeBefore) / sizePerProp; i++ )
+                    {
+                        propertiesAfter.put( nextPropKey++, prop );
+                    }
+                }
+                else if ( propertiesSizeAfter < propertiesSizeBefore )
+                {
+                    if ( propertiesSizeAfter == 0 )
+                    {
+                        propertiesAfterRemove = propertiesBefore.keySet();
+                    }
+                    else
+                    {
+                        propertiesAfterRemove.addAll( intArray( 0, x1Size * (propertiesSizeBefore - propertiesSizeAfter) / sizePerProp ) );
+                    }
+                }
+
+                FrekiPropertyCursor propertyCursorAtV1 = null;
+                FrekiPropertyCursor propertyCursorAtV2 = null;
+
+                try
+                {
+
+                    Node node = node();
+                    node.labels( labelsBefore );
+                    node.properties( propertiesBefore );
+                    FrekiNodeCursor nodeCursorAtV1 = node.storeAndPlaceNodeCursorAt();
+
+                    node = existingNode( node.id() );
+                    node.removeLabels( labelsAfterRemove );
+                    node.labels( labelsAfter );
+                    node.properties( propertiesAfter );
+                    propertiesAfterRemove.forEach( node::removeProperty );
+                    FrekiNodeCursor nodeCursorAtV2 = node.storeAndPlaceNodeCursorAt();
+
+                    propertyCursorAtV1 = cursorFactory.allocatePropertyCursor( NULL, INSTANCE );
+                    propertyCursorAtV2 = cursorFactory.allocatePropertyCursor( NULL, INSTANCE );
+                    nodeCursorAtV1.properties( propertyCursorAtV1 );
+                    nodeCursorAtV2.properties( propertyCursorAtV2 );
+
+                    // x1 + x8(L,P)   ->   x1 + x8(L) + x8(P)
+
+                    long[] expectedLabels =
+                            Arrays.stream( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) ).asLongStream().toArray();
+                    long[] acceptedBefore = Arrays.stream( labelsBefore ).asLongStream().toArray();
+
+                    long[] v1Labels = nodeCursorAtV1.labels();
+                    assertThat( v1Labels ).isSorted();
+                    assertThat( v1Labels ).doesNotHaveDuplicates();
+                    assertThat( v1Labels ).satisfiesAnyOf(
+                            l -> assertThat( l ).containsExactly( expectedLabels ),
+                            l -> assertThat( l ).containsExactly( acceptedBefore ) ); //either before or after state is acceptable
+
+                    long[] v2Labels = nodeCursorAtV2.labels();
+                    assertThat( v1Labels ).isSorted();
+                    assertThat( v1Labels ).doesNotHaveDuplicates();
+                    assertThat( v2Labels ).containsExactly( expectedLabels );
+
+                    MutableIntSet v1Keys = IntSets.mutable.empty();
+                    while ( propertyCursorAtV1.next() )
+                    {
+                        assertThat( v1Keys.add( propertyCursorAtV1.propertyKey() ) ).isTrue();
+                    }
+                    MutableIntSet v2Keys = IntSets.mutable.empty();
+                    while ( propertyCursorAtV2.next() )
+                    {
+                        assertThat( v2Keys.add( propertyCursorAtV2.propertyKey() ) ).isTrue();
+                    }
+
+                    MutableIntSet expectedKeys = IntSets.mutable.empty();
+                    expectedKeys.addAll( propertiesBefore.keySet() );
+                    expectedKeys.addAll( propertiesAfter.keySet() );
+                    expectedKeys.removeAll( propertiesAfterRemove );
+                    assertThat( v2Keys ).isEqualTo( expectedKeys );
+                    assertThat( v1Keys ).satisfiesAnyOf(
+                            s -> assertThat( s ).isEqualTo( expectedKeys ),
+                            s -> assertThat( s ).isEqualTo( propertiesBefore.keySet() ) ); //either before or after state is acceptable
+                }
+                finally
+                {
+                    if ( propertyCursorAtV1 != null )
+                    {
+                        propertyCursorAtV1.close();
+                    }
+                    if ( propertyCursorAtV2 != null )
+                    {
+                        propertyCursorAtV2.close();
+                    }
+                }
+            }
+
+            @Override
+            public String toString()
+            {
+                return String.format( "Labels %s->%s : Properties %s->%s",
+                        sizeToRec( labelsSizeBefore ), sizeToRec( labelsSizeAfter ), sizeToRec( propertiesSizeBefore ), sizeToRec( propertiesSizeAfter ) );
+            }
+
+            String sizeToRec( int size )
+            {
+                switch ( size )
+                {
+                case 0:
+                    return "/";
+                case 1:
+                    return "X1";
+                case 2:
+                    return "XL₁";
+                case 6:
+                    return "XL₂";
+                default:
+                    return "Unknown";
+                }
+            }
+        };
+        return DynamicTest.dynamicTest( test.toString(), test );
     }
 
     private int[] intArray( int from, int to )
