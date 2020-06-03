@@ -111,6 +111,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyA
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.util.Foldable
+import org.neo4j.cypher.internal.util.Foldable.SkipChildren
+import org.neo4j.cypher.internal.util.Foldable.TraverseChildren
 import org.neo4j.cypher.internal.util.UnNamedNameGenerator
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTAny
@@ -332,20 +334,20 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       // Logical plans
       //-----------------------------------------------------
       case otherPlan: LogicalPlan if otherPlan.id != planId =>
-        acc: Accumulator => (acc, DO_NOT_TRAVERSE_INTO_CHILDREN) // Do not traverse the logical plan tree! We are only looking at the given lp
+        acc: Accumulator => SkipChildren(acc) // Do not traverse the logical plan tree! We are only looking at the given lp
 
       case ValueHashJoin(_, _, Equals(_, rhsExpression)) if shouldAllocateLhs =>
         _: Accumulator =>
-          (Accumulator(doNotTraverseExpression = Some(rhsExpression)), TRAVERSE_INTO_CHILDREN) // Only look at lhsExpression
+          TraverseChildren(Accumulator(doNotTraverseExpression = Some(rhsExpression))) // Only look at lhsExpression
 
       case ValueHashJoin(_, _, Equals(lhsExpression, _)) if !shouldAllocateLhs =>
         _: Accumulator =>
-          (Accumulator(doNotTraverseExpression = Some(lhsExpression)), TRAVERSE_INTO_CHILDREN) // Only look at rhsExpression
+          TraverseChildren(Accumulator(doNotTraverseExpression = Some(lhsExpression))) // Only look at rhsExpression
 
-      case FindShortestPaths(_, shortestPathPattern, predicates, _, _) =>
+      case FindShortestPaths(_, shortestPathPattern, _, _, _) =>
         acc: Accumulator => {
           allocateShortestPathPattern(shortestPathPattern, slots, nullable)
-          (acc, TRAVERSE_INTO_CHILDREN)
+          TraverseChildren(acc)
         }
 
       case ProjectEndpoints(_, _, start, startInScope, end, endInScope, _, _, _) =>
@@ -354,13 +356,13 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             slots.newLong(start, nullable, CTNode)
           if (!endInScope)
             slots.newLong(end, nullable, CTNode)
-          (acc, TRAVERSE_INTO_CHILDREN)
+          TraverseChildren(acc)
         }
 
       // Only allocate expression on the LHS for these other two-child plans (which have expressions)
       case _: ApplyPlan if !shouldAllocateLhs =>
         acc: Accumulator =>
-          (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
+          SkipChildren(acc)
 
       //-----------------------------------------------------
       // Expressions
@@ -368,7 +370,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case e: NestedPlanExpression =>
         acc: Accumulator => {
           if (acc.doNotTraverseExpression.contains(e))
-            (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
+            SkipChildren(acc)
           else {
             breakingPolicy.onNestedPlanBreak()
             val argumentSlotConfiguration = slots.copy()
@@ -394,21 +396,21 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
             // Since we did allocation for nested plan and projection explicitly we do not need to traverse into children
             // The inner slot configuration does not need to affect the accumulated result of the outer plan
-            (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
+            SkipChildren(acc)
           }
         }
 
       case e: Expression =>
         acc: Accumulator => {
           if (acc.doNotTraverseExpression.contains(e)) {
-            (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
+            SkipChildren(acc)
           } else {
             e match {
               case c: CachedProperty =>
                 slots.newCachedProperty(c)
               case _ => // Do nothing
             }
-            (acc, TRAVERSE_INTO_CHILDREN)
+           TraverseChildren(acc)
           }
         }
     }
