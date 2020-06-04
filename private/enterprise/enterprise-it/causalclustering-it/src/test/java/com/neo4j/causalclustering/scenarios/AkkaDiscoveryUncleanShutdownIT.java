@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -35,13 +37,16 @@ import static com.neo4j.configuration.CausalClusteringSettings.minimum_core_clus
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ClusterExtension
 class AkkaDiscoveryUncleanShutdownIT
 {
     // May be possible to get rid of this with a broadcast + ack instead of a wait for stability
-    private static final int SLEEP_BETWEEN_SHUTDOWN_MILLIS = 10 * 1000;
+    private static final Duration INTERVAL_BETWEEN_SHUTDOWN_CALLS = Duration.ofSeconds( 60 );
+    private static final Duration MIN_INTERVAL_BETWEEN_SHUTDOWNS = Duration.ofSeconds( 20 );
+    private static final Duration MAX_INTERVAL_BETWEEN_SHUTDOWNS = Duration.ofSeconds( 30 );
 
     private static final int CORES = 3;
 
@@ -58,9 +63,8 @@ class AkkaDiscoveryUncleanShutdownIT
     {
         startCluster( minimumCoreClusterSizeAtRuntime );
 
-        shutdownCore( 0 );
-        Thread.sleep( SLEEP_BETWEEN_SHUTDOWN_MILLIS );
-        CoreClusterMember toRestart = shutdownCore( 1 );
+        shutdownCoreAndWaitForRemoval( 0 );
+        CoreClusterMember toRestart = shutdownCoreAndWaitForRemoval( 1 );
         startCore( toRestart );
     }
 
@@ -72,10 +76,10 @@ class AkkaDiscoveryUncleanShutdownIT
 
         startCluster( 3 );
 
-        CoreClusterMember toRestart = shutdownCore( 0 );
-        Thread.sleep( SLEEP_BETWEEN_SHUTDOWN_MILLIS );
-        shutdownCore( 1 );
-        Thread.sleep( SLEEP_BETWEEN_SHUTDOWN_MILLIS );
+        CoreClusterMember toRestart = shutdownCoreAndWaitForRemoval( 0 );
+
+        shutdownCoreAndWaitForRemoval( 1 );
+
         startCore( toRestart );
     }
 
@@ -86,10 +90,13 @@ class AkkaDiscoveryUncleanShutdownIT
         cluster.start();
 
         runningCores = IntStream.range( 0, CORES )
-                .mapToObj( cluster::getCoreMemberById )
-                .collect( toList() );
+                                .mapToObj( cluster::getCoreMemberById )
+                                .collect( toList() );
         removedCoreIds = new HashSet<>();
 
+        // sleep to allow cluster to stabilise, elect leaders etc.
+        // TODO: may be possible to remove this with better assertions on cluster state
+        Thread.sleep( MIN_INTERVAL_BETWEEN_SHUTDOWNS.toMillis() );
     }
 
     private void startCore( CoreClusterMember newCore )
@@ -99,6 +106,29 @@ class AkkaDiscoveryUncleanShutdownIT
         removedCoreIds.remove( newCore.serverId() );
 
         assertOverviews();
+    }
+
+    private CoreClusterMember shutdownCoreAndWaitForRemoval( int memberId ) throws InterruptedException
+    {
+        var deadline = Instant.now().plus( INTERVAL_BETWEEN_SHUTDOWN_CALLS );
+        var member = shutdownCore( memberId );
+        assertThat( Instant.now() ).isBefore( deadline ).as( "Core must shut down within the time provided" );
+
+        var remainingTime = Duration.between( Instant.now(), deadline );
+        if ( remainingTime.compareTo( MIN_INTERVAL_BETWEEN_SHUTDOWNS ) < 0 )
+        {
+            Thread.sleep( MIN_INTERVAL_BETWEEN_SHUTDOWNS.toMillis() );
+        }
+        else if ( remainingTime.compareTo( MAX_INTERVAL_BETWEEN_SHUTDOWNS ) > 0 )
+        {
+            Thread.sleep( MAX_INTERVAL_BETWEEN_SHUTDOWNS.toMillis() );
+        }
+        else
+        {
+            Thread.sleep( remainingTime.toMillis() );
+        }
+
+        return member;
     }
 
     private CoreClusterMember shutdownCore( int memberId )
