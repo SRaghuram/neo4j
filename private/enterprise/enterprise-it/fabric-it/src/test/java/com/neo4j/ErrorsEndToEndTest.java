@@ -88,6 +88,15 @@ class ErrorsEndToEndTest
     }
 
     @Test
+    void testUseErrorInEmbeddedApi()
+    {
+        var err = assertThrows( Exception.class, () -> testServer.getDbms()
+                                                                 .database( "neo4j" )
+                                                                 .executeTransactionally( "USE foo RETURN 1" ) );
+        assertThat( err.getMessage() ).contains( "not available in embedded or http sessions" );
+    }
+
+    @Test
     void testParsingError()
     {
         var e = run( "Some Garbage"  );

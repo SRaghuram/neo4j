@@ -164,6 +164,11 @@ public class TestServer implements AutoCloseable
         return (GraphDatabaseFacade) dbms.database( name );
     }
 
+    public DatabaseManagementService getDbms()
+    {
+        return dbms;
+    }
+
     public Config getConfig()
     {
         return config;

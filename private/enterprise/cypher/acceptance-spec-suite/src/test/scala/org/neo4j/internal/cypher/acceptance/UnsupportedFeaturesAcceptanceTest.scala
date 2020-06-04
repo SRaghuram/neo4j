@@ -18,7 +18,7 @@ class UnsupportedFeaturesAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("use graph") {
     val query = "USE GRAPH foo.bar MATCH (a)-->() RETURN a"
-    failWithError(Configs.All, query, List("The `USE GRAPH` clause is not available in this implementation of Cypher due to lack of support for USE graph selector."))
+    failWithError(Configs.All, query, List("The USE clause is not available in embedded or http sessions. Try running the query using a Neo4j driver."))
   }
 
   test("return graph") {
