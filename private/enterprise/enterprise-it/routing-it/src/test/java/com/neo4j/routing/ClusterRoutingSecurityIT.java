@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.v41.messaging.RoutingContext;
@@ -53,6 +54,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
@@ -88,6 +90,8 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
     private static Driver readReplicaDriver;
 
     private static Driver adminDriver;
+
+    private static List<Driver> adminDrivers;
 
     private static List<Bookmark> bookmarks = new ArrayList<>();
 
@@ -141,7 +145,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         var driverWithDefaultNeo4jPassword = driver( systemLeader.directURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
         runAdminCommand( driverWithDefaultNeo4jPassword, "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO '1234'" );
 
-        adminDriver = driver( systemLeader.directURI(), AuthTokens.basic( "neo4j", "1234" ) );
+        adminDriver = adminDriver( systemLeader.directURI() );
         runAdminCommand( "CREATE USER myUser SET PASSWORD 'hello' CHANGE NOT REQUIRED" );
         runAdminCommand( "CREATE DATABASE foo" );
 
@@ -155,6 +159,14 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
         var fooFollower = getFollower( cluster, fooLeader );
         fooFollowerDriver = coreDrivers.get( fooFollower.serverId() );
+
+        List<String> allUris = new ArrayList<>();
+        cluster.coreMembers().forEach( member -> allUris.add( member.directURI() ) );
+        cluster.readReplicas().forEach( member -> allUris.add( member.directURI() ) );
+
+        adminDrivers = allUris.stream()
+                              .map( ClusterRoutingSecurityIT::adminDriver )
+                              .collect( Collectors.toList() );
     }
 
     @BeforeEach
@@ -166,6 +178,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
         runAdminCommand( "CREATE ROLE myRole" );
         runAdminCommand( "GRANT ROLE myRole TO myUser" );
+        invalidateAuthCaches();
         super.beforeEach( routingContext, cluster, new ArrayList<>( coreDrivers.values() ), readReplicaDriver );
     }
 
@@ -241,6 +254,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
     void doTestPermissions( Driver driver )
     {
         runAdminCommand( "REVOKE ROLE admin FROM myUser" );
+        invalidateAuthCaches();
 
         var query = joinAsLines(
                 "USE foo",
@@ -253,16 +267,19 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 .withMessageContaining( "Database access is not allowed for user 'myUser' with roles" );
 
         runAdminCommand( "GRANT ACCESS ON DATABASE * TO myRole" );
+        invalidateAuthCaches();
         // myUser can access the database now
         runQuery( driver, query, 0 );
 
         runAdminCommand( "GRANT MATCH {*} ON GRAPH * TO myRole" );
         runAdminCommand( "GRANT CREATE NEW PROPERTY NAME ON DATABASE * TO myRole" );
         runAdminCommand( "GRANT WRITE ON GRAPH * TO myRole" );
+        invalidateAuthCaches();
         // myUser can read the 2 nodes in the DB now
         runQuery( driver, query, 2 );
 
         runAdminCommand( "REVOKE MATCH {*} ON GRAPH * FROM myRole" );
+        invalidateAuthCaches();
         runQuery( driver, query, 0 );
     }
 
@@ -306,6 +323,29 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
     static Driver driver( String uri )
     {
         return driver( uri, AuthTokens.basic( "myUser", "hello" ) );
+    }
+
+    static Driver adminDriver( String uri )
+    {
+        return driver( uri, AuthTokens.basic( "neo4j", "1234" ) );
+    }
+
+    private void invalidateAuthCaches()
+    {
+        when( routingContext.isServerRoutingEnabled() ).thenReturn( false );
+        try
+        {
+            // Principal propagation during server side routing is quite complex,
+            // so better play it safe and invalidate caches in the entire cluster
+            // ( As opposed to trying to figure out where the caches need
+            // to be invalidated for each scenario. Especially if flakiness
+            // is the result of getting it wrong )
+            adminDrivers.forEach( driver -> runAdminCommand( driver, "CALL dbms.security.clearAuthCache()" ) );
+        }
+        finally
+        {
+            when( routingContext.isServerRoutingEnabled() ).thenReturn( true );
+        }
     }
 
     private static void installKeyToInstance( File homeDir, int keyId ) throws IOException
