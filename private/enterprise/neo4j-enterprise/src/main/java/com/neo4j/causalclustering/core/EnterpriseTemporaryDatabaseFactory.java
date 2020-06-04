@@ -68,10 +68,11 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
 
         // We start the temp database in single instance mode but don't want the cluster-incompatible upgrade to happen
         managementServiceBuilder.setConfig( GraphDatabaseSettings.allow_single_automatic_upgrade, false );
-        if ( originalConfig.isExplicitlySet( GraphDatabaseSettings.system_init_file ) )
+        if ( originalConfig.isExplicitlySet( GraphDatabaseInternalSettings.system_init_file ) )
         {
             // Read custom initialization file from outer dbms
-            managementServiceBuilder.setConfig( GraphDatabaseSettings.system_init_file, originalConfig.get( GraphDatabaseSettings.system_init_file ) );
+            managementServiceBuilder
+                    .setConfig( GraphDatabaseInternalSettings.system_init_file, originalConfig.get( GraphDatabaseInternalSettings.system_init_file ) );
         }
         // Log security initialization to outer dbms log file
         managementServiceBuilder.setConfig( SecuritySettings.security_log_filename, originalConfig.get( SecuritySettings.security_log_filename ) );

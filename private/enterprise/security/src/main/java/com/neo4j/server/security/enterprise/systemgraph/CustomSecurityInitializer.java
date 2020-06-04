@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -31,7 +31,7 @@ public class CustomSecurityInitializer
 
     public void initialize( Transaction tx ) throws IOException
     {
-        if ( config.isExplicitlySet( GraphDatabaseSettings.system_init_file ) )
+        if ( config.isExplicitlySet( GraphDatabaseInternalSettings.system_init_file ) )
         {
             doCustomSecurityInitialization( tx );
         }
@@ -40,7 +40,7 @@ public class CustomSecurityInitializer
     private void doCustomSecurityInitialization( Transaction tx ) throws IOException
     {
         // this is first startup and custom initialization specified
-        File initFile = config.get( GraphDatabaseSettings.system_init_file ).toFile();
+        File initFile = config.get( GraphDatabaseInternalSettings.system_init_file ).toFile();
         BufferedReader reader = new BufferedReader( new FileReader( initFile ) );
         String[] commands = reader.lines().filter( line -> !line.matches( "^\\s*//" ) ).collect( Collectors.joining( "\n" ) ).split( ";\\s*\n" );
         reader.close();

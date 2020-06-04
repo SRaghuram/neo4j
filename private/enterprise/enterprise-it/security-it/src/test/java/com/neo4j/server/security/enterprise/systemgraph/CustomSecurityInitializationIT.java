@@ -35,6 +35,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -105,7 +106,7 @@ class CustomSecurityInitializationIT
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -130,7 +131,7 @@ class CustomSecurityInitializationIT
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 //.impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -154,7 +155,7 @@ class CustomSecurityInitializationIT
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
         TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE );
         assertThrows( Exception.class, () -> dbms = builder.build() );
 
@@ -181,7 +182,7 @@ class CustomSecurityInitializationIT
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
                 .build();
 
@@ -227,7 +228,7 @@ class CustomSecurityInitializationIT
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -246,7 +247,7 @@ class CustomSecurityInitializationIT
                 new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                         .impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                        .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) );
+                        .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) );
         Exception exception = assertThrows( Exception.class, () -> dbms = builder.build() );
 
         assertTrue( isFileNotFoundException( exception ) );
@@ -261,7 +262,7 @@ class CustomSecurityInitializationIT
                 new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                         .impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                        .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) );
+                        .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) );
         Exception exception = assertThrows( Exception.class, () -> dbms = builder.build() );
         assertThat( exception.getCause().getMessage(), containsString( "Invalid input '('" ) );
     }
@@ -274,7 +275,7 @@ class CustomSecurityInitializationIT
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
+                .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -292,7 +293,7 @@ class CustomSecurityInitializationIT
     {
         var clusterConfig = ClusterConfig.clusterConfig()
                 .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, authEnabled )
-                .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
+                .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                 .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
@@ -319,7 +320,7 @@ class CustomSecurityInitializationIT
         users.add( "neo4j" );
         var clusterConfig = ClusterConfig.clusterConfig()
                 .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
+                .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                 .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
@@ -347,7 +348,7 @@ class CustomSecurityInitializationIT
         TreeSet<String> users = new TreeSet<>();
         users.add( "neo4j" );
         var clusterConfig = ClusterConfig.clusterConfig().withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" ).withSharedCoreParam(
-                GraphDatabaseSettings.system_init_file, INIT_FILENAME ).withNumberOfCoreMembers( 3 );
+                GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME ).withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
@@ -384,7 +385,7 @@ class CustomSecurityInitializationIT
     {
         var clusterConfig = ClusterConfig.clusterConfig()
                                          .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
+                                         .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
@@ -412,7 +413,7 @@ class CustomSecurityInitializationIT
     {
         var clusterConfig = ClusterConfig.clusterConfig()
                                          .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
+                                         .withSharedCoreParam( GraphDatabaseInternalSettings.system_init_file, INIT_FILENAME )
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         Exception exception = assertThrows( Exception.class, () -> cluster.start() );
