@@ -122,42 +122,47 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
     try {
       // Role with explicit privileges to read everything in the graph
-      systemDb().executeTransactionally("CREATE ROLE WhiteRole IF NOT EXISTS")
-      systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO WhiteRole")
+      systemDb().executeTransactionally("CREATE ROLE RoleWithGrants IF NOT EXISTS")
+      systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO RoleWithGrants")
       labels.foreach { label =>
-        systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * NODES ${label.name()} TO WhiteRole")
-        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES ${label.name()} TO WhiteRole"))
+        systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
+        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES ${label.name()} TO RoleWithGrants"))
       }
       if (labels.isEmpty) {
-        systemDb().executeTransactionally("GRANT TRAVERSE ON GRAPH * NODES * TO WhiteRole")
-        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES * TO WhiteRole"))
+        systemDb().executeTransactionally("GRANT TRAVERSE ON GRAPH * NODES * TO RoleWithGrants")
+        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES * TO RoleWithGrants"))
         if (nodeProperties.isEmpty) {
-          nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES * TO WhiteRole"))
+          nodeProperties.foreach(_ => systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES * TO RoleWithGrants"))
         }
       }
       relTypes.foreach { relDefinition =>
         val relType = relDefinition.`type`().name()
-        systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS $relType TO WhiteRole")
-        relProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * RELATIONSHIPS $relType TO WhiteRole"))
+        systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS $relType TO RoleWithGrants")
+        relProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * RELATIONSHIPS $relType TO RoleWithGrants"))
       }
 
       // Role that denies unused graph elements
-      systemDb().executeTransactionally("CREATE ROLE BlackRole IF NOT EXISTS")
-      systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO BlackRole")
-      systemDb().executeTransactionally("DENY TRAVERSE ON GRAPH * ELEMENTS BLACK TO BlackRole")
-      systemDb().executeTransactionally("DENY READ {blackProp} ON GRAPH * ELEMENTS BLACK TO BlackRole")
+      systemDb().executeTransactionally("CREATE ROLE RoleWithDenies IF NOT EXISTS")
+      systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO RoleWithDenies")
+      systemDb().executeTransactionally("DENY TRAVERSE ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
+      systemDb().executeTransactionally("DENY READ {deniedProp} ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
 
       // User with grants
-      systemDb().executeTransactionally("CREATE USER white IF NOT EXISTS SET PASSWORD 'abc123' CHANGE NOT REQUIRED")
-      systemDb().executeTransactionally("GRANT ROLE WhiteRole TO white")
+      systemDb().executeTransactionally("CREATE USER userWithGrants IF NOT EXISTS SET PASSWORD 'abc123' CHANGE NOT REQUIRED")
+      systemDb().executeTransactionally("GRANT ROLE RoleWithGrants TO userWithGrants")
 
       // User with grants and denies
-      systemDb().executeTransactionally("CREATE USER black IF NOT EXISTS SET PASSWORD 'foo' CHANGE NOT REQUIRED")
-      systemDb().executeTransactionally("GRANT ROLE WhiteRole TO black")
-      systemDb().executeTransactionally("GRANT ROLE BlackRole TO black")
+      systemDb().executeTransactionally("CREATE USER userWithDenies IF NOT EXISTS SET PASSWORD 'foo' CHANGE NOT REQUIRED")
+      systemDb().executeTransactionally("GRANT ROLE RoleWithGrants TO userWithDenies")
+      systemDb().executeTransactionally("GRANT ROLE RoleWithDenies TO userWithDenies")
 
-      users += ("white" -> authManager.login(AuthToken.newBasicAuthToken("white", "abc123")))
-      users += ("black" -> authManager.login(AuthToken.newBasicAuthToken("black", "foo")))
+      // Make sure that the label/relType/propertyKey that is denied exists in the database otherwise the denies will have no effect
+      db().executeTransactionally("CALL db.createLabel('DENIED')")
+      db().executeTransactionally("CALL db.createRelationshipType('DENIED')")
+      db().executeTransactionally("CALL db.createProperty('deniedProp')")
+
+      users += ("white" -> authManager.login(AuthToken.newBasicAuthToken("userWithGrants", "abc123")))
+      users += ("black" -> authManager.login(AuthToken.newBasicAuthToken("userWithDenies", "foo")))
       users += ("full" -> LoginContext.AUTH_DISABLED)
     } catch {
       case e@(_: IOException | _: InvalidArgumentsException | _: InvalidAuthTokenException) =>

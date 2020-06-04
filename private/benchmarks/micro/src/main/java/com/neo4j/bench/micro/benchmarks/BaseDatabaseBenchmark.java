@@ -48,7 +48,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
  * <li>{@link BaseDatabaseBenchmark#afterDataGeneration()} <p>
  *     After store generation & before starting of the database, <code>afterDataGeneration()</code> will be called. <p>
  *     Override this callback to mess with the generated store, or to prevent the database from starting.</li>
- * <li>{@link BaseDatabaseBenchmark#afterDatabaseStart()} <p>
+ * <li>{@link BaseDatabaseBenchmark#afterDatabaseStart(DataGeneratorConfig)} <p>
  *     After the database is started <code>afterDatabaseStart()</code> will be called, <p>
  *     but only if {@link BaseDatabaseBenchmark#afterDataGeneration()} returns {@link StartDatabaseInstruction#START_DB}. <p>
  *     Note that if {@link StartDatabaseInstruction#DO_NOT_START_DB} is returned this callback will never be called.</li>
