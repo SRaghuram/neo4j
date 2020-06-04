@@ -73,7 +73,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
         if (matches.hasNext) {
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
-          lhs.copyTo(newRow)
+          newRow.copyAllFrom(lhs)
           copyDataFromRhs(newRow, currentRhsRow)
           return Some(newRow)
         }

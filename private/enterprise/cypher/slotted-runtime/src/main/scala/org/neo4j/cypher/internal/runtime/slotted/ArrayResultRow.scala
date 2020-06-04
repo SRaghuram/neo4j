@@ -111,9 +111,11 @@ case class ArrayResultRow(resultArray: Array[AnyValue],
   // The methods below should never be called on a produced result
   private def fail(): Nothing = throw new InternalException("Tried using a result context as an execution context")
 
-  override def copyTo(target: WritableRow, sourceLongOffset: Int, sourceRefOffset: Int, targetLongOffset: Int, targetRefOffset: Int): Unit = fail()
+  override def copyAllFrom(input: ReadableRow): Unit = fail()
 
   override def copyFrom(input: ReadableRow, nLongs: Int, nRefs: Int): Unit = fail()
+
+  override def copyFromOffset(input: ReadableRow, sourceLongOffset: Int, sourceRefOffset: Int, targetLongOffset: Int, targetRefOffset: Int): Unit = fail()
 
   override def setLongAt(offset: Int, value: Long): Unit = fail()
 

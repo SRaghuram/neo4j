@@ -18,13 +18,13 @@ case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends Exec
 
   override def copyWith(row: ReadableRow): CypherRow = {
     val newCtx = SlottedRow(slots)
-    row.copyTo(newCtx)
+    newCtx.copyAllFrom(row)
     newCtx
   }
 
   override def copyWith(row: ReadableRow, newEntries: Seq[(String, AnyValue)]): CypherRow = {
     val newCopy = SlottedRow(slots)
-    row.copyTo(newCopy)
+    newCopy.copyAllFrom(row)
     for ((key,value) <- newEntries) {
       newCopy.set(key, value)
     }
@@ -33,14 +33,14 @@ case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends Exec
 
   override def copyWith(row: ReadableRow, key: String, value: AnyValue): CypherRow = {
     val newCtx = SlottedRow(slots)
-    row.copyTo(newCtx)
+    newCtx.copyAllFrom(row)
     newCtx.set(key, value)
     newCtx
   }
 
   override def copyWith(row: ReadableRow, key1: String, value1: AnyValue, key2: String, value2: AnyValue): CypherRow = {
     val newCopy = SlottedRow(slots)
-    row.copyTo(newCopy)
+    newCopy.copyAllFrom(row)
     newCopy.set(key1, value1)
     newCopy.set(key2, value2)
     newCopy
@@ -48,7 +48,7 @@ case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends Exec
 
   override def copyWith(row: ReadableRow, key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): CypherRow = {
     val newCopy = SlottedRow(slots)
-    row.copyTo(newCopy)
+    newCopy.copyAllFrom(row)
     newCopy.set(key1, value1)
     newCopy.set(key2, value2)
     newCopy.set(key3, value3)

@@ -39,6 +39,7 @@ object SlottedRow {
 }
 
 trait SlottedCompatible {
+  def copyAllToSlottedRow(target: SlottedRow): Unit
   def copyToSlottedRow(target: SlottedRow, nLongs: Int, nRefs: Int): Unit
 }
 
@@ -66,20 +67,9 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
     s.result
   }
 
-  override def copyTo(target: WritableRow, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
-    target match {
-      case other@SlottedRow(otherPipeline) =>
-        if (slots.numberOfLongs > otherPipeline.numberOfLongs ||
-          slots.numberOfReferences > otherPipeline.numberOfReferences)
-          throw new InternalException(
-            s"""A bug has occurred in the slotted runtime: The target slotted execution context cannot hold the data to copy
-               |From : $slots
-               |To :   $otherPipeline""".stripMargin)
-        else {
-          System.arraycopy(longs, sourceLongOffset, other.longs, targetLongOffset, slots.numberOfLongs - sourceLongOffset)
-          System.arraycopy(refs, sourceRefOffset, other.refs, targetRefOffset, slots.numberOfReferences - sourceRefOffset)
-          other.setLinenumber(getLinenumber)
-        }
+  override def copyAllFrom(input: ReadableRow): Unit = input match {
+      case other:SlottedRow => copyFromSlotted(other, 0, 0, 0, 0)
+      case other: SlottedCompatible => other.copyAllToSlottedRow(this)
       case _ => fail()
     }
 
@@ -97,6 +87,31 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
 
       case _ => fail()
     }
+
+  override def copyFromOffset(input: ReadableRow, sourceLongOffset: Int, sourceRefOffset: Int, targetLongOffset: Int, targetRefOffset: Int): Unit =
+    input match {
+      case other:SlottedRow => copyFromSlotted(other, sourceLongOffset, sourceRefOffset, targetLongOffset, targetRefOffset)
+      case _ => fail()
+    }
+
+  private def copyFromSlotted(other: SlottedRow,
+                              sourceLongOffset: Int,
+                              sourceRefOffset: Int,
+                              targetLongOffset: Int,
+                              targetRefOffset: Int): Unit = {
+    val otherPipeline = other.slots
+    if (otherPipeline.numberOfLongs > slots.numberOfLongs ||
+      otherPipeline.numberOfReferences > slots.numberOfReferences) {
+      throw new InternalException(
+        s"""A bug has occurred in the slotted runtime: The target slotted execution context cannot hold the data to copy
+           |From : $otherPipeline
+           |To :   $slots""".stripMargin)
+    } else {
+      System.arraycopy(other.longs, sourceLongOffset, longs, targetLongOffset, other.slots.numberOfLongs - sourceLongOffset)
+      System.arraycopy(other.refs, sourceRefOffset, refs, targetRefOffset, other.slots.numberOfReferences - sourceRefOffset)
+      setLinenumber(other.getLinenumber)
+    }
+  }
 
   override def setLongAt(offset: Int, value: Long): Unit =
     longs(offset) = value
@@ -222,7 +237,7 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
   override def copyWith(key1: String, value1: AnyValue): CypherRow = {
     // This method should throw like its siblings below as soon as reduce is changed to not use it.
     val newCopy = SlottedRow(slots)
-    copyTo(newCopy)
+    newCopy.copyAllFrom(this)
     newCopy.setValue(key1, value1)
     newCopy
   }
@@ -310,7 +325,7 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
 
   override def createClone(): CypherRow = {
     val clone = SlottedRow(slots)
-    copyTo(clone)
+    clone.copyAllFrom(this)
     clone
   }
 

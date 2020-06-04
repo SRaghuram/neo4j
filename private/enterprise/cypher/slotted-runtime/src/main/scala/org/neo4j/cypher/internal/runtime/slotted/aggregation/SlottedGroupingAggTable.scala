@@ -68,7 +68,7 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
         val aggregateFunctions = entry.getValue
         val row = SlottedRow(slots)
         if (state.initialContext.nonEmpty) {
-          state.initialContext.get.copyTo(row)
+          row.copyAllFrom(state.initialContext.get)
         }
         groupingColumns.project(row, unorderedGroupingValue)
         var i = 0

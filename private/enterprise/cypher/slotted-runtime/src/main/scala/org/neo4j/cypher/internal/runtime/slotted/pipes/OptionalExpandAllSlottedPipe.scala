@@ -71,7 +71,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
               val matchIterator = filter(new ExpandIterator(selectionCursor, state.query) {
                 override protected def createOutputRow(relationship: Long, otherNode: Long): SlottedRow = {
                   val outputRow = SlottedRow(slots)
-                  inputRow.copyTo(outputRow)
+                  outputRow.copyAllFrom(inputRow)
                   outputRow.setLongAt(relOffset, relationship)
                   outputRow.setLongAt(toOffset, otherNode)
                   cacheNodeProperties(nodePropsToCache, outputRow)
@@ -95,7 +95,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
 
   private def withNulls(inputRow: CypherRow) = {
     val outputRow = SlottedRow(slots)
-    inputRow.copyTo(outputRow)
+    outputRow.copyAllFrom(inputRow)
     outputRow.setLongAt(relOffset, -1)
     outputRow.setLongAt(toOffset, -1)
     outputRow

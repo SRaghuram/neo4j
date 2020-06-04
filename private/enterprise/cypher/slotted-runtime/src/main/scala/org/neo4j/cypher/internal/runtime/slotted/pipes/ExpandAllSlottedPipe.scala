@@ -77,7 +77,7 @@ case class ExpandAllSlottedPipe(source: Pipe,
               new ExpandIterator(selectionCursor, state.query) {
                 override protected def createOutputRow(relationship: Long, otherNode: Long): SlottedRow = {
                   val outputRow = SlottedRow(slots)
-                  inputRow.copyTo(outputRow)
+                  outputRow.copyAllFrom(inputRow)
                   outputRow.setLongAt(relOffset, relationship)
                   outputRow.setLongAt(toOffset, otherNode)
                   cacheNodeProperties(nodePropsToCache, outputRow)

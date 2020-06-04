@@ -51,7 +51,7 @@ case class UnwindSlottedPipe(source: Pipe,
       nextItem = null
       if (unwindIterator != null && unwindIterator.hasNext) {
         nextItem = SlottedRow(slots)
-        currentInputRow.copyTo(nextItem)
+        nextItem.copyAllFrom(currentInputRow)
         nextItem.setRefAt(offset, unwindIterator.next())
       } else {
         if (input.hasNext) {

@@ -32,7 +32,7 @@ case class EagerSlottedPipe(source: Pipe, slots: SlotConfiguration)(val id: Id =
       // this is necessary because Eager is the beginning of a new pipeline
       // We do this on the output side, and buffer the input rows they will use less memory
       val outputRow = SlottedRow(slots)
-      bufferedRow.copyTo(outputRow)
+      outputRow.copyAllFrom(bufferedRow)
       outputRow
     }
   }

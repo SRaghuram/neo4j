@@ -25,8 +25,12 @@ case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
         rhs.createResults(state) map {
           rhsCtx =>
             val context = SlottedRow(slots)
-            lhsCtx.copyTo(context)
-            rhsCtx.copyTo(context, sourceLongOffset = argumentSize.nLongs, sourceRefOffset = argumentSize.nReferences, targetLongOffset = lhsLongCount, targetRefOffset = lhsRefCount)
+            context.copyAllFrom(lhsCtx)
+            context.copyFromOffset(rhsCtx,
+              sourceLongOffset = argumentSize.nLongs,
+              sourceRefOffset = argumentSize.nReferences,
+              targetLongOffset = lhsLongCount,
+              targetRefOffset = lhsRefCount)
             context
         }
     }

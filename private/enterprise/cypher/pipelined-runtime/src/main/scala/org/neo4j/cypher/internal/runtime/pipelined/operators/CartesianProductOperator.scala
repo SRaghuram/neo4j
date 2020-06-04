@@ -66,8 +66,8 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && rhsInputCursor.hasNext) {
         rhsInputCursor.next()
-        inputCursor.copyTo(outputRow) // lhs
-        rhsInputCursor.copyTo(outputRow,
+        outputRow.copyFrom(inputCursor)  // lhs
+        outputRow.copyFromOffset(rhsInputCursor,
           sourceLongOffset = argumentSize.nLongs, // Skip over arguments since they should be identical to lhsCtx
           sourceRefOffset = argumentSize.nReferences,
           targetLongOffset = lhsSlots.numberOfLongs,

@@ -41,7 +41,7 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
 
         matchesFromLhs.asScala.map { lhs =>
           val newRow = SlottedRow(slots)
-          lhs.copyTo(newRow)
+          newRow.copyAllFrom(lhs)
           NodeHashJoinSlottedPipe.copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, newRow, rhs)
           newRow
         }

@@ -88,7 +88,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
 
   private def withNulls(inputRow: CypherRow) = {
     val outputRow = SlottedRow(slots)
-    inputRow.copyTo(outputRow)
+    outputRow.copyAllFrom(inputRow)
     outputRow.setLongAt(relOffset, -1)
     outputRow
   }
@@ -126,7 +126,7 @@ case class NonFilteringOptionalExpandIntoSlottedPipe(source: Pipe,
                                  relationships: LongIterator): Iterator[SlottedRow] = {
     PrimitiveLongHelper.map(relationships, relId => {
       val outputRow = SlottedRow(slots)
-      inputRow.copyTo(outputRow)
+      outputRow.copyAllFrom(inputRow)
       outputRow.setLongAt(relOffset, relId)
       outputRow
     })
@@ -148,7 +148,7 @@ case class FilteringOptionalExpandIntoSlottedPipe(source: Pipe,
                                  relationships: LongIterator): Iterator[SlottedRow] = {
     PrimitiveLongHelper.map(relationships, relId => {
       val outputRow = SlottedRow(slots)
-      inputRow.copyTo(outputRow)
+      outputRow.copyAllFrom(inputRow)
       outputRow.setLongAt(relOffset, relId)
       outputRow
     }).filter(ctx => predicate(ctx, state) eq Values.TRUE)

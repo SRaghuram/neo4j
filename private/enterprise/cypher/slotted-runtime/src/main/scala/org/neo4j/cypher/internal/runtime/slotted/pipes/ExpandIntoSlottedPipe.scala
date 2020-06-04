@@ -80,7 +80,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
             val relationships = new RelationshipCursorIterator(selectionCursor)
             PrimitiveLongHelper.map(relationships, (relId: Long) => {
               val outputRow = SlottedRow(slots)
-              inputRow.copyTo(outputRow)
+              outputRow.copyAllFrom(inputRow)
               outputRow.setLongAt(relOffset, relId)
               outputRow
             })

@@ -62,7 +62,15 @@ class CypherRowAdapter extends CypherRow {
   override def mergeWith(other: ReadableRow,
                          entityById: EntityById): Unit = ???
 
+  override def copyAllFrom(input: ReadableRow): Unit = ???
+
   override def copyFrom(input: ReadableRow, nLongs: Int, nRefs: Int): Unit = ???
+
+  override def copyFromOffset(input: ReadableRow,
+                              sourceLongOffset: Int,
+                              sourceRefOffset: Int,
+                              targetLongOffset: Int,
+                              targetRefOffset: Int): Unit = ???
 
   /**
     * Invalidate all cached node properties for the given node id
@@ -84,12 +92,6 @@ class CypherRowAdapter extends CypherRow {
   override def getRefAt(offset: Int): AnyValue = ???
 
   override def getByName(name: String): AnyValue = ???
-
-  override def copyTo(target: WritableRow,
-                      sourceLongOffset: Int,
-                      sourceRefOffset: Int,
-                      targetLongOffset: Int,
-                      targetRefOffset: Int): Unit = ???
 
   /**
     * Returns the cached property value

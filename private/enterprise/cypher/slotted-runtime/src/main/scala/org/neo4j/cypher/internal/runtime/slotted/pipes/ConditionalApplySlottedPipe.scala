@@ -34,7 +34,7 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
         }
         else {
           val output = SlottedRow(slots)
-          lhsContext.copyTo(output)
+          output.copyAllFrom(lhsContext)
           Iterator.single(output)
         }
     }
