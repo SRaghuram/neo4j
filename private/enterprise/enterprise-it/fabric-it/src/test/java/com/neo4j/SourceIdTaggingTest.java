@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ShardFunctions;
 import org.junit.jupiter.api.AfterAll;

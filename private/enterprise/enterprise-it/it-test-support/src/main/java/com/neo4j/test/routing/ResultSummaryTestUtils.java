@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j;
+package com.neo4j.test.routing;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,7 +39,7 @@ public class ResultSummaryTestUtils
             this.children = children;
         }
 
-        void assertStats( ProfiledPlan profiledPlan )
+        public void assertStats( ProfiledPlan profiledPlan )
         {
             assertEquals( numRecords, profiledPlan.records() );
             assertEquals( hasDbHits, profiledPlan.dbHits() > 0 );

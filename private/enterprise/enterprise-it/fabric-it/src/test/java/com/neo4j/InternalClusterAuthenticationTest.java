@@ -14,6 +14,7 @@ import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.test.routing.FabricEverywhereExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;

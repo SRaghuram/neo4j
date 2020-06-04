@@ -3,12 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j;
+package com.neo4j.routing;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.routing.FabricEverywhereExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,8 +34,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
-import static com.neo4j.ResultSummaryTestUtils.plan;
-import static com.neo4j.ResultSummaryTestUtils.stats;
+import static com.neo4j.test.routing.ResultSummaryTestUtils.plan;
+import static com.neo4j.test.routing.ResultSummaryTestUtils.stats;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -48,7 +49,7 @@ import static org.neo4j.internal.helpers.Strings.joinAsLines;
 @ExtendWith( SuppressOutputExtension.class )
 @ExtendWith( MockedRoutingContextExtension.class )
 @ClusterExtension
-class CypherInClusterTest extends ClusterTestSupport
+class ClusterRoutingIT extends ClusterTestSupport
 {
     @Inject
     protected static RoutingContext routingContext;
@@ -83,7 +84,7 @@ class CypherInClusterTest extends ClusterTestSupport
 
         try ( var session = systemLeaderDriver.session( SessionConfig.builder().withDatabase( "system" ).build() ) )
         {
-            session.run( "CREATE DATABASE foo" ).consume();
+            session.writeTransaction( tx -> tx.run( "CREATE DATABASE foo" ).consume() );
         }
 
         awaitDbAvailable( cluster, "foo" );
@@ -131,7 +132,8 @@ class CypherInClusterTest extends ClusterTestSupport
                 "USE foo",
                 "CREATE (:Person {name: 'Carrie',  uid: 2, age: 50})" );
         assertThatExceptionOfType( ClientException.class )
-                .isThrownBy( () -> run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( createQuery ).list() ) )
+                .isThrownBy( () -> run( fooFollowerDriver, "neo4j", AccessMode.WRITE,
+                                        session -> session.writeTransaction( tx -> tx.run( createQuery ).list() ) ) )
                 .withMessage( "No write operations are allowed directly on this database." +
                         " Writes must pass through the leader." +
                         " The role of this server is: FOLLOWER" );
@@ -165,7 +167,8 @@ class CypherInClusterTest extends ClusterTestSupport
                 "SET n:Friend"
         );
 
-        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( query ).consume() );
+        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE,
+                                 session -> session.writeTransaction( tx -> tx.run( query ).consume() ) );
 
         var counters = resultSummary.counters();
         assertNotNull( counters );
@@ -195,7 +198,8 @@ class CypherInClusterTest extends ClusterTestSupport
                 "RETURN n"
         );
 
-        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( query ).consume() );
+        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE,
+                                 session -> session.writeTransaction( tx -> tx.run( query ).consume() ) );
 
         assertTrue( resultSummary.hasProfile() );
         var profiledPlan = resultSummary.profile();
@@ -233,7 +237,8 @@ class CypherInClusterTest extends ClusterTestSupport
                 "RETURN n"
         );
 
-        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE, session -> session.run( query ).consume() );
+        var resultSummary = run( fooFollowerDriver, "neo4j", AccessMode.WRITE,
+                                 session -> session.writeTransaction( tx -> tx.run( query ).consume() ) );
 
         assertTrue( resultSummary.hasPlan() );
         assertFalse( resultSummary.hasProfile() );
@@ -255,7 +260,8 @@ class CypherInClusterTest extends ClusterTestSupport
                 "USE foo",
                 "CREATE (:Person {name: 'Carrie',  uid: 2, age: 50})" );
         assertThatExceptionOfType( TransientException.class )
-                .isThrownBy( () -> run( driver, "neo4j", AccessMode.WRITE, session -> session.run( createQuery ).list() ) )
+                .isThrownBy( () -> run( driver, "neo4j", AccessMode.WRITE,
+                                        session -> session.writeTransaction( tx -> tx.run( createQuery ).list() ) ) )
                 .withMessage( "Unable to get bolt address of LEADER for database foo" );
     }
 }

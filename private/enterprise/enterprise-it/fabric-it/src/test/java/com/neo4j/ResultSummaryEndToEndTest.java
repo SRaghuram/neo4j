@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -25,16 +26,14 @@ import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.summary.Notification;
-import org.neo4j.driver.summary.Plan;
-import org.neo4j.driver.summary.ProfiledPlan;
 import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.api.exceptions.Status;
 
-import static com.neo4j.ResultSummaryTestUtils.plan;
-import static com.neo4j.ResultSummaryTestUtils.stats;
+import static com.neo4j.test.routing.ResultSummaryTestUtils.plan;
+import static com.neo4j.test.routing.ResultSummaryTestUtils.stats;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

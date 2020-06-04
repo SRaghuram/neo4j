@@ -39,6 +39,7 @@
         <module>enterprise-it</module>
         <module>fabric-it</module>
         <module>embedded-cluster-it</module>
+        <module>routing-it</module>
     </modules>
 
     <profiles>

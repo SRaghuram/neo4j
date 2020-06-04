@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j;
+package com.neo4j.routing;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -24,6 +24,7 @@ import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Value;
@@ -57,9 +58,9 @@ public abstract class ClusterTestSupport
 
         run( fooLeaderDriver, "foo", AccessMode.WRITE, session ->
         {
-            session.run( "MATCH (n) DETACH DELETE n" );
-            session.run( "CREATE (:Person {name: 'Anna', uid: 0, age: 30})" ).consume();
-            session.run( "CREATE (:Person {name: 'Bob',  uid: 1, age: 40})" ).consume();
+            session.writeTransaction( tx -> tx.run( "MATCH (n) DETACH DELETE n" ) );
+            session.writeTransaction( tx -> tx.run( "CREATE (:Person {name: 'Anna', uid: 0, age: 30})" ).consume() );
+            session.writeTransaction( tx -> tx.run( "CREATE (:Person {name: 'Bob',  uid: 1, age: 40})" ).consume() );
             return null;
         } );
     }
@@ -73,7 +74,8 @@ public abstract class ClusterTestSupport
                 "WITH *",
                 "UNWIND [c, d] AS person",
                 "RETURN person.name AS name" );
-        var fooWriterResult = run( writeDriver, "neo4j", AccessMode.WRITE, session -> session.run( createQuery ).list() );
+        var fooWriterResult = run( writeDriver, "neo4j", AccessMode.WRITE,
+                                   session -> session.writeTransaction( tx -> tx.run(  createQuery ).list() ) );
         assertEquals( List.of( "Carrie", "Dave" ), getNames( fooWriterResult ) );
 
         var matchQueryWithoutUse = joinAsLines(
@@ -81,7 +83,8 @@ public abstract class ClusterTestSupport
                 "RETURN person.name AS name"
         );
 
-        var neo4jResult = run( fooLeaderDriver, "neo4j", AccessMode.READ, session -> session.run( matchQueryWithoutUse ).list() );
+        var neo4jResult = run( fooLeaderDriver, "neo4j", AccessMode.READ,
+                               session -> session.writeTransaction( tx -> tx.run( matchQueryWithoutUse ).list() ));
 
         // we should get nothing when asking neo4j database
         assertEquals( List.of(), neo4jResult );
@@ -92,10 +95,12 @@ public abstract class ClusterTestSupport
                 "RETURN person.name AS name"
         );
 
-        var fooFollowerResult = run( fooFollowerDriver, "neo4j", AccessMode.READ, session -> session.run( matchQueryWithUse ).list() );
+        var fooFollowerResult = run( fooFollowerDriver, "neo4j", AccessMode.READ,
+                                     session -> session.writeTransaction( tx -> tx.run( matchQueryWithUse ).list() ));
         assertEquals( List.of( "Anna", "Bob", "Carrie", "Dave" ), getNames( fooFollowerResult ) );
 
-        var fooReadReplicaResult = run( readReplicaDriver, "neo4j", AccessMode.READ, session -> session.run( matchQueryWithUse ).list() );
+        var fooReadReplicaResult = run( readReplicaDriver, "neo4j", AccessMode.READ,
+                                        session -> session.writeTransaction( tx -> tx.run( matchQueryWithUse ).list() ));
         assertEquals( List.of( "Anna", "Bob", "Carrie", "Dave" ), getNames( fooReadReplicaResult ) );
     }
 

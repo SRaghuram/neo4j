@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.test.routing.FabricEverywhereExtension;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

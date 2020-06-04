@@ -3,13 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j;
+package com.neo4j.routing;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.routing.FabricEverywhereExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -57,12 +58,13 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 @TestDirectoryExtension
-@ExtendWith( {FabricEverywhereExtension.class,
+@ExtendWith( {
+        FabricEverywhereExtension.class,
         DefaultFileSystemExtension.class,
         SuppressOutputExtension.class,
         MockedRoutingContextExtension.class} )
 @ClusterExtension
-class SecureServerRoutingTest extends ClusterTestSupport
+class ClusterRoutingSecurityIT extends ClusterTestSupport
 {
 
     private static final String CERTIFICATES_DIR = "certificates/cluster";
@@ -206,7 +208,7 @@ class SecureServerRoutingTest extends ClusterTestSupport
             try ( var session = driver.session() )
             {
                 assertThatExceptionOfType( ServiceUnavailableException.class )
-                        .isThrownBy( () -> session.run( "RETURN 1" ).list() )
+                        .isThrownBy( () -> session.writeTransaction( tx -> tx.run( "RETURN 1" ).list() ) )
                         .withMessageContaining( "Connection to the database terminated." );
             }
         }
@@ -266,7 +268,8 @@ class SecureServerRoutingTest extends ClusterTestSupport
 
     private void runQuery( Driver driver, String query, int expectedRecords )
     {
-        var records = run( driver, "neo4j", AccessMode.WRITE, session -> session.run( query ).list() );
+        var records = run( driver, "neo4j", AccessMode.WRITE,
+                           session -> session.writeTransaction( tx -> tx.run( query ).list() ) );
         assertEquals( expectedRecords, records.size() );
     }
 
@@ -282,7 +285,7 @@ class SecureServerRoutingTest extends ClusterTestSupport
                                                          .withDefaultAccessMode( AccessMode.WRITE )
                                                          .withBookmarks( bookmarks ).build() ) )
         {
-            session.run( command ).consume();
+            session.writeTransaction( tx -> tx.run( command ).consume() );
             bookmarks.add( session.lastBookmark() );
         }
     }
