@@ -243,6 +243,7 @@ public abstract class BaseEndToEndIT
             assertEquals( 0, processExitCode, scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog ) );
             assertStoreSchema( boltUri );
             assertRecordingFilesExist( s3Path, profilers, resources, recordingsAssertion, recordingDirsCount );
+            assertProfilingNodesAreSameAsS3( neo4jBootstrap.boltURI(), s3Path );
         }
         finally
         {
@@ -274,6 +275,15 @@ public abstract class BaseEndToEndIT
         try ( StoreClient storeClient = StoreClient.connect( neo4jBoltUri, "", "" ) )
         {
             storeClient.execute( new VerifyStoreSchema() );
+        }
+    }
+
+    private static void assertProfilingNodesAreSameAsS3( URI neo4jBoltUri,
+                                                         Path s3Path )
+    {
+        try ( StoreClient storeClient = StoreClient.connect( neo4jBoltUri, "", "" ) )
+        {
+            storeClient.execute( new VerifyProfileNodes( s3Path ) );
         }
     }
 
