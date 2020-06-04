@@ -34,7 +34,7 @@ public class AmazonS3Upload implements AutoCloseable
 
     public static AmazonS3Upload create( String awsRegion, String awsEndpointURL )
     {
-        System.out.println( format( "creating Amazon S3 upload client with region '%s' and AWS ednpoint '%s'", awsRegion, awsEndpointURL ) );
+        System.out.println( format( "creating Amazon S3 upload client with region '%s' and AWS endpoint '%s'", awsRegion, awsEndpointURL ) );
         try
         {
             return new AmazonS3Upload( createAmazonS3Client( awsEndpointURL != null ? new URL( awsEndpointURL ) : null, awsRegion ) );

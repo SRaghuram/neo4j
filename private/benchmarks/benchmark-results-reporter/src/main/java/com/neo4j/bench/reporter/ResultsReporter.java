@@ -85,7 +85,8 @@ public class ResultsReporter
 
             List<String> args = AddProfilesCommand.argsFor( profilesDir.toPath(),
                                                             testRunReportFile,
-                                                            s3Bucket,
+                                                            // Adding the UUID to the s3bucket for the profiling recordings
+                                                            s3Bucket + "/" + profilesDir.getName(),
                                                             s3ArchivePath,
                                                             ignoreUnrecognizedFiles );
             Main.main( args.toArray( new String[args.size()] ) );
