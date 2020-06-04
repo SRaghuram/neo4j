@@ -5,13 +5,11 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.parser
 
-import java.io.StringReader
-
-import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.factory.neo4j.Neo4jASTExceptionFactory
 import org.neo4j.cypher.internal.ast.factory.neo4j.Neo4jASTFactory
+import org.neo4j.cypher.internal.parser.javacc.CypherCharStream
 import org.neo4j.cypher.internal.util.OpenCypherExceptionFactory
 
 abstract class BaseParserBenchmark extends BaseDatabaseBenchmark {
@@ -33,7 +31,10 @@ abstract class BaseParserState {
           query => x.parse(query, exceptionFactory)
         case "javacc" =>
           query => {
-            val x = new org.neo4j.cypher.internal.parser.javacc.Cypher(new Neo4jASTFactory(query), new Neo4jASTExceptionFactory(exceptionFactory), new StringReader(query))
+            val x = new org.neo4j.cypher.internal.parser.javacc.Cypher(
+              new Neo4jASTFactory(query),
+              new Neo4jASTExceptionFactory(exceptionFactory),
+              new CypherCharStream(query))
             x.Statements().get(0)
           }
       }

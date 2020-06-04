@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.parser
 
-import java.io.StringReader
-
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
@@ -16,7 +14,7 @@ import org.neo4j.cypher.internal.ast.factory.ASTExceptionFactory
 import org.neo4j.cypher.internal.ast.factory.LiteralInterpreter
 import org.neo4j.cypher.internal.evaluator.Evaluator
 import org.neo4j.cypher.internal.parser.javacc
-import org.neo4j.cypher.internal.parser.javacc.InvalidUnicodeLiteral
+import org.neo4j.cypher.internal.parser.javacc.CypherCharStream
 import org.neo4j.exceptions.SyntaxException
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -27,7 +25,6 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 
-import scala.collection.immutable
 import scala.util.Random
 
 @BenchmarkEnabled(true)
@@ -130,7 +127,7 @@ class InterpretCypherLiteralState {
         case "javacc" =>
           val exceptionFactory = new TestExceptionFactory()
           literal => {
-            val x = new javacc.Cypher(new LiteralInterpreter(), exceptionFactory, new StringReader(literal))
+            val x = new javacc.Cypher(new LiteralInterpreter(), exceptionFactory, new CypherCharStream(literal))
             x.Literal()
           }
         case str => throw new IllegalStateException(s"Unknown benchmark impl `$str`")
@@ -172,6 +169,6 @@ class InterpretCypherLiteralState {
 }
 
 class TestExceptionFactory extends ASTExceptionFactory {
-  override def syntaxException(source: Exception): Exception = new SyntaxException("", source)
+  override def syntaxException(source: Exception, offset: Int, line: Int, column: Int): Exception = new SyntaxException("", source)
   override def invalidUnicodeLiteral(msg: String): Exception = new InvalidUnicodeLiteral(msg)
 }
