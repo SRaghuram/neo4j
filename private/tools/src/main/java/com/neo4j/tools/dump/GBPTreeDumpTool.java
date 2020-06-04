@@ -15,7 +15,7 @@ import org.neo4j.index.internal.gbptree.GBPTreeBootstrapper;
 import org.neo4j.index.internal.gbptree.PrintConfig;
 import org.neo4j.index.internal.gbptree.PrintingGBPTreeVisitor;
 import org.neo4j.internal.helpers.Args;
-import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.index.schema.SchemaLayouts;
@@ -42,11 +42,11 @@ public class GBPTreeDumpTool
     void run( File file, PrintStream out ) throws Exception
     {
         out.println( "Dump tree " + file.getAbsolutePath() );
-        try ( JobScheduler jobScheduler = createInitialisedScheduler();
-              PageCache pageCache = GBPTreeBootstrapper.pageCache( jobScheduler ) )
+        try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+              JobScheduler jobScheduler = createInitialisedScheduler();
+              GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( fs, jobScheduler, new SchemaLayouts(), true, PageCacheTracer.NULL ) )
         {
-            final GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( pageCache, new SchemaLayouts(), true, PageCacheTracer.NULL );
-            final GBPTreeBootstrapper.Bootstrap bootstrap = bootstrapper.bootstrapTree( file );
+            GBPTreeBootstrapper.Bootstrap bootstrap = bootstrapper.bootstrapTree( file );
 
             try ( GBPTree<?,?> tree = bootstrap.getTree() )
             {
