@@ -65,13 +65,14 @@ class RxPooledDriver extends PooledDriver
 
         return driverTransaction
                 .onErrorMap( Neo4jException.class, Utils::translateError )
-                .map( tx ->  new FabricDriverRxTransaction( tx, session, location ));
+                .map( tx -> (FabricDriverTransaction) new FabricDriverRxTransaction( tx, session, location ) )
+                .cache();
     }
 
     private Mono<RxTransaction> getDriverTransaction( RxSession session, FabricTransactionInfo transactionInfo )
     {
         var transactionConfig = getTransactionConfig( transactionInfo );
-        return Mono.from( session.beginTransaction( transactionConfig ) ).cache();
+        return Mono.from( session.beginTransaction( transactionConfig ) );
     }
 
     private static class StatementResultImpl extends AbstractRemoteStatementResult implements AutoCommitStatementResult

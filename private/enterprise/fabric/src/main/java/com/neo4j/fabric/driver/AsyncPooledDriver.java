@@ -66,7 +66,8 @@ public class AsyncPooledDriver extends PooledDriver
 
         return Mono.fromFuture( driverTransaction.toCompletableFuture() )
                    .onErrorMap( Neo4jException.class, Utils::translateError )
-                   .map( tx ->  new FabricDriverAsyncTransaction( tx, session, location ));
+                   .map( tx -> (FabricDriverTransaction) new FabricDriverAsyncTransaction( tx, session, location ) )
+                   .cache();
     }
 
     private CompletionStage<AsyncTransaction> getDriverTransaction( AsyncSession session, FabricTransactionInfo transactionInfo )
