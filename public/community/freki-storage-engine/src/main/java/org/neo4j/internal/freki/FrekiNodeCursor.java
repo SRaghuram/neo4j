@@ -71,7 +71,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         // === Logic for split label data
         if ( data.labelIsSplit )
         {
-            while ( (buffer = loadNextSplitPiece( buffer, Header.FLAG_LABELS )) != null )
+            while ( (buffer = loadNextSplitPiece( buffer, Header.FLAG_LABELS, data.labelsVersion )) != null )
             {
                 long[] moreLabels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
                 labels = addAll( labels, moreLabels );
@@ -129,7 +129,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         int[] types = relationshipTypesInNode.clone();
         if ( data.isDense && data.degreesIsSplit )
         {
-            while ( (buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES )) != null )
+            while ( (buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES, data.degreesVersion )) != null )
             {
                 readRelationshipTypes( buffer );
                 types = addAll( types, relationshipTypesInNode );
@@ -180,7 +180,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
                 }
                 if ( data.degreesIsSplit )
                 {
-                    buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES );
+                    buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES, data.degreesVersion );
                     if ( buffer != null )
                     {
                         readRelationshipTypes( buffer );

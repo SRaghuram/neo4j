@@ -190,8 +190,9 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             int sizeExp = sizeExponentialFromRecordPointer( data.xLChainNextLinkPointer );
             Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.xLChainNextLinkPointer ) );
-            if ( xLRecord != null && data.gatherDataFromXL( xLRecord ) )
+            if ( xLRecord != null )
             {
+                data.gatherDataFromXL( xLRecord );
                 return true;
             }
             //Record has version mismatch or been deleted, likely reading while writing.
@@ -216,7 +217,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
      * @return ByteBuffer (may be a different one than was passed in) filled with data and positioned to read the next piece of this data part,
      * or {@code null} if there were no more pieces to load for this part.
      */
-    ByteBuffer loadNextSplitPiece( ByteBuffer buffer, int headerSlot )
+    ByteBuffer loadNextSplitPiece( ByteBuffer buffer, int headerSlot, byte expectedVersion )
     {
         Header header = new Header();
         header.deserialize( buffer.position( 0 ) );
@@ -231,16 +232,25 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                 throw new IllegalStateException(
                         "Wanted to follow forward pointer " + recordPointerToString( forwardPointer ) + ", but ended up on an unused record" );
             }
-            if ( record.version != data.version )
-            {
-                throw new IllegalStateException(
-                        "Reading split data from records with different version. Expected " + data.version + " but got " + record.version );
-            }
             buffer = record.data();
             header.deserialize( buffer );
             if ( header.hasMark( headerSlot ) )
             {
-                return buffer.position( header.getOffset( headerSlot ) );
+                if ( header.hasReferenceMark( headerSlot ) )
+                {
+                    buffer.position( header.getOffset( headerSlot ) );
+                    byte partVersion = buffer.get();
+                    if ( partVersion != expectedVersion )
+                    {
+                        throw new IllegalStateException(
+                                "Reading split data from records with different version. Expected " + expectedVersion + " but got " + partVersion );
+                    }
+                    return buffer;
+                }
+                else
+                {
+                    throw new IllegalStateException( "Reading split data from records with different version. Data is no longer split!" );
+                }
             }
             // else there could be another record in between the pieces for this data part, so just skip on through it
         }

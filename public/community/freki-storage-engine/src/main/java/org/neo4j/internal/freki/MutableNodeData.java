@@ -77,11 +77,13 @@ class MutableNodeData
     private ByteBuffer labelsBuffer;
     private int labelsOffset;
     private int labelsLength;
+    private byte labelsVersion = IntermediateBuffer.FIRST_VERSION;
 
     private MutableIntObjectMap<Value> properties;
     private ByteBuffer propertiesBuffer;
     private int propertiesOffset;
     private int propertiesLength;
+    private byte propertiesVersion = IntermediateBuffer.FIRST_VERSION;
 
     private MutableIntObjectMap<Relationships> relationships;
     private ByteBuffer relationshipsBuffer;
@@ -96,6 +98,7 @@ class MutableNodeData
     private ByteBuffer degreesBuffer;
     private int degreesOffset;
     private int degreesLength;
+    private byte degreesVersion = IntermediateBuffer.FIRST_VERSION;
 
     private long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
     private long forwardPointer = NULL;
@@ -625,6 +628,7 @@ class MutableNodeData
         StreamVByte.Writer writer = new StreamVByte.Writer();
         int[] labels = this.labels.toSortedArray();
         writeInts( writer, intermediateBuffer.add(), true, labels.length );
+        intermediateBuffer.setVersion( labelsVersion );
         for ( int i = 0; i < labels.length; )
         {
             if ( writer.writeNext( labels[i] ) )
@@ -690,6 +694,7 @@ class MutableNodeData
     {
         int[] types = sortedDegreeTypes();
         ByteBuffer buffer = intermediateBuffer.add();
+        intermediateBuffer.setVersion( degreesVersion );
         StreamVByte.Writer typeWriter = new StreamVByte.Writer();
         writeInts( typeWriter, buffer, true, types.length );
         ByteBuffer degreesBuffer = intermediateBuffer.temp();
@@ -778,12 +783,13 @@ class MutableNodeData
         }
     }
 
-    private static void writeNodeProperties( MutableIntObjectMap<Value> properties, IntermediateBuffer intermediateBuffer,
+    private void writeNodeProperties( MutableIntObjectMap<Value> properties, IntermediateBuffer intermediateBuffer,
             SimpleBigValueStore bigPropertyValueStore, Consumer<FrekiCommand.BigPropertyValue> commandConsumer )
     {
         StreamVByte.Writer keyWriter = new StreamVByte.Writer();
         int[] propertyKeys = properties.keySet().toSortedArray();
         ByteBuffer buffer = intermediateBuffer.add();
+        intermediateBuffer.setVersion( propertiesVersion );
         writeInts( keyWriter, buffer, true, propertyKeys.length );
         ByteBuffer valueBuffer = intermediateBuffer.temp();
         PropertyValueFormat valueWriter = new PropertyValueFormat( bigPropertyValueStore, commandConsumer, valueBuffer );
@@ -867,7 +873,9 @@ class MutableNodeData
             {
                 //Splitted, deserialize now!
                 ensureLabelsDeserialized();
-                addLabels( buffer.position( header.getOffset( Header.FLAG_LABELS ) ) );
+                buffer.position( header.getOffset( Header.FLAG_LABELS ) );
+                labelsVersion = buffer.get();
+                addLabels( buffer );
             }
         }
 
@@ -884,7 +892,9 @@ class MutableNodeData
             {
                 //Splitted, deserialize now!
                 ensurePropertiesDeserialized();
-                readProperties( properties, buffer.position( header.getOffset( Header.OFFSET_PROPERTIES ) ) );
+                buffer.position( header.getOffset( Header.OFFSET_PROPERTIES ) );
+                propertiesVersion = buffer.get();
+                readProperties( properties, buffer );
             }
         }
 
@@ -901,7 +911,9 @@ class MutableNodeData
             {
                 //Splitted, deserialize now!
                 ensureDegreesDeserialized();
-                readDegrees( buffer.position( header.getOffset( Header.OFFSET_DEGREES ) ) );
+                buffer.position( header.getOffset( Header.OFFSET_DEGREES ) );
+                degreesVersion = buffer.get();
+                readDegrees( buffer );
             }
         }
 

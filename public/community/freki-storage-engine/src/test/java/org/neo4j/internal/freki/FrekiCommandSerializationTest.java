@@ -146,7 +146,7 @@ public class FrekiCommandSerializationTest
         {
             byte[] data = new byte[random.nextInt( 20, 400 )];
             random.nextBytes( data );
-            records.add( new Record( (byte) FLAG_IN_USE, randomLargeId(), Record.FIRST_VERSION, ByteBuffer.wrap( data ) ) );
+            records.add( new Record( (byte) FLAG_IN_USE, randomLargeId(), ByteBuffer.wrap( data ) ) );
         }
         FrekiCommand.BigPropertyValue command = new FrekiCommand.BigPropertyValue( records );
 
@@ -203,39 +203,6 @@ public class FrekiCommandSerializationTest
         FrekiCommand.Schema readCommand = readCommand( channel, FrekiCommand.Schema.class );
         assertThat( readCommand.mode ).isEqualTo( mode );
         assertThat( readCommand.descriptor ).isEqualTo( rule );
-    }
-
-    @Test
-    void shouldReadAndWriteSparseNodeWithVersionOnlyChanges() throws Exception
-    {
-        // given
-        long nodeId = randomLargeId();
-        Record x1After = recordWithRandomData( 0, nodeId );
-        FrekiCommand.RecordChange x1 = new FrekiCommand.RecordChange( null, x1After );
-
-        FrekiCommand.RecordChange xL1;
-        FrekiCommand.RecordChange xL2;
-        {
-            int sizeExp = 1;
-            long id = randomLargeId();
-            Record before = recordWithRandomData( sizeExp, id );
-            Record after = recordWithRandomData( sizeExp, id );
-            xL1 = new FrekiCommand.RecordChange( before, after );
-        }
-        {
-            int sizeExp = 2;
-            long id = randomLargeId();
-            Record otherRecordBefore = recordWithRandomData( sizeExp, id );
-            byte version = (byte) 99;
-            otherRecordBefore.setVersion( version );
-            Record otherRecordAfter = new Record( sizeExp, id, version );
-            otherRecordAfter.copyContentsFrom( otherRecordBefore );
-            xL2 = new FrekiCommand.RecordChange( otherRecordBefore, otherRecordAfter );
-            xL2.updateVersion( (byte) (version + 1) );
-        }
-
-        // when/then
-        shouldReadAndWriteSparseNode( nodeId, x1, xL1, xL2 );
     }
 
     private SchemaRule randomSchemaRule()
@@ -317,7 +284,7 @@ public class FrekiCommandSerializationTest
 
     private Record recordWithRandomData( int sizeExp, long id )
     {
-        Record after = new Record( sizeExp, id, (byte) random.nextInt() );
+        Record after = new Record( sizeExp, id );
         after.setFlag( FLAG_IN_USE, true );
         fillWithRandomData( after );
         return after;
@@ -403,7 +370,6 @@ public class FrekiCommandSerializationTest
         for ( FrekiCommand.RecordChange change : changes )
         {
             FrekiCommand.RecordChange addedChange = command.addChange( change.before, change.after );
-            addedChange.onlyVersionChange = change.onlyVersionChange;
         }
 
         // when
@@ -416,21 +382,8 @@ public class FrekiCommandSerializationTest
         FrekiCommand.RecordChange readChange = readNode.change();
         for ( FrekiCommand.RecordChange change : changes )
         {
-            assertThat( readChange.onlyVersionChange ).isEqualTo( change.onlyVersionChange );
-            if ( change.onlyVersionChange )
-            {
-                assertThat( readChange.before.flags ).isEqualTo( change.before.flags );
-                assertThat( readChange.before.version ).isEqualTo( change.before.version );
-                assertThat( readChange.after.flags ).isEqualTo( change.after.flags );
-                assertThat( readChange.after.version ).isEqualTo( change.after.version );
-                assertThat( readChange.before.data() ).isNull();
-                assertThat( readChange.after.data() ).isNull();
-            }
-            else
-            {
-                assertRecord( change.before, readChange.before );
-                assertRecord( change.after, readChange.after );
-            }
+            assertRecord( change.before, readChange.before );
+            assertRecord( change.after, readChange.after );
             readChange = readChange.next();
         }
         assertThat( readChange ).isNull();

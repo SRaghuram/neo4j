@@ -46,7 +46,6 @@ class FrekiCursorData
     Header header = new Header();
 
     long nodeId = NULL;
-    byte version = Record.FIRST_VERSION;
     boolean x1Loaded;
     long xLChainStartPointer = NULL;
     long xLChainNextLinkPointer = NULL;
@@ -55,13 +54,16 @@ class FrekiCursorData
     int labelOffset;
     private ByteBuffer labelBuffer;
     boolean labelIsSplit;
+    byte labelsVersion;
     int propertyOffset;
     private ByteBuffer propertyBuffer;
     boolean propertyIsSplit;
+    byte propertyVersion;
     int relationshipOffset;
     int relationshipTypeOffsetsOffset;
     private ByteBuffer relationshipBuffer;
     boolean degreesIsSplit;
+    byte degreesVersion;
 
     int refCount = 1;
 
@@ -76,7 +78,6 @@ class FrekiCursorData
     void gatherDataFromX1( Record record )
     {
         x1Loaded = true;
-        version = record.version;
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
@@ -88,19 +89,14 @@ class FrekiCursorData
         }
     }
 
-    boolean gatherDataFromXL( Record record )
+    void gatherDataFromXL( Record record )
     {
-        if ( record.version != version )
-        {
-            return false;
-        }
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
         assert header.hasMark( OFFSET_RECORD_POINTER );
         long[] pointers = readRecordPointers( buffer );
         xLChainNextLinkPointer = forwardPointer( pointers, true );
-        return true;
     }
 
     private void assignDataOffsets( ByteBuffer buffer )
@@ -113,13 +109,25 @@ class FrekiCursorData
         {
             labelOffset = buffer.position();
             labelBuffer = buffer;
-            labelIsSplit = header.hasReferenceMark( FLAG_LABELS );
+            if ( header.hasReferenceMark( FLAG_LABELS ) )
+            {
+                labelIsSplit = true;
+                //TODO solve the issue when we are on the edge between split and non-split, as this "resets" the version
+                labelsVersion = labelBuffer.get( labelOffset );
+                labelOffset++; //version is 1 byte
+            }
         }
         if ( propertyOffset == 0 && header.hasMark( OFFSET_PROPERTIES ) )
         {
             propertyOffset = header.getOffset( OFFSET_PROPERTIES );
             propertyBuffer = buffer;
-            propertyIsSplit = header.hasReferenceMark( OFFSET_PROPERTIES );
+            if ( header.hasReferenceMark( OFFSET_PROPERTIES ) )
+            {
+                propertyIsSplit = true;
+                //TODO solve the issue when we are on the edge between split and non-split, as this "resets" the version
+                propertyVersion = propertyBuffer.get( propertyOffset );
+                propertyOffset++; //version is 1 byte
+            }
         }
         if ( header.hasMark( OFFSET_RELATIONSHIPS ) )
         {
@@ -131,7 +139,13 @@ class FrekiCursorData
         {
             relationshipOffset = header.getOffset( OFFSET_DEGREES );
             relationshipBuffer = buffer;
-            degreesIsSplit = header.hasReferenceMark( OFFSET_DEGREES );
+            if ( header.hasReferenceMark( OFFSET_DEGREES ) )
+            {
+                degreesIsSplit = true;
+                //TODO solve the issue when we are on the edge between split and non-split, as this "resets" the version
+                degreesVersion = relationshipBuffer.get( relationshipOffset );
+                relationshipOffset++; //version is 1 byte
+            }
         }
     }
 
@@ -169,7 +183,6 @@ class FrekiCursorData
     {
         assert refCount == 1;
         nodeId = NULL;
-        version = Record.FIRST_VERSION;
         x1Loaded = false;
         xLChainStartPointer = NULL;
         xLChainNextLinkPointer = NULL;

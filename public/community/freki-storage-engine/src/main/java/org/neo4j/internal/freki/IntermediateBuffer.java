@@ -26,13 +26,16 @@ import java.nio.ByteBuffer;
 
 class IntermediateBuffer
 {
+    static final int PART_SPLIT_VERSION_SIZE = 1;
     private static final int LEEWAY_SIZE = 50;
+    static final byte FIRST_VERSION = -1;
 
     private final MutableList<ByteBuffer> buffers = Lists.mutable.empty();
     private final int bufferCapacity;
     private int count;
     private int readIndex;
     private ByteBuffer tempBuffer;
+    private byte version = FIRST_VERSION;
 
     IntermediateBuffer( int bufferCapacity )
     {
@@ -45,6 +48,10 @@ class IntermediateBuffer
         if ( count == buffers.size() )
         {
             buffers.add( newBuffer() );
+        }
+        if ( count == 1 )
+        {
+            version++;
         }
         return clearBuffer( buffers.get( count++ ) );
     }
@@ -113,6 +120,7 @@ class IntermediateBuffer
     {
         count = 0;
         readIndex = 0;
+        version = FIRST_VERSION;
         return this;
     }
 
@@ -142,5 +150,15 @@ class IntermediateBuffer
     boolean isSplit()
     {
         return count > 1;
+    }
+
+    void setVersion( byte version )
+    {
+        this.version = version;
+    }
+
+    byte getVersion()
+    {
+        return version;
     }
 }

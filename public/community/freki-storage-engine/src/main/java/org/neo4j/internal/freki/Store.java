@@ -61,7 +61,7 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     @Override
     public Record newRecord( long id )
     {
-        return new Record( sizeExp, id, Record.FIRST_VERSION );
+        return new Record( sizeExp, id );
     }
 
     @Override
@@ -78,15 +78,6 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
         record.serialize( cursor );
         cursor.checkAndClearBoundsFlag();
         idUpdateListener.markId( idGenerator, id, record.hasFlag( Record.FLAG_IN_USE ), cursorTracer );
-    }
-
-    @Override
-    public void writeHeaderOnly( PageCursor cursor, Record record ) throws IOException
-    {
-        long id = record.id;
-        goToId( cursor, id );
-        record.serializeHeader( cursor );
-        cursor.checkAndClearBoundsFlag();
     }
 
     private void goToId( PageCursor cursor, long id ) throws IOException

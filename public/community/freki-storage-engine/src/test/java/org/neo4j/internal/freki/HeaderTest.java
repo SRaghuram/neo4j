@@ -99,31 +99,6 @@ class HeaderTest
         assertThat( readHeader.hasReferenceMark( OFFSET_RELATIONSHIPS ) ).isEqualTo( header.hasReferenceMark( OFFSET_RELATIONSHIPS ) );
     }
 
-    @Test
-    void shouldCalculateSameOrMoreMarkersWithFilterCorrectly()
-    {
-        Header h1 = new Header();
-        Header h2 = new Header();
-        int filter = 0;
-        assertThat( h1.hasSameOrMoreMarkers( h2, filter ) ).isTrue();
-
-        h1.mark( FLAG_LABELS, true );
-        filter = Header.slotBit( FLAG_LABELS );
-
-        assertThat( h1.hasSameOrMoreMarkers( h2, filter ) ).isTrue();
-
-        h1.mark( OFFSET_PROPERTIES, true );
-        h2.mark( OFFSET_PROPERTIES, true );
-        assertThat( h1.hasSameOrMoreMarkers( h2, filter ) ).isTrue();
-
-        h2.mark( OFFSET_RELATIONSHIPS, true );
-        assertThat( h1.hasSameOrMoreMarkers( h2, filter ) ).isFalse();
-        assertThat( h2.hasSameOrMoreMarkers( h1, filter ) ).isTrue();
-
-        filter |= Header.slotBit( OFFSET_RELATIONSHIPS );
-        assertThat( h1.hasSameOrMoreMarkers( h2, filter ) ).isTrue();
-    }
-
     private void assertReadAndWrite( Header header, int expectedSize )
     {
         ByteBuffer buffer = ByteBuffer.allocate( expectedSize );

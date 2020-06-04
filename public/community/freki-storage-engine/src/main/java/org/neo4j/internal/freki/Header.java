@@ -50,8 +50,6 @@ class Header
     static final int FLAG_LABELS = 7;
     static final int FLAG_HAS_DENSE_RELATIONSHIPS = 8;
 
-    static final int MARKERS_FILTER_SKIP_NON_ESSENTIAL = slotBit( OFFSET_RECORD_POINTER ) | slotBit( OFFSET_END ) | slotBit( FLAG_HAS_DENSE_RELATIONSHIPS );
-
     private int markers;
     private int referenceMarkers;
     private final int[] offsets = new int[NUM_OFFSETS];
@@ -100,6 +98,11 @@ class Header
     private static boolean hasMark( int markers, int slot )
     {
         return (markers & slotBit( slot )) != 0;
+    }
+
+    boolean isOffset( int slot )
+    {
+        return slot < NUM_OFFSETS;
     }
 
     void setOffset( int slot, int offset )
@@ -225,11 +228,6 @@ class Header
     {
         markers = 0;
         referenceMarkers = 0;
-    }
-
-    boolean hasSameOrMoreMarkers( Header header, int filter )
-    {
-        return ((markers ^ header.markers) & ~filter & ~markers) == 0;
     }
 
     boolean hasMarkers()
