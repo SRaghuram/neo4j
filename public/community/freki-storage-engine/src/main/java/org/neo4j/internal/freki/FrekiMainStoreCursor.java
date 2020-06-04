@@ -186,21 +186,19 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     boolean loadNextChainLink()
     {
         //This is only capable of reading chain in one direction, until reached end.
-        assert hasMoreChainLinks(); //Tried to load next link, but is at the end of chain.
-        int sizeExp = sizeExponentialFromRecordPointer( data.xLChainNextLinkPointer );
-        Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.xLChainNextLinkPointer ) );
-        if ( xLRecord == null || !data.gatherDataFromXL( xLRecord ) )
+        if ( data.xLChainNextLinkPointer != NULL )
         {
+            int sizeExp = sizeExponentialFromRecordPointer( data.xLChainNextLinkPointer );
+            Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.xLChainNextLinkPointer ) );
+            if ( xLRecord != null && data.gatherDataFromXL( xLRecord ) )
+            {
+                return true;
+            }
             //Record has version mismatch or been deleted, likely reading while writing.
             //Caller is responsible for have to reload everything again.
-            return false;
         }
-        return true;
-    }
-
-    boolean hasMoreChainLinks()
-    {
-        return !data.xLChainLoaded && data.xLChainNextLinkPointer != NULL;
+        // else: we reached end of chain
+        return false;
     }
 
     /**
@@ -251,27 +249,20 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     private boolean ensureLoaded( ToIntFunction<FrekiCursorData> test, int headerSlot )
     {
-        if ( (!data.x1Loaded || !data.xLChainLoaded) && test.applyAsInt( data ) == 0 )
+        if ( !ensureX1Loaded() )
         {
-            if ( !ensureX1Loaded() )
+            return false;
+        }
+        while ( test.applyAsInt( data ) == 0 && data.header.hasReferenceMark( headerSlot ) )
+        {
+            if ( !loadNextChainLink() )
             {
+                //We traversed the rest of the chain. A few possible scenarios
+                //1. The header/store is corrupt / we did not start at the beginning of the chain.
+                //2. Concurrent writes to this read and we moved the part (to earlier in the chain).
+                //3. We failed to read next link, deleted or version mismatch
+                //All we can do is retry, if its corruption we'll get retry timeout. If its concurrent read/writes we'll eventually succeed
                 return false;
-            }
-            while ( test.applyAsInt( data ) == 0 && data.header.hasReferenceMark( headerSlot ) )
-            {
-                if ( !hasMoreChainLinks() )
-                {
-                    //We traversed the rest of the chain.
-                    //      Either the header/store is corrupt / we did not start at the beginning of the chain.
-                    //      Or we moved the part.
-                    // We retry, if its corruption we'll get retry timeout.
-                    return false;
-                }
-                if ( !loadNextChainLink() )
-                {
-                    //We failed to read next link, deleted or version mismatch, we need to reload everything
-                    return false;
-                }
             }
         }
         return true;

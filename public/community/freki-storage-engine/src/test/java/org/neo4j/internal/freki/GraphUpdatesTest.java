@@ -330,7 +330,7 @@ class GraphUpdatesTest
     }
 
     @Test
-    void shouldUpdateVersionOnChangesSwitchingRecord() throws ConstraintViolationTransactionFailureException
+    void shouldNotUpdateVersionOnChangesSwitchingToNewRecord() throws ConstraintViolationTransactionFailureException
     {
         GraphUpdates updates = new GraphUpdates( mainStores, NULL, INSTANCE );
         long nodeId = mainStores.mainStore.nextId( NULL );
@@ -346,7 +346,7 @@ class GraphUpdatesTest
             manyLabels.add( i + 4 );
         }
         updates.getOrLoad( nodeId ).updateLabels( manyLabels, LongSets.immutable.of( 1,2,3 ) );
-        extractAndApplyUpdates( updates, layoutChange( false, new int[] {1}, new int[] {1, 4} ) ); // this should not get a version change!
+        extractAndApplyUpdates( updates, layoutChange( false, new int[] {1}, new int[] {1, 4} ) );
 
         updates = new GraphUpdates( mainStores, NULL, INSTANCE );
         MutableLongSet moreLabels = LongSets.mutable.empty();
