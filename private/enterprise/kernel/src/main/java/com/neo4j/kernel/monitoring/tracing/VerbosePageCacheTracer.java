@@ -36,6 +36,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
     private final Log log;
     private final SystemNanoClock clock;
     private final AtomicLong flushedPages = new AtomicLong();
+    private final AtomicLong mergedPages = new AtomicLong();
     private final AtomicLong flushBytesWritten = new AtomicLong();
 
     VerbosePageCacheTracer( Log log, SystemNanoClock clock )
@@ -62,7 +63,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
     public MajorFlushEvent beginCacheFlush()
     {
         log.info( "Start whole page cache flush." );
-        return new PageCacheMajorFlushEvent( flushedPages.get(), flushBytesWritten.get(), clock.startStopWatch() );
+        return new PageCacheMajorFlushEvent( flushedPages.get(), flushBytesWritten.get(), mergedPages.get(), clock.startStopWatch() );
     }
 
     @Override
@@ -70,7 +71,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
     {
         String fileName = swapper.file().getName();
         log.info( format( "Flushing file: '%s'.", fileName ) );
-        return new FileFlushEvent( fileName, flushedPages.get(), flushBytesWritten.get(), clock.startStopWatch() );
+        return new FileFlushEvent( fileName, flushedPages.get(), flushBytesWritten.get(), mergedPages.get(), clock.startStopWatch() );
     }
 
     private static String nanosToString( long nanos )
@@ -140,20 +141,28 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
         {
             flushedPages.getAndAdd( pageCount );
         }
+
+        @Override
+        public void addPagesMerged( int pagesMerged )
+        {
+            mergedPages.getAndAdd( pagesMerged );
+        }
     };
 
     private class FileFlushEvent implements MajorFlushEvent
     {
+        private final long mergesOnStart;
         private final Stopwatch startTime;
         private final String fileName;
         private final long flushesOnStart;
         private final long bytesWrittenOnStart;
 
-        FileFlushEvent( String fileName, long flushesOnStart, long bytesWrittenOnStart, Stopwatch startTime )
+        FileFlushEvent( String fileName, long flushesOnStart, long bytesWrittenOnStart, long mergesOnStart, Stopwatch startTime )
         {
             this.fileName = fileName;
             this.flushesOnStart = flushesOnStart;
             this.bytesWrittenOnStart = bytesWrittenOnStart;
+            this.mergesOnStart = mergesOnStart;
             this.startTime = startTime;
         }
 
@@ -169,9 +178,10 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
             long fileFlushNanos = startTime.elapsed( NANOSECONDS );
             long bytesWrittenInTotal = flushBytesWritten.get() - bytesWrittenOnStart;
             long flushedPagesInTotal = flushedPages.get() - flushesOnStart;
-            log.info( "'%s' flush completed. Flushed %s in %d pages. Flush took: %s. Average speed: %s.",
+            long mergedPagesInTotal = mergedPages.get() - mergesOnStart;
+            log.info( "'%s' flush completed. Flushed %s in %d pages, %d pages merged. Flush took: %s. Average speed: %s.",
                     fileName,
-                    bytesToString( bytesWrittenInTotal ), flushedPagesInTotal,
+                    bytesToString( bytesWrittenInTotal ), flushedPagesInTotal, mergedPagesInTotal,
                     nanosToString( fileFlushNanos ), flushSpeed( bytesWrittenInTotal, fileFlushNanos ) );
         }
     }
@@ -180,12 +190,14 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
     {
         private final long flushesOnStart;
         private final long bytesWrittenOnStart;
+        private final long mergesOnStart;
         private final Stopwatch startTime;
 
-        PageCacheMajorFlushEvent( long flushesOnStart, long bytesWrittenOnStart, Stopwatch startTime )
+        PageCacheMajorFlushEvent( long flushesOnStart, long bytesWrittenOnStart, long mergesOnStart, Stopwatch startTime )
         {
             this.flushesOnStart = flushesOnStart;
             this.bytesWrittenOnStart = bytesWrittenOnStart;
+            this.mergesOnStart = mergesOnStart;
             this.startTime = startTime;
         }
 
@@ -201,8 +213,9 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
             long pageCacheFlushNanos = startTime.elapsed( NANOSECONDS );
             long bytesWrittenInTotal = flushBytesWritten.get() - bytesWrittenOnStart;
             long flushedPagesInTotal = flushedPages.get() - flushesOnStart;
-            log.info( "Page cache flush completed. Flushed %s in %d pages. Flush took: %s. Average speed: %s.",
-                    bytesToString( bytesWrittenInTotal ), flushedPagesInTotal,
+            long mergedPagesInTotal = mergedPages.get() - mergesOnStart;
+            log.info( "Page cache flush completed. Flushed %s in %d pages, %d pages merged. Flush took: %s. Average speed: %s.",
+                    bytesToString( bytesWrittenInTotal ), flushedPagesInTotal, mergedPagesInTotal,
                     nanosToString(pageCacheFlushNanos),
                     flushSpeed( bytesWrittenInTotal, pageCacheFlushNanos ) );
         }

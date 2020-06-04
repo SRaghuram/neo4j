@@ -24,6 +24,8 @@ public class PageCacheMetrics extends LifecycleAdapter
     private static final String PC_EVICTION_EXCEPTIONS_TEMPLATE = name( PAGE_CACHE_PREFIX, "eviction_exceptions" );
     @Documented( "The total number of page flushes executed by the page cache." )
     private static final String PC_FLUSHES_TEMPLATE = name( PAGE_CACHE_PREFIX, "flushes" );
+    @Documented( "The total number of page merges executed by the page cache." )
+    private static final String PC_MERGES_TEMPLATE = name( PAGE_CACHE_PREFIX, "merges" );
     @Documented( "The total number of page unpins executed by the page cache." )
     private static final String PC_UNPINS_TEMPLATE = name( PAGE_CACHE_PREFIX, "unpins" );
     @Documented( "The total number of page pins executed by the page cache." )
@@ -45,6 +47,7 @@ public class PageCacheMetrics extends LifecycleAdapter
 
     private final String pcEvictionExceptions;
     private final String pcFlushes;
+    private final String pcMerges;
     private final String pcUnpins;
     private final String pcPins;
     private final String pcEvictions;
@@ -64,6 +67,7 @@ public class PageCacheMetrics extends LifecycleAdapter
         this.pageCacheCounters = pageCacheCounters;
         this.pcEvictionExceptions = name( metricsPrefix, PC_EVICTION_EXCEPTIONS_TEMPLATE );
         this.pcFlushes = name( metricsPrefix, PC_FLUSHES_TEMPLATE );
+        this.pcMerges = name( metricsPrefix, PC_MERGES_TEMPLATE );
         this.pcUnpins = name( metricsPrefix, PC_UNPINS_TEMPLATE );
         this.pcPins = name( metricsPrefix, PC_PINS_TEMPLATE );
         this.pcEvictions = name( metricsPrefix, PC_EVICTIONS_TEMPLATE );
@@ -84,6 +88,7 @@ public class PageCacheMetrics extends LifecycleAdapter
         registry.register( pcUnpins, new MetricsCounter( pageCacheCounters::unpins ) );
         registry.register( pcHits, new MetricsCounter( pageCacheCounters::hits ) );
         registry.register( pcFlushes, new MetricsCounter( pageCacheCounters::flushes ) );
+        registry.register( pcMerges, new MetricsCounter( pageCacheCounters::merges ) );
         registry.register( pcEvictionExceptions, new MetricsCounter( pageCacheCounters::evictionExceptions ) );
         registry.register( pcHitRatio, new PageCacheHitRatioGauge( pageCacheCounters ) );
         registry.register( pcUsageRatio, (Gauge<Double>) pageCacheCounters::usageRatio );
@@ -99,6 +104,7 @@ public class PageCacheMetrics extends LifecycleAdapter
         registry.remove( pcPins );
         registry.remove( pcUnpins );
         registry.remove( pcHits );
+        registry.remove( pcMerges );
         registry.remove( pcFlushes );
         registry.remove( pcEvictionExceptions );
         registry.remove( pcHitRatio );

@@ -56,7 +56,7 @@ class PageCacheMetricsIT
     }
 
     @Test
-    void pageCacheMetrics() throws Exception
+    void pageCacheMetrics()
     {
         Label testLabel = Label.label( "testLabel" );
         try ( Transaction transaction = database.beginTx() )
@@ -80,6 +80,7 @@ class PageCacheMetricsIT
         assertMetrics( "Metrics report should include page cache page faults", "neo4j.page_cache.page_faults", greaterThanZero );
         assertMetrics( "Metrics report should include page cache hits", "neo4j.page_cache.hits", greaterThanZero );
         assertMetrics( "Metrics report should include page cache flushes", "neo4j.page_cache.flushes", greaterThanEqualZero );
+        assertMetrics( "Metrics report should include page cache merges", "neo4j.page_cache.merges", greaterThanEqualZero );
         assertMetrics( "Metrics report should include page cache exceptions", "neo4j.page_cache.eviction_exceptions", equalityCondition( 0L ) );
 
         assertEventually(

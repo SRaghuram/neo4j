@@ -134,6 +134,12 @@ class PageCacheHitRatioTest
         }
 
         @Override
+        public long merges()
+        {
+            return 0;
+        }
+
+        @Override
         public long bytesRead()
         {
             return 0;

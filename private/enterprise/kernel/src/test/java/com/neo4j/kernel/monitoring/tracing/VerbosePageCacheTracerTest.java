@@ -58,10 +58,11 @@ class VerbosePageCacheTracerTest
             FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, mock( PageSwapper.class), 4, 3 );
             flushEvent.addBytesWritten( 2 );
             flushEvent.addPagesFlushed( 7 );
+            flushEvent.addPagesMerged( 5 );
             flushEvent.done();
         }
         assertThat( logProvider ).containsMessages( "Start whole page cache flush." );
-        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages. Flush took: 0ns. " +
+        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages, 5 pages merged. Flush took: 0ns. " +
                 "Average speed: 2bytes/ns." );
     }
 
@@ -87,10 +88,11 @@ class VerbosePageCacheTracerTest
             }
             flushEvent.addBytesWritten( 2 );
             flushEvent.addPagesFlushed( 7 );
+            flushEvent.addPagesMerged( 4 );
             flushEvent.done();
         }
         assertThat( logProvider ).containsMessages( "Start whole page cache flush." );
-        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages. Flush took: 2ms. " +
+        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages, 4 pages merged. Flush took: 2ms. " +
                 "Average speed: 0bytes/ns." );
     }
 
@@ -111,11 +113,12 @@ class VerbosePageCacheTracerTest
             FlushEvent flushEvent2 = flushEventOpportunity.beginFlush( 1, 2, swapper, 4, 3 );
             flushEvent2.addPagesFlushed( 10 );
             flushEvent2.addBytesWritten( ByteUnit.ONE_MEBI_BYTE );
+            flushEvent2.addPagesMerged( 1 );
             flushEvent2.done();
         }
         assertThat( logProvider ).containsMessages( "Flushing file: 'fileToFlush'." );
         assertThat( logProvider ).containsMessages(
-                "'fileToFlush' flush completed. Flushed 2.000MiB in 110 pages. Flush took: 1s. Average speed: 2.000MiB/s." );
+                "'fileToFlush' flush completed. Flushed 2.000MiB in 110 pages, 1 pages merged. Flush took: 1s. Average speed: 2.000MiB/s." );
     }
 
     private VerbosePageCacheTracer createTracer()
