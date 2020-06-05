@@ -252,6 +252,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                     throw new IllegalStateException( "Reading split data from records with different version. Data is no longer split!" );
                 }
             }
+            else if ( !header.hasReferenceMark( headerSlot ) )
+            {
+                throw new IllegalStateException( "Reading split data from records with different version. Data no longer exists" );
+
+            }
             // else there could be another record in between the pieces for this data part, so just skip on through it
         }
         return null;

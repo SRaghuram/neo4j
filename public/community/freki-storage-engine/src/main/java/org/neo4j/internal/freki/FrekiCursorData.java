@@ -112,7 +112,6 @@ class FrekiCursorData
             if ( header.hasReferenceMark( FLAG_LABELS ) )
             {
                 labelIsSplit = true;
-                //TODO solve the issue when we are on the edge between split and non-split, as this "resets" the version
                 labelsVersion = labelBuffer.get( labelOffset );
                 labelOffset++; //version is 1 byte
             }
@@ -124,7 +123,6 @@ class FrekiCursorData
             if ( header.hasReferenceMark( OFFSET_PROPERTIES ) )
             {
                 propertyIsSplit = true;
-                //TODO solve the issue when we are on the edge between split and non-split, as this "resets" the version
                 propertyVersion = propertyBuffer.get( propertyOffset );
                 propertyOffset++; //version is 1 byte
             }
@@ -142,7 +140,6 @@ class FrekiCursorData
             if ( header.hasReferenceMark( OFFSET_DEGREES ) )
             {
                 degreesIsSplit = true;
-                //TODO solve the issue when we are on the edge between split and non-split, as this "resets" the version
                 degreesVersion = relationshipBuffer.get( relationshipOffset );
                 relationshipOffset++; //version is 1 byte
             }

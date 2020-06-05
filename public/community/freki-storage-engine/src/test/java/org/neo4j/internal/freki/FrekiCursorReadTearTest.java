@@ -24,6 +24,7 @@ import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -214,9 +215,8 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         }
         FrekiNodeCursor nodeCursorAtV2 = existingNode( id ).removeLabels( labelsAfterRemove ).labels( labelsAfter ).storeAndPlaceNodeCursorAt();
 
-        long[] expectedLabels =
-                Arrays.stream( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) ).asLongStream().toArray();
-        long[] acceptedBefore = Arrays.stream( labelsBefore ).asLongStream().toArray();
+        long[] expectedLabels = toLong( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) );
+        long[] acceptedBefore = toLong( labelsBefore );
 
         long[] v1Labels = nodeCursorAtV1.labels();
         assertThat( v1Labels ).isSorted();
@@ -232,7 +232,7 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
     }
 
     @Test
-    void shouldSeeCorrectSplitLabelsInXLChain()
+    void shouldSeeCorrectSplitLabelsInXLChainOnUpdate()
     {
         int x8Size = stores.mainStore( 3 ).recordDataSize();
         int[] labelsBefore = intArray( 0, x8Size * 4 / 3 );
@@ -252,8 +252,7 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         }
         FrekiNodeCursor nodeCursorAtV2 = existingNode( id ).removeLabels( labelsAfterRemove ).labels( labelsAfter ).storeAndPlaceNodeCursorAt();
 
-        long[] expectedLabels =
-                Arrays.stream( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) ).asLongStream().toArray();
+        long[] expectedLabels = toLong( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) );
 
         assertThatThrownBy( nodeCursorAtV1::labels ).hasMessageContaining( "Reading split data from records with different version." );
 
@@ -261,6 +260,121 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         assertThat( v2Labels ).isSorted();
         assertThat( v2Labels ).doesNotHaveDuplicates();
         assertThat( v2Labels ).containsExactly( expectedLabels );
+    }
+
+    @Test
+    void shouldSeeCorrectSplitLabelsInXLChainOnRemoveAll()
+    {
+        int x8Size = stores.mainStore( 3 ).recordDataSize();
+        int[] labelsBefore = intArray( 0, x8Size * 4 / 3 );
+        Node node = node();
+        long id = node.id();
+        for ( int i = 0; i < 50; i++ )
+        {
+            node.relationship( i, node );
+        }
+        FrekiNodeCursor nodeCursorAtV1 = node.labels( labelsBefore ).storeAndPlaceNodeCursorAt();
+        //force load of x8
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
+        {
+            nodeCursorAtV1.relationships( relationshipCursor, RelationshipSelection.ALL_RELATIONSHIPS );
+        }
+        FrekiNodeCursor nodeCursorAtV2 = existingNode( id ).removeLabels( labelsBefore ).storeAndPlaceNodeCursorAt();
+
+        long[] expectedLabels = new long[0];
+        long[] acceptedBefore = toLong( labelsBefore );
+
+        assertThatThrownBy( nodeCursorAtV1::labels ).hasMessageContaining( "Reading split data from records with different version." );
+//        long[] v1Labels = nodeCursorAtV1.labels();
+//        assertThat( v1Labels ).isSorted();
+//        assertThat( v1Labels ).doesNotHaveDuplicates();
+//        assertThat( v1Labels ).satisfiesAnyOf(
+//                l -> assertThat( l ).containsExactly( expectedLabels ),
+//                l -> assertThat( l ).containsExactly( acceptedBefore ) );
+
+        long[] v2Labels = nodeCursorAtV2.labels();
+        assertThat( v2Labels ).isSorted();
+        assertThat( v2Labels ).doesNotHaveDuplicates();
+        assertThat( v2Labels ).containsExactly( expectedLabels );
+    }
+
+    @Test
+    void shouldSeeCorrectSplitLabelsInXLChainOnRemoveSome()
+    {
+        int x8Size = stores.mainStore( 3 ).recordDataSize();
+        int[] labelsBefore = intArray( 0, x8Size * 4 / 3 );
+        int[] labelsAfterRemove = intArray( 0, labelsBefore.length / 2 );
+        Node node = node();
+        long id = node.id();
+        for ( int i = 0; i < 50; i++ )
+        {
+            node.relationship( i, node );
+        }
+        FrekiNodeCursor nodeCursorAtV1 = node.labels( labelsBefore ).storeAndPlaceNodeCursorAt();
+        //force load of x8
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
+        {
+            nodeCursorAtV1.relationships( relationshipCursor, RelationshipSelection.ALL_RELATIONSHIPS );
+        }
+        FrekiNodeCursor nodeCursorAtV2 = existingNode( id ).removeLabels( labelsAfterRemove ).storeAndPlaceNodeCursorAt();
+
+        long[] expectedLabels = toLong( ArrayUtils.removeAll( labelsBefore, labelsAfterRemove ) );
+        long[] acceptedBefore = toLong( labelsBefore );
+
+        long[] v1Labels = nodeCursorAtV1.labels();
+        assertThat( v1Labels ).isSorted();
+        assertThat( v1Labels ).doesNotHaveDuplicates();
+        assertThat( v1Labels ).satisfiesAnyOf(
+                l -> assertThat( l ).containsExactly( expectedLabels ),
+                l -> assertThat( l ).containsExactly( acceptedBefore ) );
+
+        long[] v2Labels = nodeCursorAtV2.labels();
+        assertThat( v2Labels ).isSorted();
+        assertThat( v2Labels ).doesNotHaveDuplicates();
+        assertThat( v2Labels ).containsExactly( expectedLabels );
+    }
+
+    /*
+        This test is disabled but kept because it highlights an issue we have not solved yet.
+        When we go from split->non-split->split we loose/"reset" the version as we only do versioning on split parts.
+        So with 2 writes during one read doing exactly that, then we do not detect the version mismatch and read corrupt data
+     */
+    @Disabled
+    @Test
+    void shouldSeeCorrectDataWhenAlternatingOnSplitData()
+    {
+        int x8Size = stores.mainStore( 3 ).recordDataSize();
+        int[] labelsBefore = intArray( 0, x8Size );
+        Node node = node();
+        long id = node.id();
+        for ( int i = 0; i < 50; i++ )
+        {
+            node.relationship( i, node );
+        }
+        FrekiNodeCursor nodeCursorAtV1 = node.labels( labelsBefore ).storeAndPlaceNodeCursorAt();
+        //force load of x8
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
+        {
+            nodeCursorAtV1.relationships( relationshipCursor, RelationshipSelection.ALL_RELATIONSHIPS );
+        }
+
+        //First we have Split labels
+        long[] labelsV1 = toLong( labelsBefore );
+        //Then we have non split labels
+        FrekiNodeCursor nodeCursorAtV2 = existingNode( id ).removeLabels( intArray( 0, x8Size / 2 ) ).storeAndPlaceNodeCursorAt();
+        long[] labelsV2 = toLong( intArray( x8Size / 2, x8Size ) );
+        assertThat( nodeCursorAtV2.labels() ).containsExactly( labelsV2 );
+
+        //Then we have split labels again, but other ones than V1
+        FrekiNodeCursor nodeCursorAtV3 = existingNode( id ).labels( intArray( x8Size, x8Size * 3 / 2 ) ).storeAndPlaceNodeCursorAt();
+        long[] labelsV3 = toLong( intArray( x8Size / 2, x8Size * 3 / 2 ) );
+        assertThat( nodeCursorAtV3.labels() ).containsExactly( labelsV3 );
+
+        //Now we're expecting V1 to find either one of the three valid states.
+        assertThat( nodeCursorAtV1.labels() ).satisfiesAnyOf(
+                l -> assertThat( l ).containsExactly( labelsV1 ),
+                l -> assertThat( l ).containsExactly( labelsV2 ),
+                l -> assertThat( l ).containsExactly( labelsV3 ) );
     }
 
     @Test
@@ -471,9 +585,8 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
 
                     // x1 + x8(L,P)   ->   x1 + x8(L) + x8(P)
 
-                    long[] expectedLabels =
-                            Arrays.stream( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) ).asLongStream().toArray();
-                    long[] acceptedBefore = Arrays.stream( labelsBefore ).asLongStream().toArray();
+                    long[] expectedLabels = toLong( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) );
+                    long[] acceptedBefore = toLong( labelsBefore );
 
                     long[] v1Labels = nodeCursorAtV1.labels();
                     assertThat( v1Labels ).isSorted();
@@ -555,5 +668,10 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
             labelsLargerThanX1[i] = from + i;
         }
         return labelsLargerThanX1;
+    }
+
+    private long[] toLong( int[] array )
+    {
+        return Arrays.stream( array ).asLongStream().toArray();
     }
 }
