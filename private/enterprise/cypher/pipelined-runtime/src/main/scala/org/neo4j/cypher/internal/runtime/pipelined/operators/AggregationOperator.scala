@@ -50,6 +50,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountStarAggregat
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.IsEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevDistinctAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevPAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevPDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.NonEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumDistinctAggregator
@@ -239,6 +243,10 @@ object AggregationMapperOperatorTaskTemplate {
       case CollectDistinctAggregator => getStatic[Aggregators,Aggregator]("COLLECT_DISTINCT")
       case NonEmptyAggregator => getStatic[Aggregators,Aggregator]("NON_EMPTY")
       case IsEmptyAggregator => getStatic[Aggregators,Aggregator]("IS_EMPTY")
+      case StdevAggregator => getStatic[Aggregators,Aggregator]("STDEV")
+      case StdevDistinctAggregator => getStatic[Aggregators,Aggregator]("STDEV_DISTINCT")
+      case StdevPAggregator => getStatic[Aggregators,Aggregator]("STDEVP")
+      case StdevPDistinctAggregator => getStatic[Aggregators,Aggregator]("STDEVP_DISTINCT")
       case aggregator =>
         throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
     }

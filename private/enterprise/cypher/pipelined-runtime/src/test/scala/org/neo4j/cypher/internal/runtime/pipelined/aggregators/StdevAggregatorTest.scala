@@ -26,6 +26,14 @@ object StdevAggregatorTest {
   }
 }
 
+class StandardStdevAggregatorTest extends StdevAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = StdevAggregator
+}
+
+class ConcurrentStdevAggregatorTest extends StdevAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = StdevAggregator
+}
+
 class FunctionStdevAggregatorTest extends StdevAggregatorTest with FunctionAggregatorTest {
   override def getAggregationFunction(e: Expression): AggregationFunction = new StdevFunction(e, false)
 }
@@ -35,6 +43,14 @@ abstract class StdevAggregatorTest extends CypherFunSuite with AggregatorTest {
     val result = runAggregation(randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
     result should be(stdev(randomInts) +- 0.0001)
   }
+}
+
+class StandardStdevDistinctAggregatorTest extends StdevDistinctAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = StdevDistinctAggregator
+}
+
+class ConcurrentStdevDistinctAggregatorTest extends StdevDistinctAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = StdevDistinctAggregator
 }
 
 class FunctionStdevDistinctAggregatorTest extends StdevDistinctAggregatorTest with FunctionAggregatorTest {

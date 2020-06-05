@@ -67,7 +67,7 @@ case object AvgDistinctAggregator extends Aggregator {
 
   override val standardShallowSize: Long =
     HeapEstimator.shallowSizeOfInstance(classOf[AvgStandardReducer]) +
-    HeapEstimator.shallowSizeOfInstance(classOf[DistinctStandardReducer])
+      HeapEstimator.shallowSizeOfInstance(classOf[DistinctStandardReducer])
 }
 
 abstract class AvgBase() {
@@ -137,7 +137,7 @@ class AvgStandardReducer() extends AvgBase with StandardReducer {
   protected var secondsRunningAvg = 0d
   protected var nanosRunningAvg = 0d
 
-    // Reducer
+  // Reducer
   override def newUpdater(): Updater = this
   override def result: AnyValue =
     if (seenDuration) {

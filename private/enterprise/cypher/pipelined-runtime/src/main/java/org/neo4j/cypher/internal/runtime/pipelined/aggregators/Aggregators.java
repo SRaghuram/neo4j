@@ -25,4 +25,8 @@ public class Aggregators
     public static final Aggregator COLLECT_DISTINCT = CollectDistinctAggregator$.MODULE$;
     public static final Aggregator NON_EMPTY = NonEmptyAggregator$.MODULE$;
     public static final Aggregator IS_EMPTY = IsEmptyAggregator$.MODULE$;
+    public static final Aggregator STDEV = StdevAggregator$.MODULE$;
+    public static final Aggregator STDEV_DISTINCT = StdevDistinctAggregator$.MODULE$;
+    public static final Aggregator STDEVP = StdevPAggregator$.MODULE$;
+    public static final Aggregator STDEVP_DISTINCT = StdevPDistinctAggregator$.MODULE$;
 }

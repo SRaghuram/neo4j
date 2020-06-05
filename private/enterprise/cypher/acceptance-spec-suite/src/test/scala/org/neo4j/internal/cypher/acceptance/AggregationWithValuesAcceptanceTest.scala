@@ -37,23 +37,21 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       """)
   }
 
-  for ((i, func, funcBody, property, supportsCompiled, supportsPipelined, correctResultFromPipelinedSingle) <-
+  for ((i, func, funcBody, property, supportsCompiled, supportsPipelined) <-
          List(
-           (0, "min", "n.prop3", "n.prop3", false, true, true),
-           (1, "max", "n.prop3", "n.prop3", false, true, true),
-           (2, "sum", "n.prop2", "n.prop2", false, true, true),
-           (3, "avg", "n.prop2", "n.prop2", false, true, true),
-           (4, "stDev", "n.prop2", "n.prop2", false, false, true),
-           (5, "stDevP", "n.prop2", "n.prop2", false, false, true),
-           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, false, true),
-           (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false, false, true),
-           (8, "count", "n.prop1", "n.prop1", true, true, true),
-           (9, "count", "DISTINCT n.prop2", "n.prop2", true, true, true)
+           (0, "min", "n.prop3", "n.prop3", false, true),
+           (1, "max", "n.prop3", "n.prop3", false, true),
+           (2, "sum", "n.prop2", "n.prop2", false, true),
+           (3, "avg", "n.prop2", "n.prop2", false, true),
+           (4, "stDev", "n.prop2", "n.prop2", false, true),
+           (5, "stDevP", "n.prop2", "n.prop2", false, true),
+           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, false),
+           (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false, false),
+           (8, "count", "n.prop1", "n.prop1", true, true),
+           (9, "count", "DISTINCT n.prop2", "n.prop2", true, true)
          )
        ) {
     // Simple aggregation functions implicitly gives exists
-
-    val configsWithWrongResult = if (correctResultFromPipelinedSingle) Configs.Empty else Configs.Pipelined
 
     test(s"$i-$func: should use index provided values") {
       val config =
@@ -61,7 +59,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         else Configs.InterpretedAndSlotted
 
       val query = s"MATCH (n:Awesome) RETURN $func($funcBody) as aggregation"
-      val result = executeWith(config, query, executeBefore = createSomeNodes, expectedDifferentResults = configsWithWrongResult)
+      val result = executeWith(config, query, executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
         includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(s".*cache\\[$property\\]".r)
@@ -80,7 +78,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         else Configs.InterpretedAndSlotted
 
       val query = s"MATCH (n:Awesome) RETURN $property as res1, $func($funcBody) as res2"
-      val result = executeWith(config, query, executeBefore = createSomeNodes, expectedDifferentResults = configsWithWrongResult)
+      val result = executeWith(config, query, executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan")
 
@@ -104,7 +102,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       //Compiled does not support exists
       val config = if(supportsPipelined) Configs.CachedProperty else Configs.InterpretedAndSlotted
       val query = s"MATCH (n:Awesome) WHERE exists($property) RETURN $property as res1, $func($funcBody) as res2"
-      val result = executeWith(config, query, executeBefore = createSomeNodes, expectedDifferentResults = configsWithWrongResult)
+      val result = executeWith(config, query, executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
         includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(s".*cache\\[$property\\]".r)
@@ -350,7 +348,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val m2 = createLabeledNode(Map("prop1" -> 3, "prop2" -> 3), "Label")
     val m3 = createLabeledNode(Map("prop1" -> 4, "prop2" -> 2), "Label")
     val m4 = createLabeledNode(Map("prop1" -> 5, "prop2" -> 1), "Label")
-    (0 until 20).foreach(i => createLabeledNode("Label"))
+    (0 until 20).foreach(_ => createLabeledNode("Label"))
     relate(n, m1)
     relate(n, m2)
     relate(n, m3)

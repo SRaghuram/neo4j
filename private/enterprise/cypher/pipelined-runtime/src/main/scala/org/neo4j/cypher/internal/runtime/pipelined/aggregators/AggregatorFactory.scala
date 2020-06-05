@@ -69,6 +69,18 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
           case functions.Avg =>
             (AvgAggregator, c.arguments.head)
 
+          case functions.StdDev if c.distinct  =>
+            (StdevDistinctAggregator, c.arguments.head)
+
+          case functions.StdDev =>
+            (StdevAggregator, c.arguments.head)
+
+          case functions.StdDevP if c.distinct  =>
+            (StdevPDistinctAggregator, c.arguments.head)
+
+          case functions.StdDevP =>
+            (StdevPAggregator, c.arguments.head)
+
           case _: AggregatingFunction =>
             throw new CantCompileQueryException(s"Morsel does not yet support the Aggregating function `${c.name}`, use another runtime.")
 
