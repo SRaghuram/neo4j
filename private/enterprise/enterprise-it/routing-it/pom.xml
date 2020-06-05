@@ -5,11 +5,11 @@
     <parent>
         <groupId>com.neo4j</groupId>
         <artifactId>enterprise-integration-tests</artifactId>
-        <version>4.1.0-SNAPSHOT</version>
+        <version>4.2.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>enterprise-routing-it</artifactId>
-    <version>4.1.0-SNAPSHOT</version>
+    <version>4.2.0-SNAPSHOT</version>
 
     <name>Neo4j - Enterprise Routing Integration Tests</name>
     <packaging>jar</packaging>
@@ -56,7 +56,7 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>log-test-utils</artifactId>
-            <version>4.1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
