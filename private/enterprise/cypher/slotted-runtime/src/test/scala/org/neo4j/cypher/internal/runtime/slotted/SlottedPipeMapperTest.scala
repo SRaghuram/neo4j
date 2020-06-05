@@ -106,6 +106,7 @@ import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.util.ValueUtils.fromNodeEntity
 import org.neo4j.kernel.impl.util.ValueUtils.fromRelationshipEntity
 import org.neo4j.values.storable.Values
+import org.neo4j.values.storable.Values.longValue
 
 //noinspection NameBooleanParameters
 class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSupport2 with FakeEntityTestSupport {
@@ -716,8 +717,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       case SortPipe(
       UnwindSlottedPipe(
       ArgumentSlottedPipe(`expectedSlots1`, Size.zero),
-      commands.expressions.ListLiteral(commands.expressions.Literal(_), commands.expressions.Literal(_), commands.expressions.Literal(_)), 0, `expectedSlots2`
-      ), _) =>
+      commands.expressions.ListLiteral(commands.expressions.Literal(a), commands.expressions.Literal(b), commands.expressions.Literal(c)), 0, `expectedSlots2`
+      ), _) if a == longValue(1) && b == longValue(2) && c == longValue(3)=>
 
     }
   }
