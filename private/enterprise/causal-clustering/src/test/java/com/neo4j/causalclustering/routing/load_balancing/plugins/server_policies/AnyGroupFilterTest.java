@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -15,12 +15,12 @@ import java.util.UUID;
 import org.neo4j.configuration.helpers.SocketAddress;
 
 import static com.neo4j.configuration.ServerGroupName.setOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class AnyGroupFilterTest
+class AnyGroupFilterTest
 {
     @Test
-    public void shouldReturnServersMatchingAnyGroup()
+    void shouldReturnServersMatchingAnyGroup()
     {
         // given
         AnyGroupFilter groupFilter = new AnyGroupFilter( setOf( "china-west", "europe" ) );

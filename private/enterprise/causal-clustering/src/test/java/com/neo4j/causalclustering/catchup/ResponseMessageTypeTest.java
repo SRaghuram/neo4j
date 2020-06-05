@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.CORE_SNAPSHOT;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.DATABASE_ID_RESPONSE;
@@ -18,15 +18,15 @@ import static com.neo4j.causalclustering.catchup.ResponseMessageType.STORE_ID;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.TX;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.TX_STREAM_FINISHED;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.UNKNOWN;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ResponseMessageTypeTest
+class ResponseMessageTypeTest
 {
     /*
     Order should not change. New states should be added as higher values and old states should not be replaced.
      */
     @Test
-    public void shouldHaveExpectedValues()
+    void shouldHaveExpectedValues()
     {
         ResponseMessageType[] givenStates = ResponseMessageType.values();
 

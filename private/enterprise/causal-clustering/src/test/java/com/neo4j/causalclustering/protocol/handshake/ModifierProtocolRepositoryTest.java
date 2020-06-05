@@ -9,7 +9,7 @@ import co.unruly.matchers.OptionalMatchers;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -23,16 +23,16 @@ import static com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestMo
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.GRATUITOUS_OBFUSCATION;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 /**
  * @see ApplicationProtocolRepositoryTest for tests on base class
  */
-public class ModifierProtocolRepositoryTest
+class ModifierProtocolRepositoryTest
 {
     @Test
-    public void shouldReturnModifierProtocolOfFirstConfiguredVersionRequestedAndSupported()
+    void shouldReturnModifierProtocolOfFirstConfiguredVersionRequestedAndSupported()
     {
         // given
         List<ModifierSupportedProtocols> supportedProtocols = asList(
@@ -51,7 +51,7 @@ public class ModifierProtocolRepositoryTest
     }
 
     @Test
-    public void shouldReturnModifierProtocolOfSingleConfiguredVersionIfOthersRequested()
+    void shouldReturnModifierProtocolOfSingleConfiguredVersionIfOthersRequested()
     {
         // given
         List<ModifierSupportedProtocols> supportedProtocols = asList(
@@ -67,7 +67,7 @@ public class ModifierProtocolRepositoryTest
     }
 
     @Test
-    public void shouldCompareModifierProtocolsByListOrder()
+    void shouldCompareModifierProtocolsByListOrder()
     {
         List<ModifierSupportedProtocols> supportedProtocols = asList(
                 new ModifierSupportedProtocols( COMPRESSION, asList( LZO.implementation(), SNAPPY.implementation(), LZ4.implementation() ) ) );

@@ -5,18 +5,18 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.filters;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
 import static java.util.Collections.unmodifiableSet;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-public class IdentityFilterTest
+class IdentityFilterTest
 {
     @Test
-    public void shouldNotFilter()
+    void shouldNotFilter()
     {
         // given
         IdentityFilter<Object> identityFilter = IdentityFilter.as();

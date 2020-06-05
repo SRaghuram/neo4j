@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
@@ -13,15 +13,15 @@ import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResp
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_UNKNOWN;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.values;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-public class StoreCopyFinishedResponseTest
+class StoreCopyFinishedResponseTest
 {
     /*
     Order should not change. New statuses should be added as higher ordinal and old statuses should not be replaced.
      */
     @Test
-    public void shouldMaintainOrderOfStatuses()
+    void shouldMaintainOrderOfStatuses()
     {
         StoreCopyFinishedResponse.Status[] givenValues = values();
         StoreCopyFinishedResponse.Status[] expectedValues =

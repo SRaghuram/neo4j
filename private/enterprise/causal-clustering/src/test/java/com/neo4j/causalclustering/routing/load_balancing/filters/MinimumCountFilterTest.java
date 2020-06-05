@@ -5,18 +5,18 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.filters;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
 import static java.util.Collections.emptySet;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-public class MinimumCountFilterTest
+class MinimumCountFilterTest
 {
     @Test
-    public void shouldFilterBelowCount()
+    void shouldFilterBelowCount()
     {
         // given
         MinimumCountFilter<Integer> minFilter = new MinimumCountFilter<>( 3 );
@@ -31,7 +31,7 @@ public class MinimumCountFilterTest
     }
 
     @Test
-    public void shouldPassAtCount()
+    void shouldPassAtCount()
     {
         // given
         MinimumCountFilter<Integer> minFilter = new MinimumCountFilter<>( 3 );
@@ -46,7 +46,7 @@ public class MinimumCountFilterTest
     }
 
     @Test
-    public void shouldPassAboveCount()
+    void shouldPassAboveCount()
     {
         // given
         MinimumCountFilter<Integer> minFilter = new MinimumCountFilter<>( 3 );

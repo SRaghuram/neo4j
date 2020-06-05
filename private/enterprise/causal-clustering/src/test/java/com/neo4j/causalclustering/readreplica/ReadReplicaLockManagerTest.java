@@ -5,23 +5,23 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.impl.locking.Locks;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.kernel.api.exceptions.Status.General.ForbiddenOnReadOnlyDatabase;
 import static org.neo4j.kernel.api.exceptions.Status.statusCodeOf;
 import static org.neo4j.lock.LockTracer.NONE;
 import static org.neo4j.lock.ResourceTypes.NODE;
 
-public class ReadReplicaLockManagerTest
+class ReadReplicaLockManagerTest
 {
     private ReadReplicaLockManager lockManager = new ReadReplicaLockManager();
     private Locks.Client lockClient = lockManager.newClient();
 
     @Test
-    public void shouldThrowOnAcquireExclusiveLock()
+    void shouldThrowOnAcquireExclusiveLock()
     {
         try
         {
@@ -35,7 +35,7 @@ public class ReadReplicaLockManagerTest
     }
 
     @Test
-    public void shouldThrowOnTryAcquireExclusiveLock()
+    void shouldThrowOnTryAcquireExclusiveLock()
     {
         try
         {
@@ -49,7 +49,7 @@ public class ReadReplicaLockManagerTest
     }
 
     @Test
-    public void shouldAcceptSharedLocks()
+    void shouldAcceptSharedLocks()
     {
         lockClient.acquireShared( NONE, NODE, 1 );
         lockClient.trySharedLock( NODE, 1 );

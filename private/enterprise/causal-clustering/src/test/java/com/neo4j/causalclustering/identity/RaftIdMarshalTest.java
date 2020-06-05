@@ -8,21 +8,21 @@ package com.neo4j.causalclustering.identity;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class RaftIdMarshalTest
+class RaftIdMarshalTest
 {
     private ChannelMarshal<RaftId> marshal = RaftId.Marshal.INSTANCE;
 
     @Test
-    public void shouldMarshalRaftId() throws Throwable
+    void shouldMarshalRaftId() throws Throwable
     {
         // given
         RaftId original = RaftIdFactory.random();
@@ -41,7 +41,7 @@ public class RaftIdMarshalTest
     }
 
     @Test
-    public void shouldMarshalNullRaftId() throws Throwable
+    void shouldMarshalNullRaftId() throws Throwable
     {
         // given
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policie
 
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 import java.util.UUID;
@@ -19,20 +19,20 @@ import org.neo4j.logging.Log;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.MapValueBuilder;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.values.storable.Values.stringValue;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
-public class PoliciesTest
+class PoliciesTest
 {
     private Log log = mock( Log.class );
 
     @Test
-    public void shouldSupplyDefaultUnfilteredPolicyForEmptyContext() throws Exception
+    void shouldSupplyDefaultUnfilteredPolicyForEmptyContext() throws Exception
     {
         // given
         Policies policies = new Policies( log );
@@ -52,7 +52,7 @@ public class PoliciesTest
     }
 
     @Test
-    public void shouldThrowExceptionOnUnknownPolicyName()
+    void shouldThrowExceptionOnUnknownPolicyName()
     {
         // given
         Policies policies = new Policies( log );
@@ -71,7 +71,7 @@ public class PoliciesTest
     }
 
     @Test
-    public void shouldThrowExceptionOnSelectionOfUnregisteredDefault()
+    void shouldThrowExceptionOnSelectionOfUnregisteredDefault()
     {
         Policies policies = new Policies( log );
 
@@ -89,7 +89,7 @@ public class PoliciesTest
     }
 
     @Test
-    public void shouldAllowOverridingDefaultPolicy() throws Exception
+    void shouldAllowOverridingDefaultPolicy() throws Exception
     {
         Policies policies = new Policies( log );
 
@@ -106,7 +106,7 @@ public class PoliciesTest
     }
 
     @Test
-    public void shouldAllowLookupOfAddedPolicy() throws Exception
+    void shouldAllowLookupOfAddedPolicy() throws Exception
     {
         // given
         Policies policies = new Policies( log );

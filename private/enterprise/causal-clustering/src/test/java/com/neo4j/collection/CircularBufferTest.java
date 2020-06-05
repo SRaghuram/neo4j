@@ -5,21 +5,21 @@
  */
 package com.neo4j.collection;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class CircularBufferTest
+class CircularBufferTest
 {
     private final ThreadLocalRandom tlr = ThreadLocalRandom.current();
 
     @Test
-    public void shouldBeInitiallyEmpty()
+    void shouldBeInitiallyEmpty()
     {
         // when
         CircularBuffer<Object> buffer = new CircularBuffer<>( 3 );
@@ -36,7 +36,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void removeShouldReturnNullWhenEmpty()
+    void removeShouldReturnNullWhenEmpty()
     {
         // given
         CircularBuffer<Object> buffer = new CircularBuffer<>( 3 );
@@ -55,7 +55,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void shouldEvictElementsWhenClearing()
+    void shouldEvictElementsWhenClearing()
     {
         // given
         CircularBuffer<Integer> buffer = new CircularBuffer<>( 3 );
@@ -72,7 +72,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void shouldNullRemovedElements()
+    void shouldNullRemovedElements()
     {
         // given
         CircularBuffer<Integer> buffer = new CircularBuffer<>( 3 );
@@ -92,7 +92,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void shouldNullClearedElements()
+    void shouldNullClearedElements()
     {
         // given
         CircularBuffer<Integer> buffer = new CircularBuffer<>( 3 );
@@ -111,7 +111,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void comprehensivelyTestAppendRemove()
+    void comprehensivelyTestAppendRemove()
     {
         for ( int capacity = 1; capacity <= 128; capacity++ )
         {
@@ -123,7 +123,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void comprehensivelyTestAppendRemoveHead()
+    void comprehensivelyTestAppendRemoveHead()
     {
         for ( int capacity = 1; capacity <= 128; capacity++ )
         {
@@ -135,7 +135,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void comprehensivelyTestAppendRemoveReusingBuffer()
+    void comprehensivelyTestAppendRemoveReusingBuffer()
     {
         for ( int capacity = 1; capacity <= 128; capacity++ )
         {
@@ -202,7 +202,7 @@ public class CircularBufferTest
     }
 
     @Test
-    public void comprehensivelyTestAppendRead()
+    void comprehensivelyTestAppendRead()
     {
         for ( int capacity = 1; capacity <= 128; capacity++ )
         {

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.AssertableLogProvider;
 
@@ -18,7 +18,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-public class RequestDecoderDispatcherTest
+class RequestDecoderDispatcherTest
 {
     private final Protocol<State> protocol = new Protocol<State>( State.two )
     {
@@ -31,7 +31,7 @@ public class RequestDecoderDispatcherTest
     }
 
     @Test
-    public void shouldDispatchToRegisteredDecoder() throws Exception
+    void shouldDispatchToRegisteredDecoder() throws Exception
     {
         // given
         RequestDecoderDispatcher<State> dispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
@@ -55,7 +55,7 @@ public class RequestDecoderDispatcherTest
     }
 
     @Test
-    public void shouldLogAWarningIfThereIsNoDecoderForTheMessageType() throws Exception
+    void shouldLogAWarningIfThereIsNoDecoderForTheMessageType() throws Exception
     {
         // given
         RequestDecoderDispatcher<State> dispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );

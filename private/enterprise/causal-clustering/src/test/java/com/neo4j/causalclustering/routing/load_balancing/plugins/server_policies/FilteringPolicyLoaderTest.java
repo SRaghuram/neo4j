@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policie
 
 import com.neo4j.causalclustering.core.LoadBalancingServerPoliciesGroup;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
@@ -15,14 +15,14 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.values.storable.Values.stringValue;
 
-public class FilteringPolicyLoaderTest
+class FilteringPolicyLoaderTest
 {
     @Test
-    public void shouldLoadConfiguredPolicies() throws Exception
+    void shouldLoadConfiguredPolicies() throws Exception
     {
         // given
 

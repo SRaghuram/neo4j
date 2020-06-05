@@ -6,16 +6,16 @@
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class FilterConfigParserTest
+class FilterConfigParserTest
 {
     @Test
-    public void shouldThrowExceptionOnInvalidConfig()
+    void shouldThrowExceptionOnInvalidConfig()
     {
         String[] invalidConfigs = {
                 "",
@@ -74,7 +74,7 @@ public class FilterConfigParserTest
     }
 
     @Test
-    public void shouldParseValidConfigs()
+    void shouldParseValidConfigs()
     {
         Object[][] validConfigs = {
                 {
@@ -160,8 +160,7 @@ public class FilterConfigParserTest
             try
             {
                 Filter<ServerInfo> parsedFilter = FilterConfigParser.parse( config );
-                assertEquals( format( "Config '%s' should generate expected filter", config ),
-                        expectedFilter, parsedFilter );
+                assertEquals( expectedFilter, parsedFilter, format( "Config '%s' should generate expected filter", config ) );
             }
             catch ( InvalidFilterSpecification e )
             {

@@ -7,26 +7,26 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class PrepareStoreCopyResponseMarshalTest
+class PrepareStoreCopyResponseMarshalTest
 {
     private EmbeddedChannel embeddedChannel;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
         embeddedChannel = new EmbeddedChannel( new PrepareStoreCopyResponse.Encoder(), new PrepareStoreCopyResponse.Decoder() );
     }
 
     @Test
-    public void transactionIdGetsTransmitted()
+    void transactionIdGetsTransmitted()
     {
         // given
         long transactionId = Long.MAX_VALUE;
@@ -41,7 +41,7 @@ public class PrepareStoreCopyResponseMarshalTest
     }
 
     @Test
-    public void fileListGetsTransmitted()
+    void fileListGetsTransmitted()
     {
         // given
         File[] files =
@@ -61,7 +61,7 @@ public class PrepareStoreCopyResponseMarshalTest
     }
 
     @Test
-    public void descriptorsGetTransmitted()
+    void descriptorsGetTransmitted()
     {
         // given
         File[] files =
