@@ -16,7 +16,7 @@
     <description>Neo4j Enterprise Server Side Routing Integration Tests.</description>
 
     <properties>
-        <moduleName>com.neo4j.enterprise.fabric.it</moduleName>
+        <moduleName>com.neo4j.enterprise.routing.it</moduleName>
     </properties>
 
     <scm>
