@@ -22,6 +22,7 @@ package org.neo4j.internal.freki;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.memory.MemoryTracker;
@@ -54,6 +55,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private int currentTypeRelationshipIndex;
     private int currentTypePropertiesIndex;
     private int currentTypePropertiesOffset;
+    private boolean currentTypeRelationshipStride; // true == forwards
+    private int currentTypeNumberOfRelationships;
 
     // Accidental state from currentTypeData
     private long currentRelationshipOtherNode;
@@ -158,7 +161,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
         if ( data.isDense )
         {
-            // TODO We could be clever and place a type[] in the quick access record so that we know which types even exist for this node
+            // TODO We could be clever and use the degrees type[] in the quick access record so that we know which types even exist for this node
             //      if we do this we don't have to make a tree seek for every relationship type when there will be nothing there
             while ( selectionCriterionIndex < selection.numberOfCriteria() )
             {
@@ -208,6 +211,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                     currentTypePropertiesOffset = relationshipBuffer.position();
                     currentTypeRelationshipIndex = 0;
                     currentTypePropertiesIndex = -1;
+                    currentTypeRelationshipStride = selection.direction() != Direction.INCOMING;
+                    currentTypeNumberOfRelationships = currentTypeData.length / ARRAY_ENTRIES_PER_RELATIONSHIP;
                 }
 
                 if ( sparseNextFromCurrentType() )
@@ -230,34 +235,29 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
     private boolean sparseNextFromCurrentType()
     {
-        while ( currentTypeRelationshipIndex * ARRAY_ENTRIES_PER_RELATIONSHIP < currentTypeData.length )
+        while ( currentTypeRelationshipIndex < currentTypeNumberOfRelationships )
         {
-            int index = currentTypeRelationshipIndex++;
+            int index = currentTypeRelationshipStride ? currentTypeRelationshipIndex : currentTypeNumberOfRelationships - currentTypeRelationshipIndex - 1;
+            currentTypeRelationshipIndex++;
             int dataArrayIndex = index * ARRAY_ENTRIES_PER_RELATIONSHIP; // because of two longs per relationship
             long currentRelationshipOtherNodeRaw = currentTypeData[dataArrayIndex];
             currentRelationshipInternalId = currentTypeData[dataArrayIndex + 1];
             currentRelationshipOtherNode = otherNodeOf( currentRelationshipOtherNodeRaw );
-            if ( currentRelationshipOtherNode == nodeId )
-            {
-                currentRelationshipDirection = LOOP;
-            }
-            else
-            {
-                boolean outgoing = relationshipIsOutgoing( currentRelationshipOtherNodeRaw );
-                currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
-            }
+            currentRelationshipDirection = currentRelationshipOtherNode == nodeId ? LOOP
+                    : relationshipIsOutgoing( currentRelationshipOtherNodeRaw ) ? OUTGOING : INCOMING;
             currentRelationshipHasProperties = relationshipHasProperties( currentRelationshipOtherNodeRaw );
             if ( currentRelationshipHasProperties )
             {
                 currentTypePropertiesIndex++;
             }
 
-            // TODO a thought about this filtering. It may be beneficial to order the relationships of: OUTGOING,LOOP,INCOMING
-            //      so that filtering OUTGOING/INCOMING would basically then be to find the point where to stop, instead of going
-            //      through all relationships of that type. This may also require an addition to RelationshipSelection so that
-            //      it can be asked about requested direction.
-            if ( selection.test( relationshipTypesInNode[currentTypeIndex], currentRelationshipDirection ) &&
-                    (neighbourNodeReferenceSelection == NULL || neighbourNodeReferenceSelection == currentRelationshipOtherNode) )
+            if ( !selection.test( currentRelationshipDirection ) )
+            {
+                // Since the relationships are ordered OUTGOING,LOOP,INCOMING and we stride from the appropriate end of the array depending on selection
+                // we can abort immediately upon seeing a relationship not matching the selected direction.
+                return false;
+            }
+            if ( neighbourNodeReferenceSelection == NULL || neighbourNodeReferenceSelection == currentRelationshipOtherNode )
             {
                 return true;
             }

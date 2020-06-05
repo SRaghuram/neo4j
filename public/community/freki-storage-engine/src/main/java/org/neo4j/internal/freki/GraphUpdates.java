@@ -21,19 +21,21 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.iterator.IntIterator;
+import org.eclipse.collections.api.list.primitive.MutableLongList;
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
-import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.LongLists;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.IntPredicate;
 
@@ -66,12 +68,6 @@ import static org.neo4j.internal.freki.StreamVByte.SINGLE_VLONG_MAX_SIZE;
 public class GraphUpdates
 {
     private static final int WORST_CASE_HEADER_AND_STUFF_SIZE = Header.WORST_CASE_SIZE + DUAL_VLONG_MAX_SIZE;
-    private final Collection<StorageCommand> bigValueCommands;
-    private final MemoryTracker memoryTracker;
-    private final Consumer<StorageCommand> bigValueCommandConsumer;
-    private final MutableLongObjectMap<NodeUpdates> mutations = LongObjectMaps.mutable.empty();
-    private final MainStores stores;
-    private final PageCursorTracer cursorTracer;
 
     //Intermediate buffer slots
     static final int PROPERTIES = 0;
@@ -82,24 +78,23 @@ public class GraphUpdates
     static final int LABELS = 5;
     static final int NUM_BUFFERS = LABELS + 1;
 
-    GraphUpdates( MainStores stores, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
-    {
-        this( stores, new ArrayList<>(), null, cursorTracer, memoryTracker );
-    }
+    private final Collection<FrekiCommand.BigPropertyValue> bigValueCreationCommands = new ArrayList<>();
+    private final Collection<FrekiCommand.BigPropertyValue> bigValueDeletionCommands = new ArrayList<>();
+    private final Collection<FrekiCommand.DenseNode> denseCommands = new ArrayList<>();
+    private final MemoryTracker memoryTracker;
+    private final TreeMap<Long,NodeUpdates> mutations = new TreeMap<>();
+    private final MainStores stores;
+    private final PageCursorTracer cursorTracer;
 
     IntermediateBuffer[] intermediateBuffers = new IntermediateBuffer[NUM_BUFFERS];
     ByteBuffer smallBuffer;
     ByteBuffer maxBuffer;
     ByteBuffer recordPointersBuffer;
-    GraphUpdates( MainStores stores, Collection<StorageCommand> bigValueCommands,
-            Consumer<StorageCommand> bigValueCommandConsumer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    GraphUpdates( MainStores stores, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         this.stores = stores;
         this.cursorTracer = cursorTracer;
-        this.bigValueCommands = bigValueCommands;
         this.memoryTracker = memoryTracker;
-        this.bigValueCommandConsumer = bigValueCommandConsumer != null ? bigValueCommandConsumer : bigValueCommands::add;
-
 
         int x8Size = stores.largestMainStore().recordDataSize();
         int x8EffectiveSize = x8Size - WORST_CASE_HEADER_AND_STUFF_SIZE;
@@ -125,14 +120,14 @@ public class GraphUpdates
     {
         if (createOnly)
         {
-            NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCommandConsumer, cursorTracer );
+            NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCreationCommands::add, bigValueDeletionCommands::add, cursorTracer );
             updates.load();
             mutations.put( nodeId, updates );
             return updates;
         }
-        return mutations.getIfAbsentPut( nodeId, () ->
+        return mutations.computeIfAbsent( nodeId, id ->
         {
-            NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCommandConsumer, cursorTracer );
+            NodeUpdates updates = new NodeUpdates( id, stores, bigValueCreationCommands::add, bigValueDeletionCommands::add, cursorTracer );
             updates.load();
             return updates;
         } );
@@ -140,7 +135,7 @@ public class GraphUpdates
 
     public void create( long nodeId )
     {
-        NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCommandConsumer, cursorTracer );
+        NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCreationCommands::add, bigValueDeletionCommands::add, cursorTracer );
         mutations.put( nodeId, updates );
     }
 
@@ -164,17 +159,20 @@ public class GraphUpdates
         */
         Header x1Header = new Header();
         Header xLHeader = new Header();
-        for ( NodeUpdates mutation : mutations )
+        Header tempBeforeHeader = new Header();
+        for ( NodeUpdates mutation : mutations.values() )
         {
-            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, recordPointersBuffer, otherCommands::add, x1Header, xLHeader );
+            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, recordPointersBuffer, denseCommands::add, otherCommands::add, x1Header, xLHeader,
+                    tempBeforeHeader );
         }
-        bigValueCommands.forEach( commands );
+        denseCommands.forEach( commands );
+        bigValueCreationCommands.forEach( commands );
         otherCommands.forEach( commands );
         if (createOnly) {
             mutations.clear();
-            bigValueCommands.clear();
             otherCommands.clear();
         }
+        bigValueDeletionCommands.forEach( commands );
     }
 
     private abstract static class NodeDataModifier
@@ -197,25 +195,32 @@ public class GraphUpdates
     {
         private final long nodeId;
         private final MainStores stores;
-        private final Consumer<StorageCommand> bigValueCommandConsumer;
+        private final Consumer<FrekiCommand.BigPropertyValue> bigValueCreations;
+        private final Consumer<FrekiCommand.BigPropertyValue> bigValueDeletions;
         private final PageCursorTracer cursorTracer;
 
         // the before-state
         private RecordChain firstBeforeRecord;
         private RecordChain lastBeforeRecord;
+        private byte version = Record.FIRST_VERSION;
 
         // the after-state
-        private SparseRecordAndData sparse;
+        private final SparseRecordAndData sparse;
         private DenseRecordAndData dense;
         private boolean deleted;
+        private MutableLongList deletedBigValueIds;
+        private boolean needsVersionBump;
+        private RecordChain firstUnchangedAfterRecord;
 
-        NodeUpdates( long nodeId, MainStores stores, Consumer<StorageCommand> bigValueCommandConsumer, PageCursorTracer cursorTracer )
+        NodeUpdates( long nodeId, MainStores stores, Consumer<FrekiCommand.BigPropertyValue> bigValueCreations,
+                Consumer<FrekiCommand.BigPropertyValue> bigValueDeletions, PageCursorTracer cursorTracer )
         {
             this.nodeId = nodeId;
             this.stores = stores;
-            this.bigValueCommandConsumer = bigValueCommandConsumer;
+            this.bigValueCreations = bigValueCreations;
+            this.bigValueDeletions = bigValueDeletions;
             this.cursorTracer = cursorTracer;
-            this.sparse = new SparseRecordAndData( nodeId, stores, cursorTracer ); // this will always exist
+            this.sparse = new SparseRecordAndData( nodeId, stores, this::keepTrackOfDeletedBigValueIds, cursorTracer );
         }
 
         long nodeId()
@@ -230,9 +235,10 @@ public class GraphUpdates
             {
                 throw new IllegalStateException( "Node[" + nodeId + "] should have existed" );
             }
+            version = x1.version;
 
             MutableNodeData data = sparse.add( x1 );
-            firstBeforeRecord = lastBeforeRecord = new RecordChain( x1 );
+            firstBeforeRecord = lastBeforeRecord = new RecordChain( null, x1 );
             long fwPointer;
             while ( (fwPointer = data.getLastLoadedForwardPointer()) != NULL )
             {
@@ -241,14 +247,20 @@ public class GraphUpdates
                 {
                     throw new IllegalStateException( x1 + " points to " + recordPointerToString( fwPointer ) + " that isn't in use" );
                 }
+                if ( version != xL.version )
+                {
+                    throw new IllegalStateException( String.format( "Node[%s,%s] has mismatching versions in chain. sizeExp:%s, id:%s version:%s ", nodeId,
+                            version, xL.id, xL.sizeExp(), xL.version ) );
+                }
                 sparse.add( xL );
-                RecordChain chain = new RecordChain( xL );
+                RecordChain chain = new RecordChain( null, xL );
                 chain.next = firstBeforeRecord;
                 firstBeforeRecord = chain;
             }
             if ( data.isDense() )
             {
-                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer, cursorTracer );
+                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCreations,
+                        this::keepTrackOfDeletedBigValueIds, cursorTracer );
             }
         }
 
@@ -265,6 +277,19 @@ public class GraphUpdates
         private NodeDataModifier forRelationships()
         {
             return dense != null ? dense : sparse;
+        }
+
+        private void keepTrackOfDeletedBigValueIds( Value removedValue )
+        {
+            assert removedValue != null;
+            if ( removedValue instanceof PropertyValueFormat.PointerValue )
+            {
+                if ( deletedBigValueIds == null )
+                {
+                    deletedBigValueIds = LongLists.mutable.empty();
+                }
+                deletedBigValueIds.add( ((PropertyValueFormat.PointerValue) removedValue).pointer() );
+            }
         }
 
         @Override
@@ -325,9 +350,11 @@ public class GraphUpdates
         }
 
         void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, IntermediateBuffer[] intermediateBuffers, ByteBuffer recordPointersBuffer,
-                Consumer<StorageCommand> otherCommands, Header x1Header, Header xLHeader ) throws ConstraintViolationTransactionFailureException
+                Consumer<FrekiCommand.DenseNode> denseCommands, Consumer<StorageCommand> otherCommands,
+                Header x1Header, Header xLHeader, Header tempBeforeHeader ) throws ConstraintViolationTransactionFailureException
         {
             prepareForCommandExtraction();
+            addDeletedBigValueCommands();
 
             if ( deleted )
             {
@@ -342,13 +369,13 @@ public class GraphUpdates
                 buffer.clear();
             }
 
-            boolean isDense = sparse.data.serializeMainData( intermediateBuffers, stores.bigPropertyValueStore, bigValueCommandConsumer );
+            boolean isDense = sparse.data.serializeMainData( intermediateBuffers, stores.bigPropertyValueStore, bigValueCreations );
             intermediateBuffers[LABELS].flip();
             intermediateBuffers[PROPERTIES].flip();
             intermediateBuffers[RELATIONSHIPS].flip();
             intermediateBuffers[RELATIONSHIPS_OFFSETS].flip();
             intermediateBuffers[DEGREES].flip();
-            int relsSize = intermediateBuffers[RELATIONSHIPS].limit() + intermediateBuffers[RELATIONSHIPS_OFFSETS].limit();
+            int relsSize = intermediateBuffers[RELATIONSHIPS].currentSize() + intermediateBuffers[RELATIONSHIPS_OFFSETS].currentSize();
             isDense |= relsSize > intermediateBuffers[RELATIONSHIPS].capacity();
             if ( isDense )
             {
@@ -362,15 +389,15 @@ public class GraphUpdates
                     sparse.data.serializeDegrees( intermediateBuffers[DEGREES].clear() );
                     intermediateBuffers[DEGREES].flip();
                 }
-                dense.createCommands( otherCommands );
+                dense.createCommands( denseCommands );
             }
 
             // X LEGO TIME
             int miscSize = 0;
             x1Header.clearMarks();
             x1Header.mark( Header.OFFSET_END, true );
-            x1Header.mark( Header.FLAG_LABELS, intermediateBuffers[LABELS].totalSize() > 0 );
-            x1Header.mark( Header.OFFSET_PROPERTIES, intermediateBuffers[PROPERTIES].totalSize() > 0 );
+            x1Header.mark( Header.FLAG_LABELS, intermediateBuffers[LABELS].currentSize() > 0 );
+            x1Header.mark( Header.OFFSET_PROPERTIES, intermediateBuffers[PROPERTIES].currentSize() > 0 );
             if ( isDense )
             {
                 x1Header.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, true );
@@ -378,7 +405,7 @@ public class GraphUpdates
                 x1Header.mark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID, true );
                 sparse.data.serializeNextInternalRelationshipId( intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].add() );
                 intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
-                miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].totalSize();
+                miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].currentSize();
             }
             else if ( relsSize > 0 )
             {
@@ -386,13 +413,20 @@ public class GraphUpdates
                 x1Header.mark( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, true );
             }
 
+            boolean anyBufferIsSplit = false;
+            for ( int i = 0; i < intermediateBuffers.length && !anyBufferIsSplit; i++ )
+            {
+                anyBufferIsSplit = intermediateBuffers[i].isSplit();
+            }
+            needsVersionBump |= anyBufferIsSplit;
+
             FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId );
-            if ( x1Header.spaceNeeded() + intermediateBuffers[LABELS].totalSize() + intermediateBuffers[PROPERTIES].totalSize() +
-                    Math.max( relsSize, intermediateBuffers[DEGREES].totalSize() ) + miscSize <= stores.mainStore.recordDataSize() )
+            if ( !anyBufferIsSplit && x1Header.spaceNeeded() + intermediateBuffers[LABELS].currentSize() + intermediateBuffers[PROPERTIES].currentSize() +
+                    Math.max( relsSize, intermediateBuffers[DEGREES].currentSize() ) + miscSize <= stores.mainStore.recordDataSize() )
             {
                 //WE FIT IN x1
                 serializeParts( smallBuffer, intermediateBuffers, recordPointersBuffer, x1Header );
-                addX1Record( smallBuffer, command );
+                addX1Record( smallBuffer, tempBeforeHeader, x1Header, command );
                 deleteRemainingBeforeRecords( command );
                 otherCommands.accept( command );
                 return;
@@ -431,12 +465,13 @@ public class GraphUpdates
             xLHeader.setReference( x1Header );
 
             //split chain header into individual headers
-            boolean canFitInSingleXL = (xLHeader.hasMark( Header.FLAG_LABELS ) ? intermediateBuffers[LABELS].totalSize() : 0) +
-                    (xLHeader.hasMark( Header.OFFSET_PROPERTIES ) ? intermediateBuffers[PROPERTIES].totalSize() : 0) +
+            boolean canFitInSingleXL = !anyBufferIsSplit &&
+                    (xLHeader.hasMark( Header.FLAG_LABELS ) ? intermediateBuffers[LABELS].currentSize() : 0) +
+                    (xLHeader.hasMark( Header.OFFSET_PROPERTIES ) ? intermediateBuffers[PROPERTIES].currentSize() : 0) +
                     (xLHeader.hasMark( Header.OFFSET_RELATIONSHIPS ) ? relsSize : 0) +
-                    (xLHeader.hasMark( Header.OFFSET_DEGREES ) ? intermediateBuffers[DEGREES].totalSize() : 0) +
+                    (xLHeader.hasMark( Header.OFFSET_DEGREES ) ? intermediateBuffers[DEGREES].currentSize() : 0) +
                     (xLHeader.hasMark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) ?
-                            intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].totalSize() : 0) + xLHeader.spaceNeeded() +
+                        intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].currentSize() : 0) + xLHeader.spaceNeeded() +
                     DUAL_VLONG_MAX_SIZE <= stores.largestMainStore().recordDataSize();
 
             long forwardPointer = NULL;
@@ -491,7 +526,7 @@ public class GraphUpdates
                     linkHeader.setReference( x1Header );
                     serializeParts( maxBuffer, intermediateBuffers, recordPointersBuffer, linkHeader );
                     SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    forwardPointer = addXLRecords( maxBuffer, xLStore, command );
+                    forwardPointer = addXLRecord( maxBuffer, xLStore, tempBeforeHeader, linkHeader, command );
                 }
             }
             else
@@ -499,15 +534,51 @@ public class GraphUpdates
                 prepareRecordPointer( xLHeader, recordPointersBuffer, backwardPointer );
                 serializeParts( maxBuffer, intermediateBuffers, recordPointersBuffer, xLHeader );
                 SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                forwardPointer = addXLRecords( maxBuffer, xLStore, command );
+                forwardPointer = addXLRecord( maxBuffer, xLStore, tempBeforeHeader, xLHeader, command );
             }
 
             // serialize x1
             prepareRecordPointer( x1Header, recordPointersBuffer, forwardPointer );
             serializeParts( smallBuffer, intermediateBuffers, recordPointersBuffer, x1Header );
-            addX1Record( smallBuffer, command );
+            addX1Record( smallBuffer, tempBeforeHeader, x1Header, command );
             deleteRemainingBeforeRecords( command );
+
+            if ( needsVersionBump )
+            {
+                byte nextVersion = (byte) (version + 1);
+                for ( FrekiCommand.RecordChange change : command )
+                {
+                    if ( change.after != null )
+                    {
+                        change.after.setVersion( nextVersion );
+                    }
+                }
+                RecordChain unchanged = firstUnchangedAfterRecord;
+                while ( unchanged != null )
+                {
+                    command.addChange( unchanged.before, unchanged.record ).updateVersion( nextVersion );
+                    unchanged = unchanged.next;
+                }
+            }
+
             otherCommands.accept( command );
+        }
+
+        private void addDeletedBigValueCommands()
+        {
+            if ( deletedBigValueIds != null )
+            {
+                try ( PageCursor cursor = stores.bigPropertyValueStore.openReadCursor( cursorTracer ) )
+                {
+                    deletedBigValueIds.forEach( deletedBigValueId ->
+                    {
+                        List<Record> records = new ArrayList<>();
+                        stores.bigPropertyValueStore.visitRecordChainIds( cursor, deletedBigValueId,
+                                recordId -> records.add( Record.deletedRecord( (byte) 0, recordId ) ) );
+                        bigValueDeletions.accept( new FrekiCommand.BigPropertyValue( records ) );
+                    } );
+                }
+            }
         }
 
         private void deleteRemainingBeforeRecords( FrekiCommand.SparseNode node )
@@ -644,7 +715,8 @@ public class GraphUpdates
         {
             if ( dense == null )
             {
-                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer, cursorTracer );
+                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCreations,
+                        this::keepTrackOfDeletedBigValueIds, cursorTracer );
             }
             dense.moveDataFrom( sparse );
         }
@@ -652,44 +724,64 @@ public class GraphUpdates
         /**
          * @return the existing or allocated xL ID into sparse.data so that X1 can be serialized afterwards
          */
-        private long addXLRecords( ByteBuffer maxBuffer, SimpleStore store, FrekiCommand.SparseNode command )
+        private long addXLRecord( ByteBuffer maxBuffer, SimpleStore store, Header tempBeforeHeader, Header afterHeader, FrekiCommand.SparseNode command )
         {
             Record after;
             int sizeExp = store.recordSizeExponential();
-            Record xLBefore = takeBeforeRecord( s -> s == sizeExp );
-            if ( xLBefore != null && xLBefore.sizeExp() == sizeExp )
+            Record before = takeBeforeRecord( s -> s == sizeExp );
+            if ( before != null && before.sizeExp() == sizeExp )
             {
                 // There was a large record before and we're just modifying it
-                after = recordForData( xLBefore.id, maxBuffer, sizeExp );
-                if ( contentsDiffer( xLBefore, after ) )
-                {
-                    command.addChange( xLBefore, after );
-                }
+                after = recordForData( before.id, maxBuffer, sizeExp, version );
+                addIfChanged( command, before, after, tempBeforeHeader, afterHeader );
             }
-            else if ( xLBefore != null && xLBefore.sizeExp() != sizeExp )
+            else if ( before != null && before.sizeExp() != sizeExp )
             {
                 // There was a large record before, but this time it'll be of a different size, so a different one
-                command.addChange( xLBefore, null );
+                command.addChange( before, null );
                 long recordId = store.nextId( cursorTracer );
-                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, version ) );
             }
             else
             {
                 // There was no large record before at all
                 long recordId = store.nextId( cursorTracer );
-                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp, version ) );
             }
 
             return buildRecordPointer( after.sizeExp(), after.id );
         }
 
-        private void addX1Record( ByteBuffer smallBuffer, FrekiCommand.SparseNode node )
+        private void addX1Record( ByteBuffer smallBuffer, Header tempBeforeHeader, Header afterHeader, FrekiCommand.SparseNode node )
         {
-            Record after = recordForData( nodeId, smallBuffer, 0 );
+            Record after = recordForData( nodeId, smallBuffer, 0, version );
             Record before = takeBeforeRecord( sizeExp -> sizeExp == 0 );
-            if ( before == null || contentsDiffer( before, after ) )
+            if ( before == null )
             {
-                node.addChange( before, after );
+                node.addChange( null, after );
+            }
+            else
+            {
+                addIfChanged( node, before, after, tempBeforeHeader, afterHeader );
+            }
+        }
+
+        private void addIfChanged( FrekiCommand.SparseNode command, Record before, Record after, Header tempBeforeHeader, Header afterHeader )
+        {
+            if ( contentsDiffer( before, after ) )
+            {
+                if ( !needsVersionBump )
+                {
+                    tempBeforeHeader.deserializeMarkers( before.data( 0 ) );
+                    needsVersionBump = !afterHeader.hasSameMarkersAs( tempBeforeHeader );
+                }
+                command.addChange( before, after );
+            }
+            else
+            {
+                RecordChain chainItem = new RecordChain( before, after );
+                chainItem.next = firstUnchangedAfterRecord;
+                firstUnchangedAfterRecord = chainItem;
             }
         }
 
@@ -734,25 +826,29 @@ public class GraphUpdates
 
     private static class RecordChain
     {
+        private final Record before;
         private final Record record;
         private RecordChain next;
 
-        RecordChain( Record record )
+        RecordChain( Record before, Record record )
         {
+            this.before = before;
             this.record = record;
         }
     }
 
     private static class SparseRecordAndData extends NodeDataModifier
     {
-        private MutableNodeData data;
+        private final MutableNodeData data;
+        private final long nodeId;
+        private final Consumer<Value> removedValuesBin;
         private boolean deleted;
-        private long nodeId;
 
-        SparseRecordAndData( long nodeId, MainStores stores, PageCursorTracer cursorTracer )
+        SparseRecordAndData( long nodeId, MainStores stores, Consumer<Value> removedValuesBin, PageCursorTracer cursorTracer )
         {
             this.nodeId = nodeId;
-            data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer );
+            this.removedValuesBin = removedValuesBin;
+            this.data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer );
         }
 
         MutableNodeData add( Record record )
@@ -782,27 +878,28 @@ public class GraphUpdates
         public void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
             added.forEach( p -> data.setNodeProperty( p.propertyKeyId(), p.value() ) );
-            changed.forEach( p -> data.setNodeProperty( p.propertyKeyId(), p.value() ) );
-            removed.forEach( data::removeNodeProperty );
+            changed.forEach( p -> removedValuesBin.accept( data.setNodeProperty( p.propertyKeyId(), p.value() ) ) );
+            removed.forEach( key -> removedValuesBin.accept( data.removeNodeProperty( key ) ) );
         }
 
         @Override
         public void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
         {
-            data.deleteRelationship( internalId, type, otherNode, outgoing );
+            data.deleteRelationship( internalId, type, otherNode, outgoing, removedValuesBin );
         }
 
         @Override
         void updateRelationshipProperties( long internalId, int type, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
                 Iterable<StorageProperty> changed, IntIterable removed )
         {
-            data.updateRelationshipProperties( internalId, type, nodeId, otherNode, outgoing, added, changed, removed );
+            data.updateRelationshipProperties( internalId, type, nodeId, otherNode, outgoing, added, changed, removed, removedValuesBin );
         }
 
         @Override
         public void delete()
         {
-            this.deleted = true;
+            deleted = true;
+            data.visitNodePropertyValues( removedValuesBin );
         }
 
         void prepareForCommandExtraction() throws ConstraintViolationTransactionFailureException
@@ -822,23 +919,25 @@ public class GraphUpdates
     {
         // meta
         private final SparseRecordAndData sparse;
-        private final DenseRelationshipStore store;
+        private final SimpleDenseRelationshipStore store;
         private final SimpleBigValueStore bigValueStore;
-        private final Consumer<StorageCommand> bigValueConsumer;
+        private final Consumer<FrekiCommand.BigPropertyValue> createBigValues;
+        private final Consumer<Value> removedValuesBin;
         private final PageCursorTracer cursorTracer;
         private boolean deleted;
 
         // changes
         // TODO it feels like we've simply moving tx-state data from one form to another and that's probably true and can probably be improved on later
-        private final MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
+        private final TreeMap<Integer,DenseRelationships> relationshipUpdates = new TreeMap<>();
 
-        DenseRecordAndData( SparseRecordAndData sparse, DenseRelationshipStore store, SimpleBigValueStore bigValueStore,
-                Consumer<StorageCommand> bigValueConsumer, PageCursorTracer cursorTracer )
+        DenseRecordAndData( SparseRecordAndData sparse, SimpleDenseRelationshipStore store, SimpleBigValueStore bigValueStore,
+                Consumer<FrekiCommand.BigPropertyValue> createdBigValues, Consumer<Value> removedValuesBin, PageCursorTracer cursorTracer )
         {
             this.sparse = sparse;
             this.store = store;
             this.bigValueStore = bigValueStore;
-            this.bigValueConsumer = bigValueConsumer;
+            this.createBigValues = createdBigValues;
+            this.removedValuesBin = removedValuesBin;
             this.cursorTracer = cursorTracer;
         }
 
@@ -866,7 +965,7 @@ public class GraphUpdates
             // this counter in an explicit field in the small record. This call keeps that counter updated.
             sparse.data.registerInternalRelationshipId( internalId );
             sparse.data.addDegree( type, calculateDirection( targetNode, outgoing ), 1 );
-            relationshipUpdatesForType( type ).insert( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties ) );
+            relationshipUpdatesForType( type ).add( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties, false ) );
         }
 
         private RelationshipDirection calculateDirection( long targetNode, boolean outgoing )
@@ -876,7 +975,7 @@ public class GraphUpdates
 
         private DenseRelationships relationshipUpdatesForType( int type )
         {
-            return relationshipUpdates.getIfAbsentPutWithKey( type, t -> new DenseRelationships( nodeId(), t ) );
+            return relationshipUpdates.computeIfAbsent( type, t -> new DenseRelationships( nodeId(), t ) );
         }
 
         @Override
@@ -884,8 +983,18 @@ public class GraphUpdates
         {
             // TODO have some way of at least saying whether or not this relationship had properties, so that this loading can be skipped completely
             sparse.data.addDegree( type, calculateDirection( otherNode, outgoing ), -1 );
-            relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
-                    store.loadRelationshipProperties( nodeId(), internalId, type, otherNode, outgoing, PropertyUpdate::remove, cursorTracer ) ) );
+            MutableIntObjectMap<PropertyUpdate> properties =
+                    store.loadRelationshipProperties( nodeId(), internalId, type, otherNode, outgoing, PropertyUpdate::remove, cursorTracer );
+            relationshipUpdatesForType( type ).add( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties, true ) );
+            properties.forEachValue( update -> checkAddBigValueToRemovedValuesBin( update.before ) );
+        }
+
+        private void checkAddBigValueToRemovedValuesBin( ByteBuffer buffer )
+        {
+            if ( PropertyValueFormat.isPointerValue( buffer ) )
+            {
+                removedValuesBin.accept( PropertyValueFormat.read( buffer, bigValueStore, cursorTracer ) );
+            }
         }
 
         @Override
@@ -903,7 +1012,7 @@ public class GraphUpdates
             for ( StorageProperty property : added )
             {
                 int key = property.propertyKeyId();
-                properties.put( key, PropertyUpdate.add( key, serializeValue( bigValueStore, property.value(), bigValueConsumer ) ) );
+                properties.put( key, PropertyUpdate.add( key, serializeValue( bigValueStore, property.value(), createBigValues ) ) );
             }
             Iterator<StorageProperty> changed = changedIterable.iterator();
             IntIterator removed = removedIterable.intIterator();
@@ -914,16 +1023,18 @@ public class GraphUpdates
                     StorageProperty property = changed.next();
                     int key = property.propertyKeyId();
                     PropertyUpdate existing = properties.get( key );
-                    properties.put( key, PropertyUpdate.change( key, existing.after, serializeValue( bigValueStore, property.value(), bigValueConsumer ) ) );
+                    properties.put( key, PropertyUpdate.change( key, existing.after, serializeValue( bigValueStore, property.value(), createBigValues ) ) );
+                    checkAddBigValueToRemovedValuesBin( existing.after );
                 }
                 while ( removed.hasNext() )
                 {
                     int key = removed.next();
                     PropertyUpdate existing = properties.get( key );
                     properties.put( key, PropertyUpdate.remove( key, existing.after ) );
+                    checkAddBigValueToRemovedValuesBin( existing.after );
                 }
             }
-            relationshipUpdatesForType( type ).insert( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties ) );
+            relationshipUpdatesForType( type ).add( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties, false ) );
         }
 
         @Override
@@ -934,6 +1045,11 @@ public class GraphUpdates
 
         void prepareForCommandExtraction() throws ConstraintViolationTransactionFailureException
         {
+            // Be mechanically sympathetic to the applier by sorting the relationship updates
+            for ( DenseRelationships relationships : relationshipUpdates.values() )
+            {
+                Collections.sort( relationships.relationships );
+            }
             if ( deleted )
             {
                 // This dense node has now been deleted, verify that all its relationships have also been removed in this transaction
@@ -944,7 +1060,7 @@ public class GraphUpdates
             }
         }
 
-        void createCommands( Consumer<StorageCommand> commands )
+        void createCommands( Consumer<FrekiCommand.DenseNode> commands )
         {
             commands.accept( new FrekiCommand.DenseNode( nodeId(), relationshipUpdates ) );
         }
@@ -968,21 +1084,21 @@ public class GraphUpdates
 
         private IntObjectMap<PropertyUpdate> serializeAddedProperties( IntObjectMap<Value> properties, MutableIntObjectMap<PropertyUpdate> target )
         {
-            properties.forEachKeyValue( ( key, value ) -> target.put( key, add( key, serializeValue( bigValueStore, value, bigValueConsumer ) ) ) );
+            properties.forEachKeyValue( ( key, value ) -> target.put( key, add( key, serializeValue( bigValueStore, value, createBigValues ) ) ) );
             return target;
         }
 
         private IntObjectMap<PropertyUpdate> serializeAddedProperties( Iterable<StorageProperty> properties, MutableIntObjectMap<PropertyUpdate> target )
         {
             properties.forEach( property -> target.put( property.propertyKeyId(),
-                    add( property.propertyKeyId(), serializeValue( bigValueStore, property.value(), bigValueConsumer ) ) ) );
+                    add( property.propertyKeyId(), serializeValue( bigValueStore, property.value(), createBigValues ) ) ) );
             return target;
         }
     }
 
-    private static Record recordForData( long recordId, ByteBuffer buffer, int sizeExp )
+    private static Record recordForData( long recordId, ByteBuffer buffer, int sizeExp, byte version )
     {
-        Record after = new Record( sizeExp, recordId );
+        Record after = new Record( sizeExp, recordId, version );
         after.setFlag( FLAG_IN_USE, true );
         ByteBuffer byteBuffer = after.data();
         byteBuffer.put( buffer.array(), 0, buffer.limit() );
@@ -1005,7 +1121,7 @@ public class GraphUpdates
         }
     }
 
-    static ByteBuffer serializeValue( SimpleBigValueStore bigValueStore, Value value, Consumer<StorageCommand> bigValueCommandConsumer )
+    static ByteBuffer serializeValue( SimpleBigValueStore bigValueStore, Value value, Consumer<FrekiCommand.BigPropertyValue> bigValueCommandConsumer )
     {
         // TODO hand-wavy upper limit
         ByteBuffer buffer = ByteBuffer.wrap( new byte[256] );

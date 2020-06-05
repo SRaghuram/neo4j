@@ -95,16 +95,6 @@ class IntermediateBuffer
         return this.count > 0 && readIndex < count && readIndex >= 0 ? buffers.get( readIndex ).limit() : 0;
     }
 
-    int totalSize()
-    {
-        int size = 0;
-        for ( int i = 0; i < count; i++ )
-        {
-            size += buffers.get( i ).limit();
-        }
-        return size;
-    }
-
     private ByteBuffer newBuffer()
     {
         return ByteBuffer.wrap( new byte[bufferCapacity + LEEWAY_SIZE] ).limit( bufferCapacity );

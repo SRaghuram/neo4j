@@ -30,13 +30,13 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAmount;
+import java.util.List;
 import java.util.function.Consumer;
 
 import org.neo4j.hashing.HashFunction;
 import org.neo4j.internal.codec.string.ShortStringCodec;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.ValueMapper;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
@@ -120,7 +120,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static final short SPECIAL_TYPE_ARRAY = 0x10;
 
     private final SimpleBigValueStore bigPropertyValueStore;
-    private final Consumer<StorageCommand> commands;
+    private final Consumer<FrekiCommand.BigPropertyValue> commands;
     private final ByteBuffer outputBuffer; //Actual output-buffer
 
     private ByteBuffer buffer; //current write buffer
@@ -137,7 +137,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     //Nested properties
     private int nestedPropertyCount;
 
-    PropertyValueFormat( SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commands, ByteBuffer buffer )
+    PropertyValueFormat( SimpleBigValueStore bigPropertyValueStore, Consumer<FrekiCommand.BigPropertyValue> commands, ByteBuffer buffer )
     {
         this.bigPropertyValueStore = bigPropertyValueStore;
         this.commands = commands;
@@ -229,9 +229,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             bigArray = false;
             ByteBuffer arrayBuffer = buffer;
             buffer = outputBuffer; // restore buffer
-            long pointer = bigPropertyValueStore.allocateSpace( arrayBuffer.position() );
+            arrayBuffer.flip();
+            List<Record> records = bigPropertyValueStore.allocate( arrayBuffer, PageCursorTracer.NULL );
+            long pointer = records.get( 0 ).id;
             writeInteger( pointer );
-            commands.accept( new FrekiCommand.BigPropertyValue( pointer, arrayBuffer.array(), arrayBuffer.position() ) );
+            commands.accept( new FrekiCommand.BigPropertyValue( records ) );
         }
     }
 
@@ -571,9 +573,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             byte[] bytes = UTF8.encode( value );
             if ( bytes.length > MAX_INLINED_STRING_SIZE )
             {
-                long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
+                List<Record> records = bigPropertyValueStore.allocate( ByteBuffer.wrap( bytes ), PageCursorTracer.NULL );
+                long pointer = records.get( 0 ).id;
                 writePointer( EXTERNAL_TYPE_STRING, pointer, false );
-                commands.accept( new FrekiCommand.BigPropertyValue( pointer, bytes ) );
+                commands.accept( new FrekiCommand.BigPropertyValue( records ) );
             }
             else
             {
@@ -774,6 +777,12 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     {
         Value value = read( buffer, bigPropertyValueStore, tracer );
         return value instanceof PointerValue ? ((PointerValue) value).bigValue() : value;
+    }
+
+    static boolean isPointerValue( ByteBuffer buffer )
+    {
+        byte typeByte = buffer.get( buffer.position() );
+        return (typeByte & SPECIAL_TYPE_MASK) != 0 && (typeByte & SPECIAL_TYPE_POINTER) != 0;
     }
 
     private static Value readArray( byte externalType, int length, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
@@ -1152,7 +1161,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         }
     }
 
-    private static class PointerValue extends Value
+    static class PointerValue extends Value
     {
         private final SimpleBigValueStore bigPropertyValueStore;
         private final PageCursorTracer tracer;
@@ -1171,6 +1180,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             this.tracer = tracer;
         }
 
+        long pointer()
+        {
+            return pointer;
+        }
+
         private Value bigValue()
         {
             if ( cachedValue != null )
@@ -1181,10 +1195,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             ByteBuffer buffer;
             try ( PageCursor cursor = bigPropertyValueStore.openReadCursor( tracer ) )
             {
-                int length = bigPropertyValueStore.length( cursor, pointer ); // this is not optimal, as read() re-reads the length.
-                buffer = ByteBuffer.wrap( new byte[length] );
-                bigPropertyValueStore.read( cursor, buffer, pointer );
-                buffer.position( 0 );
+                buffer = bigPropertyValueStore.read( cursor, length -> ByteBuffer.wrap( new byte[length] ), pointer );
             }
             catch ( IOException e )
             {

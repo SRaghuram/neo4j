@@ -21,18 +21,28 @@ package org.neo4j.internal.freki;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.function.IntFunction;
+import java.util.function.LongConsumer;
 
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 interface SimpleBigValueStore extends SingleFileStore
 {
-    long allocateSpace( int length );
+    List<Record> allocate( ByteBuffer data, PageCursorTracer cursorTracer );
 
-    void write( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
+    void write( PageCursor cursor, Iterable<Record> records, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException;
 
-    boolean read( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
+    default ByteBuffer read( PageCursor cursor, long id ) throws IOException
+    {
+        return read( cursor, length -> ByteBuffer.wrap( new byte[length] ), id );
+    }
 
-    int length( PageCursor cursor, long position ) throws IOException;
+    ByteBuffer read( PageCursor cursor, IntFunction<ByteBuffer> bufferCreator, long id ) throws IOException;
 
-    long position();
+    void visitRecordChainIds( PageCursor cursor, long id, LongConsumer chainVisitor );
+
+    long getHighId();
 }

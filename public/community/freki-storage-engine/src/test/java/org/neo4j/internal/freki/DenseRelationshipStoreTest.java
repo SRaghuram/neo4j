@@ -84,7 +84,7 @@ class DenseRelationshipStoreTest
     private RandomRule random;
 
     private InMemoryBigValueTestStore bigPropertyValueStore = new InMemoryBigValueTestStore();
-    private DenseRelationshipStore store;
+    private SimpleDenseRelationshipStore store;
 
     @BeforeEach
     void start()
@@ -125,7 +125,7 @@ class DenseRelationshipStoreTest
         StorageProperty property = new PropertyKeyValue( 1928, intValue( 10 ) );
         Rel out = new Rel( 100_000, nodeId, 123, 200_000, RelationshipDirection.OUTGOING, properties( property ) );
         Rel in = new Rel( 100_001, nodeId, 123, 200_001, RelationshipDirection.INCOMING, properties( property ) );
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( int i = 0; i < 10_000; i++ )
             {
@@ -146,7 +146,7 @@ class DenseRelationshipStoreTest
     {
         // given
         long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( int r = 0; r < 1_000; r++ )
             {
@@ -164,7 +164,7 @@ class DenseRelationshipStoreTest
             relationships.add( new Rel( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
                     relationship.direction(), properties( relationship.properties() ) ) );
         }
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( Rel relationship : relationships )
             {
@@ -187,7 +187,7 @@ class DenseRelationshipStoreTest
         // given
         long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
         Set<Rel> relationships = new HashSet<>();
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( int i = 0; i < 100; i++ )
             {
@@ -206,7 +206,7 @@ class DenseRelationshipStoreTest
         {
             // when
             Rel relationship = random.among( new ArrayList<>( relationships ) );
-            try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+            try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
             {
                 updater.deleteRelationship( relationship.internalId, relationship.originNodeId, relationship.type, relationship.neighbourNodeId,
                         relationship.isOutgoing() );
@@ -226,7 +226,7 @@ class DenseRelationshipStoreTest
         List<Rel> relationships = new ArrayList<>();
         int numOtherNodes = 100;
         int numTypes = 4;
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( int i = 0; i < numOtherNodes * 10; i++ )
             {
@@ -261,7 +261,7 @@ class DenseRelationshipStoreTest
         // given
         long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
         List<Rel> relationships = new ArrayList<>();
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( int i = 0; i < 1; i++ )
             {
@@ -272,7 +272,7 @@ class DenseRelationshipStoreTest
         }
 
         // when
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             Rel relationship = random.among( relationships );
             int numChanged = random.nextInt( 1, 3 );
@@ -381,7 +381,7 @@ class DenseRelationshipStoreTest
 
     private void createRelationships( Set<Rel> expectedRelationships ) throws IOException
     {
-        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( Rel relationship : expectedRelationships )
             {
@@ -390,7 +390,7 @@ class DenseRelationshipStoreTest
         }
     }
 
-    private void createRelationship( DenseRelationshipStore.Updater updater, Rel relationship )
+    private void createRelationship( SimpleDenseRelationshipStore.Updater updater, Rel relationship )
     {
         updater.insertRelationship( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
                 relationship.direction() == RelationshipDirection.OUTGOING, serialize( relationship.properties ), u -> u.after );
@@ -507,7 +507,7 @@ class DenseRelationshipStoreTest
                     ", props=" + properties + "}";
         }
 
-        void insert( DenseRelationshipStore.Updater updater )
+        void insert( SimpleDenseRelationshipStore.Updater updater )
         {
             updater.insertRelationship( internalId, originNodeId, type, neighbourNodeId, isOutgoing(), serialize( properties ), u -> u.after );
         }

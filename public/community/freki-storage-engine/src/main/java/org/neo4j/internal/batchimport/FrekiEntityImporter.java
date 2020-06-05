@@ -9,12 +9,18 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.BatchingStoreBase;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
+import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
 import static org.neo4j.internal.freki.Record.deletedRecord;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
+import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
 import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -38,6 +44,7 @@ public class FrekiEntityImporter extends BaseEntityImporter{
     private DenseRelationshipsWorkSync denseRelationshipsWorkSync;
     protected FrekiBatchStores frekiBatchStores;
     MemoryTracker memoryTracker;
+    FrekiTransactionApplier frekiTransactionApplier;
 
     public FrekiEntityImporter(BatchingStoreBase basicNeoStore, IdMapper idMapper, PropertyValueLookup inputIdLookup,
                                DataImporter.Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker) {
@@ -54,6 +61,9 @@ public class FrekiEntityImporter extends BaseEntityImporter{
         {
             throw new UnderlyingStorageException( io.getMessage());
         }
+        frekiTransactionApplier = new FrekiTransactionApplier( frekiBatchStores.getStores(), new FrekiStorageReader( frekiBatchStores.getStores(), NO_TRACING,
+                null /*should not be required*/ ), null, null, REVERSE_RECOVERY,
+                null, null, null, denseRelationshipsWorkSync, pageCacheTracer, cursorTracer, memoryTracker );
     }
 
     @Override
@@ -76,7 +86,10 @@ public class FrekiEntityImporter extends BaseEntityImporter{
     {
         //save value of property here
         super.property(propertyKeyId, value);
-        propsAdd = asSet( new PropertyKeyValue( propertyKeyId, stringValue((String)value)) );
+        if (propsAdd == null)
+            propsAdd = asSet( new PropertyKeyValue( propertyKeyId, stringValue((String)value)) );
+        else
+            propsAdd.add( new PropertyKeyValue( propertyKeyId, stringValue((String)value)) );
         return true;
     }
 
@@ -92,6 +105,38 @@ public class FrekiEntityImporter extends BaseEntityImporter{
         try {
             for (StorageCommand command : commands) {
                 if (command instanceof FrekiCommand.SparseNode) {
+                    boolean over = false;
+                    while (!over) {
+                        try {
+                            frekiTransactionApplier.handle((FrekiCommand.SparseNode) command);
+                            over = true;
+                        } catch (IllegalStateException ie) {
+                            //retry
+                            System.out.print("7-"+ie.getMessage());
+                                over= true;//Thread.sleep(50);
+                        }
+                    }
+                } else if (command instanceof FrekiCommand.BigPropertyValue) {
+                    frekiTransactionApplier.handle((FrekiCommand.BigPropertyValue)command);
+                } else if (command instanceof FrekiCommand.DenseNode) {
+                            frekiTransactionApplier.handle((FrekiCommand.DenseNode) command);
+                }
+                else
+                    System.out.println("Unknown command:["+command.toString()+"]");
+            }
+        } catch (IOException io)
+        {
+            throw new UnderlyingStorageException( io.getMessage());
+        }
+        propsAdd.clear();
+        super.endOfEntity();
+    }
+
+    public void endOfEntityOld()
+    {
+        try {
+            for (StorageCommand command : commands) {
+                if (command instanceof FrekiCommand.SparseNode) {
                     for ( FrekiCommand.RecordChange change : (FrekiCommand.SparseNode)command )
                     {
                         int sizeExp = change.sizeExp();
@@ -103,9 +148,7 @@ public class FrekiEntityImporter extends BaseEntityImporter{
                         }
                     }
                 } else if (command instanceof FrekiCommand.BigPropertyValue) {
-                    ((BigPropertyValueStore) frekiBatchStores.stores.bigPropertyValueStore).write(bigPropertyCursor,
-                            ByteBuffer.wrap(((FrekiCommand.BigPropertyValue) command).bytes, 0, ((FrekiCommand.BigPropertyValue) command).length),
-                            ((FrekiCommand.BigPropertyValue) command).pointer);
+                    ((BigPropertyValueStore) frekiBatchStores.stores.bigPropertyValueStore).write(bigPropertyCursor, ((FrekiCommand.BigPropertyValue) command).records, IdUpdateListener.DIRECT,cursorTracer);
                 } else if (command instanceof FrekiCommand.DenseNode) {
                     if (denseRelationshipUpdates == null) {
                         denseRelationshipUpdates = denseRelationshipsWorkSync.newBatch();
@@ -131,6 +174,12 @@ public class FrekiEntityImporter extends BaseEntityImporter{
     {
         bigPropertyCursor.close();
         //commandCreationContext.close();
+        try {
+            frekiTransactionApplier.close();
+        } catch (Exception ee)
+        {
+            System.out.println("frekiTransactionApplier close error-"+ee.getMessage());
+        }
         super.close();
     }
 }

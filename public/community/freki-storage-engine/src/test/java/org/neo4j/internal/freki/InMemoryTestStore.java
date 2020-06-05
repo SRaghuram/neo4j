@@ -32,6 +32,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.freki.Record.FIRST_VERSION;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 
@@ -61,7 +62,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     @Override
     public Record newRecord( long id )
     {
-        return new Record( sizeExp, id );
+        return new Record( sizeExp, id, FIRST_VERSION );
     }
 
     @Override
@@ -75,7 +76,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     {
         if ( record.hasFlag( FLAG_IN_USE ) )
         {
-            Record copy = new Record( record.sizeExp(), record.id );
+            Record copy = new Record( record.sizeExp() );
             copy.copyContentsFrom( record );
             data.put( record.id, copy );
         }
@@ -83,6 +84,12 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
         {
             data.remove( record.id );
         }
+    }
+
+    @Override
+    public void writeHeaderOnly( PageCursor cursor, Record record )
+    {
+        data.get( record.id ).setVersion( record.version );
     }
 
     @Override
@@ -130,6 +137,11 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     public String toString()
     {
         return format( "TestStore[x%d,highId:%d]", recordXFactor( sizeExp ), nextId.get() );
+    }
+
+    void setHighId( long highId )
+    {
+        this.nextId.set( highId );
     }
 
     // Basically this isn't used, it's just something to call close()

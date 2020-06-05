@@ -23,11 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-import org.neo4j.exceptions.UnderlyingStorageException;
-import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -35,114 +32,24 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.freki.Record.recordSize;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 
 public class Store extends BareBoneSingleFileStore implements SimpleStore
 {
-    private final IdGeneratorFactory idGeneratorFactory;
-    private final IdType idType;
-    private final int recordsPerPage;
-    private final PageCacheTracer pageCacheTracer;
-    private final int recordSize;
     private final int sizeExp;
-
-    private IdGenerator idGenerator;
 
     public Store( File file, PageCache pageCache, IdGeneratorFactory idGeneratorFactory, IdType idType, boolean readOnly, boolean createIfNotExists,
             int sizeExp, PageCacheTracer pageCacheTracer )
     {
-        super( file, pageCache, readOnly, createIfNotExists );
-        this.idGeneratorFactory = idGeneratorFactory;
-        this.idType = idType;
+        super( file, pageCache, idGeneratorFactory, idType, readOnly, createIfNotExists, recordSize( sizeExp ), pageCacheTracer );
         this.sizeExp = sizeExp;
-        this.recordSize = Record.recordSize( sizeExp );
-        this.recordsPerPage = pageCache.pageSize() / recordSize;
-        this.pageCacheTracer = pageCacheTracer;
-    }
-
-    @Override
-    public void init() throws IOException
-    {
-        super.init();
-        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "Open ID generator" ) )
-        {
-            idGenerator =
-                    idGeneratorFactory.open( pageCache, idFileName(), idType, () -> 0, 1L << (6 * Byte.SIZE), readOnly, cursorTracer, openOptions( false ) );
-        }
-    }
-
-    @Override
-    public void start() throws Exception
-    {
-        super.start();
-        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "Open ID generator" ) )
-        {
-            idGenerator.start( visitor ->
-            {
-                long highestIdFound = -1;
-                long[] foundIds = new long[recordsPerPage];
-                int foundIdsCursor;
-                try ( PageCursor cursor = openReadCursor( cursorTracer ) )
-                {
-                    while ( cursor.next() ) // <-- will stop after last page, since this is a read cursor
-                    {
-                        do
-                        {
-                            foundIdsCursor = 0;
-                            long idPageOffset = cursor.getCurrentPageId() * recordsPerPage;
-                            for ( int i = 0; i < recordsPerPage; i++ )
-                            {
-                                int offset = i * recordSize;
-                                cursor.setOffset( offset );
-                                if ( !Record.isInUse( cursor, offset ) )
-                                {
-                                    foundIds[foundIdsCursor++] = idPageOffset + i;
-                                }
-                            }
-                        }
-                        while ( cursor.shouldRetry() );
-                        checkIdScanCursorBounds( cursor );
-
-                        for ( int i = 0; i < foundIdsCursor; i++ )
-                        {
-                            visitor.accept( foundIds[i] );
-                        }
-                        if ( foundIdsCursor > 0 )
-                        {
-                            highestIdFound = foundIds[foundIdsCursor - 1];
-                        }
-                    }
-                    return highestIdFound;
-                }
-            }, cursorTracer );
-        }
-    }
-
-    private void checkIdScanCursorBounds( PageCursor cursor )
-    {
-        if ( cursor.checkAndClearBoundsFlag() )
-        {
-            throw new UnderlyingStorageException(
-                    "Out of bounds access on page " + cursor.getCurrentPageId() + " detected while scanning the " + file + " file for deleted records" );
-        }
-    }
-
-    @Override
-    public void shutdown()
-    {
-        idGenerator.close();
-        super.shutdown();
     }
 
     @Override
     public long nextId( PageCursorTracer cursorTracer )
     {
         return idGenerator.nextId( cursorTracer );
-    }
-
-    private File idFileName()
-    {
-        return new File( file.getAbsolutePath() + ".id" );
     }
 
     @Override
@@ -154,7 +61,7 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     @Override
     public Record newRecord( long id )
     {
-        return new Record( sizeExp, id );
+        return new Record( sizeExp, id, Record.FIRST_VERSION );
     }
 
     @Override
@@ -167,24 +74,38 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     public void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException
     {
         long id = record.id;
-        long pageId = id / recordsPerPage;
-        int offset = (int) ((id % recordsPerPage) * recordSize);
-        if ( !cursor.next( pageId ) )
-        {
-            throw new IllegalStateException( "Could not grow file?" );
-        }
-        cursor.setOffset( offset );
+        goToId( cursor, id );
         record.serialize( cursor );
         cursor.checkAndClearBoundsFlag();
         idUpdateListener.markId( idGenerator, id, record.hasFlag( Record.FLAG_IN_USE ), cursorTracer );
     }
 
     @Override
+    public void writeHeaderOnly( PageCursor cursor, Record record ) throws IOException
+    {
+        long id = record.id;
+        goToId( cursor, id );
+        record.serializeHeader( cursor );
+        cursor.checkAndClearBoundsFlag();
+    }
+
+    private void goToId( PageCursor cursor, long id ) throws IOException
+    {
+        long pageId = idPage( id );
+        int offset = idOffset( id );
+        if ( !cursor.next( pageId ) )
+        {
+            throw new IllegalStateException( "Could not grow file?" );
+        }
+        cursor.setOffset( offset );
+    }
+
+    @Override
     public boolean read( PageCursor cursor, Record record, long id )
     {
         record.clear();
-        long pageId = id / recordsPerPage;
-        int offset = (int) ((id % recordsPerPage) * recordSize);
+        long pageId = idPage( id );
+        int offset = idOffset( id );
         try
         {
             if ( !cursor.next( pageId ) )
@@ -199,38 +120,6 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
             throw new UncheckedIOException( e );
         }
         return true;
-    }
-
-    @Override
-    public boolean exists( PageCursor cursor, long id )
-    {
-        long pageId = id / recordsPerPage;
-        int offset = (int) ((id % recordsPerPage) * recordSize);
-        try
-        {
-            if ( !cursor.next( pageId ) )
-            {
-                return false;
-            }
-            return Record.isInUse( cursor, offset );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-    }
-
-    @Override
-    public long getHighId()
-    {
-        return idGenerator == null ? 0: idGenerator.getHighId();
-    }
-
-    @Override
-    public void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer ) throws IOException
-    {
-        super.flush( ioLimiter, cursorTracer );
-        idGenerator.checkpoint( ioLimiter, cursorTracer );
     }
 
     @Override

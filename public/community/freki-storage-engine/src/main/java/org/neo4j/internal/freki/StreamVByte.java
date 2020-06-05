@@ -136,6 +136,11 @@ class StreamVByte
         return code;
     }
 
+    static int sizeOfIntSizeIndex( int sizeCode )
+    {
+        return INT_CODE_SIZES[sizeCode];
+    }
+
     private static void encodeIntValue( int value, byte sizeCode, byte[] bytes, int offset )
     {
         if ( sizeCode == 0 )
@@ -185,6 +190,33 @@ class StreamVByte
                     (bytes[dataOffset + 3] & 0xFF) << 24;
         }
         return value;
+    }
+
+    static int decodeIntValue( PageCursor cursor, int code )
+    {
+        int value;
+        if ( code == 0 )
+        {
+            value = uint( cursor );
+        }
+        else if ( code == 1 )
+        {
+            value = uint( cursor ) | (uint( cursor ) << 8);
+        }
+        else if ( code == 2 )
+        {
+            value = uint( cursor ) | (uint( cursor ) << 8) | (uint( cursor ) << 16);
+        }
+        else
+        {
+            value = uint( cursor ) | (uint( cursor ) << 8) | (uint( cursor ) << 16) | (uint( cursor ) << 24);
+        }
+        return value;
+    }
+
+    private static int uint( PageCursor cursor )
+    {
+        return cursor.getByte() & 0xFF;
     }
 
     // === LONGS ===
@@ -618,19 +650,27 @@ class StreamVByte
         }
     }
 
-    private interface Encoder
+    interface Encoder
     {
         byte sizeCodeOf( long value );
+
+        int sizeOf( byte sizeCode );
 
         void encodeNext( byte[] data, int offset, long value, byte sizeCode );
     }
 
-    private static final Encoder INT_ENCODER = new Encoder()
+    static final Encoder INT_ENCODER = new Encoder()
     {
         @Override
         public byte sizeCodeOf( long value )
         {
             return intValueSizeCode( (int) value );
+        }
+
+        @Override
+        public int sizeOf( byte sizeCode )
+        {
+            return INT_CODE_SIZES[sizeCode];
         }
 
         @Override
@@ -640,12 +680,18 @@ class StreamVByte
         }
     };
 
-    private static final Encoder LONG_ENCODER = new Encoder()
+    static final Encoder LONG_ENCODER = new Encoder()
     {
         @Override
         public byte sizeCodeOf( long value )
         {
             return longValueSizeCode( value );
+        }
+
+        @Override
+        public int sizeOf( byte sizeCode )
+        {
+            return LONG_CODE_SIZES[sizeCode];
         }
 
         @Override

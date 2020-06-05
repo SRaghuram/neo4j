@@ -72,7 +72,7 @@ class GBPTreeSingleWriterTest
             // We now have a tree with height 6.
             // The leftmost node on all levels should have only a single key.
             KeyCountingVisitor keyCountingVisitor = new KeyCountingVisitor();
-            gbpTree.visit( keyCountingVisitor, NULL );
+            gbpTree.visit( keyCountingVisitor, false, NULL );
             for ( Integer leftmostKeyCount : keyCountingVisitor.keyCountOnLeftmostPerLevel )
             {
                 assertEquals( 1, leftmostKeyCount.intValue() );
@@ -100,7 +100,7 @@ class GBPTreeSingleWriterTest
             // We now have a tree with height 6.
             // The rightmost node on all levels should have either one or zero key (zero for internal nodes).
             KeyCountingVisitor keyCountingVisitor = new KeyCountingVisitor();
-            gbpTree.visit( keyCountingVisitor, NULL );
+            gbpTree.visit( keyCountingVisitor, false, NULL );
             for ( Integer rightmostKeyCount : keyCountingVisitor.keyCountOnRightmostPerLevel )
             {
                 assertTrue( rightmostKeyCount == 0 || rightmostKeyCount == 1 );
@@ -121,9 +121,9 @@ class GBPTreeSingleWriterTest
         {
             treeWriter.merge( new MutableLong( 0 ), new MutableLong( 1 ), ValueMergers.overwrite() );
 
-            assertThat( cursorTracer.pins() ).isEqualTo( 5 );
-            assertThat( cursorTracer.unpins() ).isEqualTo( 4 );
-            assertThat( cursorTracer.hits() ).isEqualTo( 4 );
+            assertThat( cursorTracer.pins() ).isEqualTo( 4 );
+            assertThat( cursorTracer.unpins() ).isEqualTo( 2 );
+            assertThat( cursorTracer.hits() ).isEqualTo( 3 );
             assertThat( cursorTracer.faults() ).isEqualTo( 1 );
         }
     }
@@ -141,9 +141,9 @@ class GBPTreeSingleWriterTest
         {
             treeWriter.put( new MutableLong( 0 ), new MutableLong( 1 ) );
 
-            assertThat( cursorTracer.pins() ).isEqualTo( 5 );
-            assertThat( cursorTracer.unpins() ).isEqualTo( 4 );
-            assertThat( cursorTracer.hits() ).isEqualTo( 4 );
+            assertThat( cursorTracer.pins() ).isEqualTo( 4 );
+            assertThat( cursorTracer.unpins() ).isEqualTo( 2 );
+            assertThat( cursorTracer.hits() ).isEqualTo( 3 );
             assertThat( cursorTracer.faults() ).isEqualTo( 1 );
         }
     }
@@ -158,9 +158,9 @@ class GBPTreeSingleWriterTest
               var treeWriter = gbpTree.writer( 0, cursorTracer ) )
         {
             treeWriter.put( new MutableLong( 0 ), new MutableLong( 0 ) );
-            assertThat( cursorTracer.pins() ).isEqualTo( 5 );
-            assertThat( cursorTracer.unpins() ).isEqualTo( 4 );
-            assertThat( cursorTracer.hits() ).isEqualTo( 4 );
+            assertThat( cursorTracer.pins() ).isEqualTo( 4 );
+            assertThat( cursorTracer.unpins() ).isEqualTo( 2 );
+            assertThat( cursorTracer.hits() ).isEqualTo( 3 );
             assertThat( cursorTracer.faults() ).isEqualTo( 1 );
 
             cursorTracer.reportEvents();

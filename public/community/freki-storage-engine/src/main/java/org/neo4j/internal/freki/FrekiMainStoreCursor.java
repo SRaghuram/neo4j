@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.function.ToIntFunction;
 
+import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -42,6 +43,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 {
     static final long NULL = -1;
     static final int NULL_OFFSET = 0;
+    private static final int MAX_RETRIES_BEFORE_TIMER = 10;
 
     final MainStores stores;
     final CursorAccessPatternTracer cursorAccessPatternTracer;
@@ -57,7 +59,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     int[] relationshipTypeOffsets;
     int firstRelationshipTypeOffset;
 
-    private PageCursor[] xCursors;
+    private final PageCursor[] xCursors;
 
     FrekiMainStoreCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
@@ -118,17 +120,20 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     Record xRecord( int sizeExp )
     {
-        if ( data.records[sizeExp] == null )
+        if ( data.recordIndex[sizeExp] < data.records[sizeExp].length - 1 )
         {
-            data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
+            data.recordIndex[sizeExp]++;
         }
-        else if ( sizeExp > 0 && data.xLChainNextLinkPointer != data.xLChainStartPointer )
+        else
         {
-            //We cant reuse records when loading chains because we only have a one slot per sizeExp, just create a new one
-            //TODO reuse up to 2 or 3 first in chain?
-            data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
+            data.records[sizeExp][data.recordIndex[sizeExp]] = null;
         }
-        return data.records[sizeExp];
+
+        if ( data.records[sizeExp][data.recordIndex[sizeExp]] == null )
+        {
+            data.records[sizeExp][data.recordIndex[sizeExp]] = stores.mainStore( sizeExp ).newRecord();
+        }
+        return data.records[sizeExp][data.recordIndex[sizeExp]];
     }
 
     boolean loadSuperLight( long nodeId )
@@ -163,33 +168,39 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return true;
     }
 
-    private void ensureX1Loaded()
+    private boolean ensureX1Loaded()
     {
         if ( !data.x1Loaded )
         {
             Record x1Record = loadRecord( 0, data.nodeId );
-            if ( x1Record != null )
+            if ( x1Record == null )
             {
-                data.gatherDataFromX1( x1Record );
+                return false;
             }
+            data.gatherDataFromX1( x1Record );
         }
+        return true;
     }
 
     //Package-private for testing/analysis purposes
     boolean loadNextChainLink()
     {
         //This is only capable of reading chain in one direction, until reached end.
-        if ( !data.xLChainLoaded && data.xLChainNextLinkPointer != NULL )
+        assert hasMoreChainLinks(); //Tried to load next link, but is at the end of chain.
+        int sizeExp = sizeExponentialFromRecordPointer( data.xLChainNextLinkPointer );
+        Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.xLChainNextLinkPointer ) );
+        if ( xLRecord == null || !data.gatherDataFromXL( xLRecord ) )
         {
-            int sizeExp = sizeExponentialFromRecordPointer( data.xLChainNextLinkPointer );
-            Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.xLChainNextLinkPointer ) );
-            if ( xLRecord != null )
-            {
-                data.gatherDataFromXL( xLRecord );
-                return true;
-            }
+            //Record has version mismatch or been deleted, likely reading while writing.
+            //Caller is responsible for have to reload everything again.
+            return false;
         }
-        return false;
+        return true;
+    }
+
+    boolean hasMoreChainLinks()
+    {
+        return !data.xLChainLoaded && data.xLChainNextLinkPointer != NULL;
     }
 
     /**
@@ -222,6 +233,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                 throw new IllegalStateException(
                         "Wanted to follow forward pointer " + recordPointerToString( forwardPointer ) + ", but ended up on an unused record" );
             }
+            if ( record.version != data.version )
+            {
+                throw new IllegalStateException(
+                        "Reading split data from records with different version. Expected " + data.version + " but got " + record.version );
+            }
             buffer = record.data();
             header.deserialize( buffer );
             if ( header.hasMark( headerSlot ) )
@@ -233,35 +249,77 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return null;
     }
 
-    private void ensureLoaded( ToIntFunction<FrekiCursorData> test, int headerSlot )
+    private boolean ensureLoaded( ToIntFunction<FrekiCursorData> test, int headerSlot )
     {
         if ( (!data.x1Loaded || !data.xLChainLoaded) && test.applyAsInt( data ) == 0 )
         {
-            ensureX1Loaded();
+            if ( !ensureX1Loaded() )
+            {
+                return false;
+            }
             while ( test.applyAsInt( data ) == 0 && data.header.hasReferenceMark( headerSlot ) )
             {
-                if ( !loadNextChainLink() )
+                if ( !hasMoreChainLinks() )
                 {
                     //We traversed the rest of the chain. Either the header/store is corrupt or we did not start at the beginning of the chain.
-                    throw new IllegalStateException( String.format( "Should have found %d in record chain", headerSlot ) );
+                    throw new IllegalStateException( String.format( "Should have found header slot %d in record chain for node %d", headerSlot, data.nodeId ) );
+                }
+                if ( !loadNextChainLink() )
+                {
+                    //We failed to read next link, deleted or version mismatch, we need to reload everything
+                    return false;
                 }
             }
         }
+        return true;
+    }
+
+    private void ensureLoadedWithRetries( ToIntFunction<FrekiCursorData> test, int headerSlot )
+    {
+        for ( int i = 0; i < MAX_RETRIES_BEFORE_TIMER; i++ )
+        {
+            if ( ensureLoaded( test, headerSlot ) )
+            {
+                return;
+            }
+            prepareForReload();
+        }
+
+        //Double logic to avoid potential cost of System.currentTimeMillis() on hot-path.
+        long end = System.currentTimeMillis() + 1000;
+        do
+        {
+            if ( ensureLoaded( test, headerSlot ) )
+            {
+                return;
+            }
+            prepareForReload();
+        }
+        while ( System.currentTimeMillis() < end );
+        throw new TransientTransactionFailureException(
+                "Failed to load a consistent state of Node[" + data.nodeId + "]. Was modified to many times during read." );
+    }
+
+    void prepareForReload()
+    {
+        long id = data.nodeId;
+        ensureFreshDataInstanceForLoadingNewNode();
+        data.nodeId = id;
     }
 
     void ensureLabelsLocated()
     {
-        ensureLoaded( data -> data.labelOffset, Header.FLAG_LABELS );
+        ensureLoadedWithRetries( data -> data.labelOffset, Header.FLAG_LABELS );
     }
 
     void ensureRelationshipsLocated()
     {
-        ensureLoaded( data -> data.relationshipOffset, data.isDense ? Header.OFFSET_DEGREES : Header.OFFSET_RELATIONSHIPS );
+        ensureLoadedWithRetries( data -> data.relationshipOffset, data.isDense ? Header.OFFSET_DEGREES : Header.OFFSET_RELATIONSHIPS );
     }
 
     void ensurePropertiesLocated()
     {
-        ensureLoaded( data -> data.propertyOffset, Header.OFFSET_PROPERTIES );
+        ensureLoadedWithRetries( data -> data.propertyOffset, Header.OFFSET_PROPERTIES );
     }
 
     private Record loadRecord( int sizeExp, long id )

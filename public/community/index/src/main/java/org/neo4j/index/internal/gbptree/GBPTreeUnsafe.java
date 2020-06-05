@@ -25,5 +25,6 @@ import org.neo4j.io.pagecache.PagedFile;
 
 interface GBPTreeUnsafe<KEY,VALUE>
 {
-    void access( PagedFile pagedFile, Layout<KEY,VALUE> layout, TreeNode<KEY,VALUE> node, TreeState treeState ) throws IOException;
+    void access( PagedFile pagedFile, Layout<KEY,VALUE> layout, FreeListIdProvider idProvider, TreeNode<KEY,VALUE> node, TreeState treeState )
+            throws IOException;
 }

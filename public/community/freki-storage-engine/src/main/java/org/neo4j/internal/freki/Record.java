@@ -34,15 +34,17 @@ public class Record
     /*
       Header 1B
      [____,____]
-      │││| |└└└─ SizeExp (3b)
-      │││| └──── InUse (1b)
+      ││││ │└└└─ SizeExp (3b)
+      ││││ └──── InUse (1b)
       └└└└────── Unused (4b)
      */
     static int MASK_SIZE_EXP = 0x7;
     public static int FLAG_IN_USE = 0x8;
 
     static final int SIZE_BASE = 128;
-    static final int HEADER_SIZE = 1;
+    static final int HEADER_SIZE = 2;
+
+    static final byte FIRST_VERSION = 0;
 
     // not stored
     long id;
@@ -50,30 +52,31 @@ public class Record
 
     // stored
     byte flags;
+    byte version;
     private final ByteBuffer data;
 
     Record( int sizeExp )
     {
-        this( sizeExp, -1 );
+        this( sizeExp, -1, FIRST_VERSION );
     }
 
-    Record( int sizeExp, long id )
+    Record( int sizeExp, long id, byte version )
     {
-        this( sizeExpAsFlagsByte( sizeExp ), id, true );
+        this( sizeExpAsFlagsByte( sizeExp ), id, version, ByteBuffer.wrap( new byte[recordDataSize( sizeExp )] ) );
     }
 
-    private Record( byte flags, long id, boolean instantiateData )
+    Record( byte flags, long id, byte version, ByteBuffer buffer )
     {
         this.flags = flags;
         this.id = id;
         this.dataLength = recordDataSize( sizeExp() );
-        // for instantiatedData == false this is a record which will never be used as anything other than deleting a record
-        this.data = instantiateData ? ByteBuffer.wrap( new byte[dataLength] ) : null;
+        this.data = buffer;
+        this.version = version;
     }
 
     public static Record deletedRecord(int sizeExp, long id)
     {
-        return new Record( sizeExpAsFlagsByte( sizeExp ), id, false );
+        return new Record( sizeExpAsFlagsByte( sizeExp ), id, FIRST_VERSION, null );
     }
 
     static int recordSize( int sizeExp )
@@ -143,6 +146,7 @@ public class Record
         channel.put( (byte) (flags | sizeExp()) );
         if ( hasFlag( FLAG_IN_USE ) )
         {
+            channel.put( version );
             int length = data.limit();
             // write the length so that we save on tx-log command size
             channel.putShort( (short) length );
@@ -153,24 +157,24 @@ public class Record
     static Record deserialize( ReadableChannel channel, long id ) throws IOException
     {
         byte flags = channel.get();
-        Record record = new Record( flags, id );
-        if ( record.hasFlag( FLAG_IN_USE ) )
+        if ( (flags & FLAG_IN_USE) != 0 )
         {
+            byte version = channel.get();
             short length = channel.getShort();
-            assert length <= recordDataSize( record.sizeExp() ); // if incorrect, fail here instead of OOM
-            channel.get( record.data( 0 ).array(), length );
-            record.data.position( length ).flip();
+            ByteBuffer buffer = ByteBuffer.wrap( new byte[length] );
+            channel.get( buffer.array(), length );
+            buffer.position( length ).flip();
+            return new Record( flags, id, version, buffer );
         }
-        return record;
+        return new Record( (byte) 0, id, FIRST_VERSION, null );
     }
-
-    // === UNIFY THESE SOMEHOW LATER ===
 
     void serialize( PageCursor cursor )
     {
         cursor.putByte( flags );
         if ( data != null )
         {
+            cursor.putByte( version );
             int length = data.limit();
             cursor.putBytes( data.array(), 0, length );
         }
@@ -180,9 +184,16 @@ public class Record
         }
     }
 
+    void serializeHeader( PageCursor cursor )
+    {
+        cursor.putByte( flags );
+        cursor.putByte( version );
+    }
+
     void clear()
     {
         flags = 0;
+        version = FIRST_VERSION;
         if ( data != null )
         {
             data.clear();
@@ -201,6 +212,7 @@ public class Record
         {
             cursor.setOffset( offset );
             flags = cursor.getByte();
+            version = cursor.getByte();
             cursor.getBytes( data.array(), 0, dataLength );
             data.position( dataLength );
             data.flip();
@@ -232,6 +244,7 @@ public class Record
     {
         assert source.sizeExp() == sizeExp();
         id = source.id;
+        version = source.version;
         flags = source.flags;
         System.arraycopy( source.data.array(), 0, data.array(), 0, source.data.capacity() );
     }
@@ -250,12 +263,18 @@ public class Record
             dataString = Arrays.toString( Arrays.copyOf( data.array(), data.limit() ) );
             dataLength = data.limit();
         }
-        return format( "Record{x%d(%d)%s,len=%d, %s}", recordXFactor( sizeExp() ), id, hasFlag( FLAG_IN_USE ) ? "" : " UNUSED ", dataLength, dataString );
+        return format( "Record{x%d(%d)%s,len=%d,ver=%d, %s}", recordXFactor( sizeExp() ), id, hasFlag( FLAG_IN_USE ) ? "" : " UNUSED ", dataLength, version,
+                dataString );
     }
 
     boolean hasSameContentsAs( Record other )
     {
-        return other.id == id && other.flags == flags &&
+        return other.id == id && other.flags == flags && other.version == version &&
                 ((data == null && other.data == null) || Arrays.equals( other.data.array(), data.array() ));
+    }
+
+    void setVersion( byte version )
+    {
+        this.version = version;
     }
 }

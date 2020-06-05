@@ -232,8 +232,8 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void insertKeyAndRightChildAt( PageCursor cursor, KEY key, long child, int pos, int keyCount, long stableGeneration,
-            long unstableGeneration, PageCursorTracer cursorTracer ) throws IOException
+    void insertKeyAndRightChildAt( PageCursor cursor, KEY key, long child, int pos, int keyCount, long stableGeneration, long unstableGeneration,
+            IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException
     {
         // Where to write key?
         int currentKeyOffset = getAllocOffset( cursor );
@@ -254,7 +254,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
             cursor.setOffset( newKeyOffset );
             putKeySize( cursor, keySize, true );
-            long offloadId = offloadStore.writeKey( key, stableGeneration, unstableGeneration, cursorTracer );
+            long offloadId = offloadStore.writeKey( key, stableGeneration, unstableGeneration, idProvider, cursorTracer );
             DynamicSizeUtil.putOffloadId( cursor, offloadId );
         }
 
@@ -270,7 +270,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
     @Override
     void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount, long stableGeneration, long unstableGeneration,
-            PageCursorTracer cursorTracer ) throws IOException
+            IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException
     {
         // Where to write key?
         int currentKeyValueOffset = getAllocOffset( cursor );
@@ -294,7 +294,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             // Write
             cursor.setOffset( newKeyValueOffset );
             putKeyValueSize( cursor, keySize, valueSize, true );
-            long offloadId = offloadStore.writeKeyValue( key, value, stableGeneration, unstableGeneration, cursorTracer );
+            long offloadId = offloadStore.writeKeyValue( key, value, stableGeneration, unstableGeneration, idProvider, cursorTracer );
             DynamicSizeUtil.putOffloadId( cursor, offloadId );
         }
 
@@ -308,7 +308,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void removeKeyValueAt( PageCursor cursor, int pos, int keyCount, long stableGeneration, long unstableGeneration,
+    void removeKeyValueAt( PageCursor cursor, int pos, int keyCount, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider,
             PageCursorTracer cursorTracer ) throws IOException
     {
         placeCursorAtActualKey( cursor, pos, LEAF );
@@ -322,7 +322,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         if ( offload )
         {
             long offloadId = readOffloadId( cursor );
-            offloadStore.free( offloadId, stableGeneration, unstableGeneration, cursorTracer );
+            offloadStore.free( offloadId, stableGeneration, unstableGeneration, idProvider, cursorTracer );
         }
 
         // Kill actual key
@@ -339,7 +339,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void removeKeyAndRightChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration,
+    void removeKeyAndRightChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider,
             PageCursorTracer cursorTracer ) throws IOException
     {
         placeCursorAtActualKey( cursor, keyPos, INTERNAL );
@@ -352,7 +352,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         if ( offload )
         {
             long offloadId = readOffloadId( cursor );
-            offloadStore.free( offloadId, stableGeneration, unstableGeneration, cursorTracer );
+            offloadStore.free( offloadId, stableGeneration, unstableGeneration, idProvider, cursorTracer );
         }
 
         // Kill actual key
@@ -371,7 +371,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void removeKeyAndLeftChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration,
+    void removeKeyAndLeftChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider,
             PageCursorTracer cursorTracer ) throws IOException
     {
         placeCursorAtActualKey( cursor, keyPos, INTERNAL );
@@ -384,7 +384,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         if ( offload )
         {
             long offloadId = readOffloadId( cursor );
-            offloadStore.free( offloadId, stableGeneration, unstableGeneration, cursorTracer );
+            offloadStore.free( offloadId, stableGeneration, unstableGeneration, idProvider, cursorTracer );
         }
 
         // Kill actual key
@@ -787,9 +787,9 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
     }
 
     @Override
-    void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey,
-            VALUE newValue, KEY newSplitter, double ratioToKeepInLeftOnSplit, long stableGeneration, long unstableGeneration,
-            PageCursorTracer cursorTracer ) throws IOException
+    void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, VALUE newValue, KEY newSplitter,
+            double ratioToKeepInLeftOnSplit, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer )
+            throws IOException
     {
         // Find split position
         int keyCountAfterInsert = leftKeyCount + 1;
@@ -801,7 +801,6 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
         {
             leftInSplit = keyAt( leftCursor, tmpKeyLeft, splitPos - 1, LEAF, cursorTracer );
             rightInSplit = newKey;
-
         }
         else
         {
@@ -830,7 +829,7 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             // split            ^
             moveKeysAndValues( leftCursor, splitPos - 1, rightCursor, 0, rightKeyCount );
             defragmentLeaf( leftCursor );
-            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, splitPos - 1, stableGeneration, unstableGeneration, cursorTracer );
+            insertKeyValueAt( leftCursor, newKey, newValue, insertPos, splitPos - 1, stableGeneration, unstableGeneration, idProvider, cursorTracer );
         }
         else
         {
@@ -845,16 +844,16 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
             int keysToMove = leftKeyCount - splitPos;
             moveKeysAndValues( leftCursor, splitPos, rightCursor, 0, keysToMove );
             defragmentLeaf( leftCursor );
-            insertKeyValueAt( rightCursor, newKey, newValue, newInsertPos, keysToMove, stableGeneration, unstableGeneration, cursorTracer );
+            insertKeyValueAt( rightCursor, newKey, newValue, newInsertPos, keysToMove, stableGeneration, unstableGeneration, idProvider, cursorTracer );
         }
         TreeNode.setKeyCount( leftCursor, splitPos );
         TreeNode.setKeyCount( rightCursor, rightKeyCount );
     }
 
     @Override
-    void doSplitInternal( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey,
-            long newRightChild, long stableGeneration, long unstableGeneration, KEY newSplitter, double ratioToKeepInLeftOnSplit,
-            PageCursorTracer cursorTracer ) throws IOException
+    void doSplitInternal( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, long newRightChild, long stableGeneration,
+            long unstableGeneration, KEY newSplitter, double ratioToKeepInLeftOnSplit, IdProvider.Writer idProvider, PageCursorTracer cursorTracer )
+            throws IOException
     {
         int keyCountAfterInsert = leftKeyCount + 1;
         int splitPos = splitPosInternal( leftCursor, insertPos, newKey, keyCountAfterInsert, ratioToKeepInLeftOnSplit );
@@ -880,9 +879,10 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
 
             moveKeysAndChildren( leftCursor, splitPos, rightCursor, 0, rightKeyCount, true );
             // Rightmost key in left is the one we send up to parent, remove it from here.
-            removeKeyAndRightChildAt( leftCursor, splitPos - 1, splitPos, stableGeneration, unstableGeneration, cursorTracer );
+            removeKeyAndRightChildAt( leftCursor, splitPos - 1, splitPos, stableGeneration, unstableGeneration, idProvider, cursorTracer );
             defragmentInternal( leftCursor );
-            insertKeyAndRightChildAt( leftCursor, newKey, newRightChild, insertPos, splitPos - 1, stableGeneration, unstableGeneration, cursorTracer );
+            insertKeyAndRightChildAt( leftCursor, newKey, newRightChild, insertPos, splitPos - 1, stableGeneration, unstableGeneration, idProvider,
+                    cursorTracer );
         }
         else
         {
@@ -919,10 +919,10 @@ public class TreeNodeDynamicSize<KEY, VALUE> extends TreeNode<KEY,VALUE>
                 int copyCount = leftKeyCount - copyFrom;
                 moveKeysAndChildren( leftCursor, copyFrom, rightCursor, 0, copyCount, true );
                 // Rightmost key in left is the one we send up to parent, remove it from here.
-                removeKeyAndRightChildAt( leftCursor, splitPos, splitPos + 1, stableGeneration, unstableGeneration, cursorTracer );
+                removeKeyAndRightChildAt( leftCursor, splitPos, splitPos + 1, stableGeneration, unstableGeneration, idProvider, cursorTracer );
                 defragmentInternal( leftCursor );
                 insertKeyAndRightChildAt( rightCursor, newKey, newRightChild, insertPos - copyFrom, copyCount,
-                        stableGeneration, unstableGeneration, cursorTracer );
+                        stableGeneration, unstableGeneration, idProvider, cursorTracer );
             }
         }
         TreeNode.setKeyCount( leftCursor, splitPos );

@@ -24,6 +24,7 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.eclipse.collections.api.list.primitive.MutableLongList;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
+import org.eclipse.collections.api.set.primitive.IntSet;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
@@ -48,7 +49,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,7 +64,6 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.DefaultIdController;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
-import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexConfigCompleter;
@@ -96,7 +95,6 @@ import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
-import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -413,7 +411,7 @@ class FrekiStorageEngineGraphWritesIT
         {
             target.visitCreatedNode( nodeId );
             target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
-        }, target -> target.visitNodePropertyChanges( nodeId, emptyList(), singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+        }, target -> target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ), emptyList(),
                 IntSets.immutable.empty() ), index -> asSet( IndexEntryUpdate.add( nodeId, index, afterValue ) ) );
     }
 
@@ -802,7 +800,7 @@ class FrekiStorageEngineGraphWritesIT
     {
         // given a node with a property that has a big value
         long nodeId = commandCreationContext.reserveNode();
-        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         createAndApplyTransaction( target ->
         {
             target.visitCreatedNode( nodeId );
@@ -813,7 +811,7 @@ class FrekiStorageEngineGraphWritesIT
                 target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
             }
         } );
-        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
 
         // when
@@ -823,7 +821,7 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // then
-        assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+        assertThat( storageEngine.stores().bigPropertyValueStore.getHighId() ).isEqualTo( bigValuePosition );
     }
 
     @Test
@@ -843,7 +841,7 @@ class FrekiStorageEngineGraphWritesIT
         // given a node with a property that has a big value
         long nodeId = commandCreationContext.reserveNode();
         long otherNodeId = commandCreationContext.reserveNode();
-        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         String value = random.nextAlphaNumericString( 100, 100 );
         RelationshipSpec relationship =
                 new RelationshipSpec( nodeId, 0, otherNodeId, asSet( new PropertyKeyValue( 0, stringValue( value ) ) ), commandCreationContext );
@@ -857,7 +855,7 @@ class FrekiStorageEngineGraphWritesIT
                 target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
             }
         } );
-        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
         assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
 
         // when
@@ -868,7 +866,7 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // then
-        assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+        assertThat( storageEngine.stores().bigPropertyValueStore.getHighId() ).isEqualTo( bigValuePosition );
     }
 
     @Test
@@ -1219,6 +1217,7 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+    @RandomRule.Seed( 1 )
     @Test
     void shouldChangeRelationshipProperties() throws Exception
     {
@@ -1685,8 +1684,9 @@ class FrekiStorageEngineGraphWritesIT
             assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( nodeCursor.data.xLChainNextLinkPointer ); //we have not yet loaded the chain
 
             int actualChainLength = 0;
-            while ( nodeCursor.loadNextChainLink() )
+            while ( nodeCursor.hasMoreChainLinks() )
             {
+                assertThat( nodeCursor.loadNextChainLink() ).as( "No concurrent readers/writers" ).isTrue();
                 actualChainLength++;
             }
             if ( exactLengthMatch )
@@ -1806,6 +1806,18 @@ class FrekiStorageEngineGraphWritesIT
             assertThat( degrees.incomingDegree( type ) ).isEqualTo( expectedDegrees.incomingDegree( type ) );
             assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
         }
+
+        // relationship types
+        IntSet relationshipTypes = IntSets.immutable.of( nodeCursor.relationshipTypes() );
+        IntSet expectedRelationshipTypes = buildExpectedRelationshipTypes( relationships );
+        assertThat( relationshipTypes ).isEqualTo( expectedRelationshipTypes );
+    }
+
+    private static IntSet buildExpectedRelationshipTypes( Set<RelationshipSpec> relationships )
+    {
+        MutableIntSet set = IntSets.mutable.empty();
+        relationships.forEach( rel -> set.add( rel.type ) );
+        return set;
     }
 
     private Set<RelationshipSpec> readRelationships( StoragePropertyCursor propertyCursor, StorageRelationshipTraversalCursor relationshipCursor )
@@ -1947,81 +1959,6 @@ class FrekiStorageEngineGraphWritesIT
         public Iterator<StorageCommand> iterator()
         {
             return commands.iterator();
-        }
-    }
-
-    private static class RelationshipSpec
-    {
-        private final long id;
-        private final long startNodeId;
-        private final int type;
-        private final long endNodeId;
-        private final Set<StorageProperty> properties;
-
-        RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties, CommandCreationContext commandCreationContext )
-        {
-            this( startNodeId, type, endNodeId, properties, commandCreationContext.reserveRelationship( startNodeId ) );
-        }
-
-        RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties, long id )
-        {
-            this.startNodeId = startNodeId;
-            this.type = type;
-            this.endNodeId = endNodeId;
-            this.properties = properties;
-            this.id = id;
-        }
-
-        RelationshipDirection direction( long fromPovOfNodeId )
-        {
-            return startNodeId == fromPovOfNodeId ? endNodeId == fromPovOfNodeId ? RelationshipDirection.LOOP : RelationshipDirection.OUTGOING
-                                                  : RelationshipDirection.INCOMING;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "RelationshipSpec{" + "startNodeId=" + startNodeId + ", type=" + type + ", endNodeId=" + endNodeId + ", properties=" + properties + ", id=" +
-                    id + '}';
-        }
-
-        @Override
-        public boolean equals( Object o )
-        {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            RelationshipSpec that = (RelationshipSpec) o;
-            return startNodeId == that.startNodeId && type == that.type && endNodeId == that.endNodeId && Objects.equals( properties, that.properties ) &&
-                    id == that.id;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash( id, startNodeId, type, endNodeId, properties );
-        }
-
-        void create( TxStateVisitor target )
-        {
-            try
-            {
-                target.visitCreatedRelationship( id, type, startNodeId, endNodeId, properties );
-            }
-            catch ( ConstraintValidationException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        long neighbourNode( long fromNodeIdPov )
-        {
-            return startNodeId == fromNodeIdPov ? endNodeId : startNodeId;
         }
     }
 

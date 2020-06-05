@@ -23,10 +23,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.internal.id.DefaultIdController;
+import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.metadatastore.GBPTreeMetaDataStore;
@@ -37,15 +40,18 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.api.DatabaseSchemaState;
 import org.neo4j.lock.LockService;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.LogVersionRepository;
+import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StorageFilesState;
 import org.neo4j.storageengine.api.StoreId;
@@ -55,7 +61,16 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 import org.neo4j.storageengine.migration.SchemaRuleMigrationAccess;
 import org.neo4j.storageengine.migration.StoreMigrationParticipant;
+import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenHolders;
+
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
+import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
+import static org.neo4j.token.api.TokenHolder.TYPE_LABEL;
+import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
+import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
 
 /**
  * The little notebook of goals:
@@ -164,5 +179,20 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     static GBPTreeMetaDataStore openMetaDataStore( DatabaseLayout databaseLayout, PageCache pageCache, PageCacheTracer pageCacheTracer )
     {
         return new GBPTreeMetaDataStore( pageCache, databaseLayout.file( Stores.META_DATA_STORE_FILENAME ), 123456789, false, pageCacheTracer );
+    }
+
+    static FrekiStorageEngine instantiateStandalone( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, LogProvider logProvider )
+            throws IOException
+    {
+        AtomicReference<FrekiStorageEngine> ref = new AtomicReference<>();
+        TokenHolders tokenHolders = new TokenHolders(
+                new DelegatingTokenHolder( new ProxyImmediateTokenCreator( () -> ref.get().stores().propertyKeyTokenStore ), TYPE_PROPERTY_KEY ),
+                new DelegatingTokenHolder( new ProxyImmediateTokenCreator( () -> ref.get().stores().labelTokenStore ), TYPE_LABEL ),
+                new DelegatingTokenHolder( new ProxyImmediateTokenCreator( () -> ref.get().stores().relationshipTypeTokenStore ), TYPE_RELATIONSHIP_TYPE ) );
+        DatabaseHealth databaseHealth = new DatabaseHealth( causeOfPanic -> {}, logProvider.getLog( DatabaseHealth.class ) );
+        return new FrekiStorageEngine( fs, databaseLayout, Config.defaults(), pageCache, tokenHolders,
+                new DatabaseSchemaState( logProvider ), new StandardConstraintRuleAccessor(), i -> i, NO_LOCK_SERVICE,
+                new DefaultIdGeneratorFactory( fs, immediate() ), new DefaultIdController(), databaseHealth, logProvider, immediate(), true, NULL,
+                NO_TRACING, EmptyMemoryTracker.INSTANCE );
     }
 }

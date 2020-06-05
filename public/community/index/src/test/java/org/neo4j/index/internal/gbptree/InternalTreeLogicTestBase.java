@@ -103,20 +103,20 @@ abstract class InternalTreeLogicTestBase<KEY, VALUE>
     {
         cursor = new PageAwareByteArrayCursor( PAGE_SIZE );
         readCursor = cursor.duplicate();
-        id = new SimpleIdProvider( cursor::duplicate );
+        id = new SimpleIdProvider();
 
         id.reset();
-        long newId = id.acquireNewId( stableGeneration, unstableGeneration, NULL );
+        long newId = id.acquireNewId( stableGeneration, unstableGeneration, cursor.duplicate() );
         goTo( cursor, newId );
         readCursor.next( newId );
 
         layout = getLayout();
         OffloadPageCursorFactory pcFactory = ( id, flags, cursorTracer ) -> cursor.duplicate( id );
         OffloadIdValidator idValidator = OffloadIdValidator.ALWAYS_TRUE;
-        OffloadStoreImpl<KEY, VALUE> offloadStore = new OffloadStoreImpl<>( layout, id, pcFactory, idValidator, PAGE_SIZE );
+        OffloadStoreImpl<KEY, VALUE> offloadStore = new OffloadStoreImpl<>( layout, pcFactory, idValidator, PAGE_SIZE );
         node = getTreeNode( PAGE_SIZE, layout, offloadStore );
         adder = getAdder();
-        treeLogic = new InternalTreeLogic<>( id, node, layout, NO_MONITOR );
+        treeLogic = new InternalTreeLogic<>( node, layout, NO_MONITOR );
         dontCare = layout.newValue();
         structurePropagation = new StructurePropagation<>( layout.newKey(), layout.newKey(), layout.newKey() );
     }
@@ -1606,7 +1606,7 @@ abstract class InternalTreeLogicTestBase<KEY, VALUE>
         generationManager.recovery();
         // start up on stable root
         goTo( cursor, originalNodeId );
-        treeLogic.initialize( cursor );
+        treeLogic.initialize( cursor, id );
         // replay transaction TX1 will create a new successor
         insert( key( 1L ), value( 10L ) );
         assertEquals( 2, numberOfRootSuccessors );
@@ -1810,7 +1810,7 @@ abstract class InternalTreeLogicTestBase<KEY, VALUE>
     private void updateRoot()
     {
         root = new Root( cursor.getCurrentPageId(), unstableGeneration );
-        treeLogic.initialize( cursor, ratioToKeepInLeftOnSplit );
+        treeLogic.initialize( cursor, id, ratioToKeepInLeftOnSplit );
     }
 
     private void assertSuccessorPointerNotCrashOrBroken() throws IOException
@@ -1884,11 +1884,11 @@ abstract class InternalTreeLogicTestBase<KEY, VALUE>
     private void newRootFromSplit( StructurePropagation<KEY> split ) throws IOException
     {
         assertTrue( split.hasRightKeyInsert );
-        long rootId = id.acquireNewId( stableGeneration, unstableGeneration, NULL );
+        long rootId = id.acquireNewId( stableGeneration, unstableGeneration, cursor.duplicate() );
         goTo( cursor, rootId );
         node.initializeInternal( cursor, stableGeneration, unstableGeneration );
         node.setChildAt( cursor, split.midChild, 0, stableGeneration, unstableGeneration );
-        node.insertKeyAndRightChildAt( cursor, split.rightKey, split.rightChild, 0, 0, stableGeneration, unstableGeneration, NULL );
+        node.insertKeyAndRightChildAt( cursor, split.rightKey, split.rightChild, 0, 0, stableGeneration, unstableGeneration, id, NULL );
         TreeNode.setKeyCount( cursor, 1 );
         split.hasRightKeyInsert = false;
         updateRoot();

@@ -275,7 +275,10 @@ public class EagerDegrees implements Degrees, Degrees.Mutator
         }
         EagerDegrees that = (EagerDegrees) o;
         int[] types = types();
-        if ( !Arrays.equals( types, that.types() ) )
+        int[] otherTypes = that.types();
+        Arrays.sort( types );
+        Arrays.sort( otherTypes );
+        if ( !Arrays.equals( types, otherTypes ) )
         {
             return false;
         }

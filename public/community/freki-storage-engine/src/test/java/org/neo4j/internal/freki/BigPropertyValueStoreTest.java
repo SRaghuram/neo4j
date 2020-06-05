@@ -19,25 +19,32 @@
  */
 package org.neo4j.internal.freki;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.collections.api.iterator.MutableLongIterator;
+import org.eclipse.collections.api.list.primitive.MutableLongList;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
+import org.eclipse.collections.impl.factory.primitive.LongLists;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -46,12 +53,12 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.nio.ByteBuffer.wrap;
-import static java.util.Arrays.sort;
-import static java.util.Comparator.comparingLong;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.internal.freki.BigPropertyValueStore.RECORD_DATA_SIZE;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.test.Race.throwing;
 
 @ExtendWith( RandomExtension.class )
@@ -67,28 +74,68 @@ class BigPropertyValueStoreTest
     @Inject
     private RandomRule random;
 
+    private IdGeneratorFactory idGeneratorFactory;
+
+    @BeforeEach
+    void setUp()
+    {
+        idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate(), false );
+    }
+
+    @Test
+    void shouldWriteAndReadSingleRecordData() throws IOException
+    {
+        try ( Lifespan life = new Lifespan() )
+        {
+            // given
+            BigPropertyValueStore store = instantiateStore( life, false );
+            byte[] data = randomData( random.random(), RECORD_DATA_SIZE / 2 );
+
+            // when
+            long id = allocateAndWrite( store, data );
+
+            // then
+            readAndVerify( store, data, id );
+        }
+    }
+
+    @Test
+    void shouldWriteAndReadThreeRecordData() throws IOException
+    {
+        try ( Lifespan life = new Lifespan() )
+        {
+            // given
+            BigPropertyValueStore store = instantiateStore( life, false );
+            byte[] data = randomData( random.random(), (int) (RECORD_DATA_SIZE * 2.3) );
+
+            // when
+            long id = allocateAndWrite( store, data );
+
+            // then
+            readAndVerify( store, data, id );
+        }
+    }
+
     @Test
     void shouldWriteAndReadArbitraryData() throws IOException
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
-            life.add( store );
+            BigPropertyValueStore store = instantiateStore( life, false );
             byte[][] datas = new byte[100][];
-            long[] positions = new long[datas.length];
+            long[] firstIds = new long[datas.length];
             try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
                 for ( int i = 0; i < datas.length; i++ )
                 {
                     byte[] data = datas[i] = randomData( random.random() );
-                    positions[i] = store.allocateSpace( data.length );
-                    store.write( cursor, wrap( data ), positions[i] );
+                    firstIds[i] = allocateAndWrite( cursor, store, data );
                 }
             }
 
             for ( int i = 0; i < datas.length; i++ )
             {
-                readAndVerify( store, datas[i], positions[i] );
+                readAndVerify( store, datas[i], firstIds[i] );
             }
         }
     }
@@ -99,8 +146,7 @@ class BigPropertyValueStoreTest
         try ( Lifespan life = new Lifespan() )
         {
             // given
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
-            life.add( store );
+            BigPropertyValueStore store = instantiateStore( life, false );
             Race race = new Race();
             MutableLongObjectMap<byte[]>[] expectedData = new MutableLongObjectMap[4];
             for ( int i = 0; i < expectedData.length; i++ )
@@ -112,12 +158,7 @@ class BigPropertyValueStoreTest
             race.addContestants( expectedData.length, i -> throwing( () ->
             {
                 byte[] data = randomData( ThreadLocalRandom.current() );
-                try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
-                {
-                    long position = store.allocateSpace( data.length );
-                    store.write( cursor, ByteBuffer.wrap( data ), position );
-                    expectedData[i].put( position, data );
-                }
+                expectedData[i].put( allocateAndWrite( store, data ), data );
             } ), 100 );
             race.goUnchecked();
 
@@ -141,74 +182,59 @@ class BigPropertyValueStoreTest
         byte[] firstProp = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z".getBytes();
         byte[] secondProp = randomData( ThreadLocalRandom.current() );
         byte[] thirdProp = "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20".getBytes();
+
         //when
         long firstPropertyPointer = writeDataAndShutDown( firstProp );
         long secondPropertyPointer = writeDataAndShutDown( secondProp );
         long thirdPropertyPointer = writeDataAndShutDown( thirdProp );
 
         //then
-        assertArrayEquals( firstProp, readDataAndShutDown( firstPropertyPointer, firstProp.length ) );
-        assertArrayEquals( secondProp, readDataAndShutDown( secondPropertyPointer, secondProp.length ) );
-        assertArrayEquals( thirdProp, readDataAndShutDown( thirdPropertyPointer, thirdProp.length ) );
+        assertArrayEquals( firstProp, readDataAndShutDown( firstPropertyPointer ) );
+        assertArrayEquals( secondProp, readDataAndShutDown( secondPropertyPointer ) );
+        assertArrayEquals( thirdProp, readDataAndShutDown( thirdPropertyPointer ) );
 
-        assertTrue( secondPropertyPointer >= firstPropertyPointer + firstProp.length, "Pointers are not overlapping" );
-        assertTrue( thirdPropertyPointer >= secondPropertyPointer + secondProp.length, "Pointers are not overlapping" );
-
+        assertTrue( secondPropertyPointer >= firstPropertyPointer, "Pointers are not overlapping" );
+        assertTrue( thirdPropertyPointer >= secondPropertyPointer, "Pointers are not overlapping" );
     }
 
     @Test
-    void shouldBeAbleToFetchDataLength() throws IOException
+    void shouldDeleteValues() throws IOException
     {
         try ( Lifespan life = new Lifespan() )
         {
             // given
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
-            life.add( store );
-
-            byte[] data = randomData( ThreadLocalRandom.current() );
+            BigPropertyValueStore store = instantiateStore( life, false );
+            byte[][] datas = new byte[10][];
+            long[] firstIds = new long[datas.length];
             try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
-                long pointer = store.allocateSpace( data.length );
-                store.write( cursor, ByteBuffer.wrap( data ), pointer );
-
-                //then
-                assertEquals( data.length, store.length( cursor, pointer ) );
+                for ( int i = 0; i < datas.length; i++ )
+                {
+                    byte[] data = datas[i] = randomData( random.random() );
+                    firstIds[i] = allocateAndWrite( cursor, store, data );
+                }
             }
-        }
-    }
-
-    @Test
-    void shouldAllocateSpaceConcurrently()
-    {
-        try ( Lifespan life = new Lifespan() )
-        {
-            // given
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
-            life.add( store );
 
             // when
-            Race race = new Race().withEndCondition( () -> false );
-            ConcurrentLinkedQueue<Pair<Long,Integer>> allocations = new ConcurrentLinkedQueue<>();
-            race.addContestants( 8, i ->
+            int indexToRemove = random.nextInt( datas.length );
+            List<Record> records = new ArrayList<>();
+            try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
             {
-                Random rng = new Random( random.nextLong() );
-                return () ->
-                {
-                    int length = rng.nextInt( 200 ) + 1;
-                    long position = store.allocateSpace( length );
-                    allocations.add( Pair.of( position, length ) );
-                };
-            }, 100 );
-            race.goUnchecked();
+                store.visitRecordChainIds( cursor, firstIds[indexToRemove], chainId -> records.add( Record.deletedRecord( (byte) 0, chainId ) ) );
+            }
+            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+            {
+                store.write( cursor, records, IdUpdateListener.DIRECT, PageCursorTracer.NULL );
+            }
 
             // then
-            Pair<Long,Integer>[] allocationsArray = allocations.toArray( new Pair[allocations.size()] );
-            sort( allocationsArray, comparingLong( Pair::getLeft ) );
-            long prevHighPosition = 0;
-            for ( Pair<Long,Integer> allocation : allocationsArray )
+            try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
             {
-                assertThat( allocation.getLeft() ).isGreaterThanOrEqualTo( prevHighPosition );
-                prevHighPosition = allocation.getLeft() + allocation.getRight();
+                for ( int i = 0; i < firstIds.length; i++ )
+                {
+                    boolean expectedToExist = i != indexToRemove;
+                    assertThat( store.exists( cursor, firstIds[i] ) ).isEqualTo( expectedToExist );
+                }
             }
         }
     }
@@ -217,50 +243,79 @@ class BigPropertyValueStoreTest
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
-            life.add( store );
-            long pointer;
-            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
-            {
-                pointer = store.allocateSpace( data.length );
-                store.write( cursor, ByteBuffer.wrap( data ), pointer );
-            }
+            BigPropertyValueStore store = instantiateStore( life, false );
+            long pointer = allocateAndWrite( store, data );
             store.flush( IOLimiter.UNLIMITED, PageCursorTracer.NULL );
             return pointer;
         }
     }
 
-    private byte[] readDataAndShutDown( long pointer, int size ) throws IOException
+    private long allocateAndWrite( BigPropertyValueStore store, byte[] data ) throws IOException
+    {
+        try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+        {
+            return allocateAndWrite( cursor, store, data );
+        }
+    }
+
+    private long allocateAndWrite( PageCursor cursor, BigPropertyValueStore store, byte[] data ) throws IOException
+    {
+        List<Record> records = store.allocate( wrap( data ), PageCursorTracer.NULL );
+        long id = records.get( 0 ).id;
+        assertThat( store.exists( cursor, id ) ).isFalse();
+        store.write( cursor, records, IdUpdateListener.DIRECT, PageCursorTracer.NULL );
+        assertThat( store.exists( cursor, id ) ).isTrue();
+        // Do an additional test of visitRecordChainIds while we have all the records anyway
+        MutableLongList chainIds = LongLists.mutable.empty();
+        store.visitRecordChainIds( cursor, id, chainIds::add );
+        assertThat( chainIds.size() ).isEqualTo( records.size() );
+        for ( int i = 0; i < records.size(); i++ )
+        {
+            assertThat( chainIds.get( i ) ).isEqualTo( records.get( i ).id );
+        }
+        return id;
+    }
+
+    private byte[] readDataAndShutDown( long pointer ) throws IOException
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, true, true );
-            life.add( store );
+            BigPropertyValueStore store = instantiateStore( life, true );
             try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
             {
-                byte[] data = new byte[size];
-                ByteBuffer buffer = ByteBuffer.wrap( data );
-                store.read( cursor, buffer, pointer );
-                return data;
+                return store.read( cursor, length -> ByteBuffer.wrap( new byte[length] ), pointer ).array();
             }
         }
     }
 
-    private void readAndVerify( BigPropertyValueStore store, byte[] expectedData, long position ) throws IOException
+    private void readAndVerify( BigPropertyValueStore store, byte[] expectedData, long id ) throws IOException
     {
         try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
         {
-            byte[] readData = new byte[expectedData.length];
-            store.read( cursor, ByteBuffer.wrap( readData ), position );
-            assertArrayEquals( expectedData, readData );
+            ByteBuffer readBuffer = store.read( cursor, id );
+            byte[] readData = new byte[readBuffer.remaining()];
+            readBuffer.get( readData );
+            assertThat( readData ).isEqualTo( expectedData );
         }
     }
 
     private byte[] randomData( Random random )
     {
-        int length = random.nextInt( 50_000 ) + 10;
+        return randomData( random, random.nextInt( 50_000 ) + 10 );
+    }
+
+    private byte[] randomData( Random random, int length )
+    {
         byte[] bytes = new byte[length];
         random.nextBytes( bytes );
         return bytes;
+    }
+
+    private BigPropertyValueStore instantiateStore( Lifespan life, boolean readOnly )
+    {
+        BigPropertyValueStore store =
+                new BigPropertyValueStore( directory.file( "dude" ), pageCache, idGeneratorFactory, IdType.STRING_BLOCK, readOnly, true, NULL );
+        life.add( store );
+        return store;
     }
 }

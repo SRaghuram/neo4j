@@ -456,7 +456,7 @@ abstract class GBPTreeConsistencyCheckerTestBase<KEY,VALUE>
         // When tree is closed we will overwrite treeState with in memory state so we need to open tree in read only mode for our state corruption to persist.
         try ( GBPTree<KEY,VALUE> index = index().withReadOnly( true ).build() )
         {
-            GBPTreeInspection<KEY,VALUE> inspection = inspect( index );
+            GBPTreeInspection<KEY,VALUE> inspection = inspect( index, true );
             int lastIndex = inspection.getAllFreelistEntries().size() - 1;
             InspectingVisitor.FreelistEntry lastFreelistEntry = inspection.getAllFreelistEntries().get( lastIndex );
             targetMissingId = lastFreelistEntry.id;
@@ -972,7 +972,12 @@ abstract class GBPTreeConsistencyCheckerTestBase<KEY,VALUE>
 
     private static <KEY, VALUE> GBPTreeInspection<KEY,VALUE> inspect( GBPTree<KEY,VALUE> index ) throws IOException
     {
-        return index.visit( new InspectingVisitor<>(), NULL ).get();
+        return inspect( index, false );
+    }
+
+    private static <KEY, VALUE> GBPTreeInspection<KEY,VALUE> inspect( GBPTree<KEY,VALUE> index, boolean inspectFreelist ) throws IOException
+    {
+        return index.visit( new InspectingVisitor<>(), inspectFreelist, NULL ).get();
     }
 
     private static <KEY,VALUE> void assertReportNotATreeNode( GBPTree<KEY,VALUE> index, long targetNode ) throws IOException

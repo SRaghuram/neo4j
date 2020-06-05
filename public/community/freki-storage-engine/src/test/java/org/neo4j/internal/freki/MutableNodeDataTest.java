@@ -166,7 +166,7 @@ class MutableNodeDataTest
         // when
         MutableNodeData.Relationship deletedRelationship = expectedRelationships.remove( random.nextInt( expectedRelationships.size() ) );
         mutableNodeData.deleteRelationship( deletedRelationship.internalId, deletedRelationship.type, deletedRelationship.otherNode,
-                deletedRelationship.outgoing );
+                deletedRelationship.outgoing, value -> {} );
         if ( deletedRelationship.outgoing && deletedRelationship.internalId == mutableNodeData.getNextInternalRelationshipId() - 1 )
         {
             // If we delete the last relationship then the 'nextRelationshipId' on next load will be one less, therefore decrement the expected here

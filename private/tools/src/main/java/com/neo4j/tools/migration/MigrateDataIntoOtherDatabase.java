@@ -13,10 +13,15 @@ import org.eclipse.collections.impl.factory.primitive.LongLongMaps;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -28,15 +33,20 @@ import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.internal.freki.FrekiStorageEngine;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.Math.toIntExact;
+import static java.lang.String.format;
+import static java.util.Comparator.comparing;
 import static org.neo4j.configuration.GraphDatabaseSettings.CheckpointPolicy.CONTINUOUS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
+import static org.neo4j.util.Preconditions.checkArgument;
 
 public class MigrateDataIntoOtherDatabase
 {
@@ -44,13 +54,13 @@ public class MigrateDataIntoOtherDatabase
     {
         Path fromHome = Path.of( args[0] );
         Path toHome = Path.of( args[1] );
-        migrate( fromHome, toHome, true );
+        migrate( fromHome, toHome, true, true );
     }
 
-    public static void migrate( Path fromHome, Path toHome, boolean validate )
+    public static void migrate( Path fromHome, Path toHome, boolean validate, boolean statistics )
     {
-        assert !(fromHome.equals( toHome ));
-        System.out.println( String.format( "Migrating %s to Freki store: %s", fromHome, toHome ) );
+        checkArgument( !fromHome.equals( toHome ), "From directory same as to: %s", fromHome );
+        System.out.println( format( "Migrating %s to Freki store: %s", fromHome, toHome ) );
         long totalPageCacheMem = ConfiguringPageCacheFactory.defaultHeuristicPageCacheMemory();
         String pcMemory = String.valueOf( totalPageCacheMem / 10 );
         System.out.println( "Using a pagecache of size " + pcMemory );
@@ -68,7 +78,14 @@ public class MigrateDataIntoOtherDatabase
                 .build();
         try
         {
-            copyDatabase( fromDbms.database( DEFAULT_DATABASE_NAME ), toDbms.database( DEFAULT_DATABASE_NAME ), validate );
+            GraphDatabaseService fromDb = fromDbms.database( DEFAULT_DATABASE_NAME );
+            GraphDatabaseAPI toDb = (GraphDatabaseAPI) toDbms.database( DEFAULT_DATABASE_NAME );
+            copyDatabase( fromDb, toDb, validate );
+            if ( statistics )
+            {
+                System.out.println( "Printing statistics for migrated store." );
+                toDb.getDependencyResolver().resolveDependency( FrekiStorageEngine.class ).analysis().dumpStoreStats();
+            }
         }
         finally
         {
@@ -110,7 +127,10 @@ public class MigrateDataIntoOtherDatabase
                     {
                         Node fromNode = nodes.next();
                         Node toNode = copyNodeData( fromNode, toTx );
-                        fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].put( fromNode.getId(), toNode.getId() );
+                        if ( fromNode.getId() != toNode.getId() )
+                        {
+                            fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].put( fromNode.getId(), toNode.getId() );
+                        }
                     }
                     toTx.commit();
                     System.out.println( "node batch " + batch + " completed" );
@@ -124,7 +144,7 @@ public class MigrateDataIntoOtherDatabase
             {
                 for ( Node fromNode : fromTx.getAllNodes() )
                 {
-                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].get( fromNode.getId() );
+                    long toNodeId = fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].getIfAbsent( fromNode.getId(), fromNode.getId() );
                     Node toNode = toTx.getNodeById( toNodeId );
                     compareNodes( fromNode, toNode, true, true, false );
                 }
@@ -140,13 +160,14 @@ public class MigrateDataIntoOtherDatabase
                     for ( int i = 0; i < 100_000 && relationships.hasNext(); i++ )
                     {
                         Relationship fromRelationship = relationships.next();
-                        long startId = fromToNodeIdTable[toIntExact( fromRelationship.getStartNodeId() % numMaps )].get( fromRelationship.getStartNodeId() );
-                        long endId = fromToNodeIdTable[toIntExact( fromRelationship.getEndNodeId() % numMaps )].get( fromRelationship.getEndNodeId() );
+                        long startId = fromToNodeIdTable[toIntExact( fromRelationship.getStartNodeId() % numMaps )]
+                                .getIfAbsent( fromRelationship.getStartNodeId(), fromRelationship.getStartNodeId() );
+                        long endId = fromToNodeIdTable[toIntExact( fromRelationship.getEndNodeId() % numMaps )]
+                                .getIfAbsent( fromRelationship.getEndNodeId(), fromRelationship.getEndNodeId() );
 
                         Node toStartNode = toTx.getNodeById( startId );
                         Node toEndNode = toTx.getNodeById( endId );
-                        Relationship toRelationship = toStartNode.createRelationshipTo( toEndNode, fromRelationship.getType() );
-                        fromRelationship.getAllProperties().forEach( toRelationship::setProperty );
+                        copyProperties( fromRelationship, toStartNode.createRelationshipTo( toEndNode, fromRelationship.getType() ) );
                     }
                     toTx.commit();
                     System.out.println( "relationship batch " + batch + " completed" );
@@ -161,7 +182,7 @@ public class MigrateDataIntoOtherDatabase
             {
                 for ( Node fromNode : fromTx.getAllNodes() )
                 {
-                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].get( fromNode.getId() );
+                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].getIfAbsent( fromNode.getId(), fromNode.getId() );
                     Node toNode = toTx.getNodeById( toNodeId );
                     compareNodes( fromNode, toNode, true, true, true );
                 }
@@ -172,39 +193,136 @@ public class MigrateDataIntoOtherDatabase
 
     private static void compareNodes( Node fromNode, Node toNode, boolean checkLabels, boolean checkProps, boolean checkDegrees )
     {
-        if ( checkLabels )
+        try
         {
-            HashSet<String> fromLabels = new HashSet<>();
-            HashSet<String> toLabels = new HashSet<>();
-            fromNode.getLabels().forEach( l -> fromLabels.add( l.name() ) );
-            toNode.getLabels().forEach( l -> toLabels.add( l.name() ) );
-            if ( !fromLabels.equals( toLabels ) )
+            if ( checkLabels )
             {
-                throw new RuntimeException( "Broken labels " + toNode + toLabels + " should be " + fromNode + fromLabels );
+                HashSet<String> fromLabels = new HashSet<>();
+                HashSet<String> toLabels = new HashSet<>();
+                fromNode.getLabels().forEach( l -> fromLabels.add( l.name() ) );
+                toNode.getLabels().forEach( l -> toLabels.add( l.name() ) );
+                if ( !fromLabels.equals( toLabels ) )
+                {
+                    throw new RuntimeException(
+                            "Broken labels " + toNode + toLabels + " should be " + fromNode + fromLabels + " diff " + setDiff( fromLabels, toLabels ) );
+                }
+            }
+
+            if ( checkProps )
+            {
+                HashMap<String,Value> fromProps = new HashMap<>();
+                HashMap<String,Value> toProps = new HashMap<>();
+                fromNode.getAllProperties().forEach( ( s, o ) -> fromProps.put( s, Values.of( o ) ) );
+                toNode.getAllProperties().forEach( ( s, o ) -> toProps.put( s, Values.of( o ) ) );
+                if ( !fromProps.equals( toProps ) )
+                {
+                    throw new RuntimeException(
+                            "Broken properties " + toNode + toProps + " should be " + fromNode + fromProps + " diff " + mapDiff( fromProps, toProps ) );
+                }
+            }
+
+            if ( checkDegrees )
+            {
+                if ( fromNode.getDegree() != toNode.getDegree() )
+                {
+                    throw new RuntimeException(
+                            "Broken relationships (degrees) " + toNode + ", " + toNode.getDegree() + " should be " + fromNode + ", " + fromNode.getDegree() +
+                                    " diff " + degreesDiff( fromNode, toNode ) );
+                }
             }
         }
-
-        if ( checkProps )
+        catch ( RuntimeException e )
         {
-            HashMap<String,Value> fromProps = new HashMap<>();
-            HashMap<String,Value> toProps = new HashMap<>();
-            fromNode.getAllProperties().forEach( ( s, o ) -> fromProps.put( s, Values.of( o ) ) );
-            toNode.getAllProperties().forEach( ( s, o ) -> toProps.put( s, Values.of( o ) ) );
-            if ( !fromProps.equals( toProps ) )
-            {
-                throw new RuntimeException( "Broken properties " + toNode + toProps + " should be " + fromNode + fromProps );
-            }
+            System.err.printf( "Validation failed for %s --> %s listing contents, from:%n%s%n%nto:%n%s%n", fromNode, toNode,
+                    contentsOfNode( fromNode ), contentsOfNode( toNode ) );
+            throw e;
+        }
+    }
+
+    private static String contentsOfNode( Node node )
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append( "Labels:" );
+        node.getLabels().forEach( label -> builder.append( format( "%n  " ) ).append( label.name() ) );
+        builder.append( format( "%nProperties:" ) );
+        node.getAllProperties().forEach( ( key, value ) -> builder.append( format( "%n  %s=%s", key, value ) ) );
+        builder.append( format( "%nRelationships:" ) );
+        TreeSet<RelationshipType> types = new TreeSet<>( comparing( RelationshipType::name ) );
+        node.getRelationshipTypes().forEach( types::add );
+        for ( RelationshipType type : types )
+        {
+            node.getRelationships( Direction.OUTGOING, type ).forEach( rel -> builder.append( format( "%n  %s", rel ) ) );
+        }
+        return builder.append( format( "%n" ) ).toString();
+    }
+
+    private static String degreesDiff( Node fromNode, Node toNode )
+    {
+        Set<String> fromTypes = new HashSet<>();
+        Set<String> toTypes = new HashSet<>();
+        fromNode.getRelationshipTypes().forEach( type -> fromTypes.add( type.name() ) );
+        toNode.getRelationshipTypes().forEach( type -> toTypes.add( type.name() ) );
+        if ( !fromTypes.equals( toTypes ) )
+        {
+            return "Relationship types differ: " + setDiff( fromTypes, toTypes );
         }
 
-        if ( checkDegrees )
+        StringBuilder builder = new StringBuilder();
+        for ( String typeName : fromTypes )
         {
-            if ( fromNode.getDegree() != toNode.getDegree() )
+            RelationshipType type = RelationshipType.withName( typeName );
+            checkDegreeDiff( fromNode, toNode, builder, type, Direction.OUTGOING );
+            checkDegreeDiff( fromNode, toNode, builder, type, Direction.INCOMING );
+            checkDegreeDiff( fromNode, toNode, builder, type, Direction.BOTH );
+        }
+        return builder.toString();
+    }
+
+    private static void checkDegreeDiff( Node fromNode, Node toNode, StringBuilder builder, RelationshipType type, Direction direction )
+    {
+        int from = fromNode.getDegree( type, direction );
+        int to = toNode.getDegree( type, direction );
+        if ( from != to )
+        {
+            builder.append( format( "degree:%s,%s:%d vs %d", type.name(), direction.name(), from, to ) );
+        }
+    }
+
+    private static <T> String setDiff( Set<T> from, Set<T> to )
+    {
+        StringBuilder builder = new StringBuilder();
+        Set<T> combined = new HashSet<>( from );
+        combined.removeAll( to );
+        combined.forEach( label -> builder.append( format( "%n<%s", label ) ) );
+        combined = new HashSet<>( to );
+        combined.removeAll( from );
+        combined.forEach( label -> builder.append( format( "%n>%s", label ) ) );
+        return builder.toString();
+    }
+
+    private static <T> String mapDiff( Map<String,T> from, Map<String,T> to )
+    {
+        StringBuilder builder = new StringBuilder();
+        Set<String> allKeys = new HashSet<>( from.keySet() );
+        allKeys.addAll( to.keySet() );
+        for ( String key : allKeys )
+        {
+            T fromValue = from.get( key );
+            T toValue = to.get( key );
+            if ( toValue == null )
             {
-                throw new RuntimeException(
-                        "Broken relationships " + toNode + ", " + toNode.getDegree() + " should be " + fromNode + ", " + fromNode.getDegree() );
+                builder.append( format( "%n<%s=%s", key, fromValue ) );
+            }
+            else if ( fromValue == null )
+            {
+                builder.append( format( "%n>%s=%s", key, toValue ) );
+            }
+            else if ( !fromValue.equals( toValue ) )
+            {
+                builder.append( format( "%n!%s=%s vs %s", key, fromValue, toValue ) );
             }
         }
-
+        return builder.toString();
     }
 
     private static void copySchema( GraphDatabaseService to, Transaction fromTx )
@@ -311,9 +429,13 @@ public class MigrateDataIntoOtherDatabase
 
     private static Node copyNodeData( Node fromNode, Transaction toTx )
     {
-        Node node = toTx.createNode( labelsAsArray( fromNode.getLabels() ) );
-        fromNode.getAllProperties().forEach( node::setProperty );
-        return node;
+        return copyProperties( fromNode, toTx.createNode( labelsAsArray( fromNode.getLabels() ) ) );
+    }
+
+    private static <E extends Entity> E copyProperties( E from, E to )
+    {
+        from.getAllProperties().forEach( to::setProperty );
+        return to;
     }
 
     private static Label[] labelsAsArray( Iterable<Label> labels )

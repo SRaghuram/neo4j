@@ -21,16 +21,16 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.tuple.primitive.IntObjectPair;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.TreeMap;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 
@@ -92,7 +92,7 @@ abstract public class FrekiCommand implements StorageCommand
             this.lowestChange = lowestChange;
         }
 
-        void addChange( Record before, Record after )
+        RecordChange addChange( Record before, Record after )
         {
             assert before != null || after != null : "Both before and after records cannot be null";
             RecordChange change = new RecordChange( before, after );
@@ -121,6 +121,7 @@ abstract public class FrekiCommand implements StorageCommand
                     prev.next = change;
                 }
             }
+            return change;
         }
 
         RecordChange change()
@@ -238,6 +239,7 @@ abstract public class FrekiCommand implements StorageCommand
 
         final public Record before;
         final public Record after;
+        boolean onlyVersionChange;
         private RecordChange next;
 
         RecordChange( Record before, Record after )
@@ -256,6 +258,12 @@ abstract public class FrekiCommand implements StorageCommand
             return after != null ? before == null ? Mode.CREATE : Mode.UPDATE : Mode.DELETE;
         }
 
+        void updateVersion( byte version )
+        {
+            onlyVersionChange = true;
+            after.setVersion( version );
+        }
+
         public byte sizeExp()
         {
             return anyUsed().sizeExp();
@@ -270,15 +278,30 @@ abstract public class FrekiCommand implements StorageCommand
         {
             int sizeExp = sizeExp();
             long recordIdToWrite = sizeExp > 0 ? recordId() : 0;
-            channel.put( (byte) (longSizeCode( recordIdToWrite ) | (before != null ? 0x4 : 0) | (after != null ? 0x8 : 0) | (next != null ? 0x10 : 0)) );
+            byte header = (byte) (longSizeCode( recordIdToWrite )
+                    | (before != null ? 0x4 : 0)
+                    | (after != null ? 0x8 : 0)
+                    | (next != null ? 0x10 : 0)
+                    | (onlyVersionChange ? 0x20 : 0));
+            channel.put( header );
             putCompactLong( channel, recordIdToWrite );
-            if ( before != null )
+            if ( onlyVersionChange )
             {
-                before.serialize( channel );
+                channel.put( before.flags );
+                channel.put( before.version );
+                channel.put( after.flags );
+                channel.put( after.version );
             }
-            if ( after != null )
+            else
             {
-                after.serialize( channel );
+                if ( before != null )
+                {
+                    before.serialize( channel );
+                }
+                if ( after != null )
+                {
+                    after.serialize( channel );
+                }
             }
         }
 
@@ -287,9 +310,23 @@ abstract public class FrekiCommand implements StorageCommand
             byte header = channel.get();
             int idSizeCode = header & 0x3;
             long id = idSizeCode == 0 ? nodeId : getCompactLong( channel, idSizeCode );
-            Record before = (header & 0x4) != 0 ? Record.deserialize( channel, id ) : null;
-            Record after = (header & 0x8) != 0 ? Record.deserialize( channel, id ) : null;
-            RecordChange change = new RecordChange( before, after );
+            boolean onlyVersionChange = (header & 0x20) != 0;
+            RecordChange change;
+            if ( onlyVersionChange )
+            {
+                byte beforeFlags = channel.get();
+                byte beforeVersion = channel.get();
+                byte afterFlags = channel.get();
+                byte afterVersion = channel.get();
+                change = new RecordChange( new Record( beforeFlags, id, beforeVersion, null ), new Record( afterFlags, id, afterVersion, null ) );
+            }
+            else
+            {
+                Record before = (header & 0x4) != 0 ? Record.deserialize( channel, id ) : null;
+                Record after = (header & 0x8) != 0 ? Record.deserialize( channel, id ) : null;
+                change = new RecordChange( before, after );
+            }
+            change.onlyVersionChange = onlyVersionChange;
             if ( (header & 0x10) != 0 )
             {
                 change.next = DESERIALIZATION_HAS_NEXT_MARKER;
@@ -320,9 +357,9 @@ abstract public class FrekiCommand implements StorageCommand
         static final byte TYPE = 2;
 
         final long nodeId;
-        final IntObjectMap<DenseRelationships> relationshipUpdates;
+        final TreeMap<Integer,DenseRelationships> relationshipUpdates;
 
-        DenseNode( long nodeId, IntObjectMap<DenseRelationships> relationshipUpdates )
+        DenseNode( long nodeId, TreeMap<Integer,DenseRelationships> relationshipUpdates )
         {
             super( TYPE );
             this.nodeId = nodeId;
@@ -344,24 +381,17 @@ abstract public class FrekiCommand implements StorageCommand
             channel.put( header );
             putCompactLong( channel, nodeId );
             putCompactInt( channel, relationshipUpdates.size() );
-            for ( IntObjectPair<DenseRelationships> relationships : relationshipUpdates.keyValuesView() )
+            for ( Map.Entry<Integer,DenseRelationships> entry : relationshipUpdates.entrySet() )
             {
-                // Small header with type, num created and numDeleted
-                DenseRelationships relationshipsOfType = relationships.getTwo();
-                int type = relationships.getOne();
-                int numInserted = relationshipsOfType.inserted.size();
-                int numDeleted = relationshipsOfType.deleted.size();
-                byte typeHeader = (byte) (intSizeCode( type ) | (intSizeCode( numInserted ) << 2) | (intSizeCode( numDeleted ) << 4));
+                int type = entry.getKey();
+                DenseRelationships relationshipsOfType = entry.getValue();
+                int numRelationships = relationshipsOfType.relationships.size();
+                byte typeHeader = (byte) (intSizeCode( type ) | (intSizeCode( numRelationships ) << 2));
                 channel.put( typeHeader );
                 putCompactInt( channel, type );
-                putCompactInt( channel, numInserted );
-                putCompactInt( channel, numDeleted );
+                putCompactInt( channel, numRelationships );
 
-                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.inserted )
-                {
-                    writeRelationship( channel, relationship );
-                }
-                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.deleted )
+                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.relationships )
                 {
                     writeRelationship( channel, relationship );
                 }
@@ -444,7 +474,7 @@ abstract public class FrekiCommand implements StorageCommand
         {
             int numProperties = relationship.propertyUpdates.size();
             byte header = (byte) (longSizeCode( relationship.internalId ) | (longSizeCode( relationship.otherNodeId ) << 2) |
-                    (intSizeCode( numProperties ) << 4) | (relationship.outgoing ? 0x40 : 0));
+                    (intSizeCode( numProperties ) << 4) | (relationship.outgoing ? 0x40 : 0) | (relationship.deleted ? 0x80 : 0));
             channel.put( header );
             putCompactLong( channel, relationship.internalId );
             putCompactLong( channel, relationship.otherNodeId );
@@ -455,41 +485,40 @@ abstract public class FrekiCommand implements StorageCommand
             }
         }
 
-        private static void readRelationships( ReadableChannel channel, int numRelationships, Consumer<DenseRelationships.DenseRelationship> target )
+        private static void readRelationships( ReadableChannel channel, int numRelationships, DenseRelationships target )
                 throws IOException
         {
             for ( int j = 0; j < numRelationships; j++ )
             {
-                readRelationship( channel, target );
+                target.add( readRelationship( channel ) );
             }
         }
 
-        private static void readRelationship( ReadableChannel channel, Consumer<DenseRelationships.DenseRelationship> target )
-                throws IOException
+        private static DenseRelationships.DenseRelationship readRelationship( ReadableChannel channel ) throws IOException
         {
             byte header = channel.get();
             long internalId = getCompactLong( channel, header & 0x3 );
             long otherNodeId = getCompactLong( channel, (header >> 2) & 0x3 );
             int numProperties = getCompactInt( channel, (header >> 4) & 0x3 );
             boolean outgoing = (header & 0x40) != 0;
-            target.accept( new DenseRelationships.DenseRelationship( internalId, otherNodeId, outgoing, readProperties( channel, numProperties ) ) );
+            boolean deleted = (header & 0x80) != 0;
+            return new DenseRelationships.DenseRelationship( internalId, otherNodeId, outgoing, readProperties( channel, numProperties ), deleted );
         }
 
         static DenseNode deserialize( ReadableChannel channel ) throws IOException
         {
             byte header = channel.get();
             long nodeId = getCompactLong( channel, header & 0x3 );
-            MutableIntObjectMap<DenseRelationships> relationships = IntObjectMaps.mutable.empty();
+            TreeMap<Integer,DenseRelationships> relationships = new TreeMap<>();
             int numRelationshipTypes = getCompactInt( channel, (header >>> 2) & 0x3 );
             for ( int i = 0; i < numRelationshipTypes; i++ )
             {
                 byte typeHeader = channel.get();
                 int type = getCompactInt( channel, typeHeader & 0x3 );
-                int numInserted = getCompactInt( channel, (typeHeader >> 2) & 0x3 );
-                int numDeleted = getCompactInt( channel, (typeHeader >> 4) & 0x3 );
-                DenseRelationships relationshipsOfType = relationships.getIfAbsentPut( type, new DenseRelationships( nodeId, type ) );
-                readRelationships( channel, numInserted, relationshipsOfType::insert );
-                readRelationships( channel, numDeleted, relationshipsOfType::delete );
+                int numRelationships = getCompactInt( channel, (typeHeader >> 2) & 0x3 );
+                DenseRelationships relationshipsOfType = new DenseRelationships( nodeId, type );
+                relationships.put( type, relationshipsOfType );
+                readRelationships( channel, numRelationships, relationshipsOfType );
             }
 
             return new DenseNode( nodeId, relationships );
@@ -504,16 +533,12 @@ abstract public class FrekiCommand implements StorageCommand
         private String updatesToString()
         {
             StringBuilder toString = new StringBuilder();
-            for ( DenseRelationships forType : relationshipUpdates )
+            for ( DenseRelationships forType : relationshipUpdates.values() )
             {
                 toString.append( "  type=" ).append( forType.type );
-                for ( DenseRelationships.DenseRelationship relationship : forType.inserted )
+                for ( DenseRelationships.DenseRelationship relationship : forType.relationships )
                 {
-                    toString.append( format( "    +%s", relationship ) );
-                }
-                for ( DenseRelationships.DenseRelationship relationship : forType.deleted )
-                {
-                    toString.append( format( "    -%s", relationship ) );
+                    toString.append( format( "    %s%s", relationship.deleted ? "-" : "+", relationship ) );
                 }
             }
             return toString.toString();
@@ -524,21 +549,12 @@ abstract public class FrekiCommand implements StorageCommand
     {
         static final byte TYPE = 3;
 
-        public final long pointer;
-        public final byte[] bytes;
-        public final int length;
+        public final List<Record> records;
 
-        BigPropertyValue( long pointer, byte[] bytes )
-        {
-            this( pointer, bytes, bytes.length );
-        }
-
-        BigPropertyValue( long pointer, byte[] bytes, int length )
+        BigPropertyValue( List<Record> records )
         {
             super( TYPE );
-            this.pointer = pointer;
-            this.bytes = bytes;
-            this.length = length;
+            this.records = records;
         }
 
         @Override
@@ -552,27 +568,34 @@ abstract public class FrekiCommand implements StorageCommand
         public void serialize( WritableChannel channel ) throws IOException
         {
             super.serialize( channel );
-            byte header = (byte) (longSizeCode( pointer ) | intSizeCode( length ) << 2);
-            channel.put( header );
-            putCompactLong( channel, pointer );
-            putCompactInt( channel, length );
-            channel.put( bytes, length );
+            channel.put( (byte) intSizeCode( records.size() ) );
+            putCompactInt( channel, records.size() );
+            for ( Record record : records )
+            {
+                channel.put( (byte) longSizeCode( record.id ) );
+                putCompactLong( channel, record.id );
+                record.serialize( channel );
+            }
         }
 
         static BigPropertyValue deserialize( ReadableChannel channel ) throws IOException
         {
             byte header = channel.get();
-            long pointer = getCompactLong( channel, header & 0x3 );
-            int length = getCompactInt( channel, (header >>> 2) & 0x3 );
-            byte[] data = new byte[length];
-            channel.get( data, data.length );
-            return new BigPropertyValue( pointer, data );
+            int numRecords = getCompactInt( channel, header & 0x3 );
+            List<Record> records = new ArrayList<>();
+            for ( int i = 0; i < numRecords; i++ )
+            {
+                byte idHeader = channel.get();
+                long id = getCompactLong( channel, idHeader & 0x3 );
+                records.add( Record.deserialize( channel, id ) );
+            }
+            return new BigPropertyValue( records );
         }
 
         @Override
         public String toString()
         {
-            return "BigValue{" + "pointer=" + pointer + ", length=" + length + ", bytes=" + Arrays.toString( bytes ) + '}';
+            return "BigValue{" + records + '}';
         }
     }
 

@@ -125,8 +125,17 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public int[] relationshipTypes()
     {
-        readRelationshipTypes();
-        return relationshipTypesInNode.clone();
+        ByteBuffer buffer = readRelationshipTypes();
+        int[] types = relationshipTypesInNode.clone();
+        if ( data.isDense && data.degreesIsSplit )
+        {
+            while ( (buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES )) != null )
+            {
+                readRelationshipTypes( buffer );
+                types = addAll( types, relationshipTypesInNode );
+            }
+        }
+        return types;
     }
 
     @Override
@@ -134,6 +143,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         //TODO what do we do about allowFastDegreeLookup?
         // Dense
+        ensureRelationshipsLocated();
         if ( data.isDense )
         {
             ByteBuffer buffer = readRelationshipTypes();

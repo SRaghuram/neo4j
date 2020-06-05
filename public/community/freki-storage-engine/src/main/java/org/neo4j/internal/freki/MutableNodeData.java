@@ -30,6 +30,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -40,7 +41,6 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.RelationshipDirection;
-import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.util.Preconditions;
@@ -157,12 +157,14 @@ class MutableNodeData
         nextInternalRelationshipId = max( this.nextInternalRelationshipId, internalId + 1 );
     }
 
-    void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
+    void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing, Consumer<Value> removedValuesBin )
     {
         ensureRelationshipsDeserialized();
         Relationships relationships = this.relationships.get( type );
         checkState( relationships != null, "No such relationship (%d)-[:%d]->(%d)", nodeId, type, otherNode );
-        if ( relationships.remove( internalId, nodeId, otherNode, outgoing ) )
+        Relationship relationship = relationships.remove( internalId, nodeId, otherNode, outgoing );
+        relationship.properties.forEachValue( removedValuesBin::accept );
+        if ( relationships.relationships.isEmpty() )
         {
             this.relationships.remove( type );
         }
@@ -270,10 +272,10 @@ class MutableNodeData
     }
 
     void updateRelationshipProperties( long internalId, int type, long sourceNode, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
-            Iterable<StorageProperty> changed, IntIterable removed )
+            Iterable<StorageProperty> changed, IntIterable removed, Consumer<Value> removedValuesBin )
     {
         ensureRelationshipsDeserialized();
-        relationships.get( type ).update( internalId, sourceNode, otherNode, outgoing, added, changed, removed );
+        relationships.get( type ).update( internalId, sourceNode, otherNode, outgoing, added, changed, removed, removedValuesBin );
     }
 
     boolean isDense()
@@ -281,7 +283,7 @@ class MutableNodeData
         return isDense;
     }
 
-    static class Relationship
+    static class Relationship implements Comparable<Relationship>
     {
         // These two combined makes up the actual external relationship ID
         long internalId;
@@ -306,11 +308,36 @@ class MutableNodeData
             properties.put( propertyKeyId, value );
         }
 
-        void updateProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
+        void updateProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed, Consumer<Value> removedValuesBin )
         {
             added.forEach( property -> properties.put( property.propertyKeyId(), property.value() ) );
-            changed.forEach( property -> properties.put( property.propertyKeyId(), property.value() ) );
-            removed.each( properties::remove );
+            changed.forEach( property -> removedValuesBin.accept( properties.put( property.propertyKeyId(), property.value() ) ) );
+            removed.each( key -> removedValuesBin.accept( properties.remove( key ) ) );
+        }
+
+        /**
+         * Will order relationships (for this type) by direction: OUTGOING,LOOP,INCOMING
+         */
+        @Override
+        public int compareTo( Relationship o )
+        {
+            int directionComparison = Integer.compare( directionIndex(), o.directionIndex() );
+            if ( directionComparison != 0 )
+            {
+                return directionComparison;
+            }
+            int otherNodeComparison = Long.compare( otherNode, o.otherNode );
+            if ( otherNodeComparison != 0 )
+            {
+                return otherNodeComparison;
+            }
+            return Long.compare( internalId, o.internalId );
+        }
+
+        int directionIndex()
+        {
+            // We want the order of: outgoing, loop, incoming
+            return outgoing ? sourceNodeId == otherNode ? 1 : 0 : 2;
         }
 
         @Override
@@ -363,11 +390,10 @@ class MutableNodeData
         /**
          * @return {@code true} if the last relationship of this type was removed, otherwise {@code false}.
          */
-        boolean remove( long internalId, long sourceNode, long otherNode, boolean outgoing )
+        Relationship remove( long internalId, long sourceNode, long otherNode, boolean outgoing )
         {
             int foundIndex = findRelationship( internalId, sourceNode, otherNode, outgoing );
-            relationships.remove( foundIndex );
-            return relationships.isEmpty();
+            return relationships.remove( foundIndex );
         }
 
         private int findRelationship( long internalId, long sourceNode, long otherNode, boolean outgoing )
@@ -399,6 +425,7 @@ class MutableNodeData
 
         long[] packIntoLongArray()
         {
+            Collections.sort( relationships );
             int numRelationships = relationships.size();
             long[] array = new long[numRelationships * ARRAY_ENTRIES_PER_RELATIONSHIP];
             for ( int i = 0; i < numRelationships; i++ )
@@ -444,24 +471,30 @@ class MutableNodeData
         }
 
         void update( long internalId, long sourceNode, long otherNode, boolean outgoing, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
-                IntIterable removed )
+                IntIterable removed, Consumer<Value> removedValuesBin )
         {
             int foundIndex = findRelationship( internalId, sourceNode, otherNode, outgoing );
             Relationship relationship = relationships.get( foundIndex );
-            relationship.updateProperties( added, changed, removed );
+            relationship.updateProperties( added, changed, removed, removedValuesBin );
         }
     }
 
-    void setNodeProperty( int propertyKeyId, Value value )
+    Value setNodeProperty( int propertyKeyId, Value value )
     {
         ensurePropertiesDeserialized();
-        properties.put( propertyKeyId, value );
+        return properties.put( propertyKeyId, value );
     }
 
-    void removeNodeProperty( int propertyKeyId )
+    Value removeNodeProperty( int propertyKeyId )
     {
         ensurePropertiesDeserialized();
-        properties.remove( propertyKeyId );
+        return properties.remove( propertyKeyId );
+    }
+
+    void visitNodePropertyValues( Consumer<Value> removedValuesBin )
+    {
+        ensurePropertiesDeserialized();
+        properties.forEachValue( removedValuesBin::accept );
     }
 
     private void ensurePropertiesDeserialized()
@@ -493,13 +526,8 @@ class MutableNodeData
         return forwardPointer;
     }
 
-    long getLastLoadedBackwardPointer()
-    {
-        return backwardPointer;
-    }
-
     boolean serializeMainData( IntermediateBuffer[] intermediateBuffers, SimpleBigValueStore bigPropertyValueStore,
-            Consumer<StorageCommand> bigValueCommandConsumer )
+            Consumer<FrekiCommand.BigPropertyValue> bigValueCommandConsumer )
     {
         if ( labels != null )
         {
@@ -612,7 +640,7 @@ class MutableNodeData
         writer.done();
     }
 
-    private int[] writeRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
+    private int[] writeRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<FrekiCommand.BigPropertyValue> commandConsumer )
     {
         Relationships[] allRelationships = this.relationships.toArray( new Relationships[relationships.size()] );
         Arrays.sort( allRelationships );
@@ -739,7 +767,7 @@ class MutableNodeData
     }
 
     private static void writeRelationshipProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
-            Consumer<StorageCommand> commandConsumer )
+            Consumer<FrekiCommand.BigPropertyValue> commandConsumer )
     {
         int[] propertyKeys = properties.keySet().toSortedArray();
         writeInts( propertyKeys, buffer, true );
@@ -751,7 +779,7 @@ class MutableNodeData
     }
 
     private static void writeNodeProperties( MutableIntObjectMap<Value> properties, IntermediateBuffer intermediateBuffer,
-            SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
+            SimpleBigValueStore bigPropertyValueStore, Consumer<FrekiCommand.BigPropertyValue> commandConsumer )
     {
         StreamVByte.Writer keyWriter = new StreamVByte.Writer();
         int[] propertyKeys = properties.keySet().toSortedArray();

@@ -108,19 +108,21 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
             badCollector.collectBadRelationship( startId, group( startIdGroup ).name(), type, endId, group( endIdGroup ).name(),
                                 1 == IdMapper.ID_NOT_FOUND ? startId : endId );
         else {
-            commands.clear();
                 if (type != null) {
                     typeId = baseNeoStore.getRelationshipTypeRepository().getOrCreateId(type);
                 }
                 try
                 {
-                    commands.clear();
+                    //commands.clear();
                     CommandCreator commandCreator = new CommandCreator(commands, frekiBatchStores.getStores() , null, cursorTracer, memoryTracker, true);
                     commandCreator.visitCreatedRelationship(relationshipId, typeId, startNodeId, endNodeId, propsAdd);
                     relationshipCount++;
                     typeCounts.increment( typeId );
                     commandCreator.close();
-                    super.endOfEntity();
+                    if (commands.size() >5000) {
+                        super.endOfEntity();
+                        commands.clear();
+                    }
                 } catch (UnsupportedOperationException ue) {
                     System.out.print("1");
                     badCollector.collectBadRelationship(startId, group(startIdGroup).name(), type, endId, group(endIdGroup).name(),
@@ -130,7 +132,7 @@ public class FrekiRelationshipImporter extends FrekiEntityImporter{
                     badCollector.collectBadRelationship(startId, group(startIdGroup).name(), type, endId, group(endIdGroup).name(),
                             1 == IdMapper.ID_NOT_FOUND ? startId : endId);
                 } catch (Exception e) {
-                    System.out.print("3");
+                    System.out.println("3-"+e.getMessage());
                     badCollector.collectBadRelationship(startId, group(startIdGroup).name(), type, endId, group(endIdGroup).name(),
                             1 == IdMapper.ID_NOT_FOUND ? startId : endId);
                 }

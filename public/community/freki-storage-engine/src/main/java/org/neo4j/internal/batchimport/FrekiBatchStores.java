@@ -230,9 +230,9 @@ public class FrekiBatchStores extends BatchingStoreBase {
         //{
         //    stopFlushingPageCache();
         //}
-        relationshipTypeTokenStore.flush( cursorTracer );
-        labelTokenStore.flush( cursorTracer );
-        propertyKeyTokenStore.flush( cursorTracer );
+        getRelationshipTypeRepository().flush( cursorTracer );
+        getLabelRepository().flush( cursorTracer );
+        getPropertyKeyRepository().flush( cursorTracer );
         stores.flushAndForce(IOLimiter.UNLIMITED, cursorTracer);
         // Close the neo store
         //life.shutdown();
@@ -346,6 +346,11 @@ public class FrekiBatchStores extends BatchingStoreBase {
             int highestId = max( toIntExact( treeTokenStore.getHighId() ), highest );
             treeTokenStore.setHighId( highestId );
             highestCreatedId = highestId;
+        }
+
+        @Override
+        public int getHighId() {
+            return highestCreatedId;
         }
 
         private void createToken( String name, int tokenId, PageCursorTracer cursorTracer ) {

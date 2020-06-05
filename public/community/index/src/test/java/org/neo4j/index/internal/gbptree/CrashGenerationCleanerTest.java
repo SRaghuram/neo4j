@@ -42,7 +42,6 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.scheduler.CallableExecutor;
 import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.test.extension.Inject;
@@ -61,6 +60,7 @@ import static org.neo4j.index.internal.gbptree.GBPTree.NO_MONITOR;
 import static org.neo4j.index.internal.gbptree.SimpleLongLayout.longLayout;
 import static org.neo4j.index.internal.gbptree.TreeNode.Overflow;
 import static org.neo4j.index.internal.gbptree.TreeNode.setKeyCount;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.test.rule.PageCacheConfig.config;
 
 @EphemeralTestDirectoryExtension
@@ -97,6 +97,7 @@ class CrashGenerationCleanerTest
             GBPTreeCorruption.crashed( GBPTreePointerType.rightSibling() ),
             GBPTreeCorruption.crashed( GBPTreePointerType.successor() )
     );
+    private SimpleIdProvider idProvider;
 
     @BeforeAll
     static void setUp()
@@ -117,6 +118,7 @@ class CrashGenerationCleanerTest
         PageCache pageCache = pageCacheExtension
                 .getPageCache( fileSystem, config().withPageSize( PAGE_SIZE ).withAccessChecks( true ) );
         pagedFile = pageCache.map( testDirectory.file( FILE_NAME ), PAGE_SIZE, immutable.of( CREATE, DELETE_ON_CLOSE ) );
+        idProvider = new SimpleIdProvider();
     }
 
     @AfterEach
@@ -301,12 +303,12 @@ class CrashGenerationCleanerTest
 
     private void initializeFile( PagedFile pagedFile, Page... pages ) throws IOException
     {
-        try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL ) )
+        try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, NULL ) )
         {
             for ( Page page : pages )
             {
                 cursor.next();
-                page.write( cursor, treeNode, layout, checkpointedTreeState, unstableTreeState );
+                page.write( cursor, idProvider, treeNode, layout, checkpointedTreeState, unstableTreeState );
             }
         }
     }
@@ -406,13 +408,16 @@ class CrashGenerationCleanerTest
             this.pageCorruptions = pageCorruptions;
         }
 
-        private void write( PageCursor cursor, TreeNode<MutableLong,MutableLong> node, Layout<MutableLong,MutableLong> layout, TreeState checkpointedTreeState,
-                TreeState unstableTreeState ) throws IOException
+        private void write( PageCursor cursor, IdProvider idProvider, TreeNode<MutableLong,MutableLong> node, Layout<MutableLong,MutableLong> layout,
+                TreeState checkpointedTreeState, TreeState unstableTreeState ) throws IOException
         {
             type.write( cursor, node, layout, checkpointedTreeState );
-            for ( GBPTreeCorruption.PageCorruption<MutableLong,MutableLong> pc : pageCorruptions )
+            try ( IdProvider.Writer ids = idProvider.writer( NULL ) )
             {
-                pc.corrupt( cursor, layout, node, unstableTreeState );
+                for ( GBPTreeCorruption.PageCorruption<MutableLong,MutableLong> pc : pageCorruptions )
+                {
+                    pc.corrupt( cursor, ids, layout, node, unstableTreeState );
+                }
             }
         }
     }

@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
@@ -29,7 +30,6 @@ import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
-import static org.neo4j.internal.freki.MutableNodeData.backwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 
@@ -40,14 +40,16 @@ import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
  */
 class FrekiCursorData
 {
-    Record[] records;
+    private static final int RECORD_REUSE_NUM = 3;
+    Record[][] records;
+    int[] recordIndex;
     Header header = new Header();
 
     long nodeId = NULL;
+    byte version = Record.FIRST_VERSION;
     boolean x1Loaded;
     long xLChainStartPointer = NULL;
     long xLChainNextLinkPointer = NULL;
-    long x1Pointer = NULL;
     boolean isDense;
     boolean xLChainLoaded;
 
@@ -66,12 +68,16 @@ class FrekiCursorData
 
     FrekiCursorData( int numMainStores )
     {
-        this.records = new Record[numMainStores];
+        this.records = new Record[numMainStores][RECORD_REUSE_NUM];
+        this.records[0] = new Record[1];
+        this.recordIndex = new int[numMainStores];
+        Arrays.fill( recordIndex, -1 );
     }
 
     void gatherDataFromX1( Record record )
     {
         x1Loaded = true;
+        version = record.version;
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
@@ -88,16 +94,20 @@ class FrekiCursorData
         }
     }
 
-    void gatherDataFromXL( Record record )
+    boolean gatherDataFromXL( Record record )
     {
+        if ( record.version != version )
+        {
+            return false;
+        }
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
         assert header.hasMark( OFFSET_RECORD_POINTER );
         long[] pointers = readRecordPointers( buffer );
-        x1Pointer = backwardPointer( pointers, true );
         xLChainNextLinkPointer = forwardPointer( pointers, true );
         xLChainLoaded = xLChainNextLinkPointer == NULL;
+        return true;
     }
 
     private void assignDataOffsets( ByteBuffer buffer )
@@ -166,10 +176,10 @@ class FrekiCursorData
     {
         assert refCount == 1;
         nodeId = NULL;
+        version = Record.FIRST_VERSION;
         x1Loaded = false;
         xLChainStartPointer = NULL;
         xLChainNextLinkPointer = NULL;
-        x1Pointer = NULL;
         isDense = false;
         xLChainLoaded = false;
         labelOffset = 0;
@@ -179,6 +189,7 @@ class FrekiCursorData
         relationshipOffset = 0;
         relationshipTypeOffsetsOffset = 0;
         degreesIsSplit = false;
+        Arrays.fill( recordIndex, -1 );
     }
 
     @Override

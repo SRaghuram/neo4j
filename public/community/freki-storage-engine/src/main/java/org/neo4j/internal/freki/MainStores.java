@@ -48,7 +48,7 @@ public class MainStores extends Life
     public final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
     public final SimpleBigValueStore bigPropertyValueStore;
-    public final DenseRelationshipStore denseStore;
+    public final SimpleDenseRelationshipStore denseStore;
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
     private final Record[] deletedReferenceRecords;
 
@@ -58,7 +58,7 @@ public class MainStores extends Life
     {
         SimpleStore[] mainStores = new SimpleStore[4];
         BigPropertyValueStore bigPropertyValueStore = null;
-        DenseRelationshipStore denseStore = null;
+        SimpleDenseRelationshipStore denseStore = null;
         boolean success = false;
         try
         {
@@ -76,7 +76,9 @@ public class MainStores extends Life
                         IdType.NODE, false, createStoreIfNotExists, i, pageCacheTracer );
                 idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( separateIdGeneratorFactory, IdType.NODE ) );
             }
-            bigPropertyValueStore = new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists );
+            bigPropertyValueStore = new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, idGeneratorFactory, IdType.STRING_BLOCK, false,
+                    createStoreIfNotExists, pageCacheTracer );
+            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.STRING_BLOCK ) );
             denseStore = new DenseRelationshipStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
                     bigPropertyValueStore );
             success = true;
@@ -97,7 +99,7 @@ public class MainStores extends Life
         }
     }
 
-    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, DenseRelationshipStore denseStore )
+    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, SimpleDenseRelationshipStore denseStore )
     {
         this.mainStores = mainStores;
         this.mainStore = mainStores[0];
