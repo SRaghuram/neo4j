@@ -248,5 +248,36 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
             log.info( "Flushing %d pages. %d are merged.", pagesToFlush, mergedPages );
             return flushEvent;
         }
+
+        @Override
+        public void startFlush( int[][] translationTable )
+        {
+            log.info( "'%s' translation table size: %d.", fileName, translationTable.length );
+        }
+
+        @Override
+        public ChunkEvent startChunk( int[] chunk )
+        {
+            return new VerboseChunkEvent( fileName, clock.startStopWatch() );
+        }
+    }
+
+    private class VerboseChunkEvent extends FlushEventOpportunity.ChunkEvent
+    {
+        private final String fileName;
+        private final Stopwatch startTime;
+
+        VerboseChunkEvent( String fileName, Stopwatch startTime )
+        {
+            this.fileName = fileName;
+            this.startTime = startTime;
+        }
+
+        @Override
+        public void chunkFlushed( long notModifiedPages, long flushPerChunk, long buffersPerChunk, long mergesPerChunk )
+        {
+            log.info( "'%s' chunk flushed. Not modified pages: %d, flushes: %d, used buffers: %d, merge: %d in %s ns.", fileName,
+                    notModifiedPages, flushPerChunk, buffersPerChunk, mergesPerChunk, nanosToString( startTime.elapsed( NANOSECONDS ) ) );
+        }
     }
 }

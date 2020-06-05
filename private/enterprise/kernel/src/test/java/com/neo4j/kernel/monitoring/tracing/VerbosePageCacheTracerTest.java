@@ -6,7 +6,6 @@
 package com.neo4j.kernel.monitoring.tracing;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +23,7 @@ import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
 class VerbosePageCacheTracerTest
@@ -101,7 +101,7 @@ class VerbosePageCacheTracerTest
     {
         VerbosePageCacheTracer tracer = createTracer();
         PageSwapper swapper = mock( PageSwapper.class );
-        Mockito.when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
+        when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
         try ( MajorFlushEvent fileToFlush = tracer.beginFileFlush( swapper ) )
         {
             FlushEventOpportunity flushEventOpportunity = fileToFlush.flushEventOpportunity();
@@ -119,6 +119,40 @@ class VerbosePageCacheTracerTest
         assertThat( logProvider ).containsMessages( "Flushing file: 'fileToFlush'." );
         assertThat( logProvider ).containsMessages(
                 "'fileToFlush' flush completed. Flushed 2.000MiB in 110 pages, 1 pages merged. Flush took: 1s. Average speed: 2.000MiB/s." );
+    }
+
+    @Test
+    void traceTranslationTableEvents()
+    {
+        var tracer = createTracer();
+        var swapper = mock( PageSwapper.class );
+        when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
+        try ( var flushEvent = tracer.beginFileFlush( swapper ) )
+        {
+            var flushEventOpportunity = flushEvent.flushEventOpportunity();
+            flushEventOpportunity.startFlush( new int[][]{new int[]{}, new int[]{1, 2, 3}} );
+        }
+        assertThat( logProvider ).containsMessages( "Flushing file: 'fileToFlush'." );
+        assertThat( logProvider ).containsMessages( "'fileToFlush' translation table size: 2." );
+    }
+
+    @Test
+    void traceTranslationTableChunkEvents()
+    {
+        var tracer = createTracer();
+        var swapper = mock( PageSwapper.class );
+        when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
+        try ( var flushEvent = tracer.beginFileFlush( swapper ) )
+        {
+            var flushEventOpportunity = flushEvent.flushEventOpportunity();
+            var chunk1 = flushEventOpportunity.startChunk( new int[]{1} );
+            chunk1.chunkFlushed( 1, 2, 3, 4 );
+            var chunk2 = flushEventOpportunity.startChunk( new int[]{2} );
+            chunk2.chunkFlushed( 5, 6, 7, 8 );
+        }
+        assertThat( logProvider ).containsMessages( "Flushing file: 'fileToFlush'." );
+        assertThat( logProvider ).containsMessages( "'fileToFlush' chunk flushed. Not modified pages: 1, flushes: 2, used buffers: 3, merge: 4 in" );
+        assertThat( logProvider ).containsMessages( "'fileToFlush' chunk flushed. Not modified pages: 5, flushes: 6, used buffers: 7, merge: 8 in" );
     }
 
     private VerbosePageCacheTracer createTracer()
