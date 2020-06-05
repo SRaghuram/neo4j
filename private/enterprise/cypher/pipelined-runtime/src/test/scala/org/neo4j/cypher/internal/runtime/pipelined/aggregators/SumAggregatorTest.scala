@@ -5,47 +5,58 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.DistinctFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.SumFunction
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.values.storable.Values
 
-class SumAggregatorTest extends CypherFunSuite with AggregatorTest {
-  test("should sum numbers standard") {
-    val result = runStandardAggregator(SumAggregator, randomIntValuesWithNulls)
+class StandardSumAggregatorTest extends SumAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = SumAggregator
+}
+
+class ConcurrentSumAggregatorTest extends SumAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = SumAggregator
+}
+
+class FunctionSumAggregatorTest extends SumAggregatorTest with FunctionAggregatorTest {
+  override def getAggregationFunction(e: Expression): AggregationFunction = new SumFunction(e)
+}
+
+abstract class SumAggregatorTest extends CypherFunSuite with AggregatorTest {
+  test("should sum numbers") {
+    val result = runAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.sum))
   }
 
-  test("should sum numbers concurrent") {
-    val result = runConcurrentAggregator(SumAggregator, randomIntValuesWithNulls)
-    result should be(Values.intValue(randomInts.sum))
-  }
-
-  test("should sum durations standard") {
-    val result = runStandardAggregator(SumAggregator, randomDurationsWithNulls)
+  test("should sum durations") {
+    val result = runAggregation(randomDurationsWithNulls)
     result should be(randomDurations.reduce(_ add _))
   }
+}
 
-  test("should sum durations concurrent") {
-    val result = runConcurrentAggregator(SumAggregator, randomDurationsWithNulls)
-    result should be(randomDurations.reduce(_ add _))
-  }
+class StandardSumDistinctAggregatorTest extends SumDistinctAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = SumDistinctAggregator
+}
 
-  test("should sum DISTINCT numbers standard") {
-    val result = runStandardAggregator(SumDistinctAggregator, randomIntValuesWithNulls)
+class ConcurrentSumDistinctAggregatorTest extends SumDistinctAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = SumDistinctAggregator
+}
+
+class FunctionSumDistinctAggregatorTest extends SumDistinctAggregatorTest with FunctionAggregatorTest {
+  override def getAggregationFunction(exp: Expression): AggregationFunction = new DistinctFunction(exp, new SumFunction(exp), EmptyMemoryTracker.INSTANCE)
+}
+
+abstract class SumDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
+  test("should sum DISTINCT numbers") {
+    val result = runAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.distinct.sum))
   }
 
-  test("should sum DISTINCT numbers concurrent") {
-    val result = runConcurrentAggregator(SumDistinctAggregator, randomIntValuesWithNulls)
-    result should be(Values.intValue(randomInts.distinct.sum))
-  }
-
-  test("should sum DISTINCT durations standard") {
-    val result = runStandardAggregator(SumDistinctAggregator, randomDurationsWithNulls)
-    result should be(randomDurations.distinct.reduce(_ add _))
-  }
-
-  test("should sum DISTINCT durations concurrent") {
-    val result = runConcurrentAggregator(SumDistinctAggregator, randomDurationsWithNulls)
+  test("should sum DISTINCT durations") {
+    val result = runAggregation(randomDurationsWithNulls)
     result should be(randomDurations.distinct.reduce(_ add _))
   }
 }

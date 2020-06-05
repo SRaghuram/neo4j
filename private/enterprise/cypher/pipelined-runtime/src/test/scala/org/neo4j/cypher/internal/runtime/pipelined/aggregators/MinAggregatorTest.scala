@@ -5,17 +5,27 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.MinFunction
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.values.storable.Values
 
-class MinAggregatorTest extends CypherFunSuite with AggregatorTest {
-  test("should min numbers standard") {
-    val result = runStandardAggregator(MinAggregator, randomIntValuesWithNulls)
-    result should be(Values.intValue(randomInts.min))
-  }
+class StandardMinAggregatorTest extends MinAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = MinAggregator
+}
 
-  test("should min numbers concurrent") {
-    val result = runConcurrentAggregator(MinAggregator, randomIntValuesWithNulls)
+class ConcurrentMinAggregatorTest extends MinAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = MinAggregator
+}
+
+class FunctionMinAggregatorTest extends MinAggregatorTest with FunctionAggregatorTest {
+  override def getAggregationFunction(e: Expression): AggregationFunction = new MinFunction(e)
+}
+
+abstract class MinAggregatorTest extends CypherFunSuite with AggregatorTest {
+  test("should min numbers") {
+    val result = runAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.min))
   }
 }

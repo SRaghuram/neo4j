@@ -5,17 +5,27 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.MaxFunction
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.values.storable.Values
 
-class MaxAggregatorTest extends CypherFunSuite with AggregatorTest {
-  test("should max numbers standard") {
-    val result = runStandardAggregator(MaxAggregator, randomIntValuesWithNulls)
-    result should be(Values.intValue(randomInts.max))
-  }
+class StandardMaxAggregatorTest extends MaxAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = MaxAggregator
+}
 
-  test("should max numbers concurrent") {
-    val result = runConcurrentAggregator(MaxAggregator, randomIntValuesWithNulls)
+class ConcurrentMaxAggregatorTest extends MaxAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = MaxAggregator
+}
+
+class FunctionMaxAggregatorTest extends MaxAggregatorTest with FunctionAggregatorTest {
+  override def getAggregationFunction(e: Expression): AggregationFunction = new MaxFunction(e)
+}
+
+abstract class MaxAggregatorTest extends CypherFunSuite with AggregatorTest {
+  test("should max numbers") {
+    val result = runAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.max))
   }
 }

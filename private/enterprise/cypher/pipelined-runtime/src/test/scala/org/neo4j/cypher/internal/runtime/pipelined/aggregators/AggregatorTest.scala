@@ -7,6 +7,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.ThreadLocalRandom
 
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Variable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.DurationValue
@@ -15,6 +19,11 @@ import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
 
 trait AggregatorTest {
+
+  /**
+   * Override to specify how to perform the aggregation
+   */
+  def runAggregation(values: Seq[AnyValue]): AnyValue
 
   private val random: ThreadLocalRandom = ThreadLocalRandom.current()
   private val randomValues: RandomValues = RandomValues.create(random)
@@ -33,6 +42,14 @@ trait AggregatorTest {
     reducer.result
   }
 
+  def runAggregationFunction(getFunction: Expression => AggregationFunction, values: Seq[AnyValue]): AnyValue = {
+    val func = getFunction(Variable("x"))
+    for (value <- values) {
+      func.apply(CypherRow.from("x" -> value), null)
+    }
+    func.result(null)
+  }
+
   def runStandardAggregator(aggregator: Aggregator, values: Seq[AnyValue]): AnyValue =
     runAggregator(aggregator.newStandardReducer(EmptyMemoryTracker.INSTANCE), values)
 
@@ -49,4 +66,17 @@ trait AggregatorTest {
     a ++ b
   }
   protected val randomDurationsWithNulls: Seq[Value] = randomDurations.take(25) ++ Seq.fill(7)(Values.NO_VALUE) ++ randomDurations.drop(25)
+}
+
+trait StandardAggregatorTest extends AggregatorTest {
+  def runAggregation(values: Seq[AnyValue]): AnyValue = runStandardAggregator(aggregator, values)
+  def aggregator: Aggregator
+}
+trait ConcurrentAggregatorTest extends AggregatorTest {
+  def runAggregation(values: Seq[AnyValue]): AnyValue = runConcurrentAggregator(aggregator, values)
+  def aggregator: Aggregator
+}
+trait FunctionAggregatorTest extends AggregatorTest {
+  def runAggregation(values: Seq[AnyValue]): AnyValue = runAggregationFunction(getAggregationFunction, values)
+  def getAggregationFunction(e: Expression): AggregationFunction
 }

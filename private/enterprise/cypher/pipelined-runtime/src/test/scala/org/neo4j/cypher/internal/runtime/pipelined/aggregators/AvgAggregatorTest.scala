@@ -7,12 +7,19 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.time.temporal.ChronoUnit
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AvgFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.DistinctFunction
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AvgAggregatorTest.avg
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AvgAggregatorTest.cutNanos
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.values.storable.DurationValue
 import org.neo4j.values.storable.NumberValue
 import org.neo4j.values.storable.Values
 
-class AvgAggregatorTest extends CypherFunSuite with AggregatorTest {
+object AvgAggregatorTest {
   def avg(ints: Seq[Int]): Double = {
     ints.sum.toDouble / ints.length
   }
@@ -25,44 +32,53 @@ class AvgAggregatorTest extends CypherFunSuite with AggregatorTest {
     val normalized = duration.normalize()
     normalized.sub(DurationValue.duration(0, 0, 0, normalized.get(ChronoUnit.NANOS)))
   }
+}
 
-  test("should avg numbers standard") {
-    val result = runStandardAggregator(AvgAggregator, randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
+class StandardAvgAggregatorTest extends AvgAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = AvgAggregator
+}
+
+class ConcurrentAvgAggregatorTest extends AvgAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = AvgAggregator
+}
+
+class FunctionAvgAggregatorTest extends AvgAggregatorTest with FunctionAggregatorTest {
+  override def getAggregationFunction(e: Expression): AggregationFunction = new AvgFunction(e)
+}
+
+abstract class AvgAggregatorTest extends CypherFunSuite with AggregatorTest {
+  test("should avg numbers") {
+    val result = runAggregation(randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
     result should be(avg(randomInts) +- 0.0001)
   }
 
-  test("should avg numbers concurrent") {
-    val result = runConcurrentAggregator(AvgAggregator, randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
-    result should be(avg(randomInts) +- 0.0001)
-  }
-
-  test("should avg durations standard") {
-    val result = runStandardAggregator(AvgAggregator, randomDurationsWithNulls).asInstanceOf[DurationValue]
+  test("should avg durations") {
+    val result = runAggregation(randomDurationsWithNulls).asInstanceOf[DurationValue]
     cutNanos(result) should be(cutNanos(avg(randomDurations)))
   }
+}
 
-  test("should avg durations concurrent") {
-    val result = runConcurrentAggregator(AvgAggregator, randomDurationsWithNulls).asInstanceOf[DurationValue]
-    cutNanos(result) should be(cutNanos(avg(randomDurations)))
-  }
+class StandardAvgDistinctAggregatorTest extends AvgDistinctAggregatorTest with StandardAggregatorTest {
+  override val aggregator: Aggregator = AvgDistinctAggregator
+}
 
-  test("should avg DISTINCT numbers standard") {
+class ConcurrentAvgDistinctAggregatorTest extends AvgDistinctAggregatorTest with ConcurrentAggregatorTest {
+  override val aggregator: Aggregator = AvgDistinctAggregator
+}
+
+class FunctionAvgDistinctAggregatorTest extends AvgDistinctAggregatorTest with FunctionAggregatorTest {
+  override def getAggregationFunction(exp: Expression): AggregationFunction = new DistinctFunction(exp, new AvgFunction(exp), EmptyMemoryTracker.INSTANCE)
+}
+
+abstract class AvgDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
+
+  test("should avg DISTINCT numbers") {
     val result = runStandardAggregator(AvgDistinctAggregator, randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
     result should be(avg(randomInts.distinct) +- 0.0001)
   }
 
-  test("should avg DISTINCT numbers concurrent") {
-    val result = runConcurrentAggregator(AvgDistinctAggregator, randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
-    result should be(avg(randomInts.distinct) +- 0.0001)
-  }
-
-  test("should avg DISTINCT durations standard") {
+  test("should avg DISTINCT durations") {
     val result = runStandardAggregator(AvgDistinctAggregator, randomDurationsWithNulls).asInstanceOf[DurationValue]
-    cutNanos(result) should be(cutNanos(avg(randomDurations.distinct)))
-  }
-
-  test("should avg DISTINCT durations concurrent") {
-    val result = runConcurrentAggregator(AvgDistinctAggregator, randomDurationsWithNulls).asInstanceOf[DurationValue]
     cutNanos(result) should be(cutNanos(avg(randomDurations.distinct)))
   }
 }
