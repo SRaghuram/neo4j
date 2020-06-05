@@ -192,7 +192,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     }
   }
 
-  override def toString: String = {
+  override final def toString: String = {
     val sb = new StringBuilder
     sb ++= "ArgumentStateMap(\n"
     controllers.forEach((argumentRowId, controller) => {

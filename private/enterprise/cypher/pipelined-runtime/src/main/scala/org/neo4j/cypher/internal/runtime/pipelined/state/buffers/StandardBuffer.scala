@@ -39,7 +39,7 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
 
   override def toString: String = {
     val sb = new StringBuilder()
-    sb ++= "StandardBuffer("
+    sb ++= s"${getClass.getSimpleName}("
     data.foreach(t => {
       sb ++= t.toString
       sb += ','

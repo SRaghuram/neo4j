@@ -46,7 +46,7 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
 
   override def toString: String = {
     val sb = new StringBuilder()
-    sb ++= "ConcurrentBuffer("
+    sb ++= s"${getClass.getSimpleName}("
     data.forEach(t => {
       sb ++= t.toString
       sb += ','

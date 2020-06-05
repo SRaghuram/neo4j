@@ -264,7 +264,13 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private val waiters = new ConcurrentLinkedQueue[WaitState]()
   case class WaitState(latch: CountDownLatch, requestedRows: Long)
 
-  override def toString: String = s"[ConcurrentQueryCompletionTracker@${System.identityHashCode(this)}](${count.get()})"
+  override def toString: String =
+    s"[${getClass.getSimpleName}@${System.identityHashCode(this)}](" +
+      s"count=${count.get()}, " +
+      s"requested=${requested.get()}, " +
+      s"served=${served.get()}), " +
+      s"cancelled/failed=${_cancelledOrFailed}), " +
+      s"has ended=${_hasEnded})"
 
   // -------- Query completion tracking methods --------
 
@@ -418,7 +424,14 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
             latch.countDown()
           }
           debug("Awaiting latch %s ....", latch)
-          latch.await()
+          try {
+            latch.await()
+          } catch {
+            case e: InterruptedException =>
+              val e1 = new InterruptedException(toString)
+              e1.addSuppressed(e)
+              throw e1
+          }
           debug("Awaiting latch %s done", latch)
         }
         !hasEnded

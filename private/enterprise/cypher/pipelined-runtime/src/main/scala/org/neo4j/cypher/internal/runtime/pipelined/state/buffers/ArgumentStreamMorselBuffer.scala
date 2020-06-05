@@ -187,7 +187,7 @@ class ArgumentStreamArgumentStateBuffer(argumentRowId: Long,
   }
 
   override def toString: String = {
-    s"ArgumentStreamArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow, inner=$inner)"
+    s"${getClass.getSimpleName}(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow, inner=$inner)"
   }
 }
 
@@ -220,6 +220,8 @@ class StandardArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer
   override def canPut: Boolean = inner.canPut
 
   override def iterator: util.Iterator[T] = inner.iterator
+
+  override def toString: String = s"${getClass.getSimpleName}(didReceiveData=${_didReceiveData}, inner=$inner)"
 }
 
 class ConcurrentArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with BufferUsageHistory {
@@ -243,5 +245,5 @@ class ConcurrentArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buff
 
   override def iterator: util.Iterator[T] = inner.iterator
 
-  override def toString: String = s"OptionalMorselBuffer(didReceiveData=${_didReceiveData}, inner=${inner.toString})"
+  override def toString: String = s"${getClass.getSimpleName}(didReceiveData=${_didReceiveData}, inner=$inner)"
 }

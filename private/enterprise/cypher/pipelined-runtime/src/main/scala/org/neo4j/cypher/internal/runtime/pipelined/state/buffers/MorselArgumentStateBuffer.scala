@@ -127,5 +127,5 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   }
 
   override def toString: String =
-    s"MorselArgumentStateBuffer(planId: $argumentStateMapId)$argumentStateMap"
+    s"${getClass.getSimpleName}(planId: $argumentStateMapId, $argumentStateMap)"
 }

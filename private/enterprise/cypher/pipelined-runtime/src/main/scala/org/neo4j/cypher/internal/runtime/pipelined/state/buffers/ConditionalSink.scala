@@ -31,6 +31,8 @@ class ConditionalSink(predicate: Expression,
                       onFalse: Sink[Morsel],
                       queryState: PipelinedQueryState) extends Sink[Morsel] {
 
+  override def toString: String = s"${getClass.getSimpleName}"
+
   override def put(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")

@@ -45,7 +45,7 @@ class ConcurrentSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
 
   override def toString: String = {
     val sb = new StringBuilder()
-    sb ++= "ConcurrentSingletonBuffer("
+    sb ++= s"${getClass.getSimpleName}("
     val t = datum.get()
     if (t != null) {
       sb ++= t.toString

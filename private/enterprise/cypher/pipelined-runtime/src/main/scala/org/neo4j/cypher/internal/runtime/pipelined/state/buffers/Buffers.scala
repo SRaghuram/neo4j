@@ -51,6 +51,8 @@ class Buffers(numBuffers: Int,
 
   // Constructor code
 
+  override def toString: String = s"${getClass.getSimpleName}(buffers:${buffers.mkString(",")})"
+
   private def findRHSAccumulatingStateBuffers(initialIndex: Int,
                                               argumentStateMapIds: ReadOnlyArray[ArgumentStateMapId]
                                              ): ReadOnlyArray[AccumulatingBuffer] = {

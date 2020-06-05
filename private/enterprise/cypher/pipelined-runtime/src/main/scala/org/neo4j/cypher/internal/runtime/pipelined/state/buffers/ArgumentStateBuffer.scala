@@ -44,7 +44,7 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   }
 
   override def toString: String = {
-    s"ArgumentStateBuffer(argumentRowId=$argumentRowId)"
+    s"${getClass.getSimpleName}(argumentRowId=$argumentRowId, inner=$inner)"
   }
 }
 

@@ -33,12 +33,19 @@ class ExecutingQuery(val executionState: ExecutionState,
   }
 
   override def await(): Boolean = {
-    flowControl.await()
+    try {
+      flowControl.await()
+    } catch {
+      case e: InterruptedException =>
+        val e1 = new InterruptedException(toString)
+        e1.addSuppressed(e)
+        throw e1
+    }
   }
 
   def hasSucceeded: Boolean = {
     executionState.hasSucceeded
   }
 
-  override def toString: String = s"ExecutingQuery ${System.identityHashCode(this)}"
+  override def toString: String = s"${getClass.getSimpleName}(${System.identityHashCode(this)}, $executionState)"
 }

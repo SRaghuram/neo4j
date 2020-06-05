@@ -339,7 +339,14 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     true
   }
 
-  override def toString: String = "TheExecutionState"
+  override def toString: String = {
+    s"""|${getClass.getSimpleName}(
+        |  buffers: $buffers
+        |  query status: ${queryStatus.cancelled}
+        |  ASMs: ${argumentStateMapHolder.mkString(",")}
+        |  Pipeline Locks: ${pipelineLocks.mkString(",")}
+        |)""".stripMargin
+  }
 
   private def verifyThatIdsAndOffsetsMatch(): Boolean = {
     var i = 0

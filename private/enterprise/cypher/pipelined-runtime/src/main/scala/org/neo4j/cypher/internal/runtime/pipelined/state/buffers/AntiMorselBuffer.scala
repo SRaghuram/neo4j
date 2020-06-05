@@ -124,7 +124,7 @@ class AntiMorselBuffer(id: BufferId,
   }
 
   override def toString: String =
-    s"AntiMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
+    s"${getClass.getSimpleName}(planId: $argumentStateMapId)$argumentStateMap"
 }
 
 trait AntiArgumentState extends MorselAccumulator[Morsel] {
