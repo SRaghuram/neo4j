@@ -27,7 +27,7 @@ object StdevAggregatorTest {
 }
 
 class FunctionStdevAggregatorTest extends StdevAggregatorTest with FunctionAggregatorTest {
-  override def getAggregationFunction(e: Expression): AggregationFunction = new StdevFunction(e, false, EmptyMemoryTracker.INSTANCE)
+  override def getAggregationFunction(e: Expression): AggregationFunction = new StdevFunction(e, false)
 }
 
 abstract class StdevAggregatorTest extends CypherFunSuite with AggregatorTest {
@@ -38,7 +38,7 @@ abstract class StdevAggregatorTest extends CypherFunSuite with AggregatorTest {
 }
 
 class FunctionStdevDistinctAggregatorTest extends StdevDistinctAggregatorTest with FunctionAggregatorTest {
-  override def getAggregationFunction(exp: Expression): AggregationFunction = new DistinctFunction(exp, new StdevFunction(exp, false, EmptyMemoryTracker.INSTANCE), EmptyMemoryTracker.INSTANCE)
+  override def getAggregationFunction(exp: Expression): AggregationFunction = new DistinctFunction(exp, new StdevFunction(exp, false), EmptyMemoryTracker.INSTANCE)
 }
 
 abstract class StdevDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
