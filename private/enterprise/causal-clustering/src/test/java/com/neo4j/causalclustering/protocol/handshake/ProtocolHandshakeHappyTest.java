@@ -10,12 +10,10 @@ import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestModifierProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
@@ -28,64 +26,56 @@ import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCateg
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 /**
  * @see ProtocolHandshakeSadTest sad path tests
  */
-@RunWith( Parameterized.class )
-public class ProtocolHandshakeHappyTest
+class ProtocolHandshakeHappyTest
 {
-    @Parameterized.Parameter
-    public Parameters parameters;
-
-    @Parameterized.Parameters
-    public static Collection<Parameters> data()
+    static Collection<Parameters> data()
     {
         // Application protocols
-        ApplicationSupportedProtocols allRaft =
+        var allRaft =
                 new ApplicationSupportedProtocols( RAFT, TestApplicationProtocols.listVersionsOf( RAFT ) );
-        ApplicationSupportedProtocols raft1 =
+        var raft1 =
                 new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_1.implementation() ) );
-        ApplicationSupportedProtocols allRaftByDefault =
+        var allRaftByDefault =
                 new ApplicationSupportedProtocols( RAFT, emptyList() );
 
         // Modifier protocols
-        Collection<ModifierSupportedProtocols> allModifiers = asList(
+        var allModifiers = asList(
                 new ModifierSupportedProtocols( COMPRESSION, TestModifierProtocols.listVersionsOf( COMPRESSION ) ),
                 new ModifierSupportedProtocols( GRATUITOUS_OBFUSCATION, TestModifierProtocols.listVersionsOf( GRATUITOUS_OBFUSCATION ) )
                 );
-        Collection<ModifierSupportedProtocols> allCompressionModifiers = singletonList(
+        var allCompressionModifiers = singletonList(
                 new ModifierSupportedProtocols( COMPRESSION, TestModifierProtocols.listVersionsOf( COMPRESSION ) ) );
-        Collection<ModifierSupportedProtocols> allObfuscationModifiers = singletonList(
+        var allObfuscationModifiers = singletonList(
                 new ModifierSupportedProtocols( GRATUITOUS_OBFUSCATION, TestModifierProtocols.listVersionsOf( GRATUITOUS_OBFUSCATION ) ) );
-        Collection<ModifierSupportedProtocols> allCompressionModifiersByDefault = singletonList(
+        var allCompressionModifiersByDefault = singletonList(
                 new ModifierSupportedProtocols( COMPRESSION, emptyList() ) );
 
-        List<ModifierSupportedProtocols> onlyLzoCompressionModifiers = singletonList(
+        var onlyLzoCompressionModifiers = singletonList(
                 new ModifierSupportedProtocols( COMPRESSION, singletonList( LZO.implementation() ) ) );
-        List<ModifierSupportedProtocols> onlySnappyCompressionModifiers = singletonList(
+        var onlySnappyCompressionModifiers = singletonList(
                 new ModifierSupportedProtocols( COMPRESSION, singletonList( SNAPPY.implementation() ) ) );
 
         Collection<ModifierSupportedProtocols> noModifiers = emptyList();
 
         // Ordered modifier protocols
-        ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( TestModifierProtocols.values(), allModifiers );
-        String[] lzoFirstVersions = { LZO.implementation(), LZ4.implementation(), SNAPPY.implementation() };
-        List<ModifierSupportedProtocols> lzoFirstCompressionModifiers = singletonList(
+        var modifierProtocolRepository = new ModifierProtocolRepository( TestModifierProtocols.values(), allModifiers );
+        var lzoFirstVersions = new String[] { LZO.implementation(), LZ4.implementation(), SNAPPY.implementation() };
+        var lzoFirstCompressionModifiers = singletonList(
                 new ModifierSupportedProtocols( COMPRESSION, asList( lzoFirstVersions ) ) );
-        ModifierProtocol preferredLzoFirstCompressionModifier =
+        var preferredLzoFirstCompressionModifier =
                 modifierProtocolRepository.select( COMPRESSION.canonicalName(), asSet( lzoFirstVersions ) ).get();
 
-        String[] snappyFirstVersions = { SNAPPY.implementation(), LZ4.implementation(), LZO.implementation() };
-        List<ModifierSupportedProtocols> snappyFirstCompressionModifiers = singletonList(
+        var snappyFirstVersions = new String[] { SNAPPY.implementation(), LZ4.implementation(), LZO.implementation() };
+        var snappyFirstCompressionModifiers = singletonList(
                 new ModifierSupportedProtocols( COMPRESSION, asList( snappyFirstVersions ) ) );
-        ModifierProtocol preferredSnappyFirstCompressionModifier =
+        var preferredSnappyFirstCompressionModifier =
                 modifierProtocolRepository.select( COMPRESSION.canonicalName(), asSet( snappyFirstVersions ) ).get();
 
         return asList(
@@ -148,81 +138,85 @@ public class ProtocolHandshakeHappyTest
                 );
     }
 
-    @Test
-    public void shouldHandshakeApplicationProtocolOnClient()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldHandshakeApplicationProtocolOnClient( Parameters parameters )
     {
         // given
-        Fixture fixture = new Fixture( parameters );
+        var fixture = new Fixture( parameters );
 
         // when
-        CompletableFuture<ProtocolStack> clientHandshakeFuture = fixture.initiate();
+        var clientHandshakeFuture = fixture.initiate();
 
         // then
         assertFalse( fixture.clientChannel.isClosed() );
-        ProtocolStack clientProtocolStack = clientHandshakeFuture.getNow( null );
-        assertThat( clientProtocolStack.applicationProtocol(), equalTo( parameters.expectedApplicationProtocol ) );
+        var clientProtocolStack = clientHandshakeFuture.getNow( null );
+        assertThat( clientProtocolStack.applicationProtocol() ).isEqualTo( parameters.expectedApplicationProtocol );
     }
 
-    @Test
-    public void shouldHandshakeModifierProtocolsOnClient()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldHandshakeModifierProtocolsOnClient( Parameters parameters )
     {
         // given
-        Fixture fixture = new Fixture( parameters );
+        var fixture = new Fixture( parameters );
 
         // when
-        CompletableFuture<ProtocolStack> clientHandshakeFuture = fixture.initiate();
+        var clientHandshakeFuture = fixture.initiate();
 
         // then
         assertFalse( fixture.clientChannel.isClosed() );
-        ProtocolStack clientProtocolStack = clientHandshakeFuture.getNow( null );
+        var clientProtocolStack = clientHandshakeFuture.getNow( null );
         if ( parameters.expectedModifierProtocols.length == 0 )
         {
-            assertThat( clientProtocolStack.modifierProtocols(), empty() );
+            assertThat( clientProtocolStack.modifierProtocols() ).isEmpty();
         }
         else
         {
-            assertThat( clientProtocolStack.modifierProtocols(), contains( parameters.expectedModifierProtocols ) );
+            assertThat( clientProtocolStack.modifierProtocols() ).contains( parameters.expectedModifierProtocols );
         }
     }
 
-    @Test
-    public void shouldHandshakeApplicationProtocolOnServer()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldHandshakeApplicationProtocolOnServer( Parameters parameters )
     {
         // given
-        Fixture fixture = new Fixture( parameters );
+        var fixture = new Fixture( parameters );
 
         // when
         fixture.initiate();
         fixture.handshakeServer.protocolStackFuture();
-        CompletableFuture<ProtocolStack> serverHandshakeFuture = fixture.handshakeServer.protocolStackFuture();
+        var serverHandshakeFuture = fixture.handshakeServer.protocolStackFuture();
 
         // then
         assertFalse( fixture.clientChannel.isClosed() );
-        ProtocolStack serverProtocolStack = serverHandshakeFuture.getNow( null );
-        assertThat( serverProtocolStack.applicationProtocol(), equalTo( parameters.expectedApplicationProtocol ) );
+        var serverProtocolStack = serverHandshakeFuture.getNow( null );
+        assertThat( serverProtocolStack.applicationProtocol() ).isEqualTo( parameters.expectedApplicationProtocol );
     }
 
-    @Test
-    public void shouldHandshakeModifierProtocolsOnServer()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldHandshakeModifierProtocolsOnServer( Parameters parameters )
     {
         // given
-        Fixture fixture = new Fixture( parameters );
+        var fixture = new Fixture( parameters );
 
         // when
         fixture.initiate();
         fixture.handshakeServer.protocolStackFuture();
-        CompletableFuture<ProtocolStack> serverHandshakeFuture = fixture.handshakeServer.protocolStackFuture();
+        var serverHandshakeFuture = fixture.handshakeServer.protocolStackFuture();
 
         // then
         assertFalse( fixture.clientChannel.isClosed() );
-        ProtocolStack serverProtocolStack = serverHandshakeFuture.getNow( null );
+        var serverProtocolStack = serverHandshakeFuture.getNow( null );
         if ( parameters.expectedModifierProtocols.length == 0 )
         {
-            assertThat( serverProtocolStack.modifierProtocols(), empty() );
+            assertThat( serverProtocolStack.modifierProtocols() ).isEmpty();
         }
         else
         {
-            assertThat( serverProtocolStack.modifierProtocols(), contains( parameters.expectedModifierProtocols ) );
+            assertThat( serverProtocolStack.modifierProtocols() ).contains( parameters.expectedModifierProtocols );
         }
     }
 
@@ -237,9 +231,9 @@ public class ProtocolHandshakeHappyTest
 
         Fixture( Parameters parameters )
         {
-            ApplicationProtocolRepository serverApplicationProtocolRepository =
+            var serverApplicationProtocolRepository =
                     new ApplicationProtocolRepository( TestApplicationProtocols.values(), parameters.serverApplicationProtocol );
-            ModifierProtocolRepository serverModifierProtocolRepository =
+            var serverModifierProtocolRepository =
                     new ModifierProtocolRepository( TestModifierProtocols.values(), parameters.serverModifierProtocols );
 
             clientApplicationProtocolRepository = new ApplicationProtocolRepository( TestApplicationProtocols.values(), parameters.clientApplicationProtocol );

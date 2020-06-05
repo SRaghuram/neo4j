@@ -9,7 +9,9 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -17,13 +19,21 @@ import java.util.stream.IntStream;
 
 import org.neo4j.internal.helpers.collection.Pair;
 
+import static java.util.Collections.singletonList;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseReadReplicaTopology>
 {
-    public ReadReplicaTopologyMarshalTest()
+    @Override
+    Collection<DatabaseReadReplicaTopology> originals()
     {
-        super( generate(), new ReadReplicaTopologyMarshal() );
+        return singletonList( generate() );
+    }
+
+    @Override
+    ChannelMarshal<DatabaseReadReplicaTopology> marshal()
+    {
+        return new ReadReplicaTopologyMarshal();
     }
 
     static DatabaseReadReplicaTopology generate()
@@ -33,5 +43,4 @@ public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseRead
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
         return new DatabaseReadReplicaTopology( randomDatabaseId(), replicas );
     }
-
 }

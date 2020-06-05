@@ -20,35 +20,27 @@ import com.neo4j.causalclustering.helpers.Buffers;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
-import io.netty.buffer.ByteBuf;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith( Parameterized.class )
-public class CoreReplicatedContentMarshallingTestV2
+@Buffers.Extension
+class CoreReplicatedContentMarshallingTestV2
 {
-    @Rule
-    public final Buffers buffers = new Buffers();
+    @Inject
+    private Buffers buffers;
 
-    @Parameterized.Parameter()
-    public ReplicatedContent replicatedContent;
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static ReplicatedContent[] data()
+    static ReplicatedContent[] data()
     {
-        DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
+        var databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
         return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
                 new MemberIdSet( Set.of( new MemberId( UUID.randomUUID() ) ) ),
                 new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
@@ -58,16 +50,17 @@ public class CoreReplicatedContentMarshallingTestV2
                 new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 4, 5 ) )};
     }
 
-    @Test
-    public void shouldSerializeAndDeserialize() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    public void shouldSerializeAndDeserialize( ReplicatedContent replicatedContent ) throws Exception
     {
-        ChannelMarshal<ReplicatedContent> coreReplicatedContentMarshal = new CoreReplicatedContentMarshalV2();
-        ByteBuf buffer = buffers.buffer();
-        BoundedNetworkWritableChannel channel = new BoundedNetworkWritableChannel( buffer );
+        var coreReplicatedContentMarshal = new CoreReplicatedContentMarshalV2();
+        var buffer = buffers.buffer();
+        var channel = new BoundedNetworkWritableChannel( buffer );
         coreReplicatedContentMarshal.marshal( replicatedContent, channel );
 
-        NetworkReadableChannel readChannel = new NetworkReadableChannel( buffer );
-        ReplicatedContent result = coreReplicatedContentMarshal.unmarshal( readChannel );
+        var readChannel = new NetworkReadableChannel( buffer );
+        var result = coreReplicatedContentMarshal.unmarshal( readChannel );
 
         assertEquals( replicatedContent, result );
     }

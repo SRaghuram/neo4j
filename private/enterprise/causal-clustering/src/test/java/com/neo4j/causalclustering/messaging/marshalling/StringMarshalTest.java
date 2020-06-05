@@ -6,33 +6,34 @@
 package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.helpers.Buffers;
-import io.netty.buffer.ByteBuf;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
+import org.neo4j.test.extension.Inject;
 
-public class StringMarshalTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+@Buffers.Extension
+class StringMarshalTest
 {
-    @Rule
-    public final Buffers buffers = new Buffers();
+    @Inject
+    private Buffers buffers;
 
     @Test
-    public void shouldSerializeAndDeserializeString()
+    void shouldSerializeAndDeserializeString()
     {
         // given
-        final String TEST_STRING = "ABC123_?";
-        final ByteBuf buffer = buffers.buffer();
+        final var TEST_STRING = "ABC123_?";
+        final var buffer = buffers.buffer();
 
         // when
         StringMarshal.marshal( buffer, TEST_STRING );
-        String reconstructed = StringMarshal.unmarshal( buffer );
+        var reconstructed = StringMarshal.unmarshal( buffer );
 
         // then
         assertNotSame( TEST_STRING, reconstructed );
@@ -40,15 +41,15 @@ public class StringMarshalTest
     }
 
     @Test
-    public void shouldSerializeAndDeserializeEmptyString()
+    void shouldSerializeAndDeserializeEmptyString()
     {
         // given
-        final String TEST_STRING = "";
-        final ByteBuf buffer = buffers.buffer();
+        final var TEST_STRING = "";
+        final var buffer = buffers.buffer();
 
         // when
         StringMarshal.marshal( buffer, TEST_STRING );
-        String reconstructed = StringMarshal.unmarshal( buffer );
+        var reconstructed = StringMarshal.unmarshal( buffer );
 
         // then
         assertNotSame( TEST_STRING, reconstructed );
@@ -56,33 +57,33 @@ public class StringMarshalTest
     }
 
     @Test
-    public void shouldSerializeAndDeserializeNull()
+    void shouldSerializeAndDeserializeNull()
     {
         // given
-        final ByteBuf buffer = buffers.buffer();
+        final var buffer = buffers.buffer();
 
         // when
         StringMarshal.marshal( buffer, null );
-        String reconstructed = StringMarshal.unmarshal( buffer );
+        var reconstructed = StringMarshal.unmarshal( buffer );
 
         // then
         assertNull( reconstructed );
     }
 
     @Test
-    public void shouldSerializeAndDeserializeStringUsingChannel() throws IOException
+    void shouldSerializeAndDeserializeStringUsingChannel() throws IOException
     {
         // given
-        final String TEST_STRING = "ABC123_?";
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
+        final var TEST_STRING = "ABC123_?";
+        var outputStream = new ByteArrayOutputStream();
+        var writableChannel = new OutputStreamWritableChannel( outputStream );
 
         // when
         StringMarshal.marshal( writableChannel, TEST_STRING );
 
-        ByteArrayInputStream inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( inputStream );
-        String reconstructed = StringMarshal.unmarshal( readableChannel );
+        var inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
+        var readableChannel = new InputStreamReadableChannel( inputStream );
+        var reconstructed = StringMarshal.unmarshal( readableChannel );
 
         // then
         assertNotSame( TEST_STRING, reconstructed );
@@ -90,19 +91,19 @@ public class StringMarshalTest
     }
 
     @Test
-    public void shouldSerializeAndDeserializeEmptyStringUsingChannel() throws IOException
+    void shouldSerializeAndDeserializeEmptyStringUsingChannel() throws IOException
     {
         // given
-        final String TEST_STRING = "";
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
+        final var TEST_STRING = "";
+        var outputStream = new ByteArrayOutputStream();
+        var writableChannel = new OutputStreamWritableChannel( outputStream );
 
         // when
         StringMarshal.marshal( writableChannel, TEST_STRING );
 
-        ByteArrayInputStream inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( inputStream );
-        String reconstructed = StringMarshal.unmarshal( readableChannel );
+        var inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
+        var readableChannel = new InputStreamReadableChannel( inputStream );
+        var reconstructed = StringMarshal.unmarshal( readableChannel );
 
         // then
         assertNotSame( TEST_STRING, reconstructed );
@@ -110,18 +111,18 @@ public class StringMarshalTest
     }
 
     @Test
-    public void shouldSerializeAndDeserializeNullUsingChannel() throws IOException
+    void shouldSerializeAndDeserializeNullUsingChannel() throws IOException
     {
         // given
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
+        var outputStream = new ByteArrayOutputStream();
+        var writableChannel = new OutputStreamWritableChannel( outputStream );
 
         // when
         StringMarshal.marshal( writableChannel, null );
 
-        ByteArrayInputStream inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( inputStream );
-        String reconstructed = StringMarshal.unmarshal( readableChannel );
+        var inputStream = new ByteArrayInputStream( outputStream.toByteArray() );
+        var readableChannel = new InputStreamReadableChannel( inputStream );
+        var reconstructed = StringMarshal.unmarshal( readableChannel );
 
         // then
         assertNull( reconstructed );

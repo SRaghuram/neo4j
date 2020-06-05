@@ -9,38 +9,44 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
-public abstract class BaseMarshalTest<T>
+@TestInstance( TestInstance.Lifecycle.PER_CLASS )
+abstract class BaseMarshalTest<T>
 {
-    private final T original;
-    private final ChannelMarshal<T> marshal;
+    abstract Collection<T> originals();
+    abstract ChannelMarshal<T> marshal();
 
-    public BaseMarshalTest( T original, ChannelMarshal<T> marshal )
+    Collection<Object[]> data()
     {
-        this.original = original;
-        this.marshal = marshal;
+        var marshal = marshal();
+        return originals().stream().map( e -> new Object[]{e, marshal} ).collect( Collectors.toList() );
     }
 
-    @Test
-    public void shouldMarshalAndUnMarshal() throws IOException, EndOfStreamException
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldMarshalAndUnMarshal( T original, ChannelMarshal<T> marshal ) throws IOException, EndOfStreamException
     {
         // given
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        var outputStream = new ByteArrayOutputStream();
 
         // when
-        OutputStreamWritableChannel writableChannel = new OutputStreamWritableChannel( outputStream );
+        var writableChannel = new OutputStreamWritableChannel( outputStream );
         marshal.marshal( original, writableChannel );
 
-        InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        T result = marshal.unmarshal( readableChannel );
+        var readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
+        var result = marshal.unmarshal( readableChannel );
 
         // then
         assertNotSame( original, result );

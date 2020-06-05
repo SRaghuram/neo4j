@@ -7,9 +7,10 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
@@ -30,8 +31,8 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -41,7 +42,7 @@ import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
-public class BatchingTxApplierTest
+class BatchingTxApplierTest
 {
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
     private final TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
@@ -56,8 +57,8 @@ public class BatchingTxApplierTest
             new Monitors(), EmptyVersionContextSupplier.EMPTY, commandIndexTracker,
             nullLogProvider(), databaseEventDispatch, pageCacheTracer );
 
-    @Before
-    public void before() throws TransactionFailureException
+    @BeforeEach
+    void before() throws TransactionFailureException
     {
         when( commitProcess.commit( any(), any(), any() ) ).thenAnswer( invocation ->
         {
@@ -74,20 +75,20 @@ public class BatchingTxApplierTest
         txApplier.start();
     }
 
-    @After
-    public void after()
+    @AfterEach
+    void after()
     {
         txApplier.stop();
     }
 
     @Test
-    public void shouldHaveCorrectDefaults()
+    void shouldHaveCorrectDefaults()
     {
         assertEquals( startTxId, txApplier.lastQueuedTxId() );
     }
 
     @Test
-    public void shouldApplyBatchAndDispatchEvents() throws Exception
+    void shouldApplyBatchAndDispatchEvents() throws Exception
     {
         // given
         txApplier.queue( createTxWithId( startTxId + 1 ) );
@@ -103,7 +104,7 @@ public class BatchingTxApplierTest
     }
 
     @Test
-    public void shouldIgnoreOutOfOrderTransactions() throws Exception
+    void shouldIgnoreOutOfOrderTransactions() throws Exception
     {
         // given
         txApplier.queue( createTxWithId( startTxId + 4 ) ); // ignored
@@ -126,11 +127,11 @@ public class BatchingTxApplierTest
     }
 
     @Test
-    public void shouldBeAbleToQueueMaxBatchSize() throws Exception
+    void shouldBeAbleToQueueMaxBatchSize() throws Exception
     {
         // given
-        long endTxId = startTxId + maxBatchSize;
-        for ( long txId = startTxId + 1; txId <= endTxId; txId++ )
+        var endTxId = startTxId + maxBatchSize;
+        for ( var txId = startTxId + 1; txId <= endTxId; txId++ )
         {
             txApplier.queue( createTxWithId( txId ) );
         }
@@ -142,8 +143,9 @@ public class BatchingTxApplierTest
         assertTransactionsCommitted( startTxId + 1, maxBatchSize );
     }
 
-    @Test( timeout = 3_000 )
-    public void shouldGiveUpQueueingOnStop() throws Throwable
+    @Test
+    @Timeout( 3 )
+    void shouldGiveUpQueueingOnStop() throws Throwable
     {
         // given
         for ( int i = 1; i <= maxBatchSize; i++ ) // fell the queue
@@ -152,8 +154,8 @@ public class BatchingTxApplierTest
         }
 
         // when
-        CountDownLatch latch = new CountDownLatch( 1 );
-        Thread thread = new Thread( () -> {
+        var latch = new CountDownLatch( 1 );
+        var thread = new Thread( () -> {
             latch.countDown();
             try
             {
@@ -175,7 +177,7 @@ public class BatchingTxApplierTest
     }
 
     @Test
-    public void tracePageCacheAccessOnTransactionApply() throws Exception
+    void tracePageCacheAccessOnTransactionApply() throws Exception
     {
         txApplier.queue( createTxWithId( startTxId + 1 ) );
         txApplier.queue( createTxWithId( startTxId + 2 ) );
@@ -188,11 +190,11 @@ public class BatchingTxApplierTest
 
     private CommittedTransactionRepresentation createTxWithId( long txId )
     {
-        CommittedTransactionRepresentation tx = mock( CommittedTransactionRepresentation.class );
-        LogEntryCommit commitEntry = mock( LogEntryCommit.class );
+        var tx = mock( CommittedTransactionRepresentation.class );
+        var commitEntry = mock( LogEntryCommit.class );
         when( commitEntry.getTxId() ).thenReturn( txId );
-        TransactionRepresentation txRep = mock( TransactionRepresentation.class );
-        byte[] encodedRaftLogIndex = encodeLogIndexAsTxHeader( txId - 5 ); // just some arbitrary offset
+        var txRep = mock( TransactionRepresentation.class );
+        var encodedRaftLogIndex = encodeLogIndexAsTxHeader( txId - 5 ); // just some arbitrary offset
         when( txRep.additionalHeader() ).thenReturn( encodedRaftLogIndex );
         when( tx.getTransactionRepresentation() ).thenReturn( txRep );
         when( tx.getCommitEntry() ).thenReturn( commitEntry );
@@ -201,12 +203,12 @@ public class BatchingTxApplierTest
 
     private void assertTransactionsCommitted( long startTxId, long expectedCount ) throws TransactionFailureException
     {
-        ArgumentCaptor<TransactionToApply> batchCaptor = ArgumentCaptor.forClass( TransactionToApply.class );
+        var batchCaptor = ArgumentCaptor.forClass( TransactionToApply.class );
         verify( commitProcess ).commit( batchCaptor.capture(), eq( NULL ), eq( EXTERNAL ) );
 
         TransactionToApply batch = Iterables.single( batchCaptor.getAllValues() );
-        long expectedTxId = startTxId;
-        long count = 0;
+        var expectedTxId = startTxId;
+        var count = 0;
         while ( batch != null )
         {
             assertEquals( expectedTxId, batch.transactionId() );

@@ -9,29 +9,40 @@ import akka.actor.ActorSystem;
 import akka.actor.ExtendedActorSystem;
 import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+
+import java.util.Collection;
+
+import static java.util.Collections.singletonList;
 
 public class ReadReplicaRemovalMarshalTest extends BaseMarshalTest<ReadReplicaRemovalMessage>
 {
     private static ActorSystem system;
 
-    public ReadReplicaRemovalMarshalTest()
+    @Override
+    Collection<ReadReplicaRemovalMessage> originals()
     {
-        super( new ReadReplicaRemovalMessage(
-                        system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name ) ) ),
-                new ReadReplicaRemovalMessageMarshal( (ExtendedActorSystem) system ) );
+        return singletonList( new ReadReplicaRemovalMessage(
+                system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name ) ) ) );
     }
 
-    @BeforeClass
-    public static void setup()
+    @Override
+    ChannelMarshal<ReadReplicaRemovalMessage> marshal()
+    {
+        return new ReadReplicaRemovalMessageMarshal( (ExtendedActorSystem) system );
+    }
+
+    @BeforeAll
+    void setup()
     {
         system = ActorSystem.create();
         system.actorOf( ActorRefMarshalTest.Actor.props(), ActorRefMarshalTest.Actor.name );
     }
 
-    @AfterClass
-    public static void teardown()
+    @AfterAll
+    void teardown()
     {
         TestKit.shutdownActorSystem(system);
         system = null;

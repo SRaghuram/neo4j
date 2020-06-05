@@ -6,8 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.util.Collection;
 
@@ -17,16 +16,10 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
-@RunWith( Parameterized.class )
 public class ConnectorAddressesMarshalTest extends BaseMarshalTest<ConnectorAddresses>
 {
-    public ConnectorAddressesMarshalTest( ConnectorAddresses original )
-    {
-        super( original, new ConnectorAddresses.Marshal() );
-    }
-
-    @Parameterized.Parameters ( name = "{0}" )
-    public static Collection<ConnectorAddresses> data()
+    @Override
+    Collection<ConnectorAddresses> originals()
     {
         return asList(
                 ConnectorAddresses.fromList( emptyList() ),
@@ -37,6 +30,11 @@ public class ConnectorAddressesMarshalTest extends BaseMarshalTest<ConnectorAddr
                         new ConnectorAddresses.ConnectorUri( ConnectorAddresses.Scheme.https, new SocketAddress( "host3", 798 ) ),
                         new ConnectorAddresses.ConnectorUri( ConnectorAddresses.Scheme.http, new SocketAddress( "host2", 37 ) ) ) )
         );
+    }
 
+    @Override
+    ChannelMarshal<ConnectorAddresses> marshal()
+    {
+        return new ConnectorAddresses.Marshal();
     }
 }

@@ -6,28 +6,30 @@
 package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.helpers.Buffers;
-import io.netty.buffer.ByteBuf;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.neo4j.test.extension.Inject;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+@Buffers.Extension
 public class ByteArrayChunkedEncoderTest
 {
-    @Rule
-    public final Buffers buffers = new Buffers();
+    @Inject
+    private Buffers buffers;
 
     @Test
-    public void shouldWriteToBufferInChunks()
+    void shouldWriteToBufferInChunks()
     {
-        int chunkSize = 5;
-        byte[] data = new byte[]{1, 2, 3, 4, 5, 6};
-        byte[] readData = new byte[6];
-        ByteArrayChunkedEncoder byteArraySerializer = new ByteArrayChunkedEncoder( data, chunkSize );
+        var chunkSize = 5;
+        var data = new byte[]{1, 2, 3, 4, 5, 6};
+        var readData = new byte[6];
+        var byteArraySerializer = new ByteArrayChunkedEncoder( data, chunkSize );
 
-        ByteBuf buffer = byteArraySerializer.readChunk( buffers );
+        var buffer = byteArraySerializer.readChunk( buffers );
         buffer.readBytes( readData, 0, chunkSize );
         assertEquals( 0, buffer.readableBytes() );
 
@@ -39,9 +41,9 @@ public class ByteArrayChunkedEncoderTest
         assertNull( byteArraySerializer.readChunk( buffers ) );
     }
 
-    @Test( expected = IllegalArgumentException.class )
-    public void shouldThrowOnTooSmallChunk()
+    @Test
+    void shouldThrowOnTooSmallChunk()
     {
-        new ByteArrayChunkedEncoder( new byte[1], 0 );
+        assertThrows( IllegalArgumentException.class, () -> new ByteArrayChunkedEncoder( new byte[1], 0 ) );
     }
 }

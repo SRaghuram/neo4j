@@ -10,8 +10,7 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,18 +23,11 @@ import org.neo4j.internal.helpers.collection.Pair;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-@RunWith( Parameterized.class )
-public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
+class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
 {
-    public CoreTopologyMarshalTest( DatabaseCoreTopology original )
+    @Override
+    Collection<DatabaseCoreTopology> originals()
     {
-        super( original, new CoreTopologyMarshal() );
-    }
-
-    @Parameterized.Parameters
-    public static Collection<DatabaseCoreTopology> data()
-    {
-
         var dbId1 = randomDatabaseId();
         var dbId2 = randomDatabaseId();
         var dbId3 = randomDatabaseId();
@@ -45,6 +37,12 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopolog
                 new DatabaseCoreTopology( dbId2, RaftId.from( dbId2 ), coreServerInfos( 3 ) ),
                 new DatabaseCoreTopology( dbId3, null, coreServerInfos( 4 ) )
         );
+    }
+
+    @Override
+    ChannelMarshal<DatabaseCoreTopology> marshal()
+    {
+        return new CoreTopologyMarshal();
     }
 
     static Map<MemberId,CoreServerInfo> coreServerInfos( int count )

@@ -6,32 +6,26 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.configuration.ApplicationProtocolVersion;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith( Parameterized.class )
-public class ClientMessageEncodingTest
+class ClientMessageEncodingTest
 {
-    private final ClientMessage message;
     private final ServerMessageEncoder encoder = new ServerMessageEncoder();
     private final ClientMessageDecoder decoder = new ClientMessageDecoder();
 
     private List<Object> encodeDecode( ClientMessage message ) throws ClientHandshakeException
     {
-        ByteBuf byteBuf = Unpooled.directBuffer();
-        List<Object> output = new ArrayList<>();
+        var byteBuf = Unpooled.directBuffer();
+        var output = new ArrayList<>();
 
         encoder.encode( null, message, byteBuf );
         decoder.decode( null, byteBuf, output );
@@ -39,8 +33,7 @@ public class ClientMessageEncodingTest
         return output;
     }
 
-    @Parameterized.Parameters( name = "ResponseMessage-{0}" )
-    public static Collection<ClientMessage> data()
+    static Collection<ClientMessage> data()
     {
         return Arrays.asList(
                 new ApplicationProtocolResponse( StatusCode.FAILURE, "protocol", new ApplicationProtocolVersion( 13, 0 ) ),
@@ -49,19 +42,15 @@ public class ClientMessageEncodingTest
                 );
     }
 
-    public ClientMessageEncodingTest( ClientMessage message )
-    {
-        this.message = message;
-    }
-
-    @Test
-    public void shouldCompleteEncodingRoundTrip() throws ClientHandshakeException
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldCompleteEncodingRoundTrip( ClientMessage message ) throws ClientHandshakeException
     {
         //when
-        List<Object> output = encodeDecode( message );
+        var output = encodeDecode( message );
 
         //then
-        assertThat( output, hasSize( 1 ) );
-        assertThat( output.get( 0 ), equalTo( message ) );
+        assertThat( output ).hasSize( 1 );
+        assertThat( output.get( 0 ) ).isEqualTo( message );
     }
 }

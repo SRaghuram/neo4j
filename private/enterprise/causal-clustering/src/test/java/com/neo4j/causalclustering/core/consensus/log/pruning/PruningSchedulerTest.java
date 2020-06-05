@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.consensus.log.pruning;
 
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -18,6 +17,9 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.OnDemandJobScheduler;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -35,15 +37,15 @@ class PruningSchedulerTest
     void shouldScheduleTheCheckPointerJobOnStart()
     {
         // given
-        PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
+        var scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
 
-        Assertions.assertNull( jobScheduler.getJob() );
+        assertNull( jobScheduler.getJob() );
 
         // when
         scheduler.start();
 
         // then
-        Assertions.assertNotNull( jobScheduler.getJob() );
+        assertNotNull( jobScheduler.getJob() );
         verify( jobScheduler ).schedule( eq( Group.RAFT_LOG_PRUNING ), any( Runnable.class ),
                 eq( 20L ), eq( TimeUnit.MILLISECONDS ) );
     }
@@ -52,14 +54,14 @@ class PruningSchedulerTest
     void shouldRescheduleTheJobAfterARun() throws Throwable
     {
         // given
-        PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
+        var scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
 
-        Assertions.assertNull( jobScheduler.getJob() );
+        assertNull( jobScheduler.getJob() );
 
         scheduler.start();
 
-        Object scheduledJob = jobScheduler.getJob();
-        Assertions.assertNotNull( scheduledJob );
+        var scheduledJob = jobScheduler.getJob();
+        assertNotNull( scheduledJob );
 
         // when
         jobScheduler.runJob();
@@ -68,32 +70,32 @@ class PruningSchedulerTest
         verify( jobScheduler, times( 2 ) ).schedule( eq( Group.RAFT_LOG_PRUNING ), any( Runnable.class ),
                 eq( 20L ), eq( TimeUnit.MILLISECONDS ) );
         verify( logPruner ).prune();
-        Assertions.assertEquals( scheduledJob, jobScheduler.getJob() );
+        assertEquals( scheduledJob, jobScheduler.getJob() );
     }
 
     @Test
     void shouldNotRescheduleAJobWhenStopped()
     {
         // given
-        PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
+        var scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
 
-        Assertions.assertNull( jobScheduler.getJob() );
+        assertNull( jobScheduler.getJob() );
 
         scheduler.start();
 
-        Assertions.assertNotNull( jobScheduler.getJob() );
+        assertNotNull( jobScheduler.getJob() );
 
         // when
         scheduler.stop();
 
         // then
-        Assertions.assertNull( jobScheduler.getJob() );
+        assertNull( jobScheduler.getJob() );
     }
 
     @Test
     void stoppedJobCantBeInvoked() throws Throwable
     {
-        PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 10L, NullLogProvider.getInstance() );
+        var scheduler = new PruningScheduler( logPruner, jobScheduler, 10L, NullLogProvider.getInstance() );
         scheduler.start();
         jobScheduler.runJob();
 
@@ -110,13 +112,13 @@ class PruningSchedulerTest
     }
 
     @Test
-    @Timeout( 5_000 )
+    @Timeout( 5 )
     void shouldWaitOnStopUntilTheRunningCheckpointIsDone() throws Throwable
     {
         // given
-        final AtomicReference<Throwable> ex = new AtomicReference<>();
-        final DoubleLatch checkPointerLatch = new DoubleLatch( 1 );
-        RaftLogPruner logPruner = new RaftLogPruner( null, null )
+        final var ex = new AtomicReference<Throwable>();
+        final var checkPointerLatch = new DoubleLatch( 1 );
+        var logPruner = new RaftLogPruner( null, null )
         {
             @Override
             public void prune()
@@ -126,17 +128,17 @@ class PruningSchedulerTest
             }
         };
 
-        final PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
+        final var scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
 
         // when
         scheduler.start();
 
-        Thread runCheckPointer = new Thread( jobScheduler::runJob );
+        var runCheckPointer = new Thread( jobScheduler::runJob );
         runCheckPointer.start();
 
         checkPointerLatch.waitForAllToStart();
 
-        Thread stopper = new Thread( () -> {
+        var stopper = new Thread( () -> {
             try
             {
                 scheduler.stop();
@@ -154,6 +156,6 @@ class PruningSchedulerTest
 
         stopper.join();
 
-        Assertions.assertNull( ex.get() );
+        assertNull( ex.get() );
     }
 }

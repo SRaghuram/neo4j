@@ -5,60 +5,59 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
 import org.neo4j.internal.helpers.collection.Iterators;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.storageengine.api.StoreFileMetadata;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.io.fs.FileUtils.relativePath;
 
-public class PrepareStoreCopyFilesTest
+@TestDirectoryExtension
+class PrepareStoreCopyFilesTest
 {
-    private final FileSystemAbstraction fileSystemAbstraction = new DefaultFileSystemAbstraction();
+    @Inject
+    public TestDirectory testDirectory;
 
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemAbstraction );
     private PrepareStoreCopyFiles prepareStoreCopyFiles;
     private DatabaseLayout databaseLayout;
     private DatabaseFileListing.StoreFileListingBuilder fileListingBuilder;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
-        Database dataSource = mock( Database.class );
+        var dataSource = mock( Database.class );
         fileListingBuilder = mock( DatabaseFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
         databaseLayout = DatabaseLayout.ofFlat( testDirectory.directory( "neo4j", "data", "databases" ) );
         when( dataSource.getDatabaseLayout() ).thenReturn( databaseLayout );
-        DatabaseFileListing storeFileListing = mock( DatabaseFileListing.class );
+        var storeFileListing = mock( DatabaseFileListing.class );
         when( storeFileListing.builder() ).thenReturn( fileListingBuilder );
         when( dataSource.getDatabaseFileListing() ).thenReturn( storeFileListing );
-        prepareStoreCopyFiles = new PrepareStoreCopyFiles( dataSource, fileSystemAbstraction );
+        prepareStoreCopyFiles = new PrepareStoreCopyFiles( dataSource, testDirectory.getFileSystem() );
     }
 
     @Test
-    public void shouldHanldeEmptyListOfFilesForeEachType() throws Exception
+    void shouldHanldeEmptyListOfFilesForeEachType() throws Exception
     {
         setExpectedFiles( new StoreFileMetadata[0] );
-        File[] files = prepareStoreCopyFiles.listReplayableFiles();
-        StoreResource[] atomicFilesSnapshot = prepareStoreCopyFiles.getAtomicFilesSnapshot();
+        var files = prepareStoreCopyFiles.listReplayableFiles();
+        var atomicFilesSnapshot = prepareStoreCopyFiles.getAtomicFilesSnapshot();
         assertEquals( 0, files.length );
         assertEquals( 0, atomicFilesSnapshot.length );
     }
@@ -69,24 +68,24 @@ public class PrepareStoreCopyFilesTest
     }
 
     @Test
-    public void shouldReturnExpectedListOfFileNamesForEachType() throws Exception
+    void shouldReturnExpectedListOfFileNamesForEachType() throws Exception
     {
         // given
-        StoreFileMetadata[] expectedFiles = new StoreFileMetadata[]{new StoreFileMetadata( databaseLayout.file( "a" ), 1 ),
+        var expectedFiles = new StoreFileMetadata[]{new StoreFileMetadata( databaseLayout.file( "a" ), 1 ),
                 new StoreFileMetadata( databaseLayout.file( "b" ), 2 )};
         setExpectedFiles( expectedFiles );
 
         // when
-        File[] files = prepareStoreCopyFiles.listReplayableFiles();
-        StoreResource[] atomicFilesSnapshot = prepareStoreCopyFiles.getAtomicFilesSnapshot();
+        var files = prepareStoreCopyFiles.listReplayableFiles();
+        var atomicFilesSnapshot = prepareStoreCopyFiles.getAtomicFilesSnapshot();
 
         // then
-        File[] expectedFilesConverted = Arrays.stream( expectedFiles ).map( StoreFileMetadata::file ).toArray( File[]::new );
-        StoreResource[] expectedAtomicFilesConverted = Arrays.stream( expectedFiles ).map(
-                f -> new StoreResource( f.file(), getRelativePath( f ), f.recordSize(), fileSystemAbstraction ) ).toArray( StoreResource[]::new );
+        var expectedFilesConverted = Arrays.stream( expectedFiles ).map( StoreFileMetadata::file ).toArray( File[]::new );
+        var expectedAtomicFilesConverted = Arrays.stream( expectedFiles ).map(
+                f -> new StoreResource( f.file(), getRelativePath( f ), f.recordSize(), testDirectory.getFileSystem() ) ).toArray( StoreResource[]::new );
         assertArrayEquals( expectedFilesConverted, files );
         assertEquals( expectedAtomicFilesConverted.length, atomicFilesSnapshot.length );
-        for ( int i = 0; i < expectedAtomicFilesConverted.length; i++ )
+        for ( var i = 0; i < expectedAtomicFilesConverted.length; i++ )
         {
             StoreResource expected = expectedAtomicFilesConverted[i];
             StoreResource storeResource = atomicFilesSnapshot[i];

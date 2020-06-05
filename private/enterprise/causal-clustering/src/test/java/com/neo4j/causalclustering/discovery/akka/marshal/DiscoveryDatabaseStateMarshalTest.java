@@ -6,9 +6,8 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.dbms.EnterpriseOperatorState;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -16,19 +15,19 @@ import java.util.stream.Collectors;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-@RunWith( Parameterized.class )
 public class DiscoveryDatabaseStateMarshalTest extends BaseMarshalTest<DiscoveryDatabaseState>
 {
-    public DiscoveryDatabaseStateMarshalTest( DiscoveryDatabaseState original )
-    {
-        super( original, DiscoveryDatabaseStateMarshal.INSTANCE );
-    }
-
-    @Parameterized.Parameters
-    public static Collection<DiscoveryDatabaseState> parameters()
+    @Override
+    Collection<DiscoveryDatabaseState> originals()
     {
         return Arrays.stream( EnterpriseOperatorState.values() )
                 .map( state -> new DiscoveryDatabaseState( randomDatabaseId(), state ) )
                 .collect( Collectors.toList() );
+    }
+
+    @Override
+    ChannelMarshal<DiscoveryDatabaseState> marshal()
+    {
+        return DiscoveryDatabaseStateMarshal.INSTANCE;
     }
 }

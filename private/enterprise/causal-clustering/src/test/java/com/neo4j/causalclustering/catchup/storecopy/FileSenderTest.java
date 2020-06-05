@@ -6,60 +6,63 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.helpers.Buffers;
+import com.neo4j.causalclustering.helpers.BuffersExtension;
 import io.netty.buffer.ByteBuf;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Random;
 
-import org.neo4j.adversaries.Adversary;
 import org.neo4j.adversaries.RandomAdversary;
 import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class FileSenderTest
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectorySupportExtension.class, BuffersExtension.class} )
+class FileSenderTest
 {
     private final Random random = new Random();
-    @Rule
-    public final Buffers allocator = new Buffers();
-    @Rule
-    public EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
-    private final FileSystemAbstraction fs = fsRule.get();
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory( fsRule.get() );
+
+    @Inject
+    private Buffers allocator;
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
+
     private PageCache pageCache = mock( PageCache.class );
     private int maxChunkSize = 32768;
 
-    @Before
-    public void setup() throws IOException
+    @BeforeEach
+    void setup() throws IOException
     {
         when( pageCache.getExistingMapping( any() ) ).thenReturn( Optional.empty() );
     }
 
     @Test
-    public void sendEmptyFile() throws Exception
+    void sendEmptyFile() throws Exception
     {
         // given
-        File emptyFile = testDirectory.file( "emptyFile" );
+        var emptyFile = testDirectory.file( "emptyFile" );
         fs.write( emptyFile ).close();
-        FileSender fileSender = new FileSender( new StoreResource( emptyFile, null, 16, fs ), maxChunkSize );
+        var fileSender = new FileSender( new StoreResource( emptyFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
@@ -69,18 +72,18 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendSmallFile() throws Exception
+    void sendSmallFile() throws Exception
     {
         // given
-        ByteBuf buffer = getRandomBuffer( 10 );
+        var buffer = getRandomBuffer( 10 );
 
-        File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.file( "smallFile" );
+        try ( var channel = fs.write( smallFile ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }
 
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
+        var fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
@@ -90,19 +93,19 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendLargeFile() throws Exception
+    void sendLargeFile() throws Exception
     {
         // given
-        int totalSize = maxChunkSize + (maxChunkSize / 2);
-        ByteBuf buffer = getRandomBuffer( totalSize );
+        var totalSize = maxChunkSize + (maxChunkSize / 2);
+        var buffer = getRandomBuffer( totalSize );
 
-        File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.file( "smallFile" );
+        try ( var channel = fs.write( smallFile ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }
 
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
+        var fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
@@ -113,18 +116,18 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendLargeFileWithSizeMultipleOfTheChunkSize() throws Exception
+    void sendLargeFileWithSizeMultipleOfTheChunkSize() throws Exception
     {
         // given
-        ByteBuf buffer = getRandomBuffer( maxChunkSize * 3 );
+        var buffer = getRandomBuffer( maxChunkSize * 3 );
 
-        File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.file( "smallFile" );
+        try ( var channel = fs.write( smallFile ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }
 
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
+        var fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
@@ -136,15 +139,15 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendEmptyFileWhichGrowsBeforeSendCommences() throws Exception
+    void sendEmptyFileWhichGrowsBeforeSendCommences() throws Exception
     {
         // given
-        File file = testDirectory.file( "file" );
-        StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
+        var file = testDirectory.file( "file" );
+        var channel = fs.write( file );
+        var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
-        ByteBuf buffer = writeRandomBytes( channel, 1024 );
+        var buffer = writeRandomBytes( channel, 1024 );
 
         // then
         assertFalse( fileSender.isEndOfInput() );
@@ -154,16 +157,16 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendEmptyFileWhichGrowsWithPartialChunkSizes() throws Exception
+    void sendEmptyFileWhichGrowsWithPartialChunkSizes() throws Exception
     {
         // given
-        File file = testDirectory.file( "file" );
-        StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
+        var file = testDirectory.file( "file" );
+        var channel = fs.write( file );
+        var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
-        ByteBuf chunkA = writeRandomBytes( channel, maxChunkSize );
-        ByteBuf chunkB = writeRandomBytes( channel, maxChunkSize / 2 );
+        var chunkA = writeRandomBytes( channel, maxChunkSize );
+        var chunkB = writeRandomBytes( channel, maxChunkSize / 2 );
 
         // then
         assertNextChunkEquals( fileSender, chunkA, 0, maxChunkSize, false );
@@ -179,15 +182,15 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendFileWhichGrowsAfterLastChunkWasSent() throws Exception
+    void sendFileWhichGrowsAfterLastChunkWasSent() throws Exception
     {
         // given
-        File file = testDirectory.file( "file" );
-        StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
+        var file = testDirectory.file( "file" );
+        var channel = fs.write( file );
+        var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
-        ByteBuf chunkA = writeRandomBytes( channel, maxChunkSize );
+        var chunkA = writeRandomBytes( channel, maxChunkSize );
 
         // then
         assertNextChunkEquals( fileSender, chunkA, 0, maxChunkSize, true );
@@ -202,23 +205,23 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendLargerFileWhichGrows() throws Exception
+    void sendLargerFileWhichGrows() throws Exception
     {
         // given
-        File file = testDirectory.file( "file" );
-        StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
+        var file = testDirectory.file( "file" );
+        var channel = fs.write( file );
+        var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
-        ByteBuf chunkA = writeRandomBytes( channel, maxChunkSize );
-        ByteBuf chunkB = writeRandomBytes( channel, maxChunkSize );
+        var chunkA = writeRandomBytes( channel, maxChunkSize );
+        var chunkB = writeRandomBytes( channel, maxChunkSize );
 
         // then
         assertNextChunkEquals( fileSender, chunkA, 0, maxChunkSize, false );
         assertFalse( fileSender.isEndOfInput() );
 
         // when
-        ByteBuf chunkC = writeRandomBytes( channel, maxChunkSize );
+        var chunkC = writeRandomBytes( channel, maxChunkSize );
 
         // then
         assertNextChunkEquals( fileSender, chunkB, 0, maxChunkSize, false );
@@ -233,20 +236,20 @@ public class FileSenderTest
     }
 
     @Test
-    public void sendLargeFileWithUnreliableReadBufferSize() throws Exception
+    void sendLargeFileWithUnreliableReadBufferSize() throws Exception
     {
         // given
-        ByteBuf buffer = getRandomBuffer( maxChunkSize * 3 );
+        var buffer = getRandomBuffer( maxChunkSize * 3 );
 
-        File smallFile = testDirectory.file( "smallFile" );
-        try ( StoreChannel channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.file( "smallFile" );
+        try ( var channel = fs.write( smallFile ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }
 
-        Adversary adversary = new RandomAdversary( 0.9, 0.0, 0.0 );
-        AdversarialFileSystemAbstraction afs = new AdversarialFileSystemAbstraction( adversary, fs );
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, afs ), maxChunkSize );
+        var adversary = new RandomAdversary( 0.9, 0.0, 0.0 );
+        var afs = new AdversarialFileSystemAbstraction( adversary, fs );
+        var fileSender = new FileSender( new StoreResource( smallFile, null, 16, afs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
@@ -264,7 +267,7 @@ public class FileSenderTest
 
     private ByteBuf getRandomBuffer( int numberOfBytes )
     {
-        byte[] bytes = new byte[numberOfBytes];
+        var bytes = new byte[numberOfBytes];
         random.nextBytes( bytes );
         ByteBuf buffer = allocator.buffer( numberOfBytes );
         return buffer.writeBytes( bytes );
@@ -272,7 +275,7 @@ public class FileSenderTest
 
     private ByteBuf writeRandomBytes( StoreChannel channel, int numberOfBytes ) throws IOException
     {
-        ByteBuf buffer = getRandomBuffer( numberOfBytes );
+        var buffer = getRandomBuffer( numberOfBytes );
         channel.writeAll( buffer.nioBuffer() );
         return buffer;
     }

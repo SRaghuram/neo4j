@@ -12,9 +12,11 @@ import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,31 +25,39 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static java.util.Collections.singletonList;
 
 public class ReadReplicaRefreshMessageMarshalTest extends BaseMarshalTest<ReadReplicaRefreshMessage>
 {
     private static ActorSystem system;
 
-    public ReadReplicaRefreshMessageMarshalTest()
+    @Override
+    Collection<ReadReplicaRefreshMessage> originals()
     {
-        super( new ReadReplicaRefreshMessage(
-                        TestTopology.addressesForReadReplica( 432 ),
-                        new MemberId( UUID.randomUUID() ),
-                        system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name + "1" ) ),
-                        system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name + "2" ) ),
-                        defaultDatabaseStates() ), new ReadReplicaRefreshMessageMarshal( (ExtendedActorSystem)system ) );
+        return singletonList( new ReadReplicaRefreshMessage(
+                TestTopology.addressesForReadReplica( 432 ),
+                new MemberId( UUID.randomUUID() ),
+                system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name + "1" ) ),
+                system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name + "2" ) ),
+                defaultDatabaseStates() ) );
     }
 
-    @BeforeClass
-    public static void setup()
+    @Override
+    ChannelMarshal<ReadReplicaRefreshMessage> marshal()
+    {
+        return new ReadReplicaRefreshMessageMarshal( (ExtendedActorSystem) system );
+    }
+
+    @BeforeAll
+    void setup()
     {
         system = ActorSystem.create();
         system.actorOf( ActorRefMarshalTest.Actor.props(), ActorRefMarshalTest.Actor.name + "1" );
         system.actorOf( ActorRefMarshalTest.Actor.props(), ActorRefMarshalTest.Actor.name + "2" );
     }
 
-    @AfterClass
-    public static void teardown()
+    @AfterAll
+    void teardown()
     {
         TestKit.shutdownActorSystem(system);
         system = null;

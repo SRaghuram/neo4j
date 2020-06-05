@@ -8,13 +8,24 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
+import java.util.Collection;
 import java.util.UUID;
+
+import static java.util.Collections.singletonList;
 
 public class ReplicatedLeaderInfoMarshalTest extends BaseMarshalTest<ReplicatedLeaderInfo>
 {
-    public ReplicatedLeaderInfoMarshalTest()
+    @Override
+    Collection<ReplicatedLeaderInfo> originals()
     {
-        super( new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 12L ) ), new ReplicatedLeaderInfoMarshal() );
+        return singletonList(new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 12L ) ) );
+    }
+
+    @Override
+    ChannelMarshal<ReplicatedLeaderInfo> marshal()
+    {
+        return new ReplicatedLeaderInfoMarshal();
     }
 }

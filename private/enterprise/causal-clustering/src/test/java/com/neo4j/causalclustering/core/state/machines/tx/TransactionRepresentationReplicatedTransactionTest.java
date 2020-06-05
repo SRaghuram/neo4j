@@ -8,10 +8,7 @@ package com.neo4j.causalclustering.core.state.machines.tx;
 import com.neo4j.causalclustering.helpers.Buffers;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import io.netty.buffer.ByteBuf;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,31 +19,35 @@ import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
+import org.neo4j.test.extension.Inject;
 
-public class TransactionRepresentationReplicatedTransactionTest
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
+@Buffers.Extension
+class TransactionRepresentationReplicatedTransactionTest
 {
-    @Rule
-    public final Buffers buffers = new Buffers();
+    @Inject
+    private Buffers buffers;
 
     @Test
-    public void shouldMarshalToSameByteIfByteBufBackedOrNot() throws IOException
+    void shouldMarshalToSameByteIfByteBufBackedOrNot() throws IOException
     {
-        PhysicalTransactionRepresentation expectedTx =
+        var expectedTx =
                 new PhysicalTransactionRepresentation( Collections.singleton( new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 2 ) ) ) );
 
         expectedTx.setHeader( new byte[0], 3, 4, 5, 6 );
         var replicatedTransaction = ReplicatedTransaction.from( expectedTx, new TestDatabaseIdRepository().defaultDatabase() );
 
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        ByteBuf buffer = buffers.buffer();
-        OutputStreamWritableChannel outputStreamWritableChannel = new OutputStreamWritableChannel( stream );
-        NetworkWritableChannel networkWritableChannel = new NetworkWritableChannel( buffer );
+        var stream = new ByteArrayOutputStream();
+        var buffer = buffers.buffer();
+        var outputStreamWritableChannel = new OutputStreamWritableChannel( stream );
+        var networkWritableChannel = new NetworkWritableChannel( buffer );
 
         ReplicatedTransactionMarshalV2.marshal( outputStreamWritableChannel, replicatedTransaction );
         ReplicatedTransactionMarshalV2.marshal( networkWritableChannel, replicatedTransaction );
 
-        byte[] bufferArray = Arrays.copyOf( buffer.array(), buffer.writerIndex() );
+        var bufferArray = Arrays.copyOf( buffer.array(), buffer.writerIndex() );
 
-        Assertions.assertArrayEquals( bufferArray, stream.toByteArray() );
+        assertArrayEquals( bufferArray, stream.toByteArray() );
     }
 }

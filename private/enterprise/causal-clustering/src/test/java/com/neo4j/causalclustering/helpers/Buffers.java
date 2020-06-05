@@ -9,8 +9,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,8 +22,15 @@ import java.util.List;
  * For tests that uses {@link ByteBuf}. All buffers that are allocated using {@link ByteBufAllocator} will be
  * released after test has executed.
  */
-public class Buffers extends ExternalResource implements ByteBufAllocator
+public class Buffers implements ByteBufAllocator
 {
+    @Target( {ElementType.TYPE} )
+    @Retention( RetentionPolicy.RUNTIME )
+    @ExtendWith( {BuffersExtension.class} )
+    public @interface Extension
+    {
+    }
+
     private final ByteBufAllocator allocator;
 
     public Buffers( ByteBufAllocator allocator )
@@ -29,7 +40,7 @@ public class Buffers extends ExternalResource implements ByteBufAllocator
 
     private final List<ByteBuf> buffersList = new LinkedList<>();
 
-    public Buffers()
+    Buffers()
     {
         this( new UnpooledByteBufAllocator( false ) );
     }
@@ -160,14 +171,12 @@ public class Buffers extends ExternalResource implements ByteBufAllocator
         return allocator.calculateNewCapacity( minNewCapacity, maxCapacity );
     }
 
-    @Override
-    protected void before()
+    void before()
     {
         buffersList.removeIf( buf -> buf.refCnt() == 0 );
     }
 
-    @Override
-    protected void after()
+    void after()
     {
         for ( ByteBuf byteBuf : buffersList )
         {

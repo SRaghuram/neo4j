@@ -6,50 +6,50 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.helpers.Buffers;
-import io.netty.buffer.ByteBuf;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import com.neo4j.causalclustering.helpers.BuffersExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class StreamToDiskTest
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectorySupportExtension.class, BuffersExtension.class } )
+class StreamToDiskTest
 {
-    @Rule
-    public final Buffers buffers = new Buffers();
+    @Inject
+    private Buffers buffers;
 
     private static final byte[] DATA = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
-    private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
-    private final TestDirectory directory = TestDirectory.testDirectory( fs );
-    private final PageCacheRule pageCacheRule = new PageCacheRule();
-
-    @Rule
-    public final RuleChain rules = RuleChain.outerRule( fs ).around( directory ).around( pageCacheRule );
+    @Inject
+    private EphemeralFileSystemAbstraction fs;
+    @Inject
+    private TestDirectory directory;
 
     @Test
     public void shouldLetPageCacheHandleRecordStoresAndNativeLabelScanStoreFiles() throws Exception
     {
-        DatabaseLayout layout = DatabaseLayout.ofFlat( directory.file( DEFAULT_DATABASE_NAME ) );
+        var layout = DatabaseLayout.ofFlat( directory.file( DEFAULT_DATABASE_NAME ) );
         // GIVEN
-        Monitors monitors = new Monitors();
-        StreamToDiskProvider writerProvider = new StreamToDiskProvider( layout.databaseDirectory(), fs, monitors );
+        var monitors = new Monitors();
+        var writerProvider = new StreamToDiskProvider( layout.databaseDirectory(), fs, monitors );
 
         // WHEN
-        for ( StoreType type : StoreType.values() )
+        for ( var type : StoreType.values() )
         {
-            File file = layout.file( type.getDatabaseFile() );
+            var file = layout.file( type.getDatabaseFile() );
             writeAndVerify( writerProvider, file );
         }
         writeAndVerify( writerProvider, layout.labelScanStore() );
@@ -57,13 +57,13 @@ public class StreamToDiskTest
 
     private void writeAndVerify( StreamToDiskProvider writerProvider, File file ) throws Exception
     {
-        try ( StoreFileStream acquire = writerProvider.acquire( file.getName(), 16 ) )
+        try ( var acquire = writerProvider.acquire( file.getName(), 16 ) )
         {
-            ByteBuf buffer = buffers.buffer();
+            var buffer = buffers.buffer();
             buffer.writeBytes( DATA );
             acquire.write( buffer );
         }
-        assertTrue( "Streamed file created.", fs.fileExists( file ) );
+        assertTrue( fs.fileExists( file ), "Streamed file created." );
         assertEquals( DATA.length, fs.getFileSize( file ) );
     }
 }

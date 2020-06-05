@@ -6,9 +6,10 @@
 package com.neo4j.causalclustering.core.state.machines.token;
 
 import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -18,7 +19,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
-import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.recordstorage.BatchContext;
 import org.neo4j.internal.recordstorage.CacheAccessBackDoor;
 import org.neo4j.internal.recordstorage.CacheInvalidationTransactionApplier;
@@ -26,6 +26,7 @@ import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.HighIdTransactionApplier;
 import org.neo4j.internal.recordstorage.NeoStoreTransactionApplier;
 import org.neo4j.internal.schema.SchemaRule;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -48,10 +49,11 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
-import org.neo4j.test.rule.CleanupRule;
-import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.pagecache.PageCacheSupportExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 import org.neo4j.token.TokenRegistry;
 import org.neo4j.token.api.NamedToken;
 
@@ -59,8 +61,8 @@ import static com.neo4j.causalclustering.core.state.machines.token.StorageComman
 import static com.neo4j.causalclustering.core.state.machines.token.TokenType.LABEL;
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader;
 import static java.util.Collections.singletonList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -72,31 +74,43 @@ import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.CommandVersion.AFTER;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
-public class ReplicatedTokenStateMachineTest
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectorySupportExtension.class, PageCacheSupportExtension.class} )
+class ReplicatedTokenStateMachineTest
 {
     private final int EXPECTED_TOKEN_ID = 1;
     private final int UNEXPECTED_TOKEN_ID = 1024;
     private final DatabaseId databaseId = TestDatabaseIdRepository.randomNamedDatabaseId().databaseId();
-
-    private final TestDirectory testDirectory = TestDirectory.testDirectory();
-    private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
-    private final PageCacheRule pageCacheRule = new PageCacheRule();
-    private final CleanupRule cleanupRule = new CleanupRule();
 
-    @Rule
-    public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( pageCacheRule ).around( cleanupRule );
+    private NeoStores stores;
+
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private EphemeralFileSystemAbstraction fs;
+    @Inject
+    private PageCache pageCache;
+
+    @AfterEach
+    void closeStores()
+    {
+        if ( stores != null )
+        {
+            stores.close();
+            stores = null;
+        }
+    }
 
     @Test
-    public void shouldCreateTokenId() throws Exception
+    void shouldCreateTokenId() throws Exception
     {
         // given
-        TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
+        var registry = new TokenRegistry( "Label" );
+        var stateMachine = newTokenStateMachine( registry );
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
-        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
+        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
@@ -104,15 +118,15 @@ public class ReplicatedTokenStateMachineTest
     }
 
     @Test
-    public void shouldCreateInternalTokenId() throws Exception
+    void shouldCreateInternalTokenId() throws Exception
     {
         // given
-        TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
+        var registry = new TokenRegistry( "Label" );
+        var stateMachine = newTokenStateMachine( registry );
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
-        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) );
+        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
@@ -121,17 +135,17 @@ public class ReplicatedTokenStateMachineTest
     }
 
     @Test
-    public void shouldAllocateTokenIdToFirstReplicateRequest() throws Exception
+    void shouldAllocateTokenIdToFirstReplicateRequest() throws Exception
     {
         // given
-        TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
+        var registry = new TokenRegistry( "Label" );
+        var stateMachine = newTokenStateMachine( registry );
 
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
-        ReplicatedTokenRequest winningRequest =
+        var winningRequest =
                 new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) ) );
-        ReplicatedTokenRequest losingRequest =
+        var losingRequest =
                 new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, false ) ) );
 
         // when
@@ -143,17 +157,17 @@ public class ReplicatedTokenStateMachineTest
     }
 
     @Test
-    public void shouldAllocateInternalTokenIdToFirstReplicateRequest() throws Exception
+    void shouldAllocateInternalTokenIdToFirstReplicateRequest() throws Exception
     {
         // given
-        TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
+        var registry = new TokenRegistry( "Label" );
+        var stateMachine = newTokenStateMachine( registry );
 
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
-        ReplicatedTokenRequest winningRequest =
+        var winningRequest =
                 new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) ) );
-        ReplicatedTokenRequest losingRequest =
+        var losingRequest =
                 new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ) ) );
 
         // when
@@ -166,29 +180,29 @@ public class ReplicatedTokenStateMachineTest
     }
 
     @Test
-    public void shouldStoreRaftLogIndexInTransactionHeader()
+    void shouldStoreRaftLogIndexInTransactionHeader()
     {
         // given
-        int logIndex = 1;
+        var logIndex = 1;
 
-        StubTransactionCommitProcess commitProcess = new StubTransactionCommitProcess( null, null );
-        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( new TokenRegistry( "Token" ) );
+        var commitProcess = new StubTransactionCommitProcess( null, null );
+        var stateMachine = newTokenStateMachine( new TokenRegistry( "Token" ) );
         stateMachine.installCommitProcess( commitProcess, -1 );
 
         // when
-        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
+        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), logIndex, r -> {} );
 
         // then
-        List<TransactionRepresentation> transactions = commitProcess.transactionsToApply;
+        var transactions = commitProcess.transactionsToApply;
         assertEquals( 1, transactions.size() );
         assertEquals( logIndex, decodeLogIndexFromTxHeader( transactions.get( 0 ).additionalHeader() ) );
     }
 
     private static List<StorageCommand> tokenCommands( int expectedTokenId, boolean internal )
     {
-        LabelTokenRecord record = new LabelTokenRecord( expectedTokenId ).initialize( true, 7 );
-        DynamicRecord dynamicRecord = new DynamicRecord( 7 ).initialize( true, true, -1, PropertyType.STRING.intValue() );
+        var record = new LabelTokenRecord( expectedTokenId ).initialize( true, 7 );
+        var dynamicRecord = new DynamicRecord( 7 ).initialize( true, true, -1, PropertyType.STRING.intValue() );
         dynamicRecord.setData( "Person".getBytes( StandardCharsets.UTF_8 )  );
         record.addNameRecord( dynamicRecord );
         record.setInternal( internal );
@@ -199,13 +213,13 @@ public class ReplicatedTokenStateMachineTest
 
     private TransactionCommitProcess labelRegistryUpdatingCommitProcess( TokenRegistry registry ) throws Exception
     {
-        DatabaseLayout layout = DatabaseLayout.ofFlat( testDirectory.homeDir( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
-        Config config = Config.defaults();
-        PageCache pageCache = pageCacheRule.getPageCache( fs );
-        IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
-        StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL );
-        NeoStores stores = cleanupRule.add( storeFactory.openAllNeoStores( true ) );
-        TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
+        var layout = DatabaseLayout.ofFlat( testDirectory.homeDir( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
+        var config = Config.defaults();
+        var idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
+        var storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL );
+        assertNull( stores );
+        stores = storeFactory.openAllNeoStores( true );
+        var commitProcess = mock( TransactionCommitProcess.class );
         when( commitProcess.commit( any( TransactionToApply.class ), any( CommitEvent.class ), eq( EXTERNAL ) ) ).then( inv ->
         {
             TransactionToApply tta = inv.getArgument( 0 );

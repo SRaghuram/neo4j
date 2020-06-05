@@ -7,19 +7,18 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import io.netty.channel.ChannelHandlerContext;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.InOrder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.neo4j.test.rule.PageCacheRule;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
@@ -27,43 +26,42 @@ import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResp
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class StoreFileStreamingProtocolTest
+@ExtendWith( EphemeralFileSystemExtension.class )
+class StoreFileStreamingProtocolTest
 {
-    @Rule
-    public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    @Inject
+    private EphemeralFileSystemAbstraction fs;
 
-    @Rule
-    public PageCacheRule pageCacheRule = new PageCacheRule();
     private int maxChunkSize = 32768;
 
     @Test
-    public void shouldStreamResources() throws Exception
+    void shouldStreamResources() throws Exception
     {
         // given
-        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol( maxChunkSize );
-        ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
+        var protocol = new StoreFileStreamingProtocol( maxChunkSize );
+        var ctx = mock( ChannelHandlerContext.class );
 
         fs.mkdir( new File( "dirA" ) );
         fs.mkdir( new File( "dirB" ) );
 
         String[] files = new String[]{"dirA/one", "dirA/two", "dirB/one", "dirB/two", "one", "two", "three"};
 
-        List<StoreResource> resourceList = new ArrayList<>();
-        for ( String file : files )
+        var resourceList = new ArrayList<StoreResource>();
+        for ( var file : files )
         {
             resourceList.add( createResource( new File( file ), ThreadLocalRandom.current().nextInt( 1, 4096 ) ) );
         }
 
         // when
-        for ( StoreResource storeResource : resourceList )
+        for ( var storeResource : resourceList )
         {
             protocol.stream( ctx, storeResource );
         }
 
         // then
-        InOrder inOrder = Mockito.inOrder( ctx );
+        var inOrder = Mockito.inOrder( ctx );
 
-        for ( StoreResource resource : resourceList )
+        for ( var resource : resourceList )
         {
             inOrder.verify( ctx ).write( ResponseMessageType.FILE );
             inOrder.verify( ctx ).write( new FileHeader( resource.path(), resource.recordSize() ) );
@@ -73,34 +71,34 @@ public class StoreFileStreamingProtocolTest
     }
 
     @Test
-    public void shouldBeAbleToEndWithFailure()
+    void shouldBeAbleToEndWithFailure()
     {
         // given
-        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol( maxChunkSize );
-        ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
+        var protocol = new StoreFileStreamingProtocol( maxChunkSize );
+        var ctx = mock( ChannelHandlerContext.class );
 
         // when
         protocol.end( ctx, E_STORE_ID_MISMATCH, -1 );
 
         // then
-        InOrder inOrder = Mockito.inOrder( ctx );
+        var inOrder = Mockito.inOrder( ctx );
         inOrder.verify( ctx ).write( ResponseMessageType.STORE_COPY_FINISHED );
         inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( E_STORE_ID_MISMATCH, LAST_CHECKPOINTED_TX_UNAVAILABLE ) );
         inOrder.verifyNoMoreInteractions();
     }
 
     @Test
-    public void shouldBeAbleToEndWithSuccess()
+    void shouldBeAbleToEndWithSuccess()
     {
         // given
-        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol( maxChunkSize );
-        ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
+        var protocol = new StoreFileStreamingProtocol( maxChunkSize );
+        var ctx = mock( ChannelHandlerContext.class );
 
         // when
         protocol.end( ctx, StoreCopyFinishedResponse.Status.SUCCESS, -1 );
 
         // then
-        InOrder inOrder = Mockito.inOrder( ctx );
+        var inOrder = Mockito.inOrder( ctx );
         inOrder.verify( ctx ).write( ResponseMessageType.STORE_COPY_FINISHED );
         inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( SUCCESS, LAST_CHECKPOINTED_TX_UNAVAILABLE ) );
         inOrder.verifyNoMoreInteractions();

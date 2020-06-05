@@ -8,14 +8,24 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
+import java.util.Collection;
 import java.util.UUID;
 
-public class CoreServerInfoForMemberIdMarshalTest extends BaseMarshalTest<CoreServerInfoForMemberId>
+import static java.util.Collections.singletonList;
+
+class CoreServerInfoForMemberIdMarshalTest extends BaseMarshalTest<CoreServerInfoForMemberId>
 {
-    public CoreServerInfoForMemberIdMarshalTest()
+    @Override
+    Collection<CoreServerInfoForMemberId> originals()
     {
-        super( new CoreServerInfoForMemberId( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ),
-                new CoreServerInfoForMemberIdMarshal() );
+        return singletonList( new CoreServerInfoForMemberId( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ) );
+    }
+
+    @Override
+    ChannelMarshal<CoreServerInfoForMemberId> marshal()
+    {
+        return new CoreServerInfoForMemberIdMarshal();
     }
 }

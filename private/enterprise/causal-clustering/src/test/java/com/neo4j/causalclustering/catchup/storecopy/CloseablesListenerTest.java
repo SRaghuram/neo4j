@@ -5,35 +5,30 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class CloseablesListenerTest
+class CloseablesListenerTest
 {
-    @Rule
-    public final ExpectedException expectedException = ExpectedException.none();
-
     @Test
-    public void shouldCloseAllReourcesBeforeException() throws Exception
+    void shouldCloseAllResourcesBeforeException() throws Exception
     {
         // given
-        CloseablesListener closeablesListener = new CloseablesListener();
-        RuntimeException exception = new RuntimeException( "fail" );
-        CloseTrackingCloseable kindCloseable1 = new CloseTrackingCloseable();
-        CloseTrackingCloseable unkindCloseable = new CloseTrackingCloseable( exception );
-        CloseTrackingCloseable kindCloseable2 = new CloseTrackingCloseable();
+        var closeablesListener = new CloseablesListener();
+        var exception = new RuntimeException( "fail" );
+        var kindCloseable1 = new CloseTrackingCloseable();
+        var unkindCloseable = new CloseTrackingCloseable( exception );
+        var kindCloseable2 = new CloseTrackingCloseable();
         closeablesListener.add( kindCloseable1 );
         closeablesListener.add( unkindCloseable );
         closeablesListener.add( kindCloseable2 );
 
-        //then we expect an exception
-        expectedException.expect( exception.getClass() );
-
-        // when
-        closeablesListener.close();
+        // when / then we expect an exception
+        var thrownException = assertThrows( exception.getClass(), closeablesListener::close );
+        assertEquals( exception, thrownException.getCause() );
 
         //then we expect all have closed
         assertTrue( kindCloseable1.wasClosed );
@@ -41,7 +36,7 @@ public class CloseablesListenerTest
         assertTrue( kindCloseable2.wasClosed );
     }
 
-    class CloseTrackingCloseable implements AutoCloseable
+    static class CloseTrackingCloseable implements AutoCloseable
     {
         private final Exception throwOnClose;
 

@@ -7,8 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -17,19 +16,19 @@ import java.util.stream.Stream;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-@RunWith( Parameterized.class )
 public class DatabaseToMemberMarshalTest extends BaseMarshalTest<DatabaseToMember>
 {
-    public DatabaseToMemberMarshalTest( DatabaseToMember original )
-    {
-        super( original, DatabaseToMemberMarshal.INSTANCE );
-    }
-
-    @Parameterized.Parameters
-    public static Collection<DatabaseToMember> parameters()
+    @Override
+    Collection<DatabaseToMember> originals()
     {
         return Stream.generate( () -> new DatabaseToMember( randomDatabaseId(), new MemberId( UUID.randomUUID() ) ) )
                 .limit( 5 )
                 .collect( Collectors.toList() );
+    }
+
+    @Override
+    ChannelMarshal<DatabaseToMember> marshal()
+    {
+        return DatabaseToMemberMarshal.INSTANCE;
     }
 }

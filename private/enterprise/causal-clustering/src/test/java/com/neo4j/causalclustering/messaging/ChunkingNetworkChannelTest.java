@@ -7,31 +7,34 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.helpers.Buffers;
 import io.netty.buffer.ByteBuf;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedList;
+
+import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class ChunkingNetworkChannelTest
+@Buffers.Extension
+class ChunkingNetworkChannelTest
 {
-    @Rule
-    public final Buffers buffers = new Buffers();
+    @Inject
+    private Buffers buffers;
 
     @Test
-    public void shouldSerializeIntoChunksOfGivenSize()
+    void shouldSerializeIntoChunksOfGivenSize()
     {
         // given
-        int chunkSize = 8;
-        LinkedList<ByteBuf> byteBufs = new LinkedList<>();
-        ChunkingNetworkChannel channel = new ChunkingNetworkChannel( buffers, chunkSize, byteBufs );
+        var chunkSize = 8;
+        var byteBufs = new LinkedList<ByteBuf>();
+        var channel = new ChunkingNetworkChannel( buffers, chunkSize, byteBufs );
 
         // and data is written
-        byte[] array = new byte[10];
+        var array = new byte[10];
         channel.put( (byte) 1 );
         channel.putInt( 1 );
         channel.putFloat( 1.0f );
@@ -42,7 +45,7 @@ public class ChunkingNetworkChannelTest
         channel.flush();
 
         // when
-        ByteBuf combinedByteBuf = buffers.buffer();
+        var combinedByteBuf = buffers.buffer();
         ByteBuf byteBuf;
         while ( (byteBuf = byteBufs.poll()) != null )
         {
@@ -64,13 +67,13 @@ public class ChunkingNetworkChannelTest
     }
 
     @Test
-    public void shouldReturnNullIfQueueIsEmpty()
+    void shouldReturnNullIfQueueIsEmpty()
     {
         // given
-        int chunkSize = 8;
-        LinkedList<ByteBuf> byteBufs = new LinkedList<>();
+        var chunkSize = 8;
+        var byteBufs = new LinkedList<ByteBuf>();
 
-        ChunkingNetworkChannel channel = new ChunkingNetworkChannel( buffers, chunkSize, byteBufs );
+        var channel = new ChunkingNetworkChannel( buffers, chunkSize, byteBufs );
 
         // when
         channel.putLong( 1L );
@@ -94,12 +97,12 @@ public class ChunkingNetworkChannelTest
         assertNotNull( byteBufs.poll() );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowIllegalStatAfterClosed()
+    @Test
+    void shouldThrowIllegalStatAfterClosed()
     {
         int chunkSize = 8;
-        ChunkingNetworkChannel channel = new ChunkingNetworkChannel( buffers, chunkSize, new LinkedList<>() );
+        var channel = new ChunkingNetworkChannel( buffers, chunkSize, new LinkedList<>() );
         channel.close();
-        channel.putInt( 1 );
+        assertThrows( IllegalStateException.class, () -> channel.putInt( 1 ) );
     }
 }
