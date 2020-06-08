@@ -611,26 +611,17 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 SlottedPipeMapper.computeUnionSlotMappings(lhsSlots, slots),
                 SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(ctx.expressionCompiler.asInstanceOf[BinaryOperatorExpressionCompiler])
 
-        case plan@plans.ConditionalApply(lhs, rhs, _) if isHeadOperator =>
+        case _: plans.ConditionalApply | _: plans.AntiConditionalApply if isHeadOperator =>
 
           ctx: TemplateContext =>
-            val lhsConf = ctx.slotConfigurations(lhs.id)
-            val rhsConfiguration = ctx.slotConfigurations(rhs.id)
+            val lhsSlots = ctx.slotConfigurations(plan.lhs.get.id)
+            val rhsSlots = ctx.slotConfigurations(plan.rhs.get.id)
             new ConditionalOperatorTaskTemplate(ctx.inner,
               plan.id,
               ctx.innermost,
-              lhsConf,
-              rhsConfiguration
+              lhsSlots,
+              rhsSlots
             )(ctx.expressionCompiler.asInstanceOf[BinaryOperatorExpressionCompiler])
-
-        case plan@plans.AntiConditionalApply(_, rhs, _) if isHeadOperator =>
-          ctx: TemplateContext =>
-            new ConditionalOperatorTaskTemplate(ctx.inner,
-              plan.id,
-              ctx.innermost,
-              ctx.argumentSizes(plan.id),
-              ctx.slotConfigurations(rhs.id).size(),
-            )(ctx.expressionCompiler)
 
         case _ =>
           None

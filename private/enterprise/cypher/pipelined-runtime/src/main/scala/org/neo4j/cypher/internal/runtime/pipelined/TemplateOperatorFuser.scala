@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.Union
@@ -80,7 +81,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
 
     val expressionCompiler =
       _fusedPlans.head match {
-        case plan@(_: Union| _: ConditionalApply) =>
+        case plan@(_: Union| _: ConditionalApply | _: AntiConditionalApply) =>
           val leftSlots = physicalPlan.slotConfigurations(plan.lhs.get.id)
           val rightSlots = physicalPlan.slotConfigurations(plan.rhs.get.id)
           new BinaryOperatorExpressionCompiler(slots, inputSlotConfiguration, leftSlots, rightSlots, readOnly, namer)
