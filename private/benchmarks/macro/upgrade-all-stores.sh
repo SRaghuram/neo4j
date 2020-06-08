@@ -56,13 +56,10 @@ for i in "${db_and_workloads[@]}"; do
     rm "${zip_file}"
 
     "${JAVA_HOME}/bin/java"  -jar target/macro.jar upgrade-store \
-                               --original-db old/"${db_name}" \
+                               --original-db "${db_name}" \
                                --workload "${workload}" \
                                --db-edition ENTERPRISE
 
     tar -cvzf "${zip_file}" "${db_name}"
 
-    aws s3 cp "${zip_file}" s3://benchmarking.neo4j.com/datasets/macro/"${new_neo4j_version}"-enterprise-datasets/"${zip_file}" --no-progress
-    rm "${zip_file}"
-    rm -r "${db_name}"
 done
