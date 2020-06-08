@@ -183,7 +183,11 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             {
                 if ( !data.propertySplitState.last )
                 {
-                    loadNextSplitPiece( Header.OFFSET_PROPERTIES, data.propertySplitState );
+                    SPLIT_PIECE_LOAD_STATUS status = loadNextSplitPiece( Header.OFFSET_PROPERTIES, data.propertySplitState );
+                    if ( status != SPLIT_PIECE_LOAD_STATUS.OK )
+                    {
+                        throw new IllegalStateException( "Failed to load split property part chain (Retry not yet implemented). " + status.name() );
+                    }
                     readPropertyKeys( buffer = data.propertySplitState.buffer );
 
                     hasNextProperty = true;

@@ -188,7 +188,8 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
             existingNode( nodeId ).property( checkKey, stringValue( "bye" ) ).storeAndPlaceNodeCursorAt();
 
             //TODO For now we expect this to throw. But eventually we need to support this.
-            assertThatThrownBy( () -> readProperties( propertyCursor ) ).hasMessageContaining( "Reading split data from records with different version." );
+            assertThatThrownBy( () -> readProperties( propertyCursor ) )
+                    .hasMessageContaining( "Failed to load split property part chain (Retry not yet implemented). ERR_VERSION_MISMATCH" );
             // ↓ This is what we want! But for now ↑
 //            assertThat( readProperties( propertyCursor ) ).as( "We loaded some from V1. \"hello\" must be present, as \"bye\" is V2" ).contains( hello );
         }
@@ -254,7 +255,12 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
 
         long[] expectedLabels = toLong( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) );
 
-        assertThatThrownBy( nodeCursorAtV1::labels ).hasMessageContaining( "Reading split data from records with different version." );
+        long[] v1Labels = nodeCursorAtV1.labels();
+        assertThat( v1Labels ).isSorted();
+        assertThat( v1Labels ).doesNotHaveDuplicates();
+        assertThat( v1Labels ).satisfiesAnyOf(
+                l -> assertThat( l ).containsExactly( expectedLabels ),
+                l -> assertThat( l ).containsExactly( toLong( labelsBefore ) ) );
 
         long[] v2Labels = nodeCursorAtV2.labels();
         assertThat( v2Labels ).isSorted();
@@ -284,13 +290,12 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         long[] expectedLabels = new long[0];
         long[] acceptedBefore = toLong( labelsBefore );
 
-        assertThatThrownBy( nodeCursorAtV1::labels ).hasMessageContaining( "Reading split data from records with different version." );
-//        long[] v1Labels = nodeCursorAtV1.labels();
-//        assertThat( v1Labels ).isSorted();
-//        assertThat( v1Labels ).doesNotHaveDuplicates();
-//        assertThat( v1Labels ).satisfiesAnyOf(
-//                l -> assertThat( l ).containsExactly( expectedLabels ),
-//                l -> assertThat( l ).containsExactly( acceptedBefore ) );
+        long[] v1Labels = nodeCursorAtV1.labels();
+        assertThat( v1Labels ).isSorted();
+        assertThat( v1Labels ).doesNotHaveDuplicates();
+        assertThat( v1Labels ).satisfiesAnyOf(
+                l -> assertThat( l ).containsExactly( expectedLabels ),
+                l -> assertThat( l ).containsExactly( acceptedBefore ) );
 
         long[] v2Labels = nodeCursorAtV2.labels();
         assertThat( v2Labels ).isSorted();
@@ -319,14 +324,13 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         FrekiNodeCursor nodeCursorAtV2 = existingNode( id ).removeLabels( labelsAfterRemove ).storeAndPlaceNodeCursorAt();
 
         long[] expectedLabels = toLong( ArrayUtils.removeAll( labelsBefore, labelsAfterRemove ) );
-        assertThatThrownBy( nodeCursorAtV1::labels ).hasMessageContaining( "Reading split data and reached end of record chain w/o seeing a 'last' piece" );
-//        long[] acceptedBefore = toLong( labelsBefore );
-//        long[] v1Labels = nodeCursorAtV1.labels();
-//        assertThat( v1Labels ).isSorted();
-//        assertThat( v1Labels ).doesNotHaveDuplicates();
-//        assertThat( v1Labels ).satisfiesAnyOf(
-//                l -> assertThat( l ).containsExactly( expectedLabels ),
-//                l -> assertThat( l ).containsExactly( acceptedBefore ) );
+        long[] acceptedBefore = toLong( labelsBefore );
+        long[] v1Labels = nodeCursorAtV1.labels();
+        assertThat( v1Labels ).isSorted();
+        assertThat( v1Labels ).doesNotHaveDuplicates();
+        assertThat( v1Labels ).satisfiesAnyOf(
+                l -> assertThat( l ).containsExactly( expectedLabels ),
+                l -> assertThat( l ).containsExactly( acceptedBefore ) );
 
         long[] v2Labels = nodeCursorAtV2.labels();
         assertThat( v2Labels ).isSorted();
@@ -618,9 +622,19 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
                     assertThat( v2Labels ).containsExactly( expectedLabels );
 
                     MutableIntSet v1Keys = IntSets.mutable.empty();
-                    while ( propertyCursorAtV1.next() )
+                    boolean propertyFailed = false;
+                    try
                     {
-                        assertThat( v1Keys.add( propertyCursorAtV1.propertyKey() ) ).isTrue();
+                        while ( propertyCursorAtV1.next() )
+                        {
+                            assertThat( v1Keys.add( propertyCursorAtV1.propertyKey() ) ).isTrue();
+                        }
+                    }
+                    catch ( IllegalStateException e )
+                    {
+                        //TODO This is "allowed" because we do not have reload on property chain tear yet. Should be removed once we have it!
+                        assertThat( e.getMessage() ).startsWith( "Failed to load split property part chain (Retry not yet implemented). ERR_" );
+                        propertyFailed = true;
                     }
                     MutableIntSet v2Keys = IntSets.mutable.empty();
                     while ( propertyCursorAtV2.next() )
@@ -633,8 +647,12 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
                     expectedKeys.addAll( propertiesAfter.keySet() );
                     expectedKeys.removeAll( propertiesAfterRemove );
                     assertThat( v2Keys ).isEqualTo( expectedKeys );
-                    assertThat( v1Keys ).satisfiesAnyOf( s -> assertThat( s ).isEqualTo( expectedKeys ),
-                            s -> assertThat( s ).isEqualTo( propertiesBefore.keySet() ) ); //either before or after state is acceptable
+                    if ( !propertyFailed )
+                    {
+                        assertThat( v1Keys ).satisfiesAnyOf(
+                                s -> assertThat( s ).isEqualTo( expectedKeys ),
+                                s -> assertThat( s ).isEqualTo( propertiesBefore.keySet() ) ); //either before or after state is acceptable
+                    }
                 }
                 finally
                 {

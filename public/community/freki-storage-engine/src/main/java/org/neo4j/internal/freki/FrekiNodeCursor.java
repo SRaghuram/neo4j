@@ -60,26 +60,47 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     public long[] labels()
     {
         cursorAccessTracer.registerNodeLabelsAccess();
-        ensureLabelsLocated();
-        ByteBuffer buffer = data.labelBuffer();
-        if ( buffer == null )
+        long[] labels;
+        boolean shouldRetry;
+        int failures = 0;
+        do
         {
-            return EMPTY_LONG_ARRAY;
-        }
-        long[] labels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
-
-        // === Logic for split label data
-        if ( data.labelsSplitState != null )
-        {
-            data.labelsSplitState.reset();
-            do
+            shouldRetry = false;
+            ensureLabelsLocated();
+            ByteBuffer buffer = data.labelBuffer();
+            if ( buffer == null )
             {
-                loadNextSplitPiece( Header.FLAG_LABELS, data.labelsSplitState );
-                long[] moreLabels = (long[]) readInts( data.labelsSplitState.buffer, true, LONG_CREATOR, LONG_CONSUMER );
-                labels = addAll( labels, moreLabels );
+                return EMPTY_LONG_ARRAY;
             }
-            while ( !data.labelsSplitState.last );
+            labels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
+
+            // === Logic for split label data
+            if ( data.labelsSplitState != null )
+            {
+                data.labelsSplitState.reset();
+                do
+                {
+                    SPLIT_PIECE_LOAD_STATUS status = loadNextSplitPiece( Header.FLAG_LABELS, data.labelsSplitState );
+                    if ( status != SPLIT_PIECE_LOAD_STATUS.OK )
+                    {
+                        if ( failures++ > MAX_RETRIES_BEFORE_TIMER )
+                        {
+                            throw new IllegalStateException( "Failed to load split label part chain. " + status.name() );
+                        }
+                        shouldRetry = true;
+                        break;
+                    }
+                    long[] moreLabels = (long[]) readInts( data.labelsSplitState.buffer, true, LONG_CREATOR, LONG_CONSUMER );
+                    labels = addAll( labels, moreLabels );
+                }
+                while ( !data.labelsSplitState.last );
+            }
+            if ( shouldRetry )
+            {
+                prepareForReload();
+            }
         }
+        while ( shouldRetry );
         assert isOrdered( labels );
         return labels;
     }
@@ -135,7 +156,11 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             data.degreesSplitState.reset();
             do
             {
-                loadNextSplitPiece( Header.OFFSET_DEGREES, data.degreesSplitState );
+                SPLIT_PIECE_LOAD_STATUS status = loadNextSplitPiece( Header.OFFSET_DEGREES, data.degreesSplitState );
+                if ( status != SPLIT_PIECE_LOAD_STATUS.OK )
+                {
+                    throw new IllegalStateException( "Failed to load split degrees part chain (Retry not yet implemented). " + status.name() );
+                }
                 readRelationshipTypes( data.degreesSplitState.buffer );
                 types = addAll( types, relationshipTypesInNode );
             }
@@ -191,7 +216,11 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
                 }
                 if ( data.degreesSplitState != null && !data.degreesSplitState.last )
                 {
-                    loadNextSplitPiece( Header.OFFSET_DEGREES, data.degreesSplitState );
+                    SPLIT_PIECE_LOAD_STATUS status = loadNextSplitPiece( Header.OFFSET_DEGREES, data.degreesSplitState );
+                    if ( status != SPLIT_PIECE_LOAD_STATUS.OK )
+                    {
+                        throw new IllegalStateException( "Failed to load split degrees part chain (Retry not yet implemented). " + status.name() );
+                    }
                     buffer = data.degreesSplitState.buffer;
                     readRelationshipTypes( buffer );
                 }
