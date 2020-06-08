@@ -234,23 +234,24 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                     buffer.position( header.getOffset( headerSlot ) );
                     short pieceHeader = buffer.getShort();
                     byte partVersion = versionFromPieceHeader( pieceHeader );
-                    if ( partVersion != pieceLoadingState.version )
-                    {
-                        throw new IllegalStateException(
-                                "Reading split data from records with different version. Expected " + pieceLoadingState.version + " but got " + partVersion );
-                    }
                     byte pieceOrdinal = ordinalFromPieceHeader( pieceHeader );
                     pieceLoadingState.ordinal++;
-                    if ( isFirstFromPieceHeader( pieceHeader ) )
-                    {
-                        throw new IllegalStateException( "Reading split data from records with piece reporting being first." );
-                    }
+                    pieceLoadingState.last = isLastFromPieceHeader( pieceHeader );
+
                     if ( pieceOrdinal != pieceLoadingState.ordinal )
                     {
                         throw new IllegalStateException(
                                 "Reading split data from records with unexpected ordinal. Expected " + pieceLoadingState.ordinal + " but got " + pieceOrdinal );
                     }
-                    pieceLoadingState.last = isLastFromPieceHeader( pieceHeader );
+                    if ( isFirstFromPieceHeader( pieceHeader ) )
+                    {
+                        throw new IllegalStateException( "Reading split data from records with piece reporting being first." );
+                    }
+                    if ( partVersion != pieceLoadingState.version )
+                    {
+                        throw new IllegalStateException(
+                                "Reading split data from records with different version. Expected " + pieceLoadingState.version + " but got " + partVersion );
+                    }
                     return;
                 }
                 else
@@ -261,7 +262,6 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             else if ( !header.hasReferenceMark( headerSlot ) )
             {
                 throw new IllegalStateException( "Reading split data from records with different version. Data no longer exists" );
-
             }
             // else there could be another record in between the pieces for this data part, so just skip on through it
         }

@@ -495,18 +495,21 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         //part XL2 -> XL1
         //parts {labels/properties/rel}
 
-        int[] sizes = new int[]{0,1,2,6};
-        for ( int labelsSizeBefore : sizes )
+        int[] sizes = new int[] {0, 1, 2, 6, 15, 30};
+        for ( boolean forceFirstLoad : List.of( true, false ) )
         {
-            for ( int labelsSizeAfter : sizes )
+            for ( int labelsSizeBefore : sizes )
             {
-                for ( int propertiesSizeBefore : sizes )
+                for ( int labelsSizeAfter : sizes )
                 {
-                    for ( int propertiesSizeAfter : sizes )
+                    for ( int propertiesSizeBefore : sizes )
                     {
-                        if ( labelsSizeBefore != labelsSizeAfter || propertiesSizeBefore != propertiesSizeAfter )
+                        for ( int propertiesSizeAfter : sizes )
                         {
-                            tests.add( createPermutation( labelsSizeBefore, labelsSizeAfter, propertiesSizeBefore, propertiesSizeAfter ) );
+                            if ( labelsSizeBefore != labelsSizeAfter || propertiesSizeBefore != propertiesSizeAfter )
+                            {
+                                tests.add( createPermutation( labelsSizeBefore, labelsSizeAfter, propertiesSizeBefore, propertiesSizeAfter, forceFirstLoad ) );
+                            }
                         }
                     }
                 }
@@ -515,8 +518,10 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         return tests;
     }
 
-    private DynamicTest createPermutation( int labelsSizeBefore, int labelsSizeAfter, int propertiesSizeBefore, int propertiesSizeAfter )
+    private DynamicTest createPermutation( int labelsSizeBefore, int labelsSizeAfter, int propertiesSizeBefore, int propertiesSizeAfter,
+            boolean forceFirstLoad )
     {
+
         Executable test = new Executable()
         {
             private final int[] NO_LABELS = new int[0];
@@ -534,7 +539,7 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
                 MutableIntObjectMap<Value> propertiesBefore = IntObjectMaps.mutable.empty();
                 MutableIntObjectMap<Value> propertiesAfter = IntObjectMaps.mutable.empty();
                 MutableIntSet propertiesAfterRemove = IntSets.mutable.empty();
-                Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+                Value prop = Values.byteArray( new byte[] {0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
                 int sizePerProp = 10;
                 int nextPropKey = 0;
                 for ( int i = 0; i < x1Size * propertiesSizeBefore / sizePerProp; i++ )
@@ -569,7 +574,21 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
                     Node node = node();
                     node.labels( labelsBefore );
                     node.properties( propertiesBefore );
+                    if ( forceFirstLoad )
+                    {
+                        for ( int i = 0; i < 50; i++ )
+                        {
+                            node.relationship( i, node );
+                        }
+                    }
                     FrekiNodeCursor nodeCursorAtV1 = node.storeAndPlaceNodeCursorAt();
+                    if ( forceFirstLoad )
+                    {
+                        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
+                        {
+                            nodeCursorAtV1.relationships( relationshipCursor, RelationshipSelection.ALL_RELATIONSHIPS );
+                        }
+                    }
 
                     node = existingNode( node.id() );
                     node.removeLabels( labelsAfterRemove );
@@ -582,8 +601,6 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
                     propertyCursorAtV2 = cursorFactory.allocatePropertyCursor( NULL, INSTANCE );
                     nodeCursorAtV1.properties( propertyCursorAtV1 );
                     nodeCursorAtV2.properties( propertyCursorAtV2 );
-
-                    // x1 + x8(L,P)   ->   x1 + x8(L) + x8(P)
 
                     long[] expectedLabels = toLong( ArrayUtils.removeAll( ArrayUtils.addAll( labelsBefore, labelsAfter ), labelsAfterRemove ) );
                     long[] acceptedBefore = toLong( labelsBefore );
@@ -616,8 +633,7 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
                     expectedKeys.addAll( propertiesAfter.keySet() );
                     expectedKeys.removeAll( propertiesAfterRemove );
                     assertThat( v2Keys ).isEqualTo( expectedKeys );
-                    assertThat( v1Keys ).satisfiesAnyOf(
-                            s -> assertThat( s ).isEqualTo( expectedKeys ),
+                    assertThat( v1Keys ).satisfiesAnyOf( s -> assertThat( s ).isEqualTo( expectedKeys ),
                             s -> assertThat( s ).isEqualTo( propertiesBefore.keySet() ) ); //either before or after state is acceptable
                 }
                 finally
@@ -636,8 +652,8 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
             @Override
             public String toString()
             {
-                return String.format( "Labels %s->%s : Properties %s->%s",
-                        sizeToRec( labelsSizeBefore ), sizeToRec( labelsSizeAfter ), sizeToRec( propertiesSizeBefore ), sizeToRec( propertiesSizeAfter ) );
+                return String.format( "Labels %s->%s : Properties %s->%s", sizeToRec( labelsSizeBefore ), sizeToRec( labelsSizeAfter ),
+                        sizeToRec( propertiesSizeBefore ), sizeToRec( propertiesSizeAfter ) );
             }
 
             String sizeToRec( int size )
@@ -649,9 +665,13 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
                 case 1:
                     return "X1";
                 case 2:
-                    return "XL₁";
+                    return "X2";
                 case 6:
-                    return "XL₂";
+                    return "X8";
+                case 15:
+                    return "XLChain(short)";
+                case 30:
+                    return "XLChain(long)";
                 default:
                     return "Unknown";
                 }

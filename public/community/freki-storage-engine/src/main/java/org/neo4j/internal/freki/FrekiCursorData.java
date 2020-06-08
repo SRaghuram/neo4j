@@ -168,11 +168,11 @@ class FrekiCursorData
     private PieceLoadingState assignFirstPiece( ByteBuffer buffer )
     {
         short pieceHeader = buffer.getShort();
-        PieceLoadingState splitState = new PieceLoadingState( buffer, versionFromPieceHeader( pieceHeader ) );
-        boolean isFirst = isFirstFromPieceHeader( pieceHeader );
-        assert isFirst == (ordinalFromPieceHeader( pieceHeader ) == 0);
-        assert !isLastFromPieceHeader( pieceHeader );
-        return isFirst ? splitState : null;
+        if ( !isFirstFromPieceHeader( pieceHeader ) || ordinalFromPieceHeader( pieceHeader ) != 0 || isLastFromPieceHeader( pieceHeader ) )
+        {
+            return null;
+        }
+        return new PieceLoadingState( buffer, versionFromPieceHeader( pieceHeader ) );
     }
 
     private long[] readRecordPointers( ByteBuffer buffer )
