@@ -99,7 +99,9 @@ class CheckConsistencyCommandIT
                 "                  [--check-index-structure=<true/false>]%n" +
                 "                  [--check-indexes=<true/false>]%n" +
                 "                  [--check-label-scan-store=<true/false>]%n" +
-                "                  [--check-property-owners=<true/false>] [--report-dir=<path>]%n" +
+                "                  [--check-property-owners=<true/false>]%n" +
+                "                  [--check-relationship-type-scan-store=<true/false>]%n" +
+                "                  [--report-dir=<path>]%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
@@ -134,6 +136,10 @@ class CheckConsistencyCommandIT
                 "      --check-label-scan-store=<true/false>%n" +
                 "                            Perform consistency checks on the label scan store.%n" +
                 "                              Default: true%n" +
+                "      --check-relationship-type-scan-store=<true/false>%n" +
+                "                            Perform consistency checks on the relationship type%n" +
+                "                              scan store.%n" +
+                "                              Default: false%n" +
                 "      --check-property-owners=<true/false>%n" +
                 "                            Perform additional consistency checks on property%n" +
                 "                              ownership. This check is very expensive in time%n" +
@@ -314,12 +320,13 @@ class CheckConsistencyCommandIT
                 .thenReturn( ConsistencyCheckService.Result.success( null, null ) );
 
         CommandLine.populateCommand( checkConsistencyCommand, "--database=mydb", "--check-graph=false",
-            "--check-indexes=false", "--check-index-structure=false", "--check-label-scan-store=false", "--check-property-owners=true" );
+                "--check-indexes=false", "--check-index-structure=false", "--check-label-scan-store=false", "--check-relationship-type-scan-store=false",
+                "--check-property-owners=true" );
         checkConsistencyCommand.execute();
 
         verify( consistencyCheckService )
                 .runFullConsistencyCheck( any(), any(), any(), any(), any(), anyBoolean(),
-                        any(), eq( new ConsistencyFlags( false, false, false, false, true ) ) );
+                        any(), eq( new ConsistencyFlags( false, false, false, false, false, true ) ) );
     }
 
     @Test

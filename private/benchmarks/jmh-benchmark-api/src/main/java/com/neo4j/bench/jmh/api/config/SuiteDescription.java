@@ -7,7 +7,7 @@ package com.neo4j.bench.jmh.api.config;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.common.model.BenchmarkConfig;
+import com.neo4j.bench.model.model.BenchmarkConfig;
 
 import java.util.ArrayList;
 import java.util.Collection;

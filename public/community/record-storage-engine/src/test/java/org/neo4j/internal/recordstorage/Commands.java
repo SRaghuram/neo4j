@@ -54,6 +54,7 @@ import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.values.storable.Values;
 
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class Commands
 {
@@ -90,7 +91,8 @@ public class Commands
     {
         RelationshipRecord before = new RelationshipRecord( id );
         before.setInUse( false );
-        RelationshipRecord after = new RelationshipRecord( id, startNode, endNode, type );
+        RelationshipRecord after = new RelationshipRecord( id );
+        after.setLinks( startNode, endNode, type );
         after.setInUse( true );
         after.setCreated();
         return new RelationshipCommand( before, after );
@@ -158,7 +160,7 @@ public class Commands
         PropertyBlock block = new PropertyBlock();
         if ( valueRecordIds.length == 0 )
         {
-            PropertyStore.encodeValue( block, key, Values.of( 123 ), null, null, true, NULL );
+            PropertyStore.encodeValue( block, key, Values.of( 123 ), null, null, true, NULL, INSTANCE );
         }
         else
         {

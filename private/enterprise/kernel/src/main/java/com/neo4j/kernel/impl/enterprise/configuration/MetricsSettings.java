@@ -60,6 +60,11 @@ public class MetricsSettings implements SettingsDeclaration
     public static final Setting<Boolean> causalClusteringEnabled =
             newBuilder( "metrics.neo4j.causal_clustering.enabled", BOOL, true ).build();
 
+    @Description( "Enable reporting metrics for Neo4j dbms operations; " +
+            "e.g. how many databases have been created or dropped, and how many attempted operations have failed." )
+    public static final Setting<Boolean> databaseOperationCountEnabled =
+            newBuilder( "metrics.neo4j.database_operation_count.enabled", BOOL, true ).build();
+
     @Description( "Enable reporting metrics about Neo4j check pointing; when it occurs and how much time it takes to " +
             "complete." )
     public static final Setting<Boolean> neoCheckPointingEnabled =
@@ -90,11 +95,17 @@ public class MetricsSettings implements SettingsDeclaration
     public static final Setting<Boolean> jvmFileDescriptorsEnabled =
             newBuilder( "metrics.jvm.file.descriptors.enabled", BOOL, true ).build();
 
+    @Description( "Enable reporting metrics about the VM pause time." )
+    public static final Setting<Boolean> jvmPauseTimeEnabled = newBuilder( "metrics.jvm.pause_time.enabled", BOOL, true ).build();
+
     @Description( "Enable reporting metrics about number of occurred replanning events." )
     public static final Setting<Boolean> cypherPlanningEnabled = newBuilder( "metrics.cypher.replanning.enabled", BOOL, true ).build();
 
     @Description( "Enable reporting metrics about Bolt Protocol message processing." )
     public static final Setting<Boolean> boltMessagesEnabled = newBuilder( "metrics.bolt.messages.enabled", BOOL, true ).build();
+
+    @Description( "Enable reporting metrics about Neo4j memory pools." )
+    public static final Setting<Boolean> neoMemoryPoolsEnabled = newBuilder( "metrics.neo4j.pools.enabled", BOOL, true ).build();
 
     // CSV settings
     @Description( "Set to `true` to enable exporting metrics to CSV files" )

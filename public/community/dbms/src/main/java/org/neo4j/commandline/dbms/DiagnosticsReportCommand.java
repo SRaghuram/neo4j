@@ -29,7 +29,6 @@ import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -68,8 +67,8 @@ import static picocli.CommandLine.Parameters;
 )
 public class DiagnosticsReportCommand extends AbstractCommand
 {
-    static final String[] DEFAULT_CLASSIFIERS = {"logs", "config", "plugins", "tree", "metrics", "threads", "sysprop", "ps"};
-    private static final DateTimeFormatter filenameDateTimeFormatter = new DateTimeFormatterBuilder().appendPattern( "yyyy-MM-dd_HHmmss" ).toFormatter();
+    static final String[] DEFAULT_CLASSIFIERS = {"logs", "config", "plugins", "tree", "metrics", "threads", "sysprop", "ps", "version"};
+    private static final DateTimeFormatter filenameDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss" );
     private static final long NO_PID = 0;
 
     @Option( names = "--list", arity = "0", description = "List all available classifiers" )
@@ -118,7 +117,7 @@ public class DiagnosticsReportCommand extends AbstractCommand
                  reportDir = Path.of( System.getProperty( "java.io.tmpdir" ) ).resolve( "reports" ).toAbsolutePath();
             }
             Path reportFile = reportDir.resolve( getDefaultFilename() );
-            ctx.out().println( "Writing report to " + reportFile.toAbsolutePath().toString() );
+            ctx.out().println( "Writing report to " + reportFile.toAbsolutePath() );
             reporter.dump( classifiers, reportFile, progress, force );
         }
         catch ( IOException e )
@@ -270,6 +269,8 @@ public class DiagnosticsReportCommand extends AbstractCommand
             return "include the current cluster state";
         case "ps":
             return "include a list of running processes";
+        case "version":
+            return "include version of neo4j";
         default:
         }
         throw new IllegalArgumentException( "Unknown classifier: " + classifier );

@@ -5,55 +5,65 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing;
 
+import com.neo4j.causalclustering.core.consensus.GlobalLeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
+import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class DefaultLeaderService implements LeaderService
+public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
 {
-    private final LeaderLocatorForDatabase leaderLocatorForDatabase;
+    private final Map<NamedDatabaseId,MemberId> currentLeaders = new ConcurrentHashMap<>();
     private final TopologyService topologyService;
     private final Log log;
 
-    public DefaultLeaderService( LeaderLocatorForDatabase leaderLocatorForDatabase, TopologyService topologyService, LogProvider logProvider )
+    public DefaultLeaderService( TopologyService topologyService, LogProvider logProvider )
     {
-        this.leaderLocatorForDatabase = leaderLocatorForDatabase;
         this.topologyService = topologyService;
         this.log = logProvider.getLog( getClass() );
+    }
+
+    public LeaderListener createListener( NamedDatabaseId namedDatabaseId )
+    {
+        return new ListenerForDatabase( namedDatabaseId, this );
     }
 
     @Override
     public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
     {
-        var leaderLocator = leaderLocatorForDatabase.getLeader( namedDatabaseId );
-        if ( leaderLocator.isPresent() )
+        return currentLeaderAccordingToRaft( namedDatabaseId ).or( () -> leaderFromTopology( namedDatabaseId ) );
+    }
+
+    private Optional<MemberId> leaderFromTopology( NamedDatabaseId namedDatabaseId )
+    {
+        // this cluster member does not participate in the Raft group for the specified database
+        // lookup the leader ID using the discovery service
+        var leaderId = getLeaderIdFromTopologyService( namedDatabaseId );
+        log.debug( "Topology service for database %s returned leader ID %s", namedDatabaseId, leaderId );
+        return leaderId;
+    }
+
+    private Optional<MemberId> currentLeaderAccordingToRaft( NamedDatabaseId namedDatabaseId )
+    {
+        var leader = Optional.ofNullable( currentLeaders.get( namedDatabaseId ) );
+        leader.ifPresent( l ->
         {
             // this cluster member is part of the Raft group for the specified database
             // leader can be located from the Raft state machine
-            var leaderId = getLeaderIdFromLeaderLocator( leaderLocator.get() );
-            log.debug( "Leader locator %s for database %s returned leader ID %s", leaderLocator, namedDatabaseId, leaderId );
-            return leaderId;
-        }
-        else
-        {
-            // this cluster member does not participate in the Raft group for the specified database
-            // lookup the leader ID using the discovery service
-            var leaderId = getLeaderIdFromTopologyService( namedDatabaseId );
-            log.debug( "Topology service for database %s returned leader ID %s", namedDatabaseId, leaderId );
-            return leaderId;
-        }
+            log.debug( "Leader provided by the raft group for database %s is %s", namedDatabaseId, l );
+        } );
+        return leader;
     }
 
     @Override
@@ -64,19 +74,9 @@ public class DefaultLeaderService implements LeaderService
         return leaderBoltAddress;
     }
 
-    private static Optional<MemberId> getLeaderIdFromLeaderLocator( LeaderLocator leaderLocator )
-    {
-        return Optional.ofNullable( leaderLocator.getLeaderInfo() ).map( LeaderInfo::memberId );
-    }
-
     private Optional<MemberId> getLeaderIdFromTopologyService( NamedDatabaseId namedDatabaseId )
     {
-        return topologyService.coreTopologyForDatabase( namedDatabaseId )
-                .members()
-                .keySet()
-                .stream()
-                .filter( memberId -> topologyService.lookupRole( namedDatabaseId, memberId ) == RoleInfo.LEADER )
-                .findFirst();
+        return Optional.ofNullable( topologyService.getLeader( namedDatabaseId ) ).map( LeaderInfo::memberId );
     }
 
     private Optional<SocketAddress> resolveBoltAddress( MemberId memberId )
@@ -84,5 +84,41 @@ public class DefaultLeaderService implements LeaderService
         Map<MemberId,CoreServerInfo> coresById = topologyService.allCoreServers();
         log.debug( "Resolving Bolt address for member %s using %s", memberId, coresById );
         return Optional.ofNullable( coresById.get( memberId ) ).map( ClientConnector::boltAddress );
+    }
+
+    @Override
+    public void onLeaderSwitch( NamedDatabaseId databaseId, LeaderInfo leaderInfo )
+    {
+        currentLeaders.compute( databaseId, ( namedDatabaseId, memberId ) -> leaderInfo.memberId() );
+    }
+
+    @Override
+    public void onUnregister( NamedDatabaseId databaseId )
+    {
+        currentLeaders.remove( databaseId );
+    }
+
+    private static class ListenerForDatabase implements LeaderListener
+    {
+        private final NamedDatabaseId forDatabase;
+        private final GlobalLeaderListener globalLeaderListener;
+
+        ListenerForDatabase( NamedDatabaseId forDatabase, GlobalLeaderListener globalLeaderListener )
+        {
+            this.forDatabase = forDatabase;
+            this.globalLeaderListener = globalLeaderListener;
+        }
+
+        @Override
+        public void onLeaderSwitch( LeaderInfo leaderInfo )
+        {
+            globalLeaderListener.onLeaderSwitch( forDatabase, leaderInfo );
+        }
+
+        @Override
+        public void onUnregister()
+        {
+            globalLeaderListener.onUnregister( forDatabase );
+        }
     }
 }

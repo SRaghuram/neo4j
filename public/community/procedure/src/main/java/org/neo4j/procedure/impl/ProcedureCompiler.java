@@ -46,6 +46,7 @@ import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Description;
+import org.neo4j.procedure.Internal;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserAggregationFunction;
@@ -121,7 +122,7 @@ class ProcedureCompiler
             //used for proper error handling
             assertValidConstructor( fcnDefinition );
 
-            ArrayList<CallableUserFunction> out = new ArrayList<>( functionMethods.size() );
+            List<CallableUserFunction> out = new ArrayList<>( functionMethods.size() );
             for ( Method method : functionMethods )
             {
                 String valueName = method.getAnnotation( UserFunction.class ).value();
@@ -166,7 +167,7 @@ class ProcedureCompiler
 
             assertValidConstructor( fcnDefinition );
 
-            ArrayList<CallableUserAggregationFunction> out = new ArrayList<>( methods.size() );
+            List<CallableUserAggregationFunction> out = new ArrayList<>( methods.size() );
             for ( Method method : methods )
             {
                 String valueName = method.getAnnotation( UserAggregationFunction.class ).value();
@@ -213,7 +214,7 @@ class ProcedureCompiler
             }
 
             assertValidConstructor( procDefinition );
-            ArrayList<CallableProcedure> out = new ArrayList<>( procedureMethods.size() );
+            List<CallableProcedure> out = new ArrayList<>( procedureMethods.size() );
             for ( Method method : procedureMethods )
             {
                 String valueName = method.getAnnotation( Procedure.class ).value();
@@ -245,7 +246,7 @@ class ProcedureCompiler
     }
 
     private CallableProcedure compileProcedure( Class<?> procDefinition, Method method,
-            String warning, boolean fullAccess, QualifiedName procName  )
+            String warning, boolean fullAccess, QualifiedName procName )
             throws ProcedureException
     {
         List<FieldSignature> inputSignature = inputSignatureDeterminer.signatureFor( method );
@@ -256,6 +257,7 @@ class ProcedureCompiler
         Mode mode = procedure.mode();
         boolean admin = method.isAnnotationPresent( Admin.class );
         boolean systemProcedure = method.isAnnotationPresent( SystemProcedure.class );
+        boolean internal = method.isAnnotationPresent( Internal.class );
         String deprecated = deprecated( method, procedure::deprecatedBy,
                 "Use of @Procedure(deprecatedBy) without @Deprecated in " + procName );
 
@@ -271,14 +273,14 @@ class ProcedureCompiler
                 description = describeAndLogLoadFailure( procName );
                 ProcedureSignature signature =
                         new ProcedureSignature( procName, inputSignature, outputSignature, Mode.DEFAULT,
-                                admin, null, new String[0], description, warning, procedure.eager(), false, systemProcedure );
+                                admin, null, new String[0], description, warning, procedure.eager(), false, systemProcedure, internal );
                 return new FailedLoadProcedure( signature );
             }
         }
 
         ProcedureSignature signature =
                 new ProcedureSignature( procName, inputSignature, outputSignature, mode, admin, deprecated,
-                        config.rolesFor( procName.toString() ), description, warning, procedure.eager(), false, systemProcedure );
+                        config.rolesFor( procName.toString() ), description, warning, procedure.eager(), false, systemProcedure, internal );
 
         return ProcedureCompilation.compileProcedure( signature, setters, method );
     }
@@ -486,8 +488,8 @@ class ProcedureCompiler
 
     private QualifiedName extractName( Class<?> procDefinition, Method m, String valueName, String definedName )
     {
-        String procName = definedName.trim().isEmpty() ? valueName : definedName;
-        if ( !procName.trim().isEmpty() )
+        String procName = definedName.isBlank() ? valueName : definedName;
+        if ( !procName.isBlank() )
         {
             String[] split = procName.split( "\\." );
             if ( split.length == 1 )

@@ -28,11 +28,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexQueryConstraints;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
+import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.kernel.api.index.IndexProgressor;
@@ -55,7 +57,7 @@ import static org.neo4j.kernel.impl.newapi.TxStateIndexChanges.indexUpdatesWithV
 import static org.neo4j.kernel.impl.newapi.TxStateIndexChanges.indexUpdatesWithValuesForScan;
 import static org.neo4j.kernel.impl.newapi.TxStateIndexChanges.indexUpdatesWithValuesForSuffixOrContains;
 
-final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
+class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
         implements NodeValueIndexCursor, EntityIndexSeekClient, SortedMergeJoin.Sink
 {
     private Read read;
@@ -69,11 +71,16 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     private boolean needsValues;
     private IndexOrder indexOrder;
     private final CursorPool<DefaultNodeValueIndexCursor> pool;
+    private final DefaultNodeCursor nodeCursor;
     private SortedMergeJoin sortedMergeJoin = new SortedMergeJoin();
+    private AccessMode accessMode;
+    private boolean shortcutSecurity;
+    private int[] propertyIds;
 
-    DefaultNodeValueIndexCursor( CursorPool<DefaultNodeValueIndexCursor> pool )
+    DefaultNodeValueIndexCursor( CursorPool<DefaultNodeValueIndexCursor> pool, DefaultNodeCursor nodeCursor )
     {
         this.pool = pool;
+        this.nodeCursor = nodeCursor;
         node = NO_ID;
         score = Float.NaN;
         indexOrder = IndexOrder.NONE;
@@ -99,10 +106,12 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
             tracer.onIndexSeek( );
         }
 
+        shortcutSecurity = setupSecurity( descriptor );
+
         if ( !indexIncludesTransactionState && read.hasTxStateWithChanges() && query.length > 0 )
         {
            // Extract out the equality queries
-            ArrayList<Value> exactQueryValues = new ArrayList<>( query.length );
+            List<Value> exactQueryValues = new ArrayList<>( query.length );
             int i = 0;
             while ( i < query.length && query[i] instanceof IndexQuery.ExactPredicate )
             {
@@ -169,6 +178,35 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     }
 
     /**
+     * If the current user is allowed to traverse all labels used in this index and read the properties no matter what label
+     * the node has, we can skip checking on every node we get back.
+     */
+    private boolean setupSecurity( IndexDescriptor descriptor )
+    {
+        if ( accessMode == null )
+        {
+            accessMode = read.ktx.securityContext().mode();
+        }
+        propertyIds = descriptor.schema().getPropertyIds();
+
+        for ( int label : descriptor.schema().getEntityTokenIds() )
+        {
+            if ( !accessMode.allowsTraverseAllNodesWithLabel( label ) )
+            {
+                return false;
+            }
+        }
+        for ( int propId : propertyIds )
+        {
+             if ( !accessMode.allowsReadPropertyAllLabels( propId ) )
+             {
+                 return false;
+             }
+        }
+        return true;
+    }
+
+    /**
      * If we require order, we can only do the merge sort if we also get values.
      * This implicitly relies on the fact that if we can get order, we can also get values.
      */
@@ -188,7 +226,7 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
     @Override
     public boolean acceptEntity( long reference, float score, Value[] values )
     {
-        if ( isRemoved( reference ) )
+        if ( isRemoved( reference ) || !allowed( reference ) )
         {
             return false;
         }
@@ -199,6 +237,29 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
             this.values = values;
             return true;
         }
+    }
+
+    protected boolean allowed( long reference )
+    {
+        if ( shortcutSecurity )
+        {
+            return true;
+        }
+        read.singleNode( reference, nodeCursor );
+        if ( !nodeCursor.next() )
+        {
+            // This node is not visible to this security context
+            return false;
+        }
+
+        boolean allowed = true;
+        long[] labels = nodeCursor.labelsIgnoringTxStateSetRemove().all();
+        for ( int prop : propertyIds )
+        {
+            allowed &= accessMode.allowsReadNodeProperty( () -> Labels.from( labels ), prop );
+        }
+
+        return allowed;
     }
 
     @Override
@@ -346,6 +407,7 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
             this.query = null;
             this.values = null;
             this.read = null;
+            this.accessMode = null;
             this.added = ImmutableEmptyLongIterator.INSTANCE;
             this.addedWithValues = Collections.emptyIterator();
             this.removed = LongSets.immutable.empty();
@@ -465,6 +527,7 @@ final class DefaultNodeValueIndexCursor extends IndexCursor<IndexProgressor>
 
     public void release()
     {
-        // nothing to do
+        nodeCursor.close();
+        nodeCursor.release();
     }
 }

@@ -55,7 +55,6 @@ import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
@@ -76,6 +75,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -755,7 +755,7 @@ class RecoveryCorruptedTransactionLogIT
     {
         PhysicalLogVersionedStoreChannel storeChannel = logFiles.openForVersion( logVersion );
         storeChannel.position( startPosition.getByteOffset() );
-        return new ReadAheadLogChannel( storeChannel, LogVersionBridge.NO_MORE_CHANNELS );
+        return new ReadAheadLogChannel( storeChannel, EmptyMemoryTracker.INSTANCE );
     }
 
     private LogPosition getLastReadablePosition( LogFile logFile ) throws IOException

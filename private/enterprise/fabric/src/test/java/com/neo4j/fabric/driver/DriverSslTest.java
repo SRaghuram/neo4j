@@ -6,9 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
-import com.neo4j.fabric.transaction.FabricTransactionInfo;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -45,6 +43,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
+import org.neo4j.fabric.executor.Location;
+import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
@@ -203,21 +203,22 @@ class DriverSslTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
 
         var jobScheduler = mock( JobScheduler.class );
         var credentialsProvider = mock( CredentialsProvider.class );
 
-        driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, sslLoader );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
+        driverPool = new DriverPool( jobScheduler, driverConfigFactory, fabricConfig, Clock.systemUTC(), credentialsProvider );
         driverPool.start();
-        var driver = driverPool.getDriver( new Location.Remote( 0, createUri( graph0Uri ), null ), null );
+        var driver = driverPool.getDriver( new Location.Remote.External( 0, null, createUri( graph0Uri ), null ), null );
 
         var transactionInfo = mock( FabricTransactionInfo.class );
         when( transactionInfo.getTxTimeout() ).thenReturn( Duration.ZERO );
         try
         {
-            driver.run( "RETURN 1", MapValue.EMPTY, new Location.Remote( 0, null, null ), AccessMode.WRITE, transactionInfo, List.of() )
+            driver.run( "RETURN 1", MapValue.EMPTY, new Location.Remote.External( 0, null, null, null ), AccessMode.WRITE, transactionInfo, List.of() )
                     .columns()
                     .collectList()
                     .block();

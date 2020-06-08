@@ -16,6 +16,10 @@ import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlans
 import org.neo4j.cypher.internal.logical.plans.Optional
+import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
+import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
+import org.neo4j.cypher.internal.logical.plans.PartialSort
+import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
@@ -26,13 +30,13 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.Slo
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ApplyBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStreamMorselBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.AttachBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.BufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DelegateBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ExecutionStateDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingRHSStreamingBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefiner
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.OptionalMorselBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.UnionBufferDefiner
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -78,7 +82,7 @@ object PipelineTreeBuilder {
     var serial: Boolean = false
     var workCanceller: Option[ArgumentStateMapId] = None
 
-    def fuse(plan: LogicalPlan, isBreaking: Boolean): Boolean = {
+    def fuse(plan: LogicalPlan): Boolean = {
       headPlan match {
         case FusedHead(operatorFuser) if middlePlans.isEmpty && outputDefinition == NoOutput =>
           operatorFuser.fuseIn(plan)
@@ -87,7 +91,7 @@ object PipelineTreeBuilder {
     }
 
     def fuseOrInterpret(plan: LogicalPlan, isBreaking: Boolean): Unit = {
-      if (!fuse(plan, isBreaking)) {
+      if (!fuse(plan)) {
         middlePlans += plan
       }
     }
@@ -134,8 +138,8 @@ object PipelineTreeBuilder {
 
       BufferDefinition(id,
                        memoryTrackingOperatorId,
-                       downstreamReducers.result(),
-                       downstreamWorkCancellers.result(),
+                       new ReadOnlyArray(downstreamReducers.result()),
+                       new ReadOnlyArray(downstreamWorkCancellers.result()),
                        variant
                      )(bufferConfiguration)
     }
@@ -158,14 +162,14 @@ object PipelineTreeBuilder {
     override protected def variant: BufferVariant = RegularBufferVariant
   }
 
-  class OptionalMorselBufferDefiner(id: BufferId,
-                                    memoryTrackingOperatorId: Id,
-                                    val producingPipelineId: PipelineId,
-                                    val argumentStateMapId: ArgumentStateMapId,
-                                    val argumentSlotOffset: Int,
-                                    bufferConfiguration: SlotConfiguration,
-                                    val optionalBufferVariantType: OptionalBufferVariantType) extends BufferDefiner(id, memoryTrackingOperatorId, bufferConfiguration) {
-    override protected def variant: BufferVariant = OptionalBufferVariant(argumentStateMapId, optionalBufferVariantType)
+  class ArgumentStreamMorselBufferDefiner(id: BufferId,
+                                          memoryTrackingOperatorId: Id,
+                                          val producingPipelineId: PipelineId,
+                                          val argumentStateMapId: ArgumentStateMapId,
+                                          val argumentSlotOffset: Int,
+                                          bufferConfiguration: SlotConfiguration,
+                                          val bufferVariantType: ArgumentStreamBufferVariantType) extends BufferDefiner(id, memoryTrackingOperatorId, bufferConfiguration) {
+    override protected def variant: BufferVariant = ArgumentStreamBufferVariant(argumentStateMapId, bufferVariantType)
   }
 
   class DelegateBufferDefiner(id: BufferId,
@@ -201,9 +205,9 @@ object PipelineTreeBuilder {
       val reducersOnRHSReversed = reducersOnRHS.result().sortBy(_.receiver.x * -1)
 
       ApplyBufferVariant(argumentSlotOffset,
-                         reducersOnRHSReversed,
-                         downstreamStatesOnRHS.result(),
-                         delegates.result())
+                         new ReadOnlyArray(reducersOnRHSReversed),
+                         new ReadOnlyArray(downstreamStatesOnRHS.result()),
+                         new ReadOnlyArray(delegates.result()))
     }
   }
 
@@ -290,20 +294,20 @@ object PipelineTreeBuilder {
       buffer
     }
 
-    def newOptionalBuffer(producingPipelineId: PipelineId,
-                          memoryTrackingOperatorId: Id,
-                          argumentStateMapId: ArgumentStateMapId,
-                          argumentSlotOffset: Int,
-                          bufferSlotConfiguration: SlotConfiguration,
-                          optionalBufferVariantType: OptionalBufferVariantType): OptionalMorselBufferDefiner = {
+    def newArgumentStreamBuffer(producingPipelineId: PipelineId,
+                                memoryTrackingOperatorId: Id,
+                                argumentStateMapId: ArgumentStateMapId,
+                                argumentSlotOffset: Int,
+                                bufferSlotConfiguration: SlotConfiguration,
+                                bufferVariantType: ArgumentStreamBufferVariantType): ArgumentStreamMorselBufferDefiner = {
       val x = buffers.size
-      val buffer = new OptionalMorselBufferDefiner(BufferId(x),
-                                                   memoryTrackingOperatorId,
-                                                   producingPipelineId,
-                                                   argumentStateMapId,
-                                                   argumentSlotOffset,
-                                                   bufferSlotConfiguration,
-                                                   optionalBufferVariantType)
+      val buffer = new ArgumentStreamMorselBufferDefiner(BufferId(x),
+                                                         memoryTrackingOperatorId,
+                                                         producingPipelineId,
+                                                         argumentStateMapId,
+                                                         argumentSlotOffset,
+                                                         bufferSlotConfiguration,
+                                                         bufferVariantType)
       buffers += buffer
       buffer
     }
@@ -460,12 +464,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToOptionalPipelinedBuffer(pipeline: PipelineDefiner,
-                                              plan: LogicalPlan,
-                                              applyBuffer: ApplyBufferDefiner,
-                                              argumentSlotOffset: Int): OptionalMorselBufferDefiner = {
+  private def outputToArgumentStreamBuffer(pipeline: PipelineDefiner,
+                                           plan: LogicalPlan,
+                                           applyBuffer: ApplyBufferDefiner,
+                                           argumentSlotOffset: Int): ArgumentStreamMorselBufferDefiner = {
     val asm = stateDefiner.newArgumentStateMap(plan.id, argumentSlotOffset)
-    val output = stateDefiner.newOptionalBuffer(pipeline.id, plan.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id), OptionalType)
+    val output = stateDefiner.newArgumentStreamBuffer(pipeline.id, plan.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id), ArgumentStreamType)
     pipeline.fuseOrInterpret(MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, plan.id))
     markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
     output
@@ -474,9 +478,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def outputToAntiPipelinedBuffer(pipeline: PipelineDefiner,
                                           plan: LogicalPlan,
                                           applyBuffer: ApplyBufferDefiner,
-                                          argumentSlotOffset: Int): OptionalMorselBufferDefiner = {
+                                          argumentSlotOffset: Int): ArgumentStreamMorselBufferDefiner = {
     val asm = stateDefiner.newArgumentStateMap(plan.id, argumentSlotOffset)
-    val output = stateDefiner.newOptionalBuffer(pipeline.id, plan.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id), AntiType)
+    val output = stateDefiner.newArgumentStreamBuffer(pipeline.id, plan.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id), AntiType)
     pipeline.fuseOrInterpret(MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, plan.id))
     markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
     output
@@ -556,10 +560,28 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
-      case _: Optional =>
+      case _: PartialTop =>
+        if (!breakingPolicy.breakOn(plan, applyPlans(plan.id)))
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+
+        val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
+        val pipeline = newPipeline(plan, buffer)
+        pipeline.lhs = source.id
+
+        val workCancellerAsmId = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset).id
+        //if we are a toplevel PartialTop we want to propagate the limit upstream
+        val onPipeline: PipelineDefiner => Unit = createPropagateTopLevelLimitCallback(argument, workCancellerAsmId)
+        //we want to propagate starting with source and then all upstream pipelines
+        onPipeline(pipeline)
+        markCancellerInUpstreamBuffers(pipeline.inputBuffer, argument, workCancellerAsmId, onPipeline)
+        pipeline
+
+      case _: Optional |
+           _: OrderedAggregation  |
+           _: PartialSort =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
-          val optionalPipelinedBuffer = outputToOptionalPipelinedBuffer(source, plan, argument, argument.argumentSlotOffset)
-          val pipeline = newPipeline(plan, optionalPipelinedBuffer)
+          val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
+          val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = source.id
           pipeline
         } else {
@@ -578,21 +600,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Limit =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
-        //if we are a toplevel limit we want to to propagate the limit upstream
-        val onPipeline: PipelineDefiner => Unit =
-          if(argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) p => {
-            if (p.workCanceller.isEmpty) {
-              p.workCanceller = Some(asm.id)
-            }
-          }
-          else _ => {}
+        //if we are a toplevel limit we want to propagate the limit upstream
+        val onPipeline: PipelineDefiner => Unit = createPropagateTopLevelLimitCallback(argument, asm.id)
         //we want to propagate starting with source and then all upstream pipelines
         onPipeline(source)
         markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id, onPipeline)
         source.fuseOrInterpret(plan, isBreaking = true)
         source
 
-      case _: Distinct | _: Skip =>
+      case _: Distinct | _: OrderedDistinct | _: Skip =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
         argument.downstreamStatesOnRHS += asm.id
         source.fuseOrInterpret(plan, breakingPolicy.breakOn(plan, applyPlans(plan.id)))
@@ -600,7 +616,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _ =>
         val isBreaking = breakingPolicy.breakOn(plan, applyPlans(plan.id))
-        if (source.fuse(plan, isBreaking)) {
+        if (source.fuse(plan)) {
           source
         } else {
           if (isBreaking) {
@@ -816,7 +832,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           onInputBuffer(b)
           upstreams += getPipeline(b.lhsProducingPipelineId.x).inputBuffer
           upstreams += getPipeline(b.rhsProducingPipelineId.x).inputBuffer
-        case b: OptionalMorselBufferDefiner =>
+        case b: ArgumentStreamMorselBufferDefiner =>
           onInputBuffer(b)
           upstreams += getPipeline(b.producingPipelineId.x).inputBuffer
       }
@@ -829,4 +845,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     val buffers = Seq(buffer)
     bfs(buffers)
   }
+
+  private def createPropagateTopLevelLimitCallback(argument: ApplyBufferDefiner, workCancellerAsmId: ArgumentStateMapId): PipelineDefiner => Unit =
+    if (argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET)
+      p => {
+        if (p.workCanceller.isEmpty)
+          p.workCanceller = Some(workCancellerAsmId)
+      }
+    else
+      _ => ()
 }

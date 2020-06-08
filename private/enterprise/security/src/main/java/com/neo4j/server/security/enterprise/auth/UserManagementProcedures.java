@@ -19,16 +19,17 @@ import org.neo4j.graphdb.Result.ResultVisitor;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.procedure.Sensitive;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import org.neo4j.kernel.api.procedure.Sensitive;
 
 import static org.neo4j.kernel.api.exceptions.Status.Procedure.ProcedureCallFailed;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.FeatureDeprecationWarning;
-import static org.neo4j.procedure.Mode.DBMS;
+import static org.neo4j.procedure.Mode.READ;
+import static org.neo4j.procedure.Mode.WRITE;
 
 @SuppressWarnings( {"unused"} )
 public class UserManagementProcedures extends AuthProceduresBase
@@ -37,7 +38,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Create a new user." )
-    @Procedure( name = "dbms.security.createUser", mode = DBMS, deprecatedBy = "Administration command: CREATE USER" )
+    @Procedure( name = "dbms.security.createUser", mode = WRITE, deprecatedBy = "Administration command: CREATE USER" )
     public void createUser(
             @Name( "username" ) String username,
             @Name( "password" ) @Sensitive String password,
@@ -52,7 +53,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Change the current user's password." )
-    @Procedure( name = "dbms.security.changePassword", mode = DBMS, deprecatedBy = "Administration command: ALTER CURRENT USER SET PASSWORD" )
+    @Procedure( name = "dbms.security.changePassword", mode = WRITE, deprecatedBy = "Administration command: ALTER CURRENT USER SET PASSWORD" )
     public void changePassword(
             @Name( "password" ) @Sensitive String password,
             @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange )
@@ -65,7 +66,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Change the given user's password." )
-    @Procedure( name = "dbms.security.changeUserPassword", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
+    @Procedure( name = "dbms.security.changeUserPassword", mode = WRITE, deprecatedBy = "Administration command: ALTER USER" )
     public void changeUserPassword(
             @Name( "username" ) String username,
             @Name( "newPassword" ) @Sensitive String newPassword,
@@ -81,7 +82,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Assign a role to the user." )
-    @Procedure( name = "dbms.security.addRoleToUser", mode = DBMS, deprecatedBy = "Administration command: GRANT ROLE TO USER" )
+    @Procedure( name = "dbms.security.addRoleToUser", mode = WRITE, deprecatedBy = "Administration command: GRANT ROLE TO USER" )
     public void addRoleToUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "GRANT ROLE %s TO %s", escapeParameter( roleName ), escapeParameter( username ) );
@@ -92,7 +93,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Unassign a role from the user." )
-    @Procedure( name = "dbms.security.removeRoleFromUser", mode = DBMS, deprecatedBy = "Administration command: REVOKE ROLE FROM USER" )
+    @Procedure( name = "dbms.security.removeRoleFromUser", mode = WRITE, deprecatedBy = "Administration command: REVOKE ROLE FROM USER" )
     public void removeRoleFromUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "REVOKE ROLE %s FROM %s", escapeParameter( roleName ), escapeParameter( username ) );
@@ -103,7 +104,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Delete the specified user." )
-    @Procedure( name = "dbms.security.deleteUser", mode = DBMS, deprecatedBy = "Administration command: DROP USER" )
+    @Procedure( name = "dbms.security.deleteUser", mode = WRITE, deprecatedBy = "Administration command: DROP USER" )
     public void deleteUser( @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "DROP USER %s", escapeParameter( username ) );
@@ -114,7 +115,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Suspend the specified user." )
-    @Procedure( name = "dbms.security.suspendUser", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
+    @Procedure( name = "dbms.security.suspendUser", mode = WRITE, deprecatedBy = "Administration command: ALTER USER" )
     public void suspendUser( @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "ALTER USER %s SET STATUS SUSPENDED", escapeParameter( username ) );
@@ -125,7 +126,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Activate a suspended user." )
-    @Procedure( name = "dbms.security.activateUser", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
+    @Procedure( name = "dbms.security.activateUser", mode = WRITE, deprecatedBy = "Administration command: ALTER USER" )
     public void activateUser( @Name( "username" ) String username,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException
@@ -139,7 +140,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "List all native users." )
-    @Procedure( name = "dbms.security.listUsers", mode = DBMS, deprecatedBy = "Administration command: SHOW USERS" )
+    @Procedure( name = "dbms.security.listUsers", mode = READ, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<UserResult> listUsers() throws ProcedureException
     {
         return listUsers( "dbms.security.listUsers" );
@@ -179,7 +180,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "List all available roles." )
-    @Procedure( name = "dbms.security.listRoles", mode = DBMS, deprecatedBy = "Administration command: SHOW ROLES" )
+    @Procedure( name = "dbms.security.listRoles", mode = READ, deprecatedBy = "Administration command: SHOW ROLES" )
     public Stream<RoleResult> listRoles() throws ProcedureException
     {
         var result = new HashMap<String,Set<String>>();
@@ -205,7 +206,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "List all roles assigned to the specified user." )
-    @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS, deprecatedBy = "Administration command: SHOW USERS" )
+    @Procedure( name = "dbms.security.listRolesForUser", mode = READ, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
         String procedureName = "dbms.security.listRolesForUser";
@@ -239,7 +240,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "List all users currently assigned the specified role." )
-    @Procedure( name = "dbms.security.listUsersForRole", mode = DBMS, deprecatedBy = "Administration command: SHOW ROLES WITH USERS" )
+    @Procedure( name = "dbms.security.listUsersForRole", mode = READ, deprecatedBy = "Administration command: SHOW ROLES WITH USERS" )
     public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws ProcedureException, InvalidArgumentsException
     {
         var roleExists = new AtomicBoolean( false );
@@ -276,7 +277,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Create a new role." )
-    @Procedure( name = "dbms.security.createRole", mode = DBMS, deprecatedBy = "Administration command: CREATE ROLE" )
+    @Procedure( name = "dbms.security.createRole", mode = WRITE, deprecatedBy = "Administration command: CREATE ROLE" )
     public void createRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
         var query = String.format( "CREATE ROLE %s", escapeParameter( roleName ) );
@@ -287,7 +288,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Deprecated
     @Description( "Delete the specified role. Any role assignments will be removed." )
-    @Procedure( name = "dbms.security.deleteRole", mode = DBMS, deprecatedBy = "Administration command: DROP ROLE" )
+    @Procedure( name = "dbms.security.deleteRole", mode = WRITE, deprecatedBy = "Administration command: DROP ROLE" )
     public void deleteRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
         var query = String.format( "DROP ROLE %s", escapeParameter( roleName ) );

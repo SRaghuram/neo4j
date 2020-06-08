@@ -17,11 +17,14 @@ import java.io.IOException;
 
 import org.neo4j.cursor.EmptyIOCursor;
 import org.neo4j.cursor.IOCursor;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.String.format;
 
@@ -40,6 +43,7 @@ class SegmentFile implements AutoCloseable
     private final ChannelMarshal<ReplicatedContent> contentMarshal;
 
     private final PositionCache positionCache;
+    private final MemoryTracker memoryTracker;
     private final ReferenceCounter refCount;
 
     private final SegmentHeader header;
@@ -48,7 +52,7 @@ class SegmentFile implements AutoCloseable
     private PhysicalFlushableChannel bufferedWriter;
 
     SegmentFile( FileSystemAbstraction fileSystem, File file, ReaderPool readerPool, long version,
-            ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header )
+            ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.file = file;
@@ -58,13 +62,14 @@ class SegmentFile implements AutoCloseable
         this.version = version;
 
         this.positionCache = new PositionCache( header.recordOffset() );
+        this.memoryTracker = memoryTracker;
         this.refCount = new ReferenceCounter();
 
         this.log = logProvider.getLog( getClass() );
     }
 
     static SegmentFile create( FileSystemAbstraction fileSystem, File file, ReaderPool readerPool, long version,
-            ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header )
+            ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header, MemoryTracker memoryTracker )
             throws IOException
     {
         if ( fileSystem.fileExists( file ) )
@@ -72,7 +77,7 @@ class SegmentFile implements AutoCloseable
             throw new IllegalStateException( "File was not expected to exist" );
         }
 
-        SegmentFile segment = new SegmentFile( fileSystem, file, readerPool, version, contentMarshal, logProvider, header );
+        SegmentFile segment = new SegmentFile( fileSystem, file, readerPool, version, contentMarshal, logProvider, header, memoryTracker );
         headerMarshal.marshal( header, segment.getOrCreateWriter() );
         segment.flush();
 
@@ -101,7 +106,7 @@ class SegmentFile implements AutoCloseable
         try
         {
             long currentIndex = position.logIndex;
-            return new EntryRecordCursor( reader, contentMarshal, currentIndex, offsetIndex, this );
+            return new EntryRecordCursor( reader, contentMarshal, currentIndex, offsetIndex, this, memoryTracker );
         }
         catch ( EndOfStreamException e )
         {
@@ -128,7 +133,7 @@ class SegmentFile implements AutoCloseable
 
             StoreChannel channel = fileSystem.write( file );
             channel.position( channel.size() );
-            bufferedWriter = new PhysicalFlushableChannel( channel );
+            bufferedWriter = new PhysicalFlushableChannel( channel, new NativeScopedBuffer( ByteUnit.kibiBytes( 512 ), memoryTracker ) );
         }
         return bufferedWriter;
     }
@@ -155,9 +160,11 @@ class SegmentFile implements AutoCloseable
             {
                 log.error( "Failed to close writer for: " + file, e );
             }
-
-            bufferedWriter = null;
-            refCount.decrease();
+            finally
+            {
+                bufferedWriter = null;
+                refCount.decrease();
+            }
         }
     }
 

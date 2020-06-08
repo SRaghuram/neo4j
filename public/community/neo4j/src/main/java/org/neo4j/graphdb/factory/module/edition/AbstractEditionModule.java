@@ -177,12 +177,19 @@ public abstract class AbstractEditionModule
      */
     public abstract QueryEngineProvider getQueryEngineProvider();
 
+    public abstract void bootstrapFabricServices();
+
     public abstract BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
             DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService );
 
     public AuthManager getBoltAuthManager( DependencyResolver dependencyResolver )
     {
         return dependencyResolver.resolveDependency( AuthManager.class );
+    }
+
+    public AuthManager getBoltInClusterAuthManager()
+    {
+        return null;
     }
 
     public abstract DatabaseStartupController getDatabaseStartupController();

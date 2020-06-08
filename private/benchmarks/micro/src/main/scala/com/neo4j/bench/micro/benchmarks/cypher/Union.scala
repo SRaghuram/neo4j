@@ -32,8 +32,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class Union extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME),
-    base = Array(Slotted.NAME, Morsel.NAME))
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME),
+    base = Array(Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
 

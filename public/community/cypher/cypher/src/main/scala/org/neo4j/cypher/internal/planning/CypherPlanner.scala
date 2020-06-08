@@ -26,6 +26,7 @@ import org.neo4j.cypher.CypherUpdateStrategy
 import org.neo4j.cypher.internal.AdministrationCommandRuntime
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.CacheTracer
+import org.neo4j.cypher.internal.CompilerWithExpressionCodeGenOption
 import org.neo4j.cypher.internal.CypherQueryObfuscator
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.FineToReuse
@@ -62,14 +63,16 @@ import org.neo4j.cypher.internal.compiler.planner.logical.idp.SingleComponentPla
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.cartesianProductsOrValueJoins
 import org.neo4j.cypher.internal.compiler.planner.logical.simpleExpressionEvaluator
 import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.expressions.SensitiveParameter
+import org.neo4j.cypher.internal.expressions.SensitiveString
 import org.neo4j.cypher.internal.frontend.phases.BaseState
 import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer
 import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.frontend.phases.Monitors
 import org.neo4j.cypher.internal.frontend.phases.RecordingNotificationLogger
+import org.neo4j.cypher.internal.logical.plans.AdministrationCommandLogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LoadCSV
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.logical.plans.AdministrationCommandLogicalPlan
 import org.neo4j.cypher.internal.logical.plans.ProcedureCall
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.SystemProcedureCall
@@ -192,7 +195,7 @@ case class CypherPlanner(config: CypherPlannerConfiguration,
         innerVariableNamer,
         params,
         compatibilityMode)
-      parsedQueries.put(preParsedQuery.statementWithVersionAndPlanner, parsedQuery)
+      if (!config.planSystemCommands) parsedQueries.put(preParsedQuery.statementWithVersionAndPlanner, parsedQuery)
       parsedQuery
     }
   }
@@ -300,14 +303,20 @@ case class CypherPlanner(config: CypherPlannerConfiguration,
 
     val enoughParametersSupplied = queryParamNames.size == filteredParams.size // this is relevant if the query has parameters
 
+    val compilerWithExpressionCodeGenOption = new CompilerWithExpressionCodeGenOption[CacheableLogicalPlan] {
+      override def compile(): CacheableLogicalPlan = createPlan(shouldBeCached = true)
+      override def compileWithExpressionCodeGen(): CacheableLogicalPlan = compile()
+      override def maybeCompileWithExpressionCodeGen(hitCount: Int): Option[CacheableLogicalPlan] = None
+    }
+
     val cacheableLogicalPlan =
     // We don't want to cache any query without enough given parameters (although EXPLAIN queries will succeed)
       if (options.debugOptions.isEmpty && (queryParamNames.isEmpty || enoughParametersSupplied)) {
         planCache.computeIfAbsentOrStale(Pair.of(syntacticQuery.statement(), QueryCache.extractParameterTypeMap(filteredParams)),
           transactionalContext,
-          () => createPlan(shouldBeCached = true),
-          _ => None,
-          syntacticQuery.queryText).executableQuery
+          compilerWithExpressionCodeGenOption,
+          options.replan,
+          syntacticQuery.queryText)
       } else if (!enoughParametersSupplied) {
         createPlan(shouldBeCached = false, missingParameterNames = queryParamNames.filterNot(filteredParams.containsKey))
       } else {
@@ -347,6 +356,7 @@ case class CypherPlanner(config: CypherPlannerConfiguration,
         if (m.isApplicableAdministrationCommand(logicalPlanState)) {
           val allowQueryCaching = logicalPlanState.maybeLogicalPlan match {
             case Some(_: SystemProcedureCall) => false
+            case Some(ContainsSensitiveFields()) => false
             case _ => true
           }
           (FineToReuse, allowQueryCaching)
@@ -364,7 +374,7 @@ case class CypherPlanner(config: CypherPlannerConfiguration,
         val fingerprintReference = new PlanFingerprintReference(fingerprint)
         (MaybeReusable(fingerprintReference), shouldBeCached)
     }
-    CacheableLogicalPlan(logicalPlanState, reusabilityState, notificationLogger.notifications, shouldCache)
+    CacheableLogicalPlan(logicalPlanState, reusabilityState, notificationLogger.notifications.toIndexedSeq, shouldCache)
   }
 
   private def checkForSchemaChanges(tcw: TransactionalContextWrapper): Unit =
@@ -388,27 +398,41 @@ case class CypherPlanner(config: CypherPlannerConfiguration,
     }
 }
 
+object ContainsSensitiveFields {
+  def unapply(plan: LogicalPlan): Boolean = {
+    plan.treeExists {
+      case _: SensitiveString => true
+      case _: SensitiveParameter => true
+    }
+  }
+}
+
 case class LogicalPlanResult(logicalPlanState: LogicalPlanState,
                              paramNames: Seq[String],
                              extractedParams: MapValue,
                              reusability: ReusabilityState,
                              plannerContext: PlannerContext,
-                             notifications: Set[InternalNotification],
+                             notifications: IndexedSeq[InternalNotification],
                              shouldBeCached: Boolean,
                              queryObfuscator: QueryObfuscator)
 
 trait CypherCacheFlushingMonitor {
-  def cacheFlushDetected(sizeBeforeFlush: Long) {}
+  def cacheFlushDetected(sizeBeforeFlush: Long): Unit = {}
 }
 
 trait CypherCacheHitMonitor[T] {
-  def cacheHit(key: T) {}
+  def cacheHit(key: T): Unit = {}
 
-  def cacheMiss(key: T) {}
+  def cacheMiss(key: T): Unit = {}
 
-  def cacheDiscard(key: T, userKey: String, secondsSinceReplan: Int, maybeReason: Option[String]) {}
+  def cacheDiscard(key: T, userKey: String, secondsSinceReplan: Int, maybeReason: Option[String]): Unit = {}
 
-  def cacheRecompile(key: T) {}
+  def cacheCompile(key: T): Unit = {}
+
+  def cacheCompileWithExpressionCodeGen(key: T): Unit = {}
 }
 
+/**
+ * See comment in MonitoringCacheTracer for justification of the existence of this type.
+ */
 trait CypherCacheMonitor[T] extends CypherCacheHitMonitor[T] with CypherCacheFlushingMonitor

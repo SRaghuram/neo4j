@@ -14,6 +14,7 @@ import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astLabelName
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -30,8 +31,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class NodeByLabelScan extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
-    base = Array(Slotted.NAME, Morsel.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
+    base = Array(Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
@@ -49,7 +50,7 @@ class NodeByLabelScan extends AbstractCypherBenchmark {
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val nodeByLabelScan = plans.NodeByLabelScan("node", astLabelName(LABEL), Set.empty)(IdGen)
+    val nodeByLabelScan = plans.NodeByLabelScan("node", astLabelName(LABEL), Set.empty, IndexOrderNone)(IdGen)
     val resultColumns = List("node")
     val produceResults = plans.ProduceResult(nodeByLabelScan, columns = resultColumns)(IdGen)
 

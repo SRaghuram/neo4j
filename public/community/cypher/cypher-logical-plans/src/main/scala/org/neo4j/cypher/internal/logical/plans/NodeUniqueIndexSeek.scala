@@ -25,11 +25,11 @@ import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.attribution.SameId
 
 /**
-  * Produces one or zero rows containing the node with the given label and property values.
-  *
-  * This operator is used on label/property combinations under uniqueness constraint, meaning that a single matching
-  * node is guaranteed.
-  */
+ * Produces one or zero rows containing the node with the given label and property values.
+ *
+ * This operator is used on label/property combinations under uniqueness constraint, meaning that a single matching
+ * node is guaranteed.
+ */
 case class NodeUniqueIndexSeek(idName: String,
                                label: LabelToken,
                                properties: Seq[IndexedProperty],
@@ -39,6 +39,10 @@ case class NodeUniqueIndexSeek(idName: String,
                               (implicit idGen: IdGen) extends IndexSeekLeafPlan(idGen) {
 
   override val availableSymbols: Set[String] = argumentIds + idName
+
+  override def usedVariables: Set[String] = valueExpr.expressions.flatMap(_.dependencies).map(_.name).toSet
+
+  override def withoutArgumentIds(argsToExclude: Set[String]): NodeUniqueIndexSeek = copy(argumentIds = argumentIds -- argsToExclude)(SameId(this.id))
 
   override def copyWithoutGettingValues: NodeUniqueIndexSeek =
     NodeUniqueIndexSeek(idName, label, properties.map{ p => IndexedProperty(p.propertyKeyToken, DoNotGetValue) }, valueExpr, argumentIds, indexOrder)(SameId(this.id))

@@ -5,14 +5,14 @@
  */
 package com.neo4j.fabric.routing;
 
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 
 import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
@@ -24,11 +24,11 @@ public class FabricRoutingProcedureInstaller extends BaseRoutingProcedureInstall
     private final ConnectorPortRegister portRegister;
     private final Config config;
     private final FabricDatabaseManager fabricDatabaseManager;
-    private final FabricConfig fabricConfig;
+    private final FabricEnterpriseConfig fabricConfig;
     private final LogProvider logProvider;
 
     public FabricRoutingProcedureInstaller( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister, Config config,
-            FabricDatabaseManager fabricDatabaseManager, FabricConfig fabricConfig,  LogProvider logProvider )
+            FabricDatabaseManager fabricDatabaseManager, FabricEnterpriseConfig fabricConfig,  LogProvider logProvider )
     {
         this.databaseManager = databaseManager;
         this.portRegister = portRegister;

@@ -20,6 +20,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @EphemeralTestDirectoryExtension
 @ExtendWith( LifeExtension.class )
@@ -37,6 +38,6 @@ public class SegmentedRaftLogContractTest extends RaftLogContractTest
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "1 entries", logProvider ).newInstance();
         return life.add( new SegmentedRaftLog( testDirectory.getFileSystem(), testDirectory.homeDir(), 1024, ignored -> new DummyRaftableContentSerializer(),
-                logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy ) );
+                logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy, INSTANCE ) );
     }
 }

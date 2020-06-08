@@ -101,6 +101,23 @@ public class GBPTreeTokenStore implements Closeable
         return tokens;
     }
 
+<<<<<<< HEAD
+=======
+    public NamedToken loadToken( int id, PageCursorTracer cursorTracer ) throws IOException
+    {
+        TokenKey key = new TokenKey( id );
+        try ( Seeker<TokenKey,Void> seek = tree.seek( key, key, cursorTracer ) )
+        {
+            if ( seek.next() )
+            {
+                String name = UTF8.decode( seek.key().nameBytes );
+                return new NamedToken( name, id, false );
+            }
+        }
+        return null;
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     public int nextTokenId( PageCursorTracer cursorTracer )
     {
         return toIntExact( idGenerator.nextId( cursorTracer ) );

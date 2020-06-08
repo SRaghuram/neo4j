@@ -188,7 +188,6 @@ abstract class SemiApplyTestBase[CONTEXT <: RuntimeContext](edition: Edition[CON
       .semiApply()
       .|.optional("x")
       .|.allNodeScan("a", "x")
-      .|.argument("x")
       .input(variables = Seq("x"))
       .build()
 
@@ -198,6 +197,7 @@ abstract class SemiApplyTestBase[CONTEXT <: RuntimeContext](edition: Edition[CON
   }
 
   test("non-empty optional on rhs") {
+    given { nodeGraph(sizeHint) }
     val inputRows = (0 until sizeHint).map { i =>
       Array[Any](i.toLong)
     }
@@ -208,7 +208,6 @@ abstract class SemiApplyTestBase[CONTEXT <: RuntimeContext](edition: Edition[CON
       .semiApply()
       .|.optional("x")
       .|.allNodeScan("a", "x")
-      .|.argument("x")
       .input(variables = Seq("x"))
       .build()
 

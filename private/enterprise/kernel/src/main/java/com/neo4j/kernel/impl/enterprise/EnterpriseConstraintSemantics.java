@@ -24,6 +24,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
 import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceException;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
@@ -153,7 +154,7 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
 
     @Override
     public TxStateVisitor decorateTxStateVisitor( StorageReader storageReader, Read read, CursorFactory cursorFactory, ReadableTransactionState txState,
-            TxStateVisitor visitor, PageCursorTracer pageCursorTracer )
+            TxStateVisitor visitor, PageCursorTracer pageCursorTracer, MemoryTracker memoryTracker )
     {
         if ( !txState.hasDataChanges() )
         {
@@ -165,6 +166,6 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
             return visitor;
         }
         return getOrCreatePropertyExistenceEnforcerFrom( storageReader )
-                .decorate( visitor, read, cursorFactory, pageCursorTracer );
+                .decorate( visitor, read, cursorFactory, pageCursorTracer, memoryTracker );
     }
 }

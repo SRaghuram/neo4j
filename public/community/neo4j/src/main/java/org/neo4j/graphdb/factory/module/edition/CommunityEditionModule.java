@@ -36,12 +36,14 @@ import org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.dbms.database.DefaultDatabaseManager;
 import org.neo4j.dbms.database.DefaultSystemGraphInitializer;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.dbms.procedures.StandaloneDatabaseStateProcedure;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
+import org.neo4j.fabric.bootstrap.FabricServicesBootstrap;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
@@ -98,6 +100,7 @@ public class CommunityEditionModule extends StandaloneEditionModule
     protected final SslPolicyLoader sslPolicyLoader;
     protected final GlobalModule globalModule;
     private final CompositeDatabaseAvailabilityGuard globalAvailabilityGuard;
+    private final FabricServicesBootstrap fabricServicesBootstrap;
 
     public CommunityEditionModule( GlobalModule globalModule )
     {
@@ -113,6 +116,7 @@ public class CommunityEditionModule extends StandaloneEditionModule
 
         this.sslPolicyLoader = SslPolicyLoader.create( globalConfig, logService.getInternalLogProvider() );
         globalDependencies.satisfyDependency( sslPolicyLoader ); // for bolt and web server
+        globalDependencies.satisfyDependency( new DatabaseOperationCounts.Counter() ); // for global metrics
 
         LocksFactory lockFactory = createLockFactory( globalConfig, logService );
         locksSupplier = () -> createLockManager( lockFactory, globalConfig, globalClock );
@@ -130,6 +134,8 @@ public class CommunityEditionModule extends StandaloneEditionModule
 
         connectionTracker = globalDependencies.satisfyDependency( createConnectionTracker() );
         globalAvailabilityGuard = globalModule.getGlobalAvailabilityGuard();
+
+        fabricServicesBootstrap = new FabricServicesBootstrap.Community( globalModule.getGlobalLife(), globalDependencies, globalModule.getLogService() );
     }
 
     protected Function<NamedDatabaseId,TokenHolders> createTokenHolderProvider( GlobalModule platform )
@@ -280,9 +286,22 @@ public class CommunityEditionModule extends StandaloneEditionModule
     public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
             DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
     {
+        var kernelDatabaseManagementService = createBoltKernelDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
+        return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
+    }
+
+    protected BoltGraphDatabaseManagementServiceSPI createBoltKernelDatabaseManagementServiceProvider( Dependencies dependencies,
+            DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
+    {
         var config = dependencies.resolveDependency( Config.class );
         var bookmarkAwaitDuration =  config.get( GraphDatabaseSettings.bookmark_ready_timeout );
         var reconciledTxTracker = new SimpleReconciledTransactionTracker( managementService, logService );
         return new BoltKernelDatabaseManagementServiceProvider( managementService, reconciledTxTracker, monitors, clock, bookmarkAwaitDuration );
+    }
+
+    @Override
+    public void bootstrapFabricServices()
+    {
+        fabricServicesBootstrap.bootstrapServices();
     }
 }

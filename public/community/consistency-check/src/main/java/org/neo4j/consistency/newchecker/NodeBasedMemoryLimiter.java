@@ -39,7 +39,7 @@ public class NodeBasedMemoryLimiter extends PrefetchingIterator<LongRange>
         NodeBasedMemoryLimiter create( long pageCacheMemory, long highNodeId );
     }
 
-    public static Factory DEFAULT = ( pageCacheMemory, highNodeId ) ->
+    public static final Factory DEFAULT = ( pageCacheMemory, highNodeId ) ->
     {
         long jvmMemory = Runtime.getRuntime().maxMemory();
         long machineMemory = OsBeanUtil.getTotalPhysicalMemory();
@@ -117,7 +117,7 @@ public class NodeBasedMemoryLimiter extends PrefetchingIterator<LongRange>
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder( getClass().getSimpleName() + ":" );
+        StringBuilder builder = new StringBuilder().append( getClass().getSimpleName() ).append( ':' );
         builder.append( format( "%n  pageCacheMemory:%s", bytesToString( pageCacheMemory ) ) );
         builder.append( format( "%n  jvmMemory:%s", bytesToString( jvmMemory ) ) );
         builder.append( format( "%n  machineMemory:%s", bytesToString( machineMemory ) ) );

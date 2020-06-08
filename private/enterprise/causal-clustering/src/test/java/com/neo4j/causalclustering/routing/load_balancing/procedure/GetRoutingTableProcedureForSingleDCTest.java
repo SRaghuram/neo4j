@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
@@ -15,7 +14,6 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
-import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,6 +92,9 @@ class GetRoutingTableProcedureForSingleDCTest
     private NamedDatabaseId namedDatabaseId;
     private RaftId raftId;
     private DatabaseAvailabilityGuard availabilityGuard;
+    private MutableLeaderService leaderService;
+    private CoreTopologyService coreTopologyService;
+    // given
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )
@@ -121,18 +122,17 @@ class GetRoutingTableProcedureForSingleDCTest
         when( availabilityGuard.isAvailable() ).thenReturn( true );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
         this.databaseManager = databaseManager;
+        coreTopologyService = mock( CoreTopologyService.class );
+        leaderService = new MutableLeaderService( namedDatabaseId, coreTopologyService );
     }
 
     @RoutingConfigsTest
     void ttlShouldBeInSeconds( Config config ) throws Exception
     {
-        // given
-        var coreTopologyService = mock( CoreTopologyService.class );
-
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
-        var leaderService = newLeaderService( noLeaderAvailable(), coreTopologyService );
+        var leaderService = newLeaderService( coreTopologyService );
 
         // set the TTL in minutes
         config.set( routing_ttl, Duration.ofMinutes( 10 ) );
@@ -167,9 +167,6 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldProvideReaderAndRouterForSingleCoreSetup( Config config ) throws Exception
     {
         // given
-        var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( noLeaderAvailable(), coreTopologyService );
-
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
@@ -191,8 +188,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnCoreServersWithRouteAllCoresButLeaderAsReadAndSingleWriteActions( Config config ) throws Exception
     {
         // given
-        var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
+        leaderService.setLeader( getLeaderForId( 0 ) );
 
         var coreMembers = Map.of(
                 member( 0 ), addressesForCore( 0, false ),
@@ -222,9 +218,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnSelfIfOnlyMemberOfTheCluster( Config config ) throws Exception
     {
         // given
-        var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
-
+        leaderService.setLeader( getLeaderForId( 0 ) );
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
@@ -247,15 +241,13 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnTheCoreLeaderForWriteAndReadReplicasAndCoresForReads( Config config ) throws Exception
     {
         // given
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
-
-        var theLeader = member( 0 );
+        var theLeader = getLeaderForId( 0 );
+        leaderService.setLeader( theLeader );
         var coreMembers = Map.of( theLeader, addressesForCore( 0, false ) );
 
-        setupCoreTopologyService( topologyService, coreMembers, readReplicaInfoMap( 1 ) );
+        setupCoreTopologyService( coreTopologyService, coreMembers, readReplicaInfoMap( 1 ) );
 
-        var procedure = newProcedure( topologyService, leaderService, config );
+        var procedure = newProcedure( coreTopologyService, leaderService, config );
 
         // when
         var clusterView = run( procedure, config );
@@ -281,15 +273,14 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnCoreMemberAsReadServerIfNoReadReplicasAvailable( Config config ) throws Exception
     {
         // given
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
+        var theLeader = getLeaderForId( 0 );
+        leaderService.setLeader( theLeader );
 
-        var theLeader = member( 0 );
         var coreMembers = Map.of( theLeader, addressesForCore( 0, false ) );
 
-        setupCoreTopologyService( topologyService, coreMembers, emptyMap() );
+        setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
-        var procedure = newProcedure( topologyService, leaderService, config );
+        var procedure = newProcedure( coreTopologyService, leaderService, config );
 
         // when
         var clusterView = run( procedure, config );
@@ -307,14 +298,11 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnNoWriteEndpointsIfThereIsNoLeader( Config config ) throws Exception
     {
         // given
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( noLeaderAvailable(), topologyService );
-
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
-        setupCoreTopologyService( topologyService, coreMembers, emptyMap() );
+        setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
-        var procedure = newProcedure( topologyService, leaderService, config );
+        var procedure = newProcedure( coreTopologyService, leaderService, config );
 
         // when
         var clusterView = run( procedure, config );
@@ -331,14 +319,12 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnNoWriteEndpointsIfThereIsNoAddressForTheLeader( Config config ) throws Exception
     {
         // given
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 1 ), topologyService );
-
+        leaderService.setLeader( getLeaderForId( 1 ) );
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
-        setupCoreTopologyService( topologyService, coreMembers, emptyMap() );
+        setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
-        var procedure = newProcedure( topologyService, leaderService, config );
+        var procedure = newProcedure( coreTopologyService, leaderService, config );
 
         // when
         var clusterView = run( procedure, config );
@@ -357,8 +343,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var config = Config.defaults();
-        var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
+        leaderService.setLeader( getLeaderForId( 0 ) );
 
         var coreMembers = Map.of(
                 member( 0 ), addressesForCore( 0, false ),
@@ -393,10 +378,9 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldHaveCorrectSignature() throws Exception
     {
         // given
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
+        leaderService.setLeader( getLeaderForId( 1 ) );
 
-        var proc = newProcedure( topologyService, leaderService, Config.defaults() );
+        var proc = newProcedure( coreTopologyService, leaderService, Config.defaults() );
 
         // when
         var signature = proc.signature();
@@ -411,14 +395,9 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldHaveCorrectNamespace()
     {
         // given
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderLocator = mock( LeaderLocator.class );
-        var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
-        when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
-        var leaderService = newLeaderService( leaderLocatorForDatabase, topologyService );
         var config = Config.defaults();
 
-        var proc = newProcedure( topologyService, leaderService, config );
+        var proc = newProcedure( coreTopologyService, leaderService, config );
 
         // when
         var name = proc.signature().name();
@@ -434,10 +413,9 @@ class GetRoutingTableProcedureForSingleDCTest
         var databaseManager = new StubClusteredDatabaseManager( databaseIdRepository );
         var databaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
         databaseIdRepository.filter( databaseId.name() );
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
+        leaderService.setLeader( getLeaderForId( 0 ) );
 
-        var proc = newProcedure( topologyService, leaderService, databaseManager );
+        var proc = newProcedure( coreTopologyService, leaderService, databaseManager );
 
         var error = assertThrows( ProcedureException.class, () -> run( proc, databaseId, Config.defaults() ) );
         assertEquals( Status.Database.DatabaseNotFound, error.status() );
@@ -449,18 +427,17 @@ class GetRoutingTableProcedureForSingleDCTest
         var databaseManager = new StubClusteredDatabaseManager();
         var databaseId = databaseManager.databaseIdRepository().getByName( "stopped database" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withStoppedDatabase().register();
-        var topologyService = mock( CoreTopologyService.class );
-        var leaderService = newLeaderService( leaderIsMemberId( 0, databaseId ), topologyService );
+        leaderService.setLeader( databaseId, getLeaderForId( 0 ) );
 
         var coreMembers = Map.of(
                 member( 0 ), addressesForCore( 0, false ),
                 member( 1 ), addressesForCore( 1, false ),
                 member( 2 ), addressesForCore( 2, false ) );
 
-        setupCoreTopologyService( topologyService, coreMembers, emptyMap(), databaseId, raftId );
+        setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap(), databaseId, raftId );
 
         Config defaults = Config.defaults();
-        var proc = newProcedure( topologyService, leaderService, databaseManager );
+        var proc = newProcedure( coreTopologyService, leaderService, databaseManager );
 
         var clusterView = run( proc, databaseId, defaults );
 
@@ -478,44 +455,23 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldThrowWhenTopologyServiceContainsNoInfoAboutTheDatabaseButDatabaseExists() throws Exception
     {
         var unknownNamedDatabaseId = databaseManager.databaseIdRepository().getByName( "unknown" ).get();
-        var topologyService = mock( CoreTopologyService.class );
-        when( topologyService.coreTopologyForDatabase( unknownNamedDatabaseId ) )
+        when( coreTopologyService.coreTopologyForDatabase( unknownNamedDatabaseId ) )
                 .thenReturn( DatabaseCoreTopology.empty( unknownNamedDatabaseId.databaseId() ) );
-        when( topologyService.readReplicaTopologyForDatabase( unknownNamedDatabaseId ) )
+        when( coreTopologyService.readReplicaTopologyForDatabase( unknownNamedDatabaseId ) )
                 .thenReturn( DatabaseReadReplicaTopology.empty( unknownNamedDatabaseId.databaseId() ) );
 
-        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
+        leaderService.setLeader( getLeaderForId( 0 ) );
         var config = Config.defaults();
 
-        var proc = newProcedure( topologyService, leaderService, config );
+        var proc = newProcedure( coreTopologyService, leaderService, config );
 
         var error = assertThrows( ProcedureException.class, () -> run( proc, unknownNamedDatabaseId, config ) );
         assertEquals( Status.Database.DatabaseUnavailable, error.status() );
     }
 
-    private LeaderLocatorForDatabase noLeaderAvailable()
+    private static MemberId getLeaderForId( int id )
     {
-        var leaderLocator = mock( LeaderLocator.class );
-        var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
-
-        when( leaderLocator.getLeaderInfo() ).thenReturn( null );
-        when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
-        return leaderLocatorForDatabase;
-    }
-
-    private LeaderLocatorForDatabase leaderIsMemberId( int memberId )
-    {
-        return leaderIsMemberId( memberId, namedDatabaseId );
-    }
-
-    private static LeaderLocatorForDatabase leaderIsMemberId( int memberId, NamedDatabaseId databaseId )
-    {
-        var leaderLocator = mock( LeaderLocator.class );
-        var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
-
-        when( leaderLocator.getLeaderInfo() ).thenReturn( leader( memberId, 1 ) );
-        when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
-        return leaderLocatorForDatabase;
+        return leader( id, 1 ).memberId();
     }
 
     private Object[] getEndpoints( CallableProcedure proc ) throws ProcedureException
@@ -588,9 +544,9 @@ class GetRoutingTableProcedureForSingleDCTest
                 .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), readReplicas ) );
     }
 
-    private LeaderService newLeaderService( LeaderLocatorForDatabase leaderLocator, CoreTopologyService coreTopologyService )
+    private LeaderService newLeaderService( CoreTopologyService coreTopologyService )
     {
-        return new DefaultLeaderService( leaderLocator, coreTopologyService, nullLogProvider() );
+        return new DefaultLeaderService( coreTopologyService, nullLogProvider() );
     }
 
     private static class ClusterView
@@ -693,6 +649,46 @@ class GetRoutingTableProcedureForSingleDCTest
             {
                 return new ClusterView( view );
             }
+        }
+    }
+
+    private static class MutableLeaderService implements LeaderService
+    {
+        Map<NamedDatabaseId,MemberId> leaders = new HashMap<>();
+        private NamedDatabaseId defaultDb;
+        private CoreTopologyService coreTopologyService;
+
+        MutableLeaderService( NamedDatabaseId defaultDb, CoreTopologyService coreTopologyService )
+        {
+            this.defaultDb = defaultDb;
+            this.coreTopologyService = coreTopologyService;
+        }
+
+        @Override
+        public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
+        {
+            return Optional.ofNullable( leaders.get( namedDatabaseId ) );
+        }
+
+        @Override
+        public Optional<SocketAddress> getLeaderBoltAddress( NamedDatabaseId namedDatabaseId )
+        {
+            var leader = leaders.get( namedDatabaseId );
+            if ( leader != null )
+            {
+                return Optional.ofNullable( coreTopologyService.allCoreServers().get( leader ) ).map( coreInfo -> coreInfo.connectors().boltAddress() );
+            }
+            return Optional.empty();
+        }
+
+        void setLeader( MemberId leader )
+        {
+            setLeader( defaultDb, leader );
+        }
+
+        void setLeader( NamedDatabaseId namedDatabaseId, MemberId leader )
+        {
+            this.leaders.put( namedDatabaseId, leader );
         }
     }
 }

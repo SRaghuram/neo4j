@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 @FunctionalInterface
-interface TerminationCondition
+public interface TerminationCondition
 {
     TerminationCondition CONTINUE_INDEFINITELY = () ->
     {

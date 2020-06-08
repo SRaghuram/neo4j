@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.io.ByteUnit.KibiByte;
-import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 class ReadAheadLogChannelTest
@@ -80,7 +80,7 @@ class ReadAheadLogChannelTest
         StoreChannel storeChannel = fileSystem.read( file );
         PhysicalLogVersionedStoreChannel versionedStoreChannel =
                 new PhysicalLogVersionedStoreChannel( storeChannel, -1 /* ignored */, (byte) -1, file, nativeChannelAccessor );
-        try ( ReadAheadLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, NO_MORE_CHANNELS ) )
+        try ( ReadAheadLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, INSTANCE ) )
         {
             // THEN
             assertEquals( byteValue, channel.get() );
@@ -136,7 +136,7 @@ class ReadAheadLogChannelTest
                 }
                 return channel;
             }
-        } ) )
+        }, INSTANCE ) )
         {
             // THEN
             for ( long i = 0; i < 20; i++ )
@@ -150,7 +150,7 @@ class ReadAheadLogChannelTest
     {
         try ( StoreChannel channel = fileSystem.write( file ) )
         {
-            ByteBuffer buffer = ByteBuffers.allocate( 1, KibiByte );
+            ByteBuffer buffer = ByteBuffers.allocate( 1, KibiByte, INSTANCE );
             visitor.visit( buffer );
             buffer.flip();
             channel.write( buffer );

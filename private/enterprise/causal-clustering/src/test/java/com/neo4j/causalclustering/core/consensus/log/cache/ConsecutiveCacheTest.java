@@ -5,48 +5,40 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.cache;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith( Parameterized.class )
-public class ConsecutiveCacheTest
+class ConsecutiveCacheTest
 {
-    private final int capacity;
     private ConsecutiveCache<Integer> cache;
     private Integer[] evictions;
 
-    public ConsecutiveCacheTest( int capacity )
+    private void setEvictionsAndCache( int capacity )
     {
-        this.capacity = capacity;
         this.evictions = new Integer[capacity];
+        this.cache = new ConsecutiveCache<>( capacity );
     }
 
-    @Parameterized.Parameters( name = "capacity={0}" )
-    public static Collection<Object[]> data()
+    static Collection<Object[]> data()
     {
         return Arrays.asList( new Object[][]{{1}, {2}, {3}, {4}, {8}, {1024}} );
     }
 
-    @Before
-    public void setup()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testEmptyInvariants( int capacity )
     {
-        cache = new ConsecutiveCache<>( capacity );
-    }
+        setEvictionsAndCache( capacity );
 
-    @Test
-    public void testEmptyInvariants()
-    {
         assertEquals( 0, cache.size() );
         for ( int i = 0; i < capacity; i++ )
         {
@@ -54,9 +46,12 @@ public class ConsecutiveCacheTest
         }
     }
 
-    @Test
-    public void testCacheFill()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testCacheFill( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         for ( int i = 0; i < capacity; i++ )
         {
             // when
@@ -74,9 +69,12 @@ public class ConsecutiveCacheTest
         }
     }
 
-    @Test
-    public void testCacheMultipleFills()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testCacheMultipleFills( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         // given
         for ( int i = 0; i < capacity; i++ )
         {
@@ -95,9 +93,12 @@ public class ConsecutiveCacheTest
         }
     }
 
-    @Test
-    public void testCacheClearing()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testCacheClearing( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         // given
         for ( int i = 0; i < capacity; i++ )
         {
@@ -117,9 +118,12 @@ public class ConsecutiveCacheTest
         assertEquals( 0, cache.size() );
     }
 
-    @Test
-    public void testEntryOverride()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testEntryOverride( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         // given
         for ( int i = 0; i < capacity; i++ )
         {
@@ -144,9 +148,12 @@ public class ConsecutiveCacheTest
         assertEquals( 10000, cache.get( capacity / 2 ).intValue() );
     }
 
-    @Test
-    public void testEntrySkip()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testEntrySkip( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         // given
         for ( int i = 0; i < capacity; i++ )
         {
@@ -166,9 +173,12 @@ public class ConsecutiveCacheTest
         assertEquals( 10000, cache.get( capacity + 1 ).intValue() );
     }
 
-    @Test
-    public void testPruning()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testPruning( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         // given
         for ( int i = 0; i < capacity; i++ )
         {
@@ -192,9 +202,12 @@ public class ConsecutiveCacheTest
         }
     }
 
-    @Test
-    public void testRemoval()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testRemoval( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         // given
         for ( int i = 0; i < capacity; i++ )
         {
@@ -214,9 +227,12 @@ public class ConsecutiveCacheTest
         assertNull( cache.remove() );
     }
 
-    @Test
-    public void testTruncation()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void testTruncation( int capacity )
     {
+        setEvictionsAndCache( capacity );
+
         // given
         for ( int i = 0; i < capacity; i++ )
         {

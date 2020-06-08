@@ -5,15 +5,13 @@
  */
 package com.neo4j.internal.batchimport;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -25,6 +23,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -48,6 +47,7 @@ import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.io.compress.ZipUtils.zip;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.proc.ProcessUtil.getClassPath;
 import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
@@ -158,11 +158,12 @@ class RestartableImportIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             File databaseDirectory = new File( args[0] );
-            BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(),
-                    null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
-                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE )
-                    .doImport( input( Long.parseLong( args[1] ) ) );
-            // Create this file to communicate completion for realz
+            BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
+            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
+                    NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(),
+                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
+                   .doImport( input( Long.parseLong( args[1] ) ) );
+            // Create this file to communicate completion for real
             new File( databaseDirectory, COMPLETED ).createNewFile();
         }
         catch ( IllegalStateException e )

@@ -63,6 +63,7 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.SchemaState;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -102,8 +103,8 @@ import org.neo4j.kernel.internal.event.DatabaseTransactionEventListeners;
 import org.neo4j.kernel.internal.event.TransactionListenersState;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.memory.LocalMemoryTracker;
-import org.neo4j.memory.MemoryPool;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
 import org.neo4j.storageengine.api.CommandCreationContext;
@@ -139,7 +140,9 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private static final long NOT_COMMITTED_TRANSACTION_ID = -1;
     private static final long NOT_COMMITTED_TRANSACTION_COMMIT_TIME = -1;
     private static final String TRANSACTION_TAG = "transaction";
-    private static final int INITIAL_RESERVED_BYTES = FeatureToggles.getInteger( KernelTransactionImplementation.class, "initialReservedHeap", 1024 );
+    private static final String INITIAL_RESERVED_BYTES_TOGGLE =
+            FeatureToggles.getString( KernelTransactionImplementation.class, "heapGrabSize", "2m" );
+    private static final long INITIAL_RESERVED_BYTES = ByteUnit.parse( INITIAL_RESERVED_BYTES_TOGGLE );
 
     private final CollectionsFactory collectionsFactory;
 
@@ -195,7 +198,8 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private InternalTransaction internalTransaction;
     private volatile TraceProvider traceProvider;
     private volatile TransactionInitializationTrace initializationTrace;
-    private final MemoryTracker memoryTracker;
+    private final LocalMemoryTracker memoryTracker;
+    private volatile long transactionHeapBytesLimit;
 
     /**
      * Lock prevents transaction {@link #markForTermination(Status)}  transaction termination} from interfering with
@@ -216,15 +220,16 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
             ConstraintSemantics constraintSemantics, SchemaState schemaState, TokenHolders tokenHolders, IndexingService indexingService,
             LabelScanStore labelScanStore, RelationshipTypeScanStore relationshipTypeScanStore,
             IndexStatisticsStore indexStatisticsStore, Dependencies dependencies,
-            NamedDatabaseId namedDatabaseId, LeaseService leaseService, MemoryPool transactionMemoryPool )
+            NamedDatabaseId namedDatabaseId, LeaseService leaseService, ScopedMemoryPool transactionMemoryPool )
     {
         this.pageCursorTracer = tracers.getPageCacheTracer().createPageCursorTracer( TRANSACTION_TAG );
+        this.memoryTracker = new LocalMemoryTracker( transactionMemoryPool, transactionHeapBytesLimit, INITIAL_RESERVED_BYTES );
         this.eventListeners = eventListeners;
         this.constraintIndexCreator = constraintIndexCreator;
         this.commitProcess = commitProcess;
         this.transactionMonitor = transactionMonitor;
         this.storageReader = storageEngine.newReader();
-        this.commandCreationContext = storageEngine.newCommandCreationContext( pageCursorTracer );
+        this.commandCreationContext = storageEngine.newCommandCreationContext( pageCursorTracer, memoryTracker );
         this.namedDatabaseId = namedDatabaseId;
         this.storageEngine = storageEngine;
         this.pool = pool;
@@ -240,7 +245,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         DefaultPooledCursors cursors = new DefaultPooledCursors( storageReader );
         this.allStoreHolder =
                 new AllStoreHolder( storageReader, this, cursors, globalProcedures, schemaState, indexingService, labelScanStore, relationshipTypeScanStore,
-                        indexStatisticsStore, pageCursorTracer, dependencies, config );
+                        indexStatisticsStore, pageCursorTracer, dependencies, config, memoryTracker );
         this.operations =
                 new Operations(
                         allStoreHolder,
@@ -253,11 +258,11 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
                         constraintIndexCreator,
                         constraintSemantics,
                         indexingService,
-                        config, pageCursorTracer );
+                        config, pageCursorTracer, memoryTracker );
         traceProvider = getTraceProvider( config );
+        transactionHeapBytesLimit = config.get( memory_transaction_max_size );
         registerConfigChangeListeners( config );
         this.collectionsFactory = collectionsFactorySupplier.create();
-        this.memoryTracker = new LocalMemoryTracker( transactionMemoryPool, config.get( memory_transaction_max_size ), INITIAL_RESERVED_BYTES );
     }
 
     /**
@@ -292,6 +297,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.currentStatement.initialize( statementLocks, pageCursorTracer, startTimeMillis );
         this.operations.initialize();
         this.initializationTrace = traceProvider.getTraceInfo();
+        this.memoryTracker.setLimit( transactionHeapBytesLimit );
         return this;
     }
 
@@ -419,6 +425,14 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
                 statementLocks.stop();
             }
             transactionMonitor.transactionTerminated( hasTxStateWithChanges() );
+
+            var internalTransaction = this.internalTransaction;
+
+            if ( internalTransaction != null )
+            {
+                internalTransaction.terminate( reason );
+            }
+
             return true;
         }
         return false;
@@ -792,7 +806,6 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     public Write dataWrite() throws InvalidTransactionTypeKernelException
     {
         accessCapability.assertCanWrite();
-        assertAllowsWrites();
         upgradeToDataWrites();
         return operations;
     }
@@ -910,15 +923,6 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         return currentStatement.lockTracer();
     }
 
-    private void assertAllowsWrites()
-    {
-        AccessMode accessMode = securityContext().mode();
-        if ( !accessMode.allowsWrites() )
-        {
-            throw accessMode.onViolation( format( "Write operations are not allowed for %s.", securityContext().description() ) );
-        }
-    }
-
     private void assertAllowsSchemaWrites()
     {
         AccessMode accessMode = securityContext().mode();
@@ -933,7 +937,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         AccessMode accessMode = securityContext().mode();
         if ( !accessMode.allowsTokenCreates( action ) )
         {
-            throw accessMode.onViolation( format( "'%s' operations are not allowed for %s.", action.toString(), securityContext().description() ) );
+            throw accessMode.onViolation( format( "'%s' operations are not allowed for %s.", action, securityContext().description() ) );
         }
     }
 
@@ -1110,7 +1114,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private TxStateVisitor enforceConstraints( TxStateVisitor txStateVisitor )
     {
         return constraintSemantics.decorateTxStateVisitor( storageReader, operations.dataRead(), operations.cursors(), txState, txStateVisitor,
-                pageCursorTracer );
+                pageCursorTracer, memoryTracker );
     }
 
     /**
@@ -1186,11 +1190,11 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         }
 
         /**
-         * @return amount of off heap memory
+         * @return amount of native memory
          */
-        long usedDirectMemory()
+        long usedNativeMemory()
         {
-            return transaction.memoryTracker().usedDirectMemory();
+            return transaction.memoryTracker().usedNativeMemory();
         }
 
         /**
@@ -1287,6 +1291,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     {
         config.addListener( transaction_tracing_level, ( before, after ) -> traceProvider = getTraceProvider( config ) );
         config.addListener( transaction_sampling_percentage, ( before, after ) -> traceProvider = getTraceProvider( config ) );
+        config.addListener( memory_transaction_max_size, ( before, after ) -> transactionHeapBytesLimit = after );
     }
 
     /**

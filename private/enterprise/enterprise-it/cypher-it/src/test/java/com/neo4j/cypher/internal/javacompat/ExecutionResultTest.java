@@ -116,7 +116,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO PIPELINED leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -178,7 +178,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO PIPELINED leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -404,7 +404,7 @@ class ExecutionResultTest
             assertThat( arguments.get( "planner-impl" ), equalTo( "ADMINISTRATION" ) );
             assertThat( arguments.get( "runtime" ), equalTo( "SCHEMA" ) );
             assertThat( arguments.get( "runtime-impl" ), equalTo( "SCHEMA" ) );
-            assertThat( arguments.get( "IndexName" ), equalTo( "my_index" ) );
+            assertThat( arguments.get( "Details" ), equalTo( "INDEX my_index FOR (:L) ON (prop)" ) );
             transaction.commit();
         }
 
@@ -422,7 +422,7 @@ class ExecutionResultTest
             assertThat( arguments.get( "planner-impl" ), equalTo( "ADMINISTRATION" ) );
             assertThat( arguments.get( "runtime" ), equalTo( "SCHEMA" ) );
             assertThat( arguments.get( "runtime-impl" ), equalTo( "SCHEMA" ) );
-            assertThat( arguments.get( "ConstraintName" ), equalTo( "my_constraint" ) );
+            assertThat( arguments.get( "Details" ), equalTo( "CONSTRAINT my_constraint ON (n:L) ASSERT exists(n.prop)" ) );
             transaction.commit();
         }
     }

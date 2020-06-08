@@ -12,8 +12,8 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -22,10 +22,10 @@ import org.neo4j.configuration.helpers.SocketAddress;
 
 class JoinMessageFactoryTest
 {
-    private final List<Address> seenAddresses = Arrays.asList( new Address( "protocol", "system", "host", 0 ) );
+    private final List<Address> seenAddresses = Collections.singletonList( new Address( "protocol", "system", "host", 0 ) );
 
     @Test
-    public void shouldCreateMessageNotRejoin()
+    void shouldCreateMessageNotRejoin()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new NoOverrideRemoteMembersResolver() );
@@ -38,7 +38,7 @@ class JoinMessageFactoryTest
     }
 
     @Test
-    public void shouldCreateReJoinMessageAfterAddingSeenAddressWithNoOverrideResolver()
+    void shouldCreateReJoinMessageAfterAddingSeenAddressWithNoOverrideResolver()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new NoOverrideRemoteMembersResolver() );
@@ -52,7 +52,7 @@ class JoinMessageFactoryTest
     }
 
     @Test
-    public void shouldCreateReJoinMessageAfterAddingSeenAddressWithOverrideResolver()
+    void shouldCreateReJoinMessageAfterAddingSeenAddressWithOverrideResolver()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );
@@ -66,7 +66,7 @@ class JoinMessageFactoryTest
     }
 
     @Test
-    public void shouldCreateMessageWithEmptyHostsIfNotReJoin()
+    void shouldCreateMessageWithEmptyHostsIfNotReJoin()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );
@@ -79,7 +79,7 @@ class JoinMessageFactoryTest
     }
 
     @Test
-    public void shouldCreateMessageWithEmptyHostsIfReJoinNoOverrideResolver()
+    void shouldCreateMessageWithEmptyHostsIfReJoinNoOverrideResolver()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new NoOverrideRemoteMembersResolver() );
@@ -93,7 +93,7 @@ class JoinMessageFactoryTest
     }
 
     @Test
-    public void shouldCreateMessageWithNonEmptyHostsIfReJoinOverrideResolver()
+    void shouldCreateMessageWithNonEmptyHostsIfReJoinOverrideResolver()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );
@@ -108,7 +108,7 @@ class JoinMessageFactoryTest
     }
 
     @Test
-    public void shouldClearHostsWhenCreatingMessage()
+    void shouldClearHostsWhenCreatingMessage()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );

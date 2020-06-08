@@ -32,7 +32,11 @@ import org.neo4j.storageengine.api.RelationshipDirection;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 
+<<<<<<< HEAD
 public class EagerDegrees implements Degrees
+=======
+public class EagerDegrees implements Degrees, Degrees.Mutator
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 {
     private static final int FIRST_TYPE_UNDECIDED = -1;
 
@@ -40,6 +44,10 @@ public class EagerDegrees implements Degrees
     private Degree firstTypeDegrees;
     private MutableIntObjectMap<Degree> degrees;
 
+<<<<<<< HEAD
+=======
+    @Override
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     public void add( int type, int outgoing, int incoming, int loop )
     {
         getOrCreateDegree( type ).add( outgoing, incoming, loop );
@@ -274,7 +282,14 @@ public class EagerDegrees implements Degrees
         }
         EagerDegrees that = (EagerDegrees) o;
         int[] types = types();
+<<<<<<< HEAD
         if ( !Arrays.equals( types, that.types() ) )
+=======
+        int[] otherTypes = that.types();
+        Arrays.sort( types );
+        Arrays.sort( otherTypes );
+        if ( !Arrays.equals( types, otherTypes ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             return false;
         }

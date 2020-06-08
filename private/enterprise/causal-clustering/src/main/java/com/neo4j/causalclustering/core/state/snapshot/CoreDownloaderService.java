@@ -40,7 +40,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private final ReplicatedDatabaseEventService databaseEventService;
 
     private PersistentSnapshotDownloader currentJob;
-    private JobHandle jobHandle;
+    private JobHandle<?> jobHandle;
     private boolean stopped;
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, StoreDownloadContext context, CoreSnapshotService snapshotService,
@@ -60,7 +60,7 @@ public class CoreDownloaderService extends LifecycleAdapter
         this.databaseStartAborter = databaseStartAborter;
     }
 
-    public synchronized Optional<JobHandle> scheduleDownload( CatchupAddressProvider addressProvider )
+    public synchronized Optional<JobHandle<?>> scheduleDownload( CatchupAddressProvider addressProvider )
     {
         if ( stopped )
         {
@@ -80,6 +80,9 @@ public class CoreDownloaderService extends LifecycleAdapter
     @Override
     public synchronized void start() throws Exception
     {
+        /* We prevent aborts while running so that the kernel cannot abort recovering
+           the database. This can otherwise happen during the restart of the kernel database
+           in the PersistentSnapshotDownloader and will cause subsequent issues. */
         databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, false );
     }
 
@@ -96,7 +99,7 @@ public class CoreDownloaderService extends LifecycleAdapter
         databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, true );
     }
 
-    public synchronized Optional<JobHandle> downloadJob()
+    public synchronized Optional<JobHandle<?>> downloadJob()
     {
         return Optional.ofNullable( jobHandle );
     }

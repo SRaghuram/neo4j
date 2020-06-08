@@ -26,6 +26,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChecksumChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -61,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
 @EphemeralNeo4jLayoutExtension
@@ -108,7 +110,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, NODE );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertTrue( success );
@@ -159,7 +161,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, NODE );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertFalse( success );
@@ -223,7 +225,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, NODE );
+        checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertEquals( 2, handler.recordInconsistencies.size() );
@@ -280,7 +282,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, NODE );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertFalse( success );
@@ -335,7 +337,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, PROPERTY );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( PROPERTY ) );
 
         // Then
         assertFalse( success );
@@ -399,7 +401,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, PROPERTY );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( PROPERTY ) );
 
         // Then
         assertFalse( success );
@@ -437,27 +439,27 @@ class CheckTxLogsTest
 
         writeTxContent( log, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
+                        createRelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
                 )
         );
 
         writeTxContent( log, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
+                        createRelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 )
         );
 
@@ -465,7 +467,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP ) );
 
         // Then
         assertEquals( 1, handler.recordInconsistencies.size() );
@@ -489,34 +491,34 @@ class CheckTxLogsTest
 
         writeTxContent( log1, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
+                        createRelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
                 )
         );
 
         writeTxContent( log2, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 )
         );
 
         writeTxContent( log3, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
+                        createRelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true )
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true )
                 )
         );
 
@@ -524,7 +526,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP ) );
 
         // Then
         assertEquals( 2, handler.recordInconsistencies.size() );
@@ -584,7 +586,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP_GROUP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP_GROUP ) );
 
         // Then
         assertEquals( 1, handler.recordInconsistencies.size() );
@@ -645,7 +647,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP_GROUP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP_GROUP ) );
 
         // Then
         assertEquals( 2, handler.recordInconsistencies.size() );
@@ -823,6 +825,15 @@ class CheckTxLogsTest
         verify( entryCursor ).close();
     }
 
+    private static RelationshipRecord createRelationshipRecord( long id, boolean inUse, long firstNode, long secondNode, int type, long firstPrevRel,
+            long firstNextRel, long secondPrevRel, long secondNextRel, boolean firstInFirstChain, boolean firstInSecondChain )
+    {
+        RelationshipRecord record = new RelationshipRecord( id );
+        record.initialize( inUse, 0, firstNode, secondNode, type, firstPrevRel, firstNextRel, secondPrevRel, secondNextRel, firstInFirstChain,
+                firstInSecondChain );
+        return record;
+    }
+
     private File logFile( long version )
     {
         return new File( databaseLayout.databaseDirectory(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
@@ -865,7 +876,8 @@ class CheckTxLogsTest
         try ( StoreChannel channel = fs.write( log );
                 LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log,
                         getLogFiles().getChannelNativeAccessor() );
-              PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel ) )
+                PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel,
+                        new HeapScopedBuffer( 100, INSTANCE ) ) )
         {
             long offset = channel.size();
             channel.position( offset );
@@ -880,7 +892,7 @@ class CheckTxLogsTest
         {
             try ( StoreChannel channel = fs.write( logFile ) )
             {
-                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.UNKNOWN ) );
+                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.UNKNOWN ), INSTANCE );
             }
         }
     }

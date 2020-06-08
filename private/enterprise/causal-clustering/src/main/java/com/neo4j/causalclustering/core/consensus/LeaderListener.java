@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
-
 public interface LeaderListener
 {
     /**
@@ -23,15 +21,10 @@ public interface LeaderListener
     void onLeaderSwitch( LeaderInfo leaderInfo );
 
     /**
-     * Standard catch-all method which delegates leader events to their appropriate handlers
-     * in the appropriate order, i.e. calls step down logic (if necessary) before leader switch
-     * logic.
-     *
-     * @param outcome The outcome which contains details of the leader event
+     * Trigger an event when this listener is being unregistered.
      */
-    default void onLeaderEvent( Outcome outcome )
+    default void onUnregister()
     {
-        outcome.stepDownTerm().ifPresent( this::onLeaderStepDown );
-        onLeaderSwitch( new LeaderInfo( outcome.getLeader(), outcome.getTerm() ) );
+        // do nothing
     }
 }

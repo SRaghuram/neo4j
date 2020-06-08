@@ -47,8 +47,8 @@ import org.neo4j.codegen.source.SourceVisitor
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Produces runnable code from an IntermediateRepresentation
-  */
+ * Produces runnable code from an IntermediateRepresentation
+ */
 object CodeGeneration {
 
   // Use these options for Debugging. They will print generated code to stdout
@@ -95,10 +95,13 @@ object CodeGeneration {
     def bytecode: Seq[(String, String)] = _bytecode
   }
 
-  def compileClass[T](c: ClassDeclaration[T], generator: CodeGenerator): Class[T] = {
-    val handle = compileClassDeclaration(c, generator)
+  def compileClass[T](c: ClassDeclaration[T], generator: CodeGenerator): ClassHandle = {
+    compileClassDeclaration(c, generator)
+  }
+
+  def loadAndSetConstants[T](handle: ClassHandle, declaration: ClassDeclaration[T]): Class[T] = {
     val clazz = handle.loadClass()
-    setConstants(clazz, c.fields)
+    setConstants(clazz, declaration.fields)
     clazz.asInstanceOf[Class[T]]
   }
 
@@ -208,7 +211,7 @@ object CodeGeneration {
      codegen.Expression.arrayLength(compileExpression(array, block))
 
     // array[offset]
-    case ArrayLoad(array, offset) => codegen.Expression.arrayLoad(compileExpression(array, block), constant(offset))
+    case ArrayLoad(array, offset) => codegen.Expression.arrayLoad(compileExpression(array, block), compileExpression(offset, block))
 
     //Foo.BAR
     case GetStatic(owner, typ, name) => getStatic(staticField(owner.getOrElse(block.classGenerator().handle()), typ, name))

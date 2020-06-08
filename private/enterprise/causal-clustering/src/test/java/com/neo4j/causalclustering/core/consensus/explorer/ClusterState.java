@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 
-import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.raftState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 
 public class ClusterState
 {
@@ -35,7 +35,7 @@ public class ClusterState
         for ( MemberId member : members )
         {
             roles.put( member, Role.FOLLOWER );
-            RaftState memberState = raftState().myself( member ).votingMembers( members ).build();
+            RaftState memberState = builder().myself( member ).votingMembers( members ).build();
             states.put( member, new ComparableRaftState( memberState ) );
             queues.put( member, new LinkedList<>() );
         }

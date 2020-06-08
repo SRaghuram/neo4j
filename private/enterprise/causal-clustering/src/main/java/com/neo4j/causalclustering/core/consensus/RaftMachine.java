@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.logging.Log;
@@ -126,9 +127,9 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     }
 
     @Override
-    public LeaderInfo getLeaderInfo()
+    public Optional<LeaderInfo> getLeaderInfo()
     {
-        return outcomeApplier.getLeaderInfo().orElse( null );
+        return outcomeApplier.getLeaderInfo();
     }
 
     @Override

@@ -21,9 +21,11 @@ package org.neo4j.cypher.internal.logical.plans
 
 import org.neo4j.cypher.internal.ast.ActionResource
 import org.neo4j.cypher.internal.ast.AdminAction
+import org.neo4j.cypher.internal.ast.GraphAction
 import org.neo4j.cypher.internal.ast.GraphScope
 import org.neo4j.cypher.internal.ast.PrivilegeQualifier
 import org.neo4j.cypher.internal.ast.ShowPrivilegeScope
+import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.Parameter
 import org.neo4j.cypher.internal.ir.LazyMode
 import org.neo4j.cypher.internal.ir.StrictnessMode
@@ -53,12 +55,12 @@ abstract class SecurityAdministrationLogicalPlan(source: Option[AdministrationCo
 
 // Security administration commands
 case class ShowUsers(source: PrivilegePlan)(implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan(Some(source))
-case class CreateUser(source: SecurityAdministrationLogicalPlan, userName: Either[String, Parameter], initialPassword: Either[Array[Byte], Parameter],
+case class CreateUser(source: SecurityAdministrationLogicalPlan, userName: Either[String, Parameter], initialPassword: Expression,
                       requirePasswordChange: Boolean, suspended: Option[Boolean])(implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan(Some(source))
 case class DropUser(source: SecurityAdministrationLogicalPlan, userName: Either[String, Parameter])(implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan(Some(source))
-case class AlterUser(source: PrivilegePlan, userName: Either[String, Parameter], initialPassword: Option[Either[Array[Byte], Parameter]],
+case class AlterUser(source: PrivilegePlan, userName: Either[String, Parameter], initialPassword: Option[Expression],
                      requirePasswordChange: Option[Boolean], suspended: Option[Boolean])(implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan(Some(source))
-case class SetOwnPassword(newPassword: Either[Array[Byte], Parameter], currentPassword: Either[Array[Byte], Parameter])
+case class SetOwnPassword(newPassword: Expression, currentPassword: Expression)
                          (implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan
 case class ShowRoles(source: PrivilegePlan, withUsers: Boolean, showAll: Boolean)(implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan(Some(source))
 case class CreateRole(source: SecurityAdministrationLogicalPlan, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan(Some(source))
@@ -89,6 +91,10 @@ case class GrantDatabaseAction(source: PrivilegePlan, action: AdminAction, datab
 case class DenyDatabaseAction(source: PrivilegePlan, action: AdminAction, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
 case class RevokeDatabaseAction(source: PrivilegePlan, action: AdminAction, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter], revokeType: String)(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
 
+case class GrantGraphAction(source: PrivilegePlan, action: GraphAction, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
+case class DenyGraphAction(source: PrivilegePlan, action: GraphAction, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
+case class RevokeGraphAction(source: PrivilegePlan, action: GraphAction, resoure: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter], revokeType: String)(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
+
 case class GrantTraverse(source: PrivilegePlan, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
 case class DenyTraverse(source: PrivilegePlan, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
 case class RevokeTraverse(source: PrivilegePlan, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter], revokeType: String)(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
@@ -100,10 +106,6 @@ case class RevokeRead(source: PrivilegePlan, resource: ActionResource, database:
 case class GrantMatch(source: PrivilegePlan, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
 case class DenyMatch(source: PrivilegePlan, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
 case class RevokeMatch(source: PrivilegePlan, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter], revokeType: String)(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
-
-case class GrantWrite(source: PrivilegePlan, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
-case class DenyWrite(source: PrivilegePlan, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter])(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
-case class RevokeWrite(source: PrivilegePlan, database: GraphScope, qualifier: PrivilegeQualifier, roleName: Either[String, Parameter], revokeType: String)(implicit idGen: IdGen) extends PrivilegePlan(Some(source))
 
 case class ShowPrivileges(source: Option[PrivilegePlan], scope: ShowPrivilegeScope)(implicit idGen: IdGen) extends SecurityAdministrationLogicalPlan(source)
 

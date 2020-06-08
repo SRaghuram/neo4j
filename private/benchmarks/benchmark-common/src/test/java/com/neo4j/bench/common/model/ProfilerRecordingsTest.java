@@ -7,9 +7,13 @@ package com.neo4j.bench.common.model;
 
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.profiling.ProfilerRecordings;
+import com.neo4j.bench.model.profiling.RecordingType;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -17,7 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.model.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.model.model.Benchmark.benchmarkFor;
 import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -28,7 +33,7 @@ class ProfilerRecordingsTest
     void shouldWorkInRegularCase()
     {
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group" );
-        Benchmark benchmark = Benchmark.benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
+        Benchmark benchmark = benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
 
         // empty map
         List<Map<String,String>> parametersList = new ArrayList<>();
@@ -75,8 +80,8 @@ class ProfilerRecordingsTest
     {
         ProfilerRecordings profilerRecordings = new ProfilerRecordings();
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group" );
-        Benchmark benchmark = Benchmark.benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
-        RecordingType recordingType = RecordingType.ASYNC_FLAMEGRAPH;
+        Benchmark benchmark = benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
+        RecordingType recordingType = RecordingType.ASYNC;
 
         String filename = ProfilerRecordingDescriptor.create( benchmarkGroup,
                                                               benchmark,

@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.SchemaRead
@@ -49,10 +50,24 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
                              compileExpressions,
                              materializedEntitiesMode,
                              operatorEngine,
-                             interpretedPipesFallback)
+                             interpretedPipesFallback,
+                             new TestCachingExpressionCompilerTracer())
   }
 
   override def assertAllReleased(): Unit = {
     runtimeEnvironment.getQueryExecutor(parallelExecution = true).assertAllReleased()
   }
+}
+
+class TestCachingExpressionCompilerTracer() extends CachingExpressionCompilerTracer {
+
+  private var _numberOfCompilationEvents = 0
+
+  def numberOfCompilationEvents = _numberOfCompilationEvents
+
+  override def onCompileExpression(): Unit = _numberOfCompilationEvents += 1
+
+  override def onCompileProjection(): Unit = _numberOfCompilationEvents += 1
+
+  override def onCompileGrouping(): Unit = _numberOfCompilationEvents += 1
 }

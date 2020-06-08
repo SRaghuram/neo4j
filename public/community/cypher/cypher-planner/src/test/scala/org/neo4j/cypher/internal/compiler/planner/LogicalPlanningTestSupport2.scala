@@ -25,6 +25,7 @@ import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
 import org.neo4j.cypher.internal.compiler.NotImplementedPlanContext
 import org.neo4j.cypher.internal.compiler.StatsDivergenceCalculator
+import org.neo4j.cypher.internal.compiler.phases.CompilationPhases.ParsingConfig
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases.parsing
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases.planPipeLine
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases.prepareForCaching
@@ -97,6 +98,7 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
   self: CypherFunSuite =>
 
   val pushdownPropertyReads: Boolean = true
+  val readPropertiesFromCursor: Boolean = false
 
   val parser = new CypherParser
   val rewriterSequencer: String => ValidatingRewriterStepSequencer = RewriterStepSequencer.newValidating
@@ -115,7 +117,8 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
     legacyCsvQuoteEscaping = false,
     csvBufferSize = 4 * 1024 * 1024,
     nonIndexedLabelWarningThreshold = 10000,
-    planSystemCommands = false
+    planSystemCommands = false,
+    readPropertiesFromCursor = false
   )
   val realConfig = RealLogicalPlanningConfiguration(cypherCompilerConfig)
 
@@ -127,9 +130,9 @@ trait LogicalPlanningTestSupport2 extends CypherTestSupport with AstConstruction
 
   def pipeLine(): Transformer[PlannerContext, BaseState, LogicalPlanState] = {
     // if you ever want to have parameters in here, fix the map
-    parsing(newPlain, innerVariableNamer, literalExtraction = Never, parameterTypeMapping = Map.empty) andThen
+    parsing(ParsingConfig(newPlain, innerVariableNamer, literalExtraction = Never, parameterTypeMapping = Map.empty)) andThen
       prepareForCaching andThen
-      planPipeLine(newPlain, pushdownPropertyReads)
+      planPipeLine(newPlain, pushdownPropertyReads = pushdownPropertyReads, readPropertiesFromCursor = readPropertiesFromCursor)
   }
 
   implicit class LogicalPlanningEnvironment[C <: LogicalPlanningConfiguration](config: C) {

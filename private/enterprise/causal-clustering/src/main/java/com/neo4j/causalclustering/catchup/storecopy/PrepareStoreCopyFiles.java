@@ -41,6 +41,7 @@ public class PrepareStoreCopyFiles implements AutoCloseable
                 .excludeAll()
                 .includeAdditionalProviders()
                 .includeLabelScanStoreFiles()
+                .includeRelationshipTypeScanStoreFiles()
                 .includeSchemaIndexStoreFiles()
                 .includeIdFiles()
                 .build() );

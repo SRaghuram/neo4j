@@ -19,16 +19,17 @@
  */
 package org.neo4j.resources;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ProfilerTest
 {
-    private static final int COMPUTE_WORK_MILLIS = 1000;
+    private static final int COMPUTE_WORK_MILLIS = 10;
+    private static final String METHOD = "expensiveComputation";
 
     @Test
     void profilerMustNoticeWhereTimeGoes() throws Exception
@@ -36,10 +37,11 @@ class ProfilerTest
         Profiler profiler = Profiler.profiler();
         try ( Profiler.ProfiledInterval ignored = profiler.profile() )
         {
-            expensiveComputation();
+            expensiveComputation( profiler );
         }
+        profiler.finish();
         String output = getProfilerOutput( profiler );
-        assertThat( output ).contains( "expensiveComputation" );
+        assertThat( output ).contains( METHOD );
     }
 
     @Test
@@ -48,17 +50,17 @@ class ProfilerTest
         Profiler profiler = Profiler.profiler();
         try ( Profiler.ProfiledInterval ignored = profiler.profile() )
         {
-            expensiveComputation();
+            expensiveComputation( profiler );
         }
         otherIntenseWork();
+        profiler.finish();
         String output = getProfilerOutput( profiler );
-        assertThat( output ).contains( "expensiveComputation" );
+        assertThat( output ).contains( METHOD );
         assertThat( output ).doesNotContain( "otherIntensiveWork" );
     }
 
-    private static String getProfilerOutput( Profiler profiler ) throws InterruptedException
+    private static String getProfilerOutput( Profiler profiler )
     {
-        profiler.finish();
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         try ( PrintStream out = new PrintStream( buffer ) )
         {
@@ -68,9 +70,13 @@ class ProfilerTest
         return buffer.toString();
     }
 
-    private static void expensiveComputation() throws InterruptedException
+    private void expensiveComputation( Profiler profiler ) throws InterruptedException
     {
-        Thread.sleep( COMPUTE_WORK_MILLIS );
+        do
+        {
+            Thread.sleep( COMPUTE_WORK_MILLIS );
+        }
+        while ( !getProfilerOutput( profiler ).contains( METHOD ) );
     }
 
     private static void otherIntenseWork() throws InterruptedException

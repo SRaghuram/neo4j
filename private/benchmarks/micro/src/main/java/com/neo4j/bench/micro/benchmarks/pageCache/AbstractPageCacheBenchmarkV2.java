@@ -38,11 +38,13 @@ import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 import static org.neo4j.io.ByteUnit.KibiByte;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
 {
@@ -71,7 +73,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
         {
             throw new AssertionError( e );
         }
-        buf = ByteBuffers.allocate( 8, KibiByte );
+        buf = ByteBuffers.allocate( 8, KibiByte, INSTANCE );
         // NOTE: can not use SplittableRandom as it does not have nextBytes()
         ThreadLocalRandom.current().nextBytes( buf.array() );
     }
@@ -139,7 +141,8 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
                 tracer, log,
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler(),
-                Clocks.nanoClock() );
+                Clocks.nanoClock(),
+                new MemoryPools() );
         pageCache = factory.getOrCreatePageCache();
         pagedFile = pageCache.map( STORE_FILE, (int) ByteUnit.kibiBytes( 8 ) );
         if ( getPercentageCached() > 0.49 )

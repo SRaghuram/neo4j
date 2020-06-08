@@ -34,6 +34,13 @@ public interface SingleFileStore extends Lifecycle, AutoCloseable
 
     void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer ) throws IOException;
 
+<<<<<<< HEAD
+=======
+    boolean exists( PageCursor cursor, long id );
+
+    long getHighId();
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     @Override
     default void close() throws Exception
     {

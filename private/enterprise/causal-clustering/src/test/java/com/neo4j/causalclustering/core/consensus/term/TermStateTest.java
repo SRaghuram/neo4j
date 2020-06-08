@@ -5,15 +5,13 @@
  */
 package com.neo4j.causalclustering.core.consensus.term;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-public class TermStateTest
+class TermStateTest
 {
     @Test
-    public void shouldStoreCurrentTerm()
+    void shouldStoreCurrentTerm()
     {
         // given
         TermState termState = new TermState();
@@ -22,11 +20,11 @@ public class TermStateTest
         termState.update( 21 );
 
         // then
-        assertEquals( 21, termState.currentTerm() );
+        Assertions.assertEquals( 21, termState.currentTerm() );
     }
 
     @Test
-    public void rejectLowerTerm()
+    void rejectLowerTerm()
     {
         // given
         TermState termState = new TermState();
@@ -36,7 +34,7 @@ public class TermStateTest
         try
         {
             termState.update( 20 );
-            fail( "Should have thrown exception" );
+            Assertions.fail( "Should have thrown exception" );
         }
         catch ( IllegalArgumentException e )
         {

@@ -30,6 +30,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @EphemeralTestDirectoryExtension
 class SegmentedRaftLogDurabilityTest
@@ -51,7 +52,7 @@ class SegmentedRaftLogDurabilityTest
         SegmentedRaftLog log =
                 new SegmentedRaftLog( fileSystem, directory, rotateAtSizeBytes, ignored -> new DummyRaftableContentSerializer(),
                         logProvider, readerPoolSize, Clocks.fakeClock(), new OnDemandJobScheduler(),
-                        new CoreLogPruningStrategyFactory( "1 size", logProvider ).newInstance() );
+                        new CoreLogPruningStrategyFactory( "1 size", logProvider ).newInstance(), INSTANCE );
         log.start();
 
         return log;

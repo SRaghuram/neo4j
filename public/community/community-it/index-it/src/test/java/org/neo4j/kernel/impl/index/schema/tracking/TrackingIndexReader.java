@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.impl.index.schema.tracking;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexQueryConstraints;
 import org.neo4j.internal.kernel.api.QueryContext;
@@ -29,8 +27,9 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.index.IndexProgressor;
 import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.IndexSampler;
-import org.neo4j.storageengine.api.NodePropertyAccessor;
 import org.neo4j.values.storable.Value;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TrackingIndexReader implements IndexReader
 {
@@ -57,22 +56,15 @@ public class TrackingIndexReader implements IndexReader
 
     @Override
     public void query( QueryContext context, IndexProgressor.EntityValueClient client, IndexQueryConstraints constraints,
-            PageCursorTracer cursorTracer, IndexQuery... query ) throws IndexNotApplicableKernelException
+            IndexQuery... query ) throws IndexNotApplicableKernelException
     {
-        delegate.query( context, client, constraints, cursorTracer, query );
+        delegate.query( context, client, constraints, query );
     }
 
     @Override
     public boolean hasFullValuePrecision( IndexQuery... predicates )
     {
         return delegate.hasFullValuePrecision( predicates );
-    }
-
-    @Override
-    public void distinctValues( IndexProgressor.EntityValueClient client, NodePropertyAccessor propertyAccessor, boolean needsValues,
-            PageCursorTracer cursorTracer )
-    {
-        delegate.distinctValues( client, propertyAccessor, needsValues, cursorTracer );
     }
 
     @Override

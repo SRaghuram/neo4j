@@ -636,7 +636,7 @@ public final class DurationValue extends ScalarValue implements TemporalAmount, 
         {
             return "PT0S"; // no need to allocate a string builder if we know the result
         }
-        StringBuilder str = new StringBuilder().append( "P" );
+        StringBuilder str = new StringBuilder().append( 'P' );
         append( str, months / 12, 'Y' );
         append( str, months % 12, 'M' );
         append( str, days, 'D' );
@@ -1083,24 +1083,24 @@ public final class DurationValue extends ScalarValue implements TemporalAmount, 
     private InvalidArgumentException invalidDurationAdd( DurationValue o1, DurationValue o2, Exception e )
     {
         return new InvalidArgumentException(
-                String.format( "Can not add duration %s and %s without causing overflow.", o1.toString(), o2.toString() ), e );
+                String.format( "Can not add duration %s and %s without causing overflow.", o1, o2 ), e );
     }
 
     private InvalidArgumentException invalidDurationSubtract( DurationValue o1, DurationValue o2, Exception e )
     {
         return new InvalidArgumentException(
-                String.format( "Can not subtract duration %s and %s without causing overflow.", o1.toString(), o2.toString() ), e );
+                String.format( "Can not subtract duration %s and %s without causing overflow.", o1, o2 ), e );
     }
 
     private InvalidArgumentException invalidDurationMultiply( DurationValue o1, NumberValue numberValue, Exception e )
     {
         return new InvalidArgumentException(
-                String.format( "Can not multiply duration %s with %s without causing overflow.", o1.toString(), numberValue.toString() ), e );
+                String.format( "Can not multiply duration %s with %s without causing overflow.", o1, numberValue ), e );
     }
 
     private InvalidArgumentException invalidDurationDivision( DurationValue o1, NumberValue numberValue, Exception e )
     {
         return new InvalidArgumentException(
-                String.format( "Can not divide duration %s with %s without causing overflow.", o1.toString(), numberValue.toString() ), e );
+                String.format( "Can not divide duration %s with %s without causing overflow.", o1, numberValue ), e );
     }
 }

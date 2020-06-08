@@ -24,13 +24,20 @@ import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
+<<<<<<< HEAD
 import java.io.Closeable;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
+<<<<<<< HEAD
+=======
+import java.util.function.BiFunction;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -57,6 +64,7 @@ import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.StreamVByte.calculateLongSizeIndex;
@@ -64,6 +72,16 @@ import static org.neo4j.internal.freki.StreamVByte.readLongValue;
 import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.writeLongValue;
+=======
+import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
+import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
+import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
+import static org.neo4j.internal.freki.StreamVByte.encodeLongValue;
+import static org.neo4j.internal.freki.StreamVByte.longValueSizeCode;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
+import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
+import static org.neo4j.internal.freki.StreamVByte.writeInts;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.neo4j.internal.helpers.collection.Iterators.iterator;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
@@ -75,7 +93,11 @@ import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
  * OBSERVE For the time being this tree is per database, for simplicity. But in the end we'd really want to have one tree per node,
  * i.e. completely node-centric trees.
  */
+<<<<<<< HEAD
 class DenseRelationshipStore extends LifecycleAdapter implements Closeable
+=======
+class DenseRelationshipStore extends LifecycleAdapter implements SimpleDenseRelationshipStore
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 {
     private static final int MAX_ENTRY_VALUE_SIZE = 256;
 
@@ -92,8 +114,14 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 tracer, Sets.immutable.empty() );
     }
 
+<<<<<<< HEAD
     MutableIntObjectMap<PropertyUpdate> loadRelationshipPropertiesForRemoval( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing,
             PageCursorTracer cursorTracer )
+=======
+    @Override
+    public MutableIntObjectMap<PropertyUpdate> loadRelationshipProperties( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing,
+            BiFunction<Integer,ByteBuffer,PropertyUpdate> update, PageCursorTracer cursorTracer )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         try
         {
@@ -112,7 +140,11 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 {
                     relationshipProperties.next();
                     int key = relationshipProperties.propertyKeyId();
+<<<<<<< HEAD
                     properties.put( key, PropertyUpdate.remove( key, relationshipProperties.serializedValue() ) );
+=======
+                    properties.put( key, update.apply( key, relationshipProperties.serializedValue() ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 }
                 return properties;
             }
@@ -123,7 +155,12 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
+<<<<<<< HEAD
     ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
+=======
+    @Override
+    public ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         // If type is defined (i.e. NOT -1) then we can seek by direction too, otherwise we'll have to filter on direction
         DenseKey from = layout.newKey().initialize( nodeId,
@@ -147,7 +184,12 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
+<<<<<<< HEAD
     ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, long neighbourNodeId,
+=======
+    @Override
+    public ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, long neighbourNodeId,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             PageCursorTracer cursorTracer )
     {
         if ( direction == Direction.BOTH )
@@ -181,7 +223,12 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
+<<<<<<< HEAD
     RelationshipData getRelationship( long nodeId, int type, Direction direction, long otherNodeId, long internalId, PageCursorTracer cursorTracer )
+=======
+    @Override
+    public RelationshipData getRelationship( long nodeId, int type, Direction direction, long otherNodeId, long internalId, PageCursorTracer cursorTracer )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         DenseKey key = layout.newKey().initialize( nodeId, type, direction, otherNodeId, internalId );
         try ( RelationshipIterator iterator = new RelationshipIterator( tree.seek( key, key, cursorTracer ), d -> true, bigPropertyValueStore, cursorTracer ) )
@@ -201,12 +248,19 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
     private static RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData, SimpleBigValueStore bigPropertyValueStore,
             PageCursorTracer tracer )
     {
+<<<<<<< HEAD
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         if ( relationshipData.remaining() == 0 )
         {
             return NO_PROPERTIES;
         }
+<<<<<<< HEAD
         int[] propertyKeys = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), relationshipData ).array();
+=======
+        int[] propertyKeys = readInts( relationshipData, true );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         return new RelationshipPropertyIterator()
         {
             private int current = -1;
@@ -262,7 +316,12 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         };
     }
 
+<<<<<<< HEAD
     Updater newUpdater( PageCursorTracer cursorTracer ) throws IOException
+=======
+    @Override
+    public Updater newUpdater( PageCursorTracer cursorTracer ) throws IOException
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         Writer<DenseKey,DenseValue> writer = tree.writer( cursorTracer );
         return new Updater()
@@ -271,7 +330,11 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             private final DenseValue value = new DenseValue();
 
             @Override
+<<<<<<< HEAD
             public void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing,
+=======
+            public void insertRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                     IntObjectMap<PropertyUpdate> properties, Function<PropertyUpdate,ByteBuffer> version )
             {
                 key.initialize( sourceNodeId, type, outgoing ? Direction.OUTGOING : Direction.INCOMING, targetNodeId, internalId );
@@ -294,7 +357,12 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         };
     }
 
+<<<<<<< HEAD
     void checkpoint( IOLimiter ioLimiter, PageCursorTracer cursorTracer )
+=======
+    @Override
+    public void checkpoint( IOLimiter ioLimiter, PageCursorTracer cursorTracer )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         tree.checkpoint( ioLimiter, cursorTracer );
     }
@@ -311,7 +379,12 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         tree.close();
     }
 
+<<<<<<< HEAD
     Stats gatherStats( PageCursorTracer cursorTracer )
+=======
+    @Override
+    public Stats gatherStats( PageCursorTracer cursorTracer )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         Stats stats = new Stats( tree.sizeInBytes() );
         DenseKey from = new DenseKey();
@@ -352,6 +425,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         return stats;
     }
 
+<<<<<<< HEAD
     interface Updater extends Closeable
     {
         void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> properties,
@@ -360,6 +434,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         void deleteRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing );
     }
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private static class DenseLayout extends Layout.Adapter<DenseKey,DenseValue>
     {
         DenseLayout()
@@ -409,20 +485,34 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             key.getOrCalculateSize();
             cursor.putByte( key.cachedSizesByte );
+<<<<<<< HEAD
             writeLongValue( cursor, key.nodeId );
             writeLongValue( cursor, key.tokenAndDirectionInt() );
             writeLongValue( cursor, key.neighbourNodeId );
             writeLongValue( cursor, key.internalRelationshipId );
+=======
+            encodeLongValue( cursor, key.nodeId );
+            encodeLongValue( cursor, key.tokenAndDirectionInt() );
+            encodeLongValue( cursor, key.neighbourNodeId );
+            encodeLongValue( cursor, key.internalRelationshipId );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
 
         @Override
         public void readKey( PageCursor cursor, DenseKey into, int keySize )
         {
             into.cachedSizesByte = cursor.getByte();
+<<<<<<< HEAD
             into.nodeId = readLongValue( cursor, into.cachedSizesByte & 0x3 );
             into.fromTokenAndDirection( (int) readLongValue( cursor, (into.cachedSizesByte >>> 2) & 0x3 ) );
             into.neighbourNodeId = readLongValue( cursor, (into.cachedSizesByte >>> 4) & 0x3 );
             into.internalRelationshipId = readLongValue( cursor, (into.cachedSizesByte >>> 6) & 0x3 );
+=======
+            into.nodeId = decodeLongValue( cursor, into.cachedSizesByte & 0x3 );
+            into.fromTokenAndDirection( (int) decodeLongValue( cursor, (into.cachedSizesByte >>> 2) & 0x3 ) );
+            into.neighbourNodeId = decodeLongValue( cursor, (into.cachedSizesByte >>> 4) & 0x3 );
+            into.internalRelationshipId = decodeLongValue( cursor, (into.cachedSizesByte >>> 6) & 0x3 );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             into.cachedKeySize = keySize;
         }
 
@@ -519,10 +609,17 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             if ( cachedKeySize == 0 )
             {
+<<<<<<< HEAD
                 int nodeIdSize = calculateLongSizeIndex( nodeId );
                 int tokenAndDirectionSize = calculateLongSizeIndex( tokenAndDirectionInt() );
                 int neighbourIdSize = calculateLongSizeIndex( neighbourNodeId );
                 int internalRelationshipIdSize = calculateLongSizeIndex( internalRelationshipId );
+=======
+                int nodeIdSize = longValueSizeCode( nodeId );
+                int tokenAndDirectionSize = longValueSizeCode( tokenAndDirectionInt() );
+                int neighbourIdSize = longValueSizeCode( neighbourNodeId );
+                int internalRelationshipIdSize = longValueSizeCode( internalRelationshipId );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 cachedKeySize = 1 + sizeOfLongSizeIndex( nodeIdSize ) + sizeOfLongSizeIndex( tokenAndDirectionSize ) +
                         sizeOfLongSizeIndex( neighbourIdSize ) + sizeOfLongSizeIndex( internalRelationshipIdSize );
                 cachedSizesByte = (byte) (nodeIdSize | (tokenAndDirectionSize << 2) | (neighbourIdSize << 4) | (internalRelationshipIdSize << 6));
@@ -565,8 +662,26 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             if ( !properties.isEmpty() )
             {
                 properties.keySet().toSortedArray();
+<<<<<<< HEAD
                 int[] sortedKeys = properties.keySet().toSortedArray();
                 writeIntDeltas( sortedKeys, data );
+=======
+                int[] sortedKeys = new int[properties.size()];
+                Iterator<PropertyUpdate> updates = properties.iterator();
+                int cursor = 0;
+                while ( updates.hasNext() )
+                {
+                    PropertyUpdate update = updates.next();
+                    if ( update.after != null )
+                    {
+                        sortedKeys[cursor++] = update.propertyKeyId;
+                    }
+                    // serializedValue is null for property update where property is removed
+                }
+                sortedKeys = cursor == properties.size() ? sortedKeys : Arrays.copyOf( sortedKeys, cursor );
+                Arrays.sort( sortedKeys );
+                writeInts( sortedKeys, data, true );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 for ( int key : sortedKeys )
                 {
                     data.put( version.apply( properties.get( key ) ) );
@@ -627,6 +742,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
+<<<<<<< HEAD
     interface RelationshipData
     {
         long internalId();
@@ -644,6 +760,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         boolean hasProperties();
     }
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private static class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
     {
         private final SimpleBigValueStore bigPropertyValueStore;
@@ -746,6 +864,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             throw new UnsupportedOperationException();
         }
     };
+<<<<<<< HEAD
 
     static class Stats
     {
@@ -793,4 +912,6 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             return totalTreeByteSize;
         }
     }
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 }

@@ -10,7 +10,6 @@ import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
@@ -18,6 +17,7 @@ import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Extractor;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -158,6 +158,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                    runMacroWorkloadParams.triggeredBy(),
                                    infraParams.errorReportingPolicy().name(),
                                    runMacroWorkloadParams.deployment().parsableValue(),
-                                   batchJobId );
+                                   String.join( ",", runMacroWorkloadParams.queryNames() ),
+                                   RunMacroWorkloadParams.CMD_BATCH_JOB_ID, batchJobId );
     }
 }

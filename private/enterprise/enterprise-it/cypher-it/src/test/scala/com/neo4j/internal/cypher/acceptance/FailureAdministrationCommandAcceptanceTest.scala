@@ -69,6 +69,33 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("should fail grant on existing and non-existing role") {
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+
+    val exception = the[InvalidArgumentsException] thrownBy {
+      execute("GRANT CREATE INDEX ON DATABASE foo TO role, role2")
+    }
+    exception.getMessage should include("Role does not exist")
+
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("revoke on existing and non-existing role should revoke from existing") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+    execute("GRANT CREATE INDEX ON DATABASE foo TO role")
+
+    // WHEN
+    execute("REVOKE CREATE INDEX ON DATABASE foo FROM role, role2")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
   // Tests for non-existing databases
 
   test("should give nothing when showing a non-existing database") {
@@ -133,8 +160,36 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 
+
+  test("should fail grant on existing and non-existing database") {
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+
+    val exception = the [DatabaseNotFoundException] thrownBy {
+    execute("GRANT CREATE INDEX ON DATABASE foo, bar TO role")
+    }
+    exception.getMessage should include("Database 'bar' does not exist")
+
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("revoke on existing and non-existing database should revoke from existing") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+    execute("GRANT CREATE INDEX ON DATABASE foo TO role")
+
+    // WHEN
+    execute("REVOKE CREATE INDEX ON DATABASE foo, bar FROM role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
   // Test for security commands not on system database
-  test("should fail when not on system database") {
+  test("should fail security when not on system database") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
 
@@ -143,9 +198,6 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
       ("SHOW DEFAULT DATABASE", "SHOW DEFAULT DATABASE"),
       ("CREATE USER foo SET PASSWORD 'bar'", "CREATE USER"),
       ("DROP ROLE reader", "DROP ROLE"),
-      ("GRANT WRITE ON GRAPH * TO reader", "GRANT WRITE"),
-      ("DENY USER MANAGEMENT ON DBMS TO editor", "DENY USER MANAGEMENT"),
-      ("REVOKE ACCESS ON DEFAULT DATABASE FROM reader", "REVOKE ACCESS")
     ).foreach {
       case (query, command) =>
         withClue(s"$query on default database:") {
@@ -161,6 +213,25 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     // THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+  }
+
+  test("should fail privilege commands when not on system database") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+
+    allPrivilegeCommands.foreach { command =>
+      withClue(s"$command on default database:") {
+        val e = the[DatabaseAdministrationException] thrownBy {
+          // WHEN
+          execute(s"DENY $command TO editor")
+          // THEN
+        }
+        e.getMessage should include("This is an administration command and it should be executed against the system database")
+      }
+    }
+
+    // THEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 }

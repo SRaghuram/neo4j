@@ -28,8 +28,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.ValuePopulation
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
@@ -38,7 +38,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DEMAND
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PRE_POPULATE_RESULTS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PRE_POPULATE_RESULTS_V
@@ -48,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
@@ -144,12 +144,12 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       this
     }
 
-    override def produce(): Unit = {}
+    override def produce(resources: QueryResources): Unit = {}
 
     override def trackTime: Boolean = true
   }
 
-  override def createState(executionState: ExecutionState): OutputOperatorState = new OutputOOperatorState
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = new OutputOOperatorState
 
   //==========================================================================
 
@@ -168,7 +168,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                               resources: QueryResources): Int = {
     val subscriber: QuerySubscriber = state.subscriber
     var served = 0
-    val demand: Long = state.flowControl.getDemand
+    val demand: Long = state.flowControl.getDemandUnlessCancelled
     // Loop over the rows of the morsel and call the visitor for each one
     while (output.onValidRow && served < demand) {
       subscriber.onRecord()

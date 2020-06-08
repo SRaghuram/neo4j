@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
@@ -49,4 +50,8 @@ public interface ReadableRaftState
     Set<MemberId> preVotesForMe();
 
     boolean refusesToBeLeader();
+
+    Set<ServerGroupName> serverGroups();
+
+    boolean areTransferringLeadership();
 }

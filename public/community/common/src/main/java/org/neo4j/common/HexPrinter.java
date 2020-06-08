@@ -129,7 +129,7 @@ public class HexPrinter
     }
 
     /**
-     * Using no line number, 8 bytes per group, 32 bytes per line, 4-space separator as default formating to
+     * Using no line number, 8 bytes per group, 32 bytes per line, 4-space separator as default formatting to
      * print bytes as hex. Output looks like:
      * <p>
      * 01 02 03 04 05 06 07 08    01 02 03 04 05 06 07 08    01 02 03 04 05 06 07 08    01 02 03 04 05 06 07 08
@@ -312,7 +312,7 @@ public class HexPrinter
 
         new HexPrinter( out, bytesPerBlock, groupSep ).append( bytes, offset, length );
         out.flush();
-        return outStream.toString( StandardCharsets.UTF_8  );
+        return outStream.toString( StandardCharsets.UTF_8 );
     }
 
     /**
@@ -330,7 +330,7 @@ public class HexPrinter
         return hex( bytes, DEFAULT_BYTES_PER_GROUP, DEFAULT_GROUP_SEPARATOR );
     }
 
-    public static String hex( ByteBuffer bytes, int bytesPerBlock, String groupSep  )
+    public static String hex( ByteBuffer bytes, int bytesPerBlock, String groupSep )
     {
         return hex( bytes, bytes.position(), bytes.limit(), bytesPerBlock, groupSep );
     }

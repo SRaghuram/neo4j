@@ -5,17 +5,20 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.executor.Location;
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.StatementResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.fabric.executor.Location;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.fabric.driver.Utils.convertBookmark;
@@ -23,6 +26,7 @@ import static com.neo4j.fabric.driver.Utils.convertBookmark;
 class FabricDriverRxTransaction implements FabricDriverTransaction
 {
     private final ParameterConverter parameterConverter = new ParameterConverter();
+    private final AtomicReference<FabricException> primaryException = new AtomicReference<>();
 
     private final RxTransaction rxTransaction;
     private final RxSession rxSession;
@@ -57,14 +61,17 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
         return new StatementResultImpl( rxStatementResult, location.getGraphId() );
     }
 
-    private static class StatementResultImpl extends AbstractRemoteStatementResult
+    private class StatementResultImpl extends AbstractRemoteStatementResult
     {
 
         private final RxResult rxStatementResult;
 
         StatementResultImpl( RxResult rxStatementResult, long sourceTag )
         {
-            super( Mono.from( rxStatementResult.keys() ).flatMapMany(Flux::fromIterable), Mono.from( rxStatementResult.consume() ), sourceTag );
+            super( Mono.from( rxStatementResult.keys() ).flatMapMany( Flux::fromIterable ),
+                    Mono.from( rxStatementResult.consume() ),
+                    sourceTag,
+                    primaryException );
             this.rxStatementResult = rxStatementResult;
         }
 

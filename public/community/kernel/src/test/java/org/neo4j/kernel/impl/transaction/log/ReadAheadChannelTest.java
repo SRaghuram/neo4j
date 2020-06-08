@@ -34,6 +34,9 @@ import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.HeapScopedBuffer;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.io.memory.ScopedBuffer;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
@@ -41,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.io.fs.ChecksumWriter.CHECKSUM_FACTORY;
 import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
-import static org.neo4j.io.memory.ByteBuffers.allocateDirect;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
 class ReadAheadChannelTest
@@ -56,7 +59,7 @@ class ReadAheadChannelTest
         // Given
         File bytesReadTestFile = new File( "bytesReadTest.txt" );
         StoreChannel storeChannel = fileSystem.write( bytesReadTestFile );
-        ByteBuffer buffer = ByteBuffers.allocate( 1 );
+        ByteBuffer buffer = ByteBuffers.allocate( 1, INSTANCE );
         buffer.put( (byte) 1 );
         buffer.flip();
         storeChannel.writeAll( buffer );
@@ -79,7 +82,7 @@ class ReadAheadChannelTest
         // Given
         File shortReadTestFile = new File( "shortReadTest.txt" );
         StoreChannel storeChannel = fileSystem.write( shortReadTestFile );
-        ByteBuffer buffer = ByteBuffers.allocate( 1 );
+        ByteBuffer buffer = ByteBuffers.allocate( 1, INSTANCE );
         buffer.put( (byte) 1 );
         buffer.flip();
         storeChannel.writeAll( buffer );
@@ -100,7 +103,7 @@ class ReadAheadChannelTest
     {
         // Given
         StoreChannel storeChannel1 = fileSystem.write( new File( "foo.1" ) );
-        ByteBuffer buffer = ByteBuffers.allocate( 2 );
+        ByteBuffer buffer = ByteBuffers.allocate( 2, INSTANCE );
         buffer.put( (byte) 0 );
         buffer.put( (byte) 0 );
         buffer.flip();
@@ -164,7 +167,7 @@ class ReadAheadChannelTest
         File file = new File( "foo.1" );
         try ( StoreChannel storeChannel = fileSystem.write( file ) )
         {
-            ByteBuffer buffer = ByteBuffers.allocate( 6 );
+            ByteBuffer buffer = ByteBuffers.allocate( 6, INSTANCE );
             buffer.put( (byte) 1 );
             checksum.update( 1 );
             buffer.put( (byte) 2 );
@@ -193,7 +196,7 @@ class ReadAheadChannelTest
         File file = new File( "foo.1" );
         try ( StoreChannel storeChannel = fileSystem.write( file ) )
         {
-            ByteBuffer buffer = ByteBuffers.allocate( 6 );
+            ByteBuffer buffer = ByteBuffers.allocate( 6, INSTANCE );
             buffer.put( (byte) 1 );
             checksum.update( 1 );
             buffer.put( (byte) 2 );
@@ -223,7 +226,7 @@ class ReadAheadChannelTest
         int testSize = 100;
         try ( StoreChannel storeChannel = fileSystem.write( file ) )
         {
-            ByteBuffer buffer = ByteBuffers.allocate( testSize + 4 );
+            ByteBuffer buffer = ByteBuffers.allocate( testSize + 4, INSTANCE );
             for ( int i = 0; i < testSize; i++ )
             {
                 buffer.put( (byte) i );
@@ -250,7 +253,7 @@ class ReadAheadChannelTest
     private void createFile( EphemeralFileSystemAbstraction fsa, File name, int bufferSize ) throws IOException
     {
         StoreChannel storeChannel = fsa.write( name );
-        ByteBuffer buffer = ByteBuffers.allocate( bufferSize );
+        ByteBuffer buffer = ByteBuffers.allocate( bufferSize, INSTANCE );
         for ( int i = 0; i < bufferSize; i++ )
         {
             buffer.put( (byte) i );
@@ -264,14 +267,9 @@ class ReadAheadChannelTest
     {
         StoreChannel nextChannelHook;
 
-        HookedReadAheadChannel( StoreChannel channel, int readAheadSize )
+        HookedReadAheadChannel( StoreChannel channel, ScopedBuffer scopedBuffer )
         {
-            super( channel, readAheadSize );
-        }
-
-        HookedReadAheadChannel( StoreChannel channel, ByteBuffer byteBuffer )
-        {
-            super( channel, byteBuffer );
+            super( channel, scopedBuffer );
         }
 
         @Override
@@ -299,7 +297,7 @@ class ReadAheadChannelTest
                     @Override
                     public HookedReadAheadChannel apply( StoreChannel channel, int readAheadSize )
                     {
-                        return new HookedReadAheadChannel( channel, ByteBuffers.allocate( readAheadSize ) );
+                        return new HookedReadAheadChannel( channel, new HeapScopedBuffer( readAheadSize, INSTANCE ) );
                     }
                 },
         DIRECT_BUFFER
@@ -307,16 +305,8 @@ class ReadAheadChannelTest
                     @Override
                     public HookedReadAheadChannel apply( StoreChannel channel, int readAheadSize )
                     {
-                        return new HookedReadAheadChannel( channel, allocateDirect( readAheadSize ) );
+                        return new HookedReadAheadChannel( channel, new NativeScopedBuffer( readAheadSize, INSTANCE ) );
                     }
                 },
-        INNER_BUFFER
-                {
-                    @Override
-                    public HookedReadAheadChannel apply( StoreChannel channel, int readAheadSize )
-                    {
-                        return new HookedReadAheadChannel( channel, readAheadSize );
-                    }
-                }
     }
 }

@@ -23,6 +23,9 @@ import org.neo4j.cypher.internal.frontend.helpers.SeqCombiner.combine
 import org.neo4j.cypher.internal.logical.plans.CompositeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.ExistenceQueryExpression
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
+import org.neo4j.cypher.internal.logical.plans.IndexOrderAscending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderDescending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.InequalitySeekRange
 import org.neo4j.cypher.internal.logical.plans.ManyQueryExpression
 import org.neo4j.cypher.internal.logical.plans.MinMaxOrdering
@@ -33,6 +36,7 @@ import org.neo4j.cypher.internal.logical.plans.RangeLessThan
 import org.neo4j.cypher.internal.logical.plans.RangeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
+import org.neo4j.cypher.internal.runtime.CompositeValueIndexCursor
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.IsList
 import org.neo4j.cypher.internal.runtime.IsNoValue
@@ -57,11 +61,11 @@ import org.neo4j.values.storable.Values
 import scala.collection.JavaConverters.asScalaBufferConverter
 
 /**
-  * Mixin trait with functionality for executing logical index queries.
-  *
-  * This trait maps the logical IndexSeekMode and QueryExpression into the kernel IndexQuery classes, which
-  * are passed to the QueryContext for executing the index seek.
-  */
+ * Mixin trait with functionality for executing logical index queries.
+ *
+ * This trait maps the logical IndexSeekMode and QueryExpression into the kernel IndexQuery classes, which
+ * are passed to the QueryContext for executing the index seek.
+ */
 trait NodeIndexSeeker {
 
   // dependencies
@@ -75,19 +79,33 @@ trait NodeIndexSeeker {
                                             index: IndexReadSession,
                                             needsValues: Boolean,
                                             indexOrder: IndexOrder,
-                                            baseContext: CypherRow): Iterator[NodeValueIndexCursor] =
+                                            baseContext: CypherRow): NodeValueIndexCursor =
     indexMode match {
       case _: ExactSeek |
            _: SeekByRange =>
-        val indexQueries = computeIndexQueries(state, baseContext)
-        indexQueries.toIterator.map(query => state.query.indexSeek(index, needsValues, indexOrder, query))
+        val indexQueries: Seq[Seq[IndexQuery]] = computeIndexQueries(state, baseContext)
+        if (indexQueries.size == 1) {
+          state.query.indexSeek(index, needsValues, indexOrder, indexQueries.head)
+        } else {
+          orderedCursor(indexOrder, indexQueries.map(query => state.query.indexSeek(index, needsValues = needsValues || indexOrder != IndexOrderNone, indexOrder, query)).toArray)
+        }
 
       case LockingUniqueIndexSeek =>
         val indexQueries = computeExactQueries(state, baseContext)
-        indexQueries.map(indexQuery => state.query.lockingUniqueIndexSeek(index.reference(), indexQuery)).toIterator
+        if (indexQueries.size == 1) {
+          state.query.lockingUniqueIndexSeek(index.reference(), indexQueries.head)
+        } else {
+          orderedCursor(indexOrder, indexQueries.map(query => state.query.lockingUniqueIndexSeek(index.reference(), query)).toArray)
+        }
     }
 
   // helpers
+
+  private def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]) = indexOrder match {
+    case IndexOrderNone => CompositeValueIndexCursor.unordered(cursors)
+    case IndexOrderAscending => CompositeValueIndexCursor.ascending(cursors)
+    case IndexOrderDescending => CompositeValueIndexCursor.descending(cursors)
+  }
 
   private val BY_VALUE: MinMaxOrdering[Value] = MinMaxOrdering(Ordering.comparatorToOrdering(Values.COMPARATOR))
 

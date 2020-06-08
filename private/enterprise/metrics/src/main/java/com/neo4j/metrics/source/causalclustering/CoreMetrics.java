@@ -71,6 +71,8 @@ public class CoreMetrics extends LifecycleAdapter
     public static final String DISCOVERY_CLUSTER_UNREACHABLE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "unreachable" );
     @Documented( "Discovery cluster convergence." )
     public static final String DISCOVERY_CLUSTER_CONVERGED = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "converged" );
+    @Documented( "Time since last leader message in milliseconds" )
+    public static final String LAST_LEADER_MESSAGE_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "last_leader_message" );
 
     private final String appendIndex;
     private final String commitIndex;
@@ -95,6 +97,7 @@ public class CoreMetrics extends LifecycleAdapter
     private final String discoveryClusterConverged;
     private final String discoveryClusterMembers;
     private final String discoveryClusterUnreachable;
+    private final String lastLeaderMessage;
 
     private final Monitors monitors;
     private final MetricRegistry registry;
@@ -111,6 +114,7 @@ public class CoreMetrics extends LifecycleAdapter
     private final ReplicatedDataMetric discoveryReplicatedDataMetric = new ReplicatedDataMetric();
     private final ReplicationMetric replicationMetric = new ReplicationMetric();
     private final ClusterSizeMetric discoveryClusterSizeMetric = new ClusterSizeMetric();
+    private final LastLeaderMessageMetric lastLeaderMessageMetric;
 
     public CoreMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
     {
@@ -137,9 +141,12 @@ public class CoreMetrics extends LifecycleAdapter
         this.discoveryClusterConverged = name( metricsPrefix, DISCOVERY_CLUSTER_CONVERGED );
         this.discoveryClusterMembers = name( metricsPrefix, DISCOVERY_CLUSTER_MEMBERS );
         this.discoveryClusterUnreachable = name( metricsPrefix, DISCOVERY_CLUSTER_UNREACHABLE );
+        this.lastLeaderMessage = name( metricsPrefix, LAST_LEADER_MESSAGE_TEMPLATE );
         this.monitors = monitors;
         this.registry = registry;
         this.coreMetaData = coreMetaData;
+
+        this.lastLeaderMessageMetric =  new LastLeaderMessageMetric( coreMetaData );
     }
 
     @Override
@@ -156,6 +163,7 @@ public class CoreMetrics extends LifecycleAdapter
         monitors.addMonitorListener( replicationMetric );
         monitors.addMonitorListener( discoveryReplicatedDataMetric );
         monitors.addMonitorListener( discoveryClusterSizeMetric );
+        monitors.addMonitorListener( lastLeaderMessageMetric );
 
         registry.register( commitIndex, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
         registry.register( appendIndex, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
@@ -179,6 +187,7 @@ public class CoreMetrics extends LifecycleAdapter
         registry.register( discoveryClusterConverged, discoveryClusterSizeMetric.converged() );
         registry.register( discoveryClusterMembers, discoveryClusterSizeMetric.members() );
         registry.register( discoveryClusterUnreachable, discoveryClusterSizeMetric.unreachable() );
+        registry.register( lastLeaderMessage, lastLeaderMessageMetric );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
@@ -217,6 +226,7 @@ public class CoreMetrics extends LifecycleAdapter
         registry.remove( discoveryClusterConverged );
         registry.remove( discoveryClusterMembers );
         registry.remove( discoveryClusterUnreachable );
+        registry.remove( lastLeaderMessage );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
@@ -240,6 +250,7 @@ public class CoreMetrics extends LifecycleAdapter
         monitors.removeMonitorListener( replicationMetric );
         monitors.removeMonitorListener( discoveryReplicatedDataMetric );
         monitors.removeMonitorListener( discoveryClusterSizeMetric );
+        monitors.removeMonitorListener( lastLeaderMessageMetric );
     }
 
     private String messageTimerName( RaftMessages.Type type )

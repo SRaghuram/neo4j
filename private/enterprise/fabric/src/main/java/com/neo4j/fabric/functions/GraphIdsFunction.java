@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.functions;
 
-import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 
 import java.util.Collections;
 import java.util.List;
@@ -27,9 +27,9 @@ public class GraphIdsFunction implements CallableUserFunction
     private static final Neo4jTypes.ListType RESULT_TYPE = Neo4jTypes.NTList( Neo4jTypes.NTInteger );
 
     private final UserFunctionSignature signature;
-    private final FabricConfig fabricConfig;
+    private final FabricEnterpriseConfig fabricConfig;
 
-    public GraphIdsFunction( FabricConfig fabricConfig )
+    public GraphIdsFunction( FabricEnterpriseConfig fabricConfig )
     {
         this.fabricConfig = fabricConfig;
         String namespace = fabricConfig.getDatabase().getName().name();
@@ -56,7 +56,7 @@ public class GraphIdsFunction implements CallableUserFunction
     {
         return Values.longArray(
                 fabricConfig.getDatabase().getGraphs().stream()
-                        .mapToLong( FabricConfig.Graph::getId )
+                        .mapToLong( FabricEnterpriseConfig.Graph::getId )
                         .toArray()
         );
     }

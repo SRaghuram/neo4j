@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.common.tool.micro;
 
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.util.ErrorReporter;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -13,7 +13,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import java.io.File;
 import java.nio.file.Paths;
 
-import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 
 public class RunExportParams
 {

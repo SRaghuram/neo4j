@@ -603,9 +603,9 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
                     format = TreeNodeSelector.selectByFormat( meta.getFormatIdentifier(), meta.getFormatVersion() );
                 }
                 this.freeList = new FreeListIdProvider( pagedFile, rootId );
-                OffloadStoreImpl<KEY,VALUE> offloadStore = buildOffload( layout, freeList, pagedFile, pageSize );
+                OffloadStoreImpl<KEY,VALUE> offloadStore = buildOffload( layout, pagedFile, pageSize );
                 this.bTreeNode = format.create( pageSize, layout, offloadStore );
-                this.writer = new SingleWriter( new InternalTreeLogic<>( freeList, bTreeNode, layout, monitor ) );
+                this.writer = new SingleWriter( new InternalTreeLogic<>( bTreeNode, layout, monitor ) );
 
                 // Create or load state
                 if ( created )
@@ -1441,11 +1441,20 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
     @VisibleForTesting
     public <VISITOR extends GBPTreeVisitor<KEY,VALUE>> VISITOR visit( VISITOR visitor, PageCursorTracer cursorTracer ) throws IOException
     {
+        return visit( visitor, true, cursorTracer );
+    }
+
+    @VisibleForTesting
+    public <VISITOR extends GBPTreeVisitor<KEY,VALUE>> VISITOR visit( VISITOR visitor, boolean visitFreelist, PageCursorTracer cursorTracer ) throws IOException
+    {
         try ( PageCursor cursor = openRootCursor( PF_SHARED_READ_LOCK, cursorTracer ) )
         {
             new GBPTreeStructure<>( bTreeNode, layout, stableGeneration( generation ), unstableGeneration( generation ) )
                     .visitTree( cursor, writer.cursor, visitor, cursorTracer );
-            freeList.visitFreelist( visitor, cursorTracer );
+            if ( visitFreelist )
+            {
+                freeList.visitFreelist( visitor, cursorTracer );
+            }
         }
         return visitor;
     }
@@ -1551,7 +1560,7 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
             Pair<TreeState,TreeState> states = TreeStatePair.readStatePages( cursor, IdSpace.STATE_PAGE_A, IdSpace.STATE_PAGE_B );
             state = TreeStatePair.selectNewestValidState( states );
         }
-        unsafe.access( pagedFile, layout, bTreeNode, state );
+        unsafe.access( pagedFile, layout, freeList, bTreeNode, state );
     }
 
     @Override
@@ -1585,6 +1594,7 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
         private long stableGeneration;
         private long unstableGeneration;
         private double ratioToKeepInLeftOnSplit;
+        private IdProvider.Writer freelistWriter;
 
         SingleWriter( InternalTreeLogic<KEY,VALUE> treeLogic )
         {
@@ -1633,7 +1643,8 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
                 unstableGeneration = unstableGeneration( generation );
                 this.ratioToKeepInLeftOnSplit = ratioToKeepInLeftOnSplit;
                 assert assertNoSuccessor( cursor, stableGeneration, unstableGeneration );
-                treeLogic.initialize( cursor, ratioToKeepInLeftOnSplit );
+                freelistWriter = freeList.writer( cursorTracer );
+                treeLogic.initialize( cursor, freelistWriter, ratioToKeepInLeftOnSplit );
                 success = true;
             }
             catch ( Throwable e )
@@ -1695,7 +1706,7 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
         {
             long rootId = GenerationSafePointerPair.pointer( rootPointer );
             GBPTree.this.setRoot( rootId, unstableGeneration );
-            treeLogic.initialize( cursor, ratioToKeepInLeftOnSplit );
+            treeLogic.initialize( cursor, freelistWriter, ratioToKeepInLeftOnSplit );
         }
 
         @Override
@@ -1729,14 +1740,12 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
             if ( structurePropagation.hasRightKeyInsert )
             {
                 // New root
-                long newRootId = freeList.acquireNewId( stableGeneration, unstableGeneration, cursorTracer );
-                PageCursorUtil.goTo( cursor, "new root", newRootId );
-
+                long newRootId = freelistWriter.acquireNewId( stableGeneration, unstableGeneration, cursor );
                 bTreeNode.initializeInternal( cursor, stableGeneration, unstableGeneration );
                 bTreeNode.setChildAt( cursor, structurePropagation.midChild, 0,
                         stableGeneration, unstableGeneration );
                 bTreeNode.insertKeyAndRightChildAt( cursor, structurePropagation.rightKey, structurePropagation.rightChild, 0, 0,
-                        stableGeneration, unstableGeneration, cursorTracer );
+                        stableGeneration, unstableGeneration, freelistWriter, cursorTracer );
                 TreeNode.setKeyCount( cursor, 1 );
                 setRoot( newRootId );
                 monitor.treeGrowth();
@@ -1755,6 +1764,11 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
             {
                 throw new IllegalStateException( "Tried to close writer of " + GBPTree.this +
                         ", but writer is already closed." );
+            }
+            if ( freelistWriter != null )
+            {
+                freelistWriter.close();
+                freelistWriter = null;
             }
             closeCursor();
             lock.writerAndCleanerUnlock();
@@ -1797,9 +1811,13 @@ public class GBPTree<KEY,VALUE> implements Closeable, Seeker.Factory<KEY,VALUE>
         }
     }
 
+<<<<<<< HEAD
     private static <KEY, VALUE> OffloadStoreImpl<KEY,VALUE> buildOffload( Layout<KEY,VALUE> layout, IdProvider idProvider, PagedFile pagedFile, int pageSize )
+=======
+    private static <KEY, VALUE> OffloadStoreImpl<KEY,VALUE> buildOffload( Layout<KEY,VALUE> layout, PagedFile pagedFile, int pageSize )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         OffloadIdValidator idValidator = id -> id >= IdSpace.MIN_TREE_NODE_ID && id <= pagedFile.getLastPageId();
-        return new OffloadStoreImpl<>( layout, idProvider, pagedFile::io, idValidator, pageSize );
+        return new OffloadStoreImpl<>( layout, pagedFile::io, idValidator, pageSize );
     }
 }

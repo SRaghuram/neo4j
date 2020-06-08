@@ -6,6 +6,7 @@
 package com.neo4j.procedure;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.test.fabric.TestFabricTransaction;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.jupiter.api.AfterEach;
@@ -28,6 +29,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.coreapi.TransactionImpl;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Procedure;
@@ -148,7 +150,7 @@ public class ConcurrentProcedureIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                KernelTransaction kernelTransaction = ((TransactionImpl) tx).kernelTransaction();
+                KernelTransaction kernelTransaction = ((InternalTransaction) tx).kernelTransaction();
                 int uniqueId = counter.getAndIncrement();
                 kernelTransaction.setMetaData( map( "id", uniqueId ) );
                 long value = function.apply( tx );

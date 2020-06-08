@@ -96,173 +96,274 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   // Tests for granting, denying and revoking schema privileges
 
-  test("should grant create index privilege") {
+  test("should grant and revoke schema privileges") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
-    // WHEN
-    execute("GRANT CREATE INDEX ON DATABASE foo TO role")
-    execute("GRANT CREATE INDEX ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("GRANT CREATE INDEX ON DATABASE * TO role")
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"GRANT $command ON DATABASE foo TO role")
+          execute(s"GRANT $command ON DATABASE $$db TO role", Map("db" -> "bar"))
+          execute(s"GRANT $command ON DATABASE * TO role")
 
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createIndex).database("foo").role("role").map,
-      granted(createIndex).database("bar").role("role").map,
-      granted(createIndex).role("role").map
-    ))
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            granted(action).database("foo").role("role").map,
+            granted(action).database("bar").role("role").map,
+            granted(action).role("role").map
+          ))
+
+          // WHEN
+          execute(s"REVOKE GRANT $command ON DATABASE foo FROM role")
+          execute(s"REVOKE GRANT $command ON DATABASE bar FROM role")
+          execute(s"REVOKE GRANT $command ON DATABASE * FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
   }
 
-  test("should deny create index privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY CREATE INDEX ON DATABASE foo TO role")
-    execute("DENY CREATE INDEX ON DEFAULT DATABASE TO $r", Map("r" -> "role"))
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(createIndex).database("foo").role("role").map,
-      denied(createIndex).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke create index privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-    execute("GRANT INDEX ON DATABASE * TO role")
-    execute("GRANT CREATE INDEX ON DATABASE * TO role")
-    execute("DENY CREATE INDEX ON DATABASE * TO role")
-
-    // WHEN
-    execute("REVOKE CREATE INDEX ON DATABASE * FROM role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(indexManagement).role("role").map))
-  }
-
-  test("should grant drop index privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT DROP INDEX ON DATABASE foo TO role")
-    execute("GRANT DROP INDEX ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(dropIndex).database("foo").role("role").map,
-      granted(dropIndex).role("role").map
-    ))
-  }
-
-  test("should deny drop index privilege") {
+  test("should grant and revoke schema privileges on multiple databases") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"GRANT $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            granted(action).database("foo").role("role").map,
+            granted(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE GRANT $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
+  test("should deny and revoke schema privileges") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"DENY $command ON DATABASE foo TO role")
+          execute(s"DENY $command ON DATABASE $$db TO role", Map("db" -> "bar"))
+          execute(s"DENY $command ON DATABASE * TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            denied(action).database("foo").role("role").map,
+            denied(action).database("bar").role("role").map,
+            denied(action).role("role").map
+          ))
+
+          // WHEN
+          execute(s"REVOKE DENY $command ON DATABASE foo FROM role")
+          execute(s"REVOKE DENY $command ON DATABASE bar FROM role")
+          execute(s"REVOKE DENY $command ON DATABASE * FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
+  test("should deny and revoke schema privileges on multiple databases") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"DENY $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            denied(action).database("foo").role("role").map,
+            denied(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE DENY $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
+    test("should deny and revoke schema privileges on multiple databases with parameter") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"DENY $command ON DATABASE $$dbParam, bar TO role", Map("dbParam" -> "foo"))
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            denied(action).database("foo").role("role").map,
+            denied(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE DENY $command ON DATABASE foo, $$dbParam FROM role", Map("dbParam" -> "bar"))
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
+  test("should not revoke other index management privileges when revoking index management") {
+    // GIVEN
+    setup()
+    execute("CREATE ROLE custom")
+    execute("GRANT CREATE INDEX ON DATABASE * TO custom")
+    execute("GRANT DROP INDEX ON DATABASE * TO custom")
+    execute("GRANT INDEX MANAGEMENT ON DATABASE * TO custom")
+
     // WHEN
-    execute("DENY DROP INDEX ON DATABASE foo TO role")
-    execute("DENY DROP INDEX ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("DENY DROP INDEX ON DEFAULT DATABASE TO role")
+    execute("REVOKE INDEX MANAGEMENT ON DATABASE * FROM custom")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(dropIndex).database("foo").role("role").map,
-      denied(dropIndex).database("bar").role("role").map,
-      denied(dropIndex).database(DEFAULT).role("role").map
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(createIndex).role("custom").map,
+      granted(dropIndex).role("custom").map
     ))
   }
 
-  test("should revoke drop index privilege") {
+  test("should not revoke other constraint management privileges when revoking constraint management") {
     // GIVEN
     setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-    execute("GRANT INDEX ON DATABASE foo TO role")
-    execute("GRANT DROP INDEX ON DATABASE foo TO role")
-    execute("DENY DROP INDEX ON DATABASE foo TO role")
+    execute("CREATE ROLE custom")
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
+    execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
+    execute("GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO custom")
 
     // WHEN
-    execute("REVOKE DROP INDEX ON DATABASE foo FROM role")
+    execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASE * FROM custom")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(indexManagement).database("foo").role("role").map))
-  }
-
-  test("should grant index management privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT INDEX ON DATABASE foo TO role")
-    execute("GRANT INDEX ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(indexManagement).database("foo").role("role").map,
-      granted(indexManagement).role("role").map
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(createConstraint).role("custom").map,
+      granted(dropConstraint).role("custom").map
     ))
   }
 
-  test("should deny index management privilege") {
+  test("should not revoke other name management privileges when revoking name management") {
     // GIVEN
     setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
+    execute("CREATE ROLE custom")
+    execute("GRANT CREATE NEW NODE LABEL ON DATABASE * TO custom")
+    execute("GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE * TO custom")
+    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE * TO custom")
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
 
     // WHEN
-    execute("DENY INDEX ON DATABASE foo TO role")
-    execute("DENY INDEX ON DEFAULT DATABASE TO role")
+    execute("REVOKE NAME MANAGEMENT ON DATABASE * FROM custom")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(indexManagement).database("foo").role("role").map,
-      denied(indexManagement).database(DEFAULT).role("role").map
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(createNodeLabel).role("custom").map,
+      granted(createRelationshipType).role("custom").map,
+      granted(createPropertyKey).role("custom").map
     ))
   }
 
-  test("should revoke index management privilege") {
-    // GIVEN
+  test("Should revoke sub-privilege even if index management exists") {
+    // Given
     setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-    execute("GRANT CREATE INDEX ON DEFAULT DATABASE TO role")
-    execute("DENY DROP INDEX ON DEFAULT DATABASE TO role")
-    execute("GRANT ALL ON DEFAULT DATABASE TO role")
-    execute("GRANT INDEX ON DEFAULT DATABASE TO role")
-    execute("DENY INDEX ON DEFAULT DATABASE TO role")
-    execute("GRANT CREATE INDEX ON DATABASE foo TO role")
-    execute("DENY DROP INDEX ON DATABASE foo TO role")
-    execute("GRANT ALL ON DATABASE foo TO role")
-    execute("GRANT INDEX ON DATABASE foo TO role")
-    execute("DENY INDEX ON DATABASE foo TO role")
+    execute("CREATE ROLE custom")
+    execute("GRANT CREATE INDEX ON DATABASE * TO custom")
+    execute("GRANT DROP INDEX ON DATABASE * TO custom")
+    execute("GRANT INDEX MANAGEMENT ON DATABASE * TO custom")
 
-    // WHEN
-    execute("REVOKE INDEX ON DEFAULT DATABASE FROM role")
-    execute("REVOKE INDEX ON DATABASE $db FROM role", Map("db" -> "foo"))
+    // When
+    // Now revoke each sub-privilege in turn
+    Seq(
+      "CREATE INDEX",
+      "DROP INDEX"
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DATABASE * FROM custom"))
 
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createIndex).database(DEFAULT).role("role").map,
-      denied(dropIndex).database(DEFAULT).role("role").map,
-      granted(allDatabasePrivilege).database(DEFAULT).role("role").map,
-      granted(createIndex).database("foo").role("role").map,
-      denied(dropIndex).database("foo").role("role").map,
-      granted(allDatabasePrivilege).database("foo").role("role").map
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(indexManagement).role("custom").map
+    ))
+  }
+
+  test("Should revoke sub-privilege even if constraint management exists") {
+    // Given
+    setup()
+    execute("CREATE ROLE custom")
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
+    execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
+    execute("GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO custom")
+
+    // When
+    // Now revoke each sub-privilege in turn
+    Seq(
+      "CREATE CONSTRAINT",
+      "DROP CONSTRAINT"
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DATABASE * FROM custom"))
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(constraintManagement).role("custom").map
+    ))
+  }
+
+  test("Should revoke sub-privilege even if name management exists") {
+    // Given
+    setup()
+    execute("CREATE ROLE custom")
+    execute("GRANT CREATE NEW NODE LABEL ON DATABASE * TO custom")
+    execute("GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE * TO custom")
+    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE * TO custom")
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+
+    // When
+    // Now revoke each sub-privilege in turn
+    Seq(
+      "CREATE NEW NODE LABEL",
+      "CREATE NEW RELATIONSHIP TYPE",
+      "CREATE NEW PROPERTY NAME"
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DATABASE * FROM custom"))
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(nameManagement).role("custom").map
     ))
   }
 
@@ -288,176 +389,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
   }
 
-  test("should grant create constraint privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT CREATE CONSTRAINT ON DATABASE foo TO role")
-    execute("GRANT CREATE CONSTRAINT ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createConstraint).database("foo").role("role").map,
-      granted(createConstraint).database("bar").role("role").map,
-      granted(createConstraint).role("role").map
-    ))
-  }
-
-  test("should deny create constraint privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY CREATE CONSTRAINT ON DATABASE foo TO role")
-    execute("DENY CREATE CONSTRAINT ON DEFAULT DATABASE TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(createConstraint).database("foo").role("role").map,
-      denied(createConstraint).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke create constraint privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-    execute("GRANT CONSTRAINT ON DATABASE * TO role")
-    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO role")
-    execute("DENY CREATE CONSTRAINT ON DATABASE * TO role")
-
-    // WHEN
-    execute("REVOKE CREATE CONSTRAINT ON DATABASE * FROM role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(constraintManagement).role("role").map))
-  }
-
-  test("should grant drop constraint privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT DROP CONSTRAINT ON DATABASE foo TO role")
-    execute("GRANT DROP CONSTRAINT ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(dropConstraint).database("foo").role("role").map,
-      granted(dropConstraint).role("role").map
-    ))
-  }
-
-  test("should deny drop constraint privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY DROP CONSTRAINT ON DATABASE foo TO role")
-    execute("DENY DROP CONSTRAINT ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("DENY DROP CONSTRAINT ON DEFAULT DATABASE TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(dropConstraint).database("foo").role("role").map,
-      denied(dropConstraint).database("bar").role("role").map,
-      denied(dropConstraint).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke drop constraint privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-    execute("GRANT CONSTRAINT ON DATABASE foo TO role")
-    execute("GRANT DROP CONSTRAINT ON DATABASE foo TO role")
-    execute("DENY DROP CONSTRAINT ON DATABASE foo TO role")
-
-    // WHEN
-    execute("REVOKE DROP CONSTRAINT ON DATABASE foo FROM role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(constraintManagement).database("foo").role("role").map))
-  }
-
-  test("should grant constraint management privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT CONSTRAINT ON DATABASE foo TO role")
-    execute("GRANT CONSTRAINT ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(constraintManagement).database("foo").role("role").map,
-      granted(constraintManagement).role("role").map
-    ))
-  }
-
-  test("should deny constraint management privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY CONSTRAINT ON DATABASE foo TO role")
-    execute("DENY CONSTRAINT ON DEFAULT DATABASE TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(constraintManagement).database("foo").role("role").map,
-      denied(constraintManagement).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke constraint management privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-    execute("GRANT CREATE CONSTRAINT ON DEFAULT DATABASE TO role")
-    execute("DENY DROP CONSTRAINT ON DEFAULT DATABASE TO role")
-    execute("GRANT ALL ON DEFAULT DATABASE TO role")
-    execute("GRANT CONSTRAINT ON DEFAULT DATABASE TO role")
-    execute("DENY CONSTRAINT ON DEFAULT DATABASE TO role")
-    execute("GRANT CREATE CONSTRAINT ON DATABASE foo TO role")
-    execute("DENY DROP CONSTRAINT ON DATABASE foo TO role")
-    execute("GRANT ALL ON DATABASE foo TO role")
-    execute("GRANT CONSTRAINT ON DATABASE foo TO role")
-    execute("DENY CONSTRAINT ON DATABASE foo TO role")
-
-    // WHEN
-    execute("REVOKE CONSTRAINT ON DEFAULT DATABASE FROM role")
-    execute("REVOKE CONSTRAINT ON DATABASE $db FROM role", Map("db" -> "foo"))
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createConstraint).database(DEFAULT).role("role").map,
-      denied(dropConstraint).database(DEFAULT).role("role").map,
-      granted(allDatabasePrivilege).database(DEFAULT).role("role").map,
-      granted(createConstraint).database("foo").role("role").map,
-      denied(dropConstraint).database("foo").role("role").map,
-      granted(allDatabasePrivilege).database("foo").role("role").map
-    ))
-  }
-
   test("should grant constraint management privilege on custom default database") {
     // GIVEN
     val config = Config.defaults()
@@ -478,226 +409,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
-  }
-
-  test("should grant create label privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT CREATE NEW LABEL ON DATABASE foo TO role")
-    execute("GRANT CREATE NEW LABEL ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("GRANT CREATE NEW LABEL ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createNodeLabel).database("foo").role("role").map,
-      granted(createNodeLabel).database("bar").role("role").map,
-      granted(createNodeLabel).role("role").map
-    ))
-  }
-
-  test("should deny create label privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY CREATE NEW NODE LABEL ON DATABASE foo TO role")
-    execute("DENY CREATE NEW NODE LABEL ON DEFAULT DATABASE TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(createNodeLabel).database("foo").role("role").map,
-      denied(createNodeLabel).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke create label privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-    execute("GRANT NAME ON DATABASE * TO role")
-    execute("GRANT CREATE NEW NODE LABEL ON DATABASE * TO role")
-    execute("DENY CREATE NEW LABEL ON DATABASE * TO role")
-
-    // WHEN
-    execute("REVOKE CREATE NEW LABEL ON DATABASE * FROM role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(nameManagement).role("role").map))
-  }
-
-  test("should grant create type privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT CREATE NEW TYPE ON DATABASE foo TO role")
-    execute("GRANT CREATE NEW TYPE ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createRelationshipType).database("foo").role("role").map,
-      granted(createRelationshipType).role("role").map
-    ))
-  }
-
-  test("should deny create type privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY CREATE NEW RELATIONSHIP TYPE ON DATABASE foo TO role")
-    execute("DENY CREATE NEW RELATIONSHIP TYPE ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("DENY CREATE NEW RELATIONSHIP TYPE ON DEFAULT DATABASE TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(createRelationshipType).database("foo").role("role").map,
-      denied(createRelationshipType).database("bar").role("role").map,
-      denied(createRelationshipType).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke create type privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-    execute("GRANT NAME ON DATABASE * TO role")
-    execute("GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE * TO role")
-    execute("DENY CREATE NEW TYPE ON DATABASE * TO role")
-
-    // WHEN
-    execute("REVOKE CREATE NEW TYPE ON DATABASE * FROM role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(nameManagement).role("role").map))
-  }
-
-  test("should grant create property key privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT CREATE NEW NAME ON DATABASE foo TO role")
-    execute("GRANT CREATE NEW NAME ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createPropertyKey).database("foo").role("role").map,
-      granted(createPropertyKey).role("role").map
-    ))
-  }
-
-  test("should deny create property key privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY CREATE NEW PROPERTY NAME ON DATABASE foo TO role")
-    execute("DENY CREATE NEW PROPERTY NAME ON DEFAULT DATABASE TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(createPropertyKey).database("foo").role("role").map,
-      denied(createPropertyKey).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke create property key privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-    execute("GRANT NAME ON DATABASE * TO role")
-    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE * TO role")
-    execute("DENY CREATE NEW NAME ON DATABASE * TO role")
-    execute("GRANT NAME ON DATABASE foo TO role")
-    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE foo TO role")
-
-    // WHEN
-    execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE * FROM role")
-    execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE $db FROM role", Map("db" -> "foo"))
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(nameManagement).role("role").map,
-      granted(nameManagement).database("foo").role("role").map
-    ))
-  }
-
-  test("should grant name management privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("GRANT NAME ON DATABASE foo TO role")
-    execute("GRANT NAME ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("GRANT NAME ON DATABASE * TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(nameManagement).database("foo").role("role").map,
-      granted(nameManagement).database("bar").role("role").map,
-      granted(nameManagement).role("role").map
-    ))
-  }
-
-  test("should deny name management privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE role")
-
-    // WHEN
-    execute("DENY NAME ON DATABASE foo TO role")
-    execute("DENY NAME ON DEFAULT DATABASE TO role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      denied(nameManagement).database("foo").role("role").map,
-      denied(nameManagement).database(DEFAULT).role("role").map
-    ))
-  }
-
-  test("should revoke name management privilege") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-    execute("GRANT CREATE NEW LABEL ON DEFAULT DATABASE TO role")
-    execute("DENY CREATE NEW TYPE ON DEFAULT DATABASE TO role")
-    execute("GRANT CREATE NEW PROPERTY NAME ON DEFAULT DATABASE TO role")
-    execute("GRANT ALL ON DEFAULT DATABASE TO role")
-    execute("GRANT NAME ON DEFAULT DATABASE TO role")
-    execute("DENY NAME ON DEFAULT DATABASE TO role")
-
-    // WHEN
-    execute("REVOKE NAME ON DEFAULT DATABASE FROM role")
-
-    // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      granted(createNodeLabel).database(DEFAULT).role("role").map,
-      denied(createRelationshipType).database(DEFAULT).role("role").map,
-      granted(createPropertyKey).database(DEFAULT).role("role").map,
-      granted(allDatabasePrivilege).database(DEFAULT).role("role").map
-    ))
   }
 
   test("should grant name management privilege on custom default database") {
@@ -722,23 +433,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
   }
 
-  test("should grant all database privilege") {
-    // Given
-    setup()
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // When
-    execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE foo TO custom")
-    execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE * TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(allDatabasePrivilege).database("foo").role("custom").map,
-      granted(allDatabasePrivilege).role("custom").map
-    ))
-  }
-
   test("should fail to grant all database privilege using * as parameter") {
     // Given
     setup()
@@ -750,55 +444,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE $db TO custom", Map("db" -> "*"))
       // Then
     } should have message "Failed to grant database_actions privilege to role 'custom': Parameterized database and graph names do not support wildcards."
-  }
-
-  test("should deny all database privilege") {
-    // Given
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("CREATE ROLE custom")
-
-    // When
-    execute("DENY ALL DATABASE PRIVILEGES ON DEFAULT DATABASE TO custom")
-    execute("DENY ALL DATABASE PRIVILEGES ON DATABASE $db TO custom", Map("db" -> "foo"))
-    execute("DENY ALL DATABASE PRIVILEGES ON DATABASE * TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      denied(allDatabasePrivilege).database(DEFAULT).role("custom").map,
-      denied(allDatabasePrivilege).database("foo").role("custom").map,
-      denied(allDatabasePrivilege).role("custom").map
-    ))
-  }
-
-  test("should revoke all database privilege") {
-    // Given
-    setup()
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT ACCESS ON DATABASE foo TO custom")
-    execute("DENY INDEX ON DATABASE foo TO custom")
-    execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE foo TO custom")
-    execute("DENY ALL DATABASE PRIVILEGES ON DATABASE foo TO custom")
-
-    // When
-    execute("REVOKE DENY ALL DATABASE PRIVILEGES ON DATABASE foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(access).database("foo").role("custom").map,
-      denied(indexManagement).database("foo").role("custom").map,
-      granted(allDatabasePrivilege).database("foo").role("custom").map
-    ))
-
-    // When
-    execute("REVOKE ALL DATABASE PRIVILEGES ON DATABASE foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(access).database("foo").role("custom").map,
-      denied(indexManagement).database("foo").role("custom").map
-    ))
   }
 
   test("should revoke sub-privilege even if all database privilege exists") {
@@ -1513,5 +1158,4 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   // Disable normal database creation because we need different settings on each test
   override protected def initTest() {}
-
 }

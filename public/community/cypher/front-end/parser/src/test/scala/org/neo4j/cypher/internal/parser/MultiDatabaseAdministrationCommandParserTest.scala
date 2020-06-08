@@ -56,6 +56,11 @@ class MultiDatabaseAdministrationCommandParserTest extends AdministrationCommand
     yields(ast.CreateDatabase(literal("foo"), ast.IfExistsThrowError()))
   }
 
+  test("USE system CREATE DATABASE foo") {
+    // can parse USE clause, but is not included in AST
+    yields(ast.CreateDatabase(literal("foo"), ast.IfExistsThrowError()))
+  }
+
   test("CREATE DATABASE $foo") {
     yields(ast.CreateDatabase(param("foo"), ast.IfExistsThrowError()))
   }

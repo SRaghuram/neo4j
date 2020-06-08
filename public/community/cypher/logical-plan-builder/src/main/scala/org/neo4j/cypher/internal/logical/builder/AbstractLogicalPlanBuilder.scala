@@ -29,9 +29,11 @@ import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.expressions.ListLiteral
 import org.neo4j.cypher.internal.expressions.LogicalProperty
 import org.neo4j.cypher.internal.expressions.MapExpression
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
 import org.neo4j.cypher.internal.expressions.NodePattern
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.expressions.PropertyKeyToken
+import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
 import org.neo4j.cypher.internal.expressions.Range
 import org.neo4j.cypher.internal.expressions.RelTypeName
 import org.neo4j.cypher.internal.expressions.RelationshipChain
@@ -59,7 +61,9 @@ import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.ColumnOrder
+import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Create
+import org.neo4j.cypher.internal.logical.plans.CursorProperty
 import org.neo4j.cypher.internal.logical.plans.DeleteRelationship
 import org.neo4j.cypher.internal.logical.plans.DetachDeleteNode
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
@@ -72,6 +76,7 @@ import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.ExpansionMode
 import org.neo4j.cypher.internal.logical.plans.FindShortestPaths
@@ -116,9 +121,11 @@ import org.neo4j.cypher.internal.logical.plans.RangeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.RelationshipCountFromCountStore
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
+import org.neo4j.cypher.internal.logical.plans.RollUpApply
+import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
+import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.SemiApply
-import org.neo4j.cypher.internal.logical.plans.RollUpApply
 import org.neo4j.cypher.internal.logical.plans.SetNodePropertiesFromMap
 import org.neo4j.cypher.internal.logical.plans.SetNodeProperty
 import org.neo4j.cypher.internal.logical.plans.SetProperty
@@ -147,12 +154,12 @@ import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Used by [[AbstractLogicalPlanBuilder]] to resolve tokens and procedures
-  */
+ * Used by [[AbstractLogicalPlanBuilder]] to resolve tokens and procedures
+ */
 trait Resolver {
   /**
-    * Obtain the token of a label by name.
-    */
+   * Obtain the token of a label by name.
+   */
   def getLabelId(label: String): Int
 
   def getPropertyKeyId(prop: String): Int
@@ -163,8 +170,8 @@ trait Resolver {
 }
 
 /**
-  * Test help utility for hand-writing objects needing logical plans.
-  */
+ * Test help utility for hand-writing objects needing logical plans.
+ */
 abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[T, IMPL]](protected val resolver: Resolver) {
 
   self: IMPL =>
@@ -189,8 +196,30 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
   }
 
   protected class Tree(operator: OperatorBuilder) {
-    var left: Option[Tree] = None
-    var right: Option[Tree] = None
+    private var _left: Option[Tree] = None
+    private var _right: Option[Tree] = None
+
+    def left: Option[Tree] = _left
+    def left_=(newVal: Option[Tree]): Unit = {
+      operator match {
+        case _:LeafOperator =>
+          throw new IllegalArgumentException(s"Cannot attach a LHS to a leaf plan.")
+        case _ =>
+      }
+      _left = newVal
+    }
+
+    def right: Option[Tree] = _right
+    def right_=(newVal: Option[Tree]): Unit = {
+      operator match {
+        case _:LeafOperator =>
+          throw new IllegalArgumentException(s"Cannot attach a RHS to a leaf plan.")
+        case _:UnaryOperator =>
+          throw new IllegalArgumentException(s"Cannot attach a RHS to a unary plan.")
+        case _ =>
+      }
+      _right = newVal
+    }
 
     def build(): LogicalPlan = {
       operator match {
@@ -215,9 +244,9 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
   protected def idOfLastPlan: Id = _idOfLastPlan
 
   /**
-    * Increase indent. The indent determines where the next
-    * logical plan will be appended to the tree.
-    */
+   * Increase indent. The indent determines where the next
+   * logical plan will be appended to the tree.
+   */
   def | : IMPL = {
     indent += 1
     self
@@ -262,15 +291,19 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
              expandMode: ExpansionMode = ExpandAll,
              projectedDir: SemanticDirection = OUTGOING,
              nodePredicate: Predicate = AbstractLogicalPlanBuilder.NO_PREDICATE,
-             relationshipPredicate: Predicate = AbstractLogicalPlanBuilder.NO_PREDICATE): IMPL = {
+             relationshipPredicate: Predicate = AbstractLogicalPlanBuilder.NO_PREDICATE,
+             cacheNodeProperties: Seq[String] = Seq.empty,
+             cacheRelProperties: Seq[String] = Seq.empty): IMPL = {
     val p = patternParser.parse(pattern)
     newRelationship(varFor(p.relName))
     if (expandMode == ExpandAll) {
       newNode(varFor(p.to))
     }
+
+    val expandProperties = getExpandProperties(p.from, p.relName, cacheNodeProperties, cacheRelProperties)
     p.length match {
       case SimplePatternLength =>
-        appendAtCurrentIndent(UnaryOperator(lp => Expand(lp, p.from, p.dir, p.relTypes, p.to, p.relName, expandMode)(_)))
+        appendAtCurrentIndent(UnaryOperator(lp => Expand(lp, p.from, p.dir, p.relTypes, p.to, p.relName, expandMode, expandProperties)(_)))
       case varPatternLength: VarPatternLength =>
         appendAtCurrentIndent(UnaryOperator(lp => VarExpand(lp,
                                                             p.from,
@@ -287,7 +320,6 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
     }
     self
   }
-
   def shortestPath(pattern: String,
                    pathName: Option[String] = None,
                    all: Boolean = false,
@@ -345,12 +377,17 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
 
   def expandInto(pattern: String): IMPL = expand(pattern, ExpandInto)
 
-  def optionalExpandAll(pattern: String, predicate: Option[String] = None): IMPL = {
+  def optionalExpandAll(pattern: String,
+                        predicate: Option[String] = None,
+                        cacheNodeProperties: Seq[String] = Seq.empty,
+                        cacheRelProperties: Seq[String] = Seq.empty): IMPL = {
     val p = patternParser.parse(pattern)
     p.length match {
       case SimplePatternLength =>
         val pred = predicate.map(Parser.parseExpression)
-        appendAtCurrentIndent(UnaryOperator(lp => OptionalExpand(lp, p.from, p.dir, p.relTypes, p.to, p.relName, ExpandAll, pred)(_)))
+        appendAtCurrentIndent(UnaryOperator(lp =>
+          OptionalExpand(lp, p.from, p.dir, p.relTypes, p.to, p.relName, ExpandAll, pred, getExpandProperties(p.from, p.relName, cacheNodeProperties, cacheRelProperties)
+    )(_)))
       case _ =>
         throw new IllegalArgumentException("Cannot have optional expand with variable length pattern")
     }
@@ -456,10 +493,10 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
     appendAtCurrentIndent(LeafOperator(Argument(args.toSet)(_)))
   }
 
-  def nodeByLabelScan(node: String, label: String, args: String*): IMPL = {
+  def nodeByLabelScan(node: String, label: String, indexOrder: IndexOrder, args: String*): IMPL = {
     val n = VariableParser.unescaped(node)
     newNode(varFor(n))
-    appendAtCurrentIndent(LeafOperator(NodeByLabelScan(n, labelName(label), args.map(VariableParser.unescaped).toSet)(_)))
+    appendAtCurrentIndent(LeafOperator(NodeByLabelScan(n, labelName(label), args.map(VariableParser.unescaped).toSet, indexOrder)(_)))
   }
 
   def nodeByIdSeek(node: String, args: Set[String], ids: AnyVal*): IMPL = {
@@ -622,6 +659,15 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
   def semiApply(): IMPL =
     appendAtCurrentIndent(BinaryOperator((lhs, rhs) => SemiApply(lhs, rhs)(_)))
 
+  def conditionalApply(items: String*): IMPL =
+    appendAtCurrentIndent(BinaryOperator((lhs, rhs) => ConditionalApply(lhs, rhs, items)(_)))
+
+  def selectOrSemiApply(predicate: String): IMPL =
+    appendAtCurrentIndent(BinaryOperator((lhs, rhs) => SelectOrSemiApply(lhs, rhs, Parser.parseExpression(predicate))(_)))
+
+  def selectOrAntiSemiApply(predicate: String): IMPL =
+    appendAtCurrentIndent(BinaryOperator((lhs, rhs) => SelectOrAntiSemiApply(lhs, rhs, Parser.parseExpression(predicate))(_)))
+
   def rollUpApply(collectionName: String,
                   variableToCollect: String,
                   nullableIdentifiers: Set[String] = Set.empty): IMPL =
@@ -734,23 +780,23 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
   // ABSTRACT METHODS
 
   /**
-    * Called everytime a new node is introduced by some logical operator.
-    */
+   * Called everytime a new node is introduced by some logical operator.
+   */
   protected def newNode(node: Variable): Unit
 
   /**
-    * Called everytime a new relationship is introduced by some logical operator.
-    */
+   * Called everytime a new relationship is introduced by some logical operator.
+   */
   protected def newRelationship(relationship: Variable): Unit
 
   /**
-    * Called everytime a new variable is introduced by some logical operator.
-    */
+   * Called everytime a new variable is introduced by some logical operator.
+   */
   protected def newVariable(variable: Variable): Unit
 
   /**
-    * Returns the finalized output of the builder.
-    */
+   * Returns the finalized output of the builder.
+   */
   protected def build(readOnly: Boolean = true): T
 
   // HELPERS
@@ -773,7 +819,7 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
         parent.right = Some(newTree)
         looseEnds += newTree
 
-      case 0 => // append to rhs
+      case 0 => // append to lhs
         appendAtIndent()
 
       case -1 => // end of rhs
@@ -803,12 +849,26 @@ abstract class AbstractLogicalPlanBuilder[T, IMPL <: AbstractLogicalPlanBuilder[
   def function(name: String, args: Expression*): FunctionInvocation =
     FunctionInvocation(FunctionName(name)(pos), distinct = false, args.toIndexedSeq)(pos)
 
+  private def getExpandProperties(from: String,
+                                  rel: String,
+                                  cacheNodeProperties: Seq[String],
+                                  cacheRelProperties: Seq[String]): Option[ExpandCursorProperties] = {
+    if (cacheNodeProperties.isEmpty && cacheRelProperties.isEmpty) {
+      None
+    } else {
+      Some(
+        ExpandCursorProperties(
+          nodeProperties = cacheNodeProperties.map(prop => CursorProperty(from, NODE_TYPE, PropertyKeyName(prop)(NONE))),
+          relProperties = cacheRelProperties.map(prop => CursorProperty(rel, RELATIONSHIP_TYPE, PropertyKeyName(prop)(NONE)))
+        ))
+    }
+  }
 }
 
 object AbstractLogicalPlanBuilder {
-  val pos = new InputPosition(0, 1, 0)
+  val pos: InputPosition = new InputPosition(0, 1, 0)
+  val NO_PREDICATE: Predicate = Predicate("", "")
 
-  val NO_PREDICATE = Predicate("", "")
   case class Predicate(entity: String, predicate: String) {
     def asVariablePredicate: Option[VariablePredicate] = {
       if (entity == "") {

@@ -54,4 +54,6 @@ public interface InternalTransaction extends Transaction, TransactionalEntityFac
     void checkInTransaction();
 
     boolean isOpen();
+
+    void terminate( Status reason );
 }

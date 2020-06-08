@@ -23,7 +23,6 @@ import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
-import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,8 +36,12 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -51,11 +54,12 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class CommandApplicationProcessTest
+class CommandApplicationProcessTest
 {
     private final InMemoryRaftLog raftLog = spy( new InMemoryRaftLog() );
 
@@ -72,9 +76,10 @@ public class CommandApplicationProcessTest
     private final Monitors monitors = new Monitors();
     private final CoreState coreState = mock( CoreState.class );
     private final SinglePanic panicker = new SinglePanic();
+    private final JobScheduler jobScheduler = new ThreadPoolJobScheduler();
     private final CommandApplicationProcess applicationProcess =
             new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
-                    sessionTracker, coreState, inFlightCache, monitors, panicker );
+                                           sessionTracker, coreState, inFlightCache, monitors, panicker, jobScheduler );
 
     private final ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
 
@@ -90,13 +95,14 @@ public class CommandApplicationProcessTest
     }
 
     @AfterEach
-    void tearDown() throws IOException
+    void tearDown() throws Exception
     {
         applicationProcess.stop();
+        jobScheduler.shutdown();
     }
 
     @Test
-    public void shouldApplyCommittedCommand() throws Throwable
+    void shouldApplyCommittedCommand() throws Throwable
     {
         // given
         RaftLogCommitIndexMonitor listener = mock( RaftLogCommitIndexMonitor.class );
@@ -123,7 +129,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void shouldNotApplyUncommittedCommands() throws Throwable
+    void shouldNotApplyUncommittedCommands() throws Throwable
     {
         // given
         raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
@@ -134,11 +140,11 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        verifyNoMoreInteractions( commandDispatcher );
+        verifyNoInteractions( commandDispatcher );
     }
 
     @Test
-    public void entriesThatAreNotStateMachineCommandsShouldStillIncreaseCommandIndex() throws Throwable
+    void entriesThatAreNotStateMachineCommandsShouldStillIncreaseCommandIndex() throws Throwable
     {
         // given
         raftLog.append( new RaftLogEntry( 0, new NewLeaderBarrier() ) );
@@ -156,7 +162,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void duplicatesShouldBeIgnoredButStillIncreaseCommandIndex() throws Exception
+    void duplicatesShouldBeIgnoredButStillIncreaseCommandIndex() throws Exception
     {
         // given
         raftLog.append( new RaftLogEntry( 0, new NewLeaderBarrier() ) );
@@ -180,7 +186,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void outOfOrderDuplicatesShouldBeIgnoredButStillIncreaseCommandIndex() throws Exception
+    void outOfOrderDuplicatesShouldBeIgnoredButStillIncreaseCommandIndex() throws Exception
     {
         // given
         raftLog.append( new RaftLogEntry( 0, new DistributedOperation( tx( (byte) 100 ), globalSession, new LocalOperationId( 0, 0 ) ) ) );
@@ -214,7 +220,7 @@ public class CommandApplicationProcessTest
     // TODO: Test recovery, see CoreState#start().
 
     @Test
-    public void shouldPeriodicallyFlushState() throws Throwable
+    void shouldPeriodicallyFlushState() throws Throwable
     {
         // given
         int interactions = flushEvery * 5;
@@ -234,7 +240,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void shouldPanicIfUnableToApply() throws Throwable
+    void shouldPanicIfUnableToApply() throws Throwable
     {
         // given
         doThrow( RuntimeException.class ).when( commandDispatcher )
@@ -249,7 +255,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void shouldApplyToLogFromCache() throws Throwable
+    void shouldApplyToLogFromCache() throws Throwable
     {
         // given
         inFlightCache.put( 0L, new RaftLogEntry( 1, operation( nullTx ) ) );
@@ -260,11 +266,11 @@ public class CommandApplicationProcessTest
 
         //then the cache should have had it's get method called.
         verify( inFlightCache ).get( 0L );
-        verifyNoMoreInteractions( raftLog );
+        verifyNoInteractions( raftLog );
     }
 
     @Test
-    public void cacheEntryShouldBePurgedAfterBeingApplied() throws Throwable
+    void cacheEntryShouldBePurgedAfterBeingApplied() throws Throwable
     {
         // given
         inFlightCache.put( 0L, new RaftLogEntry( 0, operation( nullTx ) ) );
@@ -282,7 +288,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void shouldFailWhenCacheAndLogMiss()
+    void shouldFailWhenCacheAndLogMiss()
     {
         // given
         inFlightCache.put( 0L, new RaftLogEntry( 0, operation( nullTx ) ) );
@@ -295,7 +301,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void shouldIncreaseLastAppliedForStateMachineCommands() throws Exception
+    void shouldIncreaseLastAppliedForStateMachineCommands() throws Exception
     {
         // given
         raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
@@ -311,7 +317,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void shouldIncreaseLastAppliedForOtherCommands() throws Exception
+    void shouldIncreaseLastAppliedForOtherCommands() throws Exception
     {
         // given
         raftLog.append( new RaftLogEntry( 0, new NewLeaderBarrier() ) );
@@ -324,6 +330,30 @@ public class CommandApplicationProcessTest
 
         // then
         assertEquals( 2, applicationProcess.lastApplied() );
+    }
+
+    @Test
+    void pauseAndNotifyShouldBeThreadSafe() throws Exception
+    {
+        // given
+        raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
+        applicationProcess.start();
+
+        // when
+        for ( int i = 0; i < 1000; i++ )
+        {
+            final int current = i;
+            raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
+            var pauseFuture = runAsync( () -> applicationProcess.pauseApplier( "Testing" ) );
+            var notifyFuture = runAsync( () -> applicationProcess.notifyCommitted( current + 1 ) );
+
+            // then
+            assertThat(pauseFuture).succeedsWithin( 1, SECONDS );
+            assertThat(notifyFuture).succeedsWithin( 1, SECONDS );
+
+            // reset state
+            applicationProcess.resumeApplier( "Testing" );
+        }
     }
 
     private ReplicatedTransaction tx( byte dataValue )

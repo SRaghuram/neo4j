@@ -66,6 +66,7 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_RECORD_FORMATS;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
@@ -97,7 +98,7 @@ class RelationshipGroupDefragmenterTest
         this.units = units;
         jobScheduler = new ThreadPoolJobScheduler();
         stores = BatchingNeoStores.batchingNeoStores( testDirectory.getFileSystem(), databaseLayout, format, CONFIG, NullLogService.getInstance(),
-            AdditionalInitialIds.EMPTY, Config.defaults(), jobScheduler, PageCacheTracer.NULL );
+            AdditionalInitialIds.EMPTY, Config.defaults(), jobScheduler, PageCacheTracer.NULL, INSTANCE );
         stores.createNew();
     }
 
@@ -230,7 +231,7 @@ class RelationshipGroupDefragmenterTest
     {
         RelationshipGroupDefragmenter.Monitor monitor = mock( RelationshipGroupDefragmenter.Monitor.class );
         RelationshipGroupDefragmenter defragmenter = new RelationshipGroupDefragmenter( CONFIG,
-                ExecutionMonitors.invisible(), monitor, NumberArrayFactory.AUTO_WITHOUT_PAGECACHE, pageCacheTracer );
+                ExecutionMonitors.invisible(), monitor, NumberArrayFactory.AUTO_WITHOUT_PAGECACHE, pageCacheTracer, INSTANCE );
 
         // Calculation below correlates somewhat to calculation in RelationshipGroupDefragmenter.
         // Anyway we verify below that we exercise the multi-pass bit, which is what we want
@@ -284,7 +285,7 @@ class RelationshipGroupDefragmenterTest
             assertTrue(
                 groupRecord.getNext() == groupRecord.getId() + 1 ||
                     groupRecord.getNext() == Record.NO_NEXT_RELATIONSHIP.intValue(), "Expected this group to have a next of current + " + units + " OR NULL, " +
-                    "but was " + groupRecord.toString() );
+                    "but was " + groupRecord );
             assertTrue(
                 groupRecord.getType() > currentTypeId, "Expected " + groupRecord + " to have type > " + currentTypeId );
             currentTypeId = groupRecord.getType();

@@ -25,6 +25,10 @@ import java.util.Iterator;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -34,24 +38,39 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
 import static java.util.Collections.emptyIterator;
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.PropertyValueFormat.readEagerly;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+=======
+import static org.neo4j.internal.freki.MutableNodeData.relationshipHasProperties;
+import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
+import static org.neo4j.internal.freki.PropertyValueFormat.readEagerly;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
 class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
 {
     private boolean initializedFromEntity;
 
+<<<<<<< HEAD
     // either the properties are in the record data, where these fields come into play...
     private FrekiReference referenceToLoad;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
+=======
+    // either the properties are in the record data (node properties (and relationship properties when sparse)), where these fields come into play...
+    private FrekiReference referenceToLoad;
+    private int[] propertyKeyArray;
+    private int propertyKeyIndex = (int) NULL;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private int nextValuePosition;
     private Value readValue;
     private ByteBuffer buffer;
 
+<<<<<<< HEAD
     // ... or they are in the dense form, where these fields come into play
     private Iterator<StorageProperty> denseProperties;
     private StorageProperty currentDenseProperty;
@@ -59,6 +78,15 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     FrekiPropertyCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
         super( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+    // ... or they are in the dense form (relationship properties when dense), where these fields come into play
+    private Iterator<StorageProperty> denseProperties;
+    private StorageProperty currentDenseProperty;
+
+    FrekiPropertyCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    {
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -73,9 +101,16 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     public void initNodeProperties( StorageNodeCursor nodeCursor )
     {
         cursorAccessTracer.registerNodeToPropertyDirect();
+<<<<<<< HEAD
         if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) )
         {
             ensurePropertiesLoaded();
+=======
+        FrekiMainStoreCursor frekiNodeCursor = (FrekiMainStoreCursor) nodeCursor;
+        frekiNodeCursor.ensurePropertiesLocated();
+        if ( frekiNodeCursor.initializeOtherCursorFromStateOfThisCursor( this ) )
+        {
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             buffer = data.propertyBuffer();
             if ( readPropertyKeys( buffer ) )
             {
@@ -115,7 +150,11 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                     int offset = relCursor.currentRelationshipPropertiesOffset();
                     if ( offset != NULL_OFFSET )
                     {
+<<<<<<< HEAD
                         ensurePropertiesLoaded();
+=======
+                        ensurePropertiesLocated();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                         readPropertyKeys( buffer.position( offset ) );
                         initializedFromEntity = true;
                         return;
@@ -176,8 +215,34 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 }
             }
 
+<<<<<<< HEAD
             propertyKeyIndex++;
             if ( propertyKeyIndex >= propertyKeyArray.length )
+=======
+            boolean hasNextProperty = ++propertyKeyIndex < propertyKeyArray.length;
+            if ( !hasNextProperty && data.propertySplitState != null )
+            {
+                if ( !data.propertySplitState.last )
+                {
+                    SPLIT_PIECE_LOAD_STATUS status = loadNextSplitPiece( Header.OFFSET_PROPERTIES, data.propertySplitState );
+                    if ( status != SPLIT_PIECE_LOAD_STATUS.OK )
+                    {
+                        throw new IllegalStateException( "Failed to load split property part chain (Retry not yet implemented). " + status.name() );
+                    }
+                    readPropertyKeys( buffer = data.propertySplitState.buffer );
+
+                    hasNextProperty = true;
+                    assert propertyKeyArray.length > 0;
+                    propertyKeyIndex++;
+                }
+                else
+                {
+                    data.propertySplitState.reset();
+                }
+            }
+
+            if ( !hasNextProperty )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             {
                 propertyKeyIndex = -1;
             }
@@ -226,8 +291,17 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         else
         {
             // This is properties for a node
+<<<<<<< HEAD
             ensurePropertiesLoaded();
             buffer = data.propertyBuffer();
+=======
+            ensurePropertiesLocated();
+            buffer = data.propertyBuffer();
+            if ( data.propertySplitState != null )
+            {
+                data.propertySplitState.reset();
+            }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
         return readPropertyKeys( buffer );
     }
@@ -282,7 +356,11 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             return false;
         }
 
+<<<<<<< HEAD
         propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), buffer ).array();
+=======
+        propertyKeyArray = readInts( buffer, true );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nextValuePosition = buffer.position();
         propertyKeyIndex = -1;
         return true;

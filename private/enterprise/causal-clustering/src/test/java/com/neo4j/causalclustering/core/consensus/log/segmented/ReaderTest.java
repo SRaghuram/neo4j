@@ -5,26 +5,26 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class ReaderTest
+class ReaderTest
 {
     private final FileSystemAbstraction fsa = mock( FileSystemAbstraction.class );
     private final StoreChannel channel = mock( StoreChannel.class );
     private final File file = mock( File.class );
 
     @Test
-    public void shouldCloseChannelOnClose() throws Exception
+    void shouldCloseChannelOnClose() throws Exception
     {
         // given
         when( fsa.read( file ) ).thenReturn( channel );
@@ -38,7 +38,7 @@ public class ReaderTest
     }
 
     @Test
-    public void shouldUpdateTimeStamp() throws Exception
+    void shouldUpdateTimeStamp() throws Exception
     {
         // given
         Reader reader = new Reader( fsa, file, 0 );
@@ -48,6 +48,6 @@ public class ReaderTest
         reader.setTimeStamp( expected );
 
         // then
-        assertEquals( expected, reader.getTimeStamp() );
+        Assertions.assertEquals( expected, reader.getTimeStamp() );
     }
 }

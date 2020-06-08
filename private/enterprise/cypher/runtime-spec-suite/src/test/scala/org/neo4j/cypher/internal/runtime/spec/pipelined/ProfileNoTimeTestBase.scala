@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -47,8 +48,8 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
       .produceResults("x")       //FUSED
       .filter("true") //FUSED
       .expand("(x)-->(y)")    //FUSED
-      .optional()// NOTE here to make sure we don't fuse
-      .nodeByLabelScan("x", "X")
+      .nonFuseable()
+      .nodeByLabelScan("x", "X", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -59,7 +60,7 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
     queryProfile.operatorProfile(0).time() should be(OperatorProfile.NO_DATA) // produce results
     queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // filter
     queryProfile.operatorProfile(2).time() should be(OperatorProfile.NO_DATA) // expand
-    queryProfile.operatorProfile(3).time() should be > 0L // optional
+    queryProfile.operatorProfile(3).time() should be > 0L // nonFuseable
     queryProfile.operatorProfile(4).time() should be > 0L // labelscan
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)

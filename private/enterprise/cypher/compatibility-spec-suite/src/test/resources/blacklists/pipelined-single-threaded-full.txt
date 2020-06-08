@@ -1,5 +1,3 @@
-Feature "AggregationAcceptance": Scenario "Collect distinct nulls"
-Feature "AggregationAcceptance": Scenario "Collect distinct values mixed with nulls"
 Feature "AggregationAcceptance": Scenario "Projection during aggregation in WITH before MERGE and after WITH with predicate"
 Feature "Create": Scenario "Creating a node with a label"
 Feature "Create": Scenario "Creating a node with a property"
@@ -160,7 +158,6 @@ Feature "NullAcceptance": Scenario "Ignore null when setting label"
 Feature "NullAcceptance": Scenario "Ignore null when setting properties using an appending map"
 Feature "NullAcceptance": Scenario "Ignore null when setting properties using an overriding map"
 Feature "NullAcceptance": Scenario "Ignore null when setting property"
-Feature "OptionalMatchAcceptance": Scenario "OPTIONAL MATCH and `collect()`"
 Feature "OptionalMatchAcceptance": Scenario "Variable length optional relationships with bound nodes"
 Feature "OptionalMatchAcceptance": Scenario "Variable length optional relationships with bound nodes, no matches"
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure that takes no arguments and yields no results"
@@ -217,7 +214,6 @@ Feature "UnwindAcceptance": Scenario "Creating nodes from an unwound parameter l
 Feature "UnwindAcceptance": Scenario "Unwind with merge"
 
 // TCK needs to be updated, expects wrong error type or message
-Feature "ExpressionAcceptance": Scenario "Fail at runtime when trying to index into a map with a non-string"
 Feature "ExpressionAcceptance": Scenario "Fail at runtime when trying to index something which is not a map or list"
 Feature "ListOperations": Scenario "Fail at runtime when trying to index into a list with a list"
 Feature "SkipLimitAcceptanceTest": Scenario "Floating point parameter for LIMIT should fail"

@@ -12,23 +12,19 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesRequest;
 import static com.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 
-@RunWith( MockitoJUnitRunner.class )
-public class RaftMachineLogTest
+class RaftMachineLogTest
 {
-    @Mock
-    RaftMachineBuilder.CommitListener commitListener;
+    private RaftMachineBuilder.CommitListener commitListener = mock( RaftMachineBuilder.CommitListener.class );
 
     private MemberId myself = member( 0 );
     private ReplicatedContent content = valueOf( 1 );
@@ -36,8 +32,8 @@ public class RaftMachineLogTest
 
     private RaftMachine raft;
 
-    @Before
-    public void before() throws Exception
+    @BeforeEach
+    void before() throws Exception
     {
         // given
         testEntryLog = new InMemoryRaftLog();
@@ -50,19 +46,19 @@ public class RaftMachineLogTest
     }
 
     @Test
-    public void shouldPersistAtSpecifiedLogIndex() throws Exception
+    void shouldPersistAtSpecifiedLogIndex() throws Exception
     {
         // when
         raft.handle( appendEntriesRequest().leaderTerm( 0 ).prevLogIndex( 0 ).prevLogTerm( 0 )
                 .logEntry( new RaftLogEntry( 0, content ) ).build() );
 
         // then
-        assertEquals( 1, testEntryLog.appendIndex() );
-        assertEquals( content, readLogEntry( testEntryLog, 1 ).content() );
+        Assertions.assertEquals( 1, testEntryLog.appendIndex() );
+        Assertions.assertEquals( content, readLogEntry( testEntryLog, 1 ).content() );
     }
 
     @Test
-    public void shouldOnlyPersistSameLogEntryOnce() throws Exception
+    void shouldOnlyPersistSameLogEntryOnce() throws Exception
     {
         // when
         raft.handle( appendEntriesRequest().leaderTerm( 0 ).prevLogIndex( 0 ).prevLogTerm( 0 )
@@ -71,12 +67,12 @@ public class RaftMachineLogTest
                 .logEntry( new RaftLogEntry( 0, content ) ).build() );
 
         // then
-        assertEquals( 1, testEntryLog.appendIndex() );
-        assertEquals( content, readLogEntry( testEntryLog, 1 ).content() );
+        Assertions.assertEquals( 1, testEntryLog.appendIndex() );
+        Assertions.assertEquals( content, readLogEntry( testEntryLog, 1 ).content() );
     }
 
     @Test
-    public void shouldRemoveLaterEntryFromLogConflictingWithNewEntry() throws Exception
+    void shouldRemoveLaterEntryFromLogConflictingWithNewEntry() throws Exception
     {
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 1 ) ) );
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 4 ) ) );
@@ -88,12 +84,12 @@ public class RaftMachineLogTest
                 .logEntry( new RaftLogEntry( 2, newData ) ).build() );
 
         // then
-        assertEquals( 3, testEntryLog.appendIndex() );
-        assertEquals( newData, readLogEntry( testEntryLog, 3 ).content() );
+        Assertions.assertEquals( 3, testEntryLog.appendIndex() );
+        Assertions.assertEquals( newData, readLogEntry( testEntryLog, 3 ).content() );
     }
 
     @Test
-    public void shouldNotTouchTheLogIfWeDoMatchEverywhere() throws Exception
+    void shouldNotTouchTheLogIfWeDoMatchEverywhere() throws Exception
     {
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) ); // 0
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) ); // 1
@@ -119,13 +115,13 @@ public class RaftMachineLogTest
                 .build() );
 
         // then
-        assertEquals( 11, testEntryLog.appendIndex() );
-        assertEquals( 3, testEntryLog.readEntryTerm( 11 ) );
+        Assertions.assertEquals( 11, testEntryLog.appendIndex() );
+        Assertions.assertEquals( 3, testEntryLog.readEntryTerm( 11 ) );
     }
 
     /* Figure 3.6 */
     @Test
-    public void shouldNotTouchTheLogIfWeDoNotMatchAnywhere() throws Exception
+    void shouldNotTouchTheLogIfWeDoNotMatchAnywhere() throws Exception
     {
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
@@ -152,12 +148,12 @@ public class RaftMachineLogTest
                 .build() );
 
         // then
-        assertEquals( 11, testEntryLog.appendIndex() );
-        assertEquals( 3, testEntryLog.readEntryTerm( 11 ) );
+        Assertions.assertEquals( 11, testEntryLog.appendIndex() );
+        Assertions.assertEquals( 3, testEntryLog.readEntryTerm( 11 ) );
     }
 
     @Test
-    public void shouldTruncateOnFirstMismatchAndThenAppendOtherEntries() throws Exception
+    void shouldTruncateOnFirstMismatchAndThenAppendOtherEntries() throws Exception
     {
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
@@ -188,21 +184,21 @@ public class RaftMachineLogTest
                 .build() );
 
         // then
-        assertEquals( 10, testEntryLog.appendIndex() );
-        assertEquals( 1, testEntryLog.readEntryTerm(1) );
-        assertEquals( 1, testEntryLog.readEntryTerm(2) );
-        assertEquals( 1, testEntryLog.readEntryTerm(3) );
-        assertEquals( 4, testEntryLog.readEntryTerm(4) );
-        assertEquals( 4, testEntryLog.readEntryTerm(5) );
-        assertEquals( 5, testEntryLog.readEntryTerm(6) );
-        assertEquals( 5, testEntryLog.readEntryTerm(7) );
-        assertEquals( 6, testEntryLog.readEntryTerm(8) );
-        assertEquals( 6, testEntryLog.readEntryTerm(9) );
-        assertEquals( 6, testEntryLog.readEntryTerm(10) );
+        Assertions.assertEquals( 10, testEntryLog.appendIndex() );
+        Assertions.assertEquals( 1, testEntryLog.readEntryTerm( 1 ) );
+        Assertions.assertEquals( 1, testEntryLog.readEntryTerm( 2 ) );
+        Assertions.assertEquals( 1, testEntryLog.readEntryTerm( 3 ) );
+        Assertions.assertEquals( 4, testEntryLog.readEntryTerm( 4 ) );
+        Assertions.assertEquals( 4, testEntryLog.readEntryTerm( 5 ) );
+        Assertions.assertEquals( 5, testEntryLog.readEntryTerm( 6 ) );
+        Assertions.assertEquals( 5, testEntryLog.readEntryTerm( 7 ) );
+        Assertions.assertEquals( 6, testEntryLog.readEntryTerm( 8 ) );
+        Assertions.assertEquals( 6, testEntryLog.readEntryTerm( 9 ) );
+        Assertions.assertEquals( 6, testEntryLog.readEntryTerm( 10 ) );
     }
 
     @Test
-    public void shouldNotTruncateLogIfHistoryDoesNotMatch() throws Exception
+    void shouldNotTruncateLogIfHistoryDoesNotMatch() throws Exception
     {
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
@@ -228,11 +224,11 @@ public class RaftMachineLogTest
                 .build() );
 
         // then
-        assertEquals( 11, testEntryLog.appendIndex() );
+        Assertions.assertEquals( 11, testEntryLog.appendIndex() );
     }
 
     @Test
-    public void shouldTruncateLogIfFirstEntryMatchesAndSecondEntryMismatchesOnTerm() throws Exception
+    void shouldTruncateLogIfFirstEntryMatchesAndSecondEntryMismatchesOnTerm() throws Exception
     {
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
         testEntryLog.append( new RaftLogEntry( 1, valueOf( 99 ) ) );
@@ -260,20 +256,20 @@ public class RaftMachineLogTest
                 .build() );
 
         // then
-        assertEquals( 10, testEntryLog.appendIndex() );
+        Assertions.assertEquals( 10, testEntryLog.appendIndex() );
 
         // stay the same
-        assertEquals( 1, testEntryLog.readEntryTerm( 1 ) );
-        assertEquals( 1, testEntryLog.readEntryTerm( 2 ) );
-        assertEquals( 1, testEntryLog.readEntryTerm( 3 ) );
+        Assertions.assertEquals( 1, testEntryLog.readEntryTerm( 1 ) );
+        Assertions.assertEquals( 1, testEntryLog.readEntryTerm( 2 ) );
+        Assertions.assertEquals( 1, testEntryLog.readEntryTerm( 3 ) );
 
         // replaced
-        assertEquals( 4, testEntryLog.readEntryTerm( 4 ) );
-        assertEquals( 4, testEntryLog.readEntryTerm( 5 ) );
-        assertEquals( 5, testEntryLog.readEntryTerm( 6 ) );
-        assertEquals( 5, testEntryLog.readEntryTerm( 7 ) );
-        assertEquals( 6, testEntryLog.readEntryTerm( 8 ) );
-        assertEquals( 6, testEntryLog.readEntryTerm( 9 ) );
-        assertEquals( 6, testEntryLog.readEntryTerm( 10 ) );
+        Assertions.assertEquals( 4, testEntryLog.readEntryTerm( 4 ) );
+        Assertions.assertEquals( 4, testEntryLog.readEntryTerm( 5 ) );
+        Assertions.assertEquals( 5, testEntryLog.readEntryTerm( 6 ) );
+        Assertions.assertEquals( 5, testEntryLog.readEntryTerm( 7 ) );
+        Assertions.assertEquals( 6, testEntryLog.readEntryTerm( 8 ) );
+        Assertions.assertEquals( 6, testEntryLog.readEntryTerm( 9 ) );
+        Assertions.assertEquals( 6, testEntryLog.readEntryTerm( 10 ) );
     }
 }

@@ -7,7 +7,7 @@ package com.neo4j.bench.micro;
 
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingType;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;

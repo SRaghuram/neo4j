@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.messaging.address;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.Log;
 import org.neo4j.time.Clocks;
@@ -18,10 +18,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class UnknownAddressMonitorTest
+class UnknownAddressMonitorTest
 {
     @Test
-    public void shouldLogFirstFailure()
+    void shouldLogFirstFailure()
     {
         // given
         Log log = mock( Log.class );
@@ -41,7 +41,7 @@ public class UnknownAddressMonitorTest
     }
 
     @Test
-    public void shouldThrottleLogging()
+    void shouldThrottleLogging()
     {
         // given
         Log log = mock( Log.class );
@@ -59,7 +59,7 @@ public class UnknownAddressMonitorTest
     }
 
     @Test
-    public void shouldResumeLoggingAfterQuietPeriod()
+    void shouldResumeLoggingAfterQuietPeriod()
     {
         // given
         Log log = mock( Log.class );

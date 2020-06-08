@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.LongConsumer;
+import java.util.function.LongPredicate;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
@@ -50,6 +51,7 @@ import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Label;
@@ -57,10 +59,12 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
 import org.neo4j.internal.index.label.TokenScanWriter;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -110,6 +114,7 @@ import static org.neo4j.collection.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.experimental_consistency_checker;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
+import static org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 import static org.neo4j.kernel.impl.store.record.Record.NULL_REFERENCE;
@@ -132,13 +137,18 @@ public class DetectRandomSabotageIT
     private NeoStores neoStores;
     private DependencyResolver resolver;
 
-    protected DatabaseManagementService getDbms( File home )
+    private DatabaseManagementService getDbms( File home )
     {
-        return new TestDatabaseManagementServiceBuilder( home ).build();
+        return addConfig( createBuilder( home ) ).build();
+    }
+
+    protected TestDatabaseManagementServiceBuilder createBuilder( File home )
+    {
+        return new TestDatabaseManagementServiceBuilder( home );
     }
 
     @BeforeEach
-    void setUp()
+    protected void setUp()
     {
         dbms = getDbms( directory.homeDir() );
         GraphDatabaseAPI db = (GraphDatabaseAPI) dbms.database( DEFAULT_DATABASE_NAME );
@@ -366,12 +376,33 @@ public class DetectRandomSabotageIT
     private ConsistencyCheckService.Result shutDownAndRunConsistencyChecker() throws ConsistencyCheckIncompleteException
     {
         dbms.shutdown();
-        Config config = Config.newBuilder()
-                .set( neo4j_home, directory.homeDir().toPath() )
-                .set( experimental_consistency_checker, true )
-                .build();
+        Config.Builder builder = Config.newBuilder().set( neo4j_home, directory.homeDir().toPath() );
+        Config config = addConfig( builder ).build();
         return new ConsistencyCheckService().runFullConsistencyCheck( DatabaseLayout.of( config ), config, ProgressMonitorFactory.NONE,
                 NullLogProvider.getInstance(), false, ConsistencyFlags.DEFAULT );
+    }
+
+    protected  <T> T addConfig( T t, SetConfigAction<T> action )
+    {
+        action.setConfig( t, enable_relationship_type_scan_store, true );
+        action.setConfig( t, experimental_consistency_checker, true );
+        return t;
+    }
+
+    private DatabaseManagementServiceBuilder addConfig( DatabaseManagementServiceBuilder builder )
+    {
+        return addConfig( builder, DatabaseManagementServiceBuilder::setConfig );
+    }
+
+    private Config.Builder addConfig( Config.Builder builder )
+    {
+        return addConfig( builder, Config.Builder::set );
+    }
+
+    @FunctionalInterface
+    protected interface SetConfigAction<TARGET>
+    {
+        <VALUE> void setConfig( TARGET target, Setting<VALUE> setting, VALUE value );
     }
 
     private enum SabotageType
@@ -446,7 +477,7 @@ public class DetectRandomSabotageIT
                         RelationshipStore store = stores.getRelationshipStore();
                         RelationshipRecord relationship = randomRecord( random, store, usedRecord() );
                         RelationshipRecord before = store.getRecord( relationship.getId(), store.newRecord(), RecordLoad.NORMAL, NULL );
-                        LongSupplier rng = () -> randomIdOrSometimesDefault( random, NULL_REFERENCE.longValue() );
+                        LongSupplier rng = () -> randomIdOrSometimesDefault( random, NULL_REFERENCE.longValue(), id -> true );
                         switch ( random.nextInt( 4 ) )
                         {
                         case 0: // start node prev
@@ -491,7 +522,19 @@ public class DetectRandomSabotageIT
                     Sabotage run( RandomRule random, NeoStores stores, DependencyResolver otherDependencies )
                     {
                         return loadChangeUpdate( random, stores.getRelationshipStore(), usedRecord(), PrimitiveRecord::getNextProp,
-                                PrimitiveRecord::setNextProp );
+                                PrimitiveRecord::setNextProp, () -> randomIdOrSometimesDefault( random, NULL_REFERENCE.longValue(), propertyId ->
+                                {
+                                    // For relationship properties there's a chance that the generated id will be a perfectly valid
+                                    // start of an existing property chain, therefore add some extra validation to this ID
+                                    if ( propertyId < 0 )
+                                    {
+                                        return true;
+                                    }
+
+                                    PropertyStore propertyStore = stores.getPropertyStore();
+                                    PropertyRecord record = propertyStore.getRecord( propertyId, propertyStore.newRecord(), RecordLoad.CHECK, NULL );
+                                    return !record.inUse() || !NULL_REFERENCE.is( record.getPrevProp() );
+                                } ) );
                     }
                 },
         RELATIONSHIP_TYPE
@@ -711,13 +754,7 @@ public class DetectRandomSabotageIT
                         LabelScanStore labelIndex = otherDependencies.resolveDependency( LabelScanStore.class );
                         boolean add = random.nextBoolean();
                         NodeStore store = stores.getNodeStore();
-                        NodeRecord nodeRecord;
-                        do
-                        {
-                            // If we're removing a label from the label index, make sure that the selected node has a label
-                            nodeRecord = store.getRecord( random.nextLong( store.getHighId() ), store.newRecord(), RecordLoad.CHECK, NULL );
-                        }
-                        while ( !add && (!nodeRecord.inUse() || nodeRecord.getLabelField() == NO_LABELS_FIELD.longValue()) );
+                        NodeRecord nodeRecord = randomRecord( random, store, r -> add || (r.inUse() && r.getLabelField() != NO_LABELS_FIELD.longValue()) );
                         TokenHolders tokenHolders = otherDependencies.resolveDependency( TokenHolders.class );
                         Set<String> labelNames = new HashSet<>( Arrays.asList( TOKEN_NAMES ) );
                         int labelId;
@@ -761,6 +798,63 @@ public class DetectRandomSabotageIT
                         }
                         return new Sabotage( String.format( "%s labelId:%d node:%s", add ? "Add" : "Remove", labelId, nodeRecord ), nodeRecord.toString() );
                     }
+                },
+        RELATIONSHIP_TYPE_INDEX_ENTRY
+                {
+                    @Override
+                    Sabotage run( RandomRule random, NeoStores stores, DependencyResolver otherDependencies ) throws Exception
+                    {
+                        RelationshipTypeScanStore relationshipTypeIndex = otherDependencies.resolveDependency( RelationshipTypeScanStore.class );
+                        RelationshipStore store = stores.getRelationshipStore();
+                        RelationshipRecord relationshipRecord = randomRecord( random, store, r -> true );
+                        TokenHolders tokenHolders = otherDependencies.resolveDependency( TokenHolders.class );
+                        Set<String> relationshipTypeNames = new HashSet<>( Arrays.asList( TOKEN_NAMES ) );
+                        int typeBefore = relationshipRecord.getType();
+                        long[] typesBefore = new long[]{typeBefore};
+                        int typeId;
+                        long[] typesAfter;
+                        String operation;
+                        try ( TokenScanWriter writer = relationshipTypeIndex.newWriter( NULL ) )
+                        {
+                            if ( relationshipRecord.inUse() )
+                            {
+                                int mode = random.nextInt( 3 );
+                                if ( mode < 2 )
+                                {
+                                    relationshipTypeNames.remove( tokenHolders.relationshipTypeTokens().getTokenById( typeBefore ).name() );
+                                    typeId =
+                                            tokenHolders.relationshipTypeTokens().getIdByName( random.among( new ArrayList<>( relationshipTypeNames ) ) );
+                                    if ( mode == 0 )
+                                    {
+                                        operation = "Replace relationship type in index with a new type";
+                                        typesAfter = new long[]{typeId};
+                                    }
+                                    else
+                                    {
+                                        operation = "Add additional relationship type in index";
+                                        typesAfter = new long[]{typeId, typeBefore};
+                                        Arrays.sort( typesAfter );
+                                    }
+                                }
+                                else
+                                {
+                                    operation = "Remove relationship type from index";
+                                    typeId = typeBefore;
+                                    typesAfter = EMPTY_LONG_ARRAY;
+                                }
+                                writer.write( EntityTokenUpdate.tokenChanges( relationshipRecord.getId(), typesBefore, typesAfter ) );
+                            }
+                            else
+                            {
+                                // Getting here means the we're adding something (see above when selecting the relationship)
+                                operation = "Add relationship type to a non-existing relationship (in relationship type index only)";
+                                typeId = tokenHolders.labelTokens().getIdByName( random.among( TOKEN_NAMES ) );
+                                writer.write( EntityTokenUpdate.tokenChanges( relationshipRecord.getId(), EMPTY_LONG_ARRAY, new long[]{typeId} ) );
+                            }
+                        }
+                        String description = String.format( "%s relationshipTypeId:%d relationship:%s", operation, typeId, relationshipRecord );
+                        return new Sabotage( description, relationshipRecord.toString() );
+                    }
                 };
 
         protected <T extends AbstractBaseRecord> Sabotage setRandomRecordNotInUse( RandomRule random, RecordStore<T> store )
@@ -780,7 +874,8 @@ public class DetectRandomSabotageIT
         protected <T extends AbstractBaseRecord> Sabotage loadChangeUpdate( RandomRule random, RecordStore<T> store, Predicate<T> filter,
                 ToLongFunction<T> idGetter, BiConsumer<T,Long> idSetter )
         {
-            return loadChangeUpdate( random, store, filter, idGetter, idSetter, () -> randomIdOrSometimesDefault( random, NULL_REFERENCE.longValue() ) );
+            return loadChangeUpdate( random, store, filter, idGetter, idSetter,
+                    () -> randomIdOrSometimesDefault( random, NULL_REFERENCE.longValue(), id -> true ) );
         }
 
         protected <T extends AbstractBaseRecord> Sabotage loadChangeUpdate( RandomRule random, RecordStore<T> store, Predicate<T> filter,
@@ -835,15 +930,26 @@ public class DetectRandomSabotageIT
             }
         }
 
-        protected long randomIdOrSometimesDefault( RandomRule random, long defaultValue )
+        protected long randomIdOrSometimesDefault( RandomRule random, long defaultValue, LongPredicate filter )
         {
-            return random.nextFloat() < 0.1 ? defaultValue : randomLargeSometimesNegative( random );
+            return random.nextFloat() < 0.1 ? defaultValue : randomLargeSometimesNegative( random, filter );
         }
 
         protected long randomLargeSometimesNegative( RandomRule random )
         {
-            long value = random.nextLong( SOME_WAY_TOO_HIGH_ID );
-            return random.nextFloat() < 0.2 ? -value : value;
+            return randomLargeSometimesNegative( random, id -> true );
+        }
+
+        protected long randomLargeSometimesNegative( RandomRule random, LongPredicate filter )
+        {
+            long value;
+            do
+            {
+                value = random.nextLong( SOME_WAY_TOO_HIGH_ID );
+                value = random.nextFloat() < 0.2 ? -value : value;
+            }
+            while ( !filter.test( value ) );
+            return value;
         }
 
         protected <T extends AbstractBaseRecord> T randomRecord( RandomRule random, RecordStore<T> store, Predicate<T> filter )

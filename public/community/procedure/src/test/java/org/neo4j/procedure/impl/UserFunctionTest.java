@@ -156,9 +156,9 @@ public class UserFunctionTest
     @Test
     void shouldGiveHelpfulErrorOnConstructorThatRequiresArgument()
     {
-        ProcedureException exception = assertThrows( ProcedureException.class, () -> compile( WierdConstructorFunction.class ) );
+        ProcedureException exception = assertThrows( ProcedureException.class, () -> compile( WeirdConstructorFunction.class ) );
         assertThat( exception.getMessage() ).isEqualTo(
-                "Unable to find a usable public no-argument constructor in the class `WierdConstructorFunction`. Please add a " +
+                "Unable to find a usable public no-argument constructor in the class `WeirdConstructorFunction`. Please add a " +
                         "valid, public constructor, recompile the class and try again." );
     }
 
@@ -384,15 +384,15 @@ public class UserFunctionTest
         @UserFunction
         public Map<String, Object> listBananaOwningPeople()
         {
-            HashMap<String,Object> map = new HashMap<>();
+            Map<String,Object> map = new HashMap<>();
             map.put("foo", Arrays.asList("bar", "baz"));
             return map;
         }
     }
 
-    public static class WierdConstructorFunction
+    public static class WeirdConstructorFunction
     {
-        public WierdConstructorFunction( WierdConstructorFunction wat )
+        public WeirdConstructorFunction( WeirdConstructorFunction wat )
         {
 
         }

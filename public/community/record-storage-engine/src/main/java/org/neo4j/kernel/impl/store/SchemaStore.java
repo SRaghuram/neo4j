@@ -56,7 +56,6 @@ import static org.neo4j.internal.schema.SchemaRuleMapifier.PROP_OWNING_CONSTRAIN
 import static org.neo4j.internal.schema.SchemaRuleMapifier.mapifySchemaRule;
 import static org.neo4j.internal.schema.SchemaRuleMapifier.unmapifySchemaRule;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
-import static org.neo4j.values.storable.Values.utf8Value;
 
 /**
  * In this schema store implementation, each schema record is really just a pointer to a property chain in the property store.

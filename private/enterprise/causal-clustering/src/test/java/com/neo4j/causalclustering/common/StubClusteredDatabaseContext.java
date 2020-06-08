@@ -8,10 +8,12 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.layout.DatabaseLayout;
@@ -38,15 +40,18 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final Monitors monitors;
     private final StoreFiles storeFiles;
     private final LogFiles logFiles;
+    private final LeaderLocator leaderLocator;
 
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
-            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory )
+            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory,
+            LeaderLocator leaderLocator )
     {
         this.database = database;
         this.facade = facade;
         this.logProvider = logProvider;
         this.storeFiles = storeFiles;
         this.logFiles = logFiles;
+        this.leaderLocator = leaderLocator;
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
         this.monitors = new Monitors();
@@ -127,5 +132,11 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     public ClusteredDatabase clusteredDatabase()
     {
         return null;
+    }
+
+    @Override
+    public Optional<LeaderLocator> leaderLocator()
+    {
+        return Optional.ofNullable( leaderLocator );
     }
 }

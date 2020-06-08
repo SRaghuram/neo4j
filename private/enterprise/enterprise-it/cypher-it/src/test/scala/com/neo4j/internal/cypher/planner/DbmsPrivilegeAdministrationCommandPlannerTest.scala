@@ -5,33 +5,12 @@
  */
 package com.neo4j.internal.cypher.planner
 
-import org.neo4j.cypher.internal.plandescription.Arguments.Role
+import org.neo4j.cypher.internal.plandescription.Arguments.Details
+import org.neo4j.cypher.internal.plandescription.asPrettyString
 
 class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
-  val dbmsActions = Seq(
-    "SHOW ROLE",
-    "CREATE ROLE",
-    "DROP ROLE",
-    "ASSIGN ROLE",
-    "REMOVE ROLE",
-    "ROLE MANAGEMENT",
-    "SHOW USER",
-    "CREATE USER",
-    "DROP USER",
-    "ALTER USER",
-    "USER MANAGEMENT",
-    "CREATE DATABASE",
-    "DROP DATABASE",
-    "DATABASE MANAGEMENT",
-    "SHOW PRIVILEGE",
-    "ASSIGN PRIVILEGE",
-    "REMOVE PRIVILEGE",
-    "PRIVILEGE MANAGEMENT",
-    "ALL DBMS PRIVILEGES"
-  )
-
-  dbmsActions.foreach { action =>
+  dbmsCommands.foreach { action =>
     test(s"GRANT $action") {
       // When
       val plan = execute(s"EXPLAIN GRANT $action ON DBMS TO reader, $$role", Map("role" -> "editor")).executionPlanString()
@@ -39,7 +18,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       // Then
       plan should include(
         logPlan(
-          dbmsPrivilegePlan("GrantDbmsAction", action, Role("ROLE $role"),
+          dbmsPrivilegePlan("GrantDbmsAction", action, Details(asPrettyString.raw("ROLE $role")),
             dbmsPrivilegePlan("GrantDbmsAction", action, "reader",
               assertDbmsAdminPlan("ASSIGN PRIVILEGE")
             )

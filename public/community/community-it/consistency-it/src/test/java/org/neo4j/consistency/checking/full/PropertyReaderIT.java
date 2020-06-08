@@ -22,8 +22,6 @@ package org.neo4j.consistency.checking.full;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -44,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @DbmsExtension
 class PropertyReaderIT
@@ -65,7 +64,7 @@ class PropertyReaderIT
     }
 
     @Test
-    void shouldDetectAndAbortPropertyChainLoadingOnCircularReference() throws IOException
+    void shouldDetectAndAbortPropertyChainLoadingOnCircularReference()
     {
         // Create property chain 1 --> 2 --> 3 --> 4
         //                             ↑           │
@@ -124,7 +123,7 @@ class PropertyReaderIT
 
         PropertyBlock block = new PropertyBlock();
         TextValue expectedValue = Values.stringValue( randomAscii( 100 ) );
-        propertyStore.encodeValue( block, 1, expectedValue, NULL );
+        propertyStore.encodeValue( block, 1, expectedValue, NULL, INSTANCE );
         record.addPropertyBlock( block );
 
         propertyStore.updateRecord( record, NULL );

@@ -7,7 +7,7 @@ package com.neo4j.bench.client.queries.report;
 
 import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.client.queries.report.MicroCoverageResult.Change;
-import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.model.model.Repository;
 
 import java.util.Comparator;
 import java.util.List;

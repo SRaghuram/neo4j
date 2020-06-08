@@ -23,6 +23,10 @@ import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.junit.jupiter.api.Test;
 
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.EmptyMemoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.Value;
 
@@ -40,7 +44,11 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         IntValue value1 = intValue( 10 );
         IntValue value2 = intValue( 20 );
         var nodeCursor = node().labels( 1, 2, 5, 6 ).property( 1, value1 ).property( 2, value2 ).storeAndPlaceNodeCursorAt();
+<<<<<<< HEAD
         var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nodeCursor.properties( propertyCursor );
 
         // when
@@ -58,7 +66,11 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         IntValue value1 = intValue( 10 );
         IntValue value2 = intValue( 20 );
         var nodeCursor = node().labels( 1, 2, 5, 6 ).property( 1, value1 ).property( 2, value2 ).storeAndPlaceNodeCursorAt();
+<<<<<<< HEAD
         var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nodeCursor.properties( propertyCursor );
 
         // when
@@ -82,7 +94,11 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         var nodeCursor = node().property( 1, value1 ).property( 2, value2 ).relationship( 1, node1 ).relationship( 2, node2 ).storeAndPlaceNodeCursorAt();
         node1.store();
         node2.store();
+<<<<<<< HEAD
         var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL );
         nodeCursor.properties( propertyCursor );
 
@@ -113,7 +129,11 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
                 properties ).storeAndPlaceNodeCursorAt();
         node1.store();
         node2.store();
+<<<<<<< HEAD
         var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL );
         nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
 
@@ -141,14 +161,24 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         var value2v2 = intValue( 20 );
         var nodeCursor = node().property( 1, value1v1 ).property( 2, value2v1 ).storeAndPlaceNodeCursorAt();
         var otherNode = node().property( 1, value1v2 ).property( 2, value2v2 ).store();
+<<<<<<< HEAD
         var firstPropertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var firstPropertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nodeCursor.properties( firstPropertyCursor );
         assertNextProperty( firstPropertyCursor, 1, value1v1 );
 
         // when
+<<<<<<< HEAD
         nodeCursor.single( otherNode.id );
         assertThat( nodeCursor.next() ).isTrue();
         var secondPropertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        nodeCursor.single( otherNode );
+        assertThat( nodeCursor.next() ).isTrue();
+        var secondPropertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nodeCursor.properties( secondPropertyCursor );
         assertNextProperty( secondPropertyCursor, 1, value1v2 );
         assertNextProperty( secondPropertyCursor, 2, value2v2 );
@@ -202,7 +232,11 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         var firstRelationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL );
         nodeCursor.relationships( firstRelationshipCursor, ALL_RELATIONSHIPS );
         assertNextRelationship( firstRelationshipCursor, 1, node2.id() );
+<<<<<<< HEAD
         var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         firstRelationshipCursor.properties( propertyCursor );
         assertNextProperty( propertyCursor, 1, value1 );
         assertNextRelationship( firstRelationshipCursor, 2, node3.id() );
@@ -231,14 +265,22 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         var value2v2 = intValue( 20 );
         var nodeCursor = node().property( 1, value1v1 ).property( 2, value2v1 ).storeAndPlaceNodeCursorAt();
         var otherNode = node().property( 1, value1v2 ).property( 2, value2v2 ).store();
+<<<<<<< HEAD
         var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nodeCursor.properties( propertyCursor );
         assertNextProperty( propertyCursor, 1, value1v1 );
         assertNextProperty( propertyCursor, 2, value2v1 );
         assertThat( propertyCursor.next() ).isFalse();
 
         // when
+<<<<<<< HEAD
         nodeCursor.single( otherNode.id );
+=======
+        nodeCursor.single( otherNode );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         assertThat( nodeCursor.next() ).isTrue();
         nodeCursor.properties( propertyCursor );
         assertNextProperty( propertyCursor, 1, value1v2 );
@@ -292,7 +334,11 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL );
         nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
         assertNextRelationship( relationshipCursor, 1, node2.id() );
+<<<<<<< HEAD
         var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+=======
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         relationshipCursor.properties( propertyCursor );
         assertNextProperty( propertyCursor, 1, value1 );
         assertNextProperty( propertyCursor, 2, value2 );

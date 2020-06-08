@@ -28,8 +28,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardOpenOption;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
@@ -44,10 +47,12 @@ import org.neo4j.counts.CountsVisitor;
 import org.neo4j.index.internal.gbptree.TreeFileNotFoundException;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.test.OtherThreadExecutor;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
@@ -65,14 +70,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.counts.CountsKey.nodeKey;
 import static org.neo4j.internal.counts.CountsKey.relationshipKey;
 import static org.neo4j.internal.counts.GBPTreeCountsStore.NO_MONITOR;
 import static org.neo4j.io.pagecache.IOLimiter.UNLIMITED;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.test.OtherThreadExecutor.command;
 import static org.neo4j.test.Race.throwing;
@@ -139,7 +148,7 @@ class GBPTreeCountsStoreTest
     }
 
     @Test
-    void tracePageCacheAccessOnNodeCount() throws IOException
+    void tracePageCacheAccessOnNodeCount()
     {
         var pageCacheTracer = new DefaultPageCacheTracer();
         var cursorTracer = pageCacheTracer.createPageCursorTracer( "tracePageCacheAccessOnNodeCount" );
@@ -152,7 +161,7 @@ class GBPTreeCountsStoreTest
     }
 
     @Test
-    void tracePageCacheAccessOnRelationshipCount() throws IOException
+    void tracePageCacheAccessOnRelationshipCount()
     {
         var pageCacheTracer = new DefaultPageCacheTracer();
         var cursorTracer = pageCacheTracer.createPageCursorTracer( "tracePageCacheAccessOnRelationshipCount" );
@@ -344,9 +353,9 @@ class GBPTreeCountsStoreTest
         TestableCountsBuilder builder = new TestableCountsBuilder( rebuiltAtTransactionId )
         {
             @Override
-            public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer )
+            public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
             {
-                super.initialize( updater, cursorTracer );
+                super.initialize( updater, cursorTracer, memoryTracker );
                 updater.incrementNodeCount( labelId, 10 );
                 updater.incrementRelationshipCount( labelId, relationshipTypeId, labelId2, 14 );
             }
@@ -386,7 +395,7 @@ class GBPTreeCountsStoreTest
         instantiateCountsStore( new CountsBuilder()
         {
             @Override
-            public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer )
+            public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
             {
                 updater.incrementNodeCount( labelId, 2 );
             }
@@ -402,7 +411,7 @@ class GBPTreeCountsStoreTest
         // applying this negative delta would have failed in the updater.
         incrementNodeCount( BASE_TX_ID + 2, labelId, -2 );
         verify( monitor ).ignoredTransaction( BASE_TX_ID + 2 );
-        countsStore.start( NULL );
+        countsStore.start( NULL, INSTANCE );
 
         // then
         assertEquals( 2, countsStore.nodeCount( labelId, NULL ) );
@@ -487,7 +496,7 @@ class GBPTreeCountsStoreTest
         countsStore.checkpoint( UNLIMITED, NULL );
         closeCountsStore();
         instantiateCountsStore( CountsBuilder.EMPTY, true, NO_MONITOR );
-        countsStore.start( NULL );
+        countsStore.start( NULL, INSTANCE );
 
         // then
         assertThrows( IllegalStateException.class, () -> countsStore.apply( BASE_TX_ID + 1, NULL ) );
@@ -500,7 +509,7 @@ class GBPTreeCountsStoreTest
         countsStore.checkpoint( UNLIMITED, NULL );
         closeCountsStore();
         instantiateCountsStore( CountsBuilder.EMPTY, true, NO_MONITOR );
-        countsStore.start( NULL );
+        countsStore.start( NULL, INSTANCE );
 
         // then it's fine to call checkpoint, because no changes can actually be made on a read-only counts store anyway
         countsStore.checkpoint( UNLIMITED, NULL );
@@ -568,6 +577,42 @@ class GBPTreeCountsStoreTest
 
         // then
         assertFalse( fs.fileExists( file ) );
+    }
+
+    @Test
+    void shouldDeleteAndMarkForRebuildOnCorruptStore() throws Exception
+    {
+        // given
+        try ( CountsAccessor.Updater updater = countsStore.apply( BASE_TX_ID + 1, NULL ) )
+        {
+            updater.incrementNodeCount( LABEL_ID_1, 9 );
+        }
+        closeCountsStore();
+        try ( StoreChannel channel = fs.open( countsStoreFile(), Set.of( StandardOpenOption.WRITE ) ) )
+        {
+            ByteBuffer buffer = ByteBuffer.wrap( new byte[8192] );
+            for ( int i = 0; buffer.hasRemaining(); i++ )
+            {
+                buffer.put( (byte) i );
+            }
+            buffer.flip();
+            channel.writeAll( buffer, 0 );
+        }
+
+        // when
+        CountsBuilder countsBuilder = mock( CountsBuilder.class );
+        when( countsBuilder.lastCommittedTxId() ).thenReturn( BASE_TX_ID );
+        doAnswer( invocationOnMock ->
+        {
+            CountsAccessor.Updater updater = invocationOnMock.getArgument( 0, CountsAccessor.Updater.class );
+            updater.incrementNodeCount( LABEL_ID_1, 3 );
+            return null;
+        } ).when( countsBuilder ).initialize( any(), any(), any() );
+        openCountsStore( countsBuilder );
+
+        // then rebuild store instead of throwing exception
+        verify( countsBuilder ).initialize( any(), any(), any() );
+        assertEquals( 3, countsStore.nodeCount( LABEL_ID_1, NULL ) );
     }
 
     private void incrementNodeCount( long txId, int labelId, int delta )
@@ -691,7 +736,7 @@ class GBPTreeCountsStoreTest
     private void openCountsStore( CountsBuilder builder ) throws IOException
     {
         instantiateCountsStore( builder, false, NO_MONITOR );
-        countsStore.start( NULL );
+        countsStore.start( NULL, INSTANCE );
     }
 
     private void instantiateCountsStore( CountsBuilder builder, boolean readOnly, GBPTreeCountsStore.Monitor monitor ) throws IOException
@@ -727,7 +772,7 @@ class GBPTreeCountsStoreTest
         }
 
         @Override
-        public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer )
+        public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
         {
             initializeCalled = true;
         }

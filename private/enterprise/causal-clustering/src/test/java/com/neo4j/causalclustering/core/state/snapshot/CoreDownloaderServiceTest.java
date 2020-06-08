@@ -12,9 +12,10 @@ import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
@@ -32,14 +33,13 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.DOWNLOAD_SNAPSHOT;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
-public class CoreDownloaderServiceTest
+class CoreDownloaderServiceTest
 {
     private final SocketAddress someMemberAddress = new SocketAddress( "localhost", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( someMemberAddress );
@@ -55,8 +55,8 @@ public class CoreDownloaderServiceTest
     private final DatabaseStartAborter databaseStartAborter = mock( DatabaseStartAborter.class );
     private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
 
-    @Before
-    public void create()
+    @BeforeEach
+    void create()
     {
         centralJobScheduler = createInitialisedScheduler();
         databaseManager.givenDatabaseWithConfig()
@@ -70,14 +70,14 @@ public class CoreDownloaderServiceTest
                 logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors(), databaseStartAborter );
     }
 
-    @After
-    public void shutdown() throws Throwable
+    @AfterEach
+    void shutdown() throws Throwable
     {
         centralJobScheduler.shutdown();
     }
 
     @Test
-    public void shouldRunPersistentDownloader() throws Exception
+    void shouldRunPersistentDownloader() throws Exception
     {
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( mock( CoreSnapshot.class ) ) );
 
@@ -91,7 +91,7 @@ public class CoreDownloaderServiceTest
     }
 
     @Test
-    public void shouldOnlyScheduleOnePersistentDownloaderTaskAtTheTime() throws InterruptedException
+    void shouldOnlyScheduleOnePersistentDownloaderTaskAtTheTime() throws InterruptedException
     {
         AtomicInteger schedules = new AtomicInteger();
         CountingJobScheduler countingJobScheduler = new CountingJobScheduler( schedules, centralJobScheduler );
@@ -107,7 +107,7 @@ public class CoreDownloaderServiceTest
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
 
-        assertEquals( 1, schedules.get() );
+        Assertions.assertEquals( 1, schedules.get() );
         blockDownloader.release();
     }
 

@@ -28,12 +28,16 @@ import org.neo4j.kernel.impl.store.NodeLabelsField;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
-import org.neo4j.kernel.impl.store.record.RecordLoadOverride;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
+import org.neo4j.kernel.impl.store.record.RecordLoadOverride;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.Reference;
+<<<<<<< HEAD
+=======
+import org.neo4j.storageengine.api.RelationshipDirection;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -159,17 +163,7 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
     @Override
     public boolean hasLabel( int label )
     {
-        //Get labels from store and put in intSet, unfortunately we get longs back
-        long[] longs = NodeLabelsField.get( this, read, cursorTracer );
-        for ( long labelToken : longs )
-        {
-            if ( labelToken == label )
-            {
-                assert (int) labelToken == labelToken : "value too big to be represented as and int";
-                return true;
-            }
-        }
-        return false;
+        return NodeLabelsField.hasLabel( this, read, cursorTracer, label );
     }
 
     @Override
@@ -231,10 +225,9 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
     }
 
     @Override
-    public Degrees degrees( RelationshipSelection selection )
+    public void degrees( RelationshipSelection selection, Degrees.Mutator mutator, boolean allowFastDegreeLookup )
     {
-        EagerDegrees result = new EagerDegrees();
-        if ( !isDense() )
+        if ( !isDense() || !allowFastDegreeLookup )
         {
             if ( relationshipCursor == null )
             {
@@ -243,23 +236,27 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
             relationshipCursor.init( this, ALL_RELATIONSHIPS );
             while ( relationshipCursor.next() )
             {
-                if ( selection.test( relationshipCursor.type() ) )
+                if ( selection.test( relationshipCursor.type(), relationshipCursor.sourceNodeReference(), relationshipCursor.targetNodeReference() ) )
                 {
+                    int outgoing = 0;
+                    int incoming = 0;
+                    int loop = 0;
                     if ( relationshipCursor.sourceNodeReference() == entityReference() )
                     {
                         if ( relationshipCursor.targetNodeReference() == entityReference() )
                         {
-                            result.addLoop( relationshipCursor.type(), 1 );
+                            loop++;
                         }
-                        else
+                        else if ( selection.test( RelationshipDirection.OUTGOING ) )
                         {
-                            result.addOutgoing( relationshipCursor.type(), 1 );
+                            outgoing++;
                         }
                     }
-                    else
+                    else if ( selection.test( RelationshipDirection.INCOMING ) )
                     {
-                        result.addIncoming( relationshipCursor.type(), 1 );
+                        incoming++;
                     }
+                    mutator.add( relationshipCursor.type(), outgoing, incoming, loop );
                 }
             }
         }
@@ -274,11 +271,21 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
             {
                 if ( selection.test( groupCursor.getType() ) )
                 {
-                    result.add( groupCursor.getType(), groupCursor.outgoingCount(), groupCursor.incomingCount(), groupCursor.loopCount() );
+                    int outgoing = 0;
+                    int incoming = 0;
+                    int loop = groupCursor.loopCount();
+                    if ( selection.test( RelationshipDirection.OUTGOING ) )
+                    {
+                        outgoing = groupCursor.outgoingCount();
+                    }
+                    if ( selection.test( RelationshipDirection.INCOMING ) )
+                    {
+                        incoming = groupCursor.incomingCount();
+                    }
+                    mutator.add( groupCursor.getType(), outgoing, incoming, loop );
                 }
             }
         }
-        return result;
     }
 
     @Override

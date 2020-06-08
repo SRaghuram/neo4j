@@ -5,14 +5,13 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-
-public class SizeBasedLogPruningStrategyTest extends PruningStrategyTest
+class SizeBasedLogPruningStrategyTest extends PruningStrategyTest
 {
     @Test
-    public void indexToKeepTest()
+    void indexToKeepTest()
     {
         // given
         int segmentFilesCount = 14;
@@ -27,6 +26,6 @@ public class SizeBasedLogPruningStrategyTest extends PruningStrategyTest
         long indexToKeep = sizeBasedLogPruningStrategy.getIndexToKeep( segments );
 
         // then
-        assertEquals( expectedIndex, indexToKeep );
+        Assertions.assertEquals( expectedIndex, indexToKeep );
     }
 }

@@ -5,6 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
@@ -20,8 +21,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   case class TestOrder(cypherToken: String,
                        expectedOrder: Seq[Map[String, Any]] => Seq[Map[String, Any]],
                        providedOrder: Expression => ProvidedOrder)
-  val ASCENDING = TestOrder("ASC", x => x, ProvidedOrder.asc)
-  val DESCENDING = TestOrder("DESC", x => x.reverse, ProvidedOrder.desc)
+  private val ASCENDING = TestOrder("ASC", x => x, ProvidedOrder.asc)
+  private val DESCENDING = TestOrder("DESC", x => x.reverse, ProvidedOrder.desc)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -79,6 +80,25 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         Map("n.prop2" -> 7), Map("n.prop2" -> 7),
         Map("n.prop2" -> 8), Map("n.prop2" -> 8),
         Map("n.prop2" -> 9), Map("n.prop2" -> 9)
+      )))
+    }
+
+    test(s"$cypherToken: Label scan") {
+      val result = executeWith(Configs.All,
+        s"MATCH (n:DateString) RETURN n.ds ORDER BY n $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+
+      result.toList should be(expectedOrder(List(
+        Map("n.ds" -> "2018-01-01"),
+        Map("n.ds" -> "2018-02-01"),
+        Map("n.ds" -> "2018-04-01"),
+        Map("n.ds" -> "2017-03-01"),
+        Map("n.ds" -> "2018-01-01"),
+        Map("n.ds" -> "2018-02-01"),
+        Map("n.ds" -> "2018-04-01"),
+        Map("n.ds" -> "2017-03-01"),
       )))
     }
 
@@ -160,7 +180,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with an aggregation and an expand") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (a:Awesome)-[r]->(b) WHERE a.prop2 > 1 RETURN a.prop2, count(b) ORDER BY a.prop2 $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
@@ -185,7 +205,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with a distinct") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (a:Awesome)-[r]->(b) WHERE a.prop2 > 1 RETURN DISTINCT a.prop2 ORDER BY a.prop2 $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
@@ -247,7 +267,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial sort after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
@@ -257,7 +277,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialSort")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -274,7 +294,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial top after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 4"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
@@ -284,7 +304,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialTop")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -301,7 +321,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial top1 after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 1"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
@@ -311,7 +331,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialTop")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -368,8 +388,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       (Configs.CachedProperty, "n.prop1 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
       (Configs.CachedProperty, "n.prop1 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty),
       (Configs.CachedProperty, "n.prop1 ASC, n.prop2 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
-      (Configs.InterpretedAndSlotted, "n.prop1 ASC, n.prop2 DESC", expectedAscDesc, true, propAsc, varAsc.fromLeft, ProvidedOrder.asc(var1).desc(var2).fromLeft),
-      (Configs.InterpretedAndSlotted, "n.prop1 DESC, n.prop2 ASC", expectedDescAsc, true, propDesc, varDesc.fromLeft, ProvidedOrder.desc(var1).asc(var2).fromLeft),
+      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 DESC", expectedAscDesc, true, propAsc, varAsc.fromLeft, ProvidedOrder.asc(var1).desc(var2).fromLeft),
+      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 ASC", expectedDescAsc, true, propDesc, varDesc.fromLeft, ProvidedOrder.desc(var1).asc(var2).fromLeft),
       (Configs.CachedProperty, "n.prop1 DESC, n.prop2 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty)
     ).foreach {
       case (config, orderByString, expected, shouldSort, indexOrder, projectionOrder, sortOrder) =>
@@ -399,7 +419,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           result.executionPlanDescription() should includeSomewhere
             .aPlan("PartialSort")
             .withOrder(sortOrder)
-            .containingArgument("n.prop1", "n.prop2")
+            .containingArgument(orderByString)
         else result.executionPlanDescription() should not(includeSomewhere.aPlan("PartialSort"))
     }
   }
@@ -569,12 +589,12 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 < 42 AND n.prop2 > 0
              |RETURN n.prop1, n.prop2, n.prop3, n.prop4
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.InterpretedAndSlotted, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         // Then
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument("n.prop1, n.prop2", sortItem)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Filter")
@@ -742,11 +762,11 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 < 42 AND n.prop2 > 0 AND n.prop3 >= '' AND n.prop5 <= 5.5
              |RETURN n.prop1, n.prop2, n.prop3, n.prop4, n.prop5
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.InterpretedAndSlotted, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument(alreadySorted, toBeSorted)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Filter")
@@ -817,7 +837,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         // Then
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument(alreadySorted, toBeSorted)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Projection")
@@ -1253,6 +1273,35 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   test("Should support cartesian product with one ordered index and one other plan with no results") {
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Awesome), (n:NoResults) WHERE a.prop1 > 40 RETURN a, n").toList should be(empty)
   }
+
+  test("Should keep order through correlated subquery with aggregation") {
+    restartWithConfig(databaseConfig() ++  Map(
+      GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(13),
+      GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1024),
+    ))
+    val names = for (c <- 'a' to 'b'; i <- 0 until 100) yield {
+      val name = f"$c$i%03d"
+      val node = createLabeledNode(Map("name" -> name, "age" -> i), "Person")
+      name
+    }
+
+    graph.createIndex("Person", "name")
+    val query =
+      """MATCH (p:Person) WHERE p.name STARTS WITH ''
+        |CALL {
+        |  WITH p
+        |  MATCH (p)-->(f)
+        |  RETURN avg(f.age) AS a
+        |}
+        |RETURN p.name, a ORDER BY p.name
+        |""".stripMargin
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+
+    val expected = names.map(name => Map("p.name" -> name, "a" -> null))
+    result.toList should equal(expected)
+  }
+
 
   // Some nodes which are suitable for CONTAINS and ENDS WITH testing
   private def createStringyNodes(tx: InternalTransaction) =

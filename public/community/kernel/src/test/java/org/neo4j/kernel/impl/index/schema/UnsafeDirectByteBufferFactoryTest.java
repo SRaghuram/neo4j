@@ -33,14 +33,14 @@ class UnsafeDirectByteBufferFactoryTest
     {
         // given
         MemoryTracker tracker = new LocalMemoryTracker();
-        try ( UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator( tracker ) )
+        try ( UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator() )
         {
             // when
             int bufferSize = 128;
-            factory.allocate( bufferSize );
+            factory.allocate( bufferSize, tracker );
 
             // then
-            assertEquals( bufferSize, tracker.usedDirectMemory() );
+            assertEquals( bufferSize, tracker.usedNativeMemory() );
         }
     }
 
@@ -49,14 +49,14 @@ class UnsafeDirectByteBufferFactoryTest
     {
         // given
         MemoryTracker tracker = new LocalMemoryTracker();
-        try ( UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator( tracker ) )
+        try ( UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator() )
         {
             // when
-            factory.allocate( 256 );
+            factory.allocate( 256, tracker );
         }
 
         // then
-        assertEquals( 0, tracker.usedDirectMemory() );
+        assertEquals( 0, tracker.usedNativeMemory() );
     }
 
     @Test
@@ -64,29 +64,30 @@ class UnsafeDirectByteBufferFactoryTest
     {
         // given
         MemoryTracker tracker = new LocalMemoryTracker();
-        UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator( tracker );
+        UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator();
 
         // when
-        factory.allocate( 256 );
+        factory.allocate( 256, tracker );
         factory.close();
 
         // then
-        assertEquals( 0, tracker.usedDirectMemory() );
+        assertEquals( 0, tracker.usedNativeMemory() );
         factory.close();
-        assertEquals( 0, tracker.usedDirectMemory() );
+        assertEquals( 0, tracker.usedNativeMemory() );
     }
 
     @Test
     void shouldNotAllocateAfterClosed()
     {
         // given
-        UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator( new LocalMemoryTracker() );
+        var localMemoryTracker = new LocalMemoryTracker();
+        UnsafeDirectByteBufferAllocator factory = new UnsafeDirectByteBufferAllocator();
         factory.close();
 
         // when
         try
         {
-            factory.allocate( 8 );
+            factory.allocate( 8, localMemoryTracker );
         }
         catch ( IllegalStateException e )
         {

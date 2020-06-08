@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -58,7 +59,7 @@ class ClusterStateMigratorTest
         clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( "data" ) );
         writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
 
-        clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), logProvider );
+        clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), logProvider, INSTANCE );
         migrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
     }
 
@@ -108,7 +109,7 @@ class ClusterStateMigratorTest
         var memberId = new MemberId( UUID.randomUUID() );
         var memberIdFile = clusterStateLayout.memberIdStateFile();
         assertFalse( fs.fileExists( memberIdFile ) );
-        var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), logProvider );
+        var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), logProvider, INSTANCE );
         memberIdStorage.writeState( memberId );
         assertTrue( fs.fileExists( memberIdFile ) );
 
@@ -126,7 +127,7 @@ class ClusterStateMigratorTest
     private void writeRandomClusterId( File file ) throws IOException
     {
         assertFalse( fs.fileExists( file ) );
-        var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), logProvider );
+        var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), logProvider, INSTANCE );
         clusterIdStorage.writeState( RaftIdFactory.random() );
         assertTrue( fs.fileExists( file ) );
     }

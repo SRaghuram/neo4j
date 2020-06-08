@@ -6,28 +6,27 @@
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-
-public class PositionCacheTest
+class PositionCacheTest
 {
     private final long recordOffset = SegmentHeader.CURRENT_RECORD_OFFSET;
     private final PositionCache cache = new PositionCache( recordOffset );
     private final LogPosition FIRST = new LogPosition( 0, recordOffset );
 
     @Test
-    public void shouldReturnSaneDefaultPosition()
+    void shouldReturnSaneDefaultPosition()
     {
         // when
         LogPosition position = cache.lookup( 5 );
 
         // then
-        assertEquals( FIRST, position );
+        Assertions.assertEquals( FIRST, position );
     }
 
     @Test
-    public void shouldReturnBestPosition()
+    void shouldReturnBestPosition()
     {
         // given
         cache.put( pos( 4 ) );
@@ -37,11 +36,11 @@ public class PositionCacheTest
         LogPosition lookup = cache.lookup( 7 );
 
         // then
-        assertEquals( pos( 6 ), lookup );
+        Assertions.assertEquals( pos( 6 ), lookup );
     }
 
     @Test
-    public void shouldReturnExactMatch()
+    void shouldReturnExactMatch()
     {
         // given
         cache.put( pos( 4 ) );
@@ -52,11 +51,11 @@ public class PositionCacheTest
         LogPosition lookup = cache.lookup( 6 );
 
         // then
-        assertEquals( pos( 6 ), lookup );
+        Assertions.assertEquals( pos( 6 ), lookup );
     }
 
     @Test
-    public void shouldNotReturnPositionAhead()
+    void shouldNotReturnPositionAhead()
     {
         // given
         cache.put( pos( 4 ) );
@@ -67,11 +66,11 @@ public class PositionCacheTest
         LogPosition lookup = cache.lookup( 7 );
 
         // then
-        assertEquals( pos( 6 ), lookup );
+        Assertions.assertEquals( pos( 6 ), lookup );
     }
 
     @Test
-    public void shouldPushOutOldEntries()
+    void shouldPushOutOldEntries()
     {
         // given
         int count = PositionCache.CACHE_SIZE + 4;
@@ -84,11 +83,11 @@ public class PositionCacheTest
         for ( int i = 0; i < PositionCache.CACHE_SIZE; i++ )
         {
             int index = count - i - 1;
-            assertEquals( pos( index ), cache.lookup( index ) );
+            Assertions.assertEquals( pos( index ), cache.lookup( index ) );
         }
 
         int index = count - PositionCache.CACHE_SIZE - 1;
-        assertEquals( FIRST, cache.lookup( index ) );
+        Assertions.assertEquals( FIRST, cache.lookup( index ) );
     }
 
     private LogPosition pos( int i )

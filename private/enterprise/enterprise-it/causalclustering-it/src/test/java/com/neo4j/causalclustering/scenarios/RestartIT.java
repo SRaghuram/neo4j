@@ -165,7 +165,7 @@ class RestartIT
                 ConsistencyCheckService.Result result =
                         new ConsistencyCheckService().runFullConsistencyCheck( core.databaseLayout(), Config.defaults(),
                                 ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), fileSystem, false,
-                                new ConsistencyFlags( true, true, true, true, false ) );
+                                new ConsistencyFlags( true, true, true, true, true, false ) );
                 assertTrue( result.isSuccessful(), "Inconsistent: " + core );
             }
 
@@ -174,7 +174,7 @@ class RestartIT
                 ConsistencyCheckService.Result result =
                         new ConsistencyCheckService().runFullConsistencyCheck( readReplica.databaseLayout(), Config.defaults(),
                                 ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), fileSystem, false,
-                                new ConsistencyFlags( true, true, true, true, false ) );
+                                new ConsistencyFlags( true, true, true, true, true, false ) );
                 assertTrue( result.isSuccessful(), "Inconsistent: " + readReplica );
             }
         }

@@ -17,10 +17,11 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
+import org.neo4j.cypher.internal.runtime.compiled.expressions.StandaloneExpressionCompiler
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
@@ -42,6 +43,7 @@ class CompiledExpressionConverter(log: Log,
                                   tokenContext: TokenContext,
                                   readOnly: Boolean,
                                   codeGenerationMode: CodeGenerationMode,
+                                  cachingExpressionCompilerTracer: CachingExpressionCompilerTracer,
                                   neverFail: Boolean = false) extends ExpressionConverter {
 
   //uses an inner converter to simplify compliance with Expression trait
@@ -55,7 +57,7 @@ class CompiledExpressionConverter(log: Log,
 
     case e if sizeOf(e) > COMPILE_LIMIT => try {
       log.debug(s"Compiling expression: $expression")
-      defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
+      StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, cachingExpressionCompilerTracer)
         .compileExpression(e)
         .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
@@ -83,7 +85,7 @@ class CompiledExpressionConverter(log: Log,
       val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
       if (totalSize > COMPILE_LIMIT) {
         log.debug(s" Compiling projection: $projections")
-        defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
+        StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, cachingExpressionCompilerTracer)
           .compileProjection(projections)
           .map(CompileWrappingProjection(_, projections.isEmpty))
       } else None
@@ -112,7 +114,7 @@ class CompiledExpressionConverter(log: Log,
         val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
         if (totalSize > COMPILE_LIMIT) {
           log.debug(s" Compiling grouping expression: $projections")
-          defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
+          StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, cachingExpressionCompilerTracer)
             .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage))
             .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
         } else None

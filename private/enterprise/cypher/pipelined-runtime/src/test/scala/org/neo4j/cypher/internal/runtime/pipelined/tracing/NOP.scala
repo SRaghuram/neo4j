@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 case object NOP extends Task[Unit.type] {
   override def executeWorkUnit(resource: Unit.type,
                                workUnitEvent: WorkUnitEvent,
-                               queryProfiler: QueryProfiler): PreparedOutput = () => ()
+                               queryProfiler: QueryProfiler): PreparedOutput = resources => {}
 
   override def canContinue: Boolean = false
 

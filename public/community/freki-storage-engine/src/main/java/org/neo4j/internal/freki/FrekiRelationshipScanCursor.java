@@ -23,6 +23,10 @@ import java.util.Iterator;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -30,7 +34,11 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.MutableNodeRecordData.nodeIdFromRelationshipId;
+=======
+import static org.neo4j.internal.freki.MutableNodeData.nodeIdFromRelationshipId;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
 class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements StorageRelationshipScanCursor
 {
@@ -38,6 +46,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     private long singleTargetNodeReference;
     private boolean needsLoading;
     private boolean inScan;
+<<<<<<< HEAD
     private long scanNodeId;
     private RelationshipSelection selection;
 
@@ -47,6 +56,19 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     {
         super( stores, cursorAccessPatternTracer, cursorTracer );
         traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+    private RelationshipSelection selection;
+
+    private final FrekiRelationshipTraversalCursor traversalCursor;
+    private final FrekiNodeCursor nodeCursor;
+
+    FrekiRelationshipScanCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
+    {
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+        traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+        nodeCursor = new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -54,6 +76,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     {
         if ( inScan )
         {
+<<<<<<< HEAD
             while ( scanNodeId < stores.mainStore.getHighId() )
             {
                 if ( needsLoading )
@@ -70,6 +93,21 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
             }
             inScan = false;
             scanNodeId = NULL;
+=======
+            while ( traversalCursor.next() || (needsLoading = nodeCursor.next()) )
+            {
+                if ( needsLoading )
+                {
+                    traversalCursor.init( nodeCursor, selection ); //load next node
+                    needsLoading = false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            inScan = false;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
         else if ( singleId != NULL )
         {
@@ -111,7 +149,10 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
         singleTargetNodeReference = NULL;
         needsLoading = false;
         inScan = false;
+<<<<<<< HEAD
         scanNodeId = NULL;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         selection = null;
     }
 
@@ -121,10 +162,18 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
         //We scan all nodes, traversing only outgoing relationships to not get duplicates
         inScan = true;
         traversalCursor.reset();
+<<<<<<< HEAD
         selection = type == -1
                         ? RelationshipSelection.selection( Direction.OUTGOING )
                         : RelationshipSelection.selection( type, Direction.OUTGOING );
         scanNodeId = 0;
+=======
+        nodeCursor.reset();
+        nodeCursor.scan( false );
+        selection = type == -1
+                        ? RelationshipSelection.selection( Direction.OUTGOING )
+                        : RelationshipSelection.selection( type, Direction.OUTGOING );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         needsLoading = true;
     }
 

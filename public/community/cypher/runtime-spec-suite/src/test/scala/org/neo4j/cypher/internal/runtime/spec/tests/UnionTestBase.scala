@@ -22,6 +22,7 @@ package org.neo4j.cypher.internal.runtime.spec.tests
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -637,8 +638,8 @@ abstract class UnionTestBase[CONTEXT <: RuntimeContext](
       .produceResults("x")
       .nodeHashJoin("x")
       .|.union()
-      .|.|.nodeByLabelScan("x", "B")
-      .|.nodeByLabelScan("x", "A")
+      .|.|.nodeByLabelScan("x", "B", IndexOrderNone)
+      .|.nodeByLabelScan("x", "A", IndexOrderNone)
       .allNodeScan("x")
       .build()
 
@@ -668,9 +669,9 @@ abstract class UnionTestBase[CONTEXT <: RuntimeContext](
       .sort(Seq(Ascending("x")))
       .union()
       .|.sort(Seq(Ascending("x")))
-      .|.nodeByLabelScan("x", "B")
+      .|.nodeByLabelScan("x", "B", IndexOrderNone)
       .sort(Seq(Ascending("x")))
-      .nodeByLabelScan("x", "A")
+      .nodeByLabelScan("x", "A", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
@@ -681,5 +682,28 @@ abstract class UnionTestBase[CONTEXT <: RuntimeContext](
     } yield Array(x)
 
     runtimeResult should beColumns("x").withRows(inOrder(expected))
+  }
+
+  test("should work with non-fused limit") {
+    val size = sizeHint / 2
+    given { nodeGraph(size)}
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .limit(1)
+      .nonFuseable()
+      .unwind("range (1, 10) AS y")
+      .union()
+      .|.allNodeScan("x")
+      .input(variables = Seq("x"))
+      .build()
+
+    val inputVals = randomValues(size)
+    val input = inputValues(inputVals.map(Array[Any](_)): _*)
+    val runtimeResult = execute(logicalQuery, runtime, input)
+
+    // then
+    runtimeResult should beColumns("y").withRows(Seq(Array[Any](1)))
   }
 }

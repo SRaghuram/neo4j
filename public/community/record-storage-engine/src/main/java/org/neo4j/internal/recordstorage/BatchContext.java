@@ -30,6 +30,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.lock.LockGroup;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
@@ -51,6 +52,7 @@ public class BatchContext implements AutoCloseable
     private final StorageEngine storageEngine;
     private final SchemaCache schemaCache;
     private final PageCursorTracer cursorTracer;
+    private final MemoryTracker memoryTracker;
     private final IdUpdateListener idUpdateListener;
 
     private final IndexActivator indexActivator;
@@ -63,7 +65,11 @@ public class BatchContext implements AutoCloseable
             LabelIndexUpdatesWorkSync labelScanStoreSync,
             WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync,
             IndexUpdatesWorkSync indexUpdatesSync, NodeStore nodeStore, PropertyStore propertyStore,
+<<<<<<< HEAD
             RecordStorageEngine recordStorageEngine, SchemaCache schemaCache, PageCursorTracer cursorTracer,
+=======
+            RecordStorageEngine recordStorageEngine, SchemaCache schemaCache, PageCursorTracer cursorTracer, MemoryTracker memoryTracker,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             IdUpdateListener idUpdateListener )
     {
         this.indexActivator = new IndexActivator( indexUpdateListener );
@@ -75,6 +81,7 @@ public class BatchContext implements AutoCloseable
         this.storageEngine = recordStorageEngine;
         this.schemaCache = schemaCache;
         this.cursorTracer = cursorTracer;
+        this.memoryTracker = memoryTracker;
         this.idUpdateListener = idUpdateListener;
         this.lockGroup = new LockGroup();
     }
@@ -156,8 +163,8 @@ public class BatchContext implements AutoCloseable
     {
         if ( indexUpdates == null )
         {
-            indexUpdates = new OnlineIndexUpdates( nodeStore, schemaCache,
-                    new PropertyPhysicalToLogicalConverter( propertyStore, cursorTracer ), storageEngine.newReader(), cursorTracer );
+            indexUpdates = new OnlineIndexUpdates( nodeStore, schemaCache, new PropertyPhysicalToLogicalConverter( propertyStore, cursorTracer ),
+                    storageEngine.newReader(), cursorTracer, memoryTracker );
         }
         return indexUpdates;
     }

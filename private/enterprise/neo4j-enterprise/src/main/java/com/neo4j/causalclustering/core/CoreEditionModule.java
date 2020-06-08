@@ -12,9 +12,10 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
@@ -50,7 +51,6 @@ import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
-import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusterSystemGraphInitializer;
@@ -60,6 +60,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
+import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
@@ -77,6 +78,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -84,7 +86,6 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
@@ -97,6 +98,7 @@ import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponent
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -107,9 +109,11 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.config.SslPolicyLoader;
+import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -143,10 +147,14 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private final EnterpriseTemporaryDatabaseFactory temporaryDatabaseFactory;
     private final RaftSender raftSender;
 
+    private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
+
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
     private DatabaseStartAborter databaseStartAborter;
     private ClusteredDbmsReconcilerModule reconcilerModule;
+    private LeaderService leaderService;
+    private AuthManager inClusterAuthManager;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -170,7 +178,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
-        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
+        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
+                globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         // migration needs to happen as early as possible in the lifecycle
         var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
@@ -208,6 +217,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         satisfyEnterpriseOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies );
+
+        fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Core( globalLife, globalDependencies, logService );
     }
 
     private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )
@@ -258,13 +269,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     @Override
     protected BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
-        LeaderLocatorForDatabase leaderLocatorForDatabase = databaseId -> databaseManager
-                .getDatabaseContext( databaseId )
-                .map( DatabaseContext::dependencies )
-                .map( dep -> dep.resolveDependency( LeaderLocator.class ) );
-
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        LeaderService leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService, logProvider );
         Config config = globalModule.getGlobalConfig();
         return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseManager, config, logProvider );
     }
@@ -298,7 +303,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
 
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
-                reconciledTxTracker, panicService, dbmsModel );
+                reconciledTxTracker, dbmsModel );
 
         databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );
@@ -311,14 +316,27 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
         reconcilerModule.reconciler().registerListener( topologyService );
 
+        leaderService = new DefaultLeaderService( topologyService, logProvider );
+        dependencies.satisfyDependencies( leaderService );
+
         RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
-        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory );
+        var globalOtherTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
+        var leaderTransferInterval = globalConfig.get( CausalClusteringSettings.leader_transfer_interval );
+        var leaderTransferBackoff = globalConfig.get( CausalClusteringSettings.leader_transfer_member_backoff );
+
+        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), leaderTransferInterval,
+                globalConfig, databaseManager, raftMessageDispatcher, myIdentity, leaderTransferBackoff, globalModule.getGlobalClock() );
+
+        globalLife.add( leaderTransferService );
+
+        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
+                leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
-                globalModule.getStorageEngineFactory() );
+                globalModule.getStorageEngineFactory(), globalOtherTracker );
 
         addThroughputMonitorService();
 
@@ -400,10 +418,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
             securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( NAMED_SYSTEM_DATABASE_ID, dbInit ) );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
+            inClusterAuthManager = securityModule.getInClusterAuthManager();
         }
         else
         {
             securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
+            inClusterAuthManager = EnterpriseNoAuthSecurityProvider.INSTANCE.authManager();
         }
         setSecurityProvider( securityProvider );
     }
@@ -448,7 +468,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
 
         var protocolInstallerRepository = new ProtocolInstallerRepository<>(
-                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ) ),
+                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ),
+                        new RaftProtocolClientInstallerV3.Factory( pipelineBuilders.client(), logProvider ) ),
                 ModifierProtocolInstaller.allClientInstallers );
 
         var handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );
@@ -467,4 +488,25 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 sslPolicyLoader );
         return discoveryModule.topologyService();
     }
+
+    @Override
+    public void bootstrapFabricServices()
+    {
+        fabricServicesBootstrap.bootstrapServices();
+    }
+
+    @Override
+    public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
+            DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
+    {
+        var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
+        return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
+    }
+
+    @Override
+    public AuthManager getBoltInClusterAuthManager()
+    {
+        return inClusterAuthManager;
+    }
+
 }

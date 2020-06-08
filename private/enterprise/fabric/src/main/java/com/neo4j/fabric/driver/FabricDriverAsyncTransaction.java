@@ -5,17 +5,20 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.executor.Location;
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.StatementResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.fabric.executor.Location;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.fabric.driver.Utils.convertBookmark;
@@ -23,6 +26,7 @@ import static com.neo4j.fabric.driver.Utils.convertBookmark;
 class FabricDriverAsyncTransaction implements FabricDriverTransaction
 {
     private final ParameterConverter parameterConverter = new ParameterConverter();
+    private final AtomicReference<FabricException> primaryException = new AtomicReference<>();
 
     private final AsyncTransaction asyncTransaction;
     private final AsyncSession asyncSession;
@@ -57,7 +61,7 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
         return new StatementResultImpl( statementResultCursor, location.getGraphId() );
     }
 
-    private static class StatementResultImpl extends AbstractRemoteStatementResult
+    private class StatementResultImpl extends AbstractRemoteStatementResult
     {
 
         private final Mono<ResultCursor> statementResultCursor;
@@ -66,7 +70,9 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
         StatementResultImpl( Mono<ResultCursor> statementResultCursor, long sourceTag )
         {
             super( statementResultCursor.map( ResultCursor::keys ).flatMapMany( Flux::fromIterable ),
-                    statementResultCursor.map( ResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ), sourceTag );
+                    statementResultCursor.map( ResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ),
+                    sourceTag,
+                    primaryException );
             this.statementResultCursor = statementResultCursor;
             this.recordConverter = new RecordConverter( sourceTag );
         }

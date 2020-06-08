@@ -5,11 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
+import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.ColumnOrder
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.AcceptVisitor
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.AggregationInstruction
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.ApplyInstruction
@@ -58,7 +60,6 @@ import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
-import org.neo4j.cypher.internal
 
 object LogicalPlanConverter {
 
@@ -202,7 +203,7 @@ object LogicalPlanConverter {
       context.addVariable(nodeByLabelScan.idName, nodeVar)
       val (methodHandle, actions :: tl) = context.popParent().consume(context, this, cardinalities)
       val opName = context.registerOperator(logicalPlan)
-      (methodHandle, WhileLoop(nodeVar, ScanForLabel(opName, nodeByLabelScan.label.name, labelVar), actions) :: tl)
+      (methodHandle, WhileLoop(nodeVar, ScanForLabel(opName, nodeByLabelScan.label.name, labelVar, asKernelIndexOrder(nodeByLabelScan.indexOrder)), actions) :: tl)
     }
   }
 

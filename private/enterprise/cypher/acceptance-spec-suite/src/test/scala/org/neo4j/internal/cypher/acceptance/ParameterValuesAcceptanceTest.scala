@@ -37,7 +37,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       """ WITH 1 AS node, [] AS nodes1
         | RETURN ANY(n IN collect(distinct node) WHERE n IN nodes1) as exists """.stripMargin
 
-    val r = executeWith(Configs.InterpretedAndSlotted, query)
+    val r = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     r.toList should equal(List(Map("exists" -> false)))
   }
 
@@ -165,5 +165,23 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       params = Map("nameItems" -> List(List("Agneta", "saw"), List("Arne", "hammer"))))
 
     assertStats(result, nodesCreated = 1, labelsAdded = 1, propertiesWritten = 3)
+  }
+
+  test("floating point parameters should be coerced to int for procedures") {
+    // In Javascript every number is a floating point value unless specifically cast otherwise. Thus we need to coerce.
+    // Yes, even floats that are not ints like 0.5
+    executeWith(Configs.InterpretedAndSlotted, "CALL db.awaitIndexes($param)", params = Map("param" -> 300.0f))
+    executeWith(Configs.InterpretedAndSlotted, "CALL db.awaitIndexes($param)", params = Map("param" -> 300.5f))
+  }
+
+  test("floating point parameters should be coerced to int for functions") {
+    // In Javascript every number is a floating point value unless specifically cast otherwise. Thus we need to coerce.
+    // Yes, even floats that are not ints like 0.5
+    executeWith(Configs.All - Configs.Compiled, "UNWIND range(1, $param) AS n RETURN n", params = Map("param" -> 3.0f))
+    executeWith(Configs.All - Configs.Compiled, "UNWIND range(1, $param) AS n RETURN n", params = Map("param" -> 3.5f))
+    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 1.0f, "param2" -> 3.0f))
+    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.5f, "param2" -> 3.5f))
+    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.0f, "param2" -> 5))
+    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.5f, "param2" -> 5))
   }
 }

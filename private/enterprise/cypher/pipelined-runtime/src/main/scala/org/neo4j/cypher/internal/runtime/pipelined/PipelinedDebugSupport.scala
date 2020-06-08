@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithAccumulators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputLoopTask
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputLoopWithMorselDataTask
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
@@ -28,7 +28,7 @@ object PipelinedDebugSupport {
       case withMorsel: ContinuableOperatorTaskWithMorsel =>
         prettyMorselWithHeader("INPUT:", withMorsel.inputMorsel, currentRow(withMorsel)) :+
         prettyWorkIdentity(workIdentity)
-      case task: OptionalOperatorTask =>
+      case task: InputLoopWithMorselDataTask =>
         Array("INPUT:") ++
         prettyStreamedData(task.morselData) :+
         prettyWorkIdentity(workIdentity)
@@ -85,10 +85,11 @@ object PipelinedDebugSupport {
     }
 
   private def prettyStreamedData(streamedData: MorselData): Seq[String] = {
-    Array(s"MorselData with downstream arg ids ${streamedData.argumentRowIdsForReducers.toSeq}") ++
+    Array(s"MorselData with argument row: ${streamedData.viewOfArgumentRow}",
+      s"with downstream arg ids ${streamedData.argumentRowIdsForReducers.toSeq}") ++
       streamedData.morsels.flatMap(morsel => prettyMorselWithHeader("", morsel)) ++
       (streamedData.argumentStream match {
-        case EndOfEmptyStream(argRow) => Array("EndOfEmptyStream: " + argRow.toString)
+        case EndOfEmptyStream => Array("EndOfEmptyStream")
         case EndOfNonEmptyStream => Array("EndOfNonEmptyStream")
         case NotTheEnd => Array("NotTheEnd")
       })

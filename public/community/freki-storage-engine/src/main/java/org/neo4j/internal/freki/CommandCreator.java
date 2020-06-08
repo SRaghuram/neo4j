@@ -33,6 +33,10 @@ import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -40,7 +44,11 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.token.api.NamedToken;
 
 import static java.lang.Math.toIntExact;
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
+=======
+import static org.neo4j.internal.freki.MutableNodeData.internalRelationshipIdFromRelationshipId;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.neo4j.internal.helpers.collection.Iterators.loop;
 
 class CommandCreator implements TxStateVisitor
@@ -51,13 +59,22 @@ class CommandCreator implements TxStateVisitor
     private final PageCursorTracer cursorTracer;
     private final GraphUpdates graphUpdates;
 
+<<<<<<< HEAD
     CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer )
+=======
+    CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         this.commands = commands;
         this.stores = stores;
         this.constraintSemantics = constraintSemantics;
         this.cursorTracer = cursorTracer;
+<<<<<<< HEAD
         this.graphUpdates = new GraphUpdates( stores, cursorTracer );
+=======
+        this.graphUpdates = new GraphUpdates( stores, cursorTracer, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -107,9 +124,22 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
+<<<<<<< HEAD
     public void visitRelPropertyChanges( long relationshipId, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
         throw new UnsupportedOperationException( "Not implemented yet" );
+=======
+    public void visitRelPropertyChanges( long relationshipId, int type, long startNode, long endNode,
+            Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
+    {
+        long internalRelationshipId = internalRelationshipIdFromRelationshipId( relationshipId );
+        graphUpdates.getOrLoad( startNode ).updateRelationshipProperties( internalRelationshipId, type, endNode, true,
+                added, changed, removed );
+        if ( startNode != endNode )
+        {
+            graphUpdates.getOrLoad( endNode ).updateRelationshipProperties( internalRelationshipId, type, startNode, false, added, changed, removed );
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override

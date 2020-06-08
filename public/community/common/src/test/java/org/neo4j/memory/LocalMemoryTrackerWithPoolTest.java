@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class LocalMemoryTrackerWithPoolTest
 {
     private static final long LOCAL_LIMIT = 10;
-    private static final long INITIAL_RESERVE = 2;
+    private static final long GRAB_SIZE = 2;
 
     private MemoryPool memoryPool;
     private LocalMemoryTracker memoryTracker;
@@ -38,8 +38,8 @@ class LocalMemoryTrackerWithPoolTest
     @BeforeEach
     void setUp()
     {
-        memoryPool = MemoryPools.fromLimit( 0 );
-        memoryTracker = new LocalMemoryTracker( memoryPool, LOCAL_LIMIT, INITIAL_RESERVE );
+        memoryPool = new MemoryPoolImpl( 0, true );
+        memoryTracker = new LocalMemoryTracker( memoryPool, LOCAL_LIMIT, GRAB_SIZE );
     }
 
     @AfterEach
@@ -50,22 +50,52 @@ class LocalMemoryTrackerWithPoolTest
     }
 
     @Test
-    void reserveInitialBytes()
+    void trackedNativeAllocationReportedInPool()
     {
-        assertReserved( 2 );
+        memoryTracker.allocateNative( 10 );
+        try
+        {
+            assertEquals( 10, memoryTracker.usedNativeMemory() );
+            assertEquals( 0, memoryTracker.estimatedHeapMemory() );
+
+            assertEquals( 10, memoryPool.usedNative() );
+            assertEquals( 0, memoryPool.usedHeap() );
+        }
+        finally
+        {
+            memoryTracker.releaseNative( 10 );
+        }
+    }
+
+    @Test
+    void trackedHeapAllocationReportedInPool()
+    {
+        memoryTracker.allocateHeap( 10 );
+        assertEquals( 10, memoryTracker.estimatedHeapMemory() );
+        assertEquals( 0, memoryTracker.usedNativeMemory() );
+
+        assertEquals( 10, memoryPool.usedHeap() );
+        assertEquals( 0, memoryPool.usedNative() );
+    }
+
+    @Test
+    void grabSize()
+    {
+        memoryTracker.allocateHeap( 1 );
+        assertReserved( GRAB_SIZE );
     }
 
     @Test
     void respectsLocalLimit()
     {
-        assertThrows( HeapMemoryLimitExceeded.class, () -> memoryTracker.allocateHeap( LOCAL_LIMIT + 1 ) );
+        assertThrows( MemoryLimitExceeded.class, () -> memoryTracker.allocateHeap( LOCAL_LIMIT + 1 ) );
     }
 
     @Test
     void reserveFromParentWhenLocalPoolIsEmpty()
     {
-        memoryTracker.allocateHeap( INITIAL_RESERVE + 2 );
-        assertThat( memoryPool.used() ).isGreaterThan( INITIAL_RESERVE );
+        memoryTracker.allocateHeap( GRAB_SIZE + 2 );
+        assertThat( memoryPool.usedHeap() ).isGreaterThan( GRAB_SIZE );
     }
 
     @Test
@@ -77,14 +107,14 @@ class LocalMemoryTrackerWithPoolTest
         memoryTracker.releaseHeap( 1 );
         memoryTracker.allocateHeap( 1 );
         memoryTracker.releaseHeap( 1 );
-        assertReserved( INITIAL_RESERVE );
+        assertReserved( GRAB_SIZE );
     }
 
     @Test
     void largeAdjustments()
     {
         memoryTracker.allocateHeap( LOCAL_LIMIT );
-        assertThat( memoryPool.used() ).isGreaterThanOrEqualTo( LOCAL_LIMIT );
+        assertThat( memoryPool.usedHeap() ).isGreaterThanOrEqualTo( LOCAL_LIMIT );
     }
 
     @Test
@@ -95,6 +125,6 @@ class LocalMemoryTrackerWithPoolTest
 
     private void assertReserved( long i )
     {
-        assertEquals( i, memoryPool.used() );
+        assertEquals( i, memoryPool.usedHeap() );
     }
 }

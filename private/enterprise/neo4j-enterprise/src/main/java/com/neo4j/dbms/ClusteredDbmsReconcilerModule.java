@@ -6,7 +6,6 @@
 package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
 import java.util.stream.Stream;
@@ -25,15 +24,17 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
 {
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterInternalDbmsOperator internalOperator;
+    private final SystemOperatingDatabaseEventListener operatorEventListener;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
-            ReconciledTransactionTracker reconciledTxTracker, PanicService panicService, ClusterSystemGraphDbmsModel dbmsModel )
+                                         ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
+                                         ReconciledTransactionTracker reconciledTxTracker, ClusterSystemGraphDbmsModel dbmsModel )
     {
         super( globalModule, databaseManager, reconciledTxTracker,
-                createReconciler( globalModule, databaseManager, stateStorageFactory, panicService ), dbmsModel );
+                createReconciler( globalModule, databaseManager, stateStorageFactory ), dbmsModel );
         this.databaseEventService = databaseEventService;
         this.internalOperator = databaseManager.internalDbmsOperator();
+        this.operatorEventListener = new SystemOperatingDatabaseEventListener( systemOperator );
     }
 
     @Override
@@ -43,9 +44,15 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     }
 
     @Override
-    protected void registerWithListenerService( GlobalModule globalModule, SystemGraphDbmsOperator systemOperator )
+    protected void registerWithListenerService( GlobalModule globalModule )
     {
-        databaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, new SystemOperatingDatabaseEventListener( systemOperator ) );
+        databaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, operatorEventListener );
+    }
+
+    @Override
+    protected void unregisterWithListenerService( GlobalModule globalModule )
+    {
+        databaseEventService.unregisterListener( NAMED_SYSTEM_DATABASE_ID, operatorEventListener );
     }
 
     static TransitionsTable createTransitionsTable( ClusterReconcilerTransitions t )
@@ -54,27 +61,27 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
         TransitionsTable clusteredTransitionsTable = TransitionsTable.builder()
                 // All transitions from UNKNOWN to $X get deconstructed into UNKNOWN -> DROPPED -> $X
                 //     inside Transitions so only actions for this from/to pair need to be specified
-                .from( UNKNOWN ).to( DROPPED ).doTransitions( t::logCleanupAndDrop )
+                .from( UNKNOWN ).to( DROPPED ).doTransitions( t.logCleanupAndDrop() )
                 // No prepareDrop step needed here as the database will be stopped for store copying anyway
-                .from( STORE_COPYING ).to( DROPPED ).doTransitions( t::stop, t::drop )
+                .from( STORE_COPYING ).to( DROPPED ).doTransitions( t.stop(), t.drop() )
                 // Some Cluster components still need stopped when store copying.
                 //   This will attempt to stop the kernel database again, but that should be idempotent.
-                .from( STORE_COPYING ).to( STOPPED ).doTransitions( t::stop )
-                .from( STORE_COPYING ).to( STARTED ).doTransitions( t::startAfterStoreCopy )
-                .from( STARTED ).to( STORE_COPYING ).doTransitions( t::stopBeforeStoreCopy )
+                .from( STORE_COPYING ).to( STOPPED ).doTransitions( t.stop() )
+                .from( STORE_COPYING ).to( STARTED ).doTransitions( t.startAfterStoreCopy() )
+                .from( STARTED ).to( STORE_COPYING ).doTransitions( t.stopBeforeStoreCopy() )
                 .build();
 
         return standaloneTransitionsTable.extendWith( clusteredTransitionsTable );
     }
 
     private static ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ClusterStateStorageFactory stateStorageFactory, PanicService panicService )
+                                                            ClusterStateStorageFactory stateStorageFactory )
     {
 
         var logProvider = globalModule.getLogService().getInternalLogProvider();
         var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, logProvider ) );
 
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
-                stateStorageFactory, panicService, transitionsTable );
+                stateStorageFactory, transitionsTable );
     }
 }

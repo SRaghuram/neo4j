@@ -10,19 +10,17 @@ import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-public class RaftMembershipStateTest
+class RaftMembershipStateTest
 {
     private RaftMembershipState state = new RaftMembershipState();
 
@@ -30,31 +28,31 @@ public class RaftMembershipStateTest
     private Set<MemberId> membersB = asSet( member( 0 ), member( 1 ), member( 2 ), member( 3 ) );
 
     @Test
-    public void shouldHaveCorrectInitialState()
+    void shouldHaveCorrectInitialState()
     {
         assertThat( state.getLatest(), hasSize( 0 ) );
-        assertFalse( state.uncommittedMemberChangeInLog() );
+        Assertions.assertFalse( state.uncommittedMemberChangeInLog() );
     }
 
     @Test
-    public void shouldUpdateLatestOnAppend()
+    void shouldUpdateLatestOnAppend()
     {
         // when
         state.append( 0, membersA );
 
         // then
-        assertEquals( state.getLatest(), membersA );
+        Assertions.assertEquals( state.getLatest(), membersA );
 
         // when
         state.append( 1, membersB );
 
         // then
-        assertEquals( state.getLatest(), membersB );
-        assertEquals( 1, state.getOrdinal() );
+        Assertions.assertEquals( state.getLatest(), membersB );
+        Assertions.assertEquals( 1, state.getOrdinal() );
     }
 
     @Test
-    public void shouldKeepLatestOnCommit()
+    void shouldKeepLatestOnCommit()
     {
         // given
         state.append( 0, membersA );
@@ -64,60 +62,60 @@ public class RaftMembershipStateTest
         state.commit( 0 );
 
         // then
-        assertEquals( state.getLatest(), membersB );
-        assertTrue( state.uncommittedMemberChangeInLog() );
-        assertEquals( 1, state.getOrdinal() );
+        Assertions.assertEquals( state.getLatest(), membersB );
+        Assertions.assertTrue( state.uncommittedMemberChangeInLog() );
+        Assertions.assertEquals( 1, state.getOrdinal() );
     }
 
     @Test
-    public void shouldLowerUncommittedFlagOnCommit()
+    void shouldLowerUncommittedFlagOnCommit()
     {
         // given
         state.append( 0, membersA );
-        assertTrue( state.uncommittedMemberChangeInLog() );
+        Assertions.assertTrue( state.uncommittedMemberChangeInLog() );
 
         // when
         state.commit( 0 );
 
         // then
-        assertFalse( state.uncommittedMemberChangeInLog() );
+        Assertions.assertFalse( state.uncommittedMemberChangeInLog() );
     }
 
     @Test
-    public void shouldRevertToCommittedStateOnTruncation()
+    void shouldRevertToCommittedStateOnTruncation()
     {
         // given
         state.append( 0, membersA );
         state.commit( 0 );
         state.append( 1, membersB );
-        assertEquals( state.getLatest(), membersB );
+        Assertions.assertEquals( state.getLatest(), membersB );
 
         // when
         state.truncate( 1 );
 
         // then
-        assertEquals( state.getLatest(), membersA );
-        assertEquals( 3, state.getOrdinal() );
+        Assertions.assertEquals( state.getLatest(), membersA );
+        Assertions.assertEquals( 3, state.getOrdinal() );
     }
 
     @Test
-    public void shouldNotTruncateEarlierThanIndicated()
+    void shouldNotTruncateEarlierThanIndicated()
     {
         // given
         state.append( 0, membersA );
         state.append( 1, membersB );
-        assertEquals( state.getLatest(), membersB );
+        Assertions.assertEquals( state.getLatest(), membersB );
 
         // when
         state.truncate( 2 );
 
         // then
-        assertEquals( state.getLatest(), membersB );
-        assertEquals( 1, state.getOrdinal() );
+        Assertions.assertEquals( state.getLatest(), membersB );
+        Assertions.assertEquals( 1, state.getOrdinal() );
     }
 
     @Test
-    public void shouldMarshalCorrectly() throws Exception
+    void shouldMarshalCorrectly() throws Exception
     {
         // given
         RaftMembershipState.Marshal marshal = new RaftMembershipState.Marshal();
@@ -129,11 +127,11 @@ public class RaftMembershipStateTest
         final RaftMembershipState recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
 
         // then
-        assertEquals( state, recovered );
+        Assertions.assertEquals( state, recovered );
     }
 
     @Test
-    public void shouldRefuseToAppendToTheSameIndexTwice()
+    void shouldRefuseToAppendToTheSameIndexTwice()
     {
         // given
         state.append( 0, membersA );
@@ -144,9 +142,9 @@ public class RaftMembershipStateTest
         boolean reAppendB = state.append( 1, membersB );
 
         // then
-        assertFalse( reAppendA );
-        assertFalse( reAppendB );
-        assertEquals( membersA, state.committed().members() );
-        assertEquals( membersB, state.getLatest() );
+        Assertions.assertFalse( reAppendA );
+        Assertions.assertFalse( reAppendB );
+        Assertions.assertEquals( membersA, state.committed().members() );
+        Assertions.assertEquals( membersB, state.getLatest() );
     }
 }

@@ -21,6 +21,7 @@ import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.storageengine.api.StorageNodeCursor;
+import org.neo4j.storageengine.util.SingleDegree;
 import org.neo4j.test.rule.RecordStorageEngineRule;
 
 import static com.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.HEADER_BIT_FIXED_REFERENCE;
@@ -90,7 +91,7 @@ public class HighLimitRecordStorageReaderRelTypesAndDegreeTest extends RecordSto
 
         // Verify that an exception is thrown when we attempt to get the node degrees and thus decode all group records.
         StorageNodeCursor cursor = newCursor( nodeId );
-        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS ) );
+        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS, new SingleDegree(), true ) );
         assertThat( e ).hasMessageContaining( "out of bounds" );
     }
 
@@ -138,7 +139,7 @@ public class HighLimitRecordStorageReaderRelTypesAndDegreeTest extends RecordSto
 
         // Verify that an exception is thrown when we attempt to get the node degrees and thus decode all group records.
         StorageNodeCursor cursor = newCursor( nodeId );
-        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS ) );
+        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS, new SingleDegree(), true ) );
         assertThat( e ).hasMessageContaining( "out of bounds" );
     }
 }

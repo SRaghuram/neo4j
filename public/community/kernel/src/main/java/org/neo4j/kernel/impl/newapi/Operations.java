@@ -20,12 +20,15 @@
 package org.neo4j.kernel.impl.newapi;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.neo4j.common.EntityType;
 import org.neo4j.configuration.Config;
@@ -46,17 +49,21 @@ import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.Token;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
+import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotApplicableKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
+import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.IndexType;
@@ -96,6 +103,7 @@ import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.locking.ResourceIds;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.values.storable.Value;
@@ -140,6 +148,7 @@ public class Operations implements Write, SchemaWrite
     private final IndexingProvidersService indexProviders;
     private final Config config;
     private final PageCursorTracer cursorTracer;
+    private final MemoryTracker memoryTracker;
     private DefaultNodeCursor nodeCursor;
     private DefaultNodeCursor restrictedNodeCursor;
     private DefaultPropertyCursor propertyCursor;
@@ -148,7 +157,8 @@ public class Operations implements Write, SchemaWrite
 
     public Operations( AllStoreHolder allStoreHolder, StorageReader storageReader, IndexTxStateUpdater updater, CommandCreationContext commandCreationContext,
             KernelTransactionImplementation ktx, KernelToken token, DefaultPooledCursors cursors, ConstraintIndexCreator constraintIndexCreator,
-            ConstraintSemantics constraintSemantics, IndexingProvidersService indexProviders, Config config, PageCursorTracer cursorTracer )
+            ConstraintSemantics constraintSemantics, IndexingProvidersService indexProviders, Config config, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
     {
         this.storageReader = storageReader;
         this.commandCreationContext = commandCreationContext;
@@ -162,20 +172,22 @@ public class Operations implements Write, SchemaWrite
         this.indexProviders = indexProviders;
         this.config = config;
         this.cursorTracer = cursorTracer;
+        this.memoryTracker = memoryTracker;
     }
 
     public void initialize()
     {
         this.nodeCursor = cursors.allocateFullAccessNodeCursor( cursorTracer );
-        this.propertyCursor = cursors.allocateFullAccessPropertyCursor( cursorTracer );
+        this.propertyCursor = cursors.allocateFullAccessPropertyCursor( cursorTracer, memoryTracker );
         this.relationshipCursor = cursors.allocateRelationshipScanCursor( cursorTracer );
         this.restrictedNodeCursor = cursors.allocateNodeCursor( cursorTracer );
-        this.restrictedPropertyCursor = cursors.allocatePropertyCursor( cursorTracer );
+        this.restrictedPropertyCursor = cursors.allocatePropertyCursor( cursorTracer, memoryTracker );
     }
 
     @Override
     public long nodeCreate()
     {
+        assertAllowsCreateNode( null );
         ktx.assertOpen();
         TransactionState txState = ktx.txState();
         long nodeId = commandCreationContext.reserveNode();
@@ -190,6 +202,7 @@ public class Operations implements Write, SchemaWrite
         {
             return nodeCreate();
         }
+        assertAllowsCreateNode( labels );
 
         // We don't need to check the node for existence, like we do in nodeAddLabel, because we just created it.
         // We also don't need to check if the node already has some of the labels, because we know it has none.
@@ -246,6 +259,7 @@ public class Operations implements Write, SchemaWrite
     @Override
     public long relationshipCreate( long sourceNode, int relationshipType, long targetNode ) throws EntityNotFoundException
     {
+        assertAllowsCreateRelationship( relationshipType );
         ktx.assertOpen();
 
         sharedSchemaLock( ResourceTypes.RELATIONSHIP_TYPE, relationshipType );
@@ -280,6 +294,11 @@ public class Operations implements Write, SchemaWrite
         {
             //label already there, nothing to do
             return false;
+        }
+        LongSet removed = ktx.txState().nodeStateLabelDiffSets( node ).getRemoved();
+        if ( !removed.contains( nodeLabel ) )
+        {
+            assertAllowsSetLabel(nodeLabel);
         }
 
         checkConstraintsAndAddLabelToNode( node, nodeLabel );
@@ -371,6 +390,7 @@ public class Operations implements Write, SchemaWrite
         {
             acquireSharedNodeLabelLocks();
 
+            assertAllowsDeleteNode( nodeCursor::labels );
             ktx.txState().nodeDoDelete( node );
             return true;
         }
@@ -415,6 +435,7 @@ public class Operations implements Write, SchemaWrite
             }
             else
             {
+                assertAllowsDeleteRelationship( relationshipCursor.type() );
                 txState.relationshipDoDelete( relationship, relationshipCursor.type(),
                         relationshipCursor.sourceNodeReference(), relationshipCursor.targetNodeReference() );
             }
@@ -495,7 +516,7 @@ public class Operations implements Write, SchemaWrite
             throws UniquePropertyValueValidationException, UnableToValidateConstraintException
     {
         IndexDescriptor index = allStoreHolder.indexGetForName( constraint.getName() );
-        try ( DefaultNodeValueIndexCursor valueCursor = cursors.allocateNodeValueIndexCursor();
+        try ( FullAccessNodeValueIndexCursor valueCursor = cursors.allocateFullAccessNodeValueIndexCursor( cursorTracer );
               IndexReaders indexReaders = new IndexReaders( index, allStoreHolder ) )
         {
             assertIndexOnline( index );
@@ -552,6 +573,12 @@ public class Operations implements Write, SchemaWrite
             return false;
         }
 
+        LongSet added = ktx.txState().nodeStateLabelDiffSets( node ).getAdded();
+        if ( !added.contains( labelId ) )
+        {
+            assertAllowsRemoveLabel(labelId);
+        }
+
         sharedSchemaLock( ResourceTypes.LABEL, labelId );
         ktx.txState().nodeDoRemoveLabel( labelId, node );
         if ( storageReader.hasRelatedSchema( labelId, NODE ) )
@@ -580,6 +607,7 @@ public class Operations implements Write, SchemaWrite
 
         if ( !existingValue.equals( value ) )
         {
+            assertAllowsSetProperty( labels, propertyKey );
             // The value changed and there may be relevant constraints to check so let's check those now.
             Collection<IndexBackedConstraintDescriptor> uniquenessConstraints = storageReader.uniquenessConstraintsGetRelated( labels, propertyKey, NODE );
             NodeSchemaMatcher.onMatchingSchema( uniquenessConstraints.iterator(), propertyKey, existingPropertyKeyIds, constraint ->
@@ -589,6 +617,7 @@ public class Operations implements Write, SchemaWrite
         if ( existingValue == NO_VALUE )
         {
             //no existing value, we just add it
+            assertAllowsSetProperty( labels, propertyKey );
             ktx.txState().nodeDoAddProperty( node, propertyKey, value );
             if ( hasRelatedSchema )
             {
@@ -600,6 +629,7 @@ public class Operations implements Write, SchemaWrite
         {
             if ( propertyHasChanged( value, existingValue ) )
             {
+                assertAllowsSetProperty( labels, propertyKey );
                 //the value has changed to a new value
                 ktx.txState().nodeDoChangeProperty( node, propertyKey, value );
                 if ( hasRelatedSchema )
@@ -623,6 +653,7 @@ public class Operations implements Write, SchemaWrite
         if ( existingValue != NO_VALUE )
         {
             long[] labels = acquireSharedNodeLabelLocks();
+            assertAllowsSetProperty( labels, propertyKey );
             ktx.txState().nodeDoRemoveProperty( node, propertyKey );
             if ( storageReader.hasRelatedSchema( labels, propertyKey, NODE ) )
             {
@@ -643,14 +674,18 @@ public class Operations implements Write, SchemaWrite
         Value existingValue = readRelationshipProperty( propertyKey );
         if ( existingValue == NO_VALUE )
         {
-            ktx.txState().relationshipDoReplaceProperty( relationship, propertyKey, NO_VALUE, value );
+            assertAllowsSetProperty( relationshipCursor.type(), propertyKey );
+            ktx.txState().relationshipDoReplaceProperty( relationship, relationshipCursor.type(), relationshipCursor.sourceNodeReference(),
+                    relationshipCursor.targetNodeReference(), propertyKey, NO_VALUE, value );
             return NO_VALUE;
         }
         else
         {
             if ( propertyHasChanged( existingValue, value ) )
             {
-                ktx.txState().relationshipDoReplaceProperty( relationship, propertyKey, existingValue, value );
+                assertAllowsSetProperty( relationshipCursor.type(), propertyKey );
+                ktx.txState().relationshipDoReplaceProperty( relationship, relationshipCursor.type(), relationshipCursor.sourceNodeReference(),
+                        relationshipCursor.targetNodeReference(), propertyKey, existingValue, value );
             }
 
             return existingValue;
@@ -667,7 +702,9 @@ public class Operations implements Write, SchemaWrite
 
         if ( existingValue != NO_VALUE )
         {
-            ktx.txState().relationshipDoRemoveProperty( relationship, propertyKey );
+            assertAllowsSetProperty( relationshipCursor.type(), propertyKey );
+            ktx.txState().relationshipDoRemoveProperty( relationship, relationshipCursor.type(), relationshipCursor.sourceNodeReference(),
+                    relationshipCursor.targetNodeReference(), propertyKey );
         }
 
         return existingValue;
@@ -1142,9 +1179,9 @@ public class Operations implements Write, SchemaWrite
         }
 
         //enforce constraints
-        try ( NodeLabelIndexCursor nodes = cursors.allocateNodeLabelIndexCursor() )
+        try ( NodeLabelIndexCursor nodes = cursors.allocateFullAccessNodeLabelIndexCursor( cursorTracer ) )
         {
-            allStoreHolder.nodeLabelScan( schema.getLabelId(), nodes );
+            allStoreHolder.nodeLabelScan( schema.getLabelId(), nodes, IndexOrder.NONE );
             constraintSemantics.validateNodeKeyConstraint( nodes, nodeCursor, propertyCursor, schema.asLabelSchemaDescriptor(), token );
         }
 
@@ -1159,9 +1196,9 @@ public class Operations implements Write, SchemaWrite
         ConstraintDescriptor constraint = lockAndValidatePropertyExistenceConstraint( schema, name );
 
         //enforce constraints
-        try ( NodeLabelIndexCursor nodes = cursors.allocateNodeLabelIndexCursor() )
+        try ( NodeLabelIndexCursor nodes = cursors.allocateFullAccessNodeLabelIndexCursor( cursorTracer ) )
         {
-            allStoreHolder.nodeLabelScan( schema.getLabelId(), nodes );
+            allStoreHolder.nodeLabelScan( schema.getLabelId(), nodes, IndexOrder.NONE );
             constraintSemantics.validateNodePropertyExistenceConstraint( nodes, nodeCursor, propertyCursor, schema, token );
         }
 
@@ -1481,5 +1518,109 @@ public class Operations implements Write, SchemaWrite
         }
 
         return constraint;
+    }
+
+    private void assertAllowsWrites()
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsWrites() )
+        {
+            throw accessMode.onViolation( format( "Write operations are not allowed for %s.", ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsCreateNode( int[] labelIds )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsCreateNode( labelIds ) )
+        {
+            String labels = null == labelIds ? "" : Arrays.stream( labelIds ).mapToObj( token::labelGetName ).collect( Collectors.joining( "," ) );
+            throw accessMode.onViolation( format( "Create node with labels '%s' is not allowed for %s.", labels, ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsDeleteNode( Supplier<TokenSet> labelSupplier )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsDeleteNode( labelSupplier ) )
+        {
+            String labels = Arrays.stream( labelSupplier.get().all() ).mapToObj( id -> token.labelGetName( (int) id ) ).collect( Collectors.joining( "," ) );
+            throw accessMode.onViolation( format( "Delete node with labels '%s' is not allowed for %s.", labels, ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsCreateRelationship( int relType )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsCreateRelationship( relType ) )
+        {
+            throw accessMode.onViolation( format( "Create relationship with type '%s' is not allowed for %s.", token.relationshipTypeGetName( relType ),
+                            ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsDeleteRelationship( int relType )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsDeleteRelationship( relType ) )
+        {
+            throw accessMode
+                    .onViolation( format( "Delete relationship with type '%s' is not allowed for %s.", token.relationshipTypeGetName( relType ),
+                    ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsSetLabel( long labelId )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsSetLabel( labelId ) )
+        {
+            throw accessMode.onViolation( format( "Set label for label '%s' is not allowed for %s.", token.labelGetName( (int) labelId),
+                                                  ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsRemoveLabel( long labelId )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsRemoveLabel( labelId ) )
+        {
+            throw accessMode.onViolation( format( "Remove label for label '%s' is not allowed for %s.", token.labelGetName( (int) labelId),
+                                                  ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsSetProperty( long[] labelIds, long propertyKey )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsSetProperty( () -> Labels.from( labelIds ), (int) propertyKey ) )
+        {
+            throw accessMode.onViolation( format( "Set property for property '%s' is not allowed for %s.", resolvePropertyKey(propertyKey),
+                                                  ktx.securityContext().description() ) );
+        }
+    }
+
+    private void assertAllowsSetProperty( long relType, long propertyKey )
+    {
+        AccessMode accessMode = ktx.securityContext().mode();
+        if ( !accessMode.allowsSetProperty( () -> (int) relType, (int) propertyKey ) )
+        {
+            throw accessMode.onViolation( format( "Set property for property '%s' is not allowed for %s.", resolvePropertyKey( propertyKey ),
+                                                  ktx.securityContext().description() ) );
+        }
+    }
+
+    private String resolvePropertyKey( long propertyKey )
+    {
+        String propKeyName;
+        try
+        {
+            propKeyName = token.propertyKeyName( (int) propertyKey );
+        }
+        catch ( PropertyKeyIdNotFoundKernelException e )
+        {
+            propKeyName = "<unknown>";
+        }
+        return propKeyName;
     }
 }

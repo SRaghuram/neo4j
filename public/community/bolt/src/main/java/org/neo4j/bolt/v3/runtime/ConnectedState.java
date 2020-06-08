@@ -19,6 +19,7 @@
  */
 package org.neo4j.bolt.v3.runtime;
 
+import java.util.Collections;
 import java.util.Map;
 
 import org.neo4j.bolt.messaging.RequestMessage;
@@ -26,6 +27,7 @@ import org.neo4j.bolt.runtime.BoltConnectionFatality;
 import org.neo4j.bolt.runtime.statemachine.BoltStateMachineState;
 import org.neo4j.bolt.runtime.statemachine.StateMachineContext;
 import org.neo4j.bolt.v3.messaging.request.HelloMessage;
+import org.neo4j.bolt.v41.messaging.RoutingContext;
 import org.neo4j.values.storable.Values;
 
 import static org.neo4j.bolt.v3.messaging.BoltAuthenticationHelper.processAuthentication;
@@ -54,7 +56,7 @@ public class ConnectedState implements BoltStateMachineState
             String userAgent = helloMessage.userAgent();
             Map<String,Object> authToken = helloMessage.authToken();
 
-            if ( processAuthentication( userAgent, authToken, context ) )
+            if ( processAuthentication( userAgent, authToken, context, new RoutingContext( false, Collections.emptyMap() ) ) )
             {
                 context.connectionState().onMetadata( CONNECTION_ID_KEY, Values.utf8Value( context.connectionId() ) );
                 return readyState;

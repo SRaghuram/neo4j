@@ -5,46 +5,28 @@
  */
 package com.neo4j.bench.common.util;
 
-import com.neo4j.bench.common.model.Benchmark.Mode;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.util.UnitConverter;
 
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class Units
 {
-    public static String toAbbreviation( TimeUnit timeUnit, Mode mode )
+    public static String toAbbreviation( TimeUnit timeUnit, Benchmark.Mode mode )
     {
-        return (mode.equals( Mode.THROUGHPUT ))
-               ? "op/" + toAbbreviation( timeUnit )
-               : toAbbreviation( timeUnit ) + "/op";
-    }
-
-    public static String toAbbreviation( TimeUnit timeUnit )
-    {
-        switch ( timeUnit )
-        {
-        case SECONDS:
-            return "s";
-        case MILLISECONDS:
-            return "ms";
-        case MICROSECONDS:
-            return "us";
-        case NANOSECONDS:
-            return "ns";
-        default:
-            throw new RuntimeException( "Unsupported time unit: " + timeUnit );
-        }
+        return (mode.equals( Benchmark.Mode.THROUGHPUT ))
+               ? "op/" + UnitConverter.toAbbreviation( timeUnit )
+               : UnitConverter.toAbbreviation( timeUnit ) + "/op";
     }
 
     /*
      * Return unit that results in lowest value, given the provide mode
      */
-    public static TimeUnit minValueUnit( TimeUnit a, TimeUnit b, Mode mode )
+    public static TimeUnit minValueUnit( TimeUnit a, TimeUnit b, Benchmark.Mode mode )
     {
         switch ( mode )
         {
@@ -63,7 +45,7 @@ public class Units
     /*
      * Return unit that results in highest value, given the provide mode
      */
-    public static TimeUnit maxValueUnit( TimeUnit a, TimeUnit b, Mode mode )
+    public static TimeUnit maxValueUnit( TimeUnit a, TimeUnit b, Benchmark.Mode mode )
     {
         switch ( mode )
         {
@@ -79,24 +61,7 @@ public class Units
         }
     }
 
-    public static TimeUnit toTimeUnit( String timeUnit )
-    {
-        switch ( timeUnit )
-        {
-        case "s":
-            return SECONDS;
-        case "ms":
-            return MILLISECONDS;
-        case "us":
-            return MICROSECONDS;
-        case "ns":
-            return NANOSECONDS;
-        default:
-            throw new RuntimeException( "Unsupported time unit: " + timeUnit );
-        }
-    }
-
-    public static TimeUnit toSmallerValueUnit( TimeUnit unit, Mode mode )
+    public static TimeUnit toSmallerValueUnit( TimeUnit unit, Benchmark.Mode mode )
     {
         switch ( mode )
         {
@@ -112,7 +77,7 @@ public class Units
         }
     }
 
-    private static boolean hasSmallerValueUnit( TimeUnit unit, Mode mode )
+    private static boolean hasSmallerValueUnit( TimeUnit unit, Benchmark.Mode mode )
     {
         switch ( mode )
         {
@@ -128,7 +93,7 @@ public class Units
         }
     }
 
-    public static TimeUnit toLargerValueUnit( TimeUnit unit, Mode mode )
+    public static TimeUnit toLargerValueUnit( TimeUnit unit, Benchmark.Mode mode )
     {
         switch ( mode )
         {
@@ -144,7 +109,7 @@ public class Units
         }
     }
 
-    private static boolean hasLargerValueUnit( TimeUnit unit, Mode mode )
+    private static boolean hasLargerValueUnit( TimeUnit unit, Benchmark.Mode mode )
     {
         switch ( mode )
         {
@@ -184,18 +149,18 @@ public class Units
         }
     }
 
-    public static double convertValueTo( double fromValue, TimeUnit fromUnit, TimeUnit toUnit, Mode mode )
+    public static double convertValueTo( double fromValue, TimeUnit fromUnit, TimeUnit toUnit, Benchmark.Mode mode )
     {
         return fromValue * Units.conversionFactor( fromUnit, toUnit, mode );
     }
 
     // conversion factor is necessary because TimeUnit convert can only deal with long values
-    public static double conversionFactor( TimeUnit from, TimeUnit to, Mode mode )
+    public static double conversionFactor( TimeUnit from, TimeUnit to, Benchmark.Mode mode )
     {
         double factor = (from.ordinal() > to.ordinal())
                         ? to.convert( 1, from )
                         : 1D / from.convert( 1, to );
-        return (mode.equals( Mode.THROUGHPUT )) ? 1D / factor : factor;
+        return (mode.equals( Benchmark.Mode.THROUGHPUT )) ? 1D / factor : factor;
     }
 
     /**
@@ -206,7 +171,7 @@ public class Units
      * @param mode mode, throughput or latency
      * @return new unit, where value will be larger than zero
      */
-    public static TimeUnit findSaneUnit( double value, TimeUnit unit, Mode mode, double min, double max )
+    public static TimeUnit findSaneUnit( double value, TimeUnit unit, Benchmark.Mode mode, double min, double max )
     {
         while ( value < min && Units.hasLargerValueUnit( unit, mode ) )
         {
@@ -227,7 +192,7 @@ public class Units
      * <p>
      * E.g., if old=100 (tx/ms) & new=120 (tx/ms) improvement=1.2x
      */
-    public static double improvement( double oldValue, double newValue, Mode mode )
+    public static double improvement( double oldValue, double newValue, Benchmark.Mode mode )
     {
         switch ( mode )
         {

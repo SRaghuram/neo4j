@@ -11,6 +11,7 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
+import com.neo4j.server.security.enterprise.auth.InClusterAuthManager;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -87,6 +88,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     private SystemGraphInitializer systemGraphInitializer;
     private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
+    private SystemGraphRealm internalRealm;
     private SecureHasher secureHasher;
     private SecurityLog securityLog;
 
@@ -176,6 +178,14 @@ public class EnterpriseSecurityModule extends SecurityModule
         return authManager;
     }
 
+    public AuthManager getInClusterAuthManager()
+    {
+        var logAuthSuccess = config.get( SecuritySettings.security_log_successful_authentication );
+        var defaultDatabase = config.get( GraphDatabaseSettings.default_database );
+
+        return new InClusterAuthManager( internalRealm, securityLog, logAuthSuccess, defaultDatabase );
+    }
+
     public Optional<DatabaseInitializer> getDatabaseInitializer()
     {
         if ( !securityConfig.hasNativeProvider )
@@ -214,7 +224,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        SystemGraphRealm internalRealm = createSystemGraphRealm( config );
+        internalRealm = createSystemGraphRealm( config );
         realms.add( internalRealm );
 
         if ( securityConfig.hasLdapProvider )

@@ -14,6 +14,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
 
 public class OnlineBackupContext
 {
@@ -25,9 +27,10 @@ public class OnlineBackupContext
     private final boolean consistencyCheck;
     private final ConsistencyFlags consistencyFlags;
     private final Config config;
+    private final MemoryTracker memoryTracker;
 
     private OnlineBackupContext( SocketAddress address, String databaseName, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
-            boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config )
+            boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config, MemoryTracker memoryTracker )
     {
         this.address = address;
         this.databaseName = databaseName;
@@ -37,6 +40,7 @@ public class OnlineBackupContext
         this.consistencyCheck = consistencyCheck;
         this.consistencyFlags = consistencyFlags;
         this.config = config;
+        this.memoryTracker = memoryTracker;
     }
 
     public static Builder builder()
@@ -84,6 +88,11 @@ public class OnlineBackupContext
         return consistencyFlags;
     }
 
+    public MemoryTracker getMemoryTracker()
+    {
+        return memoryTracker;
+    }
+
     public static final class Builder
     {
         private SocketAddress address;
@@ -97,6 +106,7 @@ public class OnlineBackupContext
         private boolean consistencyCheckIndexes = true;
         private boolean consistencyCheckIndexStructure = true;
         private boolean consistencyCheckLabelScanStore = true;
+        private boolean consistencyCheckRelationshipTypeScanStore = true;
         private boolean consistencyCheckPropertyOwners;
 
         private Builder()
@@ -174,6 +184,12 @@ public class OnlineBackupContext
             return this;
         }
 
+        public Builder withConsistencyCheckRelationshipTypeScanStore( Boolean consistencyCheckRelationshipTypeScanStore )
+        {
+            this.consistencyCheckRelationshipTypeScanStore = consistencyCheckRelationshipTypeScanStore;
+            return this;
+        }
+
         public Builder withConsistencyCheckPropertyOwners( Boolean consistencyCheckPropertyOwners )
         {
             this.consistencyCheckPropertyOwners = consistencyCheckPropertyOwners;
@@ -202,9 +218,10 @@ public class OnlineBackupContext
             SocketAddress socketAddress = buildAddress();
             Path databaseBackupDirectory = backupDirectory.resolve( databaseName );
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
+            var memoryTracker = EmptyMemoryTracker.INSTANCE;
 
             return new OnlineBackupContext( socketAddress, databaseName, databaseBackupDirectory, reportsDirectory,
-                    fallbackToFullBackup, consistencyCheck, consistencyFlags, config );
+                    fallbackToFullBackup, consistencyCheck, consistencyFlags, config, memoryTracker );
         }
 
         private SocketAddress buildAddress()
@@ -220,7 +237,7 @@ public class OnlineBackupContext
         private ConsistencyFlags buildConsistencyFlags()
         {
             return new ConsistencyFlags( consistencyCheckGraph, consistencyCheckIndexes, consistencyCheckIndexStructure, consistencyCheckLabelScanStore,
-                    consistencyCheckPropertyOwners );
+                    consistencyCheckRelationshipTypeScanStore, consistencyCheckPropertyOwners );
         }
     }
 }

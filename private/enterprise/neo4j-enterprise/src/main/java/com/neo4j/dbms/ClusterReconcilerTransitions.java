@@ -7,12 +7,17 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
+import java.util.function.Consumer;
+
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
+import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.lang.String.format;
 
 /**
@@ -22,35 +27,63 @@ import static java.lang.String.format;
  */
 final class ClusterReconcilerTransitions extends ReconcilerTransitions
 {
-    private final ClusteredMultiDatabaseManager databaseManager;
-    private final LogProvider logProvider;
+    private final Transition startAfterStoreCopy;
+    private final Transition stopBeforeStoreCopy;
+    private final Transition logCleanupAndDrop;
 
     ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider )
     {
         super( databaseManager );
-        this.databaseManager = databaseManager;
-        this.logProvider = logProvider;
+        this.startAfterStoreCopy = startAfterStoreCopyFactory( databaseManager );
+        this.stopBeforeStoreCopy = stopBeforeStoreCopyFactory( databaseManager );
+        this.logCleanupAndDrop = logCleanupAndDropFactory( databaseManager, logProvider );
     }
 
-    EnterpriseDatabaseState startAfterStoreCopy( NamedDatabaseId namedDatabaseId )
+    private static Transition startAfterStoreCopyFactory( ClusteredMultiDatabaseManager databaseManager )
     {
-        databaseManager.startDatabaseAfterStoreCopy( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, STARTED );
+        return Transition.from( STORE_COPYING )
+                         .doTransition( databaseManager::startDatabaseAfterStoreCopy )
+                         .ifSucceeded( STARTED )
+                         .ifFailedThenDo( databaseManager::stopDatabase, STOPPED );
     }
 
-    EnterpriseDatabaseState stopBeforeStoreCopy( NamedDatabaseId namedDatabaseId )
+    private static Transition stopBeforeStoreCopyFactory( ClusteredMultiDatabaseManager databaseManager )
     {
-        databaseManager.stopDatabaseBeforeStoreCopy( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, STORE_COPYING );
+        return Transition.from( STARTED )
+                         .doTransition( databaseManager::stopDatabaseBeforeStoreCopy )
+                         .ifSucceeded( STORE_COPYING )
+                         .ifFailedThenDo( databaseManager::stopDatabase, STOPPED );
     }
 
-    EnterpriseDatabaseState logCleanupAndDrop( NamedDatabaseId namedDatabaseId )
+    private static Transition logCleanupAndDropFactory( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider )
     {
-        var log = logProvider.getLog( getClass() );
-        log.warn( format( "Pre-existing cluster state found with an unexpected id %s. This may indicate a previous " +
-                        "DROP operation for %s did not complete. Cleanup of both the database and cluster-sate has been attempted. You may need to re-seed",
-                namedDatabaseId.databaseId().uuid(), namedDatabaseId.name() ) );
-        databaseManager.dropDatabase( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, DROPPED );
+        Consumer<NamedDatabaseId> transition = id ->
+        {
+            var log = logProvider.getLog( ClusterReconcilerTransitions.class );
+            log.warn( format( "Pre-existing cluster state found with an unexpected id %s. This may indicate a previous " +
+                              "DROP operation for %s did not complete. Cleanup of both the database and cluster-sate has been attempted. " +
+                              "You may need to re-seed", id.databaseId().uuid(), id.name() ) );
+            databaseManager.dropDatabase( id );
+        };
+
+        return Transition.from( UNKNOWN, DIRTY )
+                         .doTransition( transition )
+                         .ifSucceeded( DROPPED )
+                         .ifFailedThenDo( nothing, DIRTY );
+    }
+
+    Transition startAfterStoreCopy()
+    {
+        return startAfterStoreCopy;
+    }
+
+    Transition stopBeforeStoreCopy()
+    {
+        return stopBeforeStoreCopy;
+    }
+
+    Transition logCleanupAndDrop()
+    {
+        return logCleanupAndDrop;
     }
 }

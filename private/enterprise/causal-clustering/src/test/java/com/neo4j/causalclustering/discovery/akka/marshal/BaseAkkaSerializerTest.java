@@ -24,14 +24,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.dbms.EnterpriseOperatorState;
-import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
@@ -41,13 +37,11 @@ import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-@RunWith( Parameterized.class )
-public class BaseAkkaSerializerTest
+class BaseAkkaSerializerTest
 {
     private static ActorSystem system = ActorSystem.create();
 
@@ -57,48 +51,41 @@ public class BaseAkkaSerializerTest
         system.actorOf( ActorRefMarshalTest.Actor.props(), ActorRefMarshalTest.Actor.name + "2" );
     }
 
-    @AfterClass
-    public static void teardown()
+    @AfterAll
+    static void teardown()
     {
         TestKit.shutdownActorSystem( system );
         system = null;
     }
 
-    @Parameterized.Parameter( 0 )
-    public Object original;
-
-    @Parameterized.Parameter( 1 )
-    public BaseAkkaSerializer<?> serializer;
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<Object[]> data()
+    static Stream<Object[]> data()
     {
         String actorPath = String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name );
         var randomDbId = randomDatabaseId();
         var randomRaftId = RaftId.from( randomDbId );
-        return Arrays.asList(
+        return Stream.of(
                 new Object[]{new LeaderInfo( new MemberId( UUID.randomUUID() ), 37L ), new LeaderInfoSerializer()},
                 new Object[]{RaftIdFactory.random(), new RaftIdSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ), new UniqueAddressSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system", "host", 79 ), 398L ),
-                        new UniqueAddressSerializer()},
+                             new UniqueAddressSerializer()},
                 new Object[]{new CoreServerInfoForMemberId( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ),
-                        new CoreServerInfoForMemberIdSerializer()},
+                             new CoreServerInfoForMemberIdSerializer()},
                 new Object[]{new ReadReplicaRefreshMessage(
                         TestTopology.addressesForReadReplica( 432 ),
                         new MemberId( UUID.randomUUID() ),
                         system.provider().resolveActorRef( actorPath + 1 ),
                         system.provider().resolveActorRef( actorPath + 2 ),
                         Collections.emptyMap() ),
-                        new ReadReplicaRefreshMessageSerializer( (ExtendedActorSystem) system )},
+                             new ReadReplicaRefreshMessageSerializer( (ExtendedActorSystem) system )},
                 new Object[]{new MemberId( UUID.randomUUID() ),
-                        new MemberIdSerializer()},
+                             new MemberIdSerializer()},
                 new Object[]{TestTopology.addressesForReadReplica( 74839 ),
-                        new ReadReplicaInfoSerializer()},
+                             new ReadReplicaInfoSerializer()},
                 new Object[]{new DatabaseCoreTopology( randomDbId, randomRaftId,
                         CoreTopologyMarshalTest.coreServerInfos( 3 ) ), new CoreTopologySerializer()},
                 new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
-                        new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},
+                             new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},
                 new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
                 new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
                 new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()},
@@ -109,26 +96,28 @@ public class BaseAkkaSerializerTest
         );
     }
 
-    @Test
-    public void shouldSerializeAndDeserialize()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldSerializeAndDeserialize( Object original, BaseAkkaSerializer<?> serializer )
     {
         // when
         byte[] binary = serializer.toBinary( original );
         Object result = serializer.fromBinaryJava( binary, original.getClass() );
 
         // then
-        assertNotSame( original, result );
+        assertThat( original ).isNotSameAs( result );
         assertEquals( original, result );
     }
 
-    @Test
-    public void shouldHaveAppropriateSizeHint()
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldHaveAppropriateSizeHint( Object original, BaseAkkaSerializer<?> serializer )
     {
         // when
         byte[] binary = serializer.toBinary( original );
 
         // then
-        assertThat( binary.length, Matchers.lessThanOrEqualTo( serializer.sizeHint() ) );
+        assertThat( binary.length ).isLessThanOrEqualTo( serializer.sizeHint() );
     }
 
     private static DatabaseToMember randomDatabaseToMember()

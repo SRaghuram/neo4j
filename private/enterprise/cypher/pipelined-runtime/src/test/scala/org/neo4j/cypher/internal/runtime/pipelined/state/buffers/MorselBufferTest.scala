@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -41,7 +42,7 @@ class MorselBufferTest extends MorselUnitTest {
     val argumentSlotOffset = 1
     val reducer = new TestAccumulatingBuffer(argumentSlotOffset)
     val cancellerMap = oddCancellerMap(argumentSlotOffset)
-    val x = new MorselBuffer(ID, tracker, Array(reducer), Array(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
+    val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
 
     // When
     val morsel =
@@ -66,7 +67,7 @@ class MorselBufferTest extends MorselUnitTest {
     val argumentSlotOffset = 1
     val reducer = new TestAccumulatingBuffer(argumentSlotOffset)
     val cancellerMap = evenCancellerMap(argumentSlotOffset)
-    val x = new MorselBuffer(ID, tracker, Array(reducer), Array(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
+    val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
 
     // When
     val morsel =
@@ -92,7 +93,7 @@ class MorselBufferTest extends MorselUnitTest {
     val reducer = new TestAccumulatingBuffer(reducerArgumentSlotOffset)
     val cancellerArgumentSlotOffset = 1
     val cancellerMap = oddCancellerMap(cancellerArgumentSlotOffset)
-    val x = new MorselBuffer(ID, tracker, Array(reducer), Array(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
+    val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
 
     // When
     val morsel =
@@ -119,7 +120,7 @@ class MorselBufferTest extends MorselUnitTest {
     val reducer = new TestAccumulatingBuffer(reducerArgumentSlotOffset)
     val cancellerArgumentSlotOffset = 2
     val cancellerMap = oddCancellerMap(cancellerArgumentSlotOffset)
-    val x = new MorselBuffer(ID, tracker, Array(reducer), Array(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
+    val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
 
     // When
     val morsel =
@@ -172,7 +173,7 @@ class MorselBufferTest extends MorselUnitTest {
     {
       val morsel = createMorsel
       val cancellerMaps = createCancellerMaps
-      val singleBuffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2), cancellerMaps.map(_.argumentStateMapId), id => cancellerMaps(id.x), null)
+      val singleBuffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2), ReadOnlyArray(cancellerMaps.map(_.argumentStateMapId):_*), id => cancellerMaps(id.x), null)
 
       singleBuffer.filterCancelledArguments(morsel)
       reducer1.assertDecrements(1, 2, 3)
@@ -183,8 +184,8 @@ class MorselBufferTest extends MorselUnitTest {
     {
       val morsel = createMorsel
       val cancellerMaps = createCancellerMaps
-      val c1Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2), Array(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
-      val c2Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2), Array(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
+      val c1Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2), ReadOnlyArray(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
+      val c2Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2), ReadOnlyArray(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
 
       c1Buffer.filterCancelledArguments(morsel)
       reducer1.assertDecrements(1, 2)
@@ -199,8 +200,8 @@ class MorselBufferTest extends MorselUnitTest {
     {
       val morsel = createMorsel
       val cancellerMaps = createCancellerMaps
-      val c1Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2), Array(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
-      val c2Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2), Array(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
+      val c1Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2), ReadOnlyArray(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
+      val c2Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2), ReadOnlyArray(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
 
       c2Buffer.filterCancelledArguments(morsel)
       reducer1.assertDecrements(3)
@@ -256,7 +257,7 @@ class MorselBufferTest extends MorselUnitTest {
     {
       val morsel = createMorsel
       val cancellerMaps = createCancellerMaps
-      val singleBuffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2, reducer3), cancellerMaps.map(_.argumentStateMapId), id => cancellerMaps(id.x), null)
+      val singleBuffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2, reducer3), ReadOnlyArray(cancellerMaps.map(_.argumentStateMapId):_*), id => cancellerMaps(id.x), null)
 
       singleBuffer.filterCancelledArguments(morsel)
       reducer1.assertDecrements(1, 4)
@@ -268,8 +269,8 @@ class MorselBufferTest extends MorselUnitTest {
     {
       val morsel = createMorsel
       val cancellerMaps = createCancellerMaps
-      val c1Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2, reducer3), Array(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
-      val c2Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2, reducer3), Array(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
+      val c1Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2, reducer3), ReadOnlyArray(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
+      val c2Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2, reducer3), ReadOnlyArray(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
 
       c1Buffer.filterCancelledArguments(morsel)
       reducer1.assertDecrements()
@@ -286,8 +287,8 @@ class MorselBufferTest extends MorselUnitTest {
     {
       val morsel = createMorsel
       val cancellerMaps = createCancellerMaps
-      val c1Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2, reducer3), Array(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
-      val c2Buffer = new MorselBuffer(ID, tracker, Array(reducer1, reducer2, reducer3), Array(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
+      val c1Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2, reducer3), ReadOnlyArray(cancellerMaps(0).argumentStateMapId), _ => cancellerMaps(0), null)
+      val c2Buffer = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2, reducer3), ReadOnlyArray(cancellerMaps(1).argumentStateMapId), _ => cancellerMaps(1), null)
 
       c2Buffer.filterCancelledArguments(morsel)
       reducer1.assertDecrements(4)
@@ -312,7 +313,7 @@ class MorselBufferTest extends MorselUnitTest {
       new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), firstArgumentSlotOffset, CancellerFactory(Seq(1, 2).contains)),
       new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), secondArgumentSlotOffset, CancellerFactory(Seq(1, 4, 6, 7).contains)))
 
-    val x = new MorselBuffer(ID, tracker, Array(reducer1, reducer2), cancellerMaps.map(_.argumentStateMapId), id => cancellerMaps(id.x), null)
+    val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2), ReadOnlyArray(cancellerMaps.map(_.argumentStateMapId):_*), id => cancellerMaps(id.x), null)
 
     // When
     val morsel =
@@ -333,7 +334,7 @@ class MorselBufferTest extends MorselUnitTest {
       val argumentSlotOffset = 0
       val reducer = new TestAccumulatingBuffer(argumentSlotOffset)
       val cancellerMap = evenCancellerMap(argumentSlotOffset)
-      val x = new MorselBuffer(ID, tracker, Array(reducer), Array(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
+      val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap.argumentStateMapId), _ => cancellerMap, null)
 
       // When
       val morsel =
@@ -383,7 +384,7 @@ class MorselBufferTest extends MorselUnitTest {
         new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC1)),
         new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), argumentSlotOffset, CancellerFactory(cancelledByC2)))
 
-      val x = new MorselBuffer(ID, tracker, Array(reducer), cancellerMaps.map(_.argumentStateMapId), id => cancellerMaps(id.x), null)
+      val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMaps.map(_.argumentStateMapId):_*), id => cancellerMaps(id.x), null)
 
       // When
       val morsel = buildSequentialInput(numberOfRows)
@@ -400,10 +401,10 @@ class MorselBufferTest extends MorselUnitTest {
       val argumentSlotOffset = 0
       val reducer = new TestAccumulatingBuffer(argumentSlotOffset)
       val cancellerMap1 = new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC1))
-      val x1 = new MorselBuffer(ID, tracker, Array(reducer), Array(cancellerMap1.argumentStateMapId), _ => cancellerMap1, null)
+      val x1 = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap1.argumentStateMapId), _ => cancellerMap1, null)
 
       val cancellerMap2 = new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC2))
-      val x2 = new MorselBuffer(ID, tracker, Array(reducer), Array(cancellerMap2.argumentStateMapId), _ => cancellerMap2, null)
+      val x2 = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap2.argumentStateMapId), _ => cancellerMap2, null)
 
       // When
       val morsel = buildSequentialInput(numberOfRows)

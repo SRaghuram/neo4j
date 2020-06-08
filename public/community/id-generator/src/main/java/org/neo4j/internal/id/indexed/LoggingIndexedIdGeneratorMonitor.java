@@ -40,7 +40,7 @@ import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
-import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.util.FeatureToggles;
@@ -50,6 +50,8 @@ import static java.util.concurrent.TimeUnit.DAYS;
 import static org.neo4j.internal.helpers.Format.date;
 import static org.neo4j.internal.id.indexed.IndexedIdGenerator.NO_MONITOR;
 import static org.neo4j.io.ByteUnit.mebiBytes;
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 /**
  * Logs all monitor calls into a {@link FlushableChannel}.
@@ -72,9 +74,9 @@ public class LoggingIndexedIdGeneratorMonitor implements IndexedIdGenerator.Moni
     private final File file;
     private final SystemNanoClock clock;
     private FlushableChannel channel;
-    private AtomicLong position = new AtomicLong();
-    private long rotationThreshold;
-    private long pruneThreshold;
+    private final AtomicLong position = new AtomicLong();
+    private final long rotationThreshold;
+    private final long pruneThreshold;
 
     /**
      * Looks at feature toggle and instantiates a LoggingMonitor if enabled, otherwise a no-op monitor.
@@ -324,7 +326,7 @@ public class LoggingIndexedIdGeneratorMonitor implements IndexedIdGenerator.Moni
 
     private PhysicalFlushableChannel instantiateChannel() throws IOException
     {
-        return new PhysicalFlushableChannel( fs.write( file ) );
+        return new PhysicalFlushableChannel( fs.write( file ), INSTANCE );
     }
 
     private File timestampedFile()
@@ -388,14 +390,14 @@ public class LoggingIndexedIdGeneratorMonitor implements IndexedIdGenerator.Moni
     private static void dumpFile( FileSystemAbstraction fs, File file, Dumper dumper ) throws IOException
     {
         dumper.file( file );
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ) ) )
+        try ( var channel = new ReadAheadChannel<>( fs.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, INSTANCE ) ) )
         {
             while ( true )
             {
                 byte typeByte = channel.get();
                 if ( typeByte < 0 || typeByte >= TYPES.length )
                 {
-                    System.out.println( "Unknown type " + typeByte + " at " + ((ReadAheadChannel) channel).position() );
+                    System.out.println( "Unknown type " + typeByte + " at " + channel.position() );
                     continue;
                 }
 
@@ -426,7 +428,7 @@ public class LoggingIndexedIdGeneratorMonitor implements IndexedIdGenerator.Moni
                     dumper.typeAndTwoIds( type, time, channel.getLong(), channel.getLong() );
                     break;
                 default:
-                    System.out.println( "Unknown type " + type + " at " + ((ReadAheadChannel) channel).position() );
+                    System.out.println( "Unknown type " + type + " at " + channel.position() );
                     break;
                 }
             }

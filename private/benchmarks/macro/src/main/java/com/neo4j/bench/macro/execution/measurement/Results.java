@@ -6,11 +6,11 @@
 package com.neo4j.bench.macro.execution.measurement;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.model.AuxiliaryMetrics;
-import com.neo4j.bench.common.model.Metrics;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.Units;
+import com.neo4j.bench.model.model.AuxiliaryMetrics;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.model.util.UnitConverter;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static com.neo4j.bench.common.util.Units.toAbbreviation;
+import static com.neo4j.bench.model.util.UnitConverter.toAbbreviation;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -238,7 +238,7 @@ public class Results
         int startOffset = (SCHEDULED_START + SEPARATOR + START + SEPARATOR + DURATION).length() + 1;
         int endOffset = header.lastIndexOf( SEPARATOR );
         String unitString = header.substring( startOffset, endOffset );
-        return Units.toTimeUnit( unitString );
+        return UnitConverter.toTimeUnit( unitString );
     }
 
     private final AggregateMeasurement duration;

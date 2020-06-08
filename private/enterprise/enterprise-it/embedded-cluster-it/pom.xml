@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.neo4j</groupId>
+        <artifactId>enterprise-integration-tests</artifactId>
+        <version>4.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>enterprise-embedded-causalclustering-it</artifactId>
+    <version>4.1.0-SNAPSHOT</version>
+
+    <name>Neo4j - Enterprise Embedded Causal Clustering Integration Tests</name>
+    <packaging>jar</packaging>
+    <description>Neo4j Enterprise Edition Embedded Causal Clustering Integration Tests.</description>
+
+    <properties>
+        <moduleName>com.neo4j.enterprise.embedded.cluster.it</moduleName>
+    </properties>
+
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2020 "Neo4j,"
+                Neo4j Sweden AB [http://neo4j.com]
+                This file is a commercial add-on to Neo4j Enterprise Edition.
+            </comments>
+        </license>
+    </licenses>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!-- ITs typically do not use all that much CPU, so a high fork count should be fine. -->
+                    <forkCount>6</forkCount>
+                    <!-- When issues happen, we want as much information as possible. -->
+                    <trimStackTrace>false</trimStackTrace>
+                    <!-- Fork creation should have a relatively minor impact compared to test run times. Robustness is thus preferred. -->
+                    <reuseForks>false</reuseForks>
+                    <!-- We want predictable and comparable runs. -->
+                    <runOrder>alphabetical</runOrder>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- This branch typically not relevant for ITs, but added for symmetry. -->
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>8</forkCount>
+                    <trimStackTrace>false</trimStackTrace>
+                    <reuseForks>false</reuseForks>
+                    <runOrder>alphabetical</runOrder>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-enterprise</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <scope>test</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>io-test-utils</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>skip-clustering-it</id>
+            <activation>
+                <property>
+                    <name>skipClusteringIT</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

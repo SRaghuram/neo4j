@@ -29,12 +29,10 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
-import org.neo4j.cypher.internal.logical.plans.IndexOrderAscending
-import org.neo4j.cypher.internal.logical.plans.IndexOrderDescending
-import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.Expander
 import org.neo4j.cypher.internal.runtime.IsNoValue
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
+import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.KernelPredicate
 import org.neo4j.cypher.internal.runtime.NodeValueHit
 import org.neo4j.cypher.internal.runtime.Operations
@@ -42,6 +40,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.UserDefinedAggregator
+import org.neo4j.cypher.internal.runtime.ValuedNodeIndexCursor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.CursorIterator
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.RelationshipCursorIterator
@@ -64,15 +63,13 @@ import org.neo4j.graphdb.security.URLAccessValidationError
 import org.neo4j.graphdb.traversal.Evaluators
 import org.neo4j.graphdb.traversal.TraversalDescription
 import org.neo4j.graphdb.traversal.Uniqueness
-import org.neo4j.internal
 import org.neo4j.internal.helpers.collection.Iterators
 import org.neo4j.internal.kernel.api
-import org.neo4j.internal.kernel.api.DefaultCloseListenable
 import org.neo4j.internal.kernel.api.IndexQuery
+import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.InternalIndexState
-import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
@@ -80,7 +77,6 @@ import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.TokenRead
-import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.helpers.Nodes
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingCursor
@@ -247,7 +243,7 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
     try {
       val read = reads()
       val cursors = transactionalContext.cursors
-      val cursorTracer = transactionalContext.kernelTransaction.pageCursorTracer();
+      val cursorTracer = transactionalContext.kernelTransaction.pageCursorTracer()
       read.singleNode(node, cursor)
       if (!cursor.next()) RelationshipIterator.EMPTY
       else {
@@ -348,7 +344,7 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
   override def lockingUniqueIndexSeek[RESULT](index: IndexDescriptor,
                                               queries: Seq[IndexQuery.ExactPredicate]): NodeValueIndexCursor = {
 
-    val cursor = transactionalContext.cursors.allocateNodeValueIndexCursor()
+    val cursor = transactionalContext.cursors.allocateNodeValueIndexCursor(transactionalContext.kernelTransaction.pageCursorTracer)
     try {
       indexSearchMonitor.lockingUniqueIndexSeek(index, queries)
       if (queries.exists(q => q.value() eq Values.NO_VALUE))
@@ -372,9 +368,9 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
       if (transactionalContext.kernelTransaction.dataWrite().nodeRemoveLabel(node, labelId)) count + 1 else count
   }
 
-  override def getNodesByLabel(id: Int): Iterator[NodeValue] = {
+  override def getNodesByLabel(id: Int, indexOrder: IndexOrder): Iterator[NodeValue] = {
     val cursor = allocateAndTraceNodeLabelIndexCursor()
-    reads().nodeLabelScan(id, cursor)
+    reads().nodeLabelScan(id, cursor, asKernelIndexOrder(indexOrder))
     new CursorIterator[NodeValue] {
       override protected def fetchNext(): NodeValue = {
         if (cursor.next()) fromNodeEntity(entityAccessor.newNodeEntity(cursor.nodeReference()))
@@ -414,9 +410,9 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
     }
   }
 
-  override def getNodesByLabelPrimitive(id: Int): LongIterator = {
+  override def getNodesByLabelPrimitive(id: Int, indexOrder: IndexOrder): LongIterator = {
     val cursor = allocateAndTraceNodeLabelIndexCursor()
-    reads().nodeLabelScan(id, cursor)
+    reads().nodeLabelScan(id, cursor, asKernelIndexOrder(indexOrder))
     new PrimitiveCursorIterator {
       override protected def fetchNext(): Long = if (cursor.next()) cursor.nodeReference() else -1L
 
@@ -537,11 +533,11 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
       }
     }
 
-    override def removeProperty(id: Long, propertyKeyId: Int): Unit = {
+    override def removeProperty(id: Long, propertyKeyId: Int): Boolean = {
       try {
-        writes().nodeRemoveProperty(id, propertyKeyId)
+        !(writes().nodeRemoveProperty(id, propertyKeyId) eq Values.NO_VALUE)
       } catch {
-        case _: api.exceptions.EntityNotFoundException => //ignore
+        case _: api.exceptions.EntityNotFoundException => false
       }
     }
 
@@ -629,11 +625,11 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
       CursorUtils.relationshipHasProperty(reads(), relationshipCursor, id, propertyCursor, propertyKey)
     }
 
-    override def removeProperty(id: Long, propertyKeyId: Int): Unit = {
+    override def removeProperty(id: Long, propertyKeyId: Int): Boolean = {
       try {
-        writes().relationshipRemoveProperty(id, propertyKeyId)
+        !(writes().relationshipRemoveProperty(id, propertyKeyId) eq Values.NO_VALUE)
       } catch {
-        case _: api.exceptions.EntityNotFoundException => //ignore
+        case _: api.exceptions.EntityNotFoundException => false
       }
     }
 
@@ -959,21 +955,15 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
   }
 
   private def allocateAndTraceNodeValueIndexCursor() = {
-    val cursor = transactionalContext.cursors.allocateNodeValueIndexCursor()
+    val cursor = transactionalContext.cursors.allocateNodeValueIndexCursor(transactionalContext.kernelTransaction.pageCursorTracer)
     resources.trace(cursor)
     cursor
   }
 
   private def allocateAndTraceNodeLabelIndexCursor() = {
-    val cursor = transactionalContext.cursors.allocateNodeLabelIndexCursor()
+    val cursor = transactionalContext.cursors.allocateNodeLabelIndexCursor(transactionalContext.kernelTransaction.pageCursorTracer)
     resources.trace(cursor)
     cursor
-  }
-
-  private def asKernelIndexOrder(indexOrder: IndexOrder): internal.schema.IndexOrder = indexOrder match {
-    case IndexOrderAscending => internal.schema.IndexOrder.ASCENDING
-    case IndexOrderDescending => internal.schema.IndexOrder.DESCENDING
-    case IndexOrderNone => internal.schema.IndexOrder.NONE
   }
 
   abstract class PrimitiveCursorIterator extends PrimitiveLongResourceIterator {
@@ -995,37 +985,6 @@ sealed class TransactionBoundQueryContext(val transactionalContext: Transactiona
 
       current
     }
-  }
-
-  class ValuedNodeIndexCursor(inner: NodeValueIndexCursor, values: Array[Value]) extends DefaultCloseListenable with NodeValueIndexCursor {
-
-    override def numberOfProperties(): Int = values.length
-
-    override def propertyKey(offset: Int): Int = inner.propertyKey(offset)
-
-    override def hasValue: Boolean = true
-
-    override def propertyValue(offset: Int): Value = values(offset)
-
-    override def node(cursor: NodeCursor): Unit = inner.node(cursor)
-
-    override def nodeReference(): Long = inner.nodeReference()
-
-    override def next(): Boolean = inner.next()
-
-    override def closeInternal(): Unit = inner.close()
-
-    // We do not call getCloseListener.onClosed(inner) here since
-    // that will already happen in closeInternal.
-    override def close(): Unit = closeInternal()
-
-    override def isClosed: Boolean = inner.isClosed
-
-    override def score(): Float = inner.score()
-
-    override def setTracer(tracer: KernelReadTracer): Unit = inner.setTracer(tracer)
-
-    override def removeTracer(): Unit = inner.removeTracer()
   }
 }
 
@@ -1057,8 +1016,8 @@ object TransactionBoundQueryContext {
 
   class RelationshipCursorIterator(selectionCursor: RelationshipTraversalCursor) extends RelationshipIterator with AutoCloseable {
 
-    import RelationshipCursorIterator.NOT_INITIALIZED
-    import RelationshipCursorIterator.NO_ID
+    import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.RelationshipCursorIterator.NOT_INITIALIZED
+    import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.RelationshipCursorIterator.NO_ID
 
     private var _next = NOT_INITIALIZED
     private var relTypeId: Int = NO_ID

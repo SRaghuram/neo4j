@@ -98,7 +98,7 @@ public class StoreDownloader
     {
         try
         {
-            remoteStore.tryCatchingUp( addressProvider, context.storeId(), context.databaseLayout(), false, false );
+            remoteStore.tryCatchingUp( addressProvider, context.storeId(), context.databaseLayout(), false );
             return true;
         }
         catch ( StoreCopyFailedException e )

@@ -5,12 +5,13 @@
  */
 package com.neo4j.bench.common.tool.macro;
 
-import com.neo4j.bench.common.options.Edition;
+import com.google.common.collect.Lists;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
-import com.neo4j.bench.common.process.JvmArgs;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.model.process.JvmArgs;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -19,6 +20,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -32,6 +34,9 @@ public class RunMacroWorkloadParams
 
     public static final String CMD_WORKLOAD = "--workload";
     private String workloadName;
+
+    public static final String CMD_QUERIES = "--queries";
+    private List<String> queryNames;
 
     public static final String CMD_EDITION = "--db-edition";
     private Edition neo4jEdition;
@@ -137,6 +142,7 @@ public class RunMacroWorkloadParams
     }
 
     public RunMacroWorkloadParams( String workloadName,
+                                   List<String> queryNames,
                                    Edition neo4jEdition,
                                    Path jvm,
                                    List<ParameterizedProfiler> profilers,
@@ -157,7 +163,7 @@ public class RunMacroWorkloadParams
                                    // Result Client Report Results Args
                                    // -----------------------------------------------------------------------
                                    String neo4jCommit,
-                                   String neo4jVersion,
+                                   Version neo4jVersion,
                                    String neo4jBranch,
                                    String neo4jBranchOwner,
                                    String toolCommit,
@@ -167,7 +173,9 @@ public class RunMacroWorkloadParams
                                    Long parentBuild,
                                    String triggeredBy )
     {
+        Objects.requireNonNull( queryNames );
         this.workloadName = workloadName;
+        this.queryNames = queryNames;
         this.neo4jEdition = neo4jEdition;
         this.jvm = jvm;
         this.profilers = profilers;
@@ -188,7 +196,7 @@ public class RunMacroWorkloadParams
         // Result Client Report Results Args
         // -----------------------------------------------------------------------
         this.neo4jCommit = neo4jCommit;
-        this.neo4jVersion = new Version( neo4jVersion );
+        this.neo4jVersion = neo4jVersion;
         this.neo4jBranch = neo4jBranch;
         this.neo4jBranchOwner = neo4jBranchOwner;
         this.toolCommit = toolCommit;
@@ -202,6 +210,11 @@ public class RunMacroWorkloadParams
     public String workloadName()
     {
         return workloadName;
+    }
+
+    public List<String> queryNames()
+    {
+        return queryNames;
     }
 
     public Edition neo4jEdition()
@@ -408,6 +421,39 @@ public class RunMacroWorkloadParams
                       .collect( toList() );
     }
 
+    public RunMacroWorkloadParams setQuery( String queryName )
+    {
+        return new RunMacroWorkloadParams(
+                workloadName,
+                Lists.newArrayList( queryName ),
+                neo4jEdition,
+                jvm,
+                profilers,
+                warmupCount,
+                measurementCount,
+                minMeasurementDuration,
+                maxMeasurementDuration,
+                measurementForkCount,
+                unit,
+                runtime,
+                planner,
+                executionMode,
+                jvmArgs,
+                recreateSchema,
+                skipFlameGraphs,
+                deployment,
+                neo4jCommit,
+                neo4jVersion,
+                neo4jBranch,
+                neo4jBranchOwner,
+                toolCommit,
+                toolOwner,
+                toolBranch,
+                teamcityBuild,
+                parentBuild,
+                triggeredBy );
+    }
+
     @Override
     public boolean equals( Object that )
     {
@@ -419,4 +465,5 @@ public class RunMacroWorkloadParams
     {
         return HashCodeBuilder.reflectionHashCode( this );
     }
+
 }

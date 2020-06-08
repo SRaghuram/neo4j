@@ -29,11 +29,11 @@ import java.io.UncheckedIOException;
 import java.util.Arrays;
 
 import org.neo4j.common.EntityType;
-import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.schema.FulltextSchemaDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
@@ -109,7 +109,12 @@ class FulltextIndexTransactionStateVisitor extends TxStateVisitor.Adapter
     }
 
     @Override
+<<<<<<< HEAD
     public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
+=======
+    public void visitRelPropertyChanges( long id, int type, long startNode, long endNode, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
+            IntIterable removed )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         indexRelationship( id );
     }

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -31,6 +32,7 @@ import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.query
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.startCluster;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.writeSomeData;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.coreFieldIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.discoveryHealthFieldIs;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.healthFieldIs;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.lastAppliedRaftIndexFieldIs;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.leaderFieldIs;
@@ -64,10 +66,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.test.conditions.Conditions.FALSE;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.assertion.Assert.awaitUntilAsserted;
+import static org.neo4j.test.conditions.Conditions.FALSE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestInstance( PER_CLASS )
 @TestDirectoryExtension
@@ -391,6 +393,7 @@ class CausalClusterRestEndpointsIT
             assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( memberIdFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( healthFieldIs( equalTo( true ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( discoveryHealthFieldIs( equalTo( true ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
                     1, MINUTES );
@@ -407,6 +410,7 @@ class CausalClusterRestEndpointsIT
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( memberIdFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( healthFieldIs( equalTo( true ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( discoveryHealthFieldIs( equalTo( true ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
                     1, MINUTES );
@@ -457,21 +461,17 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void participatingInRaftGroupFalseWhenNotInGroup()
+    void participatingInRaftGroupFalseWhenNotInGroup() throws TimeoutException
     {
         try
         {
+
             var cores = cluster.getCores();
             assertThat( cores, hasSize( greaterThan( 1 ) ) );
-
-            // stop all cores except the first one
-            for ( var i = 1; i < cores.size(); i++ )
-            {
-                cores.get( i ).close();
-            }
-
-            var remainingCore = cores.get( 0 );
-            assertEventually( canVote( statusEndpoint( remainingCore, KNOWN_DB ) ), FALSE, 1, MINUTES );
+            var leader = awaitLeader( cluster, KNOWN_DB );
+            // stop all cores except the leader
+            cores.stream().filter( core -> !core.equals( leader ) ).forEach( core -> core.close() );
+            assertEventually( canVote( statusEndpoint( leader, KNOWN_DB ) ), FALSE, 1, MINUTES );
         }
         finally
         {

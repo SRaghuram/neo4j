@@ -73,6 +73,13 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
   }
 
   override def clear(): Unit = {
+    // TODO: Use a heap tracking collection or ScopedMemoryTracker instead
+    if (resultMap != null) {
+      resultMap.forEach { (key, functions) =>
+        state.memoryTracker.deallocated(key, operatorId.x)
+        functions.foreach(_.recordMemoryDeallocation())
+      }
+    }
     resultMap = new java.util.LinkedHashMap[LongArray, Array[AggregationFunction]]()
   }
 

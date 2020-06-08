@@ -65,7 +65,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-fabric</artifactId>
+            <artifactId>neo4j-enterprise-fabric</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -145,6 +145,11 @@
             <groupId>org.neo4j</groupId>
             <artifactId>layout-test-utils</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -26,7 +26,6 @@ import org.neo4j.internal.kernel.api.KernelReadTracer;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.security.AccessMode;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.api.txstate.NodeState;
@@ -38,18 +37,22 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
         implements RelationshipTraversalCursor
 {
     private final CursorPool<DefaultRelationshipTraversalCursor> pool;
-    private final PageCursorTracer cursorTracer;
+    private final DefaultNodeCursor nodeCursor;
     private LongIterator addedRelationships;
     private long originNodeReference;
     private RelationshipSelection selection;
+<<<<<<< HEAD
+=======
+    private AccessMode mode;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private long neighbourNodeReference;
 
     DefaultRelationshipTraversalCursor( CursorPool<DefaultRelationshipTraversalCursor> pool, StorageRelationshipTraversalCursor storeCursor,
-            PageCursorTracer cursorTracer )
+            DefaultNodeCursor nodeCursor )
     {
         super( storeCursor );
         this.pool = pool;
-        this.cursorTracer = cursorTracer;
+        this.nodeCursor = nodeCursor;
     }
 
     /**
@@ -88,8 +91,28 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
         {
             storeCursor.reset();
         }
+<<<<<<< HEAD
+=======
         init( read );
         this.addedRelationships = ImmutableEmptyLongIterator.INSTANCE;
+    }
+
+    boolean init( DefaultNodeCursor nodeCursor, RelationshipSelection selection, long neighbourNodeReference, Read read )
+    {
+        this.originNodeReference = nodeCursor.nodeReference();
+        this.selection = selection;
+        this.neighbourNodeReference = neighbourNodeReference;
+        if ( !nodeCursor.currentNodeIsAddedInTx() )
+        {
+            if ( !nodeCursor.storeCursor.relationshipsTo( storeCursor, selection, neighbourNodeReference ) )
+            {
+                return false;
+            }
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
+        init( read );
+        this.addedRelationships = ImmutableEmptyLongIterator.INSTANCE;
+        return true;
     }
 
     boolean init( DefaultNodeCursor nodeCursor, RelationshipSelection selection, long neighbourNodeReference, Read read )
@@ -173,8 +196,7 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
         while ( storeCursor.next() )
         {
             boolean skip = hasChanges && read.txState().relationshipIsDeletedInThisTx( storeCursor.entityReference() );
-            AccessMode mode = read.ktx.securityContext().mode();
-            if ( !skip && mode.allowsTraverseRelType( storeCursor.type() ) && allowedToSeeEndNode( mode ) )
+            if ( !skip && allowed() )
             {
                 return true;
             }
@@ -196,17 +218,23 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
         super.removeTracer();
     }
 
+    private boolean allowed()
+    {
+        if ( mode == null )
+        {
+            mode = read.ktx.securityContext().mode();
+        }
+        return mode.allowsTraverseRelType( storeCursor.type() ) && allowedToSeeEndNode( mode );
+    }
+
     private boolean allowedToSeeEndNode( AccessMode mode )
     {
         if ( mode.allowsTraverseAllLabels() )
         {
             return true;
         }
-        try ( NodeCursor nodeCursor = read.cursors().allocateNodeCursor( cursorTracer ) )
-        {
-            read.singleNode( storeCursor.neighbourNodeReference(), nodeCursor );
-            return nodeCursor.next();
-        }
+        read.singleNode( storeCursor.neighbourNodeReference(), nodeCursor );
+        return nodeCursor.next();
     }
 
     @Override
@@ -216,6 +244,7 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
         {
             read = null;
             selection = null;
+            mode = null;
             storeCursor.close();
 
             pool.accept( this );
@@ -238,6 +267,8 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
     public void release()
     {
         storeCursor.close();
+        nodeCursor.close();
+        nodeCursor.release();
     }
 
     @Override
@@ -250,7 +281,7 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
         else
         {
             return "RelationshipTraversalCursor[id=" + storeCursor.entityReference() +
-                    ", " + storeCursor.toString() + "]";
+                    ", " + storeCursor + "]";
         }
     }
 }

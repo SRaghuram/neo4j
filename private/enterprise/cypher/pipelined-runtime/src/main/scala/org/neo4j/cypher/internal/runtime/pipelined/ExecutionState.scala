@@ -17,9 +17,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiMorselBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.util.CalledFromGeneratedCode
 
@@ -30,9 +30,14 @@ trait ArgumentStateMapCreator {
 
   /**
    * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `argumentStateMapId`.
+   *
+   * @param argumentStateMapId the id of the [[ArgumentStateMap]]
+   * @param factory            a factory to create argument states
+   * @param ordered            if `true`, use an ordered [[ArgumentStateMap]], otherwise use an unordered [[ArgumentStateMap]]
    */
   def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
-                                                 factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
+                                                 factory: ArgumentStateFactory[S],
+                                                 ordered: Boolean = false): ArgumentStateMap[S]
 
 }
 
@@ -57,7 +62,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   /**
    * Put a morsel into the buffer with id `bufferId`.
    */
-  def putMorsel(bufferId: BufferId, morsel: Morsel): Unit
+  def putMorsel(bufferId: BufferId, morsel: Morsel, resources: QueryResources): Unit
 
   /**
    * Take a morsel from the buffer with id `bufferId`.
@@ -81,7 +86,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC]
 
   /**
-   * Take data from a [[OptionalMorselBuffer]] or [[AntiMorselBuffer]] buffer with id `bufferId`.
+   * Take data from a [[ArgumentStreamMorselBuffer]] or [[AntiMorselBuffer]] buffer with id `bufferId`.
    *
    * @return the data to take, or `null` if no data was available
    */
@@ -96,7 +101,8 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: Morsel): Unit
 
   /**
-   * Close a pipeline task which was executing over some data from an [[OptionalMorselBuffer]].
+   * Close a pipeline task which was executing over some data from an [[ArgumentStreamMorselBuffer]].
+   *
    * @param pipeline the executing pipeline
    * @param data the input data
    */

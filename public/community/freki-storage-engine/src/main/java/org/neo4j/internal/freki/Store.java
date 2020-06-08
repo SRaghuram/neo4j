@@ -23,11 +23,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+<<<<<<< HEAD
 import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.IOLimiter;
+=======
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -35,10 +40,15 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.lang.String.format;
+<<<<<<< HEAD
+=======
+import static org.neo4j.internal.freki.Record.recordSize;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.neo4j.internal.freki.Record.recordXFactor;
 
 public class Store extends BareBoneSingleFileStore implements SimpleStore
 {
+<<<<<<< HEAD
     private final IdGeneratorFactory idGeneratorFactory;
     private final IdType idType;
     private final int recordsPerPage;
@@ -132,6 +142,15 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     {
         idGenerator.close();
         super.shutdown();
+=======
+    private final int sizeExp;
+
+    public Store( File file, PageCache pageCache, IdGeneratorFactory idGeneratorFactory, IdType idType, boolean readOnly, boolean createIfNotExists,
+            int sizeExp, PageCacheTracer pageCacheTracer )
+    {
+        super( file, pageCache, idGeneratorFactory, idType, readOnly, createIfNotExists, recordSize( sizeExp ), pageCacheTracer );
+        this.sizeExp = sizeExp;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -140,11 +159,14 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
         return idGenerator.nextId( cursorTracer );
     }
 
+<<<<<<< HEAD
     private File idFileName()
     {
         return new File( file.getAbsolutePath() + ".id" );
     }
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     @Override
     public Record newRecord()
     {
@@ -167,24 +189,45 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     public void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException
     {
         long id = record.id;
+<<<<<<< HEAD
         long pageId = id / recordsPerPage;
         int offset = (int) ((id % recordsPerPage) * recordSize);
+=======
+        goToId( cursor, id );
+        record.serialize( cursor );
+        cursor.checkAndClearBoundsFlag();
+        idUpdateListener.markId( idGenerator, id, record.hasFlag( Record.FLAG_IN_USE ), cursorTracer );
+    }
+
+    private void goToId( PageCursor cursor, long id ) throws IOException
+    {
+        long pageId = idPage( id );
+        int offset = idOffset( id );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         if ( !cursor.next( pageId ) )
         {
             throw new IllegalStateException( "Could not grow file?" );
         }
         cursor.setOffset( offset );
+<<<<<<< HEAD
         record.serialize( cursor );
         cursor.checkAndClearBoundsFlag();
         idUpdateListener.markId( idGenerator, id, record.hasFlag( Record.FLAG_IN_USE ), cursorTracer );
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
     public boolean read( PageCursor cursor, Record record, long id )
     {
         record.clear();
+<<<<<<< HEAD
         long pageId = id / recordsPerPage;
         int offset = (int) ((id % recordsPerPage) * recordSize);
+=======
+        long pageId = idPage( id );
+        int offset = idOffset( id );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         try
         {
             if ( !cursor.next( pageId ) )
@@ -202,6 +245,7 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     }
 
     @Override
+<<<<<<< HEAD
     public boolean exists( PageCursor cursor, long id )
     {
         long pageId = id / recordsPerPage;
@@ -234,6 +278,8 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     }
 
     @Override
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     public String toString()
     {
         return format( "Store[x%d,highId:%d,%s]", recordXFactor( sizeExp ), getHighId(), file.getName() );

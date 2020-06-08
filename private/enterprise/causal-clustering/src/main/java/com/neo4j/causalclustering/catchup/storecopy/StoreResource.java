@@ -12,14 +12,14 @@ import java.util.Objects;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 
-class StoreResource
+public class StoreResource
 {
     private final File file;
     private final String path;
     private final int recordSize;
     private final FileSystemAbstraction fs;
 
-    StoreResource( File file, String relativePath, int recordSize, FileSystemAbstraction fs )
+    public StoreResource( File file, String relativePath, int recordSize, FileSystemAbstraction fs )
     {
         this.file = file;
         this.path = relativePath;

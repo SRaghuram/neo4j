@@ -6,6 +6,7 @@
 package com.neo4j.harness.internal;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -18,9 +19,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -32,8 +33,8 @@ import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 
 public class CausalClusterInProcessBuilder
@@ -227,13 +228,15 @@ public class CausalClusterInProcessBuilder
         private final Map<Setting<Object>, Object> config;
         private final BiFunction<File,String,EnterpriseInProcessNeo4jBuilder> serverBuilder;
 
-        private final List<InProcessNeo4j> cores = new CopyOnWriteArrayList<>();
-        private final List<InProcessNeo4j> readReplicas = new CopyOnWriteArrayList<>();
+        private final InProcessNeo4j[] cores;
+        private final InProcessNeo4j[] readReplicas;
 
         private CausalCluster( CausalClusterInProcessBuilder.Builder builder )
         {
             this.nCores = builder.numCoreHosts;
+            this.cores = new InProcessNeo4j[this.nCores];
             this.nReplicas = builder.numReadReplicas;
+            this.readReplicas = new InProcessNeo4j[this.nReplicas];
             this.clusterPath = builder.path;
             this.log = builder.log;
             this.portFactory = builder.portFactory;
@@ -282,7 +285,7 @@ public class CausalClusterInProcessBuilder
 
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_formation, nCores );
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, nCores );
-                builder.withConfig( CausalClusteringSettings.server_groups, List.of( "core",  "core" + coreId ) );
+                builder.withConfig( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "core",  "core" + coreId ) );
                 configureConnectors( boltPort, httpPort, builder );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );
@@ -292,7 +295,7 @@ public class CausalClusterInProcessBuilder
                 int finalCoreId = coreId;
                 coreStartActions.add( () ->
                 {
-                    cores.add( builder.build() );
+                    cores[finalCoreId] = builder.build();
                     log.info( "Core " + finalCoreId + " started." );
                 } );
             }
@@ -320,7 +323,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.discovery_advertised_address, specifyPortOnly( discoveryPort ) );
                 builder.withConfig( CausalClusteringSettings.transaction_advertised_address, specifyPortOnly( txPort ) );
 
-                builder.withConfig( CausalClusteringSettings.server_groups, List.of( "replica", "replica" + replicaId ) );
+                builder.withConfig( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "replica", "replica" + replicaId ) );
                 configureConnectors( boltPort, httpPort, builder );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );
@@ -330,7 +333,7 @@ public class CausalClusterInProcessBuilder
                 int finalReplicaId = replicaId;
                 replicaStartActions.add( () ->
                 {
-                    readReplicas.add( builder.build() );
+                    readReplicas[finalReplicaId] = builder.build();
                     log.info( "Read replica " + finalReplicaId + " started." );
                 } );
             }
@@ -355,19 +358,17 @@ public class CausalClusterInProcessBuilder
 
         public List<InProcessNeo4j> getCores()
         {
-            return unmodifiableList( cores );
+            return Stream.of( cores ).collect( toUnmodifiableList() );
         }
 
         public List<InProcessNeo4j> getReadReplicas()
         {
-            return unmodifiableList( readReplicas );
+            return Stream.of( readReplicas ).collect( toUnmodifiableList() );
         }
 
         public List<InProcessNeo4j> getCoresAndReadReplicas()
         {
-            var result = new ArrayList<>( cores );
-            result.addAll( readReplicas );
-            return unmodifiableList( result );
+            return Stream.concat( Stream.of( cores ), Stream.of( readReplicas ) ).collect( toUnmodifiableList() );
         }
 
         public void shutdown()

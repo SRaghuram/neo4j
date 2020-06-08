@@ -16,7 +16,6 @@
  */
 package org.neo4j.cypher.internal.ast.semantics
 
-import org.neo4j.cypher.internal.ast.semantics.SemanticFunctionCheck.possibleTypes
 import org.neo4j.cypher.internal.expressions.ContainerIndex
 import org.neo4j.cypher.internal.expressions.DoubleLiteral
 import org.neo4j.cypher.internal.expressions.Expression
@@ -196,8 +195,8 @@ object SemanticFunctionCheck extends SemanticAnalysisTooling {
     }
 
   /**
-    * Check that invocation align with one of the functions type signatures
-    */
+   * Check that invocation align with one of the functions type signatures
+   */
   def checkTypeSignatures(
                            ctx: Expression.SemanticContext,
                            f:TypeSignatures,

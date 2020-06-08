@@ -15,17 +15,16 @@ import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-
-public class ActorRefMarshalTest
+class ActorRefMarshalTest
 {
     private static ActorSystem system;
 
@@ -46,7 +45,7 @@ public class ActorRefMarshalTest
     }
 
     @Test
-    public void shouldMarshalAndUnMarshal() throws IOException, EndOfStreamException
+    void shouldMarshalAndUnMarshal() throws IOException, EndOfStreamException
     {
         ActorRefMarshal marshal = new ActorRefMarshal( (ExtendedActorSystem) system );
         ActorRef original = system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), Actor.name ) );
@@ -61,18 +60,18 @@ public class ActorRefMarshalTest
         ActorRef result = marshal.unmarshal( readableChannel );
 
         // then
-        assertEquals( original, result );
+        Assertions.assertEquals( original, result );
     }
 
-    @BeforeClass
-    public static void setup()
+    @BeforeAll
+    static void setup()
     {
         system = ActorSystem.create();
         system.actorOf( ActorRefMarshalTest.Actor.props(), ActorRefMarshalTest.Actor.name );
     }
 
-    @AfterClass
-    public static void teardown()
+    @AfterAll
+    static void teardown()
     {
         TestKit.shutdownActorSystem(system);
         system = null;

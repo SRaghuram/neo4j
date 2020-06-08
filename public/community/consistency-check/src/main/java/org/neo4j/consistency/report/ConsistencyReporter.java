@@ -44,13 +44,14 @@ import org.neo4j.consistency.report.ConsistencyReport.PropertyKeyTokenConsistenc
 import org.neo4j.consistency.report.ConsistencyReport.RelationshipConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.RelationshipGroupConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.RelationshipTypeConsistencyReport;
+import org.neo4j.consistency.report.ConsistencyReport.RelationshipTypeScanConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.SchemaConsistencyReport;
 import org.neo4j.consistency.store.DirectRecordReference;
 import org.neo4j.consistency.store.RecordAccess;
 import org.neo4j.consistency.store.RecordReference;
 import org.neo4j.consistency.store.synthetic.CountsEntry;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
+import org.neo4j.consistency.store.synthetic.TokenScanDocument;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
@@ -81,6 +82,8 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
     private static final ProxyFactory<DynamicConsistencyReport> DYNAMIC_REPORT = create( DynamicConsistencyReport.class );
     private static final ProxyFactory<DynamicLabelConsistencyReport> DYNAMIC_LABEL_REPORT = create( DynamicLabelConsistencyReport.class );
     private static final ProxyFactory<LabelScanConsistencyReport> LABEL_SCAN_REPORT = create( LabelScanConsistencyReport.class );
+    private static final ProxyFactory<RelationshipTypeScanConsistencyReport> RELATIONSHIP_TYPE_SCAN_REPORT =
+            create( RelationshipTypeScanConsistencyReport.class );
     private static final ProxyFactory<IndexConsistencyReport> INDEX_REPORT = create( IndexConsistencyReport.class );
     private static final ProxyFactory<RelationshipGroupConsistencyReport> RELATIONSHIP_GROUP_REPORT = create( RelationshipGroupConsistencyReport.class );
     private static final ProxyFactory<CountsConsistencyReport> COUNTS_REPORT = create( CountsConsistencyReport.class );
@@ -440,10 +443,17 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
     }
 
     @Override
-    public void forNodeLabelScan( LabelScanDocument document,
-                                  RecordCheck<LabelScanDocument, LabelScanConsistencyReport> checker, PageCursorTracer cursorTracer )
+    public void forNodeLabelScan( TokenScanDocument document,
+                                  RecordCheck<TokenScanDocument, LabelScanConsistencyReport> checker, PageCursorTracer cursorTracer )
     {
         dispatch( RecordType.LABEL_SCAN_DOCUMENT, LABEL_SCAN_REPORT, document, checker, cursorTracer );
+    }
+
+    @Override
+    public void forRelationshipTypeScan( TokenScanDocument document,
+            RecordCheck<TokenScanDocument,RelationshipTypeScanConsistencyReport> checker, PageCursorTracer cursorTracer )
+    {
+        dispatch( RecordType.RELATIONSHIP_TYPE_SCAN_DOCUMENT, RELATIONSHIP_TYPE_SCAN_REPORT, document, checker, cursorTracer );
     }
 
     @Override
@@ -545,9 +555,15 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
     }
 
     @Override
-    public LabelScanConsistencyReport forNodeLabelScan( LabelScanDocument document )
+    public LabelScanConsistencyReport forNodeLabelScan( TokenScanDocument document )
     {
         return report( LABEL_SCAN_REPORT, RecordType.LABEL_SCAN_DOCUMENT, document );
+    }
+
+    @Override
+    public RelationshipTypeScanConsistencyReport forRelationshipTypeScan( TokenScanDocument document )
+    {
+        return report( RELATIONSHIP_TYPE_SCAN_REPORT, RecordType.RELATIONSHIP_TYPE_SCAN_DOCUMENT, document );
     }
 
     @Override

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
@@ -13,11 +12,8 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftTestMember;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
-import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
-import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -33,7 +29,6 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.load_bala
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.contains;
@@ -45,14 +40,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
-public class AddressCollectorTest
+class AddressCollectorTest
 {
     private NamedDatabaseId namedDatabaseId = DatabaseIdFactory.from( "testDb", UUID.randomUUID() );
     private RaftId raftId = RaftId.from( namedDatabaseId.databaseId() );
     private TopologyService topologyService = mock( CoreTopologyService.class );
-    private LeaderLocatorForDatabase leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
-    private LeaderLocator leaderLocator = mock( LeaderLocator.class );
-    private LeaderService leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService, nullLogProvider() );
+    private DefaultLeaderService leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
     private Log log = nullLogProvider().getLog( "ignore" );
 
     @Test
@@ -230,15 +223,10 @@ public class AddressCollectorTest
         when( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ) )
                 .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), readReplicas ) );
 
-        if ( leaderIndex < 0 )
+        if ( leaderIndex >= 0 )
         {
-            when( leaderLocator.getLeaderInfo() ).thenReturn( null );
+            leaderService.onLeaderSwitch( namedDatabaseId, leader( leaderIndex, 1 ) );
         }
-        else
-        {
-            when( leaderLocator.getLeaderInfo() ).thenReturn( leader( leaderIndex, 1 ) );
-        }
-        when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
 
         var config = Config.defaults();
         config.set( cluster_allow_reads_on_followers, allowReads );

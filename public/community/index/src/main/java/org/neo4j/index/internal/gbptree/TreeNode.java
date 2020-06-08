@@ -249,20 +249,20 @@ abstract class TreeNode<KEY,VALUE>
 
     abstract void keyValueAt( PageCursor cursor, KEY intoKey, VALUE intoValue, int pos, PageCursorTracer cursorTracer );
 
-    abstract void insertKeyAndRightChildAt( PageCursor cursor, KEY key, long child, int pos, int keyCount,
-            long stableGeneration, long unstableGeneration, PageCursorTracer cursorTracer ) throws IOException;
+    abstract void insertKeyAndRightChildAt( PageCursor cursor, KEY key, long child, int pos, int keyCount, long stableGeneration, long unstableGeneration,
+            IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
 
     abstract void insertKeyValueAt( PageCursor cursor, KEY key, VALUE value, int pos, int keyCount, long stableGeneration, long unstableGeneration,
-            PageCursorTracer cursorTracer ) throws IOException;
+            IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
 
-    abstract void removeKeyValueAt( PageCursor cursor, int pos, int keyCount, long stableGeneration, long unstableGeneration,
+    abstract void removeKeyValueAt( PageCursor cursor, int pos, int keyCount, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider,
             PageCursorTracer cursorTracer ) throws IOException;
 
     abstract void removeKeyAndRightChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration,
-            PageCursorTracer cursorTracer ) throws IOException;
+            IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
 
     abstract void removeKeyAndLeftChildAt( PageCursor cursor, int keyPos, int keyCount, long stableGeneration, long unstableGeneration,
-            PageCursorTracer cursorTracer ) throws IOException;
+            IdProvider.Writer idProvider, PageCursorTracer cursorTracer ) throws IOException;
 
     /**
      * Overwrite key at position with given key.
@@ -374,17 +374,18 @@ abstract class TreeNode<KEY,VALUE>
      * Key count is updated.
      */
     abstract void doSplitLeaf( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, VALUE newValue, KEY newSplitter,
-            double ratioToKeepInLeftOnSplit, long stableGeneration, long unstableGeneration, PageCursorTracer cursorTracer ) throws IOException;
+            double ratioToKeepInLeftOnSplit, long stableGeneration, long unstableGeneration, IdProvider.Writer idProvider, PageCursorTracer cursorTracer )
+            throws IOException;
 
     /**
      * Performs the entry moving part of split in internal.
-     *
+     * <p>
      * Keys and children from left is divided between left and right and the new key and child is inserted where it belongs.
-     *
+     * <p>
      * Key count is updated.
      */
-    abstract void doSplitInternal( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos,
-            KEY newKey, long newRightChild, long stableGeneration, long unstableGeneration, KEY newSplitter, double ratioToKeepInLeftOnSplit,
+    abstract void doSplitInternal( PageCursor leftCursor, int leftKeyCount, PageCursor rightCursor, int insertPos, KEY newKey, long newRightChild,
+            long stableGeneration, long unstableGeneration, KEY newSplitter, double ratioToKeepInLeftOnSplit, IdProvider.Writer idProvider,
             PageCursorTracer cursorTracer ) throws IOException;
 
     /**

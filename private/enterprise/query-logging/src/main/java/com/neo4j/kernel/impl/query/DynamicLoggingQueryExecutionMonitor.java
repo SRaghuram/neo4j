@@ -9,6 +9,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.time.ZoneId;
 
 import org.neo4j.configuration.Config;
@@ -17,11 +18,13 @@ import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.query.ExecutingQuery;
+import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.query.QueryExecutionMonitor;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.RotatingFileOutputStreamSupplier;
+import org.neo4j.memory.HeapDumper;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -49,6 +52,8 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     private int currentMaxArchives;
     private Log log;
     private Closeable closable;
+    private HeapDumper heapDumper;
+    private Path heapDumpPath;
 
     DynamicLoggingQueryExecutionMonitor( Config config, FileSystemAbstraction fileSystem, JobScheduler scheduler, Log debugLog )
     {
@@ -63,7 +68,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     {
         // This set of settings are currently not dynamic:
         ZoneId currentLogTimeZone = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
-        logBuilder = FormattedLog.withZoneId( currentLogTimeZone );
+        logBuilder = FormattedLog.withZoneId( currentLogTimeZone ).withFormat( config.get( GraphDatabaseSettings.log_format ) );
         currentQueryLogFile = config.get( GraphDatabaseSettings.log_queries_filename ).toFile();
 
         updateSettings();
@@ -74,10 +79,12 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_max_archives );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_runtime_logging_enabled );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_parameter_logging_enabled );
+        registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_parameter_full_entities );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_page_detail_logging_enabled );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_allocation_logging_enabled );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled );
         registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_early_raw_logging_enabled );
+        registerDynamicSettingUpdater( GraphDatabaseSettings.log_queries_heap_dump_enabled );
     }
 
     private <T> void registerDynamicSettingUpdater( Setting<T> setting )
@@ -99,10 +106,21 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
         // are prime candidates.
         if ( config.get( GraphDatabaseSettings.log_queries ) != LogQueryLevel.OFF )
         {
+            boolean heapDumpEnabled = config.get( GraphDatabaseSettings.log_queries_heap_dump_enabled );
+            if ( heapDumpEnabled )
+            {
+                heapDumper = new HeapDumper();
+                heapDumpPath = config.get( GraphDatabaseSettings.log_queries_filename ).getParent();
+            }
+            else
+            {
+                heapDumper = null;
+            }
             currentLog = new ConfiguredQueryLogger( log, config );
         }
         else
         {
+            heapDumper = null;
             currentLog = NO_LOG;
         }
     }
@@ -196,7 +214,13 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     }
 
     @Override
-    public void start( ExecutingQuery query )
+    public void startProcessing( ExecutingQuery query )
+    {
+        currentLog.start( query );
+    }
+
+    @Override
+    public void startExecution( ExecutingQuery query )
     {
         currentLog.start( query );
     }
@@ -217,5 +241,30 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     public void endSuccess( ExecutingQuery query )
     {
         currentLog.success( query );
+    }
+
+    @Override
+    public void beforeEnd( ExecutingQuery query, boolean success )
+    {
+        if ( heapDumper != null )
+        {
+            QuerySnapshot snapshot = query.snapshot();
+
+            if ( !filterOutQuery( snapshot ) )
+            {
+                String suffix = success ? "" : "-fail";
+                String dumpFilename = heapDumpPath.resolve( String.format( "query-%s%s.hprof", snapshot.id(), suffix ) ).toString();
+                heapDumper.createHeapDump( dumpFilename, true );
+            }
+        }
+    }
+
+    private boolean filterOutQuery( QuerySnapshot snapshot )
+    {
+        // Filter out "CALL db.*" and "CALL dbms.*" queries internally generated by client tools and drivers
+        // (NOTE: This is a very rough filter that could also catch some user queries not generated by internal client tools,
+        //        (or not catch _all_ internally generated queries), but should be good enough for our current internal needs)
+        String queryText = snapshot.rawQueryText().stripLeading();
+        return queryText.startsWith( "CALL db." ) || queryText.startsWith( "CALL dbms." );
     }
 }

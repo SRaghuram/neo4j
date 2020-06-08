@@ -46,8 +46,8 @@ import org.neo4j.values.storable.Values;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.kernel.api.IndexQuery.exact;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
@@ -107,7 +107,7 @@ public class CompositeRandomizedIndexAccessorCompatibility extends IndexAccessor
                         exact( 101, update.values()[1] ),
                         exact( 102, update.values()[2] ),
                         exact( 103, update.values()[3] ) );
-                assertEquals( update.describe( tokens ) + " " + hits.toString(), 1, hits.size() );
+                assertEquals( update.describe( tokens ) + " " + hits, 1, hits.size() );
                 assertThat( single( hits ), equalTo( update.getEntityId() ) );
             }
         }

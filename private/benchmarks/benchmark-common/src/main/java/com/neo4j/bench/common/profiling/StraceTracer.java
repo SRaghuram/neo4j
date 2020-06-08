@@ -6,13 +6,14 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.nio.file.Path;
 import java.util.List;

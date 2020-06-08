@@ -36,6 +36,7 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -67,6 +68,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -430,7 +432,8 @@ class OnlineBackupCommandCcIT
         Config config = Config.defaults();
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
         LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
-        ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, true );
+        boolean checkRelationshipTypeScanStore = config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store );
+        ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, checkRelationshipTypeScanStore, true );
         ConsistencyCheckService service = new ConsistencyCheckService();
         ConsistencyCheckService.Result result = service.runFullConsistencyCheck( backupLayout, config, progressMonitorFactory, logProvider, true, flags );
         return result.isSuccessful();
@@ -475,7 +478,7 @@ class OnlineBackupCommandCcIT
 
     private boolean isRecoveryRequired( DatabaseLayout layout ) throws Exception
     {
-        return Recovery.isRecoveryRequired( testDirectory.getFileSystem(), layout, Config.defaults() );
+        return Recovery.isRecoveryRequired( testDirectory.getFileSystem(), layout, Config.defaults(), INSTANCE );
     }
 
     private static String leaderBackupAddress( Cluster cluster ) throws TimeoutException

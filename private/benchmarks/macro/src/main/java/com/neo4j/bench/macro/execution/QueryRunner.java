@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.Pid;

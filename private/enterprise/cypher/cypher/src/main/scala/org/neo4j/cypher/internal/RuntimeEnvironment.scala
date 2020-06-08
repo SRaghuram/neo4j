@@ -20,6 +20,7 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.lifecycle.LifeSupport
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.scheduler.Group
 import org.neo4j.scheduler.JobScheduler
 
@@ -32,11 +33,12 @@ object RuntimeEnvironment {
          jobScheduler: JobScheduler,
          cursors: CursorFactory,
          lifeSupport: LifeSupport,
-         workerManager: WorkerManagement): RuntimeEnvironment = {
+         workerManager: WorkerManagement,
+         memoryTracker: MemoryTracker): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
       createPipelinedQueryExecutor(cursors),
-      createParallelQueryExecutor(cursors, lifeSupport, workerManager),
+      createParallelQueryExecutor(cursors, lifeSupport, workerManager, memoryTracker),
       createTracer(config, jobScheduler, lifeSupport),
       cursors)
   }
@@ -47,8 +49,9 @@ object RuntimeEnvironment {
 
   private def createParallelQueryExecutor(cursors: CursorFactory,
                                           lifeSupport: LifeSupport,
-                                          workerManager: WorkerManagement): QueryExecutor = {
-    val resourceFactory = () => new QueryResources(cursors, PageCursorTracer.NULL)
+                                          workerManager: WorkerManagement,
+                                          memoryTracker: MemoryTracker): QueryExecutor = {
+    val resourceFactory = () => new QueryResources(cursors, PageCursorTracer.NULL, memoryTracker)
     val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
     lifeSupport.add(workerResourceProvider)
     val queryExecutor = new FixedWorkersQueryExecutor( workerResourceProvider, workerManager)
@@ -88,3 +91,4 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
     if (parallelExecution) parallelQueryExecutor else pipelinedQueryExecutor
 
 }
+

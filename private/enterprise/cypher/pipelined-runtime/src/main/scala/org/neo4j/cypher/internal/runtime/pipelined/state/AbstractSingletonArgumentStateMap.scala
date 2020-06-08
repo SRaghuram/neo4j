@@ -16,9 +16,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 /**
  * A singleton argument state map, where singleton means it will only ever hold one STATE, of the argument 0. This is the
  * case for all argument state maps that are not on the RHS of any apply.
+ *
+ * This is per definition an ordered argument state map.
  */
 abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
-  extends OrderedArgumentStateMap[STATE] with UnorderedArgumentStateMap[STATE] {
+  extends ArgumentStateMap[STATE] {
 
   override def argumentSlotOffset: Int = TopLevelArgument.SLOT_OFFSET
 
@@ -30,12 +32,6 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   protected var controller: CONTROLLER
 
   protected var hasController: Boolean
-
-  // Not assigned here since the Concurrent implementation needs to declare this volatile
-  /**
-   * A private counter for the methods [[takeNextIfCompletedOrElsePeek()]], [[nextArgumentStateIsCompletedOr()]], and [[peekNext()]]. Will only be -1 or 0.
-   */
-  protected var lastCompletedArgumentId: Long
 
   /**
    * Create a new state controller
@@ -80,37 +76,32 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
       val completedState = controller.state
       hasController = false
       DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
-      return IndexedSeq(completedState)
+      return Collections.singletonIndexedSeq(completedState)
     }
     null
   }
 
-  override def takeNextIfCompleted(): STATE = {
-    nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
-  }
-
-  override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    nextIfCompletedOrNull((state, isCompleted) => ArgumentStateWithCompleted(state, isCompleted))
-  }
-
-  private def nextIfCompletedOrNull[T](stateMapper: (STATE, Boolean) => T): T = {
-    if (hasController && controller.tryTake()) {
-      lastCompletedArgumentId = TopLevelArgument.VALUE
-      val completedState = controller.state
-      hasController = false
-      stateMapper(completedState, true)
-    } else if (hasController) {
-      stateMapper(controller.state, false)
-    } else {
-      null.asInstanceOf[T]
+  override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
+    if (hasController) {
+      if (controller.tryTake()) {
+        val completedState = controller.state
+        hasController = false
+        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
+        return ArgumentStateWithCompleted(completedState, isCompleted = true)
+      } else {
+        return ArgumentStateWithCompleted(controller.state, isCompleted = false)
+      }
     }
+    null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
   }
 
-  override def nextArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
+  override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
     hasController && (controller.isZero || statePredicate(controller.state))
   }
 
-  override def peekNext(): STATE = peek(lastCompletedArgumentId + 1)
+  override def exists(statePredicate: STATE => Boolean): Boolean = {
+    hasController && statePredicate(controller.state)
+  }
 
   override def peekCompleted(): Iterator[STATE] = {
     if (hasController && controller.isZero) Iterator.single(controller.state)

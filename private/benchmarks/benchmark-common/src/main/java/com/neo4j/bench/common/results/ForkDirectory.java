@@ -5,16 +5,16 @@
  */
 package com.neo4j.bench.common.results;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.profiling.RecordingType;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,17 +42,17 @@ import static java.lang.String.format;
 public class ForkDirectory
 {
     private static final String FORK_JSON = "fork.json";
-    static final String PLAN_JSON = "plan.json";
+    public static final String PLAN_JSON = "plan.json";
     private final Path dir;
     private final ForkDescription forkDescription;
 
-    static ForkDirectory findOrFailAt( Path parentDir, String name )
+    public static ForkDirectory findOrFailAt( Path parentDir, String name )
     {
         Path forkDir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
         return openAt( forkDir );
     }
 
-    static ForkDirectory findOrCreateAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
+    public static ForkDirectory findOrCreateAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
     {
         Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
         if ( Files.exists( dir ) )
@@ -67,7 +67,7 @@ public class ForkDirectory
         }
     }
 
-    static ForkDirectory createAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
+    public static ForkDirectory createAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
     {
         try
         {
@@ -158,7 +158,7 @@ public class ForkDirectory
         return dir.toAbsolutePath().toString();
     }
 
-    void copyProfilerRecordings( BenchmarkGroup benchmarkGroup, Benchmark benchmark, Path targetDir, Set<RecordingType> excluding )
+    public void copyProfilerRecordings( BenchmarkGroup benchmarkGroup, Benchmark benchmark, Path targetDir, Set<RecordingType> excluding )
     {
         try
         {

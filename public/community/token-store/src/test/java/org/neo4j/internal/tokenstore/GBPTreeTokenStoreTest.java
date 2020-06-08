@@ -43,6 +43,10 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.token.api.NamedToken;
 
+<<<<<<< HEAD
+=======
+import static org.assertj.core.api.Assertions.assertThat;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
@@ -83,6 +87,14 @@ class GBPTreeTokenStoreTest
 
             // then
             assertEquals( expected, found );
+<<<<<<< HEAD
+=======
+            for ( NamedToken expectedToken : expected )
+            {
+                NamedToken loadedToken = store.loadToken( expectedToken.id(), PageCursorTracer.NULL );
+                assertThat( loadedToken ).isEqualTo( expectedToken );
+            }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
     }
 

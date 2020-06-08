@@ -22,12 +22,12 @@ package org.neo4j.memory;
 /**
  * Memory allocation tracker that tracks bytes allocation and de-allocation
  */
-public interface MemoryTracker
+public interface MemoryTracker extends AutoCloseable
 {
     /**
-     * @return number of bytes of direct memory that are used
+     * @return number of bytes of native memory that are used
      */
-    long usedDirectMemory();
+    long usedNativeMemory();
 
     /**
      * @return estimated number of retained heap in bytes
@@ -35,24 +35,24 @@ public interface MemoryTracker
     long estimatedHeapMemory();
 
     /**
-     * Record allocation of bytes in direct memory.
+     * Record allocation of bytes in native memory.
      *
      * @param bytes number of allocated bytes.
      */
-    void allocateDirect( long bytes );
+    void allocateNative( long bytes );
 
     /**
-     * Record de-allocation of bytes in direct memory.
+     * Record de-allocation of bytes in native memory.
      *
      * @param bytes number of released bytes.
      */
-    void releaseDirect( long bytes );
+    void releaseNative( long bytes );
 
     /**
      * Record an allocation of heap memory.
      *
      * @param bytes the number of bytes about to be allocated.
-     * @throws HeapMemoryLimitExceeded if the current quota would be exceeded by allocating the provided number of bytes.
+     * @throws MemoryLimitExceeded if the current quota would be exceeded by allocating the provided number of bytes.
      */
     void allocateHeap( long bytes );
 
@@ -69,4 +69,10 @@ public interface MemoryTracker
     long heapHighWaterMark();
 
     void reset();
+
+    @Override
+    default void close()
+    {
+        reset();
+    }
 }

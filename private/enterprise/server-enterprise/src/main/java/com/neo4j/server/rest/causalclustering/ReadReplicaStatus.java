@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
 import java.util.Collection;
-import java.util.Optional;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
@@ -65,6 +64,7 @@ class ReadReplicaStatus extends ClusterMemberStatus
     {
         Collection<MemberId> votingMembers = topologyService.allCoreServers().keySet();
         boolean isHealthy = dbHealth.isHealthy();
+        boolean isDiscoveryHealthy = topologyService.isHealthy();
         MemberId myId = topologyService.memberId();
         MemberId leaderId = votingMembers.stream()
                 .filter( memberId -> topologyService.lookupRole( db.databaseId(), memberId ) == RoleInfo.LEADER )
@@ -75,6 +75,6 @@ class ReadReplicaStatus extends ClusterMemberStatus
         Duration millisSinceLastLeaderMessage = null;
         Double raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
         return statusResponse( lastAppliedRaftIndex, false, votingMembers, isHealthy, myId, leaderId, millisSinceLastLeaderMessage,
-                raftCommandsPerSecond, false );
+                raftCommandsPerSecond, false, isDiscoveryHealthy );
     }
 }

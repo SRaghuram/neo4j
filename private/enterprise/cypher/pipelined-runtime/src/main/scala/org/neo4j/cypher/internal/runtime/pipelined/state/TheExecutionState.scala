@@ -58,9 +58,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   // of any reducing operators.
 
   private val queryStatus = new QueryStatus
-  private val argumentStateMapHolder = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.size)
+  private val argumentStateMapHolder = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.length)
   override val argumentStateMaps: ArgumentStateMap.ArgumentStateMaps = id => argumentStateMapHolder(id.x)
-  private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.size,
+  private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.length,
     tracker,
     argumentStateMaps,
     stateFactory,
@@ -83,7 +83,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
     // We don't reach the first apply buffer because it is not the output buffer of any pipeline, and also
     // not the input buffer, because all apply buffers are consumed through delegates.
-    buffers.constructBuffer(executionGraphDefinition.buffers.head)
+    buffers.constructBuffer(executionGraphDefinition.buffers(0))
     states
   }
 
@@ -113,7 +113,10 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def initializeState(): Unit = {
     // Assumption: Buffer with ID 0 is the initial buffer
-    putMorsel(BufferId(0), Morsel.createInitialRow())
+    val initialBuffer = BufferId(0)
+    // Assumption: No resources are used by the initial buffer
+    val NO_RESOURCES = null
+    putMorsel(initialBuffer, Morsel.createInitialRow(), NO_RESOURCES)
   }
 
   // Methods
@@ -122,10 +125,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     new AlarmSink(buffers.sink[T](bufferId), workerWaker, queryStatus)
   }
 
-  override def putMorsel(bufferId: BufferId,
-                         output: Morsel): Unit = {
+  override def putMorsel(bufferId: BufferId, output: Morsel, resources: QueryResources): Unit = {
     if (!queryStatus.cancelled) {
-      buffers.sink[Morsel](bufferId).put(output)
+      buffers.sink[Morsel](bufferId).put(output, resources)
       workerWaker.wakeOne()
     } else {
       DebugSupport.ERROR_HANDLING.log("Dropped morsel %s because of query cancellation", output)
@@ -207,7 +209,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       // Put the continuation before unlocking (closeWorkUnit)
       // so that in serial pipelines we can guarantee that the continuation
       // is the next thing which is picked up
-      continuations(task.pipelineState.pipeline.id.x).put(task)
+      continuations(task.pipelineState.pipeline.id.x).put(task, resources)
       if (wakeUp && !task.pipelineState.pipeline.serial) {
         // We only wake up other Threads if this pipeline is not serial.
         // Otherwise they will all race to get this continuation while
@@ -239,9 +241,10 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
-                                                                factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
+                                                                factory: ArgumentStateFactory[S],
+                                                                ordered: Boolean): ArgumentStateMap[S] = {
     val argumentSlotOffset = executionGraphDefinition.argumentStateMaps(argumentStateMapId.x).argumentSlotOffset
-    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory)
+    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory, ordered)
     argumentStateMapHolder(argumentStateMapId.x) = asm
     asm
   }
@@ -344,7 +347,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
 
     i = 0
-    while (i < executionGraphDefinition.buffers.size) {
+    while (i < executionGraphDefinition.buffers.length) {
       Preconditions
         .checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
       i += 1

@@ -117,7 +117,11 @@ class TransactionToRecordStateVisitor extends TxStateVisitor.Adapter
     }
 
     @Override
+<<<<<<< HEAD
     public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added,
+=======
+    public void visitRelPropertyChanges( long id, int type, long startNode, long endNode, Iterable<StorageProperty> added,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             Iterable<StorageProperty> changed, IntIterable removed )
     {
         removed.each( relId -> recordState.relRemoveProperty( id, relId ) );

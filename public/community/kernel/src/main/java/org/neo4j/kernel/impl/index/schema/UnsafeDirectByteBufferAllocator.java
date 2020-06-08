@@ -26,40 +26,35 @@ import java.util.List;
 import org.neo4j.internal.unsafe.NativeMemoryAllocationRefusedError;
 import org.neo4j.internal.unsafe.UnsafeUtil;
 import org.neo4j.io.memory.ByteBufferFactory;
-import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.HeapScopedBuffer;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.io.memory.ScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.util.Preconditions;
 
 /**
- * Allocates {@link ByteBuffer} instances using {@link UnsafeUtil#newDirectByteBuffer(long, int)}/{@link UnsafeUtil#initDirectByteBuffer(Object, long, int)}
+ * Allocates {@link ByteBuffer} instances using {@link UnsafeUtil#newDirectByteBuffer(long, int)}/{@link UnsafeUtil#initDirectByteBuffer(ByteBuffer, long, int)}
  * and frees all allocated memory in {@link #close()}.
  */
 public class UnsafeDirectByteBufferAllocator implements ByteBufferFactory.Allocator
 {
-    private final MemoryTracker memoryTracker;
-    private final List<ByteBuffer> allocations = new ArrayList<>();
+    private final List<ScopedBuffer> allocations = new ArrayList<>();
     private boolean closed;
 
-    public UnsafeDirectByteBufferAllocator( MemoryTracker memoryTracker )
-    {
-        this.memoryTracker = memoryTracker;
-    }
-
     @Override
-    public synchronized ByteBuffer allocate( int bufferSize )
+    public synchronized ScopedBuffer allocate( int bufferSize, MemoryTracker memoryTracker )
     {
         assertOpen();
         try
         {
-            var byteBuffer = ByteBuffers.allocateDirect( bufferSize );
+            var byteBuffer = new NativeScopedBuffer( bufferSize, memoryTracker );
             allocations.add( byteBuffer );
-            memoryTracker.allocateDirect( bufferSize );
             return byteBuffer;
         }
         catch ( NativeMemoryAllocationRefusedError allocationRefusedError )
         {
             // What ever went wrong fallback to on-heap buffer.
-            return ByteBuffers.allocate( bufferSize );
+            return new HeapScopedBuffer( bufferSize, memoryTracker );
         }
     }
 
@@ -69,11 +64,7 @@ public class UnsafeDirectByteBufferAllocator implements ByteBufferFactory.Alloca
         // Idempotent close due to the way the population lifecycle works sometimes
         if ( !closed )
         {
-            allocations.forEach( buffer -> {
-                int capacity = buffer.capacity();
-                memoryTracker.releaseDirect( capacity );
-                ByteBuffers.releaseBuffer( buffer );
-            } );
+            allocations.forEach( ScopedBuffer::close );
             closed = true;
         }
     }

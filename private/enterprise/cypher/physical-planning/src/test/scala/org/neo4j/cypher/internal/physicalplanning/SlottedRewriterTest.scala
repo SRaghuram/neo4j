@@ -8,15 +8,21 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.expressions.AndedPropertyInequalities
+import org.neo4j.cypher.internal.expressions.CachedProperty
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.CacheProperties
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
@@ -26,11 +32,14 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReferenceProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyLate
+import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithPropertyToken
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.NonEmptyList
 import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.util.symbols.CTAny
@@ -405,7 +414,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("rewriting variable should always work, even if Variable is not part of a bigger tree") {
     // given
-    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty)
+    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty, IndexOrderNone)
     val projection = Projection(leaf, Map("x" -> varFor("x"), "x.propertyKey" -> xPropKey))
     val tokenContext = mock[TokenContext]
     val tokenId = 2
@@ -432,7 +441,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("make sure to handle nullable nodes correctly") {
     // given
-    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty)
+    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty, IndexOrderNone)
     val projection = Projection(leaf, Map("x" -> varFor("x"), "x.propertyKey" -> xPropKey))
     val tokenContext = mock[TokenContext]
     val tokenId = 2
@@ -502,8 +511,8 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("ValueHashJoin needs to execute expressions with two different slots") {
     // MATCH (a:labelA), (b:labelB) WHERE a.prop = b.prop
-    val leafA = NodeByLabelScan("a", labelName("labelA"), Set.empty)
-    val leafB = NodeByLabelScan("b", labelName("labelB"), Set.empty)
+    val leafA = NodeByLabelScan("a", labelName("labelA"), Set.empty, IndexOrderNone)
+    val leafB = NodeByLabelScan("b", labelName("labelB"), Set.empty, IndexOrderNone)
 
     val join = ValueHashJoin(leafA, leafB, equals(aProp, bProp))
 
@@ -626,5 +635,46 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
       NullCheckProperty(offsetN, NodeProperty(offsetN, 666, "n.prop")(xProp)),
       NonEmptyList(lessThan(literalInt(42), ReferenceFromSlot(offsetZ, "z"))))
     result should equal(Selection(Seq(newPred), arg))
+  }
+
+  test("should rewrite cached property of a nullable entity in ref slot using NullCheckReferenceProperty") {
+    // given
+    val arg = Argument()
+    val property = CachedProperty("n.prop", Variable("n")(InputPosition.NONE), PropertyKeyName("prop")(InputPosition.NONE), NODE_TYPE)(InputPosition.NONE)
+    val properties = CacheProperties(arg, Set(property))
+
+    val slots = SlotConfiguration.empty
+      .newReference("n", nullable = true, CTAny)
+      .newCachedProperty(property)
+    val tokenContext = mock[TokenContext]
+    val tokenId = 666
+    when(tokenContext.getOptPropertyKeyId("prop")).thenReturn(Some(tokenId))
+
+    val rewriter = new SlottedRewriter(tokenContext)
+
+    val lookup = new SlotConfigurations
+    lookup.set(arg.id, SlotConfiguration.empty)
+    lookup.set(properties.id, slots)
+
+    // when
+    val result = rewriter(properties, lookup)
+
+    // then
+    result should equal {
+      CacheProperties(
+        arg,
+        Set(NullCheckReferenceProperty(
+          offset = 0,
+          inner = SlottedCachedPropertyWithPropertyToken(
+            entityName = "n.prop",
+            propertyKey = PropertyKeyName("prop")(InputPosition.NONE),
+            offset = 0,
+            offsetIsForLongSlot = false,
+            propToken = 666,
+            cachedPropertyOffset = 1,
+            entityType = NODE_TYPE,
+            nullable = true
+          ))))
+    }
   }
 }

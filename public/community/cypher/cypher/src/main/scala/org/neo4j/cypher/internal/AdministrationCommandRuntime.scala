@@ -69,32 +69,15 @@ trait AdministrationCommandRuntime extends CypherRuntime[RuntimeContext] {
 
   protected def internalKey(name: String): String = internalPrefix + name
 
-  trait PasswordExpression {
-    def key: String
-    def value: Value
-    def bytesKey: String
-    def bytesValue: Value
-    def mapValueConverter: MapValue => MapValue
-  }
+  protected case class PasswordExpression(key: String,
+                                          value: Value,
+                                          bytesKey: String,
+                                          bytesValue: Value,
+                                          mapValueConverter: MapValue => MapValue)
 
-  case class LiteralPasswordExpression(key: String, value: Value, bytesKey: String, bytesValue: Value) extends PasswordExpression {
-    val mapValueConverter = IdentityConverter
-  }
-
-  case class ParameterPasswordExpression(key: String,
-                                         value: Value,
-                                         bytesKey: String,
-                                         bytesValue: Value,
-                                         mapValueConverter: MapValue => MapValue) extends PasswordExpression
-
-  protected def getPasswordExpression(password: Either[Array[Byte], AnyRef]): PasswordExpression =
+  protected def getPasswordExpression(password: expressions.Expression): PasswordExpression =
     password match {
-      case Left(encodedPassword) =>
-        validatePassword(encodedPassword)
-        LiteralPasswordExpression(internalKey("credentials"), hashPassword(encodedPassword), internalKey("credentials_bytes"), Values.byteArray(encodedPassword))
-      case Right(pw) if pw.isInstanceOf[ParameterFromSlot] =>
-        // JVM type erasure means at runtime we get a type that is not actually expected by the Scala compiler, so we cannot use case Right(parameterPassword)
-        val parameterPassword = pw.asInstanceOf[ParameterFromSlot]
+      case parameterPassword: ParameterFromSlot =>
         validateStringParameterType(parameterPassword)
         def convertPasswordParameters(params: MapValue): MapValue = {
           val passwordParameter = parameterPassword.name
@@ -103,17 +86,12 @@ trait AdministrationCommandRuntime extends CypherRuntime[RuntimeContext] {
           val hashedPassword = hashPassword(encodedPassword)
           params.updatedWith(passwordParameter, hashedPassword).updatedWith(passwordParameter + "_bytes", Values.byteArray(encodedPassword))
         }
-        ParameterPasswordExpression(parameterPassword.name, Values.NO_VALUE, s"${parameterPassword.name}_bytes", Values.NO_VALUE, convertPasswordParameters)
+        PasswordExpression(parameterPassword.name, Values.NO_VALUE, s"${parameterPassword.name}_bytes", Values.NO_VALUE, convertPasswordParameters)
     }
 
-  protected def getPasswordFieldsCurrent(password: Either[Array[Byte], AnyRef]): (String, Value, MapValue => MapValue) = {
+  protected def getPasswordFieldsCurrent(password: expressions.Expression): (String, Value, MapValue => MapValue) = {
     password match {
-      case Left(encodedPassword) =>
-        validatePassword(encodedPassword)
-        (internalKey("current_credentials_bytes"), Values.byteArray(encodedPassword), IdentityConverter)
-      case Right(pw) if pw.isInstanceOf[ParameterFromSlot] =>
-        // JVM type erasure means at runtime we get a type that is not actually expected by the Scala compiler, so we cannot use case Right(parameterPassword)
-        val parameterPassword = pw.asInstanceOf[ParameterFromSlot]
+      case parameterPassword: ParameterFromSlot =>
         validateStringParameterType(parameterPassword)
         val passwordParameter = parameterPassword.name
         val renamedParameter = s"__current_${passwordParameter}_bytes"
@@ -129,9 +107,9 @@ trait AdministrationCommandRuntime extends CypherRuntime[RuntimeContext] {
   private def getValidPasswordParameter(params: MapValue, passwordParameter: String): Array[Byte] = {
     params.get(passwordParameter) match {
       case bytes: ByteArray =>
-        bytes.asObjectCopy()
+        bytes.asObject()  // Have as few copies of the password in memory as possible
       case s: StringValue =>
-        UTF8.encode(s.stringValue())
+        UTF8.encode(s.stringValue()) // User parameters have String type
       case Values.NO_VALUE =>
         throw new ParameterNotFoundException(s"Expected parameter(s): $passwordParameter")
       case other =>
@@ -141,7 +119,7 @@ trait AdministrationCommandRuntime extends CypherRuntime[RuntimeContext] {
 
   private def validateStringParameterType(param: ParameterFromSlot): Unit = {
     param.parameterType match {
-      case _:StringType =>
+      case _: StringType =>
       case _ => throw new ParameterWrongTypeException(s"Only ${StringType.instance} values are accepted as password, got: " + param.parameterType)
     }
   }
@@ -187,7 +165,7 @@ trait AdministrationCommandRuntime extends CypherRuntime[RuntimeContext] {
   }
 
   protected def makeCreateUserExecutionPlan(userName: Either[String, Parameter],
-                                  password: Either[Array[Byte], Parameter],
+                                  password: expressions.Expression,
                                   requirePasswordChange: Boolean,
                                   suspended: Boolean)(
                                    sourcePlan: Option[ExecutionPlan],
@@ -199,14 +177,15 @@ trait AdministrationCommandRuntime extends CypherRuntime[RuntimeContext] {
     val mapValueConverter: MapValue => MapValue = p => credentials.mapValueConverter(userNameConverter(p))
     UpdatingSystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
       // NOTE: If username already exists we will violate a constraint
-      s"""CREATE (u:User {name: $$$userNameKey, credentials: $$${credentials.key},
-         |passwordChangeRequired: $$$passwordChangeRequiredKey, suspended: $$$suspendedKey})
+      s"""CREATE (u:User {name: $$`$userNameKey`, credentials: $$`${credentials.key}`,
+         |passwordChangeRequired: $$`$passwordChangeRequiredKey`, suspended: $$`$suspendedKey`})
          |RETURN u.name""".stripMargin,
       VirtualValues.map(
-        Array(userNameKey, credentials.key, passwordChangeRequiredKey, suspendedKey),
+        Array(userNameKey, credentials.key, credentials.bytesKey, passwordChangeRequiredKey, suspendedKey),
         Array(
           userNameValue,
           credentials.value,
+          credentials.bytesValue,
           Values.booleanValue(requirePasswordChange),
           Values.booleanValue(suspended))),
       QueryHandler
@@ -219,9 +198,63 @@ trait AdministrationCommandRuntime extends CypherRuntime[RuntimeContext] {
           case _ => new IllegalStateException(s"Failed to create the specified user '${runtimeValue(userName, params)}'.", error)
         }),
       sourcePlan,
+      finallyFunction = p => p.get(credentials.bytesKey).asInstanceOf[ByteArray].zero(),
       initFunction = (params, _) => NameValidator.assertValidUsername(runtimeValue(userName, params)),
       parameterConverter = mapValueConverter
     )
   }
 
+  protected def makeAlterUserExecutionPlan(userName: Either[String, Parameter],
+                                           password: Option[expressions.Expression],
+                                           requirePasswordChange: Option[Boolean],
+                                           suspended: Option[Boolean])(
+                                            sourcePlan: Option[ExecutionPlan],
+                                            normalExecutionEngine: ExecutionEngine
+                                          ): ExecutionPlan = {
+          val (userNameKey, userNameValue, userNameConverter) = getNameFields("username", userName)
+      val maybePw = password.map(getPasswordExpression(_))
+      val params = Seq(
+        maybePw -> "credentials",
+        requirePasswordChange -> "passwordChangeRequired",
+        suspended -> "suspended"
+      ).flatMap { param =>
+        param._1 match {
+          case None => Seq.empty
+          case Some(boolExpr: Boolean) => Seq((param._2, internalKey(param._2), Values.booleanValue(boolExpr)))
+          case Some(passwordExpression: PasswordExpression) => Seq((param._2, passwordExpression.key, passwordExpression.value))
+          case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected PasswordExpression or Boolean but got: ${p.getClass.getSimpleName}")
+        }
+      }
+      val (query, keys, values) = params.foldLeft((s"MATCH (user:User {name: $$`$userNameKey`}) WITH user, user.credentials AS oldCredentials", Seq.empty[String], Seq.empty[Value])) { (acc, param) =>
+        val propertyName: String = param._1
+        val key: String = param._2
+        val value: Value = param._3
+        (acc._1 + s" SET user.$propertyName = $$`$key`", acc._2 :+ key, acc._3 :+ value)
+      }
+      val parameterKeys: Seq[String] = (keys ++ maybePw.map(_.bytesKey).toSeq) :+ userNameKey
+      val parameterValues: Seq[Value] = (values ++ maybePw.map(_.bytesValue).toSeq) :+ userNameValue
+      val mapper: MapValue => MapValue = m => maybePw.map(_.mapValueConverter).getOrElse(IdentityConverter)(userNameConverter(m))
+      UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
+        s"$query RETURN oldCredentials",
+        VirtualValues.map(parameterKeys.toArray, parameterValues.toArray),
+        QueryHandler
+          .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': User does not exist.")))
+          .handleError {
+            case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': $followerError", error)
+            case (error, p) => new IllegalStateException(s"Failed to alter the specified user '${runtimeValue(userName, p)}'.", error)
+          }
+          .handleResult((_, value, p) => maybePw.flatMap { newPw =>
+            val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
+            val newValue = p.get(newPw.bytesKey).asInstanceOf[ByteArray].asObject()
+            if (oldCredentials.matchesPassword(newValue))
+              Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': Old password and new password cannot be the same."))
+            else
+              None
+          }),
+        sourcePlan,
+        finallyFunction = p => maybePw.foreach(newPw => p.get(newPw.bytesKey).asInstanceOf[ByteArray].zero()),
+        parameterConverter = mapper
+      )
+  }
 }

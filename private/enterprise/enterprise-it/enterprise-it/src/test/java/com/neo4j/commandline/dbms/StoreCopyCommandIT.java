@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.cli.CommandFailedException;
@@ -26,18 +27,23 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.StandardFormatFamily;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.internal.locker.FileLockException;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.token.TokenHolders;
 
 import static java.lang.Math.min;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +65,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
     private static final Label NUMBER_LABEL = Label.label( "Number" );
     private static final Label CHARACTER_LABEL = Label.label( "Character" );
     private static final Label ERROR_LABEL = Label.label( "Error" );
-    private static final RelationshipType KNOWS_RELATIONSHIP_TYPE = RelationshipType.withName( "KNOWS" );
+    private static final RelationshipType KNOWS = RelationshipType.withName( "KNOWS" );
+    private static final RelationshipType SECRET = RelationshipType.withName( "SECRET" );
 
     @Test
     void cantCopyFromRunningDatabase()
@@ -144,7 +151,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -160,7 +167,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( "Uno", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Dos", tx.getNodeById( 1 ).getProperty( "name" ) );
             assertEquals( "Tres", tx.getNodeById( 2 ).getProperty( "name" ) );
-            assertEquals( RelationshipType.withName( "KNOWS" ), single( tx.getNodeById( 1 ).getRelationships() ).getType() );
+            assertEquals( KNOWS, single( tx.getNodeById( 1 ).getRelationships() ).getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
             tx.commit();
         }
@@ -180,7 +187,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Trays" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -204,7 +211,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( "On", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Those", tx.getNodeById( 1 ).getProperty( "name" ) );
             assertEquals( "Trays", tx.getNodeById( 2 ).getProperty( "name" ) );
-            assertEquals( RelationshipType.withName( "KNOWS" ), single( tx.getNodeById( 1 ).getRelationships() ).getType() );
+            assertEquals( KNOWS, single( tx.getNodeById( 1 ).getRelationships() ).getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
             tx.commit();
         }
@@ -224,7 +231,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -260,9 +267,9 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Trays" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
-            b.createRelationshipTo( c, RelationshipType.withName( "KNOWS" ) );
-            a.createRelationshipTo( c, RelationshipType.withName( "HATES" ) );
+            a.createRelationshipTo( b, KNOWS );
+            b.createRelationshipTo( c, KNOWS );
+            a.createRelationshipTo( c, SECRET );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -273,7 +280,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
                 "--to-database=" + copyName,
                 "--skip-labels=Error",
                 "--skip-properties=secretProperty",
-                "--skip-relationships=HATES" );
+                "--skip-relationships=" + SECRET.name() );
 
         managementService.createDatabase( copyName );
         GraphDatabaseService copyDb = managementService.database( copyName );
@@ -320,8 +327,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
             b.setProperty( "name", "Bob" );
             Node c = tx.createNode( NUMBER_LABEL, ERROR_LABEL );
             c.setProperty( "name", "Carrie" );
-            a.createRelationshipTo( b, KNOWS_RELATIONSHIP_TYPE );
-            b.createRelationshipTo( c, KNOWS_RELATIONSHIP_TYPE );
+            a.createRelationshipTo( b, KNOWS );
+            b.createRelationshipTo( c, KNOWS );
             tx.commit();
         }
         try ( Transaction tx = databaseAPI.beginTx() )
@@ -369,7 +376,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
         {
             assertEquals( "Anna", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Bob", tx.getNodeById( 1 ).getProperty( "name" ) );
-            assertEquals( KNOWS_RELATIONSHIP_TYPE, single( tx.getNodeById( 0 ).getRelationships() ).getType() );
+            assertEquals( KNOWS, single( tx.getNodeById( 0 ).getRelationships() ).getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 2 ) );
             assertThrows( NotFoundException.class, () -> tx.getRelationshipById( 1 ) );
             tx.commit();
@@ -390,7 +397,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         try ( Transaction tx = databaseAPI.beginTx() )
@@ -405,7 +412,65 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
         copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName );
 
-        suppressOutput.getOutputVoice().containsMessage( "CALL db.createIndex('myIndex'" );
+        assertTrue( suppressOutput.getOutputVoice().containsMessage( "CALL db.createIndex('myIndex'" ) );
+    }
+
+    @Test
+    void mustRepairBrokenTokens() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL );
+            a.setProperty( "a", 1 );
+            a.setProperty( "b", 2 );
+            a.createRelationshipTo( a, KNOWS );
+            tx.commit();
+        }
+
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+
+        // Create a name duplication inconsistency in the property key token store:
+        TokenHolders tokens = databaseAPI.getDependencyResolver().resolveDependency( TokenHolders.class );
+        RecordStorageEngine engine = databaseAPI.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
+        int idA = tokens.propertyKeyTokens().getIdByName( "a" );
+        int idB = tokens.propertyKeyTokens().getIdByName( "b" );
+        PropertyKeyTokenStore store = engine.testAccessNeoStores().getPropertyKeyTokenStore();
+        var tokenA = store.getRecord( idA, store.newRecord(), RecordLoad.NORMAL, PageCursorTracer.NULL );
+        var tokenB = store.getRecord( idB, store.newRecord(), RecordLoad.NORMAL, PageCursorTracer.NULL );
+        tokenB.initialize( tokenA.inUse(), tokenA.getNameId(), tokenA.getPropertyCount() );
+        store.updateRecord( tokenB, PageCursorTracer.NULL );
+
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName );
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService db = managementService.database( copyName );
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node  = single( tx.getAllNodes() );
+            Map<String, Object> properties = node.getAllProperties();
+            assertThat( properties.remove( "a" ) ).isEqualTo( 1 );
+            assertThat( single( properties.values() ) ).isEqualTo( 2 );
+        }
+        String output = suppressOutput.getOutputVoice().toString();
+        assertTrue( output.contains( "tokens were recreated" ) );
+        // One occurrence reporting the broken token. Then another reporting its invented replacement:
+        assertThat( countOccurrences( output, "PropertyKey(" + idB + ")" ) ).isEqualTo( 2 );
+    }
+
+    private int countOccurrences( String haystack, String needle )
+    {
+        int count = 0;
+        int index = 0;
+        while ( ( index = haystack.indexOf( needle, index ) ) != -1 )
+        {
+            count++;
+            index++;
+        }
+        return count;
     }
 
     @Test
@@ -421,7 +486,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -433,8 +498,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
                 "--from-pagecache=6m",
                 "--to-pagecache=7m" );
 
-        suppressOutput.getOutputVoice().containsMessage( "(page cache 6m)" );
-        suppressOutput.getOutputVoice().containsMessage( "(page cache 7m)" );
+        assertTrue( suppressOutput.getOutputVoice().containsMessage( "(page cache 6m)" ) );
+        assertTrue( suppressOutput.getOutputVoice().containsMessage( "(page cache 7m)" ) );
     }
 
     private void copyDatabase( String... args ) throws Exception

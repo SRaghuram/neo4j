@@ -6,7 +6,8 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -20,8 +21,6 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -29,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-public class DnsHostnameResolverTest
+class DnsHostnameResolverTest
 {
     private final MapDomainNameResolver mockDomainNameResolver = new MapDomainNameResolver( new HashMap<>() );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -40,7 +39,7 @@ public class DnsHostnameResolverTest
             config, RetryStrategyTest.testRetryStrategy( 1 ) );
 
     @Test
-    public void hostnamesAreResolvedByTheResolver()
+    void hostnamesAreResolvedByTheResolver()
     {
         // given
         mockDomainNameResolver.setHostnameAddresses( "google.com", asList( "1.2.3.4", "5.6.7.8" ) );
@@ -50,13 +49,13 @@ public class DnsHostnameResolverTest
                 resolver.resolve( new SocketAddress( "google.com", 80 ) );
 
         // then
-        assertEquals( 2, resolvedAddresses.size() );
-        assertTrue( resolvedAddresses.removeIf( address -> address.getHostname().equals( "1.2.3.4" ) ) );
-        assertTrue( resolvedAddresses.removeIf( address -> address.getHostname().equals( "5.6.7.8" ) ) );
+        Assertions.assertEquals( 2, resolvedAddresses.size() );
+        Assertions.assertTrue( resolvedAddresses.removeIf( address -> address.getHostname().equals( "1.2.3.4" ) ) );
+        Assertions.assertTrue( resolvedAddresses.removeIf( address -> address.getHostname().equals( "5.6.7.8" ) ) );
     }
 
     @Test
-    public void resolvedHostnamesUseTheSamePort()
+    void resolvedHostnamesUseTheSamePort()
     {
         // given
         mockDomainNameResolver.setHostnameAddresses( "google.com", asList( "1.2.3.4", "5.6.7.8" ) );
@@ -66,13 +65,13 @@ public class DnsHostnameResolverTest
                 new ArrayList<>( resolver.resolve( new SocketAddress( "google.com", 1234 ) ) );
 
         // then
-        assertEquals( 2, resolvedAddresses.size() );
-        assertEquals( 1234, resolvedAddresses.get( 0 ).getPort() );
-        assertEquals( 1234, resolvedAddresses.get( 1 ).getPort() );
+        Assertions.assertEquals( 2, resolvedAddresses.size() );
+        Assertions.assertEquals( 1234, resolvedAddresses.get( 0 ).getPort() );
+        Assertions.assertEquals( 1234, resolvedAddresses.get( 1 ).getPort() );
     }
 
     @Test
-    public void resolutionDetailsAreLoggedToUserLogs()
+    void resolutionDetailsAreLoggedToUserLogs()
     {
         // given
         mockDomainNameResolver.setHostnameAddresses( "google.com", asList( "1.2.3.4", "5.6.7.8" ) );
@@ -85,7 +84,7 @@ public class DnsHostnameResolverTest
     }
 
     @Test
-    public void unknownHostExceptionsAreLoggedAsErrors()
+    void unknownHostExceptionsAreLoggedAsErrors()
     {
         // when
         resolver.resolve( new SocketAddress( "google.com", 1234 ) );
@@ -95,7 +94,7 @@ public class DnsHostnameResolverTest
     }
 
     @Test
-    public void resolverRetriesUntilHostnamesAreFound()
+    void resolverRetriesUntilHostnamesAreFound()
     {
         // given
         mockDomainNameResolver.setHostnameAddresses( "google.com", asList( "1.2.3.4", "5.6.7.8" ) );
@@ -114,8 +113,8 @@ public class DnsHostnameResolverTest
 
         // then
         verify( mockResolver, times( 3 ) ).resolveDomainName( "google.com" );
-        assertEquals( 2, resolvedAddresses.size() );
-        assertEquals( 1234, resolvedAddresses.get( 0 ).getPort() );
-        assertEquals( 1234, resolvedAddresses.get( 1 ).getPort() );
+        Assertions.assertEquals( 2, resolvedAddresses.size() );
+        Assertions.assertEquals( 1234, resolvedAddresses.get( 0 ).getPort() );
+        Assertions.assertEquals( 1234, resolvedAddresses.get( 1 ).getPort() );
     }
 }

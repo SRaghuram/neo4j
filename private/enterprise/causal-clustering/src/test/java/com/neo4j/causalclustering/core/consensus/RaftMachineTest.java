@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
+import co.unruly.matchers.OptionalMatchers;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -18,7 +19,9 @@ import com.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
-import org.junit.Test;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
@@ -34,13 +37,10 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterables.last;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-public class RaftMachineTest
+class RaftMachineTest
 {
     private final int electionTimeout = 500;
     private MemberId myself = member( 0 );
@@ -57,18 +57,18 @@ public class RaftMachineTest
     private RaftLog raftLog = new InMemoryRaftLog();
 
     @Test
-    public void shouldAlwaysStartAsFollower()
+    void shouldAlwaysStartAsFollower()
     {
         // when
         RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
                 .build();
 
         // then
-        assertEquals( FOLLOWER, raft.currentRole() );
+        Assertions.assertEquals( FOLLOWER, raft.currentRole() );
     }
 
     @Test
-    public void shouldRequestVotesOnElectionTimeout() throws Exception
+    void shouldRequestVotesOnElectionTimeout() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -99,7 +99,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldBecomeLeaderInMajorityOf3() throws Exception
+    void shouldBecomeLeaderInMajorityOf3() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -121,7 +121,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldBecomeLeaderInMajorityOf5() throws Exception
+    void shouldBecomeLeaderInMajorityOf5() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -146,7 +146,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderOnMultipleVotesFromSameMember() throws Exception
+    void shouldNotBecomeLeaderOnMultipleVotesFromSameMember() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -169,7 +169,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderWhenVotingOnItself() throws Exception
+    void shouldNotBecomeLeaderWhenVotingOnItself() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -190,7 +190,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderWhenMembersVoteNo() throws Exception
+    void shouldNotBecomeLeaderWhenMembersVoteNo() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -212,7 +212,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderByVotesFromOldTerm() throws Exception
+    void shouldNotBecomeLeaderByVotesFromOldTerm() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -233,7 +233,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldVoteFalseForCandidateInOldTerm() throws Exception
+    void shouldVoteFalseForCandidateInOldTerm() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -259,7 +259,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderByVotesFromFutureTerm() throws Exception
+    void shouldNotBecomeLeaderByVotesFromFutureTerm() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -277,11 +277,11 @@ public class RaftMachineTest
         raft.handle( voteResponse().from( member2 ).term( 2 ).grant().build() );
 
         assertThat( raft.isLeader(), is( false ) );
-        assertEquals( raft.term(), 2L );
+        Assertions.assertEquals( raft.term(), 2L );
     }
 
     @Test
-    public void shouldAppendNewLeaderBarrierAfterBecomingLeader() throws Exception
+    void shouldAppendNewLeaderBarrierAfterBecomingLeader() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -304,11 +304,11 @@ public class RaftMachineTest
         raft.handle( voteResponse().from( member1 ).term( 1 ).grant().build() );
 
         // Then
-        assertEquals( new NewLeaderBarrier(), RaftLogHelper.readLogEntry( raftLog, raftLog.appendIndex() ).content() );
+        Assertions.assertEquals( new NewLeaderBarrier(), RaftLogHelper.readLogEntry( raftLog, raftLog.appendIndex() ).content() );
     }
 
     @Test
-    public void leaderShouldSendHeartBeatsOnHeartbeatTimeout() throws Exception
+    void leaderShouldSendHeartBeatsOnHeartbeatTimeout() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -331,12 +331,12 @@ public class RaftMachineTest
         timerService.invoke( RaftMachine.Timeouts.HEARTBEAT );
 
         // Then
-        assertTrue( last( messages.sentTo( member1 ) ) instanceof RaftMessages.Heartbeat );
-        assertTrue( last( messages.sentTo( member2 ) ) instanceof RaftMessages.Heartbeat );
+        Assertions.assertTrue( last( messages.sentTo( member1 ) ) instanceof RaftMessages.Heartbeat );
+        Assertions.assertTrue( last( messages.sentTo( member2 ) ) instanceof RaftMessages.Heartbeat );
     }
 
     @Test
-    public void shouldReturnNullIfReceivesClientRequestWithNoLeaderElected() throws Exception
+    void shouldReturnNullIfReceivesClientRequestWithNoLeaderElected() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -351,11 +351,11 @@ public class RaftMachineTest
         // When
         // There is no leader
         // Then
-        assertNull( raft.getLeaderInfo() );
+        MatcherAssert.assertThat( raft.getLeaderInfo(), OptionalMatchers.empty() );
     }
 
     @Test
-    public void shouldPersistAtSpecifiedLogIndex() throws Exception
+    void shouldPersistAtSpecifiedLogIndex() throws Exception
     {
         // given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -372,12 +372,12 @@ public class RaftMachineTest
         raft.handle( appendEntriesRequest().from( member1 ).prevLogIndex( 0 ).prevLogTerm( 0 ).leaderTerm( 0 )
                 .logEntry( new RaftLogEntry( 0, data1 ) ).build());
         // then
-        assertEquals( 1, raftLog.appendIndex() );
-        assertEquals( data1, RaftLogHelper.readLogEntry( raftLog, 1 ).content() );
+        Assertions.assertEquals( 1, raftLog.appendIndex() );
+        Assertions.assertEquals( data1, RaftLogHelper.readLogEntry( raftLog, 1 ).content() );
     }
 
     @Test
-    public void newMembersShouldBeIncludedInHeartbeatMessages() throws Exception
+    void newMembersShouldBeIncludedInHeartbeatMessages() throws Exception
     {
         // Given
         DirectNetworking network = new DirectNetworking();
@@ -409,11 +409,11 @@ public class RaftMachineTest
         network.processMessages();
 
         // Then
-        assertEquals( RaftMessages.AppendEntries.Request.class, messages.sentTo( newMember ).get( 0 ).getClass() );
+        Assertions.assertEquals( RaftMessages.AppendEntries.Request.class, messages.sentTo( newMember ).get( 0 ).getClass() );
     }
 
     @Test
-    public void shouldMonitorLeaderNotFound() throws Exception
+    void shouldMonitorLeaderNotFound() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -428,11 +428,11 @@ public class RaftMachineTest
         // When
         // There is no leader
         // Then
-        assertNull( raft.getLeaderInfo() );
+        MatcherAssert.assertThat( raft.getLeaderInfo(), OptionalMatchers.empty() );
     }
 
     @Test
-    public void shouldNotCacheInFlightEntriesUntilAfterRecovery() throws Exception
+    void shouldNotCacheInFlightEntriesUntilAfterRecovery() throws Exception
     {
         // given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -449,8 +449,8 @@ public class RaftMachineTest
                 .logEntry( new RaftLogEntry( 0, data1 ) ).build() );
 
         // then
-        assertEquals( data1, RaftLogHelper.readLogEntry( raftLog, 1 ).content() );
-        assertNull( inFlightCache.get( 1L ) );
+        Assertions.assertEquals( data1, RaftLogHelper.readLogEntry( raftLog, 1 ).content() );
+        Assertions.assertNull( inFlightCache.get( 1L ) );
 
         // when
         raft.postRecoveryActions();
@@ -458,7 +458,7 @@ public class RaftMachineTest
                 .logEntry( new RaftLogEntry( 0, data2 ) ).build() );
 
         // then
-        assertEquals( data2, RaftLogHelper.readLogEntry( raftLog, 2 ).content() );
-        assertEquals( data2, inFlightCache.get( 2L ).content() );
+        Assertions.assertEquals( data2, RaftLogHelper.readLogEntry( raftLog, 2 ).content() );
+        Assertions.assertEquals( data2, inFlightCache.get( 2L ).content() );
     }
 }

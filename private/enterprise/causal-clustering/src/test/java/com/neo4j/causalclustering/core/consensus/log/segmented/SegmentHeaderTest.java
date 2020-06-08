@@ -6,20 +6,18 @@
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.impl.transaction.log.InMemoryClosableChannel;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 // TODO: Tests for new segment header
-public class SegmentHeaderTest
+class SegmentHeaderTest
 {
     private SegmentHeader.Marshal marshal = new SegmentHeader.Marshal();
 
     @Test
-    public void shouldWriteAndReadHeader() throws Exception
+    void shouldWriteAndReadHeader() throws Exception
     {
         // given
         long prevFileLastIndex = 1;
@@ -36,11 +34,11 @@ public class SegmentHeaderTest
         SegmentHeader readHeader = marshal.unmarshal( channel );
 
         // then
-        assertEquals( writtenHeader, readHeader );
+        Assertions.assertEquals( writtenHeader, readHeader );
     }
 
     @Test
-    public void shouldThrowExceptionWhenReadingIncompleteHeader() throws Exception
+    void shouldThrowExceptionWhenReadingIncompleteHeader() throws Exception
     {
         // given
         long prevFileLastIndex = 1;
@@ -58,7 +56,7 @@ public class SegmentHeaderTest
         try
         {
             marshal.unmarshal( channel );
-            fail();
+            Assertions.fail();
         }
         catch ( EndOfStreamException e )
         {

@@ -752,7 +752,7 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyTryingToWrite()" ).next() );
-            assertThat( exception.getMessage() ).startsWith( "Write operations are not allowed" );
+            assertThat( exception.getMessage() ).startsWith( "Create node with labels '' is not allowed" );
         }
     }
 
@@ -829,7 +829,7 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyCallingWriteProcedure" ).next() );
-            assertThat( exception.getMessage() ).contains( "Write operations are not allowed" );
+            assertThat( exception.getMessage() ).contains( "Create node with labels '' is not allowed" );
         }
     }
 
@@ -1365,7 +1365,7 @@ public class ProcedureIT
                         tx.commit();
                     }
                 } );
-        assertThat( exception.getMessage() ).startsWith( "Write operations are not allowed" );
+        assertThat( exception.getMessage() ).startsWith( "Create node with labels '' is not allowed" );
     }
 
     @Test

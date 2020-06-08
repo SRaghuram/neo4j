@@ -23,12 +23,15 @@ import java.util.Iterator;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
+<<<<<<< HEAD
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+=======
+import org.neo4j.internal.kernel.api.PropertyCursor;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -45,8 +48,9 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
 {
     private static final int NODE = -2;
     private Read read;
-    private StoragePropertyCursor storeCursor;
-    private final PageCursorTracer cursorTracer;
+    private final StoragePropertyCursor storeCursor;
+    private final FullAccessNodeCursor nodeCursor;
+    private final FullAccessRelationshipScanCursor relCursor;
     private EntityState propertiesState;
     private Iterator<StorageProperty> txStateChangedProperties;
     private StorageProperty txStateValue;
@@ -59,11 +63,13 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
     private int type = NO_TOKEN;
     private boolean addedInTx;
 
-    DefaultPropertyCursor( CursorPool<DefaultPropertyCursor> pool, StoragePropertyCursor storeCursor, PageCursorTracer cursorTracer )
+    DefaultPropertyCursor( CursorPool<DefaultPropertyCursor> pool, StoragePropertyCursor storeCursor,
+                           FullAccessNodeCursor nodeCursor, FullAccessRelationshipScanCursor relCursor )
     {
         this.pool = pool;
         this.storeCursor = storeCursor;
-        this.cursorTracer = cursorTracer;
+        this.nodeCursor = nodeCursor;
+        this.relCursor = relCursor;
     }
 
     void initNode( long nodeReference, Reference reference, Read read, AssertOpen assertOpen )
@@ -200,7 +206,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         while ( storeCursor.next() )
         {
             boolean skip = propertiesState != null && propertiesState.isPropertyChangedOrRemoved( storeCursor.propertyKey() );
-            if ( !skip && allowed( ) )
+            if ( !skip && allowed() )
             {
                 if ( tracer != null )
                 {
@@ -265,7 +271,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
     @Override
     public boolean seekProperty( int property )
     {
-        if ( property == NO_TOKEN  )
+        if ( property == NO_TOKEN )
         {
             return false;
         }
@@ -317,7 +323,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         else
         {
             return "PropertyCursor[id=" + propertyKey() +
-                   ", " + storeCursor.toString() + " ]";
+                   ", " + storeCursor + " ]";
         }
     }
 
@@ -332,12 +338,9 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
 
         if ( labels == null )
         {
-            try ( NodeCursor nodeCursor = read.cursors().allocateFullAccessNodeCursor( cursorTracer ) )
-            {
-                read.singleNode( entityReference, nodeCursor );
-                nodeCursor.next();
-                labels = nodeCursor.labelsIgnoringTxStateSetRemove();
-            }
+            read.singleNode( entityReference, nodeCursor );
+            nodeCursor.next();
+            labels = nodeCursor.labelsIgnoringTxStateSetRemove();
         }
         return labels;
     }
@@ -349,13 +352,9 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
 
         if ( type < 0 )
         {
-            try ( RelationshipScanCursor relCursor = read.cursors()
-                    .allocateFullAccessRelationshipScanCursor( cursorTracer ) )
-            {
-                read.singleRelationship( entityReference, relCursor );
-                relCursor.next();
-                this.type = relCursor.type();
-            }
+            read.singleRelationship( entityReference, relCursor );
+            relCursor.next();
+            this.type = relCursor.type();
         }
         return type;
     }
@@ -371,6 +370,10 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
     public void release()
     {
         storeCursor.close();
+        nodeCursor.close();
+        nodeCursor.release();
+        relCursor.close();
+        relCursor.release();
     }
 
     private boolean isNode()

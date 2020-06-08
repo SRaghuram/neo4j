@@ -117,6 +117,13 @@ class PrivilegeBuilder
         case ALL_PROPERTIES:
             this.resource = new Resource.AllPropertiesResource();
             break;
+        case LABEL:
+            String label = resourceNode.getProperty( "arg1" ).toString();
+            this.resource = new Resource.LabelResource( label );
+            break;
+        case ALL_LABELS:
+            this.resource = new Resource.AllLabelsResource();
+            break;
         case PROCEDURE:
             String namespace = resourceNode.getProperty( "arg1" ).toString();
             String procedureName = resourceNode.getProperty( "arg2" ).toString();

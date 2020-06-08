@@ -555,7 +555,7 @@ public abstract class CompositeIndexAccessorCompatibility extends IndexAccessorC
         DateTimeValue d3 = datetime( 10000, 100, ZoneId.of( "+01:00" ) );
         DateTimeValue d4 = datetime( 10000, 100, ZoneId.of( "Europe/Stockholm" ) );
         DateTimeValue d5 = datetime( 10000, 100, ZoneId.of( "+03:00" ) );
-        testIndexSeekRangeWithExists( d1, d2, d3, d4, d5  );
+        testIndexSeekRangeWithExists( d1, d2, d3, d4, d5 );
     }
 
     @Test
@@ -670,7 +670,7 @@ public abstract class CompositeIndexAccessorCompatibility extends IndexAccessorC
         {
             // then
             List<Long> hits = query( exact( 0, update.values()[0] ), exact( 1, update.values()[1] ) );
-            assertEquals( update.describe( tokenNameLookup ) + " " + hits.toString(), 1, hits.size() );
+            assertEquals( update.describe( tokenNameLookup ) + " " + hits, 1, hits.size() );
             assertThat( single( hits ) ).isEqualTo( update.getEntityId() );
         }
     }
@@ -1073,7 +1073,7 @@ public abstract class CompositeIndexAccessorCompatibility extends IndexAccessorC
     public void shouldRangeSeekInOrderAscendingLocalTimeArray() throws Exception
     {
         Object o0 = new LocalTime[]{LocalTime.of( 10, 0 )};
-        Object o1 = new LocalTime[]{LocalTime.of( 10, 1  )};
+        Object o1 = new LocalTime[]{LocalTime.of( 10, 1 )};
         Object o2 = new LocalTime[]{LocalTime.of( 10, 2 )};
         Object o3 = new LocalTime[]{LocalTime.of( 10, 3 )};
         Object o4 = new LocalTime[]{LocalTime.of( 10, 4 )};
@@ -1244,7 +1244,7 @@ public abstract class CompositeIndexAccessorCompatibility extends IndexAccessorC
                 if ( legal )
                 {
                     // when
-                    reader.query( NULL_CONTEXT, client, unconstrained(), NULL, theQuery );
+                    reader.query( NULL_CONTEXT, client, unconstrained(), theQuery );
 
                     // then should not throw
                 }
@@ -1253,7 +1253,7 @@ public abstract class CompositeIndexAccessorCompatibility extends IndexAccessorC
                     try
                     {
                         // when
-                        reader.query( NULL_CONTEXT, client, unconstrained(), NULL, theQuery );
+                        reader.query( NULL_CONTEXT, client, unconstrained(), theQuery );
                         fail( "Expected index reader to throw for illegal composite query. Query was, " + Arrays.toString( theQuery ) );
                     }
                     catch ( IllegalArgumentException e )

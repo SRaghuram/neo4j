@@ -48,22 +48,10 @@ public class TrackingRecordAccess<RECORD, ADDITIONAL> implements RecordAccess<RE
     }
 
     @Override
-    public void close()
-    {
-        delegate.close();
-    }
-
-    @Override
     public RecordProxy<RECORD,ADDITIONAL> getIfLoaded( long key )
     {
         RecordProxy<RECORD,ADDITIONAL> actual = delegate.getIfLoaded( key );
         return actual == null ? null : new TrackingRecordProxy<>( actual, false, tracker );
-    }
-
-    @Override
-    public void setTo( long key, RECORD newRecord, ADDITIONAL additionalData, PageCursorTracer cursorTracer )
-    {
-        delegate.setTo( key, newRecord, additionalData, cursorTracer );
     }
 
     @Override

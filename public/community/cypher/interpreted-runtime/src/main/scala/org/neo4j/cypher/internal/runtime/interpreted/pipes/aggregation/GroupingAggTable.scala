@@ -48,6 +48,13 @@ class GroupingAggTable(groupingColumns: Array[GroupingCol],
   protected val addKeys: (CypherRow, AnyValue) => Unit = AggregationPipe.computeAddKeysToResultRowFunction(groupingColumns)
 
   override def clear(): Unit = {
+    // TODO: Use a heap tracking collection or ScopedMemoryTracker instead
+    if (resultMap != null) {
+      resultMap.forEach { (key, functions) =>
+        state.memoryTracker.deallocated(key, operatorId.x)
+        functions.foreach(_.recordMemoryDeallocation())
+      }
+    }
     resultMap = new java.util.LinkedHashMap[AnyValue, Array[AggregationFunction]]()
   }
 

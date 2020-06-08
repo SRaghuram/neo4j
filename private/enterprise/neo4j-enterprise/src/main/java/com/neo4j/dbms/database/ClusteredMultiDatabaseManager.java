@@ -7,7 +7,6 @@ package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContextFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
@@ -32,7 +31,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
 {
     protected final FileSystemAbstraction fs;
     private final PageCache pageCache;
-    protected final ClusteredDatabaseContextFactory contextFactory;
     protected final LogProvider logProvider;
     protected final Log log;
     protected final Config config;
@@ -45,8 +43,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
         super( globalModule, edition );
-        this.internalDbmsOperator = new ClusterInternalDbmsOperator();
-        this.contextFactory = DefaultClusteredDatabaseContext::new;
+        this.internalDbmsOperator = new ClusterInternalDbmsOperator( logProvider );
         this.logProvider = logProvider;
         this.fs = fs;
         this.log = logProvider.getLog( this.getClass() );

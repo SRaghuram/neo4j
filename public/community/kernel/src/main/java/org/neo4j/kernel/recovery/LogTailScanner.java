@@ -26,6 +26,7 @@ import java.util.Arrays;
 
 import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
@@ -37,6 +38,10 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -65,20 +70,29 @@ public class LogTailScanner
     private LogTailInformation logTailInformation;
     private final LogTailScannerMonitor monitor;
     private final boolean failOnCorruptedLogFiles;
+    private final Log log;
+    private final MemoryTracker memoryTracker;
 
-    public LogTailScanner( LogFiles logFiles, LogEntryReader logEntryReader, Monitors monitors )
+    public LogTailScanner( LogFiles logFiles, LogEntryReader logEntryReader, Monitors monitors, MemoryTracker memoryTracker )
     {
-        this( logFiles, logEntryReader, monitors, false );
+        this( logFiles, logEntryReader, monitors, false, memoryTracker );
+    }
+
+    public LogTailScanner( LogFiles logFiles, LogEntryReader logEntryReader, Monitors monitors, boolean failOnCorruptedLogFiles, MemoryTracker memoryTracker )
+    {
+        this( logFiles, logEntryReader, monitors, failOnCorruptedLogFiles, NullLogProvider.getInstance(), memoryTracker );
     }
 
     public LogTailScanner( LogFiles logFiles,
-            LogEntryReader logEntryReader, Monitors monitors,
-            boolean failOnCorruptedLogFiles )
+                           LogEntryReader logEntryReader, Monitors monitors,
+                           boolean failOnCorruptedLogFiles, LogProvider log, MemoryTracker memoryTracker )
     {
         this.logFiles = logFiles;
         this.logEntryReader = logEntryReader;
         this.monitor = monitors.newMonitor( LogTailScannerMonitor.class );
         this.failOnCorruptedLogFiles = failOnCorruptedLogFiles;
+        this.log = log.getLog( getClass() );
+        this.memoryTracker = memoryTracker;
     }
 
     private LogTailInformation findLogTail() throws IOException
@@ -95,12 +109,13 @@ public class LogTailScanner
 
         while ( version >= logFiles.getLowestLogVersion() && version >= INITIAL_LOG_VERSION )
         {
+            log.info( "Scanning transaction file with version %d for checkpoint entries", version );
+
             oldestVersionFound = version;
             CheckPoint latestCheckPoint = null;
             StoreId storeId = StoreId.UNKNOWN;
             try ( LogVersionedStoreChannel channel = logFiles.openForVersion( version );
-                  ReadAheadLogChannel readAheadLogChannel = new ReadAheadLogChannel( channel );
-                  LogEntryCursor cursor = new LogEntryCursor( logEntryReader, readAheadLogChannel ) )
+                  LogEntryCursor cursor = new LogEntryCursor( logEntryReader, new ReadAheadLogChannel( channel, memoryTracker ) ) )
             {
                 LogHeader logHeader = logFiles.extractHeader( version );
                 storeId = logHeader.getStoreId();
@@ -222,14 +237,17 @@ public class LogTailScanner
         try
         {
             channel.position( logPosition.getByteOffset() );
-            ByteBuffer byteBuffer = ByteBuffers.allocate( safeCastLongToInt( min( kibiBytes( 12 ), channelLeftovers ) ) );
-            channel.readAll( byteBuffer );
-            byteBuffer.flip();
-            if ( !isAllZerosBuffer( byteBuffer ) )
+            try ( var scopedBuffer = new HeapScopedBuffer( safeCastLongToInt( min( kibiBytes( 12 ), channelLeftovers ) ), memoryTracker ) )
             {
-                throw new RuntimeException( format( "Transaction log files with version %d has some data available after last readable log entry. " +
-                                "Last readable position %d, read ahead buffer content: %s.", version, logPosition.getByteOffset(),
-                        dumpBufferToString( byteBuffer ) ) );
+                ByteBuffer byteBuffer = scopedBuffer.getBuffer();
+                channel.readAll( byteBuffer );
+                byteBuffer.flip();
+                if ( !isAllZerosBuffer( byteBuffer ) )
+                {
+                    throw new RuntimeException( format( "Transaction log files with version %d has some data available after last readable log entry. " +
+                            "Last readable position %d, read ahead buffer content: %s.", version, logPosition.getByteOffset(),
+                            dumpBufferToString( byteBuffer ) ) );
+                }
             }
         }
         finally
@@ -277,8 +295,7 @@ public class LogTailScanner
                 try ( LogVersionedStoreChannel storeChannel = logFiles.openForVersion( logVersion ) )
                 {
                     storeChannel.position( currentPosition.getByteOffset() );
-                    try ( ReadAheadLogChannel logChannel = new ReadAheadLogChannel( storeChannel );
-                            LogEntryCursor cursor = new LogEntryCursor( logEntryReader, logChannel ) )
+                    try ( LogEntryCursor cursor = new LogEntryCursor( logEntryReader, new ReadAheadLogChannel( storeChannel, memoryTracker ) ) )
                     {
                         while ( cursor.next() )
                         {
@@ -438,7 +455,7 @@ public class LogTailScanner
             return recordAfterCheckpoint;
         }
 
-        boolean logsMissing()
+        public boolean logsMissing()
         {
             return lastCheckPoint == null && oldestLogVersionFound == -1;
         }
@@ -455,6 +472,5 @@ public class LogTailScanner
                     ", oldestLogVersionFound=" + oldestLogVersionFound + ", currentLogVersion=" + currentLogVersion + ", latestLogEntryVersion=" +
                     latestLogEntryVersion + ", recordAfterCheckpoint=" + recordAfterCheckpoint + '}';
         }
-
     }
 }

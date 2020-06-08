@@ -90,6 +90,11 @@ class RaftMembershipChanger
         handleState( state.onRole( role ) );
     }
 
+    void onLeadershipTransfer( boolean areTransferring )
+    {
+        handleState( state.onLeadershipTransfer( areTransferring ) );
+    }
+
     void onRaftGroupCommitted()
     {
         handleState( state.onRaftGroupCommitted() );
@@ -149,6 +154,42 @@ class RaftMembershipChanger
             if ( role != Role.LEADER )
             {
                 return new Inactive();
+            }
+            else
+            {
+                return this;
+            }
+        }
+
+        @Override
+        public RaftMembershipStateMachineEventHandler onLeadershipTransfer( boolean areTransferring )
+        {
+            if ( areTransferring )
+            {
+                return new TransferringLeadership();
+            }
+            else
+            {
+                return this;
+            }
+        }
+    }
+
+    private class TransferringLeadership extends ActiveBaseState
+    {
+        @Override
+        public RaftMembershipStateMachineEventHandler onLeadershipTransfer( boolean areTransferring )
+        {
+            if ( !areTransferring )
+            {
+                if ( membershipManager.uncommittedMemberChangeInLog() )
+                {
+                    return new ConsensusInProgress();
+                }
+                else
+                {
+                    return new Idle();
+                }
             }
             else
             {

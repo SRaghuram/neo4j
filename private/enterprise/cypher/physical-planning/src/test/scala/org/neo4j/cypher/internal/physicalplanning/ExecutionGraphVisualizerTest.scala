@@ -9,6 +9,7 @@ import java.lang
 
 import org.neo4j.cypher.internal.ExecutionPlan
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer.getExecutionPlan
 import org.neo4j.cypher.internal.runtime.TestSubscriber
@@ -125,7 +126,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     val bufs = Seq(
       TNode(Map("name" -> "ApplyBuffer[0]", "id" -> (0: Integer), "argumentSlotOffset" -> (-1: Integer)), "Start", "Buffer"),
       TNode(Map("name" -> "Buffer[1]", "id" -> (1: Integer)), "Buffer"),
-      TNode(Map("name" -> "OptionalBuffer[2]", "id" -> (2: Integer)), "Buffer"),
+      TNode(Map("name" -> "ArgumentStreamBuffer[2]", "id" -> (2: Integer)), "Buffer"),
     )
     val pipes = Seq(
       TNode(Map("name" -> "Pipeline[0]", "id" -> (0: Integer), "serial" -> (false: lang.Boolean)), "Pipeline"),
@@ -268,7 +269,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
       .produceResults("n")
       .nodeHashJoin("n").withBreak()
-      .|.nodeByLabelScan("n", "N").withBreak()
+      .|.nodeByLabelScan("n", "N", IndexOrderNone).withBreak()
       .allNodeScan("n").withBreak()
       .build())
 
@@ -326,7 +327,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
       .produceResults("n")
       .cartesianProduct().withBreak()
-      .|.nodeByLabelScan("m", "M").withBreak()
+      .|.nodeByLabelScan("m", "M", IndexOrderNone).withBreak()
       .allNodeScan("n").withBreak()
       .build())
 
@@ -389,7 +390,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
       .produceResults("n")
       .apply().withBreak()
-      .|.nodeByLabelScan("n", "N", "n").withBreak()
+      .|.nodeByLabelScan("n", "N", IndexOrderNone, "n").withBreak()
       .allNodeScan("n").withBreak()
       .build())
 

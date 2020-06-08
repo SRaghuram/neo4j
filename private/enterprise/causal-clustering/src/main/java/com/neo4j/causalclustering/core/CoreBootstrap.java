@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.BootstrapSaver;
+import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.BoundState;
@@ -36,10 +36,11 @@ class CoreBootstrap
     private final DatabaseStartAborter databaseStartAborter;
     private final SimpleStorage<RaftId> raftIdStorage;
     private final BootstrapSaver bootstrapSaver;
+    private final TempBootstrapDir tempBootstrapDir;
 
     CoreBootstrap( Database kernelDatabase, RaftBinder raftBinder, LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService,
             CoreDownloaderService downloadService, ClusterInternalDbmsOperator clusterInternalOperator, DatabaseStartAborter databaseStartAborter,
-            SimpleStorage<RaftId> raftIdStorage, BootstrapSaver bootstrapSaver )
+            SimpleStorage<RaftId> raftIdStorage, BootstrapSaver bootstrapSaver, TempBootstrapDir tempBootstrapDir )
     {
         this.kernelDatabase = kernelDatabase;
         this.raftBinder = raftBinder;
@@ -50,6 +51,7 @@ class CoreBootstrap
         this.databaseStartAborter = databaseStartAborter;
         this.raftIdStorage = raftIdStorage;
         this.bootstrapSaver = bootstrapSaver;
+        this.tempBootstrapDir = tempBootstrapDir;
     }
 
     public void perform() throws Exception
@@ -69,6 +71,9 @@ class CoreBootstrap
     private void bindAndStartMessageHandler() throws Exception
     {
         bootstrapSaver.restore( kernelDatabase.getDatabaseLayout() );
+        // Previous versions could leave "temp-bootstrap" around, so this deletion is a cleanup of that.
+        tempBootstrapDir.delete();
+
         BoundState boundState = raftBinder.bindToRaft( databaseStartAborter );
 
         if ( boundState.snapshot().isPresent() )
@@ -87,6 +92,7 @@ class CoreBootstrap
             }
             catch ( Exception e )
             {
+                downloadService.stop(); // The handler might be blocked doing a download, so we need to stop it.
                 raftMessageHandler.stop();
                 throw e;
             }
@@ -110,7 +116,7 @@ class CoreBootstrap
     {
         var waitTime = Duration.ofSeconds( 1 );
         snapshotService.awaitState( databaseStartAborter, waitTime );
-        Optional<JobHandle> downloadJob = downloadService.downloadJob();
+        Optional<JobHandle<?>> downloadJob = downloadService.downloadJob();
         if ( downloadJob.isPresent() )
         {
             downloadJob.get().waitTermination();

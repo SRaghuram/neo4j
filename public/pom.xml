@@ -94,6 +94,9 @@
       -Djunit.jupiter.execution.parallel.mode.classes.default=${default.jupiter.test.mode}
       -XX:+UnlockExperimentalVMOptions
       -XX:+TrustFinalNonStaticFields
+      -XX:FlightRecorderOptions=stackdepth=256
+      -XX:+UnlockDiagnosticVMOptions
+      -XX:+DebugNonSafepoints
       ${test.runner.jvm.settings.additional}
     </test.runner.jvm.settings>
     <default.jupiter.test.timeout>20m</default.jupiter.test.timeout>
@@ -103,26 +106,28 @@
 
     <license-text.header>headers/AGPL-3-header.txt</license-text.header>
 
-    <lucene.version>8.5.0</lucene.version>
-    <bouncycastle.version>1.64</bouncycastle.version>
+    <jamm.version>0.3.3</jamm.version>
+    <lucene.version>8.5.1</lucene.version>
+    <bouncycastle.version>1.65</bouncycastle.version>
     <jetty.version>9.4.26.v20200117</jetty.version>
     <findbugs.version>3.0.1</findbugs.version>
     <scala-maven-plugin.version>4.3.0</scala-maven-plugin.version>
     <scala.version>2.12.10</scala.version>
     <scala.binary.version>2.12</scala.binary.version>
-    <asm.version>7.3.1</asm.version>
-    <metrics.version>4.1.5</metrics.version>
+    <scala.plugin.recompileMode>all</scala.plugin.recompileMode>
+    <asm.version>8.0.1</asm.version>
+    <metrics.version>4.1.7</metrics.version>
     <scala.target.vm>1.8</scala.target.vm>
     <jersey.version>2.30.1</jersey.version>
-    <junit.version>5.6.1</junit.version>
-    <junit.platform.version>1.6.1</junit.platform.version>
+    <junit.version>5.6.2</junit.version>
+    <junit.platform.version>1.6.2</junit.platform.version>
     <currentYear>2020</currentYear>
     <opencypher.version>1.0.0-M15</opencypher.version>
-    <caffeine.version>2.8.1</caffeine.version>
+    <caffeine.version>2.8.2</caffeine.version>
     <required.maven.version>3.5.4</required.maven.version>
-    <jackson.version>2.10.2</jackson.version>
+    <jackson.version>2.11.0</jackson.version>
 	<amazon-sdk.version>1.11.524</amazon-sdk.version>
-    <guava.version>28.2-jre</guava.version>
+    <guava.version>29.0-jre</guava.version>
     <awaitility.version>4.0.2</awaitility.version>
     <skip-scalastyle>false</skip-scalastyle>
   </properties>
@@ -477,6 +482,7 @@
             </includes>
             <excludes>
               <exclude>**/cypher-shell/*</exclude>
+              <exclude>**/apoc/*</exclude>
             </excludes>
             <mapping>
               <java>SLASHSTAR_STYLE</java>
@@ -506,6 +512,7 @@
           <configuration>
             <scalaVersion>${scala.version}</scalaVersion>
             <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
+            <recompileMode>${scala.plugin.recompileMode}</recompileMode>
             <args>
               <arg>-Xmax-classfile-name</arg>
               <arg>100</arg>
@@ -580,17 +587,20 @@
           <configuration>
             <showDeprecation>true</showDeprecation>
             <showWarnings>true</showWarnings>
+            <compilerArgs>
+              <arg>-Xpkginfo:always</arg><!-- Prevents recompilation due to missing package-info.class, see MCOMPILER-368,-205 -->
+            </compilerArgs>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-antrun-plugin</artifactId>
-          <version>1.8</version>
+          <version>3.0.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.1.2</version>
           <dependencies>
             <dependency>
               <groupId>org.apache.maven.shared</groupId>
@@ -632,12 +642,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.1</version>
+          <version>3.2.3</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.3.0</version>
           <configuration>
             <tarLongFileMode>gnu</tarLongFileMode>
           </configuration>
@@ -682,7 +692,7 @@
       <!-- Checkstyle is always validated -->
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.1.0</version>
+        <version>3.1.1</version>
         <configuration>
           <configLocation>checkstyle/checkstyle.xml</configLocation>
           <consoleOutput>true</consoleOutput>
@@ -695,7 +705,7 @@
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
             <artifactId>checkstyle</artifactId>
-            <version>8.30</version>
+            <version>8.32</version>
           </dependency>
           <dependency>
             <groupId>org.neo4j.build</groupId>
@@ -727,6 +737,7 @@
           <testSourceDirectory>${project.basedir}/src/test/scala</testSourceDirectory>
           <configLocation>checkstyle/scalastyle_config.xml</configLocation>
           <skip>${skip-scalastyle}</skip>
+          <inputEncoding>UTF-8</inputEncoding>
         </configuration>
         <dependencies>
           <dependency>
@@ -820,6 +831,7 @@
                   -Xep:ReturnValueIgnored:WARN
                   -Xep:InvalidZoneId:WARN
                 </arg>
+                <arg>-Xpkginfo:always</arg><!-- Prevents recompilation due to missing package-info.class, see MCOMPILER-368,-205 -->
               </compilerArgs>
               <annotationProcessorPaths>
                 <path>
@@ -943,25 +955,19 @@
 
     <profile>
       <id>zinc</id>
-      <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>net.alchim31.maven</groupId>
-              <artifactId>scala-maven-plugin</artifactId>
-              <version>${scala-maven-plugin.version}</version>
-              <configuration>
-                <recompileMode>incremental</recompileMode>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
-      </build>
+      <properties>
+        <scala.plugin.recompileMode>incremental</scala.plugin.recompileMode>
+      </properties>
     </profile>
   </profiles>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.codehaus.jettison</groupId>
+        <artifactId>jettison</artifactId>
+        <version>1.4.1</version>
+      </dependency>
       <dependency>
         <groupId>net.java.dev.jna</groupId>
         <artifactId>jna</artifactId>
@@ -1000,7 +1006,7 @@
       <dependency>
         <groupId>org.apache.shiro</groupId>
         <artifactId>shiro-core</artifactId>
-        <version>1.5.2</version>
+        <version>1.5.3</version>
       </dependency>
       <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
@@ -1036,6 +1042,16 @@
         <groupId>org.hdrhistogram</groupId>
         <artifactId>HdrHistogram</artifactId>
         <version>2.1.12</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.jbellis</groupId>
+        <artifactId>jamm</artifactId>
+        <version>${jamm.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.projectreactor</groupId>
+        <artifactId>reactor-core</artifactId>
+        <version>3.3.5.RELEASE</version>
       </dependency>
 
       <!-- testing -->
@@ -1102,7 +1118,7 @@
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
-        <version>3.15.0</version>
+        <version>3.16.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1214,26 +1230,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>com.github.salat</groupId>
-        <artifactId>salat-core_${scala.binary.version}</artifactId>
-        <version>1.11.2</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-          </exclusion>
-          <exclusion>
-            <artifactId>scalap</artifactId>
-            <groupId>org.scala-lang</groupId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.scala-lang.modules</groupId>
-            <artifactId>scala-xml_${scala.binary.version}</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>com.lihaoyi</groupId>
         <artifactId>pprint_${scala.binary.version}</artifactId>
         <version>0.5.3</version>
@@ -1289,7 +1285,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
-        <version>3.9</version>
+        <version>3.10</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -1304,7 +1300,7 @@
       <dependency>
         <groupId>com.github.luben</groupId>
         <artifactId>zstd-jni</artifactId>
-        <version>1.4.4-7</version>
+        <version>1.4.4-11</version>
       </dependency>
 
       <dependency>
@@ -1315,7 +1311,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative-boringssl-static</artifactId>
-        <version>2.0.27.Final</version>
+        <version>2.0.30.Final</version>
         <scope>test</scope>
       </dependency>
 

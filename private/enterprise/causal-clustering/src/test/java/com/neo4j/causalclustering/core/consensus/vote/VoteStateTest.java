@@ -6,20 +6,15 @@
 package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-public class VoteStateTest
+class VoteStateTest
 {
     @Test
-    public void shouldStoreVote()
+    void shouldStoreVote()
     {
         // given
         VoteState voteState = new VoteState();
@@ -29,21 +24,21 @@ public class VoteStateTest
         voteState.update( member, 0 );
 
         // then
-        assertEquals( member, voteState.votedFor() );
+        Assertions.assertEquals( member, voteState.votedFor() );
     }
 
     @Test
-    public void shouldStartWithNoVote()
+    void shouldStartWithNoVote()
     {
         // given
         VoteState voteState = new VoteState();
 
         // then
-        assertNull( voteState.votedFor() );
+        Assertions.assertNull( voteState.votedFor() );
     }
 
     @Test
-    public void shouldUpdateVote()
+    void shouldUpdateVote()
     {
         // given
         VoteState voteState = new VoteState();
@@ -55,11 +50,11 @@ public class VoteStateTest
         voteState.update( member2, 1 );
 
         // then
-        assertEquals( member2, voteState.votedFor() );
+        Assertions.assertEquals( member2, voteState.votedFor() );
     }
 
     @Test
-    public void shouldClearVote()
+    void shouldClearVote()
     {
         // given
         VoteState voteState = new VoteState();
@@ -71,11 +66,11 @@ public class VoteStateTest
         voteState.update( null, 1 );
 
         // then
-        assertNull( voteState.votedFor() );
+        Assertions.assertNull( voteState.votedFor() );
     }
 
     @Test
-    public void shouldNotUpdateVoteForSameTerm()
+    void shouldNotUpdateVoteForSameTerm()
     {
         // given
         VoteState voteState = new VoteState();
@@ -88,7 +83,7 @@ public class VoteStateTest
         {
             // when
             voteState.update( member2, 0 );
-            fail( "Should have thrown IllegalArgumentException" );
+            Assertions.fail( "Should have thrown IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
         {
@@ -97,7 +92,7 @@ public class VoteStateTest
     }
 
     @Test
-    public void shouldNotClearVoteForSameTerm()
+    void shouldNotClearVoteForSameTerm()
     {
         // given
         VoteState voteState = new VoteState();
@@ -109,7 +104,7 @@ public class VoteStateTest
         {
             // when
             voteState.update( null, 0 );
-            fail( "Should have thrown IllegalArgumentException" );
+            Assertions.fail( "Should have thrown IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
         {
@@ -118,7 +113,7 @@ public class VoteStateTest
     }
 
     @Test
-    public void shouldReportNoUpdateWhenVoteStateUnchanged()
+    void shouldReportNoUpdateWhenVoteStateUnchanged()
     {
         // given
         VoteState voteState = new VoteState();
@@ -126,11 +121,11 @@ public class VoteStateTest
         MemberId member2 = new MemberId( UUID.randomUUID() );
 
         // when
-        assertTrue( voteState.update( null, 0 ) );
-        assertFalse( voteState.update( null, 0 ) );
-        assertTrue( voteState.update( member1, 0 ) );
-        assertFalse( voteState.update( member1, 0 ) );
-        assertTrue( voteState.update( member2, 1 ) );
-        assertFalse( voteState.update( member2, 1 ) );
+        Assertions.assertTrue( voteState.update( null, 0 ) );
+        Assertions.assertFalse( voteState.update( null, 0 ) );
+        Assertions.assertTrue( voteState.update( member1, 0 ) );
+        Assertions.assertFalse( voteState.update( member1, 0 ) );
+        Assertions.assertTrue( voteState.update( member2, 1 ) );
+        Assertions.assertFalse( voteState.update( member2, 1 ) );
     }
 }

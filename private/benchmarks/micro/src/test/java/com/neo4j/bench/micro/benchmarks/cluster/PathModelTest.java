@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ public class PathModelTest
     private EditionModuleBackedAbstractBenchmark editionModuleBackedAbstractBenchmark;
 
     @AfterEach
-    void cleanupDB()
+    void cleanupDB() throws Throwable
     {
         editionModuleBackedAbstractBenchmark.benchmarkTearDown();
     }

@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -52,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTest
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MultiNodeIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeCountFromCountStoreTestBase
@@ -64,6 +66,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndComposi
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeLockingUniqueIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
@@ -74,7 +77,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PartialSortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.PartialTop1TestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.PartialTopNTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallDbHitsTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTrackingDisabledTestBase
@@ -87,6 +89,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
@@ -162,8 +165,9 @@ class InterpretedProvidedOrderTest extends ProvidedOrderTestBase(COMMUNITY.EDITI
                                    with CartesianProductProvidedOrderTestBase[CommunityRuntimeContext]
 class InterpretedProfileDbHitsTest extends LegacyDbHitsTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
                                    with ProcedureCallDbHitsTestBase[CommunityRuntimeContext]
+                                   with NestedPlanDbHitsTestBase[CommunityRuntimeContext]
 class InterpretedProfileRowsTest extends ProfileRowsTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT, 1)
-                                 with ProcedureCallRowsTestBase[CommunityRuntimeContext]
+                                 with NonParallelProfileRowsTestBase[CommunityRuntimeContext]
 class InterpretedMemoryManagementTest extends MemoryManagementTestBase(COMMUNITY.EDITION, InterpretedRuntime)
                                       with FullSupportMemoryManagementTestBase[CommunityRuntimeContext]
 class InterpretedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(COMMUNITY.EDITION, InterpretedRuntime)
@@ -180,6 +184,8 @@ class InterpretedShortestPathTest extends ShortestPathTestBase(COMMUNITY.EDITION
 class InterpretedUnionTest extends UnionTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedSemiApplyTest extends SemiApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedAntiSemiApplyTest extends AntiSemiApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
+class InterpretedConditionalApplyTest extends ConditionalApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 
+class InterpretedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedRollupApplyTest extends RollupApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)

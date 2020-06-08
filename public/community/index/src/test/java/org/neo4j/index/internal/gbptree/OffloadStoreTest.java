@@ -45,7 +45,7 @@ class OffloadStoreTest
     void setup()
     {
         cursor = new PageAwareByteArrayCursor( PAGE_SIZE );
-        idProvider = new SimpleIdProvider( cursor::duplicate );
+        idProvider = new SimpleIdProvider();
         pcFactory = ( id, flags, cursorTracer ) -> cursor.duplicate( id );
         idValidator = OffloadIdValidator.ALWAYS_TRUE;
     }
@@ -59,7 +59,7 @@ class OffloadStoreTest
         RawBytes value = layout.newValue();
         key.bytes = new byte[200];
         value.bytes = new byte[offloadStore.maxEntrySize() - layout.keySize( key )];
-        long offloadId = offloadStore.writeKeyValue( key, value, STABLE_GENERATION, UNSTABLE_GENERATION, NULL );
+        long offloadId = offloadStore.writeKeyValue( key, value, STABLE_GENERATION, UNSTABLE_GENERATION, idProvider, NULL );
 
         {
             RawBytes into = layout.newKey();
@@ -89,7 +89,7 @@ class OffloadStoreTest
 
         RawBytes key = layout.newKey();
         key.bytes = new byte[200];
-        long offloadId = offloadStore.writeKey( key, STABLE_GENERATION, UNSTABLE_GENERATION, NULL );
+        long offloadId = offloadStore.writeKey( key, STABLE_GENERATION, UNSTABLE_GENERATION, idProvider, NULL );
 
         cursor.next( offloadId );
         assertEquals( TreeNode.NODE_TYPE_OFFLOAD, TreeNode.nodeType( cursor ) );
@@ -123,6 +123,6 @@ class OffloadStoreTest
 
     private OffloadStoreImpl<RawBytes,RawBytes> getOffloadStore()
     {
-        return new OffloadStoreImpl<>( layout, idProvider, pcFactory, idValidator, PAGE_SIZE );
+        return new OffloadStoreImpl<>( layout, pcFactory, idValidator, PAGE_SIZE );
     }
 }

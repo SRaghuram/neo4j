@@ -16,7 +16,7 @@
  */
 package org.neo4j.cypher.internal.ast.semantics
 
-import org.neo4j.cypher.internal.ast.ReturnItemsDef
+import org.neo4j.cypher.internal.ast.ReturnItems
 import org.neo4j.cypher.internal.expressions.EveryPath
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.InvalidNodePattern
@@ -324,7 +324,7 @@ object SemanticPatternCheck extends SemanticAnalysisTooling {
         ) chain implicitVariable(variable, expectedType)
     }
 
-  def checkValidPropertyKeyNamesInReturnItems(returnItems: ReturnItemsDef, position: InputPosition): SemanticCheck = {
+  def checkValidPropertyKeyNamesInReturnItems(returnItems: ReturnItems, position: InputPosition): SemanticCheck = {
     val propertyKeys = returnItems.items.collect { case item => item.expression.findByAllClass[Property]map(prop => prop.propertyKey) }.flatten
     SemanticPatternCheck.checkValidPropertyKeyNames(propertyKeys, position)
   }
@@ -351,7 +351,7 @@ object SemanticPatternCheck extends SemanticAnalysisTooling {
   }
 
   private def checkValidTokenName(name: String): Option[String] = {
-    if (name == null || name.isEmpty || name.contains("\0") || name.contains("`")) {
+    if (name == null || name.isEmpty || name.contains("\u0000") || name.contains("`")) {
       Some(String.format("%s is not a valid token name. " + "Token names cannot be empty, or contain any null-bytes or back-ticks.",
         if (name != null) "'" + name + "'" else "Null"))
     } else {

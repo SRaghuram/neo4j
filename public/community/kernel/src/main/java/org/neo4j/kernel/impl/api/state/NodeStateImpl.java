@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.api.state;
 
 import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.iterator.LongIterator;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 
@@ -31,7 +32,6 @@ import java.util.Set;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.kernel.impl.api.state.RelationshipChangesForNode.DiffStrategy;
 import org.neo4j.kernel.impl.util.collection.CollectionsFactory;
-import org.neo4j.kernel.impl.util.collection.HeapTrackingCollections;
 import org.neo4j.kernel.impl.util.diffsets.MutableLongDiffSets;
 import org.neo4j.memory.HeapEstimator;
 import org.neo4j.memory.MemoryTracker;
@@ -43,6 +43,7 @@ import org.neo4j.values.storable.Value;
 
 import static java.util.Collections.emptyList;
 import static org.neo4j.kernel.impl.api.state.RelationshipChangesForNode.createRelationshipChangesForNode;
+import static org.neo4j.kernel.impl.util.diffsets.TrackableDiffSets.newMutableLongDiffSets;
 
 class NodeStateImpl extends EntityStateImpl implements NodeState
 {
@@ -87,7 +88,7 @@ class NodeStateImpl extends EntityStateImpl implements NodeState
         }
 
         @Override
-        public int augmentDegree( Direction direction, int degree, int typeId )
+        public int augmentDegree( RelationshipDirection direction, int degree, int typeId )
         {
             return degree;
         }
@@ -133,6 +134,12 @@ class NodeStateImpl extends EntityStateImpl implements NodeState
         {
             return IntSets.immutable.empty();
         }
+
+        @Override
+        public IntIterable getAddedAndRemovedRelationshipTypes()
+        {
+            return IntSets.immutable.empty();
+        }
     };
 
     private MutableLongDiffSets labelDiffSets;
@@ -162,7 +169,7 @@ class NodeStateImpl extends EntityStateImpl implements NodeState
     {
         if ( labelDiffSets == null )
         {
-            labelDiffSets = HeapTrackingCollections.newMutableLongDiffSets( collectionsFactory, memoryTracker );
+            labelDiffSets = newMutableLongDiffSets( collectionsFactory, memoryTracker );
         }
         return labelDiffSets;
     }
@@ -217,7 +224,7 @@ class NodeStateImpl extends EntityStateImpl implements NodeState
     }
 
     @Override
-    public int augmentDegree( Direction direction, int degree, int typeId )
+    public int augmentDegree( RelationshipDirection direction, int degree, int typeId )
     {
         if ( hasAddedRelationships() )
         {
@@ -300,5 +307,21 @@ class NodeStateImpl extends EntityStateImpl implements NodeState
     public IntIterable getAddedRelationshipTypes()
     {
         return relationshipsAdded != null ? relationshipsAdded.relationshipTypes() : IntSets.immutable.empty();
+    }
+
+    @Override
+    public IntIterable getAddedAndRemovedRelationshipTypes()
+    {
+        if ( relationshipsAdded == null && relationshipsRemoved == null )
+        {
+            return IntSets.immutable.empty();
+        }
+        if ( relationshipsAdded != null && relationshipsRemoved != null )
+        {
+            MutableIntSet types = IntSets.mutable.withAll( relationshipsAdded.relationshipTypes() );
+            types.addAll( relationshipsRemoved.relationshipTypes() );
+            return types;
+        }
+        return relationshipsAdded != null ? relationshipsAdded.relationshipTypes() : relationshipsRemoved.relationshipTypes();
     }
 }

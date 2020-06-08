@@ -24,6 +24,9 @@ import java.util.Collections
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderAscending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.runtime.TestSubscriber
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -300,51 +303,61 @@ abstract class OrderedAggregationTestBase[CONTEXT <: RuntimeContext](
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("countStar", "count", "avg", "collect", "max", "min", "sum")
+      .produceResults("countStar", "count", "countD", "avg", "avgD", "collect", "collectD", "max", "maxD", "min", "minD", "sum", "sumD")
       .orderedAggregation(Seq("x AS x"), Seq(
         "count(*) AS countStar",
         "count(x.num) AS count",
+        "count(DISTINCT x.num) AS countD",
         "avg(x.num) AS avg",
+        "avg(DISTINCT x.num) AS avgD",
         "collect(x.num) AS collect",
+        "collect(DISTINCT x.num) AS collectD",
         "max(x.num) AS max",
+        "max(DISTINCT x.num) AS maxD",
         "min(x.num) AS min",
+        "min(DISTINCT x.num) AS minD",
         "sum(x.num) AS sum",
-      ),
-        Seq("x"))
+        "sum(DISTINCT x.num) AS sumD",
+      ), Seq("x"))
       .input(variables = Seq("x"))
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime, inputValues())
 
     // then
-    runtimeResult should beColumns("countStar", "count", "avg", "collect", "max", "min", "sum").withNoRows()
+    runtimeResult should beColumns("countStar", "count", "countD", "avg", "avgD", "collect", "collectD", "max", "maxD", "min", "minD", "sum", "sumD").withNoRows()
   }
 
   test("should return one row for one input row") {
-    // given nothing
+    // given one row
     val input = inputValues(Array(1))
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("countStar", "count", "avg", "collect", "max", "min", "sum")
+      .produceResults("countStar", "count", "countD", "avg", "avgD", "collect", "collectD", "max", "maxD", "min", "minD", "sum", "sumD")
       .orderedAggregation(Seq("x AS x"), Seq(
         "count(*) AS countStar",
         "count(x) AS count",
+        "count(DISTINCT x) AS countD",
         "avg(x) AS avg",
+        "avg(DISTINCT x) AS avgD",
         "collect(x) AS collect",
+        "collect(DISTINCT x) AS collectD",
         "max(x) AS max",
+        "max(DISTINCT x) AS maxD",
         "min(x) AS min",
+        "min(DISTINCT x) AS minD",
         "sum(x) AS sum",
-      ),
-        Seq("x"))
+        "sum(DISTINCT x) AS sumD",
+      ), Seq("x"))
       .input(variables = Seq("x"))
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime, input)
 
     // then
-    runtimeResult should beColumns("countStar", "count", "avg", "collect", "max", "min", "sum")
-      .withSingleRow(1, 1, 1, Collections.singletonList(1), 1, 1, 1)
+    runtimeResult should beColumns("countStar", "count", "countD", "avg", "avgD", "collect", "collectD", "max", "maxD", "min", "minD", "sum", "sumD")
+      .withSingleRow(1, 1, 1, 1, 1, Collections.singletonList(1), Collections.singletonList(1), 1, 1, 1, 1, 1, 1)
   }
 
   test("should keep input order") {
@@ -364,4 +377,129 @@ abstract class OrderedAggregationTestBase[CONTEXT <: RuntimeContext](
     runtimeResult should beColumns("i", "count")
       .withRows(inOrder((0 until sizeHint).map(Array[Any](_, 1))))
   }
+
+  test("should count on single ordered grouping column under apply") {
+    val nodesPerLabel = 100
+    index("B", "prop")
+    val (aNodes, bNodes) = given {
+      val aNodes = nodeGraph(nodesPerLabel, "A")
+      val bNodes = nodePropertyGraph(nodesPerLabel, {
+        case i: Int => Map("prop" -> (if (i % 2 == 0) 5 else 0))
+      }, "B")
+      (aNodes, bNodes)
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("a", "b", "c")
+      .apply()
+      .|.orderedAggregation(Seq("b AS b"), Seq("count(number) AS c"), Seq("b"))
+      .|.unwind("range(1, b.prop) AS number")
+      .|.nodeIndexOperator("b:B(prop >= 0)", indexOrder = IndexOrderAscending, argumentIds = Set("a"))
+      .nodeByLabelScan("a", "A", IndexOrderNone)
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    val expected = for {
+      a <- aNodes
+      b <- bNodes if b.getProperty("prop").asInstanceOf[Int] == 5
+    }  yield Array[Any](a, b, 5)
+
+    runtimeResult should beColumns("a", "b", "c").withRows(inOrder(expected))
+  }
+
+  test("should handle long chunks") {
+    // given
+    val input = inputColumns(nBatches = sizeHint / 10, batchSize = 10,
+      rowNumber => rowNumber / 100,
+      identity)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y", "c")
+      .orderedAggregation(Seq("x AS x", "y AS y"), Seq("count(*) AS c"), Seq("x"))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime, input)
+
+    // then
+    val expected = input.flatten.map(row => row :+ 1)
+    runtimeResult should beColumns("x", "y", "c").withRows(expected)
+  }
+
+  test("should count on single ordered, single unordered grouping column under apply") {
+    val propValue = 10
+    val nodesPerLabel = 100
+    index("B", "prop")
+    val (aNodes, bNodes) = given {
+      val aNodes = nodeGraph(nodesPerLabel, "A")
+      val bNodes = nodePropertyGraph(nodesPerLabel, {
+        case i: Int => Map("prop" -> (if (i % 2 == 0) propValue else 0))
+      }, "B")
+      (aNodes, bNodes)
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("a", "b", "n", "c")
+      .apply()
+      .|.orderedAggregation(Seq("b AS b", "number AS n"), Seq("count(number) AS c"), Seq("b"))
+      .|.unwind("range(1, b.prop) AS number")
+      .|.nodeIndexOperator("b:B(prop >= 0)", indexOrder = IndexOrderAscending, argumentIds = Set("a"))
+      .nodeByLabelScan("a", "A", IndexOrderNone)
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    val expected = for {
+      a <- aNodes
+      b <- bNodes if b.getProperty("prop").asInstanceOf[Int] == propValue
+      n <- Range.inclusive(1, propValue)
+    }  yield Array[Any](a, b, n, 1)
+
+    runtimeResult should beColumns("a", "b", "n", "c").withRows(inOrder(expected))
+  }
+
+  test("ordered aggregation should not exhaust input when there is no demand, one column, one ordered") {
+    val input = inputColumns(nBatches = sizeHint / 10, batchSize = 10, row => row / 10)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "c")
+      .orderedAggregation(Seq("x AS x"), Seq("count(*) AS c"), Seq("x"))
+      .input(variables = Seq("x"))
+      .build()
+
+    val stream = input.stream()
+    // When
+    val result = execute(logicalQuery, runtime, stream, TestSubscriber.concurrent)
+
+    // Then
+    result.request(1)
+    result.await() shouldBe true
+    //we shouldn't have exhausted the entire input
+    stream.hasMore shouldBe true
+  }
+
+  test("ordered aggregation should not exhaust input when there is no demand, two columns, one ordered") {
+    val input = inputColumns(nBatches = sizeHint / 10, batchSize = 10, row => row / 10, identity)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y", "c")
+      .orderedAggregation(Seq("x AS x", "y AS y"), Seq("count(*) AS c"), Seq("x"))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val stream = input.stream()
+    // When
+    val result = execute(logicalQuery, runtime, stream, TestSubscriber.concurrent)
+
+    // Then
+    result.request(1)
+    result.await() shouldBe true
+    //we shouldn't have exhausted the entire input
+    stream.hasMore shouldBe true
+  }
+
 }

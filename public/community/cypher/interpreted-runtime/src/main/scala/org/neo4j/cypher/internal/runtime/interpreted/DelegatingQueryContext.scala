@@ -176,9 +176,11 @@ abstract class DelegatingQueryContext(val inner: QueryContext) extends QueryCont
                                                      value: TextValue): NodeValueIndexCursor =
     manyDbHits(inner.indexSeekByEndsWith(index, needsValues, indexOrder, value))
 
-  override def getNodesByLabel(id: Int): Iterator[NodeValue] = manyDbHits(inner.getNodesByLabel(id))
+  override def getNodesByLabel(id: Int, indexOrder: IndexOrder): Iterator[NodeValue] =
+    manyDbHits(inner.getNodesByLabel(id, indexOrder))
 
-  override def getNodesByLabelPrimitive(id: Int): LongIterator = manyDbHits(inner.getNodesByLabelPrimitive(id))
+  override def getNodesByLabelPrimitive(id: Int, indexOrder: IndexOrder): LongIterator =
+    manyDbHits(inner.getNodesByLabelPrimitive(id, indexOrder))
 
   override def nodeAsMap(id: Long, nodeCursor: NodeCursor, propertyCursor: PropertyCursor): MapValue = {
     val map = inner.nodeAsMap(id, nodeCursor, propertyCursor)
@@ -336,7 +338,7 @@ class DelegatingOperations[T, CURSOR](protected val inner: Operations[T, CURSOR]
   override def propertyKeyIds(obj: Long, cursor: CURSOR, propertyCursor: PropertyCursor): Array[Int] =
     singleDbHit(inner.propertyKeyIds(obj, cursor, propertyCursor))
 
-  override def removeProperty(obj: Long, propertyKeyId: Int): Unit = singleDbHit(inner.removeProperty(obj, propertyKeyId))
+  override def removeProperty(obj: Long, propertyKeyId: Int): Boolean = singleDbHit(inner.removeProperty(obj, propertyKeyId))
 
   override def all: Iterator[T] = manyDbHits(inner.all)
 

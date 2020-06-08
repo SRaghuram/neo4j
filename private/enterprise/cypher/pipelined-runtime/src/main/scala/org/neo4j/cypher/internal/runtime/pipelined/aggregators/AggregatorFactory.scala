@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
+import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.CountStar
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.Null
 import org.neo4j.cypher.internal.expressions.functions
-import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ast.CollectAll
@@ -38,26 +38,32 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
           case functions.Count if c.distinct =>
             (CountDistinctAggregator, c.arguments.head)
 
-          case _: AggregatingFunction if c.distinct =>
-            throw new CantCompileQueryException("Morsel does not yet support Distinct aggregating functions, use another runtime.")
-
           case functions.Count =>
             (CountAggregator, c.arguments.head)
+
+          case functions.Sum if c.distinct =>
+            (SumDistinctAggregator, c.arguments.head)
 
           case functions.Sum =>
             (SumAggregator, c.arguments.head)
 
-          case functions.Avg =>
-            (AvgAggregator, c.arguments.head)
-
-          case functions.Max =>
+          case functions.Max => // no difference if distinct
             (MaxAggregator, c.arguments.head)
 
-          case functions.Min =>
+          case functions.Min => // no difference if distinct
             (MinAggregator, c.arguments.head)
+
+          case functions.Collect if c.distinct =>
+            (CollectDistinctAggregator, c.arguments.head)
 
           case functions.Collect =>
             (CollectAggregator, c.arguments.head)
+
+          case functions.Avg if c.distinct  =>
+            (AvgDistinctAggregator, c.arguments.head)
+
+          case functions.Avg =>
+            (AvgAggregator, c.arguments.head)
 
           case _: AggregatingFunction =>
             throw new CantCompileQueryException(s"Morsel does not yet support the Aggregating function `${c.name}`, use another runtime.")

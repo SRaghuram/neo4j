@@ -5,14 +5,14 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
-import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +23,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.model.Benchmark.Mode;
+import static com.neo4j.bench.model.model.Benchmark.Mode;
+import static com.neo4j.bench.model.model.Benchmark.benchmarkFor;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
@@ -46,7 +47,7 @@ class GcProfilerTest
         Path parentDir = tempFolder.absolutePath().toPath();
 
         benchmarkGroup = new BenchmarkGroup( "group" );
-        benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, Collections.emptyMap() );
+        benchmark = benchmarkFor( "description", "simpleName", Mode.LATENCY, Collections.emptyMap() );
 
         BenchmarkGroupDirectory groupDirectory = BenchmarkGroupDirectory.createAt( parentDir, benchmarkGroup );
         BenchmarkDirectory benchmarkDirectory = groupDirectory.findOrCreate( benchmark );

@@ -72,7 +72,7 @@ public final class UnsafeUtil
     private static final MethodHandle sharedStringConstructor;
     private static final String allowUnalignedMemoryAccessProperty = "org.neo4j.internal.unsafe.UnsafeUtil.allowUnalignedMemoryAccess";
 
-    private static final ConcurrentSkipListMap<Long, Allocation> allocations = new ConcurrentSkipListMap<>();
+    private static final ConcurrentSkipListMap<Long, Allocation> allocations = new ConcurrentSkipListMap<>( Long::compareUnsigned );
     private static final ThreadLocal<Allocation> lastUsedAllocation = new ThreadLocal<>();
     private static final FreeTrace[] freeTraces = CHECK_NATIVE_ACCESS ? new FreeTrace[4096] : null;
     private static final AtomicLong freeCounter = new AtomicLong();
@@ -423,22 +423,42 @@ public final class UnsafeUtil
      * Allocates a {@link ByteBuffer}
      * @param size The size of the buffer to allocate
      */
-    public static ByteBuffer allocateByteBuffer( int size )
+    public static ByteBuffer allocateByteBuffer( int size, MemoryTracker memoryTracker )
     {
-        ByteBuffer buffer = ByteBuffer.allocateDirect( size );
-        GlobalMemoryTracker.INSTANCE.allocateDirect( size );
-        return buffer;
+        try
+        {
+            long addr = allocateMemory( size, memoryTracker );
+            setMemory( addr, size, (byte) 0 );
+            return newDirectByteBuffer( addr, size );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     /**
      * Allocates a {@link ByteBuffer}
-     * @param byteBuffer The ByteBuffer to free, allocated by {@link #allocateByteBuffer(int)}
+     * @param byteBuffer The ByteBuffer to free, allocated by {@link #allocateByteBuffer(int, MemoryTracker)}
      */
-    public static void freeByteBuffer( ByteBuffer byteBuffer )
+    public static void freeByteBuffer( ByteBuffer byteBuffer, MemoryTracker memoryTracker )
     {
-        int capacity = byteBuffer.capacity();
-        UnsafeUtil.invokeCleaner( byteBuffer );
-        GlobalMemoryTracker.INSTANCE.releaseDirect( capacity );
+        int bytes = byteBuffer.capacity();
+        long addr = getDirectByteBufferAddress( byteBuffer );
+        if ( addr == 0 )
+        {
+            return; // This buffer has already been freed.
+        }
+
+        // Nerf the byte buffer, causing all future accesses to get out-of-bounds.
+        unsafe.putInt( byteBuffer, directByteBufferMarkOffset, -1 );
+        unsafe.putInt( byteBuffer, directByteBufferPositionOffset, 0 );
+        unsafe.putInt( byteBuffer, directByteBufferLimitOffset, 0 );
+        unsafe.putInt( byteBuffer, directByteBufferCapacityOffset, 0 );
+        unsafe.putLong( byteBuffer, directByteBufferAddressOffset, 0 );
+
+        // Free the buffer.
+        free( addr, bytes, memoryTracker );
     }
 
     /**
@@ -459,56 +479,31 @@ public final class UnsafeUtil
      *
      * @return a pointer to the allocated memory
      */
-    public static long allocateMemory( long bytes ) throws NativeMemoryAllocationRefusedError
+    public static long allocateMemory( long bytes, MemoryTracker memoryTracker ) throws NativeMemoryAllocationRefusedError
     {
         final long pointer = Native.malloc( bytes );
         if ( pointer == 0 )
         {
-            throw new NativeMemoryAllocationRefusedError( bytes, GlobalMemoryTracker.INSTANCE.usedDirectMemory() );
+            throw new NativeMemoryAllocationRefusedError( bytes, memoryTracker.usedNativeMemory() );
         }
 
+        addAllocatedPointer( pointer, bytes );
+        memoryTracker.allocateNative( bytes );
         if ( DIRTY_MEMORY )
         {
             setMemory( pointer, bytes, (byte) 0xA5 );
         }
-        addAllocatedPointer( pointer, bytes );
-        GlobalMemoryTracker.INSTANCE.allocateDirect( bytes );
-        return pointer;
-    }
-
-    /**
-     * Allocate a block of memory of the given size in bytes and update memory allocation tracker accordingly.
-     * <p>
-     * The memory is aligned such that it can be used for any data type.
-     * The memory is uninitialised, so it may contain random garbage, or it may not.
-     * @return a pointer to the allocated memory
-     */
-    public static long allocateMemory( long bytes, MemoryTracker allocationTracker ) throws NativeMemoryAllocationRefusedError
-    {
-        assert allocationTracker != GlobalMemoryTracker.INSTANCE;
-        final long pointer = allocateMemory( bytes );
-        allocationTracker.allocateDirect( bytes );
         return pointer;
     }
 
     /**
      * Free the memory that was allocated with {@link #allocateMemory} and update memory allocation tracker accordingly.
      */
-    public static void free( long pointer, long bytes, MemoryTracker allocationTracker )
-    {
-        assert allocationTracker != GlobalMemoryTracker.INSTANCE;
-        free( pointer, bytes );
-        allocationTracker.releaseDirect( bytes );
-    }
-
-    /**
-     * Free the memory that was allocated with {@link #allocateMemory}.
-     */
-    public static void free( long pointer, long bytes )
+    public static void free( long pointer, long bytes, MemoryTracker memoryTracker )
     {
         checkFree( pointer );
         Native.free( pointer );
-        GlobalMemoryTracker.INSTANCE.releaseDirect( bytes );
+        memoryTracker.releaseNative( bytes );
     }
 
     private static void addAllocatedPointer( long pointer, long sizeInBytes )
@@ -534,14 +529,15 @@ public final class UnsafeUtil
         if ( allocation == null )
         {
             StringBuilder sb = new StringBuilder( format( "Bad free: 0x%x, valid pointers are:", pointer ) );
-            allocations.forEach( ( k, v ) -> sb.append( '\n' ).append( k ) );
+            allocations.forEach( ( k, v ) -> sb.append( '\n' ).append( "0x" ).append( Long.toHexString( k ) ) );
             throw new AssertionError( sb.toString() );
         }
+        allocation.freed = true;
         int idx = (int) (count & 4095);
         freeTraces[idx] = new FreeTrace( pointer, allocation, count );
     }
 
-    private static void checkAccess( long pointer, int size )
+    private static void checkAccess( long pointer, long size )
     {
         if ( CHECK_NATIVE_ACCESS && nativeAccessCheckEnabled )
         {
@@ -549,11 +545,11 @@ public final class UnsafeUtil
         }
     }
 
-    private static void doCheckAccess( long pointer, int size )
+    private static void doCheckAccess( long pointer, long size )
     {
         long boundary = pointer + size;
         Allocation allocation = lastUsedAllocation.get();
-        if ( allocation != null )
+        if ( allocation != null && !allocation.freed )
         {
             if ( compareUnsigned( allocation.pointer, pointer ) <= 0 &&
                  compareUnsigned( allocation.boundary, boundary ) > 0 &&
@@ -573,7 +569,7 @@ public final class UnsafeUtil
         lastUsedAllocation.set( fentry.getValue() );
     }
 
-    private static void throwBadAccess( long pointer, int size, Map.Entry<Long,Allocation> fentry,
+    private static void throwBadAccess( long pointer, long size, Map.Entry<Long,Allocation> fentry,
                                         Map.Entry<Long,Allocation> centry )
     {
         long now = System.nanoTime();
@@ -966,12 +962,12 @@ public final class UnsafeUtil
         unsafe.putObjectVolatile( obj, offset, value );
     }
 
-    public static int arrayBaseOffset( Class klass )
+    public static int arrayBaseOffset( Class<?> klass )
     {
         return unsafe.arrayBaseOffset( klass );
     }
 
-    public static int arrayIndexScale( Class klass )
+    public static int arrayIndexScale( Class<?> klass )
     {
         int scale = unsafe.arrayIndexScale( klass );
         if ( scale == 0 )
@@ -991,6 +987,7 @@ public final class UnsafeUtil
      */
     public static void setMemory( long address, long bytes, byte value )
     {
+        checkAccess( address, bytes );
         if ( 0 == (address & 1) && bytes > 64 )
         {
             unsafe.putByte( address, value );
@@ -1007,6 +1004,8 @@ public final class UnsafeUtil
      */
     public static void copyMemory( long srcAddress, long destAddress, long bytes )
     {
+        checkAccess( srcAddress, bytes );
+        checkAccess( destAddress, bytes );
         unsafe.copyMemory( srcAddress, destAddress, bytes );
     }
 
@@ -1026,12 +1025,13 @@ public final class UnsafeUtil
      */
     public static ByteBuffer newDirectByteBuffer( long addr, int cap ) throws Exception
     {
+        checkAccess( addr, cap );
         if ( directByteBufferCtor == null )
         {
             // Simulate the JNI NewDirectByteBuffer(void*, long) invocation.
-            Object dbb = unsafe.allocateInstance( directByteBufferClass );
+            ByteBuffer dbb = (ByteBuffer) unsafe.allocateInstance( directByteBufferClass );
             initDirectByteBuffer( dbb, addr, cap );
-            return (ByteBuffer) dbb;
+            return dbb;
         }
         // Reflection based fallback code.
         return (ByteBuffer) directByteBufferCtor.newInstance( addr, cap );
@@ -1040,8 +1040,10 @@ public final class UnsafeUtil
     /**
      * Initialize (simulate calling the constructor of) the given DirectByteBuffer.
      */
-    public static void initDirectByteBuffer( Object dbb, long addr, int cap )
+    public static void initDirectByteBuffer( ByteBuffer dbb, long addr, int cap )
     {
+        checkAccess( addr, cap );
+        dbb.order( ByteOrder.BIG_ENDIAN );
         unsafe.putInt( dbb, directByteBufferMarkOffset, -1 );
         unsafe.putInt( dbb, directByteBufferPositionOffset, 0 );
         unsafe.putInt( dbb, directByteBufferLimitOffset, cap );
@@ -1071,7 +1073,7 @@ public final class UnsafeUtil
      * <p>
      * Remember to restore the old value so other tests in the same JVM get the benefit of native access checks.
      * <p>
-     * The changing of this setting is completely unsynchronised, so you have to order this modification before and
+     * The changing of this setting is completely unsynchronized, so you have to order this modification before and
      * after the tests that you want to run without native access checks.
      *
      * @param newSetting The new setting.
@@ -1220,6 +1222,7 @@ public final class UnsafeUtil
         private final long sizeInBytes;
         private final long boundary;
         private final long freeCounter;
+        public volatile boolean freed;
 
         Allocation( long pointer, long sizeInBytes, long freeCounter )
         {
@@ -1227,6 +1230,13 @@ public final class UnsafeUtil
             this.sizeInBytes = sizeInBytes;
             this.freeCounter = freeCounter;
             this.boundary = pointer + sizeInBytes;
+        }
+
+        @Override
+        public String toString()
+        {
+            return format( "Allocation[pointer=%s (%x), size=%s, boundary=%s (%x), free counter=%s]",
+                    pointer, pointer, sizeInBytes, boundary, boundary, freeCounter );
         }
     }
 

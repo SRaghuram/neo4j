@@ -18,6 +18,7 @@ import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.logging.NullLog;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
@@ -51,7 +52,8 @@ public class DumpCountsStore
         SystemNanoClock clock = Clocks.nanoClock();
         try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               JobScheduler scheduler = createInitialisedScheduler();
-              PageCache pageCache = new ConfiguringPageCacheFactory( fs, config, tracer, log, versions, scheduler, clock ).getOrCreatePageCache() )
+              PageCache pageCache = new ConfiguringPageCacheFactory( fs, config, tracer, log, versions, scheduler, clock, new MemoryPools() )
+                      .getOrCreatePageCache() )
         {
             GBPTreeCountsStore.dump( pageCache, new File( args[0] ), out, NULL );
         }

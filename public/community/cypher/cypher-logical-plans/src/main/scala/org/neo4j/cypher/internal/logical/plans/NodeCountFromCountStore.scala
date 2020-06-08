@@ -19,16 +19,21 @@
  */
 package org.neo4j.cypher.internal.logical.plans
 
-import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.expressions.LabelName
+import org.neo4j.cypher.internal.util.attribution.IdGen
+import org.neo4j.cypher.internal.util.attribution.SameId
 
 /**
-  * Produce a single row with the contents of argument and a new value 'idName'. For each label in 'labelNames' the
-  * number of nodes with that label is fetched from the counts store. These counts are multiplied together, and the
-  * result is assigned to 'idName'
-  */
+ * Produce a single row with the contents of argument and a new value 'idName'. For each label in 'labelNames' the
+ * number of nodes with that label is fetched from the counts store. These counts are multiplied together, and the
+ * result is assigned to 'idName'
+ */
 case class NodeCountFromCountStore(idName: String, labelNames: List[Option[LabelName]], argumentIds: Set[String])(implicit idGen: IdGen)
   extends LogicalLeafPlan(idGen) {
 
   override val availableSymbols = Set(idName)
+
+  override def usedVariables: Set[String] = Set.empty
+
+  override def withoutArgumentIds(argsToExclude: Set[String]): NodeCountFromCountStore = copy(argumentIds = argumentIds -- argsToExclude)(SameId(this.id))
 }

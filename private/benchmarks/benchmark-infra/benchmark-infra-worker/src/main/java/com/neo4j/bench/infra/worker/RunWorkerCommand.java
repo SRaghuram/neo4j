@@ -10,7 +10,6 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
-import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.InfraParams;
@@ -19,6 +18,7 @@ import com.neo4j.bench.infra.PasswordManager;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSPasswordManager;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.File;
 import java.net.URI;
@@ -80,7 +80,7 @@ public class RunWorkerCommand implements Runnable
             Workspace.assertWorkspaceAreEqual( artifactsWorkspace, deserializeWorkspace );
 
             // fetch result db password
-            PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsRegion() );
+            PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsCredentials().awsRegion() );
             String resultsStorePassword = awsSecretsManager.getSecret( infraParams.resultsStorePasswordSecretName() );
 
             BenchmarkingTool benchmarkingTool = jobParams.benchmarkingEnvironment().benchmarkingTool();

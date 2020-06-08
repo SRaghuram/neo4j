@@ -10,12 +10,14 @@ import java.util.function.Supplier;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.web.WebContainerThreadInfo;
@@ -29,6 +31,8 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
 
         PageCacheCounters pageCacheCounters();
 
+        DatabaseOperationCounts databaseOperationCounts();
+
         Config configuration();
 
         LogService logService();
@@ -40,6 +44,8 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
         ConnectorPortRegister portRegister();
 
         Supplier<WebContainerThreadInfo> webContainerThreadInfo();
+
+        MemoryPools memoryPools();
     }
 
     public GlobalMetricsExtensionFactory()

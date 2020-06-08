@@ -12,17 +12,15 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.BatchAppendLogEntries;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.hamcrest.Matchers;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
@@ -30,41 +28,32 @@ import org.neo4j.logging.NullLogProvider;
 import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesRequest;
 import static com.neo4j.causalclustering.core.consensus.roles.AppendEntriesRequestTest.ContentGenerator.content;
-import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.raftState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith( Parameterized.class )
 public class AppendEntriesRequestTest
 {
 
-    @Parameterized.Parameters( name = "{0} with leader {1} terms ahead." )
-    public static Collection<Object[]> data()
+    public static Stream<Object[]> data()
     {
-        return Arrays.asList( new Object[][]{
+        return Stream.of( new Object[][]{
                 {Role.FOLLOWER, 0}, {Role.FOLLOWER, 1}, {Role.LEADER, 1}, {Role.CANDIDATE, 1}
         } );
     }
 
-    @Parameterized.Parameter( value = 0 )
-    public Role role;
-
-    @Parameterized.Parameter( value = 1 )
-    public int leaderTermDifference;
-
     private MemberId myself = member( 0 );
     private MemberId leader = member( 1 );
 
-    @Test
-    public void shouldAcceptInitialEntryAfterBootstrap() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldAcceptInitialEntryAfterBootstrap( Role role, int leaderTermDifference ) throws Exception
     {
         RaftLog raftLog = bootstrappedLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -83,14 +72,15 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), hasItem( new BatchAppendLogEntries( 1, 0, new RaftLogEntry[]{ logEntry } ) ) );
+        assertThat( outcome.getLogCommands() ).contains( new BatchAppendLogEntries( 1, 0, new RaftLogEntry[]{logEntry} ) );
     }
 
-    @Test
-    public void shouldAcceptInitialEntriesAfterBootstrap() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldAcceptInitialEntriesAfterBootstrap( Role role, int leaderTermDifference ) throws Exception
     {
         RaftLog raftLog = bootstrappedLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -111,8 +101,7 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), hasItem( new BatchAppendLogEntries( 1, 0,
-                new RaftLogEntry[]{logEntry1, logEntry2} ) ) );
+        assertThat( outcome.getLogCommands() ).contains( new BatchAppendLogEntries( 1, 0, new RaftLogEntry[]{logEntry1, logEntry2} ) );
     }
 
     private RaftLog bootstrappedLog()
@@ -122,11 +111,12 @@ public class AppendEntriesRequestTest
         return raftLog;
     }
 
-    @Test
-    public void shouldRejectDiscontinuousEntries() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldRejectDiscontinuousEntries( Role role, int leaderTermDifference ) throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .build();
 
@@ -147,11 +137,12 @@ public class AppendEntriesRequestTest
         assertFalse( response.success() );
     }
 
-    @Test
-    public void shouldAcceptContinuousEntries() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldAcceptContinuousEntries( Role role, int leaderTermDifference ) throws Exception
     {
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .entryLog( raftLog )
                 .build();
@@ -172,14 +163,15 @@ public class AppendEntriesRequestTest
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
     }
 
-    @Test
-    public void shouldTruncateOnReceiptOfConflictingEntry() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldTruncateOnReceiptOfConflictingEntry( Role role, int leaderTermDifference ) throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
-                .term( 5 )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 5 ).build() )
                 .entryLog( raftLog )
                 .build();
 
@@ -199,15 +191,16 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), hasItem( new TruncateLogCommand( 1 ) ) );
+        assertThat( outcome.getLogCommands() ).contains( new TruncateLogCommand( 1 ) );
     }
 
-    @Test
-    public void shouldCommitEntry() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldCommitEntry( Role role, int leaderTermDifference ) throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -226,15 +219,16 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getCommitIndex(), Matchers.equalTo( 0L ) );
+        assertThat( outcome.getCommitIndex() ).isEqualTo( 0 );
     }
 
-    @Test
-    public void shouldAppendNewEntryAndCommitPreviouslyAppendedEntry() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldAppendNewEntryAndCommitPreviouslyAppendedEntry( Role role, int leaderTermDifference ) throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -256,17 +250,18 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getCommitIndex(), Matchers.equalTo( 0L ) );
-        assertThat( outcome.getLogCommands(), hasItem( new BatchAppendLogEntries( 1, 0,
-                new RaftLogEntry[]{ newLogEntry } ) ) );
+        assertThat( outcome.getCommitIndex() ).isEqualTo( 0 );
+        assertThat( outcome.getLogCommands() ).contains( new BatchAppendLogEntries( 1, 0,
+                new RaftLogEntry[]{newLogEntry} ) );
     }
 
-    @Test
-    public void shouldNotCommitAheadOfMatchingHistory() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldNotCommitAheadOfMatchingHistory( Role role, int leaderTermDifference ) throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -286,12 +281,12 @@ public class AppendEntriesRequestTest
 
         // then
         assertFalse( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), empty() );
+        assertThat( outcome.getLogCommands() ).isEmpty();
     }
 
     public RaftState newState() throws IOException
     {
-        return raftState().myself( myself ).build();
+        return builder().myself( myself ).build();
     }
 
     private Log log()

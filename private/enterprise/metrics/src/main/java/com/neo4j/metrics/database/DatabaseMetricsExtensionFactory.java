@@ -23,6 +23,7 @@ import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -61,6 +62,8 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
         FileSystemAbstraction fileSystem();
 
         Tracers tracers();
+
+        MemoryPools memoryPools();
     }
 
     public DatabaseMetricsExtensionFactory()

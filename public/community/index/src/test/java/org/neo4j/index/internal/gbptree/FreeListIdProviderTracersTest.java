@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.test.extension.Inject;
@@ -67,7 +69,11 @@ public class FreeListIdProviderTracersTest
         try ( var freeListFile = pageCache.map( testDirectory.createFile( "newId" ), pageCache.pageSize() ) )
         {
             FreeListIdProvider listIdProvider = new FreeListIdProvider( freeListFile, 0 );
-            listIdProvider.acquireNewId( 1, 1, cursorTracer );
+            try ( IdProvider.Writer idWriter = listIdProvider.writer( NULL );
+                    PageCursor targetCursor = freeListFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, cursorTracer ) )
+            {
+                idWriter.acquireNewId( 1, 1, targetCursor );
+            }
         }
 
         assertOneCursor( cursorTracer );
@@ -82,7 +88,10 @@ public class FreeListIdProviderTracersTest
         try ( var freeListFile = pageCache.map( testDirectory.createFile( "releaseId" ), pageCache.pageSize() ) )
         {
             FreeListIdProvider listIdProvider = new FreeListIdProvider( freeListFile, 0 );
-            listIdProvider.releaseId( 1, 1,42,  cursorTracer );
+            try ( IdProvider.Writer idWriter = listIdProvider.writer( cursorTracer ) )
+            {
+                idWriter.releaseId( 1, 1, 42 );
+            }
         }
 
         assertOneCursor( cursorTracer );
@@ -98,7 +107,10 @@ public class FreeListIdProviderTracersTest
         {
             FreeListIdProvider listIdProvider = new FreeListIdProvider( freeListFile, 0 );
             listIdProvider.initialize( 0, 1, 0, listIdProvider.entriesPerPage() - 1, 0 );
-            listIdProvider.releaseId( 1, 1,42,  cursorTracer );
+            try ( IdProvider.Writer idWriter = listIdProvider.writer( cursorTracer ) )
+            {
+                idWriter.releaseId( 1, 1, 42 );
+            }
             assertEquals( 0, listIdProvider.writePos() );
         }
 
@@ -118,7 +130,10 @@ public class FreeListIdProviderTracersTest
         {
             FreeListIdProvider listIdProvider = new FreeListIdProvider( freeListFile, 0 );
             listIdProvider.initialize( 100, 0, 1, listIdProvider.entriesPerPage() - 1, 0 );
-            listIdProvider.releaseId( 1, 1,42,  NULL );
+            try ( IdProvider.Writer idWriter = listIdProvider.writer( NULL ) )
+            {
+                idWriter.releaseId( 1, 1, 42 );
+            }
             assertEquals( 0, listIdProvider.writePos() );
 
             listIdProvider.visitFreelist( new IdProvider.IdProviderVisitor.Adaptor(), cursorTracer );

@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
@@ -28,6 +27,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -40,19 +40,20 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
@@ -87,7 +88,7 @@ class UnionOperator(val workIdentity: WorkIdentity,
       else if (morsel.slots eq rhsSlotConfig) rhsMapping
       else throw new IllegalStateException(s"Unknown slot configuration in UnionOperator. Got: ${morsel.slots}. LHS: $lhsSlotConfig. RHS: $rhsSlotConfig")
 
-    IndexedSeq(new UnionTask(morsel,
+    singletonIndexedSeq(new UnionTask(morsel,
       workIdentity,
       rowMapping))
   }
@@ -127,8 +128,8 @@ class UnionOperatorExpressionCompiler(unionSlotConfigurationFromOperator: SlotCo
                                       lhsSlotConfiguration: SlotConfiguration,
                                       rhsSlotConfiguration: SlotConfiguration,
                                       readOnly: Boolean,
-                                      codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                                      namer: VariableNamer) extends OperatorExpressionCompiler(unionSlotConfigurationFromOperator, unionSlotConfigurationFromBuffer, readOnly, codeGenerationMode, namer) {
+                                      namer: VariableNamer
+                                     ) extends OperatorExpressionCompiler(unionSlotConfigurationFromOperator, unionSlotConfigurationFromBuffer, readOnly, namer) {
   Preconditions.checkArgument(unionSlotConfigurationFromOperator == unionSlotConfigurationFromBuffer, "Union must have the same slot configuration as its input buffer.")
 
   val fromLHSName: String = namer.nextVariableName("fromLHS")
@@ -231,6 +232,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
           fail(newInstance(constructor[IllegalStateException, String], constant("Unknown slot configuration in UnionOperator.")))
         }
       },
+      genAdvanceOnCancelledRow,
       setField(canContinue, INPUT_ROW_IS_VALID),
       genLoop
     )
@@ -313,4 +315,6 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
 }

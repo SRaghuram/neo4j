@@ -63,9 +63,8 @@ import org.neo4j.kernel.impl.util.MonotonicCounter;
 import org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier;
 import org.neo4j.kernel.internal.event.DatabaseTransactionEventListeners;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.memory.MemoryGroup;
-import org.neo4j.memory.MemoryGroupTracker;
-import org.neo4j.memory.MemoryPool;
+import org.neo4j.memory.GlobalMemoryGroupTracker;
+import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -75,7 +74,7 @@ import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.TokenHolders;
 
 import static java.util.stream.Collectors.toSet;
-import static org.neo4j.configuration.GraphDatabaseSettings.memory_transaction_global_max_size;
+import static org.neo4j.configuration.GraphDatabaseSettings.memory_transaction_database_max_size;
 
 /**
  * Central source of transactions in the database.
@@ -137,7 +136,7 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<IdC
     private final ConstraintSemantics constraintSemantics;
     private final AtomicInteger activeTransactionCounter = new AtomicInteger();
     private final TokenHoldersIdLookup tokenHoldersIdLookup;
-    private final MemoryPool transactionMemoryPool;
+    private final ScopedMemoryPool transactionMemoryPool;
 
     /**
      * Kernel transactions component status. True when stopped, false when started.
@@ -154,7 +153,8 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<IdC
             VersionContextSupplier versionContextSupplier, CollectionsFactorySupplier collectionsFactorySupplier, ConstraintSemantics constraintSemantics,
             SchemaState schemaState, TokenHolders tokenHolders, NamedDatabaseId namedDatabaseId, IndexingService indexingService, LabelScanStore labelScanStore,
             RelationshipTypeScanStore relationshipTypeScanStore, IndexStatisticsStore indexStatisticsStore,
-            Dependencies databaseDependencies, DatabaseTracers tracers, LeaseService leaseService )
+            Dependencies databaseDependencies, DatabaseTracers tracers, LeaseService leaseService,
+            GlobalMemoryGroupTracker transactionsMemoryPool )
     {
         this.config = config;
         this.statementLocksFactory = statementLocksFactory;
@@ -186,7 +186,9 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<IdC
         this.factory = new KernelTransactionImplementationFactory( allTransactions, tracers );
         this.globalTxPool = new GlobalKernelTransactionPool( allTransactions, factory );
         this.localTxPool = new LocalKernelTransactionPool( globalTxPool, activeTransactionCounter, config );
-        this.transactionMemoryPool = new MemoryGroupTracker( MemoryGroup.TRANSACTION, config.get( memory_transaction_global_max_size ) );
+        this.transactionMemoryPool = transactionsMemoryPool.newDatabasePool( namedDatabaseId.name(),
+                config.get( memory_transaction_database_max_size ) );
+        config.addListener( memory_transaction_database_max_size, ( before, after ) -> transactionMemoryPool.setSize( after ) );
         doBlockNewTransactions();
     }
 
@@ -297,6 +299,7 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<IdC
     @Override
     public void shutdown()
     {
+        transactionMemoryPool.close();
         disposeAll();
     }
 

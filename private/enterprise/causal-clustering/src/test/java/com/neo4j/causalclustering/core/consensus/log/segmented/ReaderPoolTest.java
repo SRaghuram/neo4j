@@ -37,7 +37,7 @@ class ReaderPoolTest
     private ReaderPool pool = new ReaderPool( 2, getInstance(), fileNames, fsa, clock );
 
     @BeforeEach
-    void before()
+    void before() throws Exception
     {
         fsa.mkdirs( base );
     }

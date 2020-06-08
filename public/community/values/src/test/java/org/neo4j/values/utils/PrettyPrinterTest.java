@@ -47,6 +47,8 @@ import org.neo4j.values.virtual.VirtualValues;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.values.AnyValueWriter.EntityMode.FULL;
+import static org.neo4j.values.AnyValueWriter.EntityMode.REFERENCE;
 import static org.neo4j.values.storable.DateTimeValue.datetime;
 import static org.neo4j.values.storable.DateValue.date;
 import static org.neo4j.values.storable.DurationValue.duration;
@@ -88,6 +90,21 @@ class PrettyPrinterTest
 
         // Then
         assertThat( printer.value() ).isEqualTo( "(id=42 :L1:L2:L3 {bar: [1337, \"baz\"], foo: 42})" );
+    }
+
+    @Test
+    void shouldHandleNodeValueAsReference()
+    {
+        // Given
+        NodeValue node = VirtualValues.nodeValue( 42L, Values.stringArray( "L1", "L2", "L3" ),
+                                                  props( "foo", intValue( 42 ), "bar", list( intValue( 1337 ), stringValue( "baz" ) ) ) );
+        PrettyPrinter printer = new PrettyPrinter( REFERENCE );
+
+        // When
+        node.writeTo( printer );
+
+        // Then
+        assertThat( printer.value() ).isEqualTo( "(id=42)" );
     }
 
     @Test
@@ -134,7 +151,7 @@ class PrettyPrinterTest
     }
 
     @Test
-    void shouldHandleEdgeReference()
+    void shouldHandleRelationshipReference()
     {
         // Given
         RelationshipReference rel = VirtualValues.relationship( 42L );
@@ -148,13 +165,13 @@ class PrettyPrinterTest
     }
 
     @Test
-    void shouldHandleEdgeValue()
+    void shouldHandleRelationshipValue()
     {
         // Given
         NodeValue startNode = VirtualValues.nodeValue( 1L, Values.stringArray( "L" ), EMPTY_MAP );
         NodeValue endNode = VirtualValues.nodeValue( 2L, Values.stringArray( "L" ), EMPTY_MAP );
         RelationshipValue rel = VirtualValues.relationshipValue( 42L, startNode, endNode, stringValue( "R" ),
-                props( "foo", intValue( 42 ), "bar", list( intValue( 1337 ), stringValue( "baz" ) ) ) );
+                                                                 props( "foo", intValue( 42 ), "bar", list( intValue( 1337 ), stringValue( "baz" ) ) ) );
         PrettyPrinter printer = new PrettyPrinter();
 
         // When
@@ -165,7 +182,24 @@ class PrettyPrinterTest
     }
 
     @Test
-    void shouldHandleEdgeValueWithoutProperties()
+    void shouldHandleRelationshipValueAsReference()
+    {
+        // Given
+        NodeValue startNode = VirtualValues.nodeValue( 1L, Values.stringArray( "L" ), EMPTY_MAP );
+        NodeValue endNode = VirtualValues.nodeValue( 2L, Values.stringArray( "L" ), EMPTY_MAP );
+        RelationshipValue rel = VirtualValues.relationshipValue( 42L, startNode, endNode, stringValue( "R" ),
+                                                                 props( "foo", intValue( 42 ), "bar", list( intValue( 1337 ), stringValue( "baz" ) ) ) );
+        PrettyPrinter printer = new PrettyPrinter( REFERENCE );
+
+        // When
+        rel.writeTo( printer );
+
+        // Then
+        assertThat( printer.value() ).isEqualTo( "-[id=42]-" );
+    }
+
+    @Test
+    void shouldHandleRelationshipValueWithoutProperties()
     {
         NodeValue startNode = VirtualValues.nodeValue( 1L, Values.stringArray( "L" ), EMPTY_MAP );
         NodeValue endNode = VirtualValues.nodeValue( 2L, Values.stringArray( "L" ), EMPTY_MAP );
@@ -181,7 +215,7 @@ class PrettyPrinterTest
     }
 
     @Test
-    void shouldHandleEdgeValueWithoutLabelsNorProperties()
+    void shouldHandleRelationshipValueWithoutLabelsNorProperties()
     {
         // Given
         NodeValue node = VirtualValues.nodeValue( 42L, Values.stringArray(), EMPTY_MAP );
@@ -315,7 +349,7 @@ class PrettyPrinterTest
     {
         // Given
         TextValue hello = stringValue( "(ツ)" );
-        PrettyPrinter printer = new PrettyPrinter( "__" );
+        PrettyPrinter printer = new PrettyPrinter( "__", FULL );
 
         // When
         hello.writeTo( printer );
@@ -382,7 +416,7 @@ class PrettyPrinterTest
     @Test
     void shouldHandleDateTimeWithTimeZoneId()
     {
-        DateTimeValue datetime = datetime( 2045, 2, 7, 12, 00, 40, 999888999, "Europe/London" );
+        DateTimeValue datetime = datetime( 2045, 2, 7, 12, 0, 40, 999888999, "Europe/London" );
         PrettyPrinter printer = new PrettyPrinter();
 
         datetime.writeTo( printer );

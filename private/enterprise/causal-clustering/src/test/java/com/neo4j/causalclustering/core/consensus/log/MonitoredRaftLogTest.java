@@ -8,16 +8,15 @@ package com.neo4j.causalclustering.core.consensus.log;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogAppendIndexMonitor;
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogCommitIndexMonitor;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.monitoring.Monitors;
 
-import static org.junit.Assert.assertEquals;
-
-public class MonitoredRaftLogTest
+class MonitoredRaftLogTest
 {
     @Test
-    public void shouldMonitorAppendIndexAndCommitIndex() throws Exception
+    void shouldMonitorAppendIndexAndCommitIndex() throws Exception
     {
         // Given
         Monitors monitors = new Monitors();
@@ -33,11 +32,11 @@ public class MonitoredRaftLogTest
         log.append( new RaftLogEntry( 0, ReplicatedInteger.valueOf( 1 ) ) );
         log.append( new RaftLogEntry( 0, ReplicatedInteger.valueOf( 1 ) ) );
 
-        assertEquals( 1, appendMonitor.appendIndex() );
-        assertEquals( 0, commitMonitor.commitIndex() );
+        Assertions.assertEquals( 1, appendMonitor.appendIndex() );
+        Assertions.assertEquals( 0, commitMonitor.commitIndex() );
 
         log.truncate( 1 );
-        assertEquals( 0, appendMonitor.appendIndex() );
+        Assertions.assertEquals( 0, appendMonitor.appendIndex() );
     }
 
     private static class StubRaftLogCommitIndexMonitor implements RaftLogCommitIndexMonitor

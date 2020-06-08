@@ -149,10 +149,9 @@ install -m 0644 neo4j.default %{buildroot}/%{_sysconfdir}/default/neo4j
 install -m 0755 neo4j.init %{buildroot}/%{_sysconfdir}/init.d/neo4j
 
 install -m 0644 server/conf/* %{buildroot}/%{_sysconfdir}/neo4j
-
 install -m 0755 server/scripts/* %{buildroot}/%{_bindir}
-
 install -m 0755 server/lib/* %{buildroot}/%{_datadir}/neo4j/lib
+install -m 0755 server/plugins/* %{buildroot}/%{neo4jhome}/plugins
 
 cp -r server/bin/* %{buildroot}/%{_datadir}/neo4j/bin
 chmod -R 0755 %{buildroot}/%{_datadir}/neo4j/bin

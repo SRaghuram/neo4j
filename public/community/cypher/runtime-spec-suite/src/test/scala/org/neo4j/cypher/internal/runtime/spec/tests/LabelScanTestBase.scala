@@ -21,6 +21,9 @@ package org.neo4j.cypher.internal.runtime.spec.tests
 
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.logical.plans.IndexOrderAscending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderDescending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -42,7 +45,7 @@ abstract class LabelScanTestBase[CONTEXT <: RuntimeContext](
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
-      .nodeByLabelScan("x", "Honey")
+      .nodeByLabelScan("x", "Honey", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
@@ -51,11 +54,51 @@ abstract class LabelScanTestBase[CONTEXT <: RuntimeContext](
     runtimeResult should beColumns("x").withRows(singleColumn(nodes))
   }
 
+  test("should scan all nodes of a label in ascending order") {
+    // given
+    val nodes = given {
+      nodeGraph(sizeHint, "Butter")
+      nodeGraph(sizeHint, "Almond")
+      nodeGraph(sizeHint, "Honey")
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .nodeByLabelScan("x", "Honey", IndexOrderAscending)
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x").withRows(singleColumnInOrder(nodes.sortBy(_.getId)))
+  }
+
+  test("should scan all nodes of a label in descending order") {
+    // given
+    val nodes = given {
+      nodeGraph(sizeHint, "Butter")
+      nodeGraph(sizeHint, "Almond")
+      nodeGraph(sizeHint, "Honey")
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .nodeByLabelScan("x", "Honey", IndexOrderDescending)
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x").withRows(singleColumnInOrder(nodes.sortBy(_.getId * -1)))
+  }
+
   test("should scan empty graph") {
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
-      .nodeByLabelScan("x", "Honey")
+      .nodeByLabelScan("x", "Honey", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
@@ -72,10 +115,10 @@ abstract class LabelScanTestBase[CONTEXT <: RuntimeContext](
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("y", "z", "x")
       .apply()
-      .|.nodeByLabelScan("x", "Honey")
+      .|.nodeByLabelScan("x", "Honey", IndexOrderNone)
       .apply()
-      .|.nodeByLabelScan("y", "Honey")
-      .nodeByLabelScan("z", "Honey")
+      .|.nodeByLabelScan("y", "Honey", IndexOrderNone)
+      .nodeByLabelScan("z", "Honey", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)

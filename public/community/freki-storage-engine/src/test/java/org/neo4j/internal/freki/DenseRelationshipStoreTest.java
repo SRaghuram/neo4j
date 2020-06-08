@@ -30,15 +30,27 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+<<<<<<< HEAD
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+=======
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.ResourceIterator;
+<<<<<<< HEAD
+=======
+import org.neo4j.internal.helpers.collection.Iterators;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -52,7 +64,11 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.Value;
 
+<<<<<<< HEAD
 import static java.util.Collections.emptySet;
+=======
+import static java.util.Collections.emptyMap;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.graphdb.Direction.INCOMING;
@@ -81,7 +97,11 @@ class DenseRelationshipStoreTest
     private RandomRule random;
 
     private InMemoryBigValueTestStore bigPropertyValueStore = new InMemoryBigValueTestStore();
+<<<<<<< HEAD
     private DenseRelationshipStore store;
+=======
+    private SimpleDenseRelationshipStore store;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
     @BeforeEach
     void start()
@@ -104,7 +124,11 @@ class DenseRelationshipStoreTest
         long internalId = 1;
         int type = 89;
         Set<Rel> expectedRelationships = asSet( new Rel( internalId, sourceNodeId, type, targetNodeId, RelationshipDirection.OUTGOING,
+<<<<<<< HEAD
                 asSet( new PropertyKeyValue( 159, doubleValue( 10.45D ) ) ) ) );
+=======
+                properties( new PropertyKeyValue( 159, doubleValue( 10.45D ) ) ) ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
         // when
         createRelationships( expectedRelationships );
@@ -120,6 +144,7 @@ class DenseRelationshipStoreTest
         long nodeId = 1010;
         int type = 123;
         StorageProperty property = new PropertyKeyValue( 1928, intValue( 10 ) );
+<<<<<<< HEAD
         Rel out = new Rel( 100_000, nodeId, 123, 200_000, RelationshipDirection.OUTGOING, asSet( property ) );
         Rel in = new Rel( 100_001, nodeId, 123, 200_001, RelationshipDirection.INCOMING, asSet( property ) );
         try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
@@ -127,6 +152,15 @@ class DenseRelationshipStoreTest
             for ( int i = 0; i < 10_000; i++ )
             {
                 updater.createRelationship( i, nodeId, i % 3, i, i % 2 == 0, IntObjectMaps.immutable.empty(), u -> u.after );
+=======
+        Rel out = new Rel( 100_000, nodeId, 123, 200_000, RelationshipDirection.OUTGOING, properties( property ) );
+        Rel in = new Rel( 100_001, nodeId, 123, 200_001, RelationshipDirection.INCOMING, properties( property ) );
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        {
+            for ( int i = 0; i < 10_000; i++ )
+            {
+                updater.insertRelationship( i, nodeId, i % 3, i, i % 2 == 0, IntObjectMaps.immutable.empty(), u -> u.after );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             }
             createRelationship( updater, out );
             createRelationship( updater, in );
@@ -143,13 +177,21 @@ class DenseRelationshipStoreTest
     {
         // given
         long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+<<<<<<< HEAD
         try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+=======
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             for ( int r = 0; r < 1_000; r++ )
             {
                 boolean outgoing = random.nextBoolean();
                 long otherNodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+<<<<<<< HEAD
                 updater.createRelationship( r, outgoing ? nodeId : otherNodeId, (r % 10) * random.nextInt( 1, 100 ), outgoing ? otherNodeId : nodeId, outgoing,
+=======
+                updater.insertRelationship( r, outgoing ? nodeId : otherNodeId, (r % 10) * random.nextInt( 1, 100 ), outgoing ? otherNodeId : nodeId, outgoing,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                         IntObjectMaps.immutable.empty(), v -> v.after );
             }
         }
@@ -159,9 +201,15 @@ class DenseRelationshipStoreTest
         for ( DenseRelationshipStore.RelationshipData relationship : loop( store.getRelationships( nodeId, ANY_RELATIONSHIP_TYPE, BOTH, NULL ) ) )
         {
             relationships.add( new Rel( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
+<<<<<<< HEAD
                     relationship.direction(), asSet( relationship.properties() ) ) );
         }
         try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+=======
+                    relationship.direction(), properties( relationship.properties() ) ) );
+        }
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             for ( Rel relationship : relationships )
             {
@@ -184,18 +232,26 @@ class DenseRelationshipStoreTest
         // given
         long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
         Set<Rel> relationships = new HashSet<>();
+<<<<<<< HEAD
         try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+=======
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             for ( int i = 0; i < 100; i++ )
             {
                 boolean outgoing = random.nextBoolean();
                 long otherNodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+<<<<<<< HEAD
                 Set<StorageProperty> properties = new HashSet<>();
                 int numProperties = random.nextInt( 3 );
                 for ( int p = 0; p < numProperties; p++ )
                 {
                     properties.add( new PropertyKeyValue( p, random.nextValue() ) );
                 }
+=======
+                Map<Integer,Value> properties = randomProperties( random.nextInt( 3 ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 Rel relationship = new Rel( i, nodeId, random.nextInt( 4 ), otherNodeId,
                         outgoing ? RelationshipDirection.OUTGOING : RelationshipDirection.INCOMING, properties );
                 createRelationship( updater, relationship );
@@ -208,7 +264,11 @@ class DenseRelationshipStoreTest
         {
             // when
             Rel relationship = random.among( new ArrayList<>( relationships ) );
+<<<<<<< HEAD
             try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+=======
+            try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             {
                 updater.deleteRelationship( relationship.internalId, relationship.originNodeId, relationship.type, relationship.neighbourNodeId,
                         relationship.isOutgoing() );
@@ -228,7 +288,11 @@ class DenseRelationshipStoreTest
         List<Rel> relationships = new ArrayList<>();
         int numOtherNodes = 100;
         int numTypes = 4;
+<<<<<<< HEAD
         try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+=======
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             for ( int i = 0; i < numOtherNodes * 10; i++ )
             {
@@ -237,9 +301,15 @@ class DenseRelationshipStoreTest
                 int type = random.nextInt( numTypes );
                 long originNodeId = outgoing ? nodeId : otherNodeId;
                 long neighbourNodeId = outgoing ? otherNodeId : nodeId;
+<<<<<<< HEAD
                 updater.createRelationship( i, originNodeId, type, neighbourNodeId, outgoing, IntObjectMaps.immutable.empty(), p -> p.after );
                 relationships.add( new Rel( i, originNodeId, type, neighbourNodeId, outgoing ? RelationshipDirection.OUTGOING : RelationshipDirection.INCOMING,
                         emptySet() ) );
+=======
+                updater.insertRelationship( i, originNodeId, type, neighbourNodeId, outgoing, IntObjectMaps.immutable.empty(), p -> p.after );
+                relationships.add( new Rel( i, originNodeId, type, neighbourNodeId, outgoing ? RelationshipDirection.OUTGOING : RelationshipDirection.INCOMING,
+                        emptyMap() ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             }
         }
 
@@ -257,6 +327,91 @@ class DenseRelationshipStoreTest
         }
     }
 
+<<<<<<< HEAD
+=======
+    @Test
+    void shouldUpdateRelationshipProperties() throws IOException
+    {
+        // given
+        long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+        List<Rel> relationships = new ArrayList<>();
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        {
+            for ( int i = 0; i < 1; i++ )
+            {
+                Rel relationship = new Rel( i, nodeId, 0, 100 + i, RelationshipDirection.OUTGOING, randomProperties( 5 ) );
+                relationships.add( relationship );
+                relationship.insert( updater );
+            }
+        }
+
+        // when
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        {
+            Rel relationship = random.among( relationships );
+            int numChanged = random.nextInt( 1, 3 );
+            for ( int i = 0; i < numChanged; i++ )
+            {
+                int key = random.among( relationship.properties.keySet().toArray( new Integer[0] ) );
+                Value existingValue = relationship.properties.get( key );
+                Value updatedValue;
+                do
+                {
+                    updatedValue = random.nextValue();
+                }
+                while ( updatedValue.equals( existingValue ) );
+                relationship.properties.put( key, updatedValue );
+            }
+            int numRemoved = random.nextInt( 1, 3 );
+            for ( int i = 0; i < numRemoved; i++ )
+            {
+                int key = random.among( relationship.properties.keySet().toArray( new Integer[0] ) );
+                relationship.properties.remove( key );
+            }
+            int numAdded = random.nextInt( 1, 3 );
+            for ( int i = 0; i < numAdded; i++ )
+            {
+                relationship.properties.put( 20 + i, random.nextValue() );
+            }
+            relationship.insert( updater );
+        }
+
+        // then
+        assertRelationships( nodeId, -1, BOTH, asSet( relationships.iterator() ) );
+    }
+
+    private Map<Integer,Value> properties( StorageProperty... properties )
+    {
+        Map<Integer,Value> map = new HashMap<>();
+        for ( StorageProperty property : properties )
+        {
+            map.put( property.propertyKeyId(), property.value() );
+        }
+        return map;
+    }
+
+    private Map<Integer,Value> properties( Iterator<StorageProperty> properties )
+    {
+        Map<Integer,Value> map = new HashMap<>();
+        while ( properties.hasNext() )
+        {
+            StorageProperty property = properties.next();
+            map.put( property.propertyKeyId(), property.value() );
+        }
+        return map;
+    }
+
+    private Map<Integer,Value> randomProperties( int numProperties )
+    {
+        Map<Integer,Value> properties = new HashMap<>();
+        for ( int p = 0; p < numProperties; p++ )
+        {
+            properties.put( p, random.nextValue() );
+        }
+        return properties;
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private Set<Rel> subset( List<Rel> relationships, int type, Direction direction, long otherNodeId )
     {
         return relationships.stream()
@@ -272,7 +427,11 @@ class DenseRelationshipStoreTest
     private void assertRelationships( ResourceIterator<DenseRelationshipStore.RelationshipData> relationships, Set<Rel> expectedRelationships )
     {
         Set<Rel> readRelationships = new HashSet<>();
+<<<<<<< HEAD
         try
+=======
+        try ( relationships )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             while ( relationships.hasNext() )
             {
@@ -282,6 +441,7 @@ class DenseRelationshipStoreTest
             }
             assertThat( readRelationships ).isEqualTo( expectedRelationships );
         }
+<<<<<<< HEAD
         finally
         {
             relationships.close();
@@ -291,13 +451,24 @@ class DenseRelationshipStoreTest
     private Set<StorageProperty> readProperties( DenseRelationshipStore.RelationshipData relationship )
     {
         Set<StorageProperty> readProperties = new HashSet<>();
+=======
+    }
+
+    private Map<Integer,Value> readProperties( DenseRelationshipStore.RelationshipData relationship )
+    {
+        Map<Integer,Value> readProperties = new HashMap<>();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         if ( relationship.hasProperties() )
         {
             Iterator<StorageProperty> props = relationship.properties();
             while ( props.hasNext() )
             {
                 StorageProperty property = props.next();
+<<<<<<< HEAD
                 readProperties.add( new PropertyKeyValue( property.propertyKeyId(), property.value() ) );
+=======
+                readProperties.put( property.propertyKeyId(), property.value() );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             }
         }
         return readProperties;
@@ -305,7 +476,11 @@ class DenseRelationshipStoreTest
 
     private void createRelationships( Set<Rel> expectedRelationships ) throws IOException
     {
+<<<<<<< HEAD
         try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+=======
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             for ( Rel relationship : expectedRelationships )
             {
@@ -314,6 +489,7 @@ class DenseRelationshipStoreTest
         }
     }
 
+<<<<<<< HEAD
     private void createRelationship( DenseRelationshipStore.Updater updater, Rel relationship )
     {
         updater.createRelationship( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
@@ -324,6 +500,18 @@ class DenseRelationshipStoreTest
     {
         MutableIntObjectMap<PropertyUpdate> serialized = IntObjectMaps.mutable.empty();
         properties.forEach( property -> serialized.put( property.propertyKeyId(), add( property.propertyKeyId(), serialize( property.value() ) ) ) );
+=======
+    private void createRelationship( SimpleDenseRelationshipStore.Updater updater, Rel relationship )
+    {
+        updater.insertRelationship( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
+                relationship.direction() == RelationshipDirection.OUTGOING, serialize( relationship.properties ), u -> u.after );
+    }
+
+    private IntObjectMap<PropertyUpdate> serialize( Map<Integer,Value> properties )
+    {
+        MutableIntObjectMap<PropertyUpdate> serialized = IntObjectMaps.mutable.empty();
+        properties.forEach( ( key, value ) -> serialized.put( key, add( key, serialize( value ) ) ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         return serialized;
     }
 
@@ -336,16 +524,26 @@ class DenseRelationshipStoreTest
         return buffer;
     }
 
+<<<<<<< HEAD
     private static class Rel implements DenseRelationshipStore.RelationshipData
+=======
+    private class Rel implements DenseRelationshipStore.RelationshipData
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         private final long internalId;
         private final long originNodeId;
         private final int type;
         private final long neighbourNodeId;
         private final RelationshipDirection direction;
+<<<<<<< HEAD
         private final Set<StorageProperty> properties;
 
         Rel( long internalId, long originNodeId, int type, long neighbourNodeId, RelationshipDirection direction, Set<StorageProperty> properties )
+=======
+        private final Map<Integer,Value> properties;
+
+        Rel( long internalId, long originNodeId, int type, long neighbourNodeId, RelationshipDirection direction, Map<Integer,Value> properties )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             this.internalId = internalId;
             this.originNodeId = originNodeId;
@@ -393,7 +591,11 @@ class DenseRelationshipStoreTest
         @Override
         public Iterator<StorageProperty> properties()
         {
+<<<<<<< HEAD
             return properties.iterator();
+=======
+            return Iterators.map( entry -> new PropertyKeyValue( entry.getKey(), entry.getValue() ), properties.entrySet().iterator() );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
 
         @Override
@@ -430,5 +632,13 @@ class DenseRelationshipStoreTest
             return "Rel{" + originNodeId + (direction == RelationshipDirection.OUTGOING ? "-[" + type + "]>" : "<[" + type + "]-") + neighbourNodeId +
                     ", props=" + properties + "}";
         }
+<<<<<<< HEAD
+=======
+
+        void insert( SimpleDenseRelationshipStore.Updater updater )
+        {
+            updater.insertRelationship( internalId, originNodeId, type, neighbourNodeId, isOutgoing(), serialize( properties ), u -> u.after );
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 }

@@ -13,10 +13,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -36,7 +38,7 @@ class AntiOperator(val workIdentity: WorkIdentity,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id))
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AntiArgumentState.Factory(id), ordered = true)
     new AntiOperatorState
   }
 
@@ -48,7 +50,7 @@ class AntiOperator(val workIdentity: WorkIdentity,
                            argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
       val input: Seq[MorselData] = operatorInput.takeData()
       if (input != null) {
-        IndexedSeq(new OTask(input))
+        singletonIndexedSeq(new OTask(input))
       } else {
         null
       }
@@ -64,9 +66,14 @@ class AntiOperator(val workIdentity: WorkIdentity,
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
       while (outputCursor.onValidRow() && canContinue) {
         val morselData = morselDataIterator.next()
-        val row = morselData.argumentStream.asInstanceOf[EndOfEmptyStream].viewOfArgumentRow
-        outputCursor.copyFrom(row, argumentSize.nLongs, argumentSize.nReferences)
-        outputCursor.next()
+        morselData.argumentStream match {
+          case EndOfEmptyStream =>
+            val row = morselData.viewOfArgumentRow
+            outputCursor.copyFrom(row, argumentSize.nLongs, argumentSize.nReferences)
+            outputCursor.next()
+          case EndOfNonEmptyStream =>
+            // ignore, nothing to see here
+        }
       }
       outputCursor.truncate()
     }

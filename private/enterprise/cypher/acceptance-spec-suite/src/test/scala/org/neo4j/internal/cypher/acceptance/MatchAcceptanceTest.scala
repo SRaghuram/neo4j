@@ -188,7 +188,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN a, b, COLLECT( DISTINCT c) as c
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.size should be(0)
   }
 
@@ -908,7 +908,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate(n3, createNode())
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH p=(n)-[*0..3]-() RETURN size(COLLECT(DISTINCT p)) AS size")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH p=(n)-[*0..3]-() RETURN size(COLLECT(DISTINCT p)) AS size")
 
     // Then
     result.toList should equal(List(Map("size" -> 8)))
@@ -1161,10 +1161,10 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Filter")
-      .containingArgumentRegex("name = \\$`  AUTOSTRING\\d+`".r)
+      .containingArgumentRegex("name = \\$autostring_\\d+".r)
       .onTopOf(aPlan("Projection")
         .containingVariables("name")
-        .containingArgument("{name : a.name}")
+        .containingArgumentForProjection(Map("name" -> "a.name"))
       )
   }
 }

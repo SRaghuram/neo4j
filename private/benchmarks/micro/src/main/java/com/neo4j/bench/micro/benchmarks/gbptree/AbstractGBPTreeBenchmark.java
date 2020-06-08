@@ -31,6 +31,7 @@ import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.time.Clocks;
 
 import static org.eclipse.collections.api.factory.Sets.immutable;
@@ -170,7 +171,8 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 tracer, log,
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler(),
-                Clocks.nanoClock() );
+                Clocks.nanoClock(),
+                new MemoryPools() );
         return factory.getOrCreatePageCache();
     }
 

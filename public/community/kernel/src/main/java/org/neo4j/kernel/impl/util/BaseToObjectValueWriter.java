@@ -32,6 +32,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Node;
@@ -89,6 +90,12 @@ public abstract class BaseToObjectValueWriter<E extends Exception> implements An
     }
 
     @Override
+    public EntityMode entityMode()
+    {
+        return EntityMode.FULL;
+    }
+
+    @Override
     public void writeNodeReference( long nodeId )
     {
         throw new UnsupportedOperationException( "Cannot write a raw node reference" );
@@ -112,7 +119,7 @@ public abstract class BaseToObjectValueWriter<E extends Exception> implements An
     @Override
     public void writeRelationshipReference( long relId )
     {
-        throw new UnsupportedOperationException( "Cannot write a raw edge reference" );
+        throw new UnsupportedOperationException( "Cannot write a raw relationship reference" );
     }
 
     @Override
@@ -451,7 +458,7 @@ public abstract class BaseToObjectValueWriter<E extends Exception> implements An
     {
         private String key;
         private boolean isKey = true;
-        private final HashMap<String,Object> map;
+        private final Map<String,Object> map;
 
         MapWriter( int size )
         {

@@ -13,7 +13,7 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotationsResult;
-import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.model.model.Repository;
 
 import java.net.URI;
 import java.util.ArrayList;

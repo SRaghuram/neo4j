@@ -31,6 +31,8 @@ import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
 
+import static org.neo4j.io.ByteUnit.MebiByte;
+
 /*
  * This class is an helper to allow to construct properly a page cache in the few places we need it without all
  * the graph database stuff, e.g., various store dump programs.
@@ -50,8 +52,9 @@ public final class StandalonePageCacheFactory
         return createPageCache( factory, jobScheduler, cacheTracer );
     }
 
-    public static PageCache createPageCache( PageSwapperFactory factory, JobScheduler jobScheduler )
+    public static PageCache createPageCache( FileSystemAbstraction fileSystem, JobScheduler jobScheduler )
     {
+        SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
         PageCacheTracer cacheTracer = PageCacheTracer.NULL;
         return createPageCache( factory, jobScheduler, cacheTracer );
     }
@@ -59,7 +62,8 @@ public final class StandalonePageCacheFactory
     private static PageCache createPageCache( PageSwapperFactory factory, JobScheduler jobScheduler, PageCacheTracer cacheTracer )
     {
         VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
-        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( "8 MiB", EmptyMemoryTracker.INSTANCE );
-        return new MuninnPageCache( factory, memoryAllocator, cacheTracer, versionContextSupplier, jobScheduler, Clocks.nanoClock() );
+        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( MebiByte.toBytes( 8 ), EmptyMemoryTracker.INSTANCE );
+        return new MuninnPageCache( factory, memoryAllocator, cacheTracer, versionContextSupplier, jobScheduler, Clocks.nanoClock(),
+                EmptyMemoryTracker.INSTANCE );
     }
 }

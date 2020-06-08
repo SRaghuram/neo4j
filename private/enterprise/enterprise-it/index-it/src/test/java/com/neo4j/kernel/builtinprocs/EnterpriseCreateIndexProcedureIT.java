@@ -281,7 +281,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     private static void assertIndexData( KernelTransaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexDescriptor index )
             throws KernelException
     {
-        try ( NodeValueIndexCursor indexCursor = transaction.cursors().allocateNodeValueIndexCursor() )
+        try ( NodeValueIndexCursor indexCursor = transaction.cursors().allocateNodeValueIndexCursor( transaction.pageCursorTracer() ) )
         {
             IndexQuery[] query = new IndexQuery[propertyKeyIds.length];
             for ( int i = 0; i < propertyKeyIds.length; i++ )

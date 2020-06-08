@@ -5,20 +5,21 @@
  */
 package com.neo4j.bench.infra;
 
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
-import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
-import org.junit.jupiter.api.Test;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.Rule;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfilers;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JobParamsTest
@@ -41,9 +43,9 @@ public class JobParamsTest
         // given
         JobParams jobParams = new JobParams(
                 new InfraParams(
-                        "awsSecret",
-                        "awsKey",
-                        "awsRegion",
+                        new AWSCredentials( "awsKey",
+                                            "awsSecret",
+                                            "awsRegion" ),
                         "resultsStoreUsername",
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),
@@ -55,6 +57,7 @@ public class JobParamsTest
                                 MacroToolRunner.class,
                                 new RunToolMacroWorkloadParams(
                                         new RunMacroWorkloadParams( "workloadName",
+                                                                    emptyList(),
                                                                     Edition.ENTERPRISE,
                                                                     Paths.get( "jvm" ).toAbsolutePath(),
                                                                     defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
@@ -72,7 +75,7 @@ public class JobParamsTest
                                                                     false,
                                                                     Deployment.embedded(),
                                                                     "neo4jCommit",
-                                                                    "3.4.12",
+                                                                    new Version( "3.4.12" ),
                                                                     "neo4jBranch",
                                                                     "neo4jBranchOwner",
                                                                     "toolCommit",
@@ -94,9 +97,9 @@ public class JobParamsTest
         // given
         JobParams jobParams = new JobParams(
                 new InfraParams(
-                        "awsSecret",
-                        "awsKey",
-                        "awsRegion",
+                        new AWSCredentials( "awsKey",
+                                            "awsSecret",
+                                            "awsRegion" ),
                         "resultsStoreUsername",
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),
@@ -107,6 +110,7 @@ public class JobParamsTest
                         new BenchmarkingTool(
                                 MacroToolRunner.class,
                                 new RunMacroWorkloadParams( "workloadName",
+                                                            emptyList(),
                                                             Edition.ENTERPRISE,
                                                             Paths.get( "jvm" ).toAbsolutePath(),
                                                             defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
@@ -124,7 +128,7 @@ public class JobParamsTest
                                                             false,
                                                             Deployment.server( temporaryFolder.newFolder().toPath().toString() ),
                                                             "neo4jCommit",
-                                                            "3.4.12",
+                                                            new Version( "3.4.12" ),
                                                             "neo4jBranch",
                                                             "neo4jBranchOwner",
                                                             "toolCommit",

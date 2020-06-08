@@ -7,10 +7,12 @@ package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.common.ClusteredDatabase;
+import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -80,4 +82,10 @@ public interface ClusteredDatabaseContext extends DatabaseContext
      * @return lifecycle controller for this database and its supporting lifecycled components
      */
     ClusteredDatabase clusteredDatabase();
+
+    /**
+     *
+     * @return {@link LeaderLocator} for this database. This is only available if this database participates in Raft
+     */
+    Optional<LeaderLocator> leaderLocator();
 }

@@ -23,10 +23,12 @@ import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.Descending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.graphdb.Node
+import org.neo4j.internal.helpers.ArrayUtil.MAX_ARRAY_SIZE
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
@@ -148,13 +150,30 @@ abstract class TopTestBase[CONTEXT <: RuntimeContext](
     val runtimeResult = execute(logicalQuery, runtime, input)
 
     // then
-    val expected = input.flatten.sortBy(arr => arr(0).asInstanceOf[Int])
     runtimeResult should beColumns("a").withNoRows()
   }
 
   test("should handle limit of Int.MaxValue") {
     val input = inputValues((0 until sizeHint).map(i => Array[Any](i)): _*)
     val limit = Int.MaxValue
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("a")
+      .top(Seq(Ascending("a")), limit)
+      .input(variables = Seq("a"))
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime, input)
+
+    // then
+    val expected = input.flatten.sortBy(arr => arr(0).asInstanceOf[Int])
+    runtimeResult should beColumns("a").withRows(inOrder(expected))
+  }
+
+  test("should handle limit of maximum array size") {
+    val input = inputValues((0 until sizeHint).map(i => Array[Any](i)): _*)
+    val limit = MAX_ARRAY_SIZE
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -226,7 +245,7 @@ abstract class TopTestBase[CONTEXT <: RuntimeContext](
       .|.top(sortItems = Seq(Descending("y")), limit1)
       .|.expand("(x)-[:R]->(y)")
       .|.argument("x")
-      .nodeByLabelScan("x","A")
+      .nodeByLabelScan("x","A", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
@@ -289,7 +308,7 @@ abstract class TopTestBase[CONTEXT <: RuntimeContext](
       .|.top(Seq(Descending("y")), limit1)
       .|.expandAll("(x)--(y)")
       .|.argument()
-      .nodeByLabelScan("x", "A")
+      .nodeByLabelScan("x", "A", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)

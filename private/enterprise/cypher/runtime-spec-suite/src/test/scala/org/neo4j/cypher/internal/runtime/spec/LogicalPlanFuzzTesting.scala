@@ -20,17 +20,27 @@ import org.neo4j.cypher.internal.util.Cost
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.exceptions.ParameterWrongTypeException
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.values.storable.RandomValues
 import org.scalacheck.Gen
 import org.scalacheck.rng.Seed
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.TimeLimits
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
+// This is still an early prototype, and there are a number of unsolved problems
+// * How to generate the graph
+// * How to  generate valid plans (or at x % of valid plans) where the invalid ones could be a result of other erros, not system errors
+// Also it only generates very few plans right now.
+
 // Class name not ending in `Test` to make sure `mvn test` won't run it
-class LogicalPlanFuzzTesting extends CypherFunSuite {
+class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with TimeLimits {
 
   private val managementService = ENTERPRISE.DEFAULT.newGraphManagementService()
   private val graphDb = managementService.database(DEFAULT_DATABASE_NAME)
@@ -41,12 +51,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite {
 
   private val runtimes = Seq(InterpretedRuntime, SlottedRuntime, PIPELINED/*, PARALLEL*/)
 
-  // This is still an early prototype, and there are a number of unsolved problems
-  // * How to generate the graph
-  // * How to  generate valid plans (or at x % of valid plans) where the invalid ones could be a result of other erros, not system errors
-  // Also it only generates very few plans right now.
-
-  test("all sorts of queries") {
+  private val (tx, txContext) = {
     // Create the data (all executors use the same database instance)
     runtimeTestSupport.start()
     runtimeTestSupport.startTx()
@@ -58,28 +63,31 @@ class LogicalPlanFuzzTesting extends CypherFunSuite {
     runtimeTestSupport.stopTx()
 
     runtimeTestSupport.startTx()
-    val tx = runtimeTestSupport.tx
-    val txContext = runtimeTestSupport.txContext
+    (runtimeTestSupport.tx, runtimeTestSupport.txContext)
+  }
 
-    val generator = LogicalQueryGenerator.logicalQuery(txContext, Cost(10000))
+  override protected def afterAll(): Unit = {
+    txContext.close()
+    tx.close()
+    runtimeTestSupport.stop()
+    managementService.shutdown()
+  }
 
-    val initialSeed = Seed.random() // use `Seed.fromBase64` to reproduce test failures
-    val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "100").toInt
+  private val initialSeed = Seed.random() // use `Seed.fromBase64` to reproduce test failures
+  private val maxCost = Cost(sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_COST", "10000").toInt)
+  private val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "100").toInt
+  private val maxIterationTimeSpan = Span(
+    sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_ITERATION_TIME_SECONDS", "60").toInt,
+    Seconds)
 
-    try {
-      Range(0, iterationCount).foldLeft(initialSeed) {
-        (seed: Seed, iter: Int) =>
-          println()
-          println(s"[${iter + 1}/$iterationCount] seed = ${seed.toBase64}")
-          runTest(seed, generator)
-          Seed.random()
+  private val generator = LogicalQueryGenerator.logicalQuery(txContext, maxCost)
+
+  Range(0, iterationCount).foldLeft(initialSeed) {
+    (seed: Seed, iter: Int) =>
+      test(s"[${iter + 1}/$iterationCount] seed = ${seed.toBase64}") {
+        runTest(seed, generator)
       }
-    } finally {
-      txContext.close()
-      tx.close()
-      runtimeTestSupport.stop()
-      managementService.shutdown()
-    }
+      Seed.random()
   }
 
   private def runTest(seed: Seed, generator: Gen[WithState[LogicalQuery]]): Unit = {
@@ -89,44 +97,50 @@ class LogicalPlanFuzzTesting extends CypherFunSuite {
 
     val cost = CardinalityCostModel(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
 
-    println(logicalQuery.logicalPlan)
-    println(parameters)
-    println(cost)
+    withCluesFailAfter(maxIterationTimeSpan,
+      s"plan = ${logicalQuery.logicalPlan}",
+      s"parameters = $parameters",
+      s"cost = $cost",
+      s"seed = $seed") {
 
-    runtimeTestSupport.startTx()
+      runtimeTestSupport.startTx()
 
-    try {
-      val results = runtimes.map {
-        runtime => Try(runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters))
-      }
+      try {
+        val results = runtimes.map {
+          runtime => Try(runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters))
+        }
 
-      results.zip(runtimes).foreach {
-        case (Failure(_: CantCompileQueryException), _) => // OK
-        case (Failure(_: CypherTypeException), _) => // Ignore these for now, need to generate parameters of appropriate types first
-        case (Failure(e), runtime) =>
-          withClue(s"Error in ${runtime.name}") {
-            fail(e)
-          }
-        case (Success(_), _) => // checking `Failure`s first
-      }
+        results.zip(runtimes).foreach {
+          case (Failure(_: CantCompileQueryException), _) => // OK
+          case (Failure(_: CypherTypeException | _: ParameterWrongTypeException), _) => // Ignore these for now, need to generate parameters of appropriate types first
+          case (Failure(e), runtime) =>
+            withClue(s"Error in ${runtime.name}") {
+              fail(e)
+            }
+          case (Success(_), _) => // checking `Failure`s first
+        }
 
-      val referenceResult = results.head
+        val referenceResult = results.head
 
-      results.zip(runtimes).tail.foreach {
-        case (Success(result), runtime) if referenceResult.isSuccess =>
-          withClue(s"Comparing ${runtime.name} against ${runtimes.head.name}") {
-            println(s"result.size = ${result.size}")
-            if (result.size <= 1000)
+        results.zip(runtimes).tail.foreach {
+          case (Success(result), runtime) if referenceResult.isSuccess =>
+            withClue(s"Comparing ${runtime.name} against ${runtimes.head.name}, result.size = ${result.size}") {
               result should (contain theSameElementsAs referenceResult.get)
-            else
-              println(s"skipping check")
-          }
-        case (Success(_), runtime) if referenceResult.isFailure =>
-          fail(s"Failed in ${runtimes.head.name}, but succeded in ${runtime.name}", referenceResult.failed.get)
-        case (Failure(_), _) => // already checked
+            }
+          case (Success(_), runtime) if referenceResult.isFailure =>
+            fail(s"Failed in ${runtimes.head.name}, but succeeded in ${runtime.name}", referenceResult.failed.get)
+          case (Failure(_), _) => // already checked
+        }
+      } finally {
+        runtimeTestSupport.stopTx()
       }
-    } finally {
-      runtimeTestSupport.stopTx()
     }
   }
+
+  private def withCluesFailAfter[T](span: Span, clues: Any*)(f: => T): T =
+    withClue(clues.mkString("", "\n","\n")) {
+      failAfter(span) {
+        f
+      }
+    }
 }

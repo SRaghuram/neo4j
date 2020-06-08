@@ -20,11 +20,19 @@
 package org.neo4j.internal.freki;
 
 import java.io.IOException;
+<<<<<<< HEAD
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+=======
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import java.util.function.Function;
 
 import org.neo4j.common.EntityType;
@@ -34,28 +42,45 @@ import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
+<<<<<<< HEAD
 import org.neo4j.internal.schema.SchemaCache;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityUpdates;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+<<<<<<< HEAD
 import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.util.Preconditions;
+=======
+import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
+import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.util.concurrent.AsyncApply;
 import org.neo4j.values.storable.Value;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+=======
+import static org.neo4j.internal.freki.Record.deletedRecord;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.neo4j.io.IOUtils.closeAll;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
 import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
@@ -69,6 +94,10 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final DenseRelationshipsWorkSync denseRelationshipsWorkSync;
     private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracer cursorTracer;
+<<<<<<< HEAD
+=======
+    private final MemoryTracker memoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private List<IndexDescriptor> createdIndexes;
     private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
     private final LabelIndexUpdatesWorkSync.Batch labelIndexUpdates;
@@ -77,16 +106,28 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiPropertyCursor propertyCursorBefore;
     private final FrekiPropertyCursor propertyCursorAfter;
     private CountsAccessor.Updater countsApplier;
+<<<<<<< HEAD
     private DenseRelationshipsWorkSync.Batch denseRelationshipUpdates;
 
     // State used for generating index updates
     private long currentNodeId = NULL;
     private final FrekiCommand.SparseNode[] currentSparseNodeCommands = new FrekiCommand.SparseNode[4];
+=======
+    private DenseRelationshipsWorkSync.Batch denseRelationshipsUpdates;
+
+    // State used for generating index updates
+    private boolean hasAnySchema;
+    private AsyncApply denseRelationshipsApply;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
             IndexUpdatesWorkSync indexUpdatesWorkSync, DenseRelationshipsWorkSync denseRelationshipsWorkSync,
+<<<<<<< HEAD
             PageCacheTracer pageCacheTracer, PageCursorTracer cursorTracer )
+=======
+            PageCacheTracer pageCacheTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         this.stores = stores;
         this.reader = reader;
@@ -95,17 +136,30 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         this.denseRelationshipsWorkSync = denseRelationshipsWorkSync;
         this.pageCacheTracer = pageCacheTracer;
         this.cursorTracer = cursorTracer;
+<<<<<<< HEAD
+=======
+        this.memoryTracker = memoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch( pageCacheTracer );
         this.indexUpdates = mode == REVERSE_RECOVERY || indexUpdatesWorkSync == null ? null : indexUpdatesWorkSync.newBatch();
         this.nodeCursor = reader.allocateNodeCursor( cursorTracer );
+<<<<<<< HEAD
         this.propertyCursorBefore = reader.allocatePropertyCursor( cursorTracer );
         this.propertyCursorAfter = reader.allocatePropertyCursor( cursorTracer );
+=======
+        this.propertyCursorBefore = reader.allocatePropertyCursor( cursorTracer, memoryTracker );
+        this.propertyCursorAfter = reader.allocatePropertyCursor( cursorTracer, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     void beginTx( long transactionId )
     {
         countsApplier = stores.countsStore.apply( transactionId, cursorTracer );
+<<<<<<< HEAD
+=======
+        hasAnySchema = !stores.schemaCache.isEmpty();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     void endTx()
@@ -125,14 +179,18 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public boolean visit( StorageCommand command ) throws IOException
     {
+<<<<<<< HEAD
         // TODO DUDE, we gotta handle reverse recovery at some point!!
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         return ((FrekiCommand) command).accept( this );
     }
 
     @Override
     public void handle( FrekiCommand.SparseNode node ) throws IOException
     {
+<<<<<<< HEAD
         checkExtractIndexUpdates( node.nodeId );
 
         Record record = node.after;
@@ -220,6 +278,61 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         }
 
         EntityUpdates.Builder builder = EntityUpdates.forEntity( currentNodeId, nodeIsCreatedRightNow );
+=======
+        // Seeing a SparseNode signals that dense command section is over, so let's start applying them, and also wait for them to prevent readers
+        // from having a chance to observe this node w/o relationships. This really only affects nodes that moves relationshisp to dense store,
+        // but it's more efficient to apply all dense commands in the same go anyway and therefore they are grouped in the beginning like this.
+        endOfDenseCommands();
+        awaitDenseCommandsApplied();
+        writeSparseNode( node, stores, idUpdates, cursorTracer );
+        if ( indexUpdates != null )
+        {
+            checkExtractIndexUpdates( node );
+        }
+    }
+
+    static void writeSparseNode( FrekiCommand.SparseNode node, MainStores stores, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer )
+            throws IOException
+    {
+        for ( FrekiCommand.RecordChange change : node )
+        {
+            int sizeExp = change.sizeExp();
+            SimpleStore store = stores.mainStore( sizeExp );
+            try ( PageCursor cursor = store.openWriteCursor( cursorTracer ) )
+            {
+                boolean updated = change.mode() == Mode.UPDATE;
+                Record afterRecord = change.after != null ? change.after : deletedRecord( sizeExp, change.recordId() );
+                store.write( cursor, afterRecord, idUpdateListener == null || updated ? IGNORE : idUpdateListener, cursorTracer );
+            }
+        }
+    }
+
+    private void checkExtractIndexUpdates( FrekiCommand.SparseNode node )
+    {
+        long[] labelsBefore = findLabelsAndInitializePropertyCursor( node, propertyCursorBefore, change -> change.before, !hasAnySchema );
+        long[] labelsAfter = findLabelsAndInitializePropertyCursor( node, propertyCursorAfter, change -> change.after, !hasAnySchema );
+        if ( hasAnySchema )
+        {
+            EntityUpdates entityUpdates = extractIndexUpdates( node, labelsBefore, labelsAfter );
+            Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
+            if ( !relatedIndexes.isEmpty() )
+            {
+                indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer, memoryTracker ) );
+            }
+        }
+        if ( labelIndexUpdates != null )
+        {
+            labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( node.nodeId, labelsBefore.clone(), labelsAfter.clone() ) );
+        }
+    }
+
+    public EntityUpdates extractIndexUpdates( FrekiCommand.SparseNode node, long[] labelsBefore, long[] labelsAfter )
+    {
+        FrekiCommand.RecordChange x1 = node.change( 0 );
+        boolean nodeIsCreatedRightNow = x1 != null && x1.mode() == Mode.CREATE;
+
+        EntityUpdates.Builder builder = EntityUpdates.forEntity( node.nodeId, nodeIsCreatedRightNow );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         builder.withTokens( labelsBefore ).withTokensAfter( labelsAfter );
         boolean beforeHasNext = propertyCursorBefore.next();
         boolean afterHasNext = propertyCursorAfter.next();
@@ -252,11 +365,15 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 // a property has been changed or is unchanged
                 Value beforeValue = propertyCursorBefore.propertyValue();
                 Value afterValue = propertyCursorAfter.propertyValue();
+<<<<<<< HEAD
                 if ( beforeValue.equals( afterValue ) )
                 {
                     builder.existing( afterKey, afterValue );
                 }
                 else
+=======
+                if ( !beforeValue.equals( afterValue ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 {
                     builder.changed( afterKey, beforeValue, afterValue );
                 }
@@ -267,6 +384,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         return builder.build();
     }
 
+<<<<<<< HEAD
     private Record findRelevantUsedRecord( Function<FrekiCommand.SparseNode,Record> recordFunction )
     {
         Record smallRecord = recordFunction.apply( currentSparseNodeCommands[0] );
@@ -314,6 +432,121 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             denseRelationshipUpdates = denseRelationshipsWorkSync.newBatch();
         }
         denseRelationshipUpdates.add( node );
+=======
+    private long[] findLabelsAndInitializePropertyCursor( FrekiCommand.SparseNode node, FrekiPropertyCursor propertyCursor,
+            Function<FrekiCommand.RecordChange,Record> recordFunction, boolean skipProperties )
+    {
+        nodeCursor.single( node.nodeId, ( sizeExp, id ) ->
+        {
+            FrekiCommand.RecordChange change = node.change( sizeExp, id );
+            if ( change != null )
+            {
+                Record record = recordFunction.apply( change );
+                return record != null ? record : stores.deletedReferenceRecord( sizeExp );
+            }
+            return null;
+        } );
+        boolean inUse = nodeCursor.next();
+        if ( !inUse || skipProperties )
+        {
+            propertyCursor.reset();
+        }
+        if ( inUse )
+        {
+            if ( !skipProperties )
+            {
+                nodeCursor.properties( propertyCursor );
+            }
+            return nodeCursor.labels();
+        }
+        return EMPTY_LONG_ARRAY;
+    }
+
+    @Override
+    public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
+    {
+        // Seeing a BigPropertyValue signals that dense command section is over, so let's start applying them
+        endOfDenseCommands();
+        writeBigValue( value, stores.bigPropertyValueStore, idUpdates, cursorTracer );
+    }
+
+    static void writeBigValue( FrekiCommand.BigPropertyValue value, SimpleBigValueStore bigPropertyValueStore, IdUpdateListener idUpdateListener,
+            PageCursorTracer cursorTracer ) throws IOException
+    {
+        try ( PageCursor cursor = bigPropertyValueStore.openWriteCursor( cursorTracer ) )
+        {
+            bigPropertyValueStore.write( cursor, value.records, idUpdateListener != null ? idUpdateListener : IGNORE, cursorTracer );
+        }
+    }
+
+    @Override
+    public void handle( FrekiCommand.DenseNode node ) throws IOException
+    {
+        if ( denseRelationshipsUpdates == null )
+        {
+            denseRelationshipsUpdates = denseRelationshipsWorkSync.newBatch();
+        }
+        denseRelationshipsUpdates.add( node );
+    }
+
+    static void writeDenseNode( List<FrekiCommand.DenseNode> nodes, SimpleDenseRelationshipStore store, PageCursorTracer cursorTracer ) throws IOException
+    {
+        try ( SimpleDenseRelationshipStore.Updater updater = store.newUpdater( cursorTracer ) )
+        {
+            for ( FrekiCommand.DenseNode node : nodes )
+            {
+                for ( Map.Entry<Integer,DenseRelationships> typedRelationships : node.relationshipUpdates.entrySet() )
+                {
+                    int type = typedRelationships.getKey();
+                    typedRelationships.getValue().relationships.forEach( relationship ->
+                    {
+                        if ( relationship.deleted )
+                        {
+                            updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing );
+                        }
+                        else
+                        {
+                            updater.insertRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing,
+                                    relationship.propertyUpdates, u -> u.after );
+                        }
+                    } );
+                }
+            }
+        }
+    }
+
+    private void endOfDenseCommands()
+    {
+        if ( denseRelationshipsUpdates != null )
+        {
+            denseRelationshipsApply = denseRelationshipsUpdates.applyAsync( pageCacheTracer );
+            denseRelationshipsUpdates = null;
+        }
+    }
+
+    private void awaitDenseCommandsApplied() throws IOException
+    {
+        if ( denseRelationshipsApply != null )
+        {
+            try
+            {
+                denseRelationshipsApply.await();
+            }
+            catch ( ExecutionException e )
+            {
+                Throwable cause = e.getCause();
+                if ( cause instanceof IOException )
+                {
+                    throw (IOException) cause;
+                }
+                if ( cause instanceof RuntimeException )
+                {
+                    throw (RuntimeException) cause;
+                }
+                throw new RuntimeException( cause );
+            }
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -413,15 +646,28 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             }
             AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
             AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
+<<<<<<< HEAD
             AsyncApply denseAsyncApply = denseRelationshipUpdates != null ? denseRelationshipUpdates.applyAsync( pageCacheTracer ) : AsyncApply.EMPTY;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             if ( idUpdates != null )
             {
                 idUpdates.apply( pageCacheTracer );
             }
             labelUpdatesAsyncApply.await();
             indexUpdatesAsyncApply.await();
+<<<<<<< HEAD
             denseAsyncApply.await();
         };
         closeAll( () -> checkExtractIndexUpdates( NULL ), nodeCursor, propertyCursorBefore, propertyCursorAfter, indexesCloser );
+=======
+            endOfDenseCommands();
+            if ( denseRelationshipsApply != null )
+            {
+                denseRelationshipsApply.await();
+            }
+        };
+        closeAll( nodeCursor, propertyCursorBefore, propertyCursorAfter, indexesCloser );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 }

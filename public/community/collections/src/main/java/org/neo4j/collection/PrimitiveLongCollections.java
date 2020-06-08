@@ -50,6 +50,39 @@ public final class PrimitiveLongCollections
         // nop
     }
 
+    public static LongIterator single( long item )
+    {
+        return new SingleLongIterator( item );
+    }
+
+    private static final class SingleLongIterator implements LongIterator
+    {
+        private final long item;
+        private boolean consumed;
+
+        SingleLongIterator( long item )
+        {
+            this.item = item;
+        }
+
+        @Override
+        public long next()
+        {
+            if ( consumed )
+            {
+                throw new NoSuchElementException( "No such element" );
+            }
+            consumed = true;
+            return item;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return !consumed;
+        }
+    }
+
     public static LongIterator iterator( final long... items )
     {
         return new PrimitiveLongResourceCollections.AbstractPrimitiveLongBaseResourceIterator( Resource.EMPTY )
@@ -65,6 +98,21 @@ public final class PrimitiveLongCollections
         };
     }
 
+    public static LongIterator reverseIterator( final long... items )
+    {
+        return new PrimitiveLongResourceCollections.AbstractPrimitiveLongBaseResourceIterator( Resource.EMPTY )
+        {
+            private int index = items.length;
+
+            @Override
+            protected boolean fetchNext()
+            {
+                index--;
+                return index >= 0 && next( items[index] );
+            }
+        };
+    }
+
     // Concating
     public static LongIterator concat( LongIterator... longIterators )
     {
@@ -73,7 +121,7 @@ public final class PrimitiveLongCollections
 
     public static LongIterator concat( Iterator<LongIterator> primitiveLongIterators )
     {
-        return new PrimitiveLongConcatingIterator( primitiveLongIterators );
+        return new PrimitiveLongConcatenatingIterator( primitiveLongIterators );
     }
 
     public static LongIterator filter( LongIterator source, final LongPredicate filter )
@@ -356,12 +404,12 @@ public final class PrimitiveLongCollections
         }
     }
 
-    public static class PrimitiveLongConcatingIterator extends AbstractPrimitiveLongBaseIterator
+    public static class PrimitiveLongConcatenatingIterator extends AbstractPrimitiveLongBaseIterator
     {
         private final Iterator<? extends LongIterator> iterators;
         private LongIterator currentIterator;
 
-        PrimitiveLongConcatingIterator( Iterator<? extends LongIterator> iterators )
+        PrimitiveLongConcatenatingIterator( Iterator<? extends LongIterator> iterators )
         {
             this.iterators = iterators;
         }

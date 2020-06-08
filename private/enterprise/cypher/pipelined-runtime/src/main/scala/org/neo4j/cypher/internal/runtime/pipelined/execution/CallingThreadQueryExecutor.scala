@@ -6,9 +6,11 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.runtime.CUSTOM_MEMORY_TRACKING
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.MEMORY_TRACKING
 import org.neo4j.cypher.internal.runtime.MemoryTracking
+import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerDecorator
 import org.neo4j.cypher.internal.runtime.NO_TRACKING
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
@@ -61,9 +63,11 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
       memoryTracking match {
         case NO_TRACKING => new StandardStateFactory
         case MEMORY_TRACKING => new MemoryTrackingStandardStateFactory(transactionMemoryTracker)
+        case CUSTOM_MEMORY_TRACKING(decorator: MemoryTrackerDecorator) => new MemoryTrackingStandardStateFactory(decorator(transactionMemoryTracker));
       }
 
-    val resources = new QueryResources(cursors: CursorFactory, queryContext.transactionalContext.transaction.pageCursorTracer())
+    val transaction = queryContext.transactionalContext.transaction
+    val resources = new QueryResources(cursors: CursorFactory, transaction.pageCursorTracer(), transaction.memoryTracker())
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = PipelinedQueryState(queryContext,

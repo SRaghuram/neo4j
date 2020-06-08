@@ -51,10 +51,16 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         Set<String> roles = queryForRoleNames();
-        StandardAccessMode.Builder accessModeBuilder =
-                new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver, dbName, defaultDatabase );
+        StandardAccessModeBuilder accessModeBuilder =
+                new StandardAccessModeBuilder( isAuthenticated, passwordChangeRequired, roles, resolver, dbName, defaultDatabase );
 
         Set<ResourcePrivilege> privileges = authManager.getPermissions( roles );
+        return mode( accessModeBuilder, privileges, dbName, defaultDatabase, neoShiroSubject.username(), roles );
+    }
+
+    static StandardAccessMode mode( StandardAccessModeBuilder accessModeBuilder, Set<ResourcePrivilege> privileges, String dbName, String defaultDatabase,
+            String username, Set<String> roles )
+    {
         boolean isDefault = dbName.equals( defaultDatabase );
         for ( ResourcePrivilege privilege : privileges )
         {
@@ -72,7 +78,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         if ( !mode.allowsAccess() )
         {
             throw mode.onViolation(
-                String.format( "Database access is not allowed for user '%s' with roles %s.", neoShiroSubject.username(), new TreeSet<>( roles ).toString() ) );
+                String.format( "Database access is not allowed for user '%s' with roles %s.", username, new TreeSet<>( roles ).toString() ) );
         }
 
         return mode;

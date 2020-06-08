@@ -75,14 +75,14 @@ class HintAcceptanceTest
   }
 
   test("should solve join hints when leaves have extra variables") {
-
-    val rel = relate(createNode(), createNode())
+    val rel = relate(createNode(), createNode(), "p" -> 1)
 
     val query =
       s"""
          |    WITH 1 as nbr
          |    MATCH (n)-[r]->(p)
          |    USING JOIN ON p
+         |    WHERE r.p = nbr
          |    RETURN r
       """.stripMargin
 

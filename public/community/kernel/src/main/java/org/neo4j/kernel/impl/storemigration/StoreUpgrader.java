@@ -36,20 +36,16 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.Version;
-import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.IndexCapabilities;
-import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreVersion;
 import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.storageengine.migration.MigrationProgressMonitor;
 import org.neo4j.storageengine.migration.StoreMigrationParticipant;
 import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 
-import static org.neo4j.io.fs.FileSystemAbstraction.EMPTY_COPY_OPTIONS;
 import static org.neo4j.storageengine.migration.StoreMigrationParticipant.NOT_PARTICIPATING;
 import static org.neo4j.util.Preconditions.checkState;
 
@@ -89,25 +85,21 @@ public class StoreUpgrader
     private final Config config;
     private final FileSystemAbstraction fileSystem;
     private final Log log;
-    private final LogTailScanner logTailScanner;
-    private final LegacyTransactionLogsLocator legacyLogsLocator;
+    private final LogsUpgrader logsUpgrader;
     private final String configuredFormat;
-    private final StorageEngineFactory storageEngineFactory;
     private final PageCacheTracer pageCacheTracer;
 
-    public StoreUpgrader( StoreVersionCheck storeVersionCheck, MigrationProgressMonitor progressMonitor, Config
-            config, FileSystemAbstraction fileSystem, LogProvider logProvider, LogTailScanner logTailScanner,
-            LegacyTransactionLogsLocator legacyLogsLocator, StorageEngineFactory storageEngineFactory, PageCacheTracer pageCacheTracer )
+    public StoreUpgrader( StoreVersionCheck storeVersionCheck, MigrationProgressMonitor progressMonitor, Config config,
+                          FileSystemAbstraction fileSystem, LogProvider logProvider, LogsUpgrader logsUpgrader,
+                          PageCacheTracer pageCacheTracer )
     {
         this.storeVersionCheck = storeVersionCheck;
         this.progressMonitor = progressMonitor;
         this.fileSystem = fileSystem;
         this.config = config;
-        this.legacyLogsLocator = legacyLogsLocator;
+        this.logsUpgrader = logsUpgrader;
         this.log = logProvider.getLog( getClass() );
-        this.logTailScanner = logTailScanner;
         this.configuredFormat = storeVersionCheck.configuredVersion();
-        this.storageEngineFactory = storageEngineFactory;
         this.pageCacheTracer = pageCacheTracer;
     }
 
@@ -130,6 +122,12 @@ public class StoreUpgrader
 
     public void migrateIfNeeded( DatabaseLayout layout )
     {
+        // nothing to migrate
+        if ( !layout.databaseDirectory().exists() )
+        {
+            return;
+        }
+        logsUpgrader.assertLogVersionIsCurrent( layout );
         if ( layout.getDatabaseName().equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
         {
             // TODO: System database does not (yet) support migration, remove this when it does!
@@ -202,7 +200,7 @@ public class StoreUpgrader
         {
             StoreVersionCheck.Result upgradeCheck = storeVersionCheck.checkUpgrade( storeVersionCheck.configuredVersion(), cursorTracer );
             versionToMigrateFrom = getVersionFromResult( upgradeCheck );
-            assertCleanlyShutDownByCheckPoint();
+            logsUpgrader.assertCleanlyShutDown( dbDirectoryLayout );
             cleanMigrationDirectory( migrationLayout.databaseDirectory() );
             MigrationStatus.migrating.setMigrationStatus( fileSystem, migrationStateFile, versionToMigrateFrom );
             migrateToIsolatedDirectory( dbDirectoryLayout, migrationLayout, versionToMigrateFrom );
@@ -217,45 +215,12 @@ public class StoreUpgrader
         }
 
         progressMonitor.startTransactionLogsMigration();
-        migrateTransactionLogs( dbDirectoryLayout, legacyLogsLocator );
+        logsUpgrader.upgrade( dbDirectoryLayout );
         progressMonitor.completeTransactionLogsMigration();
 
         cleanup( participants.values(), migrationLayout );
 
         progressMonitor.completed();
-    }
-
-    private void migrateTransactionLogs( DatabaseLayout dbDirectoryLayout, LegacyTransactionLogsLocator transactionLogsLocator )
-    {
-        try
-        {
-            File transactionLogsDirectory = dbDirectoryLayout.getTransactionLogsDirectory();
-            File legacyLogsDirectory = transactionLogsLocator.getTransactionLogsDirectory();
-            if ( transactionLogsDirectory.equals( legacyLogsDirectory ) )
-            {
-                // directories are the same - no need to move log files
-                return;
-            }
-            File[] legacyFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( legacyLogsDirectory, fileSystem )
-                    .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
-                    .build()
-                    .logFiles();
-            if ( legacyFiles != null )
-            {
-                for ( File legacyFile : legacyFiles )
-                {
-                    fileSystem.copyFile( legacyFile, new File( transactionLogsDirectory, legacyFile.getName() ), EMPTY_COPY_OPTIONS );
-                }
-                for ( File legacyFile : legacyFiles )
-                {
-                    fileSystem.deleteFile( legacyFile );
-                }
-            }
-        }
-        catch ( IOException ioException )
-        {
-            throw new TransactionLogsRelocationException( "Failure on attempt to move transaction logs into new location.", ioException );
-        }
     }
 
     private String getVersionFromResult( StoreVersionCheck.Result result )
@@ -279,30 +244,6 @@ public class StoreUpgrader
         default:
             throw new IllegalArgumentException( "Unexpected outcome: " + result.outcome.name() );
         }
-    }
-
-    private void assertCleanlyShutDownByCheckPoint()
-    {
-        Throwable suppressibleException = null;
-        try
-        {
-            if ( !logTailScanner.getTailInformation().commitsAfterLastCheckpoint() )
-            {
-                // All good
-                return;
-            }
-        }
-        catch ( Throwable throwable )
-        {
-            // ignore exception and throw db not cleanly shutdown
-            suppressibleException = throwable;
-        }
-        DatabaseNotCleanlyShutDownException exception = new DatabaseNotCleanlyShutDownException();
-        if ( suppressibleException != null )
-        {
-            exception.addSuppressed( suppressibleException );
-        }
-        throw exception;
     }
 
     List<StoreMigrationParticipant> getParticipants()
@@ -481,7 +422,7 @@ public class StoreUpgrader
         }
     }
 
-    static class DatabaseNotCleanlyShutDownException extends UnableToUpgradeException
+    public static class DatabaseNotCleanlyShutDownException extends UnableToUpgradeException
     {
         private static final String MESSAGE =
                 "The database is not cleanly shutdown. The database needs recovery, in order to recover the database, "

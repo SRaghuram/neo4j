@@ -22,6 +22,7 @@ package org.neo4j.cypher.internal.runtime.spec.tests
 import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -100,7 +101,7 @@ abstract class ExpressionTestBase[CONTEXT <: RuntimeContext](edition: Edition[CO
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("hasLabel")
       .projection("x:Other AS hasLabel")
-      .nodeByLabelScan("x", "Label")
+      .nodeByLabelScan("x", "Label", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
@@ -163,7 +164,7 @@ abstract class ExpressionTestBase[CONTEXT <: RuntimeContext](edition: Edition[CO
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("prop")
       .projection("x.prop AS prop")
-      .nodeByLabelScan("x", "Label")
+      .nodeByLabelScan("x", "Label", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
@@ -229,7 +230,7 @@ abstract class ExpressionTestBase[CONTEXT <: RuntimeContext](edition: Edition[CO
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("hasProp")
       .projection("EXISTS(x.prop) AS hasProp")
-      .nodeByLabelScan("x", "Label")
+      .nodeByLabelScan("x", "Label", IndexOrderNone)
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
@@ -364,6 +365,54 @@ abstract class ExpressionTestBase[CONTEXT <: RuntimeContext](edition: Edition[CO
 
     // then
     runtimeResult should beColumns("prop").withRows(singleColumn(Seq(null)))
+  }
+
+  test("should read property from correct entity (rel/long slot)") {
+    // given
+    val size = 100
+    val halfSize = size / 2
+    val nodes =
+      given {
+        nodePropertyGraph(size, { case i => Map("prop" -> i) })
+      }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("longNodeProp", "refNodeProp")
+      .projection("longNode.prop AS longNodeProp", "refNode.prop AS refNodeProp")
+      .input(nodes = Seq("longNode"), variables = Seq("refNode"))
+      .build()
+
+    val input = inputColumns(1, halfSize, i => nodes(i), i => nodes(halfSize + i))
+    val runtimeResult = execute(logicalQuery, runtime, input)
+
+    // then
+    val expected = (0 until halfSize).map(i => Array[Any](i, halfSize+i))
+    runtimeResult should beColumns("longNodeProp", "refNodeProp").withRows(expected)
+  }
+
+  test("should read cached property from correct entity (rel/long slot)") {
+    // given
+    val size = 100
+    val halfSize = size / 2
+    val nodes =
+      given {
+        nodePropertyGraph(size, { case i => Map("prop" -> i) })
+      }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("longNodeProp", "refNodeProp")
+      .projection("cache[longNode.prop] AS longNodeProp", "cache[refNode.prop] AS refNodeProp")
+      .input(nodes = Seq("longNode"), variables = Seq("refNode"))
+      .build()
+
+    val input = inputColumns(1, halfSize, i => nodes(i), i => nodes(halfSize + i))
+    val runtimeResult = execute(logicalQuery, runtime, input)
+
+    // then
+    val expected = (0 until halfSize).map(i => Array[Any](i, halfSize+i))
+    runtimeResult should beColumns("longNodeProp", "refNodeProp").withRows(expected)
   }
 }
 

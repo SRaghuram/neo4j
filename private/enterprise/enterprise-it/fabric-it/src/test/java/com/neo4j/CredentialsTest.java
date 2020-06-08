@@ -101,7 +101,7 @@ class CredentialsTest
         }
 
         ArgumentCaptor<LoginContext> loginContextArgumentCaptor = ArgumentCaptor.forClass( LoginContext.class );
-        verify( boltDatabaseService ).beginTransaction( any(), loginContextArgumentCaptor.capture(), any(), any(), any(), any(), any() );
+        verify( boltDatabaseService ).beginTransaction( any(), loginContextArgumentCaptor.capture(), any(), any(), any(), any(), any(), any() );
 
         LoginContext loginContext = loginContextArgumentCaptor.getValue();
         Credentials credentials = FabricAuthManagerWrapper.getCredentials( loginContext.subject() );
@@ -124,7 +124,7 @@ class CredentialsTest
         }
 
         ArgumentCaptor<LoginContext> loginContextArgumentCaptor = ArgumentCaptor.forClass( LoginContext.class );
-        verify( boltDatabaseService ).beginTransaction( any(), loginContextArgumentCaptor.capture(), any(), any(), any(), any(), any() );
+        verify( boltDatabaseService ).beginTransaction( any(), loginContextArgumentCaptor.capture(), any(), any(), any(), any(), any(), any() );
 
         LoginContext loginContext = loginContextArgumentCaptor.getValue();
         Credentials credentials = FabricAuthManagerWrapper.getCredentials( loginContext.subject() );

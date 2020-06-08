@@ -10,27 +10,22 @@ import com.neo4j.causalclustering.core.consensus.RaftTestFixture;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.causalclustering.core.consensus.RaftMachine.Timeouts.ELECTION;
 import static com.neo4j.causalclustering.core.consensus.RaftMachine.Timeouts.HEARTBEAT;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
-@RunWith( MockitoJUnitRunner.class )
-public class RaftMembershipTest
+class RaftMembershipTest
 {
     @Test
-    public void shouldNotFormGroupWithoutAnyBootstrapping()
+    void shouldNotFormGroupWithoutAnyBootstrapping()
     {
         // given
         DirectNetworking net = new DirectNetworking();
@@ -46,13 +41,13 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertThat( fixture.members(), hasCurrentMembers( new RaftTestMembers( new int[0] ) ) );
-        assertEquals( fixture.messageLog(), 0, fixture.members().withRole( LEADER ).size() );
-        assertEquals( fixture.messageLog(), 3, fixture.members().withRole( FOLLOWER ).size() );
+        MatcherAssert.assertThat( fixture.members(), hasCurrentMembers( new RaftTestMembers( new int[0] ) ) );
+        Assertions.assertEquals( 0, fixture.members().withRole( LEADER ).size(), fixture.messageLog() );
+        Assertions.assertEquals( 3, fixture.members().withRole( FOLLOWER ).size(), fixture.messageLog() );
     }
 
     @Test
-    public void shouldAddSingleInstanceToExistingRaftGroup() throws Exception
+    void shouldAddSingleInstanceToExistingRaftGroup() throws Exception
     {
         // given
         DirectNetworking net = new DirectNetworking();
@@ -80,13 +75,13 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
-        assertEquals( fixture.messageLog(),1, fixture.members().withRole( LEADER ).size() );
-        assertEquals( fixture.messageLog(),3, fixture.members().withRole( FOLLOWER ).size() );
+        MatcherAssert.assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
+        Assertions.assertEquals( 1, fixture.members().withRole( LEADER ).size(), fixture.messageLog() );
+        Assertions.assertEquals( 3, fixture.members().withRole( FOLLOWER ).size(), fixture.messageLog() );
     }
 
     @Test
-    public void shouldAddMultipleInstancesToExistingRaftGroup() throws Exception
+    void shouldAddMultipleInstancesToExistingRaftGroup() throws Exception
     {
         // given
         DirectNetworking net = new DirectNetworking();
@@ -121,13 +116,13 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withRole( LEADER ).size() );
-        assertEquals( fixture.messageLog(), 5, fixture.members().withRole( FOLLOWER ).size() );
+        MatcherAssert.assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
+        Assertions.assertEquals( 1, fixture.members().withRole( LEADER ).size(), fixture.messageLog() );
+        Assertions.assertEquals( 5, fixture.members().withRole( FOLLOWER ).size(), fixture.messageLog() );
     }
 
     @Test
-    public void shouldRemoveSingleInstanceFromExistingRaftGroup() throws Exception
+    void shouldRemoveSingleInstanceFromExistingRaftGroup() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -149,13 +144,13 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
+        MatcherAssert.assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
+        Assertions.assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size(), fixture.messageLog() );
+        Assertions.assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size(), fixture.messageLog() );
     }
 
     @Test
-    public void shouldRemoveMultipleInstancesFromExistingRaftGroup() throws Exception
+    void shouldRemoveMultipleInstancesFromExistingRaftGroup() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -180,13 +175,13 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
+        MatcherAssert.assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
+        Assertions.assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size(), fixture.messageLog() );
+        Assertions.assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size(), fixture.messageLog() );
     }
 
     @Test
-    public void shouldHandleMixedChangeToExistingRaftGroup() throws Exception
+    void shouldHandleMixedChangeToExistingRaftGroup() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -222,14 +217,14 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size() );
-        assertEquals( fixture.messageLog(), 3, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size() );
+        MatcherAssert.assertThat( fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
+        Assertions.assertEquals( 1, fixture.members().withIds( finalMembers ).withRole( LEADER ).size(), fixture.messageLog() );
+        Assertions.assertEquals( 3, fixture.members().withIds( finalMembers ).withRole( FOLLOWER ).size(), fixture.messageLog() );
     }
 
     @Test
-    @Ignore // rethink when we implement "safe shutdown"
-    public void shouldRemoveLeaderFromExistingRaftGroupAndActivelyTransferLeadership() throws Exception
+    @Disabled // rethink when we implement "safe shutdown"
+    void shouldRemoveLeaderFromExistingRaftGroupAndActivelyTransferLeadership() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -254,13 +249,13 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
-        assertTrue( fixture.messageLog(), fixture.members().withId( stable1 ).raftInstance().isLeader() ||
-                fixture.members().withId( stable2 ).raftInstance().isLeader() );
+        MatcherAssert.assertThat( fixture.messageLog(), fixture.members().withIds( finalMembers ), hasCurrentMembers( new RaftTestMembers( finalMembers ) ) );
+        Assertions.assertTrue( fixture.members().withId( stable1 ).raftInstance().isLeader() ||
+                               fixture.members().withId( stable2 ).raftInstance().isLeader(), fixture.messageLog() );
     }
 
     @Test
-    public void shouldRemoveLeaderAndAddItBackIn() throws Exception
+    void shouldRemoveLeaderAndAddItBackIn() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -295,12 +290,12 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertTrue( fixture.messageLog(), fixture.members().withId( leader2 ).raftInstance().isLeader() );
-        assertThat( fixture.messageLog(), fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestMembers( allMembers ) ) );
+        Assertions.assertTrue( fixture.members().withId( leader2 ).raftInstance().isLeader(), fixture.messageLog() );
+        MatcherAssert.assertThat( fixture.messageLog(), fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestMembers( allMembers ) ) );
     }
 
     @Test
-    public void shouldRemoveFollowerAndAddItBackIn() throws Exception
+    void shouldRemoveFollowerAndAddItBackIn() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -323,8 +318,8 @@ public class RaftMembershipTest
         fixture.members().withId( leader ).raftInstance().setTargetMembershipSet( new RaftTestMembers( fewerMembers ).getMembers() );
         net.processMessages();
 
-        assertTrue( fixture.members().withId( leader ).raftInstance().isLeader() );
-        assertThat( fixture.members().withIds( fewerMembers ), hasCurrentMembers( new RaftTestMembers( fewerMembers ) ) );
+        Assertions.assertTrue( fixture.members().withId( leader ).raftInstance().isLeader() );
+        MatcherAssert.assertThat( fixture.members().withIds( fewerMembers ), hasCurrentMembers( new RaftTestMembers( fewerMembers ) ) );
 
         fixture.members().withId( leader ).raftInstance().setTargetMembershipSet( new RaftTestMembers( allMembers ).getMembers() );
         net.processMessages();
@@ -333,12 +328,12 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertTrue( fixture.messageLog(), fixture.members().withId( leader ).raftInstance().isLeader() );
-        assertThat( fixture.messageLog(), fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestMembers( allMembers ) ) );
+        Assertions.assertTrue( fixture.members().withId( leader ).raftInstance().isLeader(), fixture.messageLog() );
+        MatcherAssert.assertThat( fixture.messageLog(), fixture.members().withIds( allMembers ), hasCurrentMembers( new RaftTestMembers( allMembers ) ) );
     }
 
     @Test
-    public void shouldElectNewLeaderWhenOldOneAbruptlyLeaves() throws Exception
+    void shouldElectNewLeaderWhenOldOneAbruptlyLeaves() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -361,10 +356,10 @@ public class RaftMembershipTest
         net.processMessages();
 
         // then
-        assertTrue( fixture.messageLog(), fixture.members().withId( leader2 ).raftInstance().isLeader() );
-        assertFalse( fixture.messageLog(), fixture.members().withId( stable ).raftInstance().isLeader() );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( leader2, stable ).withRole( LEADER ).size() );
-        assertEquals( fixture.messageLog(), 1, fixture.members().withIds( leader2, stable ).withRole( FOLLOWER ).size() );
+        Assertions.assertTrue( fixture.members().withId( leader2 ).raftInstance().isLeader(), fixture.messageLog() );
+        Assertions.assertFalse( fixture.members().withId( stable ).raftInstance().isLeader(), fixture.messageLog() );
+        Assertions.assertEquals( 1, fixture.members().withIds( leader2, stable ).withRole( LEADER ).size(), fixture.messageLog() );
+        Assertions.assertEquals( 1, fixture.members().withIds( leader2, stable ).withRole( FOLLOWER ).size(), fixture.messageLog() );
     }
 
     private Matcher<? super RaftTestFixture.Members> hasCurrentMembers( final RaftTestMembers raftGroup )

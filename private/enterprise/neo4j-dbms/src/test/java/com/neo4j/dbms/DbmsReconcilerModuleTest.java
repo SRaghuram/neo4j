@@ -15,10 +15,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -26,6 +24,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -37,7 +36,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.StandaloneDbmsReconcilerModule.createTransitionsTable;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
@@ -48,10 +49,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -176,7 +179,7 @@ class DbmsReconcilerModuleTest
         var foo = idRepository.getRaw( "foo" );
         var operator = new LocalDbmsOperator( idRepository );
         // a database manager which blocks on starting databases
-        CountDownLatch startingLatch  = new CountDownLatch( 1 );
+        CountDownLatch startingLatch = new CountDownLatch( 1 );
         AtomicBoolean isStarting = new AtomicBoolean( false );
         MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
 
@@ -228,7 +231,7 @@ class DbmsReconcilerModuleTest
         var operator = new LocalDbmsOperator( idRepository );
 
         // a database manager which blocks on starting databases
-        CountDownLatch startingLatch  = new CountDownLatch( 1 );
+        CountDownLatch startingLatch = new CountDownLatch( 1 );
         AtomicBoolean isStarting = new AtomicBoolean( false );
         MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
 
@@ -277,24 +280,99 @@ class DbmsReconcilerModuleTest
     void shouldCatchAsFailure( Throwable failure )
     {
         // given
-        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+        var databaseManager = mock( MultiDatabaseManager.class );
 
-        NamedDatabaseId foo = idRepository.getRaw( "foo" );
+        var foo = idRepository.getRaw( "foo" );
         doThrow( failure ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
-        DbmsReconciler reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
 
         // when
-        LocalDbmsOperator operator = new LocalDbmsOperator( idRepository );
+        var operator = new LocalDbmsOperator( idRepository );
         operator.startDatabase( "foo" );
 
         reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
-        Optional<Throwable> startFailure = reconciler.causeOfFailure( foo );
+        var startFailure = reconciler.causeOfFailure( foo );
 
         // then
         assertTrue( startFailure.isPresent() );
         assertEquals( failure, startFailure.get() );
+    }
+
+    @Test
+    void shouldDoCleanupInTransitionFails()
+    {
+        // given
+        var databaseManager = mock( MultiDatabaseManager.class );
+
+        var foo = idRepository.getRaw( "foo" );
+        var failure = new RuntimeException();
+        doThrow( failure ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
+
+        var transitionWithCleanup = Transition.from( INITIAL )
+                .doTransition( databaseManager::startDatabase )
+                .ifSucceeded( STARTED )
+                .ifFailedThenDo( databaseManager::stopDatabase, STOPPED );
+        var transitionsTable = TransitionsTable.builder()
+                .from( INITIAL ).to( STARTED ).doTransitions( transitionWithCleanup )
+                .build();
+
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+
+        // when
+        var operator = new LocalDbmsOperator( idRepository );
+        operator.startDatabase( "foo" );
+
+        reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
+        var startFailure = reconciler.causeOfFailure( foo );
+
+        // then
+        assertTrue( startFailure.isPresent() );
+        assertEquals( failure, startFailure.get() );
+        verify( databaseManager ).stopDatabase( foo );
+    }
+
+    @Test
+    void priorityRequestsShouldIgnoreAndHealFailedStates()
+    {
+        // given
+        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+
+        var foo = idRepository.getRaw( "foo" );
+        var failure = new RuntimeException( "An error has occurred" );
+
+        doThrow( failure )
+                .doNothing() // Second attempt succeeds
+                .when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
+
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var operator = new LocalDbmsOperator( idRepository );
+        operator.startDatabase( "foo" );
+
+        // when/then
+        assertThrows( DatabaseManagementException.class, () -> reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() ).join( foo ) );
+        var startFailure = reconciler.causeOfFailure( foo );
+        assertTrue( startFailure.isPresent() );
+        assertEquals( failure, startFailure.get() );
+
+        verify( databaseManager ).startDatabase( foo );
+
+        // when
+        reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() ).await( foo );
+
+        // then
+        verify( databaseManager, atMostOnce() ).startDatabase( foo );
+
+        // when
+        reconciler.reconcile( List.of( operator ), ReconcilerRequest.priority( foo ) ).join( foo );
+
+        // then
+        startFailure = reconciler.causeOfFailure( foo );
+        assertTrue( startFailure.isEmpty() );
+        verify( databaseManager, times( 2 ) ).startDatabase( foo );
     }
 }

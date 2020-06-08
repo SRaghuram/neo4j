@@ -92,7 +92,7 @@ public abstract class CompiledConversionUtils
         {
             return Array.getLength( value ) > 0;
         }
-        throw new CypherTypeException( "Don't know how to treat that as a predicate: " + value.toString(), null );
+        throw new CypherTypeException( "Don't know how to treat that as a predicate: " + value, null );
     }
 
     public static Set<?> toSet( Object value )
@@ -149,7 +149,7 @@ public abstract class CompiledConversionUtils
         else if ( value.getClass().isArray() )
         {
             int len = Array.getLength( value );
-            HashSet<Object> collection = new HashSet<>( len );
+            Set<Object> collection = new HashSet<>( len );
             for ( int i = 0; i < len; i++ )
             {
                 collection.add( Array.get( value, i ) );
@@ -274,7 +274,7 @@ public abstract class CompiledConversionUtils
         {
             return ((BooleanValue) o).booleanValue();
         }
-        throw new CypherTypeException( "Don't know how to treat that as a boolean: " + o.toString(), null );
+        throw new CypherTypeException( "Don't know how to treat that as a boolean: " + o, null );
     }
 
     @SuppressWarnings( {"unchecked", "WeakerAccess"} )

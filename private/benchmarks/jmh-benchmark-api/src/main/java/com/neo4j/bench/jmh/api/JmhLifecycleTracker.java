@@ -5,16 +5,16 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.jmh.api.profile.AbstractMicroProfiler;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;

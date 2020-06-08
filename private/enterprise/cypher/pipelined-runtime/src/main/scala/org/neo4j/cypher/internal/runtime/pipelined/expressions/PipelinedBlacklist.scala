@@ -7,20 +7,20 @@ package org.neo4j.cypher.internal.runtime.pipelined.expressions
 
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.functions
-import org.neo4j.cypher.internal.logical.plans.Aggregation
-import org.neo4j.cypher.internal.logical.plans.AntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
+import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
+import org.neo4j.cypher.internal.logical.plans.PartialSort
+import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
-import org.neo4j.cypher.internal.logical.plans.SemiApply
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.exceptions.CantCompileQueryException
 
 object PipelinedBlacklist {
 
-  def throwOnUnsupportedPlan(logicalPlan: LogicalPlan, parallelExecution: Boolean, leveragedOrders: LeveragedOrders): Unit = {
+  def throwOnUnsupportedPlan(logicalPlan: LogicalPlan, parallelExecution: Boolean, leveragedOrders: LeveragedOrders, runtimeName: String): Unit = {
     val unsupport =
       logicalPlan.fold(Set[String]()) {
         //Queries containing these expression cant be handled by morsel runtime yet
@@ -39,9 +39,22 @@ object PipelinedBlacklist {
 
         case c: CartesianProduct if leveragedOrders.get(c.id) =>
           _ + "CartesianProduct if it needs to maintain order"
+
+        case _: OrderedAggregation if parallelExecution =>
+          _ + "OrderedAggregation"
+
+        case _: OrderedDistinct if parallelExecution =>
+          _ + "OrderedDistinct"
+
+        case _: PartialSort if parallelExecution =>
+          _ + "PartialSort"
+
+        case _: PartialTop if parallelExecution =>
+          _ + "PartialTop"
+
       }
     if (unsupport.nonEmpty) {
-      throw new CantCompileQueryException(s"Pipelined does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
+      throw new CantCompileQueryException(s"$runtimeName does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
     }
   }
 }

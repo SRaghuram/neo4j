@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
@@ -144,6 +145,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     {
         return row.groups.stream()
                 .sorted()
+                .map( ServerGroupName::getRaw )
                 .map( Values::utf8Value )
                 .collect( ListValueBuilder.collector() );
     }
@@ -153,9 +155,9 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         final UUID memberId;
         final ClientConnectorAddresses addresses;
         final Map<NamedDatabaseId,RoleInfo> databases;
-        final Set<String> groups;
+        final Set<ServerGroupName> groups;
 
-        ResultRow( UUID memberId, ClientConnectorAddresses addresses, Map<NamedDatabaseId,RoleInfo> databases, Set<String> groups )
+        ResultRow( UUID memberId, ClientConnectorAddresses addresses, Map<NamedDatabaseId,RoleInfo> databases, Set<ServerGroupName> groups )
         {
             this.memberId = memberId;
             this.addresses = addresses;

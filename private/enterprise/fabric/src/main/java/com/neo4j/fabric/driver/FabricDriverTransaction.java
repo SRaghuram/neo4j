@@ -5,9 +5,10 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.stream.StatementResult;
 import reactor.core.publisher.Mono;
 
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.values.virtual.MapValue;
 
 public interface FabricDriverTransaction

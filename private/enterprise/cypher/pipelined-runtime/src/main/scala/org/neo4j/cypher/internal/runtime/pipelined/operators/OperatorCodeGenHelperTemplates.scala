@@ -49,10 +49,9 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
@@ -66,7 +65,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.operations.CursorUtils
@@ -89,6 +88,8 @@ import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.TextValue
@@ -146,8 +147,7 @@ object OperatorCodeGenHelperTemplates {
     )
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
   val SHOULD_BREAK: LocalVariable = variable[Boolean]("shouldBreak", constant(false))
-  val MEMORY_TRACKER: InstanceField  = field[QueryMemoryTracker]("memoryTracker",
-    invokeStatic(method[QueryMemoryTracker , QueryMemoryTracker]("NO_MEMORY_TRACKER")))
+  val NO_MEMORY_TRACKER: GetStatic = getStatic[EmptyMemoryTracker, MemoryTracker]("INSTANCE")
 
   // IntermediateRepresentation code
   val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")
@@ -167,31 +167,15 @@ object OperatorCodeGenHelperTemplates {
   val OUTPUT_MORSEL: IntermediateRepresentation =
     load("outputMorsel")
 
-  val DB_ACCESS: IntermediateRepresentation =
-    load("dbAccess")
-
-  val PARAMS: IntermediateRepresentation =
-    load("params")
-
-  val EXPRESSION_CURSORS: IntermediateRepresentation =
-    load("cursors")
-
-  val EXPRESSION_VARIABLES: IntermediateRepresentation =
-    load("expressionVariables")
-
   val EXECUTION_STATE: IntermediateRepresentation =
     load("executionState")
-
-  val SET_MEMORY_TRACKER: IntermediateRepresentation =
-    setField(MEMORY_TRACKER, invoke(EXECUTION_STATE,
-      method[ExecutionState, QueryMemoryTracker]("memoryTracker")))
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
     invoke(QUERY_STATE, method[PipelinedQueryState, QuerySubscriber]("subscriber")))
   val SUBSCRIPTION: LocalVariable = variable[FlowControl]("subscription",
     invoke(QUERY_STATE, method[PipelinedQueryState, FlowControl]("flowControl")))
   val DEMAND: LocalVariable = variable[Long]("demand",
-    invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemand")))
+    invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemandUnlessCancelled")))
 
   val SERVED: LocalVariable = variable[Long]("served", constant(0L))
 
@@ -216,7 +200,7 @@ object OperatorCodeGenHelperTemplates {
   val NEXT: Method = method[MorselCursor, Boolean]("next")
 
   val OUTPUT_FULL_CURSOR: IntermediateRepresentation = invoke(OUTPUT_MORSEL, method[Morsel, MorselFullCursor, Boolean]("fullCursor"), constant(true))
-  val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompiler.CONTEXT, OUTPUT_FULL_CURSOR)
+  val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompilation.ROW_NAME, OUTPUT_FULL_CURSOR)
   val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR.name)
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_CURSOR, method[MorselFullCursor, Boolean]("onValidRow"))
 
@@ -236,18 +220,23 @@ object OperatorCodeGenHelperTemplates {
   val NO_OPERATOR_PROFILE_EVENT: IntermediateRepresentation = constant(null)
   private val TRACE_ON_NODE: Method = method[KernelReadTracer, Unit, Long]("onNode")
   private val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
-  private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
+  private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Long]("dbHits")
   val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
+
+  def setMemoryTracker(memoryTrackerField: InstanceField, operatorId: Int): IntermediateRepresentation =
+    setField(memoryTrackerField,
+             invoke(load("stateFactory"),
+                    method[StateFactory, MemoryTracker, Int]("newMemoryTracker"), constant(operatorId)))
 
   def peekState[STATE_TYPE](argumentStateMapId: ArgumentStateMapId)(implicit to: Manifest[STATE_TYPE]): IntermediateRepresentation =
     cast[STATE_TYPE](
       invoke(
-        cast[UnorderedArgumentStateMapReader[_ <: ArgumentState]](
+        cast[ArgumentStateMap[_ <: ArgumentState]](
           invoke(load(
             ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
             constant(argumentStateMapId.x))),
-        method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
         constant(TopLevelArgument.VALUE)
       )
     )
@@ -278,15 +267,15 @@ object OperatorCodeGenHelperTemplates {
   def allNodeScan(cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, NodeCursor]("allNodesScan"), cursor)
 
-  def nodeLabelScan(label: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label,
-      cursor)
+  def nodeLabelScan(label: IntermediateRepresentation, cursor: IntermediateRepresentation, order: IndexOrder): IntermediateRepresentation =
+    invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor, IndexOrder]("nodeLabelScan"), label,
+      cursor, indexOrder(order))
 
   def nodeHasLabel(node: IntermediateRepresentation, labelToken: IntermediateRepresentation): IntermediateRepresentation = {
     invokeStatic(
       method[CursorUtils, Boolean, Read, NodeCursor, Long, Int]("nodeHasLabel"),
       loadField(OperatorCodeGenHelperTemplates.DATA_READ),
-      ExpressionCompiler.NODE_CURSOR,
+      ExpressionCompilation.NODE_CURSOR,
       node,
       labelToken)
   }
@@ -295,36 +284,36 @@ object OperatorCodeGenHelperTemplates {
     invokeStatic(
       method[CursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
       loadField(DATA_READ),
-      ExpressionCompiler.NODE_CURSOR,
+      ExpressionCompilation.NODE_CURSOR,
       node,
-      ExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def nodeHasProperty(node: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Boolean, Read, NodeCursor, Long, PropertyCursor, Int]("nodeHasProperty"),
       loadField(DATA_READ),
-      ExpressionCompiler.NODE_CURSOR,
+      ExpressionCompilation.NODE_CURSOR,
       node,
-      ExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def relationshipGetProperty(relationship: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
       loadField(DATA_READ),
-      ExpressionCompiler.RELATIONSHIP_CURSOR,
+      ExpressionCompilation.RELATIONSHIP_CURSOR,
       relationship,
-      ExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def relationshipHasProperty(relationship: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Boolean, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipHasProperty"),
       loadField(DATA_READ),
-      ExpressionCompiler.RELATIONSHIP_CURSOR,
+      ExpressionCompilation.RELATIONSHIP_CURSOR,
       relationship,
-      ExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def nodeIndexScan(indexReadSession: IntermediateRepresentation,
@@ -472,6 +461,7 @@ object OperatorCodeGenHelperTemplates {
 
   def nodeLabelId(labelName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("nodeLabel"), constant(labelName))
   def relationshipTypeId(typeName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName))
+  def propertyKeyId(propName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propName))
 
   // Profiling
 
@@ -502,13 +492,8 @@ object OperatorCodeGenHelperTemplates {
     condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Boolean]("row"), hasRow))
   }
 
-  def profileRows(id: Id, nRows: Int): IntermediateRepresentation = {
-    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Int]("rows"),
-      constant(nRows)))
-  }
-
   def profileRows(id: Id, nRows: IntermediateRepresentation): IntermediateRepresentation = {
-    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Int]("rows"),
+    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Long]("rows"),
       nRows))
   }
   def closeEvent(id: Id): IntermediateRepresentation =

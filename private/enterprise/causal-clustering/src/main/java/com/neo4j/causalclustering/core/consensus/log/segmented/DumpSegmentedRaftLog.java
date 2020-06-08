@@ -21,18 +21,22 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.time.Clocks;
 
 class DumpSegmentedRaftLog
 {
     private final FileSystemAbstraction fileSystem;
     private static final String TO_FILE = "tofile";
-    private ChannelMarshal<ReplicatedContent> marshal;
+    private final ChannelMarshal<ReplicatedContent> marshal;
+    private final MemoryTracker memoryTracker;
 
-    private DumpSegmentedRaftLog( FileSystemAbstraction fileSystem, ChannelMarshal<ReplicatedContent> marshal )
+    private DumpSegmentedRaftLog( FileSystemAbstraction fileSystem, ChannelMarshal<ReplicatedContent> marshal, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.marshal = marshal;
+        this.memoryTracker = memoryTracker;
     }
 
     private int dump( String filenameOrDirectory, PrintStream out )
@@ -44,7 +48,7 @@ class DumpSegmentedRaftLog
         ReaderPool readerPool = new ReaderPool( 0, logProvider, fileNames, fileSystem, Clocks.systemClock() );
         //TODO: Update to provide a proper MarshalSelector (although in this dump tool its probably just the latest?)
         RecoveryProtocol recoveryProtocol =
-                new RecoveryProtocol( fileSystem, fileNames, readerPool, ignored -> marshal, logProvider );
+                new RecoveryProtocol( fileSystem, fileNames, readerPool, ignored -> marshal, logProvider, memoryTracker );
         Segments segments = recoveryProtocol.run().segments;
 
         segments.visit( segment -> {
@@ -86,7 +90,7 @@ class DumpSegmentedRaftLog
 
                 try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
                 {
-                    new DumpSegmentedRaftLog( fileSystem, new CoreReplicatedContentMarshalV2() )
+                    new DumpSegmentedRaftLog( fileSystem, new CoreReplicatedContentMarshalV2(), EmptyMemoryTracker.INSTANCE )
                             .dump( fileAsString, printer.getFor( fileAsString ) );
                 }
                 catch ( IOException | DisposedException | DamagedLogStorageException e )

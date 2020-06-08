@@ -5,16 +5,16 @@
  */
 package com.neo4j.bench.jmh.api.profile;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.profiling.Profiler;
+import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.jmh.api.JmhLifecycleTracker;
 import com.neo4j.bench.jmh.api.RunnerParams;
 import org.openjdk.jmh.infra.BenchmarkParams;
@@ -242,11 +242,11 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             ForkDirectory forkDir = getOrFailForkDir( runnerParams, benchmarkParams, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( benchmarkParams.getJvm() ) );
             ((com.neo4j.bench.common.profiling.InternalProfiler) innerProfiler).onMeasurementFinished( jvm,
-                                                                                                       forkDir,
-                                                                                                       HasPid.getPid(),
-                                                                                                       benchmarkGroup,
-                                                                                                       benchmark,
-                                                                                                       Parameters.NONE );
+                                                                                                      forkDir,
+                                                                                                      HasPid.getPid(),
+                                                                                                      benchmarkGroup,
+                                                                                                      benchmark,
+                                                                                                      Parameters.NONE );
             if ( !profilerType.isExternal() )
             {
                 // profiler recording cleanup should only happen once

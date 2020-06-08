@@ -59,7 +59,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -414,7 +414,7 @@ class UniqueDatabaseIndexPopulatorTest
             // Just open it and let it be closed
             populator.newPopulatingUpdater( nodePropertyAccessor, NULL ).close();
             return null;
-        } ).get( 5, SECONDS );
+        } ).get( 5, MINUTES );
     }
 
     @Test
@@ -461,7 +461,7 @@ class UniqueDatabaseIndexPopulatorTest
         try ( IndexReader reader = index.getIndexReader();
               NodeValueIterator allEntities = new NodeValueIterator() )
         {
-            reader.query( NULL_CONTEXT, allEntities, unconstrained(), NULL, IndexQuery.exists( 1 ) );
+            reader.query( NULL_CONTEXT, allEntities, unconstrained(), IndexQuery.exists( 1 ) );
             assertArrayEquals( new long[]{1, 2, 3}, PrimitiveLongCollections.asArray( allEntities ) );
         }
     }

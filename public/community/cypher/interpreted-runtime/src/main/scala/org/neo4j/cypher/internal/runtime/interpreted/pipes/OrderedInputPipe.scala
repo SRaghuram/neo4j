@@ -22,15 +22,15 @@ package org.neo4j.cypher.internal.runtime.interpreted.pipes
 import org.neo4j.cypher.internal.runtime.CypherRow
 
 /**
-  * A pipe that relies on its input coming in a certain order and processing that input in chunks.
-  */
+ * A pipe that relies on its input coming in a certain order and processing that input in chunks.
+ */
 trait OrderedInputPipe {
   self: PipeWithSource =>
 
   /**
-    * @return provide the receiver that will be used to create results. If you override internalCreateResults, and choose to call
-    *         [[internalCreateResultsWithReceiver]] directly, you do not have to implement this method.
-    */
+   * @return provide the receiver that will be used to create results. If you override internalCreateResults, and choose to call
+   *         [[internalCreateResultsWithReceiver]] directly, you do not have to implement this method.
+   */
   def getReceiver(state: QueryState): OrderedChunkReceiver
 
   protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
@@ -39,18 +39,23 @@ trait OrderedInputPipe {
   }
 
   /**
-    * Processes the input in chunks as described by [[OrderedChunkReceiver]].
-    */
+   * Processes the input in chunks as described by [[OrderedChunkReceiver]].
+   */
   protected final def internalCreateResultsWithReceiver(input: Iterator[CypherRow], state: QueryState, receiver: OrderedChunkReceiver): Iterator[CypherRow] = {
     val inputState = new InputState()
 
     new Iterator[CypherRow] {
       private var processNextChunk = true
 
-      override def hasNext: Boolean =
-        inputState.resultRowsOfChunk.hasNext ||
+      override def hasNext: Boolean = {
+        val _hasNext = inputState.resultRowsOfChunk.hasNext ||
           (processNextChunk && (
             inputState.firstRowOfNextChunk != null || input.hasNext))
+        if (!_hasNext) {
+          receiver.close()
+        }
+        _hasNext
+      }
 
       override def next(): CypherRow = {
         if (inputState.firstRowOfNextChunk == null && inputState.resultRowsOfChunk.isEmpty) {
@@ -92,48 +97,55 @@ trait OrderedInputPipe {
 }
 
 /**
-  * A receiver needs to process rows in chunks. The call pattern looks like:
-  *
-  * clear()
-  * isSameChunk(a, a) -> true
-  * processRow(a)
-  * isSameChunk(a, b) -> true
-  * processRow(b)
-  * isSameChunk(a, c) -> false
-  * result()
-  * processNextChunk -> true
-  *
-  * clear()
-  * ...
-  * processNextChunk -> false
-  */
+ * A receiver needs to process rows in chunks. The call pattern looks like:
+ *
+ * clear()
+ * isSameChunk(a, a) -> true
+ * processRow(a)
+ * isSameChunk(a, b) -> true
+ * processRow(b)
+ * isSameChunk(a, c) -> false
+ * result()
+ * processNextChunk -> true
+ *
+ * clear()
+ * ...
+ * processNextChunk -> false
+ */
 trait OrderedChunkReceiver {
   /**
-    * Will be called after a chunk is completed and all rows streamed out to the enclosing Pipe.
-    */
+   * Will be called after a chunk is completed and all rows streamed out to the enclosing Pipe.
+   */
   def clear(): Unit
 
   /**
-    * @param first   the first row of the current chunk
-    * @param current the row in question.
-    * @return if the two rows are part of the same chunk.
-    */
+   * @param first   the first row of the current chunk
+   * @param current the row in question.
+   * @return if the two rows are part of the same chunk.
+   */
   def isSameChunk(first: CypherRow, current: CypherRow): Boolean
 
   /**
-    * Called for each row.
-    */
+   * Called for each row.
+   */
   def processRow(row: CypherRow): Unit
 
   /**
-    * Called at the end of a chunk.
-    *
-    * @return an iterator of rows.
-    */
+   * Called at the end of a chunk.
+   *
+   * @return an iterator of rows.
+   */
   def result(): Iterator[CypherRow]
 
   /**
-    * @return whether the next chunk needs to be processed
-    */
+   * @return whether the next chunk needs to be processed
+   */
   def processNextChunk: Boolean
+
+  /**
+   * Will be called after all chunks are completed.
+   */
+  def close(): Unit = {
+    clear()
+  }
 }

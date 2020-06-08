@@ -29,7 +29,6 @@ import org.neo4j.cypher.internal.expressions.FunctionName
 import org.neo4j.cypher.internal.expressions.GetDegree
 import org.neo4j.cypher.internal.expressions.LessThan
 import org.neo4j.cypher.internal.expressions.Namespace
-import org.neo4j.cypher.internal.expressions.PathExpression
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.ir.SimplePatternLength
@@ -237,10 +236,9 @@ class WithPlanningIntegrationTest extends CypherFunSuite with LogicalPlanningTes
       case
         SelectionMatcher(Seq(LessThan(FunctionInvocation(Namespace(List()),FunctionName("rand"),false,Vector()),Variable("p"))),
         Limit(
-        Apply(
-        Projection(_, _),
-        AllNodesScan("n1", _)
-        ), _, _)
+        Projection(
+        AllNodesScan("n1", _), _),
+         _, _)
         ) => ()
     }
   }
@@ -259,10 +257,9 @@ class WithPlanningIntegrationTest extends CypherFunSuite with LogicalPlanningTes
         Variable("  p@111"))),
         Limit(
         Distinct(
-        Apply(
-        Projection(_, _),
-        AllNodesScan("  n1@66", _)
-        ), _), _, _)
+        Projection(
+        AllNodesScan("  n1@66", _), _),
+         _), _, _)
         ) => ()
     }
   }
@@ -278,10 +275,9 @@ class WithPlanningIntegrationTest extends CypherFunSuite with LogicalPlanningTes
       case
         SelectionMatcher(Seq(LessThan(FunctionInvocation(Namespace(List()),FunctionName("rand"),false,Vector()),Variable("  p@114"))),
         Aggregation(
-        Apply(
-        Projection(_, _),
-        AllNodesScan("n1", _)
-        ), _, _)
+        Projection(
+        AllNodesScan("n1", _), _),
+        _, _)
         ) => ()
     }
   }

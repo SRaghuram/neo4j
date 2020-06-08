@@ -7,7 +7,6 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.time.Clock
 
-import com.neo4j.bench.micro.benchmarks.cypher.ContextHelper.mock
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
@@ -18,18 +17,15 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.NoSchedulerTracing
 import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
-import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer
-import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
-import org.neo4j.cypher.internal.frontend.phases.devNullLogger
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
-import org.neo4j.cypher.internal.util.CypherException
-import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
 import org.scalatest.mock.MockitoSugar
 
@@ -49,10 +45,7 @@ object ContextHelper extends MockitoSugar {
     enableMonitors = false
   )
 
-  def create(exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null,
-             tracer: CompilationPhaseTracer = CompilationPhaseTracer.NO_TRACING,
-             notificationLogger: InternalNotificationLogger = devNullLogger,
-             planContext: PlanContext,
+  def create(planContext: PlanContext,
              debugOptions: Set[String] = Set.empty,
              clock: Clock = Clock.systemUTC(),
              codeStructure: CodeStructure[GeneratedQuery] = mock[CodeStructure[GeneratedQuery]],
@@ -71,11 +64,12 @@ object ContextHelper extends MockitoSugar {
       clock,
       debugOptions,
       runtimeConfig,
-      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, lifeSupport, workerManager),
+      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE),
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
       operatorEngine = CypherOperatorEngineOption.compiled,
       interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_pipelined_interpreted_pipes_fallback.defaultValue().toString),
+      cachingExpressionCompilerTracer = CachingExpressionCompilerTracer.NONE
     )
   }
 }

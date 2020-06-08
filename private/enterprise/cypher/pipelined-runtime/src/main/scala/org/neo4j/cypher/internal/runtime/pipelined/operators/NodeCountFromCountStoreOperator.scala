@@ -29,6 +29,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -37,13 +38,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.dbHit
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.dbHits
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeLabelId
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.NameId
@@ -66,7 +67,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    IndexedSeq(new NodeFromCountStoreTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new NodeFromCountStoreTask(inputMorsel.nextCopy))
   }
 
 
@@ -214,7 +215,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
     //takes care of the labels we do know at compile time
     val knownLabelOps = block(knownLabels.map(token =>
       assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
-      dbHits(loadField(executionEventField), constant(knownLabels.size)) :_*)
+      dbHits(loadField(executionEventField), constant(knownLabels.size.toLong)) :_*)
 
     //take care of all wildcard labels
     val wildCardOps = if (wildCards > 0) {

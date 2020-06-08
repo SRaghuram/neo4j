@@ -29,10 +29,12 @@ import org.neo4j.cypher.internal.ast.DenyPrivilege
 import org.neo4j.cypher.internal.ast.DropConstraintOnName
 import org.neo4j.cypher.internal.ast.DropIndexOnName
 import org.neo4j.cypher.internal.ast.GrantPrivilege
+import org.neo4j.cypher.internal.ast.GraphPrivilege
 import org.neo4j.cypher.internal.ast.RevokePrivilege
 import org.neo4j.cypher.internal.ast.RoleManagementAction
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.TransactionManagementAction
+import org.neo4j.cypher.internal.ast.WriteAction
 import org.neo4j.cypher.internal.expressions.ExistsSubClause
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
 
@@ -52,19 +54,19 @@ object Additions {
         throw cypherExceptionFactory.syntaxException("Dropping index by name is not supported in this Cypher version.", d.position)
 
       // CREATE CONSTRAINT name ON ... IS NODE KEY
-      case c@CreateNodeKeyConstraint(_, _, _, Some(_)) =>
+      case c@CreateNodeKeyConstraint(_, _, _, Some(_), _) =>
         throw cypherExceptionFactory.syntaxException("Creating named node key constraint is not supported in this Cypher version.", c.position)
 
       // CREATE CONSTRAINT name ON ... IS UNIQUE
-      case c@CreateUniquePropertyConstraint(_, _, _, Some(_)) =>
+      case c@CreateUniquePropertyConstraint(_, _, _, Some(_), _) =>
         throw cypherExceptionFactory.syntaxException("Creating named uniqueness constraint is not supported in this Cypher version.", c.position)
 
       // CREATE CONSTRAINT name ON () ... EXISTS
-      case c@CreateNodePropertyExistenceConstraint(_, _, _, Some(_)) =>
+      case c@CreateNodePropertyExistenceConstraint(_, _, _, Some(_), _) =>
         throw cypherExceptionFactory.syntaxException("Creating named node existence constraint is not supported in this Cypher version.", c.position)
 
       // CREATE CONSTRAINT name ON ()-[]-() ... EXISTS
-      case c@CreateRelationshipPropertyExistenceConstraint(_, _, _, Some(_)) =>
+      case c@CreateRelationshipPropertyExistenceConstraint(_, _, _, Some(_), _) =>
         throw cypherExceptionFactory.syntaxException("Creating named relationship existence constraint is not supported in this Cypher version.", c.position)
 
       // DROP CONSTRAINT name
@@ -84,15 +86,15 @@ object Additions {
     override def check(statement: Statement, cypherExceptionFactory: CypherExceptionFactory): Unit = statement.treeExists {
 
       // Grant DEFAULT DATABASE
-      case p@GrantPrivilege(_, _, DefaultDatabaseScope(), _, _) =>
+      case p@GrantPrivilege(_, _, List(DefaultDatabaseScope()), _, _) =>
         throw cypherExceptionFactory.syntaxException("DEFAULT DATABASE is not supported in this Cypher version.", p.position)
 
       // Deny DEFAULT DATABASE
-      case p@DenyPrivilege(_, _, DefaultDatabaseScope(), _, _) =>
+      case p@DenyPrivilege(_, _, List(DefaultDatabaseScope()), _, _) =>
         throw cypherExceptionFactory.syntaxException("DEFAULT DATABASE is not supported in this Cypher version.", p.position)
 
       // Revoke DEFAULT DATABASE
-      case p@RevokePrivilege(_, _, DefaultDatabaseScope(), _, _, _) =>
+      case p@RevokePrivilege(_, _, List(DefaultDatabaseScope()), _, _, _) =>
         throw cypherExceptionFactory.syntaxException("DEFAULT DATABASE is not supported in this Cypher version.", p.position)
 
       // grant dbms privilege (except role management)
@@ -118,6 +120,18 @@ object Additions {
       // revoke transaction administration
       case p@RevokePrivilege(DatabasePrivilege(_: TransactionManagementAction), _, _, _, _, _) =>
         throw cypherExceptionFactory.syntaxException("Transaction administration privileges are not supported in this Cypher version.", p.position)
+
+      // grant fine-grained write
+      case p@GrantPrivilege(GraphPrivilege(action), _, _, _, _) if !action.equals(WriteAction) =>
+        throw cypherExceptionFactory.syntaxException("Fine-grained writes are not supported in this Cypher version.", p.position)
+
+      // deny fine-grained write
+      case p@DenyPrivilege(GraphPrivilege(action), _, _, _, _) if !action.equals(WriteAction) =>
+        throw cypherExceptionFactory.syntaxException("Fine-grained writes are not supported in this Cypher version.", p.position)
+
+      // revoke fine-grained
+      case p@RevokePrivilege(GraphPrivilege(action), _, _, _, _, _) if !action.equals(WriteAction) =>
+        throw cypherExceptionFactory.syntaxException("Fine-grained writes are not supported in this Cypher version.", p.position)
     }
   }
 

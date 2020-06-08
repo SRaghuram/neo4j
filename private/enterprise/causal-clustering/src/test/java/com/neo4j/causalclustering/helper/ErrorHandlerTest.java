@@ -5,42 +5,40 @@
  */
 package com.neo4j.causalclustering.helper;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class ErrorHandlerTest
+class ErrorHandlerTest
 {
     private static final String FAILMESSAGE = "More fail";
 
     @Test
-    public void shouldExecuteAllFailingOperations()
+    void shouldExecuteAllFailingOperations()
     {
         AtomicBoolean bool = new AtomicBoolean( false );
         try
         {
-            ErrorHandler.runAll( "test", Assert::fail, () ->
+            ErrorHandler.runAll( "test", () ->
+            {
+                throw new Exception();
+            }, () ->
             {
                 bool.set( true );
                 throw new IllegalStateException( FAILMESSAGE );
             } );
-            fail();
         }
         catch ( RuntimeException e )
         {
-            assertEquals( "test", e.getMessage() );
+            assertThat( e ).hasMessage( "test" ).isInstanceOf( RuntimeException.class );
             Throwable cause = e.getCause();
-            assertEquals( AssertionError.class, cause.getClass() );
+            assertThat( cause ).isInstanceOf( Exception.class );
             Throwable[] suppressed = e.getSuppressed();
-            assertEquals( 1, suppressed.length );
-            assertEquals( IllegalStateException.class, suppressed[0].getClass() );
-            assertEquals( "More fail", suppressed[0].getMessage() );
-            assertTrue( bool.get() );
+            assertThat( suppressed ).hasSize( 1 );
+            assertThat( suppressed[0] ).isInstanceOf( IllegalStateException.class ).hasMessage( FAILMESSAGE );
+            assertThat( bool ).isTrue();
         }
     }
 }

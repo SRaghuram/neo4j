@@ -44,9 +44,39 @@ object SlottedExecutionContextOrdering {
       }
   }
 
-  def asComparator(orderBy: Seq[ColumnOrder]): Comparator[CypherRow] =
-    orderBy.map(SlottedExecutionContextOrdering.comparator)
-      .reduceLeft[Comparator[CypherRow]]((a, b) => a.thenComparing(b))
+  def asComparator(orderBy: Seq[ColumnOrder]): Comparator[CypherRow] = {
+    val comparators = orderBy.map(SlottedExecutionContextOrdering.comparator)
+
+    // For size 1 and 2 the overhead of doing the foreach is measurable
+    if (comparators.size == 1) {
+      return comparators.head
+    }
+    if (comparators.size == 2) {
+      val first = comparators.head
+      val second = comparators.last
+      return (a, b) => {
+        val i = first.compare(a, b)
+        if (i == 0) {
+          second.compare(a, b)
+        } else {
+          i
+        }
+      }
+    }
+
+    // For larger ORDER BY the overhead is negligible
+    new Comparator[CypherRow] {
+      override def compare(a: CypherRow, b: CypherRow): Int = {
+        for (comparator <- comparators) {
+          val i = comparator.compare(a, b)
+          if (i != 0) {
+            return i;
+          }
+        }
+        0
+      }
+    }
+  }
 }
 
 sealed trait ColumnOrder {

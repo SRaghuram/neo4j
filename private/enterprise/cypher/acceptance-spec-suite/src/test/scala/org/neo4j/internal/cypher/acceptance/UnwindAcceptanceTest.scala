@@ -128,4 +128,20 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("x" -> r)))
   }
+
+  test("Unwind query should plan successfully with data") {
+    createLabeledNode(Map("prop" -> 42, "other" -> 43), "Elements")
+    val result = executeSingle(
+      """
+        |explain CYPHER RUNTIME=slotted MATCH (m:Elements:Creation:Model{polyglotID:$polyglotID})
+        |WITH *
+        |UNWIND keys($relationships) as relationType
+        |UNWIND $relationships[relationType] as relation
+        |MATCH (a:Elements:`val1`:Artefact:ModelItem{name:relation.from}) <-[:contains]-(m)
+        |MATCH (b:Elements:`val2`:Artefact:ModelItem{name:relation.to}) <-[:contains]-(m)
+        |CALL dbms.procedures() YIELD name AS rel
+        |RETURN *""".stripMargin
+    )
+
+  }
 }

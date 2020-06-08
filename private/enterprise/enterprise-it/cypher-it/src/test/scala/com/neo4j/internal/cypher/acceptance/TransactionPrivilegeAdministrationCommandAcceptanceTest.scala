@@ -212,4 +212,88 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
       granted(terminateTransaction("*")).database("foo").role("role").map
     ))
   }
+
+  test("should grant and revoke transaction privileges on multiple databases") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    transactionPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"GRANT $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            granted(action).database("foo").role("role").map,
+            granted(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE GRANT $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
+    test("should grant and revoke transaction privileges on multiple databases with parameter") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    transactionPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"GRANT $command ON DATABASE $$dbParam1, $$dbParam2 TO role", Map("dbParam1" -> "foo", "dbParam2" -> "bar"))
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            granted(action).database("foo").role("role").map,
+            granted(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE GRANT $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
+  test("should deny and revoke transaction privileges on multiple databases") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    transactionPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"DENY $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            denied(action).database("foo").role("role").map,
+            denied(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE DENY $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
 }

@@ -5,7 +5,9 @@
  */
 package com.neo4j.causalclustering.core.consensus.protocol.v2;
 
+import com.neo4j.causalclustering.core.consensus.protocol.SupportedMessageHandler;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentCodec;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.ContentTypeEncoder;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageContentEncoder;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageEncoder;
@@ -53,7 +55,7 @@ public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<Protocol
      * Uses latest version of handlers. Hence version naming may be less than the current version if no change was needed for that handler
      */
     @Override
-    public void install( Channel channel ) throws Exception
+    public void install( Channel channel )
     {
         clientPipelineBuilderFactory
                 .client( channel, log )
@@ -61,8 +63,9 @@ public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<Protocol
                 .addFraming()
                 .add( "raft_message_encoder", new RaftMessageEncoder() )
                 .add( "raft_content_type_encoder", new ContentTypeEncoder() )
-                .add( "raft_chunked_writer", new ChunkedWriteHandler(  ) )
+                .add( "raft_chunked_writer", new ChunkedWriteHandler() )
                 .add( "raft_message_content_encoder", new RaftMessageContentEncoder( new ReplicatedContentCodec() ) )
+                .add( "message_validator", new SupportedMessageHandler( new SupportedMessagesV2() ) )
                 .install();
     }
 

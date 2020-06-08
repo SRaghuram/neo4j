@@ -6,20 +6,18 @@
 package com.neo4j.causalclustering.core.replication.session;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
-public class LocalSessionPoolTest
+class LocalSessionPoolTest
 {
     private MemberId memberId = new MemberId( UUID.randomUUID() );
     private GlobalSession globalSession = new GlobalSession( UUID.randomUUID(), memberId );
 
     @Test
-    public void poolGivesBackSameSessionAfterRelease()
+    void poolGivesBackSameSessionAfterRelease()
     {
         LocalSessionPool sessionPool = new LocalSessionPool( globalSession );
 
@@ -29,11 +27,11 @@ public class LocalSessionPoolTest
         OperationContext contextB = sessionPool.acquireSession();
         sessionPool.releaseSession( contextB );
 
-        assertEquals( contextA.localSession(), contextB.localSession() );
+        Assertions.assertEquals( contextA.localSession(), contextB.localSession() );
     }
 
     @Test
-    public void sessionAcquirementIncreasesOperationId()
+    void sessionAcquirementIncreasesOperationId()
     {
         LocalSessionPool sessionPool = new LocalSessionPool( globalSession );
         OperationContext context;
@@ -46,17 +44,17 @@ public class LocalSessionPoolTest
         LocalOperationId operationB = context.localOperationId();
         sessionPool.releaseSession( context );
 
-        assertEquals( operationB.sequenceNumber(), operationA.sequenceNumber() + 1 );
+        Assertions.assertEquals( operationB.sequenceNumber(), operationA.sequenceNumber() + 1 );
     }
 
     @Test
-    public void poolHasIndependentSessions()
+    void poolHasIndependentSessions()
     {
         LocalSessionPool sessionPool = new LocalSessionPool( globalSession );
 
         OperationContext contextA = sessionPool.acquireSession();
         OperationContext contextB = sessionPool.acquireSession();
 
-        assertNotEquals( contextA.localSession(), contextB.localSession() );
+        Assertions.assertNotEquals( contextA.localSession(), contextB.localSession() );
     }
 }

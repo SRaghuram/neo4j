@@ -23,10 +23,8 @@ import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
-import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.security.AccessMode;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
@@ -38,13 +36,13 @@ class DefaultRelationshipScanCursor extends DefaultRelationshipCursor<StorageRel
     private long single;
     private LongIterator addedRelationships;
     private CursorPool<DefaultRelationshipScanCursor> pool;
-    private final PageCursorTracer cursorTracer;
+    private final DefaultNodeCursor nodeCursor;
 
-    DefaultRelationshipScanCursor( CursorPool<DefaultRelationshipScanCursor> pool, StorageRelationshipScanCursor storeCursor, PageCursorTracer cursorTracer )
+    DefaultRelationshipScanCursor( CursorPool<DefaultRelationshipScanCursor> pool, StorageRelationshipScanCursor storeCursor, DefaultNodeCursor nodeCursor )
     {
         super( storeCursor );
         this.pool = pool;
-        this.cursorTracer = cursorTracer;
+        this.nodeCursor = nodeCursor;
     }
 
     void scan( int type, Read read )
@@ -137,13 +135,13 @@ class DefaultRelationshipScanCursor extends DefaultRelationshipCursor<StorageRel
         {
             return true;
         }
-        try ( NodeCursor sourceNode = read.cursors().allocateNodeCursor( cursorTracer );
-              NodeCursor targetNode = read.cursors().allocateNodeCursor( cursorTracer ) )
+        read.singleNode( storeCursor.sourceNodeReference(), nodeCursor );
+        if ( nodeCursor.next() )
         {
-            read.singleNode( storeCursor.sourceNodeReference(), sourceNode );
-            read.singleNode( storeCursor.targetNodeReference(), targetNode );
-            return sourceNode.next() && targetNode.next();
+            read.singleNode( storeCursor.targetNodeReference(), nodeCursor );
+            return nodeCursor.next();
         }
+        return false;
     }
 
     @Override
@@ -176,7 +174,7 @@ class DefaultRelationshipScanCursor extends DefaultRelationshipCursor<StorageRel
             return "RelationshipScanCursor[id=" + storeCursor.entityReference() +
                     ", open state with: single=" + single +
                     ", type=" + type +
-                    ", " + storeCursor.toString() + "]";
+                    ", " + storeCursor + "]";
         }
     }
 
@@ -203,5 +201,7 @@ class DefaultRelationshipScanCursor extends DefaultRelationshipCursor<StorageRel
     public void release()
     {
         storeCursor.close();
+        nodeCursor.close();
+        nodeCursor.release();
     }
 }

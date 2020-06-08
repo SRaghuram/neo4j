@@ -31,8 +31,12 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
   private val aggregationFunctions = new Array[AggregationFunction](aggregationExpressions.length)
 
   override def clear(): Unit = {
+    // TODO: Use a ScopedMemoryTracker instead
     var i = 0
     while (i < aggregationFunctions.length) {
+      if (aggregationFunctions(i) != null) {
+        aggregationFunctions(i).recordMemoryDeallocation()
+      }
       aggregationFunctions(i) = aggregationExpressions(i).createAggregationFunction(operatorId)
       i += 1
     }

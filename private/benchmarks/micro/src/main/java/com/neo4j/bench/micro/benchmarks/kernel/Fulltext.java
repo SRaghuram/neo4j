@@ -44,6 +44,7 @@ import static com.neo4j.bench.micro.benchmarks.core.FindNodeNonUnique.minEstimat
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unconstrained;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -135,7 +136,7 @@ public class Fulltext extends AbstractKernelBenchmark
 
             index = kernelTx.schemaRead.indexGetForName( "ftsNodes" );
             indexReadSession = kernelTx.read.indexReadSession( index );
-            node = kernelTx.cursors.allocateNodeValueIndexCursor();
+            node = kernelTx.cursors.allocateNodeValueIndexCursor( NULL );
             read = kernelTx.read;
         }
 

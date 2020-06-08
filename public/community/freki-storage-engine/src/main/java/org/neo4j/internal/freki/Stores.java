@@ -22,9 +22,17 @@ package org.neo4j.internal.freki;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
+<<<<<<< HEAD
 
 import org.neo4j.common.TokenNameLookup;
 import org.neo4j.counts.CountsAccessor;
+=======
+import java.io.UncheckedIOException;
+
+import org.neo4j.common.TokenNameLookup;
+import org.neo4j.counts.CountsAccessor;
+import org.neo4j.function.ThrowingFunction;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
@@ -42,8 +50,15 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+<<<<<<< HEAD
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
+=======
+import org.neo4j.memory.MemoryTracker;
+import org.neo4j.storageengine.api.ConstraintRuleAccessor;
+import org.neo4j.storageengine.api.TransactionMetaDataStore;
+import org.neo4j.token.api.NamedToken;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.IOUtils.closeAllSilently;
@@ -61,6 +76,7 @@ public class Stores extends MainStores
     public final GBPTreeTokenStore propertyKeyTokenStore;
     public final GBPTreeTokenStore relationshipTypeTokenStore;
     public final GBPTreeTokenStore labelTokenStore;
+<<<<<<< HEAD
 
     public Stores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
@@ -69,6 +85,17 @@ public class Stores extends MainStores
             throws IOException
     {
         super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
+=======
+    private final MemoryTracker memoryTracker;
+
+    public Stores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
+            PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
+            boolean createStoreIfNotExists, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, MemoryTracker memoryTracker )
+            throws IOException
+    {
+        super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
+        this.memoryTracker = memoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         GBPTreeMetaDataStore metaDataStore = null;
         GBPTreeCountsStore countsStore = null;
         GBPTreeSchemaStore schemaStore = null;
@@ -81,9 +108,12 @@ public class Stores extends MainStores
             metaDataStore = FrekiStorageEngineFactory.openMetaDataStore( databaseLayout, pageCache, pageCacheTracer );
             countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), fs, recoveryCleanupWorkCollector,
                     initialCountsBuilder( metaDataStore ), false, pageCacheTracer, GBPTreeCountsStore.NO_MONITOR );
+<<<<<<< HEAD
             schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory, tokenNameLookup,
                     false, pageCacheTracer, cursorTracer );
             idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.SCHEMA ) );
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             propertyKeyTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.propertyKeyTokenStore(), recoveryCleanupWorkCollector,
                     idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
             idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN ) );
@@ -93,6 +123,12 @@ public class Stores extends MainStores
             labelTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.labelTokenStore(), recoveryCleanupWorkCollector,
                     idGeneratorFactory, IdType.LABEL_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
             idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.LABEL_TOKEN ) );
+<<<<<<< HEAD
+=======
+            schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory,
+                    tokenNameLookup( propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore, cursorTracer ), false, pageCacheTracer, cursorTracer );
+            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.SCHEMA ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
             success = true;
 
@@ -115,9 +151,16 @@ public class Stores extends MainStores
         }
     }
 
+<<<<<<< HEAD
     Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseRelationshipStore denseStore,
             TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
             GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
+=======
+    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, SimpleDenseRelationshipStore denseStore,
+            TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
+            GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore,
+            MemoryTracker memoryTracker )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         super( mainStores, bigPropertyValueStore, denseStore );
         this.metaDataStore = metaDataStore;
@@ -127,6 +170,10 @@ public class Stores extends MainStores
         this.propertyKeyTokenStore = propertyKeyTokenStore;
         this.relationshipTypeTokenStore = relationshipTypeTokenStore;
         this.labelTokenStore = labelTokenStore;
+<<<<<<< HEAD
+=======
+        this.memoryTracker = memoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         addStoresToLife();
     }
 
@@ -138,7 +185,11 @@ public class Stores extends MainStores
             @Override
             public void start() throws Exception
             {
+<<<<<<< HEAD
                 countsStore.start( PageCursorTracer.NULL );
+=======
+                countsStore.start( PageCursorTracer.NULL, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             }
 
             @Override
@@ -170,7 +221,11 @@ public class Stores extends MainStores
         return new CountsBuilder()
         {
             @Override
+<<<<<<< HEAD
             public void initialize( CountsAccessor.Updater updater, PageCursorTracer tracer )
+=======
+            public void initialize( CountsAccessor.Updater updater, PageCursorTracer tracer, MemoryTracker memoryTracker )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             {
                 // TODO rebuild from store, right?
             }
@@ -182,4 +237,45 @@ public class Stores extends MainStores
             }
         };
     }
+<<<<<<< HEAD
+=======
+
+    private static TokenNameLookup tokenNameLookup( GBPTreeTokenStore propertyKeyTokens, GBPTreeTokenStore relationshipTypeTokens,
+            GBPTreeTokenStore labelTokens, PageCursorTracer cursorTracer )
+    {
+        return new TokenNameLookup()
+        {
+            @Override
+            public String labelGetName( int labelId )
+            {
+                return tokenName( labelId, id -> labelTokens.loadToken( id, cursorTracer ) );
+            }
+
+            @Override
+            public String relationshipTypeGetName( int relationshipTypeId )
+            {
+                return tokenName( relationshipTypeId, id -> relationshipTypeTokens.loadToken( id, cursorTracer ) );
+            }
+
+            @Override
+            public String propertyKeyGetName( int propertyKeyId )
+            {
+                return tokenName( propertyKeyId, id -> propertyKeyTokens.loadToken( id, cursorTracer ) );
+            }
+
+            private String tokenName( int id, ThrowingFunction<Integer,NamedToken,IOException> lookup )
+            {
+                try
+                {
+                    NamedToken token = lookup.apply( id );
+                    return token != null ? token.name() : "<unknown token with id:" + id + ">";
+                }
+                catch ( IOException e )
+                {
+                    throw new UncheckedIOException( e );
+                }
+            }
+        };
+    }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 }

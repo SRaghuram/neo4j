@@ -122,19 +122,13 @@ public class ServerDatabase implements Database
     @Override
     public int execute( String query, Map<String,Object> parameters, boolean inTx, boolean shouldRollback )
     {
+        if ( !inTx )
+        {
+            return session.writeTransaction( tx -> getRowCount( tx, query, parameters ) );
+        }
         try ( Transaction tx = session.beginTransaction() )
         {
-            Result result = tx.run( query, parameters );
-            int rowCount = 0;
-            while ( result.hasNext() )
-            {
-                Record record = result.next();
-                // Use record to avoid JIT dead code elimination
-                if ( record != null )
-                {
-                    rowCount++;
-                }
-            }
+            int rowCount = getRowCount( tx, query, parameters );
 
             if ( shouldRollback )
             {
@@ -146,6 +140,22 @@ public class ServerDatabase implements Database
             }
             return rowCount;
         }
+    }
+
+    private Integer getRowCount( Transaction tx, String query, Map<String,Object> parameters )
+    {
+        Result result = tx.run( query, parameters );
+        int rowCount = 0;
+        while ( result.hasNext() )
+        {
+            Record record = result.next();
+            // Use record to avoid JIT dead code elimination
+            if ( record != null )
+            {
+                rowCount++;
+            }
+        }
+        return rowCount;
     }
 
     @Override

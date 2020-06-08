@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
@@ -28,6 +29,8 @@ import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.DurationRange;
@@ -99,10 +102,11 @@ public class RaftMachineBuilder
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, clock, member, membershipManager,
                         retryTimeMillis, catchupBatchSize, maxAllowedShippingLag, inFlightCache );
 
-        var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider, false, false );
+        var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider, false, false,
+                Set::of, new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var outcomeApplier = new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
-                membershipManager, logProvider );
+                membershipManager, logProvider, rejection -> {} );
         RaftMachine raft = new RaftMachine( member, leaderAvailabilityTimers, logProvider,
                 membershipManager, inFlightCache, outcomeApplier, raftState );
         inbound.registerHandler( incomingMessage ->

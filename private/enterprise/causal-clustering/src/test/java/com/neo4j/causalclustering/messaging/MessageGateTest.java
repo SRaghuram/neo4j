@@ -11,8 +11,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class MessageGateTest
+class MessageGateTest
 {
     private final String ALLOWED_MSG = "allowed";
     private final MessageGate gate = new MessageGate( m -> m != ALLOWED_MSG );
@@ -31,15 +31,15 @@ public class MessageGateTest
     private final Channel channel = mock( Channel.class );
     private final ChannelPipeline pipeline = mock( ChannelPipeline.class );
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         when( channel.pipeline() ).thenReturn( pipeline );
         when( ctx.channel() ).thenReturn( channel );
     }
 
     @Test
-    public void shouldLetAllowedMessagesPass() throws Exception
+    void shouldLetAllowedMessagesPass()
     {
         // when
         ChannelPromise promise = mock( ChannelPromise.class );
@@ -52,7 +52,7 @@ public class MessageGateTest
     }
 
     @Test
-    public void shouldGateMessages() throws Exception
+    void shouldGateMessages()
     {
         // when
         ChannelPromise promise = mock( ChannelPromise.class );
@@ -65,7 +65,7 @@ public class MessageGateTest
     }
 
     @Test
-    public void shouldLetGatedMessagesPassOnSuccess() throws Exception
+    void shouldLetGatedMessagesPassOnSuccess() throws Exception
     {
         // given
         ChannelPromise promiseA = mock( ChannelPromise.class );
@@ -89,7 +89,7 @@ public class MessageGateTest
     }
 
     @Test
-    public void shouldRemoveGateOnSuccess() throws Exception
+    void shouldRemoveGateOnSuccess() throws Exception
     {
         // when
         gate.userEventTriggered( ctx, GateEvent.getSuccess() );
@@ -99,7 +99,7 @@ public class MessageGateTest
     }
 
     @Test
-    public void shouldNotLetGatedMessagesPassAfterFailure() throws Exception
+    void shouldNotLetGatedMessagesPassAfterFailure() throws Exception
     {
         // given
         ChannelPromise promise = mock( ChannelPromise.class );
@@ -115,7 +115,7 @@ public class MessageGateTest
     }
 
     @Test
-    public void shouldStillLetAllowedMessagePassAfterFailure() throws Exception
+    void shouldStillLetAllowedMessagePassAfterFailure() throws Exception
     {
         // given
         ChannelPromise promise = mock( ChannelPromise.class );
@@ -129,7 +129,7 @@ public class MessageGateTest
     }
 
     @Test
-    public void shouldLeaveGateOnFailure() throws Exception
+    void shouldLeaveGateOnFailure() throws Exception
     {
         // when
         gate.userEventTriggered( ctx, GateEvent.getFailure() );

@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.Nes
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -42,14 +43,16 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
       TokenContext.EMPTY,
       readOnly = false,
       codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)),
-      neverFail = true)
+      neverFail = true,
+      cachingExpressionCompilerTracer = CachingExpressionCompilerTracer.NONE)
     val logSourceCode = new BufferingLog
     val converterSourceCode = new CompiledExpressionConverter(logSourceCode,
       physicalPlan,
       TokenContext.EMPTY,
       readOnly = false,
       codeGenerationMode = SourceCodeGeneration(new CodeSaver(false, false)),
-      neverFail = true)
+      neverFail = true,
+      cachingExpressionCompilerTracer = CachingExpressionCompilerTracer.NONE)
 
     // When
     //There is a limit of 65535 on the length of a String literal, so by exceeding that limit

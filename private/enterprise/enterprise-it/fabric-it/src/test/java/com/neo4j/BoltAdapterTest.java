@@ -5,17 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
-import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.FabricExecutor;
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.summary.EmptySummary;
-import com.neo4j.fabric.transaction.FabricTransaction;
-import com.neo4j.fabric.transaction.TransactionBookmarkManager;
-import com.neo4j.fabric.transaction.TransactionManager;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +17,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -38,13 +27,27 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.fabric.FabricDatabaseManager;
+import org.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
+import org.neo4j.fabric.bolt.FabricBookmark;
+import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
+import org.neo4j.fabric.config.FabricConfig;
+import org.neo4j.fabric.executor.FabricExecutor;
+import org.neo4j.fabric.stream.FabricExecutionStatementResult;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.summary.EmptySummary;
+import org.neo4j.fabric.transaction.FabricTransaction;
+import org.neo4j.fabric.transaction.TransactionManager;
+import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -74,7 +77,7 @@ class BoltAdapterTest
     private static FabricConfig fabricConfig;
     private static DriverUtils driverUtils;
     private final ResultPublisher publisher = new ResultPublisher();
-    private final StatementResult statementResult = mock( StatementResult.class );
+    private final FabricExecutionStatementResult statementResult = mock( FabricExecutionStatementResult.class );
     private final CountDownLatch transactionLatch = new CountDownLatch( 1 );
     private final FabricTransaction fabricTransaction = mock( FabricTransaction.class );
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -101,9 +104,9 @@ class BoltAdapterTest
         when( graphDatabaseFacade.databaseId() ).thenReturn( databaseId );
         when( databaseManager.getDatabase( "mega" ) ).thenReturn( graphDatabaseFacade );
 
-        var transactionIdTracker = mock( TransactionIdTracker.class);
+        var transactionIdTracker = mock( LocalGraphTransactionIdTracker.class);
         var databaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, fabricConfig, transactionManager, databaseManager,
-                Duration.ZERO, transactionIdTracker );
+                transactionIdTracker, new TransactionBookmarkManagerFactory( databaseManager ) );
         testServer.addMocks( databaseManagementService, databaseManager );
         testServer.start();
         driver = GraphDatabase.driver( testServer.getBoltDirectUri(), AuthTokens.none(), Config.builder()
@@ -122,6 +125,7 @@ class BoltAdapterTest
         when( statementResult.columns() ).thenReturn( Flux.just( "c1", "c2" ) );
         when( statementResult.records() ).thenReturn( Flux.from( publisher ) );
         when( statementResult.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
+        when( statementResult.queryExecutionType() ).thenReturn( Mono.just( QueryExecutionType.query( QueryExecutionType.QueryType.READ_WRITE ) ) );
 
         when( fabricExecutor.run( any(), any(), any() ) ).thenReturn( statementResult );
 
@@ -330,6 +334,56 @@ class BoltAdapterTest
         verify( fabricTransaction ).rollback();
     }
 
+    @Test
+    void testCompletionWhenLastRecordRead() throws InterruptedException
+    {
+        mockConfig();
+
+        var latch = new CountDownLatch( 1 );
+        List<org.neo4j.driver.Record> records = new ArrayList<>();
+        var session = driver.rxSession( SessionConfig.forDatabase( "mega" ) );
+        try
+        {
+            var tx = Mono.from( session.beginTransaction() ).block();
+            var result = tx.run( "Some Cypher query" );
+            Flux.from( result.records() )
+                .subscribe( new Subscriber<>()
+                {
+                    @Override
+                    public void onSubscribe( Subscription subscription )
+                    {
+                        subscription.request( 2 );
+                    }
+
+                    @Override
+                    public void onNext( org.neo4j.driver.Record record )
+                    {
+                        records.add( record );
+                    }
+
+                    @Override
+                    public void onError( Throwable throwable )
+                    {
+                        throwable.printStackTrace();
+                    }
+
+                    @Override
+                    public void onComplete()
+                    {
+                        latch.countDown();
+                    }
+                } );
+
+            publishDefaultResult();
+            assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
+            verifyDefaultResult( records );
+        }
+        finally
+        {
+            Mono.from( session.close() ).block();
+        }
+    }
+
     private void mockConfig()
     {
         var streamConfig = new FabricConfig.DataStream( 1, 1000, 1000, 10 );
@@ -357,7 +411,7 @@ class BoltAdapterTest
         } ).when( fabricTransaction ).rollback();
 
         var bookmarkManager = mock( TransactionBookmarkManager.class );
-        when( bookmarkManager.constructFinalBookmark() ).thenReturn( new FabricBookmark( List.of() ) );
+        when( bookmarkManager.constructFinalBookmark() ).thenReturn( new FabricBookmark( List.of(), List.of() ) );
         when( fabricTransaction.getBookmarkManager() ).thenReturn( bookmarkManager );
     }
 
@@ -384,6 +438,11 @@ class BoltAdapterTest
     private void verifyDefaultResult( Result result )
     {
         var records = result.list();
+        verifyDefaultResult( records );
+    }
+
+    private void verifyDefaultResult( List<org.neo4j.driver.Record> records )
+    {
         assertEquals( 2, records.size() );
         var r1 = records.get( 0 );
         assertEquals( "v1", r1.get( "c1" ).asString() );
@@ -436,7 +495,7 @@ class BoltAdapterTest
         }
     }
 
-    private static class RecordImpl extends com.neo4j.fabric.stream.Record
+    private static class RecordImpl extends org.neo4j.fabric.stream.Record
     {
 
         private final List<Object> values;

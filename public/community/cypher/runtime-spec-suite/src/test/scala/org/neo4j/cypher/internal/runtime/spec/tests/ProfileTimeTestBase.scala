@@ -23,6 +23,7 @@ import org.neo4j.collection.RawIterator
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -43,7 +44,7 @@ abstract class ProfileTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
                                                              ) extends RuntimeTestSuite[CONTEXT](edition, runtime) {
 
   // We always get OperatorProfile.NO_DATA for page cache hits and misses in Pipelined
-  private val NO_PROFILE = new OperatorProfile.ConstOperatorProfile(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
+  val NO_PROFILE = new OperatorProfile.ConstOperatorProfile(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
 
   // time is profiled in nano-seconds, but we can only assert > 0, because the operators take
   // different time on different tested systems.
@@ -184,7 +185,7 @@ abstract class ProfileTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
     // then
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
     queryProfile.operatorProfile(0).time() should be > 0L // produce results
-    queryProfile.operatorProfile(1).time() should be > 0L // pruning var expand
+    queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // pruning var expand (OperatorProfile.NO_DATA as long as we use slotted fallback)
     queryProfile.operatorProfile(2).time() should be > 0L // all node scan
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
@@ -202,8 +203,8 @@ abstract class ProfileTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
       .produceResults("y")
       .shortestPath("(x)-[r*]-(y)", Some("path"))
       .cartesianProduct()
-      .|.nodeByLabelScan("y", "END")
-      .nodeByLabelScan("x", "START")
+      .|.nodeByLabelScan("y", "END", IndexOrderNone)
+      .nodeByLabelScan("x", "START", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -212,7 +213,7 @@ abstract class ProfileTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
     // then
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
     queryProfile.operatorProfile(0).time() should be > 0L // produce results
-    queryProfile.operatorProfile(1).time() should be > 0L // shortest path
+    queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // shortest path (OperatorProfile.NO_DATA as long as we use slotted fallback)
     queryProfile.operatorProfile(2).time() should be > 0L // cartesian product
     queryProfile.operatorProfile(3).time() should be > 0L // nodeByLabelScan
     queryProfile.operatorProfile(4).time() should be > 0L // nodeByLabelScan
@@ -386,7 +387,7 @@ abstract class ProfileTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
   }
 }
 
-trait ProcedureCallTimeTestBase[CONTEXT <: RuntimeContext] {
+trait NonParallelProfileTimeTestBase[CONTEXT <: RuntimeContext] {
   self: ProfileTimeTestBase[CONTEXT] =>
 
   test("should profile time of procedure call") {
@@ -409,8 +410,85 @@ trait ProcedureCallTimeTestBase[CONTEXT <: RuntimeContext] {
     consume(result)
 
     // then
-    result.runtimeResult.queryProfile().operatorProfile(1).time() should be > 0L // procedure call
-    result.runtimeResult.queryProfile().operatorProfile(2).time() should be > 0L // unwind
-    result.runtimeResult.queryProfile().operatorProfile(3).time() should be > 0L // argument
+    val queryProfile = result.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // procedure call (OperatorProfile.NO_DATA as long as we use slotted fallback)
+    queryProfile.operatorProfile(2).time() should be > 0L // unwind
+    queryProfile.operatorProfile(3).time() should be > 0L // argument
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
+  }
+
+  test("should profile time of ordered distinct") {
+    // given
+    val nodes = given {
+      nodeGraph(sizeHint)
+    }
+
+    val input = for (n <- nodes) yield Array[Any](nodes.head, n)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .orderedDistinct(Seq("x"), "y AS y")
+      .input(nodes = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input:_*))
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).time() should be > 0L // produce results
+    queryProfile.operatorProfile(1).time() should be > 0L // orderedDistinct
+    queryProfile.operatorProfile(2).time() should be > 0L // input
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
+  }
+
+  test("should profile time of ordered aggregation") {
+    // given
+    val nodes = given {
+      nodeGraph(sizeHint)
+    }
+
+    val input = for (n <- nodes) yield Array[Any](nodes.head, n)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("c")
+      .orderedAggregation(Seq("x AS x", "y AS y"), Seq("collect(y) AS c"), Seq("x"))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input:_*))
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).time() should be > 0L // produce results
+    queryProfile.operatorProfile(1).time() should be > 0L // orderedAggregation
+    queryProfile.operatorProfile(2).time() should be > 0L // input
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
+  }
+
+  test("should profile time of partial sort") {
+    val input = for (i <- 0 until sizeHint) yield Array[Any](1, i)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .partialSort(Seq(Ascending("x")), Seq(Ascending("y")))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input: _*))
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).time() should be > 0L // produce results
+    queryProfile.operatorProfile(1).time() should be > 0L // partial sort
+    queryProfile.operatorProfile(2).time() should be > 0L // input
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 }

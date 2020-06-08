@@ -20,6 +20,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.memory.EmptyMemoryTracker;
 
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
@@ -135,6 +136,6 @@ public class DumpClusterState
     private static ClusterStateStorageFactory newCoreStateStorageService( FileSystemAbstraction fs, File dataDirectory )
     {
         ClusterStateLayout layout = ClusterStateLayout.of( dataDirectory );
-        return new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), Config.defaults() );
+        return new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), Config.defaults(), EmptyMemoryTracker.INSTANCE );
     }
 }

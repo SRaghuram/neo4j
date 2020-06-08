@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -20,6 +21,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
@@ -30,7 +32,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
 {
     private final Protocol<ContentType> protocol;
 
-    RaftMessageDecoder( Protocol<ContentType> protocol )
+    public RaftMessageDecoder( Protocol<ContentType> protocol )
     {
         this.protocol = protocol;
     }
@@ -130,16 +132,16 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
             throw new IllegalArgumentException( "Unknown message type" );
         }
 
-        list.add( new RaftIdAwareMessageComposer( composer, raftId ) );
+        list.add( new InboundRaftMessageContainerComposer( composer, raftId ) );
         protocol.expect( ContentType.ContentType );
     }
 
-    static class RaftIdAwareMessageComposer
+    static class InboundRaftMessageContainerComposer
     {
         private final LazyComposer composer;
         private final RaftId raftId;
 
-        RaftIdAwareMessageComposer( LazyComposer composer, RaftId raftId )
+        InboundRaftMessageContainerComposer( LazyComposer composer, RaftId raftId )
         {
             this.composer = composer;
             this.raftId = raftId;

@@ -24,6 +24,7 @@ import org.neo4j.values.storable.TextValue;
 
 import static java.lang.String.format;
 import static org.neo4j.memory.HeapEstimator.shallowSizeOfInstance;
+import static org.neo4j.values.AnyValueWriter.EntityMode.REFERENCE;
 
 public abstract class RelationshipValue extends VirtualRelationshipValue
 {
@@ -41,7 +42,18 @@ public abstract class RelationshipValue extends VirtualRelationshipValue
     @Override
     public <E extends Exception> void writeTo( AnyValueWriter<E> writer ) throws E
     {
+<<<<<<< HEAD
         writer.writeRelationship( id, startNodeId(), endNodeId(), type(), properties() );
+=======
+        if ( writer.entityMode() == REFERENCE )
+        {
+            writer.writeRelationshipReference( id );
+        }
+        else
+        {
+            writer.writeRelationship( id, startNodeId(), endNodeId(), type(), properties() );
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override

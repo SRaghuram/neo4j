@@ -5,11 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.FabricException;
-import com.neo4j.fabric.executor.Location;
-import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +13,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
@@ -36,6 +30,10 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.fabric.executor.Location;
+import org.neo4j.fabric.stream.Records;
+import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
@@ -59,7 +57,7 @@ class AsyncPooledDriverTest
     private final AsyncSession session = mock( AsyncSession.class );
     private final AsyncTransaction asyncTransaction = mock( AsyncTransaction.class );
 
-    private final Location.Remote location = new Location.Remote( 0, null, null );
+    private final Location.Remote location = new Location.Remote.External( 0, null, null, null );
     private final FabricTransactionInfo transactionInfo = new FabricTransactionInfo( null, null, null, null, false, Duration.ZERO, null );
 
     @BeforeEach
@@ -90,7 +88,7 @@ class AsyncPooledDriverTest
         assertEquals( List.of( createFabricRecord( "a1", "b1" ) ), records );
 
         var bookmark = fabricTransaction.commit().block();
-        assertEquals( Set.of( "BB" ), bookmark.getSerialisedState() );
+        assertEquals( "BB", bookmark.getSerialisedState() );
 
         verify( asyncTransaction ).commitAsync();
         verify( session ).closeAsync();
@@ -256,7 +254,7 @@ class AsyncPooledDriverTest
         return CompletableFuture.completedFuture( record );
     }
 
-    private com.neo4j.fabric.stream.Record createFabricRecord( String... values )
+    private org.neo4j.fabric.stream.Record createFabricRecord( String... values )
     {
         var convertedValues =
                 Arrays.stream( values ).map( org.neo4j.values.storable.Values::stringValue ).map( v -> (AnyValue) v ).collect( Collectors.toList() );

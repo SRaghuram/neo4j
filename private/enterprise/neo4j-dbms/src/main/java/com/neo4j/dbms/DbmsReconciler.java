@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.TransitionsTable.Transition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.HashMap;
@@ -130,23 +129,28 @@ public class DbmsReconciler implements DatabaseStateService
 
     private void reportFailedDatabases()
     {
-        var failedDbs = currentStates.values().stream().filter( EnterpriseDatabaseState::hasFailed )
-                .map( db -> db.databaseId().name() ).collect( Collectors.joining( ",", "[", "]" ) );
+        var failedDbs = currentStates.values().stream()
+                .filter( EnterpriseDatabaseState::hasFailed )
+                .map( db -> db.databaseId().name() )
+                .collect( Collectors.joining( ",", "[", "]" ) );
 
-        log.warn( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
-                "Run `SHOW DATABASES` for further information.", failedDbs );
+        if ( failedDbs.length() > 2 )
+        {
+            log.warn( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
+                    "Run `SHOW DATABASES` for further information.", failedDbs );
+        }
     }
 
     private void validatedAndWarn( ReconcilerRequest request, Set<String> namesOfDbsToReconcile )
     {
-        if ( request.isSimple() )
+        if ( !request.isSimple() )
         {
-            var requestedDbs = new HashSet<>( request.priorityDatabaseNames() );
+            var requestedDbs = new HashSet<>( request.specifiedDatabaseNames() );
             requestedDbs.removeAll( namesOfDbsToReconcile );
 
             if ( !requestedDbs.isEmpty() )
             {
-                log.warn( "Reconciliation request specifies unknown databases as priority: [%s]. Reconciler is tracking: [%s]",
+                log.warn( "Reconciliation request specifies unknown databases: [%s]. Reconciler is tracking: [%s]",
                         requestedDbs, namesOfDbsToReconcile );
             }
         }
@@ -208,7 +212,7 @@ public class DbmsReconciler implements DatabaseStateService
     private synchronized CompletableFuture<ReconcilerStepResult> scheduleReconciliationJob( String databaseName, ReconcilerRequest request,
             List<DbmsOperator> operators )
     {
-        var jobCanBeCached = !request.isPriorityRequestForDatabase( databaseName );
+        var jobCanBeCached = request.canUseCacheFor( databaseName );
         if ( jobCanBeCached )
         {
             var cachedJob = waitingJobCache.get( databaseName );
@@ -219,11 +223,14 @@ public class DbmsReconciler implements DatabaseStateService
         }
 
         var reconcilerJobHandle = new CompletableFuture<Void>();
-        var executor = executors.executor( request, databaseName );
+        // Whilst the transitions step may take place on either the bound or unbound executor depending on the request
+        //  the preReconcile step will always take place on the unbound executor, as threads in this step only wait to
+        //  acquire locks.
+        var preReconcileExecutor = executors.unboundExecutor();
 
         var job = reconcilerJobHandle
-                .thenCompose( ignored -> preReconcile( databaseName, operators, request, executor ) )
-                .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request, executor ) )
+                .thenCompose( ignored -> preReconcile( databaseName, operators, request, preReconcileExecutor ) )
+                .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request ) )
                 .whenComplete( ( result, throwable ) -> postReconcile( databaseName, request, result, throwable ) );
 
         if ( jobCanBeCached )
@@ -240,14 +247,14 @@ public class DbmsReconciler implements DatabaseStateService
     private CompletableFuture<EnterpriseDatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators, ReconcilerRequest request,
             Executor executor )
     {
-        return CompletableFuture.supplyAsync( () ->
+        Supplier<EnterpriseDatabaseState> preReconcileJob = () ->
         {
             try
             {
                 log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
                 locks.acquireLockOn( request, databaseName );
 
-                if ( !request.isPriorityRequestForDatabase( databaseName ) )
+                if ( request.canUseCacheFor( databaseName ) )
                 {
                     // Must happen-before extracting desired states otherwise the cache might return a job which reconciles to an
                     // earlier desired state than that specified by the component triggering this job.
@@ -273,11 +280,11 @@ public class DbmsReconciler implements DatabaseStateService
                 throw new CompletionException( e );
             }
 
-        }, executor );
+        };
+        return CompletableFuture.supplyAsync( () -> namedJob( databaseName, preReconcileJob ), executor );
     }
 
-    private CompletableFuture<ReconcilerStepResult> doTransitions( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request,
-            Executor executor )
+    private CompletableFuture<ReconcilerStepResult> doTransitions( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request )
     {
         var currentState = getReconcilerEntryOrDefault( desiredState.databaseId(), initialReconcilerEntry( desiredState.databaseId() ) );
         var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
@@ -288,7 +295,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
         log.info( "Database %s is requested to transition from %s to %s", databaseName, currentState, desiredState );
 
-        if ( currentState.hasFailed() && !request.isPriorityRequestForDatabase( databaseName ) )
+        if ( currentState.hasFailed() && !request.overridesPreviousFailuresFor( databaseName ) )
         {
             var previousError = currentState.failure().orElseThrow( IllegalStateException::new );
             return CompletableFuture.completedFuture( initialResult.withError( DatabaseManagementException.wrap( previousError ) ) );
@@ -296,19 +303,29 @@ public class DbmsReconciler implements DatabaseStateService
 
         var backoff = backoffStrategy.newTimeout();
         var steps = getLifecycleTransitionSteps( currentState, desiredState );
+        var executor = executors.executor( request, desiredState.databaseId() );
 
-        NamedDatabaseId namedDatabaseId = desiredState.databaseId();
+        var namedDatabaseId = desiredState.databaseId();
         return CompletableFuture.supplyAsync( () -> doTransitions( initialResult.state(), steps, desiredState ), executor )
                 .thenCompose( result -> handleResult( namedDatabaseId, desiredState, result, executor, backoff, 0 ) );
     }
 
-    private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState, Stream<Transition> steps, EnterpriseDatabaseState desiredState )
+    private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState,
+                                                       Stream<Transition.Prepared> steps,
+                                                       EnterpriseDatabaseState desiredState )
     {
+        Supplier<ReconcilerStepResult> job = () -> doTransitionStep( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+        return namedJob( desiredState.databaseId().name(), job );
+    }
+
+    private static <T> T namedJob( String name, Supplier<T> operation )
+    {
+
         String oldThreadName = currentThread().getName();
         try
         {
-            currentThread().setName( oldThreadName + "-" + desiredState.databaseId().name() );
-            return doTransitionStep( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+            currentThread().setName( oldThreadName + "-" + name );
+            return operation.get();
         }
         finally
         {
@@ -316,7 +333,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    private static ReconcilerStepResult doTransitionStep( Iterator<Transition> steps, ReconcilerStepResult result )
+    private static ReconcilerStepResult doTransitionStep( Iterator<Transition.Prepared> steps, ReconcilerStepResult result )
     {
         if ( !steps.hasNext() )
         {
@@ -325,13 +342,41 @@ public class DbmsReconciler implements DatabaseStateService
 
         try
         {
-            var nextState = steps.next().doTransition();
-            return doTransitionStep( steps, result.withState( nextState ) );
+            var preparedTransition = steps.next();
+            try
+            {
+                var nextState = preparedTransition.doTransition();
+                return doTransitionStep( steps, result.withState( nextState ) );
+            }
+            catch ( TransitionFailureException failure )
+            {
+                return doTransitionCleanupStep( preparedTransition, failure, result );
+            }
         }
-        catch ( Throwable error )
+        catch ( Throwable throwable )
         {
-            return result.withError( error );
+            // This is last line of defense:
+            //   We think the two scenarios here where we would get a Throwable which isn't wrapped in a TransitionFailure are:
+            //   - The assignment of nextState is the "hair that broke the camel's back" and throws and OOM.
+            //   - There are way too many steps and doTransitionStep eventually throws a StackOverflowError.
+            //   Since in this case we don't know what would have been the failed state we leave the database in the last state it successfully reached
+            //   and just set that to failed with the catched Throwable
+            return result.withError( throwable );
         }
+    }
+
+    private static ReconcilerStepResult doTransitionCleanupStep( Transition.Prepared preparedTransition,
+            TransitionFailureException originalFailure, ReconcilerStepResult result )
+    {
+        try
+        {
+            preparedTransition.doCleanup();
+        }
+        catch ( TransitionFailureException actualFailure )
+        {
+            originalFailure.getCause().addSuppressed( actualFailure.getCause() );
+        }
+        return result.withState( originalFailure.failedState() ).withError( originalFailure.getCause() );
     }
 
     private CompletableFuture<ReconcilerStepResult> handleResult( NamedDatabaseId namedDatabaseId, EnterpriseDatabaseState desiredState,
@@ -380,14 +425,19 @@ public class DbmsReconciler implements DatabaseStateService
 
     private void stateChanged( EnterpriseDatabaseState previousState, EnterpriseDatabaseState newState )
     {
-        //If the previous state has a different id then a drop-recreate must have occurred
+        var initialState = new EnterpriseDatabaseState( newState.databaseId(), EnterpriseOperatorState.INITIAL );
+        // If the previous state has a different id then a drop-recreate must have occurred
         // In this case we should fire the listener twice, once for each databaseId.
         if ( previousState != null && !Objects.equals( previousState.databaseId(), newState.databaseId() ) )
         {
             var droppedPrevious = new EnterpriseDatabaseState( previousState.databaseId(), DROPPED );
-            listeners.forEach( listener -> listener.stateChange( droppedPrevious ) );
+            listeners.forEach( listener -> listener.stateChange( previousState, droppedPrevious ) );
+            listeners.forEach( listener -> listener.stateChange( initialState, newState ) );
         }
-        listeners.forEach( listener -> listener.stateChange( newState ) );
+        else
+        {
+            listeners.forEach( listener -> listener.stateChange( ( previousState == null ) ? initialState : previousState, newState ) );
+        }
     }
 
     private Optional<EnterpriseDatabaseState> handleReconciliationErrors( Throwable throwable, ReconcilerRequest request, ReconcilerStepResult result,
@@ -405,7 +455,7 @@ public class DbmsReconciler implements DatabaseStateService
             }
             else
             {
-                reportErrorAndPanicDatabase( previousState.databaseId(), message, throwable );
+                log.error( message, throwable );
                 return Optional.of( previousState.failed( throwable ) );
             }
         }
@@ -422,44 +472,38 @@ public class DbmsReconciler implements DatabaseStateService
             // An exception occurred somewhere in the internal machinery of the database and was caught by the DatabaseManager
             var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
                     databaseName, result.state(), result.desiredState().operatorState().description() );
-            reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
+            log.error( message, result.error() );
             return Optional.of( result.state().failed( result.error() ) );
         }
         else
         {
-            // No exception occurred during this transition, but the request may still panic the database and mark it as failed anyway
+            // No exception occurred during this transition, but the request may still be for a panicked database.
+            //   In that case we should mark it as failed anyway
             var nextState = result.state();
             var failure =  shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
             return failure.map( nextState::failed );
         }
     }
 
-    private void reportErrorAndPanicDatabase( NamedDatabaseId namedDatabaseId, String message, Throwable error )
-    {
-        log.error( message, error );
-        var panicCause = new IllegalStateException( message, error );
-        panicDatabase( namedDatabaseId, panicCause );
-    }
-
     private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( NamedDatabaseId namedDatabaseId,
-            EnterpriseDatabaseState currentState, ReconcilerRequest request )
+            EnterpriseDatabaseState previousState, ReconcilerRequest request )
     {
         var panicked = request.causeOfPanic( namedDatabaseId );
-        var isPriority = request.isPriorityRequestForDatabase( namedDatabaseId.name() );
-        var currentlyFailed = currentState != null && currentState.hasFailed();
+        var canHeal = request.overridesPreviousFailuresFor( namedDatabaseId.name() );
+        var currentlyFailed = previousState != null && previousState.hasFailed();
 
         if ( panicked.isPresent() )
         {
             return panicked;
         }
-        else if ( currentlyFailed && !isPriority )
+        else if ( currentlyFailed && !canHeal )
         {
-            // Preserve the current failed state because the reconcile request is not a priority one
-            return currentState.failure();
+            // Preserve the previous failed state because the reconcile request is not a priority or explicit one
+            return previousState.failure();
         }
         else
         {
-            // Either the current state is not failed, or the request is a priority one, and therefore may override previous failed states
+            // Either the previous state is not failed, or the request allows heal from failure, and therefore may override previous failed states
             return Optional.empty();
         }
     }
@@ -475,19 +519,12 @@ public class DbmsReconciler implements DatabaseStateService
         return !canRetry || t instanceof Error || t instanceof DatabaseStartAbortedException;
     }
 
-    private Stream<Transition> getLifecycleTransitionSteps( EnterpriseDatabaseState currentState, EnterpriseDatabaseState desiredState )
+    private Stream<Transition.Prepared> getLifecycleTransitionSteps( EnterpriseDatabaseState currentState, EnterpriseDatabaseState desiredState )
     {
         return transitionsTable.fromCurrent( currentState ).toDesired( desiredState );
     }
 
-    protected void panicDatabase( NamedDatabaseId namedDatabaseId, Throwable error )
-    {
-        databaseManager.getDatabaseContext( namedDatabaseId )
-                .map( ctx -> ctx.database().getDatabaseHealth() )
-                .ifPresent( health -> health.panic( error ) );
-    }
-
-    /* DaatabaseStateService implementation */
+    /* DatabaseStateService implementation */
     @Override
     public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
     {

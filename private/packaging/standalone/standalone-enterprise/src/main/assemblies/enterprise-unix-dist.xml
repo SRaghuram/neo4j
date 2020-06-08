@@ -10,6 +10,7 @@
   <id>unix</id>
   <formats>
     <format>tar.gz</format>
+    <format>dir</format>
   </formats>
   <fileSets>
 
@@ -93,6 +94,13 @@
         <exclude>**/*-sources.jar</exclude>
         <exclude>**/*-tests.jar</exclude>
       </excludes>
+    </fileSet>
+    <fileSet>
+      <directory>${project.parent.basedir}/src/main/distribution/</directory>
+      <outputDirectory>plugins</outputDirectory>
+      <includes>
+        <include>apoc*.jar</include>
+      </includes>
     </fileSet>
   </fileSets>
 

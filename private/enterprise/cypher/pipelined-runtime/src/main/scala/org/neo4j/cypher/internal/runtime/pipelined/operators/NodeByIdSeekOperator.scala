@@ -33,7 +33,7 @@ import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
@@ -50,6 +50,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.onNode
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -70,7 +71,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-    IndexedSeq(new NodeByIdTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new NodeByIdTask(inputMorsel.nextCopy))
   }
 
 
@@ -153,7 +154,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (nodeId == null) {
-      nodeId = codeGen.intermediateCompileExpression(nodeIdExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdExpr"))
+      nodeId = codeGen.compileExpression(nodeIdExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdExpr"))
     }
 
     /**
@@ -220,7 +221,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (nodeIds == null) {
-      nodeIds = codeGen.intermediateCompileExpression(nodeIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdsExpr"))
+      nodeIds = codeGen.compileExpression(nodeIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdsExpr"))
     }
 
     /**

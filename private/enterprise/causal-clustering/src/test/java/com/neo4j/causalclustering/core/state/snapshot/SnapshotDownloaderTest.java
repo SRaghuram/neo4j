@@ -13,9 +13,8 @@ import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Optional;
 
@@ -27,36 +26,32 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
-import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith( value = Parameterized.class )
-public class SnapshotDownloaderTest
+class SnapshotDownloaderTest
 {
-    @Parameterized.Parameters( name = "{0}" )
-    public static Iterable<ApplicationProtocol> data()
+    static Iterable<ApplicationProtocol> data()
     {
         return ApplicationProtocols.withCategory( CATCHUP );
     }
-
-    @Parameterized.Parameter
-    public ApplicationProtocol protocol;
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final SocketAddress remoteAddress = new SocketAddress( "localhost", 1234 );
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
-    @Test
-    public void shouldRequestSnapshot() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldRequestSnapshot( ApplicationProtocol protocol ) throws Exception
     {
         // given
         CoreSnapshot expectedSnapshot = mock( CoreSnapshot.class );
-        CatchupClientFactory catchupClientFactory = mockCatchupClient( responses().withCoreSnapshot( expectedSnapshot ) );
+        CatchupClientFactory catchupClientFactory = mockCatchupClient( responses().withCoreSnapshot( expectedSnapshot ), protocol );
 
         // when
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupClientFactory );
@@ -67,11 +62,15 @@ public class SnapshotDownloaderTest
         assertEquals( expectedSnapshot, downloadedSnapshot.get() );
     }
 
-    @Test
-    public void shouldHandleFailure() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldHandleFailure( ApplicationProtocol protocol ) throws Exception
     {
         // given
-        CatchupClientFactory catchupClientFactory = mockCatchupClient( responses().withCoreSnapshot( () -> { throw new RuntimeException(); } ) );
+        CatchupClientFactory catchupClientFactory = mockCatchupClient( responses().withCoreSnapshot( () ->
+        {
+            throw new RuntimeException();
+        } ), protocol );
 
         // when
         SnapshotDownloader downloader = new SnapshotDownloader( logProvider, catchupClientFactory );
@@ -81,7 +80,8 @@ public class SnapshotDownloaderTest
         assertFalse( downloadedSnapshot.isPresent() );
     }
 
-    private CatchupClientFactory mockCatchupClient( MockClientResponses clientResponses ) throws Exception
+    private CatchupClientFactory mockCatchupClient( MockClientResponses clientResponses,
+            ApplicationProtocol protocol ) throws Exception
     {
         CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
 

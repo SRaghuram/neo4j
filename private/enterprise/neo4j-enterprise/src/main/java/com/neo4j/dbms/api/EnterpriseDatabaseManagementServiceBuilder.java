@@ -6,12 +6,14 @@
 package com.neo4j.dbms.api;
 
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 import java.io.File;
 import java.util.function.Function;
 
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.common.Edition;
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.facade.ExternalDependencies;
@@ -51,14 +53,24 @@ public class EnterpriseDatabaseManagementServiceBuilder extends DatabaseManageme
     }
 
     @Override
-    protected DatabaseInfo getDatabaseInfo()
+    protected DatabaseInfo getDatabaseInfo( Config config )
     {
-        return DatabaseInfo.ENTERPRISE;
+        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
+        if ( mode == EnterpriseEditionSettings.Mode.SINGLE )
+        {
+            return DatabaseInfo.ENTERPRISE;
+        }
+        throw new IllegalArgumentException( "Unsupported mode: " + mode );
     }
 
     @Override
-    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory()
+    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
     {
-        return EnterpriseEditionModule::new;
+        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
+        if ( mode == EnterpriseEditionSettings.Mode.SINGLE )
+        {
+            return EnterpriseEditionModule::new;
+        }
+        throw new IllegalArgumentException( "Unsupported mode: " + mode );
     }
 }

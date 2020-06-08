@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.roles;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.PruneLogCommand;
 
 class Pruning
@@ -16,8 +16,8 @@ class Pruning
     {
     }
 
-    static void handlePruneRequest( Outcome outcome, RaftMessages.PruneRequest pruneRequest )
+    static void handlePruneRequest( OutcomeBuilder outcomeBuilder, RaftMessages.PruneRequest pruneRequest )
     {
-        outcome.addLogCommand( new PruneLogCommand( pruneRequest.pruneIndex() ) );
+        outcomeBuilder.addLogCommand( new PruneLogCommand( pruneRequest.pruneIndex() ) );
     }
 }

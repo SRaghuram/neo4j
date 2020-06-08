@@ -48,8 +48,14 @@ class MainStores extends Life
     public final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
     public final SimpleBigValueStore bigPropertyValueStore;
+<<<<<<< HEAD
     public final DenseRelationshipStore denseStore;
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
+=======
+    public final SimpleDenseRelationshipStore denseStore;
+    protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
+    private final Record[] deletedReferenceRecords;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
     MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
@@ -57,7 +63,11 @@ class MainStores extends Life
     {
         SimpleStore[] mainStores = new SimpleStore[4];
         BigPropertyValueStore bigPropertyValueStore = null;
+<<<<<<< HEAD
         DenseRelationshipStore denseStore = null;
+=======
+        SimpleDenseRelationshipStore denseStore = null;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         boolean success = false;
         try
         {
@@ -75,7 +85,13 @@ class MainStores extends Life
                         IdType.NODE, false, createStoreIfNotExists, i, pageCacheTracer );
                 idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( separateIdGeneratorFactory, IdType.NODE ) );
             }
+<<<<<<< HEAD
             bigPropertyValueStore = new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists );
+=======
+            bigPropertyValueStore = new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, idGeneratorFactory, IdType.STRING_BLOCK, false,
+                    createStoreIfNotExists, pageCacheTracer );
+            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.STRING_BLOCK ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             denseStore = new DenseRelationshipStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
                     bigPropertyValueStore );
             success = true;
@@ -84,6 +100,10 @@ class MainStores extends Life
             this.mainStore = mainStores[0];
             this.bigPropertyValueStore = bigPropertyValueStore;
             this.denseStore = denseStore;
+<<<<<<< HEAD
+=======
+            this.deletedReferenceRecords = constructDeletedReferenceRecords( mainStores );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             addMainStoresToLife();
         }
         finally
@@ -95,15 +115,39 @@ class MainStores extends Life
         }
     }
 
+<<<<<<< HEAD
     MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, DenseRelationshipStore denseStore )
+=======
+    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, SimpleDenseRelationshipStore denseStore )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         this.mainStores = mainStores;
         this.mainStore = mainStores[0];
         this.bigPropertyValueStore = bigPropertyValueStore;
         this.denseStore = denseStore;
+<<<<<<< HEAD
         addMainStoresToLife();
     }
 
+=======
+        this.deletedReferenceRecords = constructDeletedReferenceRecords( mainStores );
+        addMainStoresToLife();
+    }
+
+    private static Record[] constructDeletedReferenceRecords( SimpleStore[] mainStores )
+    {
+        Record[] records = new Record[mainStores.length];
+        for ( int i = 0; i < records.length; i++ )
+        {
+            if ( mainStores[i] != null )
+            {
+                records[i] = Record.deletedRecord( i, -1 );
+            }
+        }
+        return records;
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private void addMainStoresToLife()
     {
         for ( SimpleStore store : mainStores )
@@ -169,6 +213,14 @@ class MainStores extends Life
         return null;
     }
 
+<<<<<<< HEAD
+=======
+    Record deletedReferenceRecord( int sizeExp )
+    {
+        return deletedReferenceRecords[sizeExp];
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     int getNumMainStores()
     {
         return mainStores.length;

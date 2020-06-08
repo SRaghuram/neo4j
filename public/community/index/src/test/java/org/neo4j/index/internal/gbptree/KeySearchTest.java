@@ -34,6 +34,7 @@ import org.neo4j.test.rule.RandomRule;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.neo4j.index.internal.gbptree.GBPTreeTestUtil.contains;
 import static org.neo4j.index.internal.gbptree.KeySearch.search;
 import static org.neo4j.index.internal.gbptree.SimpleLongLayout.longLayout;
@@ -476,7 +477,7 @@ class KeySearchTest
             }
             layout.copyKey( key, expectedKey );
             keys.add( keyCount, expectedKey );
-            node.insertKeyValueAt( cursor, key, dummyValue, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION, NULL );
+            node.insertKeyValueAt( cursor, key, dummyValue, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION, mock( IdProvider.Writer.class ), NULL );
             currentKey += random.nextInt( 100 ) + 10;
             keyCount++;
         }
@@ -532,11 +533,13 @@ class KeySearchTest
         if ( TreeNode.isInternal( cursor ) )
         {
             long dummyChild = 10;
-            node.insertKeyAndRightChildAt( cursor, insertKey, dummyChild, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION, NULL );
+            node.insertKeyAndRightChildAt( cursor, insertKey, dummyChild, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION,
+                    mock( IdProvider.Writer.class ), NULL );
         }
         else
         {
-            node.insertKeyValueAt( cursor, insertKey, dummyValue, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION, NULL );
+            node.insertKeyValueAt( cursor, insertKey, dummyValue, keyCount, keyCount, STABLE_GENERATION, UNSTABLE_GENERATION, mock( IdProvider.Writer.class ),
+                    NULL );
         }
         TreeNode.setKeyCount( cursor, keyCount + 1 );
     }
@@ -555,7 +558,7 @@ class KeySearchTest
         for ( int i = 0; i < KEY_COUNT; i++ )
         {
             key.setValue( key( i ) );
-            node.insertKeyValueAt( cursor, key, dummyValue, i, i, STABLE_GENERATION, UNSTABLE_GENERATION, NULL );
+            node.insertKeyValueAt( cursor, key, dummyValue, i, i, STABLE_GENERATION, UNSTABLE_GENERATION, mock( IdProvider.Writer.class ), NULL );
         }
         TreeNode.setKeyCount( cursor, KEY_COUNT );
     }

@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+<<<<<<< HEAD
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
@@ -43,23 +44,44 @@ import static org.neo4j.util.Preconditions.checkState;
 class FrekiCommandCreationContext implements CommandCreationContext
 {
     private final MainStores stores;
+=======
+import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
+import org.neo4j.storageengine.api.CommandCreationContext;
+
+class FrekiCommandCreationContext extends FrekiRelationshipIdGenerator implements CommandCreationContext
+{
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private final IdGenerator nodes;
     private final IdGenerator labelTokens;
     private final IdGenerator relationshipTypeTokens;
     private final IdGenerator propertyKeyTokens;
     private final IdGenerator schema;
+<<<<<<< HEAD
     private final PageCursorTracer cursorTracer;
     private MutableLongObjectMap<MutableInt> sourceNodeNextRelationshipIds = LongObjectMaps.mutable.empty();
 
     FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer )
     {
         this.stores = stores;
+=======
+
+    FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    {
+        super( stores, cursorTracer, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nodes = idGeneratorFactory.get( IdType.NODE );
         labelTokens = idGeneratorFactory.get( IdType.LABEL_TOKEN );
         relationshipTypeTokens = idGeneratorFactory.get( IdType.RELATIONSHIP_TYPE_TOKEN );
         propertyKeyTokens = idGeneratorFactory.get( IdType.PROPERTY_KEY_TOKEN );
         schema = idGeneratorFactory.get( IdType.SCHEMA );
+<<<<<<< HEAD
         this.cursorTracer = cursorTracer;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -69,6 +91,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
     }
 
     @Override
+<<<<<<< HEAD
     public long reserveRelationship( long sourceNode )
     {
         // This is a bit more complicated than simply asking an ID generator for a new ID. The relationship ids are associated with
@@ -121,6 +144,8 @@ class FrekiCommandCreationContext implements CommandCreationContext
     }
 
     @Override
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     public long reserveSchema()
     {
         return schema.nextId( cursorTracer );
@@ -145,6 +170,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
     }
 
     @Override
+<<<<<<< HEAD
     public void reset()
     {
         if ( !sourceNodeNextRelationshipIds.isEmpty() )
@@ -156,6 +182,8 @@ class FrekiCommandCreationContext implements CommandCreationContext
     }
 
     @Override
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     public void close()
     {
     }

@@ -20,7 +20,6 @@
 package org.neo4j.cypher.internal.compiler.planner.logical.idp
 
 import org.neo4j.cypher.internal.compiler.planner.logical.LogicalPlanningContext
-import org.neo4j.cypher.internal.compiler.planner.logical.LogicalPlanningSupport
 import org.neo4j.cypher.internal.compiler.planner.logical.LogicalPlanningSupport.RichHint
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.joinSolverStep.VERBOSE
 import org.neo4j.cypher.internal.ir.PatternRelationship
@@ -49,18 +48,21 @@ case class joinSolverStep(qg: QueryGraph, IGNORE_EXPAND_SOLUTIONS_FOR_TEST: Bool
     }
 
     /**
-      *  Normally, it is not desirable to join on the argument(s).
-      *  The exception is when all bits that occurs in goal and the IDP table are compacted ones
-      *  (= not registered), because then it will not be possible to find an expand solution anymore.
-      */
+     *  Normally, it is not desirable to join on the argument(s).
+     *  However, Expand is not going to look at goals which are entirely compacted (not in the registry reverseMap) so
+     *  we may as well consider them here. Also, if everything in the plan table is compacted the same is true.
+     */
     def registered: Int => Boolean = nbr => registry.lookup(nbr).isDefined
-    val expandStillPossible = (goal.exists(registered) || table.plans.exists(p => p._1._1.exists(registered))) && !IGNORE_EXPAND_SOLUTIONS_FOR_TEST
+    val goalIsEntirelyCompacted = !goal.exists(registered)
+    val allPlansHaveBeenCompacted = !table.plans.exists(p => p._1._1.exists(registered))
+    val expandStillPossible = !(goalIsEntirelyCompacted || allPlansHaveBeenCompacted || IGNORE_EXPAND_SOLUTIONS_FOR_TEST)
 
-      val argumentsToRemove =
-        if (expandStillPossible)
-          qg.argumentIds
-        else
-          Set.empty[String]
+    val argumentsToRemove =
+      if (expandStillPossible) {
+        qg.argumentIds
+      } else {
+        Set.empty[String]
+      }
 
     val goalSize = goal.size
     val planProducer = context.logicalPlanProducer

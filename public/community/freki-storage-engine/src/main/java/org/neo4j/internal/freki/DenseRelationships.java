@@ -28,6 +28,7 @@ import java.util.Objects;
 /**
  * Logical information about relationships which will go into commands for dense nodes.
  */
+<<<<<<< HEAD
 class DenseRelationships
 {
     private final long nodeId;
@@ -35,12 +36,20 @@ class DenseRelationships
     // TODO consider consolidating these lists into one with a Mode on each individual relationship?
     final List<DenseRelationship> created = new ArrayList<>();
     final List<DenseRelationship> deleted = new ArrayList<>();
+=======
+class DenseRelationships implements Comparable<DenseRelationships>
+{
+    private final long nodeId;
+    final int type;
+    final List<DenseRelationship> relationships = new ArrayList<>();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
     DenseRelationships( long nodeId, int type )
     {
         this.nodeId = nodeId;
         this.type = type;
     }
+<<<<<<< HEAD
 
     void create( DenseRelationship relationship )
     {
@@ -55,6 +64,11 @@ class DenseRelationships
     void add( DenseRelationship relationship, List<DenseRelationship> list, int increment )
     {
         list.add( relationship );
+=======
+    void add( DenseRelationship relationship )
+    {
+        relationships.add( relationship );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -69,28 +83,60 @@ class DenseRelationships
             return false;
         }
         DenseRelationships that = (DenseRelationships) o;
+<<<<<<< HEAD
         return type == that.type && Objects.equals( created, that.created ) && Objects.equals( deleted, that.deleted );
+=======
+        return type == that.type && Objects.equals( relationships, that.relationships );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
     public int hashCode()
     {
+<<<<<<< HEAD
         return Objects.hash( type, created, deleted );
     }
 
     static class DenseRelationship
+=======
+        return Objects.hash( type, relationships );
+    }
+
+    @Override
+    public int compareTo( DenseRelationships o )
+    {
+        int nodeComparison = Long.compare( nodeId, o.nodeId );
+        if ( nodeComparison != 0 )
+        {
+            return nodeComparison;
+        }
+        return Integer.compare( type, o.type );
+    }
+
+    static class DenseRelationship implements Comparable<DenseRelationship>
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         long internalId;
         long otherNodeId;
         boolean outgoing;
         IntObjectMap<PropertyUpdate> propertyUpdates;
+<<<<<<< HEAD
 
         DenseRelationship( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> propertyUpdates )
+=======
+        boolean deleted;
+
+        DenseRelationship( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> propertyUpdates, boolean deleted )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             this.internalId = internalId;
             this.otherNodeId = otherNodeId;
             this.outgoing = outgoing;
             this.propertyUpdates = propertyUpdates;
+<<<<<<< HEAD
+=======
+            this.deleted = deleted;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
 
         @Override
@@ -106,12 +152,17 @@ class DenseRelationships
             }
             DenseRelationship that = (DenseRelationship) o;
             return internalId == that.internalId && otherNodeId == that.otherNodeId && outgoing == that.outgoing &&
+<<<<<<< HEAD
                     propertyUpdates.equals( that.propertyUpdates );
+=======
+                    propertyUpdates.equals( that.propertyUpdates ) && deleted == that.deleted;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
 
         @Override
         public int hashCode()
         {
+<<<<<<< HEAD
             return Objects.hash( internalId, otherNodeId, outgoing, propertyUpdates );
         }
     }
@@ -163,6 +214,32 @@ class DenseRelationships
         public int hashCode()
         {
             return Objects.hash( outgoing, incoming, loop );
+=======
+            return Objects.hash( internalId, otherNodeId, outgoing, propertyUpdates, deleted );
+        }
+
+        @Override
+        public int compareTo( DenseRelationship o )
+        {
+            int directionComparison = Boolean.compare( outgoing, o.outgoing );
+            if ( directionComparison != 0 )
+            {
+                return directionComparison;
+            }
+            int neighbourComparison = Long.compare( otherNodeId, o.otherNodeId );
+            if ( neighbourComparison != 0 )
+            {
+                return neighbourComparison;
+            }
+            return Long.compare( internalId, o.internalId );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "DenseRelationship{" + "internalId=" + internalId + ", otherNodeId=" + otherNodeId + ", outgoing=" + outgoing + ", propertyUpdates=" +
+                    propertyUpdates + '}';
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         }
     }
 }

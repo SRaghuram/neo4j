@@ -70,6 +70,7 @@ import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.util.DefaultValueMapper;
 import org.neo4j.lock.ResourceTypes;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CountsDelta;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.StorageSchemaReader;
@@ -92,22 +93,15 @@ public class AllStoreHolder extends Read
     private final RelationshipTypeScanStore relationshipTypeScanStore;
     private final IndexStatisticsStore indexStatisticsStore;
     private final Dependencies databaseDependencies;
+    private final MemoryTracker memoryTracker;
     private final IndexReaderCache indexReaderCache;
     private TokenScanReader labelScanReader;
     private TokenScanReader relationshipTypeScanReader;
 
-    public AllStoreHolder( StorageReader storageReader,
-                           KernelTransactionImplementation ktx,
-                           DefaultPooledCursors cursors,
-                           GlobalProcedures globalProcedures,
-                           SchemaState schemaState,
-                           IndexingService indexingService,
-                           LabelScanStore labelScanStore,
-                           RelationshipTypeScanStore relationshipTypeScanStore,
-                           IndexStatisticsStore indexStatisticsStore,
-                           PageCursorTracer cursorTracer,
-                           Dependencies databaseDependencies,
-                           Config config )
+    public AllStoreHolder( StorageReader storageReader, KernelTransactionImplementation ktx, DefaultPooledCursors cursors, GlobalProcedures globalProcedures,
+            SchemaState schemaState, IndexingService indexingService, LabelScanStore labelScanStore, RelationshipTypeScanStore relationshipTypeScanStore,
+            IndexStatisticsStore indexStatisticsStore, PageCursorTracer cursorTracer, Dependencies databaseDependencies, Config config,
+            MemoryTracker memoryTracker )
     {
         super( storageReader, cursors, cursorTracer, ktx, config );
         this.globalProcedures = globalProcedures;
@@ -118,6 +112,7 @@ public class AllStoreHolder extends Read
         this.relationshipTypeScanStore = relationshipTypeScanStore;
         this.indexStatisticsStore = indexStatisticsStore;
         this.databaseDependencies = databaseDependencies;
+        this.memoryTracker = memoryTracker;
     }
 
     @Override
@@ -213,7 +208,7 @@ public class AllStoreHolder extends Read
                 this.allNodesScan( nodes );
                 while ( nodes.next() )
                 {
-                    if ( labelId == TokenRead.ANY_LABEL || nodes.labels().contains( labelId ) )
+                    if ( labelId == TokenRead.ANY_LABEL || nodes.hasLabel( labelId ) )
                     {
                         count++;
                     }
@@ -305,8 +300,8 @@ public class AllStoreHolder extends Read
         {
             relationship.source( sourceNode );
             relationship.target( targetNode );
-            if ( sourceNode.next() && (startLabelId == TokenRead.ANY_LABEL || sourceNode.labels().contains( startLabelId )) &&
-                    targetNode.next() && (endLabelId == TokenRead.ANY_LABEL || targetNode.labels().contains( endLabelId )) )
+            if ( sourceNode.next() && (startLabelId == TokenRead.ANY_LABEL || sourceNode.hasLabel( startLabelId )) &&
+                    targetNode.next() && (endLabelId == TokenRead.ANY_LABEL || targetNode.hasLabel( endLabelId )) )
             {
                 internalCount++;
             }
@@ -357,7 +352,26 @@ public class AllStoreHolder extends Read
                 return true;
             }
         }
-        return storageReader.relationshipExists( reference, cursorTracer );
+        AccessMode mode = ktx.securityContext().mode();
+        boolean existsInRelStore = storageReader.relationshipExists( reference, cursorTracer );
+
+        if ( mode.allowsTraverseAllRelTypes() )
+        {
+            return existsInRelStore;
+        }
+        else if ( !existsInRelStore )
+        {
+            return false;
+        }
+        else
+        {
+            // DefaultNodeCursor already contains traversal checks within next()
+            try ( DefaultRelationshipScanCursor rels = cursors.allocateRelationshipScanCursor( cursorTracer ) )
+            {
+                ktx.dataRead().singleRelationship( reference, rels );
+                return rels.next();
+            }
+        }
     }
 
     @Override
@@ -714,17 +728,19 @@ public class AllStoreHolder extends Read
     @Override
     public long nodesGetCount()
     {
-        ktx.assertOpen();
-        long base = storageReader.nodesGetCount( cursorTracer );
-        return ktx.hasTxStateWithChanges() ? base + ktx.txState().addedAndRemovedNodes().delta() : base;
+        return countsForNode( TokenRead.ANY_LABEL );
     }
 
     @Override
     public long relationshipsGetCount()
     {
+<<<<<<< HEAD
         ktx.assertOpen();
         long base = storageReader.relationshipsGetCount( cursorTracer );
         return ktx.hasTxStateWithChanges() ? base + ktx.txState().addedAndRemovedRelationships().delta() : base;
+=======
+        return countsForRelationship( TokenRead.ANY_LABEL, TokenRead.ANY_RELATIONSHIP_TYPE, TokenRead.ANY_LABEL );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -1027,5 +1043,17 @@ public class AllStoreHolder extends Read
     public void release()
     {
         indexReaderCache.close();
+    }
+
+    @Override
+    public PageCursorTracer cursorTracer()
+    {
+        return cursorTracer;
+    }
+
+    @Override
+    public MemoryTracker memoryTracker()
+    {
+        return memoryTracker;
     }
 }

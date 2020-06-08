@@ -16,22 +16,29 @@ import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
+
+import static org.neo4j.io.ByteUnit.kibiBytes;
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 
 public class SimpleFileStorage<T> implements SimpleStorage<T>
 {
     private final FileSystemAbstraction fileSystem;
     private final ChannelMarshal<T> marshal;
+    private final MemoryTracker memoryTracker;
     private final File file;
     private final Log log;
 
-    public SimpleFileStorage( FileSystemAbstraction fileSystem, File file, ChannelMarshal<T> marshal, LogProvider logProvider )
+    public SimpleFileStorage( FileSystemAbstraction fileSystem, File file, ChannelMarshal<T> marshal, LogProvider logProvider, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.log = logProvider.getLog( getClass() );
         this.file = file;
         this.marshal = marshal;
+        this.memoryTracker = memoryTracker;
     }
 
     @Override
@@ -43,7 +50,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public T readState() throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             return marshal.unmarshal( channel );
         }
@@ -63,7 +70,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
         }
         fileSystem.deleteFile( file );
 
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.write( file ) ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.write( file ), new NativeScopedBuffer( kibiBytes( 512 ), memoryTracker ) ) )
         {
             marshal.marshal( state, channel );
         }

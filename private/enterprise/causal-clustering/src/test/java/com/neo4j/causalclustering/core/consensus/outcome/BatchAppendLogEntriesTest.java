@@ -10,17 +10,15 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogHelper;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
-public class BatchAppendLogEntriesTest
+class BatchAppendLogEntriesTest
 {
     private final Log log = NullLog.getInstance();
     private RaftLogEntry entryA = new RaftLogEntry( 0, valueOf( 100 ) );
@@ -29,7 +27,7 @@ public class BatchAppendLogEntriesTest
     private RaftLogEntry entryD = new RaftLogEntry( 3, valueOf( 400 ) );
 
     @Test
-    public void shouldApplyMultipleEntries() throws Exception
+    void shouldApplyMultipleEntries() throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
@@ -40,14 +38,14 @@ public class BatchAppendLogEntriesTest
         batchAppendLogEntries.applyTo( raftLog, log );
 
         // then
-        assertEquals( entryA, RaftLogHelper.readLogEntry( raftLog, 0 ) );
-        assertEquals( entryB, RaftLogHelper.readLogEntry( raftLog, 1 ) );
-        assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 2 ) );
-        assertEquals( 2, raftLog.appendIndex() );
+        Assertions.assertEquals( entryA, RaftLogHelper.readLogEntry( raftLog, 0 ) );
+        Assertions.assertEquals( entryB, RaftLogHelper.readLogEntry( raftLog, 1 ) );
+        Assertions.assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 2 ) );
+        Assertions.assertEquals( 2, raftLog.appendIndex() );
     }
 
     @Test
-    public void shouldApplyFromOffsetOnly() throws Exception
+    void shouldApplyFromOffsetOnly() throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
@@ -58,13 +56,13 @@ public class BatchAppendLogEntriesTest
         batchAppendLogEntries.applyTo( raftLog, log );
 
         // then
-        assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 0 ) );
-        assertEquals( entryD, RaftLogHelper.readLogEntry( raftLog, 1 ) );
-        assertEquals( 1, raftLog.appendIndex() );
+        Assertions.assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 0 ) );
+        Assertions.assertEquals( entryD, RaftLogHelper.readLogEntry( raftLog, 1 ) );
+        Assertions.assertEquals( 1, raftLog.appendIndex() );
     }
 
     @Test
-    public void applyTo()
+    void applyTo()
     {
         //Test that batch commands apply entries to the cache.
 
@@ -83,8 +81,8 @@ public class BatchAppendLogEntriesTest
         batchAppend.applyTo( cache, log );
 
         //then
-        assertNull( cache.get( 0L ) );
-        assertNotNull( cache.get( 1L ) );
-        assertNotNull( cache.get( 2L ) );
+        Assertions.assertNull( cache.get( 0L ) );
+        Assertions.assertNotNull( cache.get( 1L ) );
+        Assertions.assertNotNull( cache.get( 2L ) );
     }
 }

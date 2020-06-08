@@ -132,9 +132,9 @@ public class ClusterLeaseCoordinator implements LeaseService
     {
         var leaderInfo = leaderLocator.getLeaderInfo();
         MemberId leader = null;
-        if ( leaderInfo != null )
+        if ( leaderInfo.isPresent() )
         {
-            leader = leaderInfo.memberId();
+            leader = leaderInfo.get().memberId();
         }
         if ( !myself.equals( leader ) )
         {

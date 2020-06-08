@@ -25,7 +25,6 @@ import org.eclipse.collections.impl.factory.primitive.LongSets;
 
 import org.neo4j.internal.index.label.TokenScan;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
-import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.index.IndexProgressor;
 import org.neo4j.kernel.api.txstate.TransactionState;
@@ -40,6 +39,7 @@ class NodeLabelIndexCursorScan extends BaseCursorScan<NodeLabelIndexCursor,Token
     NodeLabelIndexCursorScan( Read read, int label, TokenScan tokenScan, PageCursorTracer cursorTracer )
     {
         super( tokenScan, read, () -> read.txState().nodesWithLabelChanged( label ).getAdded().toArray(), cursorTracer );
+        this.label = label;
         if ( hasChanges )
         {
             TransactionState txState = read.txState();
@@ -50,7 +50,6 @@ class NodeLabelIndexCursorScan extends BaseCursorScan<NodeLabelIndexCursor,Token
         {
             this.removed = LongSets.immutable.empty();
         }
-        this.label = label;
     }
 
     @Override
@@ -58,25 +57,7 @@ class NodeLabelIndexCursorScan extends BaseCursorScan<NodeLabelIndexCursor,Token
     {
         DefaultNodeLabelIndexCursor indexCursor = (DefaultNodeLabelIndexCursor) cursor;
         indexCursor.setRead( read );
-        IndexProgressor indexProgressor;
-
-        AccessMode mode = read.ktx.securityContext().mode();
-        if ( mode.allowsTraverseAllNodesWithLabel( label ) )
-        {
-            // all nodes will be allowed
-            indexProgressor = storageScan.initializeBatch( indexCursor.nodeLabelClient(), sizeHint, cursorTracer );
-        }
-        else if ( mode.disallowsTraverseLabel( label ) )
-        {
-            // no nodes with this label will be allowed
-            indexProgressor = IndexProgressor.EMPTY;
-        }
-        else
-        {
-            // some nodes of this label might be blocked. we need to filter
-            // TODO: Find which code path hits this and write tests for DENY (seems to be part of parallel runtime)
-            indexProgressor = storageScan.initializeBatch( read.filteringNodeLabelClient( indexCursor.nodeLabelClient(), mode ), sizeHint, cursorTracer );
-        }
+        IndexProgressor indexProgressor = storageScan.initializeBatch( indexCursor.nodeLabelClient(), sizeHint, cursorTracer );
 
         if ( indexProgressor == IndexProgressor.EMPTY && !addedItems.hasNext() )
         {
@@ -84,7 +65,7 @@ class NodeLabelIndexCursorScan extends BaseCursorScan<NodeLabelIndexCursor,Token
         }
         else
         {
-            indexCursor.scan( indexProgressor, addedItems, removed );
+            indexCursor.scan( indexProgressor, addedItems, removed, label );
             return true;
         }
     }

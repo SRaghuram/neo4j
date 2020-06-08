@@ -32,6 +32,15 @@ import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
 import static org.assertj.core.api.Assertions.assertThat;
+<<<<<<< HEAD
+=======
+import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
+import static org.neo4j.internal.freki.Header.FLAG_LABELS;
+import static org.neo4j.internal.freki.Header.MARKERS_SIZE;
+import static org.neo4j.internal.freki.Header.NUM_OFFSETS;
+import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
 @ExtendWith( RandomExtension.class )
 class HeaderTest
@@ -40,6 +49,7 @@ class HeaderTest
     private RandomRule random;
 
     @Test
+<<<<<<< HEAD
     void shouldReadAndWriteFlagsAndOffsets()
     {
         // given
@@ -59,6 +69,59 @@ class HeaderTest
         assertAddOffsetAndReadAndWrite( header, offsets.get( 3 ), 6 );
         assertAddOffsetAndReadAndWrite( header, offsets.get( 4 ), 8 );
         assertAddOffsetAndReadAndWrite( header, offsets.get( 5 ), 9 );
+=======
+    void shouldReadAndWriteMarksAndOffsets()
+    {
+        // given
+        Header header = new Header();
+        header.mark( FLAG_LABELS, true );
+        header.mark( FLAG_HAS_DENSE_RELATIONSHIPS, true );
+
+        // when/then
+        assertReadAndWrite( header, MARKERS_SIZE );
+
+        List<Integer> offsets = new ArrayList<>( List.of( 0, 1, 2, 3, 4, 5, 6 ) );
+        Collections.shuffle( offsets, random.random() );
+
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 0 ), MARKERS_SIZE + 2 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 1 ), MARKERS_SIZE + 3 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 2 ), MARKERS_SIZE + 4 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 3 ), MARKERS_SIZE + 5 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 4 ), MARKERS_SIZE + 7 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 5 ), MARKERS_SIZE + 8 );
+        // The header currently only supports 6 active offsets, so to set this last one first unset another
+        header.mark( offsets.get( random.nextInt( 6 ) ), false );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 6 ), MARKERS_SIZE + 8 );
+    }
+
+    @Test
+    void shouldAlsoReadAndWriteReferenceMarkers()
+    {
+        // given
+        Header header = new Header();
+        Header referenceHeader = new Header();
+        header.mark( FLAG_LABELS, false );
+        referenceHeader.mark( FLAG_LABELS, true );
+        header.mark( OFFSET_PROPERTIES, true );
+        referenceHeader.mark( OFFSET_PROPERTIES, false );
+        header.mark( OFFSET_RELATIONSHIPS, false );
+        referenceHeader.mark( OFFSET_RELATIONSHIPS, true );
+
+        // when
+        ByteBuffer buffer = ByteBuffer.allocate( header.spaceNeeded() );
+        header.setReference( referenceHeader );
+        header.serialize( buffer );
+        Header readHeader = new Header();
+        readHeader.deserialize( buffer.position( 0 ) );
+
+        // then
+        assertThat( readHeader.hasMark( FLAG_LABELS ) ).isEqualTo( header.hasMark( FLAG_LABELS ) );
+        assertThat( readHeader.hasReferenceMark( FLAG_LABELS ) ).isEqualTo( header.hasReferenceMark( FLAG_LABELS ) );
+        assertThat( readHeader.hasMark( OFFSET_PROPERTIES ) ).isEqualTo( header.hasMark( OFFSET_PROPERTIES ) );
+        assertThat( readHeader.hasReferenceMark( OFFSET_PROPERTIES ) ).isEqualTo( header.hasReferenceMark( OFFSET_PROPERTIES ) );
+        assertThat( readHeader.hasMark( OFFSET_RELATIONSHIPS ) ).isEqualTo( header.hasMark( OFFSET_RELATIONSHIPS ) );
+        assertThat( readHeader.hasReferenceMark( OFFSET_RELATIONSHIPS ) ).isEqualTo( header.hasReferenceMark( OFFSET_RELATIONSHIPS ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     private void assertReadAndWrite( Header header, int expectedSize )
@@ -72,23 +135,40 @@ class HeaderTest
         Header readHeader = new Header();
         readHeader.deserialize( buffer );
         assertThat( buffer.position() ).isEqualTo( expectedSize );
+<<<<<<< HEAD
         assertThat( readHeader.hasFlag( Header.FLAG_LABELS ) ).isEqualTo( header.hasFlag( Header.FLAG_LABELS ) );
         assertThat( readHeader.hasFlag( Header.FLAG_IS_DENSE ) ).isEqualTo( header.hasFlag( Header.FLAG_IS_DENSE ) );
         for ( int offsetSlot = 0; offsetSlot < Header.NUM_OFFSETS; offsetSlot++ )
         {
             assertThat( readHeader.hasOffset( offsetSlot ) ).isEqualTo( header.hasOffset( offsetSlot ) );
             if ( readHeader.hasOffset( offsetSlot ) )
+=======
+        assertThat( readHeader.hasMark( FLAG_LABELS ) ).isEqualTo( header.hasMark( FLAG_LABELS ) );
+        assertThat( readHeader.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) ).isEqualTo( header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) );
+        for ( int offsetSlot = 0; offsetSlot < NUM_OFFSETS; offsetSlot++ )
+        {
+            assertThat( readHeader.hasMark( offsetSlot ) ).isEqualTo( header.hasMark( offsetSlot ) );
+            if ( readHeader.hasMark( offsetSlot ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             {
                 assertThat( readHeader.getOffset( offsetSlot ) ).isEqualTo( header.getOffset( offsetSlot ) );
             }
         }
     }
 
+<<<<<<< HEAD
     private void assertAddOffsetAndReadAndWrite( Header header, int offsetSlot, int expectedSize )
     {
         int offset = random.nextInt( 0x3FF );
         header.markHasOffset( offsetSlot );
         header.setOffset( offsetSlot, offset );
+=======
+    private void assertAddOffsetAndReadAndWrite( Header header, int slot, int expectedSize )
+    {
+        int offset = random.nextInt( 0x3FF );
+        header.mark( slot, true );
+        header.setOffset( slot, offset );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         assertReadAndWrite( header, expectedSize );
     }
 }

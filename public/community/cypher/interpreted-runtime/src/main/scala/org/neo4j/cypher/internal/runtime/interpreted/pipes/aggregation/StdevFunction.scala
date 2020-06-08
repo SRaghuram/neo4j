@@ -19,10 +19,11 @@
  */
 package org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation
 
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
@@ -30,7 +31,7 @@ class StdevFunction(val value: Expression, val population:Boolean, operatorId: I
   extends AggregationFunction
   with NumericExpressionOnly {
 
-  def name = if (population) "STDEVP" else "STDEV"
+  def name: String = if (population) "STDEVP" else "STDEV"
 
   // would be cool to not have to keep a temporary list to do multiple passes
   // this will blow up RAM over a big data set (not lazy!)
@@ -38,6 +39,7 @@ class StdevFunction(val value: Expression, val population:Boolean, operatorId: I
   private var temp = Vector[Double]()
   private var count:Int = 0
   private var total:Double = 0
+  private var memoryTracker: MemoryTracker = _
 
   override def result(state: QueryState): AnyValue = {
     if(count < 2) {
@@ -55,12 +57,21 @@ class StdevFunction(val value: Expression, val population:Boolean, operatorId: I
     }
   }
 
-  override def apply(data: CypherRow, state: QueryState) {
+  override def apply(data: ReadableRow, state: QueryState) {
+    if (memoryTracker == null) {
+      memoryTracker = state.memoryTracker.memoryTrackerForOperator(operatorId.x)
+    }
     actOnNumber(value(data, state), number => {
       count += 1
       total += number.doubleValue()
       temp = temp :+ number.doubleValue()
-      state.memoryTracker.allocated(java.lang.Double.BYTES, operatorId.x)
+      memoryTracker.allocateHeap(java.lang.Double.BYTES) // TODO: Heap tracking collection
     })
+  }
+
+  override def recordMemoryDeallocation(): Unit = {
+    if (memoryTracker != null) {
+      memoryTracker.releaseHeap(java.lang.Double.BYTES * temp.size)
+    }
   }
 }

@@ -46,7 +46,7 @@ import org.neo4j.consistency.store.RecordAccess;
 import org.neo4j.consistency.store.RecordReference;
 import org.neo4j.consistency.store.synthetic.CountsEntry;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
+import org.neo4j.consistency.store.synthetic.TokenScanDocument;
 import org.neo4j.internal.index.label.EntityTokenRange;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
@@ -80,6 +80,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.neo4j.common.EntityType.NODE;
 import static org.neo4j.consistency.report.ConsistencyReporter.NO_MONITOR;
 import static org.neo4j.internal.counts.CountsKey.nodeKey;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
@@ -275,7 +276,9 @@ class ConsistencyReporterTest
             }
             if ( type == RelationshipRecord.class )
             {
-                return new RelationshipRecord( 0, 1, 2, 3 );
+                RelationshipRecord relationship = new RelationshipRecord( 0 );
+                relationship.setLinks( 1, 2, 3 );
+                return relationship;
             }
             if ( type == PropertyRecord.class )
             {
@@ -305,9 +308,9 @@ class ConsistencyReporterTest
             {
                 return new NeoStoreRecord();
             }
-            if ( type == LabelScanDocument.class )
+            if ( type == TokenScanDocument.class )
             {
-                return new LabelScanDocument( new EntityTokenRange( 0, new long[][] {} ) );
+                return new TokenScanDocument( new EntityTokenRange( 0, new long[][] {}, NODE ) );
             }
             if ( type == IndexEntry.class )
             {
@@ -418,7 +421,7 @@ class ConsistencyReporterTest
 
     public static List<ReportMethods> methods()
     {
-        ArrayList<ReportMethods> methods = new ArrayList<>();
+        List<ReportMethods> methods = new ArrayList<>();
         for ( Method reporterMethod : ConsistencyReport.Reporter.class.getMethods() )
         {
             if ( reporterMethod.getReturnType() == Void.TYPE )

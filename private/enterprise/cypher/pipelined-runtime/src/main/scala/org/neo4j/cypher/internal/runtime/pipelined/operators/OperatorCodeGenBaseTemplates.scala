@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.codegen.ClassHandle
 import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.api.ClassDeclaration
 import org.neo4j.codegen.api.CodeGeneration
@@ -50,7 +51,7 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
@@ -68,6 +69,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR_FIELD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_KERNEL_TRACER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_OPERATOR_PROFILE_EVENT
@@ -130,7 +132,7 @@ object CompiledStreamingOperator {
 
   def getClassDeclaration(packageName: String,
                           className: String,
-                          taskClazz: Class[CompiledTask],
+                          taskClassHandle: ClassHandle,
                           workIdentityField: StaticField,
                           argumentStates:  Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): ClassDeclaration[CompiledStreamingOperator] = {
 
@@ -146,16 +148,19 @@ object CompiledStreamingOperator {
         case (argumentStateMapId, factory) =>
           /**
            * {{{
-           *   argumentStateCreator.createStateMap(mapId, FACTORY_i)
+           *   argumentStateCreator.createStateMap(mapId, FACTORY_i, ordered = false)
            * }}}
            */
           invokeSideEffect(load("argumentStateCreator"),
             method[ArgumentStateMapCreator,
               ArgumentStateMap[ArgumentState],
               Int,
-              ArgumentStateFactory[ArgumentState]]("createArgumentStateMap"),
+              ArgumentStateFactory[ArgumentState],
+              Boolean]("createArgumentStateMap"),
             constant(argumentStateMapId.x),
-            getStatic[ArgumentStateFactory[ArgumentState]](staticFieldName(factory)))
+            getStatic[ArgumentStateFactory[ArgumentState]](staticFieldName(factory)),
+            // We currently only fuse operators that do not need ordered ASMs. Pull this into the Tuple in `argumentStates` when that changes.
+            constant(false))
       }: _*)
 
     ClassDeclaration[CompiledStreamingOperator](
@@ -171,7 +176,7 @@ object CompiledStreamingOperator {
           parameters = Seq(param[Read]("dataRead"),
             param[Morsel]("inputMorsel"),
             param[ArgumentStateMaps]("argumentStateMaps")),
-          body = newInstance(Constructor(TypeReference.typeReference(taskClazz),
+          body = newInstance(Constructor(taskClassHandle,
             Seq(TypeReference.typeReference(classOf[Read]),
               TypeReference.typeReference(classOf[Morsel]),
               TypeReference.typeReference(classOf[ArgumentStateMaps]))),
@@ -209,10 +214,14 @@ object ContinuableOperatorTaskWithMorselGenerator {
     val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
     val operatorId = COUNTER.getAndIncrement()
     val generator = CodeGeneration.createGenerator(codeGenerationMode)
-    val taskClazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, "OperatorTask"+operatorId, Seq(staticWorkIdentity)), generator)
-    val operatorClazz = compileClass(CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, "Operator"+operatorId, taskClazz, staticWorkIdentity, argumentStates), generator)
+    val taskDeclaration = template.genClassDeclaration(PACKAGE_NAME, "OperatorTask" + operatorId, Seq(staticWorkIdentity))
+    val taskClassHandle = compileClass(taskDeclaration, generator)
+    val operatorDeclaration = CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, "Operator" + operatorId, taskClassHandle, staticWorkIdentity, argumentStates)
+    val operatorClassHandle = compileClass(operatorDeclaration, generator)
 
-    operatorClazz.getDeclaredConstructor().newInstance()
+    CodeGeneration.loadAndSetConstants(taskClassHandle, taskDeclaration)
+    val clazz = CodeGeneration.loadAndSetConstants(operatorClassHandle, operatorDeclaration)
+    clazz.getDeclaredConstructor().newInstance()
   }
 
 }
@@ -243,8 +252,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperator]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as an [[OutputOperatorState]].
    */
-  override final def createState(executionState: ExecutionState): OutputOperatorState = {
-    compiledCreateState(executionState)
+  override final def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = {
+    compiledCreateState(executionState, stateFactory)
     this
   }
 
@@ -276,7 +285,9 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[PreparedOutput]] trait. Implementing this allows fused reducing operators to write to [[ExecutionState]].
    */
-  override final def produce(): Unit = compiledProduce()
+  override final def produce(resources: QueryResources): Unit = compiledProduce(resources)
+
+  override final def close(): Unit = compiledCloseOutput()
 
   /**
    * Generated code that initializes the profile events.
@@ -297,14 +308,20 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    * Generated code that produces output into the execution state.
    */
   @throws[Exception]
-  def compiledProduce(): Unit
+  def compiledProduce(resources: QueryResources): Unit
+
+  /**
+   * Generated code that closes the produced output.
+   */
+  @throws[Exception]
+  def compiledCloseOutput(): Unit
 
   /**
     * Generated code that performs the initialization necessary for performing [[PreparedOutput.produce()]].
     * E.g., retrieving [[org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink]] from [[ExecutionState]].
     */
   @throws[Exception]
-  def compiledCreateState(executionState: ExecutionState): Unit
+  def compiledCreateState(executionState: ExecutionState, stateFactory: StateFactory): Unit
 
   /**
    * Generated code for [[OutputOperator.outputBuffer]]. Return [[BufferId]] or null.
@@ -409,9 +426,7 @@ trait OperatorTaskTemplate {
     val assignments = localState.assignments
 
     val expressionCursors = genExpressions.flatMap(_.variables)
-      .intersect(Seq(ExpressionCompiler.vNODE_CURSOR,
-        ExpressionCompiler.vPROPERTY_CURSOR,
-        ExpressionCompiler.vRELATIONSHIP_CURSOR))
+      .intersect(ExpressionCompilation.vCURSORS)
     val setTracerCalls =
       if (expressionCursors.nonEmpty) {
         expressionCursors.map(cursor => invokeSideEffect(load(cursor), SET_TRACER, loadField(executionEventField)))
@@ -447,6 +462,14 @@ trait OperatorTaskTemplate {
    * }}}
    */
   protected def genProduce: IntermediateRepresentation = inner.genProduce
+
+  /**
+   * Responsible for generating [[PreparedOutput]] method:
+   * {{{
+   *     def close(): Unit
+   * }}}
+   */
+  def genCloseOutput: IntermediateRepresentation = inner.genCloseOutput
 
   /**
    * Responsible for generating the body of [[OutputOperator]] method (but is not expected to return anything):
@@ -509,6 +532,7 @@ object OperatorTaskTemplate {
     override def id: Id = withId
     override def genOperate: IntermediateRepresentation = noop()
     override def genProduce: IntermediateRepresentation = noop()
+    override def genCloseOutput: IntermediateRepresentation = noop()
     override def genCreateState: IntermediateRepresentation = noop()
     override def genFields: Seq[Field] = Seq.empty
     override def genLocalVariables: Seq[LocalVariable] = Seq.empty
@@ -563,6 +587,29 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
     block(localsState.declarations ++ localsState.assignments :+ body: _*)
   }
 
+  /**
+   * Clear operator state assuming input row has been cancelled.
+   *
+   * Should NOT recurse into inner operator templates.
+   */
+  protected def genClearStateOnCancelledRow: IntermediateRepresentation
+
+  def genAdvanceOnCancelledRow: IntermediateRepresentation =
+    condition(not(INPUT_ROW_IS_VALID)) {
+      block(
+        clearStateForEachOperator,
+        invokeSideEffect(INPUT_CURSOR, NEXT)
+      )
+    }
+
+  private def clearStateForEachOperator: IntermediateRepresentation = {
+    val clearStateCalls = map {
+      case x: ContinuableOperatorTaskWithMorselTemplate => x.genClearStateOnCancelledRow
+      case _ => noop()
+    }
+    block(clearStateCalls.reverse:_*)
+  }
+
   // We let the generated class extend the abstract class CompiledContinuableOperatorTaskWithMorsel(which extends ContinuableOperatorTaskWithMorsel),
   // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
 
@@ -586,7 +633,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         MethodDeclaration("compiledOperate",
           returnType = typeRefOf[Unit],
           Seq(param[Morsel]("outputMorsel"),
-            param[QueryContext]("dbAccess"),
+            param[QueryContext](ExpressionCompilation.DB_ACCESS_NAME),
             param[PipelinedQueryState]("state"),
             param[QueryResources]("resources"),
             param[QueryProfiler]("queryProfiler")
@@ -598,13 +645,13 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
           ),
           genLocalVariables = () => {
             Seq(
-              variable[Array[AnyValue]]("params",
+              variable[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME,
                 invoke(QUERY_STATE,
                   method[PipelinedQueryState, Array[AnyValue]]("params"))),
-              variable[ExpressionCursors]("cursors",
+              variable[ExpressionCursors](ExpressionCompilation.CURSORS_NAME,
                 invoke(QUERY_RESOURCES,
                   method[QueryResources, ExpressionCursors]("expressionCursors"))),
-              variable[Array[AnyValue]]("expressionVariables",
+              variable[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME,
                 invoke(QUERY_RESOURCES,
                   method[QueryResources, Array[AnyValue], Int]("expressionVariables"),
                   invoke(QUERY_STATE,
@@ -616,13 +663,20 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
           throws = Some(typeRefOf[Exception])),
         MethodDeclaration("compiledProduce",
           returnType = typeRefOf[Unit],
-          parameters = Seq.empty,
+          parameters = Seq(param[QueryResources]("resources")),
           body = genProduce,
+          genLocalVariables = () => Seq.empty,
+          throws = Some(typeRefOf[Exception])),
+        MethodDeclaration("compiledCloseOutput",
+          returnType = typeRefOf[Unit],
+          parameters = Seq.empty,
+          body = genCloseOutput,
           genLocalVariables = () => Seq.empty,
           throws = Some(typeRefOf[Exception])),
         MethodDeclaration("compiledCreateState",
           returnType = typeRefOf[Unit],
-          Seq(param[ExecutionState]("executionState")),
+          Seq(param[ExecutionState]("executionState"),
+              param[StateFactory]("stateFactory")),
                           body = genCreateState,
                           genLocalVariables = () => Seq.empty,
                           throws = Some(typeRefOf[Exception])),
@@ -821,6 +875,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genCloseCursors: IntermediateRepresentation = block()
 
   override protected def genProduce: IntermediateRepresentation = noop()
+
+  override def genCloseOutput: IntermediateRepresentation = noop()
 
   override def genCreateState: IntermediateRepresentation = noop()
 

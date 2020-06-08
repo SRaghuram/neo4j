@@ -6,11 +6,11 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.ImmutableList;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.Benchmark.Mode;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.Benchmark.Mode;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;

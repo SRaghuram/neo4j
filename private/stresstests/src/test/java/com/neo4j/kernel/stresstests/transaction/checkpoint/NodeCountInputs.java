@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.stresstests.transaction.checkpoint;
 
-import java.util.function.ToIntBiFunction;
+import java.io.IOException;
 
 import org.neo4j.internal.batchimport.GeneratingInputIterator;
 import org.neo4j.internal.batchimport.InputIterable;
@@ -13,9 +13,8 @@ import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.IdType;
 import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.input.PropertySizeCalculator;
 import org.neo4j.internal.batchimport.input.ReadableGroups;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.values.storable.Value;
 
 import static org.neo4j.internal.batchimport.input.Input.knownEstimates;
 
@@ -67,7 +66,7 @@ public class NodeCountInputs implements Input
     }
 
     @Override
-    public Estimates calculateEstimates( ToIntBiFunction<Value[],PageCursorTracer> valueSizeCalculator )
+    public Estimates calculateEstimates( PropertySizeCalculator valueSizeCalculator ) throws IOException
     {
         return knownEstimates( nodeCount, 0, nodeCount * properties.length / 2, 0, nodeCount * properties.length / 2 * Long.BYTES, 0,
                 nodeCount * labels.length );

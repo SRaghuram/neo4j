@@ -25,9 +25,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 
 import org.neo4j.io.ByteUnit;
-import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.HeapScopedBuffer;
+import org.neo4j.io.memory.ScopedBuffer;
+import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.Math.min;
+import static java.lang.Math.toIntExact;
+import static org.neo4j.io.memory.HeapScopedBuffer.EMPTY_BUFFER;
 
 /**
  * The main implementation of {@link FlushableChannel}. This class provides buffering over a simple {@link StoreChannel}
@@ -35,27 +39,24 @@ import static java.lang.Math.min;
  */
 public class PhysicalFlushableChannel implements FlushableChannel
 {
-    public static final int DEFAULT_BUFFER_SIZE = (int) ByteUnit.kibiBytes( 512 );
+    public static final int DEFAULT_BUFFER_SIZE = toIntExact( ByteUnit.kibiBytes( 4 ) );
 
     private volatile boolean closed;
 
-    protected ByteBuffer buffer;
+    protected ScopedBuffer scopedBuffer;
     protected StoreChannel channel;
+    protected ByteBuffer buffer;
 
-    public PhysicalFlushableChannel( StoreChannel channel )
+    public PhysicalFlushableChannel( StoreChannel channel, MemoryTracker memoryTracker )
     {
-        this( channel, DEFAULT_BUFFER_SIZE );
+        this( channel, new HeapScopedBuffer( DEFAULT_BUFFER_SIZE, memoryTracker ) );
     }
 
-    public PhysicalFlushableChannel( StoreChannel channel, int bufferSize )
-    {
-        this( channel, ByteBuffers.allocate( bufferSize ) );
-    }
-
-    public PhysicalFlushableChannel( StoreChannel channel, ByteBuffer byteBuffer )
+    public PhysicalFlushableChannel( StoreChannel channel, ScopedBuffer scopedBuffer )
     {
         this.channel = channel;
-        this.buffer = byteBuffer;
+        this.scopedBuffer = scopedBuffer;
+        this.buffer = scopedBuffer.getBuffer();
     }
 
     /**
@@ -145,6 +146,8 @@ public class PhysicalFlushableChannel implements FlushableChannel
         prepareForFlush().flush();
         this.closed = true;
         this.channel.close();
+        this.scopedBuffer.close();
+        this.scopedBuffer = EMPTY_BUFFER;
     }
 
     /**

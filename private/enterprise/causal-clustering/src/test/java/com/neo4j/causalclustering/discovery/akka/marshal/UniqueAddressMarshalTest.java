@@ -11,36 +11,30 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
-@RunWith( Parameterized.class )
-public class UniqueAddressMarshalTest
+class UniqueAddressMarshalTest
 {
-    @Parameterized.Parameter
-    public UniqueAddress uniqueAddress;
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<UniqueAddress> params()
+    static Stream<UniqueAddress> params()
     {
-        return Arrays.asList(
+        return Stream.of(
                 new UniqueAddress( new Address( "protocol", "system" ), 17L ),
                 new UniqueAddress( new Address( "protocol", "system", "host", 87 ), 17L )
         );
     }
 
-    @Test
-    public void shouldMarshalAndUnMarshal() throws IOException, EndOfStreamException
+    @ParameterizedTest
+    @MethodSource( "params" )
+    void shouldMarshalAndUnMarshal( UniqueAddress uniqueAddress ) throws IOException, EndOfStreamException
     {
         // given
         ChannelMarshal<UniqueAddress> marshal = new UniqueAddressMarshal();

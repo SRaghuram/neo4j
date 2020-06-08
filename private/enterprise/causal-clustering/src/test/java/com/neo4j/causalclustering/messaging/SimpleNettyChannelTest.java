@@ -6,23 +6,21 @@
 package com.neo4j.causalclustering.messaging;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Future;
 
 import org.neo4j.logging.NullLog;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class SimpleNettyChannelTest
+class SimpleNettyChannelTest
 {
     private EmbeddedChannel nettyChannel = new EmbeddedChannel();
 
     @Test
-    public void shouldWriteOnNettyChannel()
+    void shouldWriteOnNettyChannel()
     {
         // given
         SimpleNettyChannel channel = new SimpleNettyChannel( nettyChannel, NullLog.getInstance() );
@@ -32,19 +30,19 @@ public class SimpleNettyChannelTest
         Future<Void> writeComplete = channel.write( msg );
 
         // then
-        assertNull( nettyChannel.readOutbound() );
-        assertFalse( writeComplete.isDone() );
+        Assertions.assertNull( nettyChannel.readOutbound() );
+        Assertions.assertFalse( writeComplete.isDone() );
 
         // when
         nettyChannel.flush();
 
         // then
-        assertTrue( writeComplete.isDone() );
-        assertEquals( msg, nettyChannel.readOutbound() );
+        Assertions.assertTrue( writeComplete.isDone() );
+        Assertions.assertEquals( msg, nettyChannel.readOutbound() );
     }
 
     @Test
-    public void shouldWriteAndFlushOnNettyChannel()
+    void shouldWriteAndFlushOnNettyChannel()
     {
         // given
         SimpleNettyChannel channel = new SimpleNettyChannel( nettyChannel, NullLog.getInstance() );
@@ -54,33 +52,29 @@ public class SimpleNettyChannelTest
         Future<Void> writeComplete = channel.writeAndFlush( msg );
 
         // then
-        assertTrue( writeComplete.isDone() );
-        assertEquals( msg, nettyChannel.readOutbound() );
+        Assertions.assertTrue( writeComplete.isDone() );
+        Assertions.assertEquals( msg, nettyChannel.readOutbound() );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowWhenWritingOnDisposedChannel()
+    @Test
+    void shouldThrowWhenWritingOnDisposedChannel()
     {
         // given
         SimpleNettyChannel channel = new SimpleNettyChannel( nettyChannel, NullLog.getInstance() );
         channel.dispose();
 
-        // when
-        channel.write( new Object() );
-
-        // then expected to throw
+        // when then
+        assertThrows( IllegalStateException.class, () -> channel.write( new Object() ) );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowWhenWriteAndFlushingOnDisposedChannel()
+    @Test
+    void shouldThrowWhenWriteAndFlushingOnDisposedChannel()
     {
         // given
         SimpleNettyChannel channel = new SimpleNettyChannel( nettyChannel, NullLog.getInstance() );
         channel.dispose();
 
-        // when
-        channel.writeAndFlush( new Object() );
-
-        // then expected to throw
+        // when then
+        assertThrows( IllegalStateException.class, () -> channel.writeAndFlush( new Object() ) );
     }
 }

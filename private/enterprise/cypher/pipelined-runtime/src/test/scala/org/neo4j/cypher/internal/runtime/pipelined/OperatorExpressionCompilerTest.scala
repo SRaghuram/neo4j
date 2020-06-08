@@ -45,10 +45,9 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
   def createOperatorExpressionCompiler(slots: SlotConfiguration, maybeInputSlots: Option[SlotConfiguration] = None): TestOperatorExpressionCompiler = {
     val inputSlots = maybeInputSlots.getOrElse(slots)
     val readOnly = true
-    val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
     val namer = new VariableNamer
 
-    val expressionCompiler = new TestOperatorExpressionCompiler(slots, inputSlots, readOnly, codeGenerationMode, namer)
+    val expressionCompiler = new TestOperatorExpressionCompiler(slots, inputSlots, readOnly, namer)
     expressionCompiler
   }
 
@@ -631,9 +630,8 @@ object OperatorExpressionCompilerTest {
   def matchBeginsWithIR(ir: IntermediateRepresentation): BeginsWithIrMatcher = BeginsWithIrMatcher(ir)
 }
 
-class TestOperatorExpressionCompiler(slots: SlotConfiguration, inputSlots: SlotConfiguration, readOnly: Boolean,
-                                     codeGenerationMode: CodeGenerationMode, namer: VariableNamer)
-  extends OperatorExpressionCompiler(slots, inputSlots, readOnly, codeGenerationMode, namer) {
+class TestOperatorExpressionCompiler(slots: SlotConfiguration, inputSlots: SlotConfiguration, readOnly: Boolean, namer: VariableNamer)
+  extends OperatorExpressionCompiler(slots, inputSlots, readOnly, namer) {
 
   var initCachedPropertyFromStoreCount = 0
   var initCachedPropertyFromContextCount = 0

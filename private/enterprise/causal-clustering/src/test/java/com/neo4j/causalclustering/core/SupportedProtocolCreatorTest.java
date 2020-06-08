@@ -59,13 +59,13 @@ class SupportedProtocolCreatorTest
     {
         // given
         var config = Config.defaults( CausalClusteringSettings.raft_implementations,
-                List.of( appProtocolVer( 1, 0 ), appProtocolVer( 2, 0 ), appProtocolVer( 3, 0 ) ) );
+                List.of( appProtocolVer( 1, 0 ), appProtocolVer( 2, 0 ), appProtocolVer( 3, 0 ), appProtocolVer( 4, 0 ) ) );
 
         // when
         var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ) ) );
+        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 3, 0 ) ) );
     }
 
     @Test

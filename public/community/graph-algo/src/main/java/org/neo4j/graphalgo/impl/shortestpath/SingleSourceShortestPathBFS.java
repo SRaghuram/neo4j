@@ -43,8 +43,8 @@ public class SingleSourceShortestPathBFS implements
     protected Node startNode;
     protected Direction relationShipDirection;
     protected RelationshipType[] relationShipTypes;
-    protected HashMap<Node,Integer> distances = new HashMap<>();
-    protected HashMap<Node,List<Relationship>> predecessors = new HashMap<>();
+    protected Map<Node,Integer> distances = new HashMap<>();
+    protected Map<Node,List<Relationship>> predecessors = new HashMap<>();
     // Limits
     protected long maxDepth = Long.MAX_VALUE;
     protected long depth;
@@ -299,7 +299,7 @@ public class SingleSourceShortestPathBFS implements
         List<Node> result = new LinkedList<>();
         List<Relationship> predecessorRelationShips = predecessors.get( node );
         if ( predecessorRelationShips == null
-            || predecessorRelationShips.size() == 0 )
+            || predecessorRelationShips.isEmpty() )
         {
             return null;
         }

@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.impl.transaction.log;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -28,15 +26,18 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
+import org.junit.jupiter.api.Test;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChecksumChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.io.fs.ChecksumWriter.CHECKSUM_FACTORY;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @SuppressWarnings( "ResultOfMethodCallIgnored" )
 @TestDirectoryExtension
@@ -53,7 +54,7 @@ class PhysicalFlushableChecksumChannelTest
         final File firstFile = new File( directory.homeDir(), "file1" );
         StoreChannel storeChannel = fileSystem.write( firstFile );
         int channelChecksum;
-        try ( PhysicalFlushableChecksumChannel channel = new PhysicalFlushableChecksumChannel( storeChannel ) )
+        try ( PhysicalFlushableChecksumChannel channel = new PhysicalFlushableChecksumChannel( storeChannel, new HeapScopedBuffer( 100, INSTANCE ) ) )
         {
             channel.beginChecksum();
             channel.put( (byte) 10 );
@@ -83,7 +84,7 @@ class PhysicalFlushableChecksumChannelTest
         final File firstFile = new File( directory.homeDir(), "file1" );
         StoreChannel storeChannel = fileSystem.write( firstFile );
         int channelChecksum;
-        try ( PhysicalFlushableChecksumChannel channel = new PhysicalFlushableChecksumChannel( storeChannel ) )
+        try ( PhysicalFlushableChecksumChannel channel = new PhysicalFlushableChecksumChannel( storeChannel, new HeapScopedBuffer( 100, INSTANCE ) ) )
         {
             channel.put( (byte) 5 );
             channel.beginChecksum();

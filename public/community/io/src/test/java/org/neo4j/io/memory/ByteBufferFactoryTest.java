@@ -19,6 +19,7 @@
  */
 package org.neo4j.io.memory;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
@@ -34,19 +35,21 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import org.neo4j.memory.LocalMemoryTracker;
 import org.neo4j.util.concurrent.Futures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
-import static org.neo4j.io.memory.ByteBufferFactory.HEAP_ALLOCATOR;
-import static org.neo4j.io.memory.ByteBuffers.allocate;
+import static org.neo4j.io.memory.ByteBufferFactory.heapBufferFactory;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 class ByteBufferFactoryTest
 {
@@ -55,24 +58,24 @@ class ByteBufferFactoryTest
     {
         // given
         ByteBufferFactory.Allocator allocator = mock( ByteBufferFactory.Allocator.class );
-        when( allocator.allocate( anyInt() ) ).thenAnswer( invocationOnMock -> allocate( invocationOnMock.getArgument( 0 ) ) );
+        when( allocator.allocate( anyInt(), any() ) ).thenAnswer( invocationOnMock -> new HeapScopedBuffer( invocationOnMock.getArgument( 0 ), INSTANCE ) );
         ByteBufferFactory factory = new ByteBufferFactory( () -> allocator, 100 );
 
         // when doing some allocations that are counted as global
-        factory.acquireThreadLocalBuffer();
+        factory.acquireThreadLocalBuffer( INSTANCE );
         factory.releaseThreadLocalBuffer();
-        factory.acquireThreadLocalBuffer();
+        factory.acquireThreadLocalBuffer( INSTANCE );
         factory.releaseThreadLocalBuffer();
-        factory.globalAllocator().allocate( 123 );
-        factory.globalAllocator().allocate( 456 );
+        factory.globalAllocator().allocate( 123, INSTANCE );
+        factory.globalAllocator().allocate( 456, INSTANCE );
         // and closing it
         factory.close();
 
         // then
         InOrder inOrder = inOrder( allocator );
-        inOrder.verify( allocator, times( 1 ) ).allocate( 100 );
-        inOrder.verify( allocator, times( 1 ) ).allocate( 123 );
-        inOrder.verify( allocator, times( 1 ) ).allocate( 456 );
+        inOrder.verify( allocator, times( 1 ) ).allocate( 100, INSTANCE );
+        inOrder.verify( allocator, times( 1 ) ).allocate( 123, INSTANCE );
+        inOrder.verify( allocator, times( 1 ) ).allocate( 456, INSTANCE );
         inOrder.verify( allocator, times( 1 ) ).close();
         inOrder.verifyNoMoreInteractions();
     }
@@ -81,8 +84,7 @@ class ByteBufferFactoryTest
     void shouldCreateNewInstancesOfLocalAllocators()
     {
         // given
-        Supplier<ByteBufferFactory.Allocator> allocator = mock( Supplier.class );
-        when( allocator.get() ).thenAnswer( invocationOnMock -> mock( ByteBufferFactory.Allocator.class ) );
+        Supplier<ByteBufferFactory.Allocator> allocator = () -> mock( ByteBufferFactory.Allocator.class );
         ByteBufferFactory factory = new ByteBufferFactory( allocator, 100 );
 
         // when
@@ -101,11 +103,11 @@ class ByteBufferFactoryTest
     void shouldFailAcquireThreadLocalBufferIfAlreadyAcquired()
     {
         // given
-        ByteBufferFactory factory = new ByteBufferFactory( () -> HEAP_ALLOCATOR, 1024 );
-        factory.acquireThreadLocalBuffer();
+        ByteBufferFactory factory = heapBufferFactory( 1024 );
+        factory.acquireThreadLocalBuffer( INSTANCE );
 
         // when/then
-        assertThrows( IllegalStateException.class, factory::acquireThreadLocalBuffer );
+        assertThrows( IllegalStateException.class, () -> factory.acquireThreadLocalBuffer( INSTANCE ) );
         factory.close();
     }
 
@@ -113,8 +115,8 @@ class ByteBufferFactoryTest
     void shouldFailReleaseThreadLocalBufferIfNotAcquired()
     {
         // given
-        ByteBufferFactory factory = new ByteBufferFactory( () -> HEAP_ALLOCATOR, 1024 );
-        factory.acquireThreadLocalBuffer();
+        ByteBufferFactory factory = heapBufferFactory( 1024 );
+        factory.acquireThreadLocalBuffer( INSTANCE );
         factory.releaseThreadLocalBuffer();
 
         // when/then
@@ -123,10 +125,10 @@ class ByteBufferFactoryTest
     }
 
     @Test
-    void shouldShareThreadLocalBuffersStressfully() throws Throwable
+    void shouldShareThreadLocalBuffersLoggingIndexedIdGeneratorMonitorStressfully() throws Throwable
     {
         // given
-        ByteBufferFactory factory = new ByteBufferFactory( () -> HEAP_ALLOCATOR, 1024 );
+        ByteBufferFactory factory = heapBufferFactory( 1024 );
         int threads = 10;
         CountDownLatch startLatch = new CountDownLatch( 1 );
         ExecutorService executor = Executors.newFixedThreadPool( threads );
@@ -134,14 +136,14 @@ class ByteBufferFactoryTest
         List<Set<ByteBuffer>> seenBuffers = new ArrayList<>();
         for ( int i = 0; i < threads; i++ )
         {
-            HashSet<ByteBuffer> seen = new HashSet<>();
+            Set<ByteBuffer> seen = new HashSet<>();
             seenBuffers.add( seen );
             futures.add( executor.submit( () ->
             {
                 startLatch.await();
                 for ( int j = 0; j < 1000; j++ )
                 {
-                    ByteBuffer buffer = factory.acquireThreadLocalBuffer();
+                    ByteBuffer buffer = factory.acquireThreadLocalBuffer( INSTANCE );
                     assertNotNull( buffer );
                     seen.add( buffer );
                     factory.releaseThreadLocalBuffer();
@@ -162,5 +164,42 @@ class ByteBufferFactoryTest
             assertEquals( 1, seenBuffers.get( i ).size() );
         }
         factory.close();
+    }
+
+    @Disabled
+    void releaseAllBuffersReleaseMemoryFromThreadLocalBuffers()
+    {
+        var memoryTracker = new LocalMemoryTracker();
+        var factory = heapBufferFactory( 10 );
+        factory.acquireThreadLocalBuffer( memoryTracker );
+        factory.releaseThreadLocalBuffer();
+        factory.acquireThreadLocalBuffer( memoryTracker );
+        factory.releaseThreadLocalBuffer();
+        factory.acquireThreadLocalBuffer( memoryTracker );
+        factory.releaseThreadLocalBuffer();
+
+        assertEquals( 10, memoryTracker.estimatedHeapMemory() );
+
+        assertEquals( 0, memoryTracker.estimatedHeapMemory() );
+    }
+
+    @Test
+    void byteBufferMustThrowOutOfBoundsAfterRelease()
+    {
+        var tracker = new LocalMemoryTracker();
+        ByteBuffer buffer = ByteBuffers.allocateDirect( Long.BYTES, tracker );
+        buffer.get( 0 );
+        ByteBuffers.releaseBuffer( buffer, tracker );
+        assertThrows( IndexOutOfBoundsException.class, () -> buffer.get( 0 ) );
+    }
+
+    @Test
+    void doubleFreeOfByteBufferIsOkay()
+    {
+        var tracker = new LocalMemoryTracker();
+        ByteBuffer buffer = ByteBuffers.allocateDirect( Long.BYTES, tracker );
+        ByteBuffers.releaseBuffer( buffer, tracker );
+        ByteBuffers.releaseBuffer( buffer, tracker ); // This must not throw.
+        assertThrows( IndexOutOfBoundsException.class, () -> buffer.get( 0 ) ); // And this still throws.
     }
 }

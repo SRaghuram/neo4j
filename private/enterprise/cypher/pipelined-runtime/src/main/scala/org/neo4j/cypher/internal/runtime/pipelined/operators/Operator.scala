@@ -8,19 +8,23 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.updateProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Input to use for starting an operator task.
@@ -147,6 +151,28 @@ trait OperatorState {
 }
 
 /**
+ * A memory tracking version of the execution state of an operator.
+ * One instance of this is created for every query execution that requires memory tracking.
+ */
+class MemoryTrackingOperatorState(delegate: OperatorState, operatorId: Int, stateFactory: StateFactory) extends OperatorState {
+  private val memoryTracker = stateFactory.newMemoryTracker(operatorId)
+
+  override def nextTasks(state: PipelinedQueryState,
+                         operatorInput: OperatorInput,
+                         parallelism: Int,
+                         resources: QueryResources,
+                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+
+    resources.setMemoryTracker(memoryTracker)
+    try {
+      delegate.nextTasks(state, operatorInput, parallelism, resources, argumentStateMaps)
+    } finally {
+      resources.resetMemoryTracker()
+    }
+  }
+}
+
+/**
  * The execution state of a reduce operator. One instance of this is created for every query execution.
  */
 trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
@@ -225,6 +251,22 @@ trait MiddleOperator extends HasWorkIdentity {
                  resources: QueryResources): OperatorTask
 }
 
+abstract class MemoryTrackingMiddleOperator(operatorId: Int) extends MiddleOperator {
+  final override def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                                stateFactory: StateFactory,
+                                state: PipelinedQueryState,
+                                resources: QueryResources): OperatorTask = {
+    val memoryTracker = stateFactory.newMemoryTracker(operatorId)
+    createTask(argumentStateCreator, stateFactory, state, resources, memoryTracker)
+  }
+
+  def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                 stateFactory: StateFactory,
+                 state: PipelinedQueryState,
+                 resources: QueryResources,
+                 memoryTracker: MemoryTracker): OperatorTask
+}
+
 trait StatelessOperator extends MiddleOperator with OperatorTask {
   final override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                                 stateFactory: StateFactory,
@@ -247,11 +289,15 @@ trait OperatorTask extends HasWorkIdentity {
 
     val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
     resources.setKernelTracer(operatorExecutionEvent)
+    if (state.doProfile) {
+      resources.profileInformation = new InterpretedProfileInformation
+    }
     setExecutionEvent(operatorExecutionEvent)
     try {
       operate(output, state, resources)
       if (operatorExecutionEvent != null) {
         operatorExecutionEvent.rows(output.numberOfRows)
+        updateProfileEvent(operatorExecutionEvent, resources.profileInformation)
       }
     } finally {
       setExecutionEvent(null)
@@ -290,6 +336,18 @@ trait ContinuableOperatorTask extends OperatorTask with Measurable {
    * @return `true` if the task has become obsolete.
    */
   def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean
+}
+
+trait ContinuableOperatorTaskWithMorselData extends ContinuableOperatorTask {
+  val morselData: MorselData
+
+  override protected def closeInput(operatorCloser: OperatorCloser): Unit = operatorCloser.closeData(morselData)
+
+  override final def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = false
+
+  override final def producingWorkUnitEvent: WorkUnitEvent = null
+
+  override def estimatedHeapUsage: Long = morselData.morsels.map(_.estimatedHeapUsage).sum
 }
 
 trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {

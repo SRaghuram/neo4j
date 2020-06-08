@@ -127,9 +127,10 @@ public class DatabaseManagementServiceFactory
         LogService logService = globalModule.getLogService();
         Log internalLog = logService.getInternalLog( getClass() );
         DatabaseManager<?> databaseManager = edition.createDatabaseManager( globalModule );
-        DatabaseManagementService managementService = new DatabaseManagementServiceImpl( databaseManager, globalModule.getGlobalAvailabilityGuard(),
-                globalLife, globalModule.getDatabaseEventListeners(), globalModule.getTransactionEventListeners(), internalLog );
+        DatabaseManagementService managementService = createManagementService( globalModule, globalLife, internalLog, databaseManager );
         globalDependencies.satisfyDependencies( managementService );
+
+        edition.bootstrapFabricServices();
 
         GlobalProcedures globalProcedures = setupProcedures( globalModule, edition, databaseManager );
         globalDependencies.satisfyDependency( new TransactionalDbmsOperations( globalProcedures ) );
@@ -153,6 +154,13 @@ public class DatabaseManagementServiceFactory
         startDatabaseServer( globalModule, globalLife, internalLog, databaseManager, managementService );
 
         return managementService;
+    }
+
+    protected DatabaseManagementService createManagementService( GlobalModule globalModule, LifeSupport globalLife, Log internalLog,
+            DatabaseManager<?> databaseManager )
+    {
+        return new DatabaseManagementServiceImpl( databaseManager, globalModule.getGlobalAvailabilityGuard(),
+                globalLife, globalModule.getDatabaseEventListeners(), globalModule.getTransactionEventListeners(), internalLog );
     }
 
     private Lifecycle createWebServer( AbstractEditionModule edition, DatabaseManagementService managementService,
@@ -299,12 +307,13 @@ public class DatabaseManagementServiceFactory
         return globalProcedures;
     }
 
-    private static BoltServer createBoltServer( GlobalModule platform, AbstractEditionModule edition,
+    private static BoltServer createBoltServer( GlobalModule globalModule, AbstractEditionModule edition,
             BoltGraphDatabaseManagementServiceSPI boltGraphDatabaseManagementServiceSPI, DatabaseIdRepository databaseIdRepository )
     {
-        return new BoltServer( boltGraphDatabaseManagementServiceSPI, platform.getJobScheduler(), platform.getConnectorPortRegister(),
-                edition.getConnectionTracker(), databaseIdRepository, platform.getGlobalConfig(), platform.getGlobalClock(),
-                platform.getGlobalMonitors(), platform.getLogService(), platform.getGlobalDependencies(),
-                edition.getBoltAuthManager( platform.getGlobalDependencies() ) );
+        return new BoltServer( boltGraphDatabaseManagementServiceSPI, globalModule.getJobScheduler(), globalModule.getConnectorPortRegister(),
+                               edition.getConnectionTracker(), databaseIdRepository, globalModule.getGlobalConfig(), globalModule.getGlobalClock(),
+                               globalModule.getGlobalMonitors(), globalModule.getLogService(), globalModule.getGlobalDependencies(),
+                               edition.getBoltAuthManager( globalModule.getGlobalDependencies() ), edition.getBoltInClusterAuthManager(),
+                               globalModule.getMemoryPools() );
     }
 }

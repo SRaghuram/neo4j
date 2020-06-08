@@ -747,7 +747,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentForProjection("point")
       .onTopOf(aPlan("Filter").containingArgumentRegex("distance.*".r)
-        .onTopOf(includeSomewhere.aPlan("NodeByLabelScan").containingArgument(":Place")))
+        .onTopOf(includeSomewhere.aPlan("NodeByLabelScan").containingArgument("p:Place")))
     result.toList.toSet should equal(Set.empty)
   }
 
@@ -849,7 +849,6 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   private def expectResultsAndIndexUsage(query: String, expectedResults: Set[_ <: Any], inclusiveRange: Boolean,
                                          config: TestConfiguration = Configs.CachedProperty): Unit = {
     val result = executeWith(config, query)
-    println(result.executionPlanDescription())
 
     // Then
     val plan = result.executionPlanDescription()

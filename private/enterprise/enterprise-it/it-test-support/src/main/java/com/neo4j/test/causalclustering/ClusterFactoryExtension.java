@@ -13,7 +13,7 @@ import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.StatefullFieldExtension;
+import org.neo4j.test.extension.StatefulFieldExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -23,7 +23,7 @@ import static java.lang.String.format;
  * Extension for cluster ITs. Allows the user to {@link Inject} a {@link ClusterFactory} into the test class. Clusters created will have the same lifecycle
  * as the {@link TestInstance.Lifecycle} of the root class.
  */
-public class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> implements AfterEachCallback, ExecutionCondition
+public class ClusterFactoryExtension extends StatefulFieldExtension<ClusterFactory> implements AfterEachCallback, ExecutionCondition
 {
     private static final String CLUSTER = "cluster";
     private static final ExtensionContext.Namespace CLUSTER_NAMESPACE = ExtensionContext.Namespace.create( CLUSTER );

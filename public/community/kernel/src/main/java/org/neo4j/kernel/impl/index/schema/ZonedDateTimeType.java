@@ -40,7 +40,7 @@ class ZonedDateTimeType extends Type
     private static final int ZONE_ID_MASK = 0x00FF_FFFF;
     // This is used to determine if the value is negative (after applying the bitmask)
     private static final int ZONE_ID_HIGH = 0x0080_0000;
-    // This is ised to restore masked negative offsets to their real value
+    // This is used to restore masked negative offsets to their real value
     private static final int ZONE_ID_EXT =  0xFF00_0000;
 
     // Affected key state:
@@ -103,7 +103,7 @@ class ZonedDateTimeType extends Type
         if ( compare == 0 )
         {
             compare = Integer.compare( (int) this_long1, (int) that_long1 );
-            if ( compare == 0 &&
+            if ( compare == 0 && !(this_long2 == that_long2 && this_long3 == that_long3) &&
                     // We need to check validity upfront without throwing exceptions, because the PageCursor might give garbage bytes
                     TimeZones.validZoneOffset( (int) this_long3 ) &&
                     TimeZones.validZoneOffset( (int) that_long3 ) )

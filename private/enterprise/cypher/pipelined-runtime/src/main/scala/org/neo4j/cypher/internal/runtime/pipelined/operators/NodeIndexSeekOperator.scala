@@ -8,7 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayLength
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -39,10 +42,12 @@ import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.CompositeValueIndexCursor
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ValuedNodeIndexCursor
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek
@@ -50,17 +55,15 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeGetPropertyMethod
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeNextMethod
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeQueryIteratorMethod
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.getPropertyMethod
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.nextMethod
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.queryIteratorMethod
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.createCursorsMethod
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.isImpossible
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_INDEX_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeValueIndexCursorPool
@@ -70,9 +73,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexOrder
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexReadSession
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeIndexSeek
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -108,7 +111,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-    IndexedSeq(new OTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new OTask(inputMorsel.nextCopy))
   }
 
   override val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
@@ -117,8 +120,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = NodeIndexSeekOperator.this.workIdentity
 
-    private var indexQueries: Iterator[Seq[IndexQuery]] = _
     private var nodeCursor: NodeValueIndexCursor = _
+    private var cursorsToClose: Array[NodeValueIndexCursor] = _
     private var exactSeekValues: Array[Value] = _
 
     // INPUT LOOP TASK
@@ -127,23 +130,43 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
       val queryState = state.queryStateForExpressionEvaluation(resources)
       initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
-      indexQueries = computeIndexQueries(queryState, initExecutionContext).toIterator
-      nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+      val indexQueries = computeIndexQueries(queryState, initExecutionContext)
+      val read = state.query.transactionalContext.transaction.dataRead
+      if (indexQueries.size == 1) {
+        nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        cursorsToClose = Array(nodeCursor)
+        seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQueries.head)
+      } else {
+        cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
+          val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+          read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, needsValues || indexOrder != IndexOrder.NONE), query: _*)
+          cursor
+        }).toArray
+        nodeCursor = orderedCursor(indexOrder, cursorsToClose)
+      }
+
       true
     }
 
+    private def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]): NodeValueIndexCursor = indexOrder match {
+      case IndexOrder.NONE => CompositeValueIndexCursor.unordered(cursors)
+      case IndexOrder.ASCENDING => CompositeValueIndexCursor.ascending(cursors)
+      case IndexOrder.DESCENDING => CompositeValueIndexCursor.descending(cursors)
+    }
+
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
-      val read = state.queryContext.transactionalContext.transaction.dataRead()
-      while (outputRow.onValidRow && next(state, read)) {
+      while (outputRow.onValidRow && nodeCursor != null && nodeCursor.next()) {
         outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, nodeCursor.nodeReference())
         var i = 0
         while (i < indexPropertyIndices.length) {
           val indexPropertyIndex = indexPropertyIndices(i)
           val value =
-            if (exactSeekValues != null) exactSeekValues(indexPropertyIndex)
-            else nodeCursor.propertyValue(indexPropertyIndex)
-
+            if (exactSeekValues != null) {
+              exactSeekValues(indexPropertyIndex)
+            } else {
+              nodeCursor.propertyValue(indexPropertyIndex)
+            }
           outputRow.setCachedPropertyAt(indexPropertySlotOffsets(i), value)
           i += 1
         }
@@ -158,51 +181,33 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
-      indexQueries = null
-      resources.cursorPools.nodeValueIndexCursorPool.free(nodeCursor)
+      if (cursorsToClose != null) {
+        cursorsToClose.foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
+        cursorsToClose = null
+      }
       nodeCursor = null
     }
 
     // HELPERS
-
-    private def next(state: PipelinedQueryState, read: Read): Boolean = {
-      while (true) {
-        if (nodeCursor != null && nodeCursor.next()) {
-          return true
-        } else if (indexQueries.hasNext) {
-          val indexQuery = indexQueries.next()
-          seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQuery)
-        } else {
-          return false
-        }
-      }
-      throw new IllegalStateException("Unreachable code")
-    }
 
     private def seek[RESULT <: AnyRef](index: IndexReadSession,
                                        nodeCursor: NodeValueIndexCursor,
                                        read: Read,
                                        predicates: Seq[IndexQuery]): Unit = {
 
-      val impossiblePredicate =
-        predicates.exists {
-          case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
-          case _: IndexQuery.ExistsPredicate if predicates.length > 1 => false
-          case p: IndexQuery =>
-            !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
-        }
 
-      if (impossiblePredicate) {
+
+      if (isImpossible(predicates)) {
         return // leave cursor un-initialized/empty
       }
 
       // We don't need property values from the index for an exact seek
       exactSeekValues =
-        if (needsValues && predicates.forall(_.isInstanceOf[ExactPredicate]))
+        if (needsValues && predicates.forall(_.isInstanceOf[ExactPredicate])) {
           predicates.map(_.asInstanceOf[ExactPredicate].value()).toArray
-        else
+        } else {
           null
-
+        }
       val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
       read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
     }
@@ -411,62 +416,49 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
   override protected def predicate: IntermediateRepresentation = load(predicateVar)
 }
 
-/**
- * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
- * Generates code for first doing an exact search of the first predicate and when the result is exhausted
- * it moves on to the next predicate until all predicates have been visited.
- */
-class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
                                            id: Id,
                                            innermost: DelegateOperatorTaskTemplate,
-                                           nodeVarName: String,
                                            offset: Int,
-                                           property: SlottedIndexedProperty,
-                                           seekExpression: SeekExpression,
-                                           queryIndexId: Int,
+                                           properties: Seq[SlottedIndexedProperty],
                                            order: IndexOrder,
-                                           argumentSize: SlotConfiguration.Size)
-                                          (codeGen: OperatorExpressionCompiler)
+                                           argumentSize: SlotConfiguration.Size,
+                                           codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+  private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2).toArray
+  private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot).toArray
+  protected val needsValues: Boolean = indexPropertyIndices.nonEmpty
+  private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName("indexCursor"))
+  private val nodeCursorsToCloseField = field[Array[NodeValueIndexCursor]](codeGen.namer.nextVariableName("cursorsToClose"))
 
-
-  private var seekValues: Seq[IntermediateExpression] = _
-
-  private val needsValues = property.getValueFromIndex
-  private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
-  private val queryIteratorField = field[ManyPredicateIterator](codeGen.namer.nextVariableName())
-
-  override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, queryIteratorField)
+  def createCursorArray: IntermediateRepresentation
+  override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, nodeCursorsToCloseField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override def genExpressions: Seq[IntermediateExpression] = seekValues
+  private def getCursor = {
+    val methodName =
+      order match {
+        case IndexOrder.NONE => "unordered"
+        case IndexOrder.ASCENDING => "ascending"
+        case IndexOrder.DESCENDING => "descending"
+      }
+    method[CompositeValueIndexCursor, NodeValueIndexCursor, Array[NodeValueIndexCursor]](methodName)
+  }
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    if (seekValues == null) {
-      seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
-    }
     /**
      * {{{
-     *   this.queryIterator = queryIterator(property, ([query predicate])
-     *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+     *   this.cursorsToClose = createCursor(...)
+     *   this.nodeIndexCursor = ascending(cursorsToClose)
      *   this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
      *   true
      * }}}
      */
     block(
-      setField(queryIteratorField,
-      invokeStatic(queryIteratorMethod, seekExpression.generatePredicate(seekValues.map(_.ir)))),
-      setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
-      setField(canContinue,
-        invokeStatic(nextMethod,
-          indexReadSession(queryIndexId),
-          loadField(nodeIndexCursorField),
-          loadField(queryIteratorField),
-          indexOrder(order),
-                            constant(needsValues),
-                            loadField(DATA_READ))),
-      profileRow(id, loadField(canContinue)),
+      setField(nodeCursorsToCloseField, createCursorArray),
+      setField(nodeIndexCursorField, invokeStatic(getCursor, loadField(nodeCursorsToCloseField))),
+      setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
       constant(true))
   }
 
@@ -486,39 +478,45 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_,
-          getPropertyValueRepresentation)).getOrElse(noop()),
+        cacheProperties,
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          block(
-            innermost.setUnlessPastLimit(canContinue,
-              invokeStatic(nextMethod,
-                indexReadSession(queryIndexId),
-                loadField(nodeIndexCursorField),
-                loadField(queryIteratorField),
-                indexOrder(order), constant(needsValues), loadField(DATA_READ))),
-            profileRow(id, loadField(canContinue))),
+          innermost.setUnlessPastLimit(canContinue,
+            profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))
         ),
         endInnerLoop
       )
     )
   }
 
-  private def getPropertyValueRepresentation: IntermediateRepresentation =
-    invokeStatic(getPropertyMethod,
-                 loadField(queryIteratorField),
-                 loadField(nodeIndexCursorField),
-                 constant(0))
+  private def getPropertyValueRepresentation(offset: Int): IntermediateRepresentation =
+    invoke(loadField(nodeIndexCursorField),
+      method[NodeValueIndexCursor, Value, Int]("propertyValue"), constant(offset))
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    val i = codeGen.namer.nextVariableName("i")
     /**
      * {{{
-     *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
+     *   if (cursorsToClose != null) {
+     *      cursorsToClose.foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
+     *      cursorsToClose = null
+     *   }
      *   nodeIndexCursor = null
      * }}}
      */
     block(
-      freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
+      condition(isNotNull(loadField(nodeCursorsToCloseField))){
+        block(
+          declareAndAssign(typeRefOf[Int], i, constant(0)),
+          loop(IntermediateRepresentation.lessThan(load(i), arrayLength(loadField(nodeCursorsToCloseField)))) {
+            block(
+              freeCursor[NodeValueIndexCursor](arrayLoad(loadField(nodeCursorsToCloseField), load(i)), NodeValueIndexCursorPool),
+              assign(i, add(load(i), constant(1)))
+            )
+          },
+          setField(nodeCursorsToCloseField, constant(null))
+        )
+      },
       setField(nodeIndexCursorField, constant(null))
     )
   }
@@ -527,15 +525,59 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
     block(
       condition(isNotNull(loadField(nodeIndexCursorField)))(
         invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
-        ),
+      ),
       inner.genSetExecutionEvent(event)
-      )
+    )
+
+  private def cacheProperties: IntermediateRepresentation = {
+    val ops = for {i <- indexPropertyIndices.indices
+                   indexPropertyIndex = indexPropertyIndices(i)
+                   slot = indexPropertySlotOffsets(i)
+                   } yield {
+
+      codeGen.setCachedPropertyAt(slot, getPropertyValueRepresentation(indexPropertyIndex))
+    }
+    block(ops:_*)
+  }
 }
 
-class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+/**
+ * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
+ *
+ * Will use delegate to `unordered`, `ascending`, or `descending` in `CompositeValueIndexCursor` depending on the order
+ * to get a cursor.
+ */
+class ManyQueriesNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
+                                           id: Id,
+                                           innermost: DelegateOperatorTaskTemplate,
+                                           offset: Int,
+                                           property: SlottedIndexedProperty,
+                                           seekExpression: SeekExpression,
+                                           queryIndexId: Int,
+                                           order: IndexOrder,
+                                           argumentSize: SlotConfiguration.Size)
+                                          (codeGen: OperatorExpressionCompiler)
+  extends BaseManyQueriesNodeIndexSeekTaskTemplate(inner, id, innermost, offset, Seq(property), order, argumentSize, codeGen) {
+  private var seekValues: Seq[IntermediateExpression] = _
+
+  override def createCursorArray: IntermediateRepresentation = {
+    if (seekValues == null) {
+      seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
+    }
+    invokeStatic(createCursorsMethod,
+      seekExpression.generatePredicate(seekValues.map(_.ir)),
+      indexReadSession(queryIndexId),
+      indexOrder(order),
+      constant(needsValues),
+      loadField(DATA_READ),
+      CURSOR_POOL)
+  }
+  override def genExpressions: Seq[IntermediateExpression] = seekValues
+}
+
+class CompositeNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                          id: Id,
                                          innermost: DelegateOperatorTaskTemplate,
-                                         nodeVarName: String,
                                          offset: Int,
                                          properties: Seq[SlottedIndexedProperty],
                                          seekExpressions: Seq[SeekExpression],
@@ -543,201 +585,87 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
                                          order: IndexOrder,
                                          argumentSize: SlotConfiguration.Size)
                                         (codeGen: OperatorExpressionCompiler)
-  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
-
+  extends BaseManyQueriesNodeIndexSeekTaskTemplate(inner, id, innermost, offset, properties, order, argumentSize, codeGen) {
   private var seekValues: Seq[Seq[IntermediateExpression]] = _
-
-  private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
-  private val queryIteratorField = field[CompositePredicateIterator](codeGen.namer.nextVariableName())
-  private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2).toArray
-  private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot).toArray
-
-  private val needsValues: Boolean = indexPropertyIndices.nonEmpty
-
-  override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, queryIteratorField)
-
-  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
-
-  override def genExpressions: Seq[IntermediateExpression] = seekValues.flatten
-
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override def createCursorArray: IntermediateRepresentation = {
     if (seekValues == null) {
       seekValues = seekExpressions.map(_.generateSeekValues).map(compile).map(nullCheck)
     }
-    /**
-      * {{{
-      *   this.queryIterator = compositeQueryIterator(new IndexQuery[][]{[query predicate]}
-      *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
-      *   this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
-      *   true
-      * }}}
-      */
     val predicates = seekValues.zip(seekExpressions.map(_.generatePredicate)).map{
       case (vs, p) => p(vs.map(_.ir))
     }
-
-    block(
-      setField(queryIteratorField,
-               invokeStatic(compositeQueryIteratorMethod, arrayOf[Array[IndexQuery]](predicates:_*))),
-      setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
-      setField(canContinue,
-               invokeStatic(compositeNextMethod,
-                            indexReadSession(queryIndexId),
-                            loadField(nodeIndexCursorField),
-                            loadField(queryIteratorField),
-                            indexOrder(order),
-                            constant(needsValues),
-                            loadField(DATA_READ))),
-      profileRow(id, loadField(canContinue)),
-      constant(true))
+    invokeStatic(ManyQueriesNodeIndexSeekTaskTemplate.compositeCreateCursorsMethod,
+      arrayOf[Array[IndexQuery]](predicates:_*),
+      indexReadSession(queryIndexId),
+      indexOrder(order),
+      constant(needsValues),
+      loadField(DATA_READ),
+      CURSOR_POOL)
   }
-
-  override protected def genInnerLoop: IntermediateRepresentation = {
-    /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     setLongAt(offset, nodeIndexCursor.nodeReference())
-      *     setCachedPropertyAt(offset, queryIterator.current)//only if applicable
-      *     << inner.genOperate >>
-      *     this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
-      *   }
-      * }}}
-      */
-    loop(and(innermost.predicate, loadField(canContinue)))(
-      block(
-        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-        codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        cacheProperties,
-        inner.genOperateWithExpressions,
-        doIfInnerCantContinue(
-          block(
-            innermost.setUnlessPastLimit(canContinue,
-              invokeStatic(compositeNextMethod,
-                indexReadSession(queryIndexId),
-                loadField(nodeIndexCursorField),
-                loadField(queryIteratorField),
-                indexOrder(order),
-                constant(needsValues),
-                loadField(DATA_READ))),
-            profileRow(id, loadField(canContinue))),
-        ),
-        endInnerLoop
-        )
-      )
-  }
-
-  private def cacheProperties: IntermediateRepresentation = {
-    val ops = for {i <- indexPropertyIndices.indices
-      indexPropertyIndex = indexPropertyIndices(i)
-      slot = indexPropertySlotOffsets(i)
-    } yield {
-
-      codeGen.setCachedPropertyAt(slot, getPropertyValueRepresentation(indexPropertyIndex))
-    }
-    block(ops:_*)
-  }
+  override def genExpressions: Seq[IntermediateExpression] = seekValues.flatten
   private def compile(generators: Seq[() => IntermediateExpression]): Seq[IntermediateExpression] = generators.map(_())
-
   private def nullCheck(in: Seq[IntermediateExpression]): Seq[IntermediateExpression] = in.map(v => v.copy(ir = nullCheckIfRequired(v)))
-
-  private def getPropertyValueRepresentation(offset: Int): IntermediateRepresentation =
-    invokeStatic(compositeGetPropertyMethod,
-                 loadField(queryIteratorField),
-                 loadField(nodeIndexCursorField),
-                 constant(offset))
-
-  override protected def genCloseInnerLoop: IntermediateRepresentation = {
-    /**
-      * {{{
-      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
-      *   nodeIndexCursor = null
-      * }}}
-      */
-    block(
-      freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
-      setField(nodeIndexCursorField, constant(null))
-      )
-  }
-
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
-    block(
-      condition(isNotNull(loadField(nodeIndexCursorField)))(
-        invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
-        ),
-      inner.genSetExecutionEvent(event)
-      )
 }
 
 object ManyQueriesNodeIndexSeekTaskTemplate {
-  def next(index: IndexReadSession,
-           cursor: NodeValueIndexCursor,
-           queries: ManyPredicateIterator,
-           order: IndexOrder,
-           needsValues: Boolean,
-           read: Read): Boolean = {
-    while (true) {
-      if (cursor.next()) {
-        return true
-      }
-      else if (queries.hasNext) {
-        var continue = true
-        while (continue) {
-          val indexQuery = queries.next()
-          if (!isImpossible(indexQuery)) {
-            val reallyNeedsValues = needsValues && !indexQuery.isInstanceOf[ExactPredicate]
-            read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, reallyNeedsValues), indexQuery)
-            continue = false
-          } else {
-            continue = queries.hasNext
-          }
-        }
-      } else {
-        return false
-      }
+  def createCursors(predicates: Array[IndexQuery],
+                    index: IndexReadSession,
+                    order: IndexOrder,
+                    needsValues: Boolean,
+                    read: Read,
+                    cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+    val cursors = new Array[NodeValueIndexCursor](predicates.length)
+    val pool = cursorPools.nodeValueIndexCursorPool
+    var i = 0
+    while (i < cursors.length) {
+      val cursor = pool.allocate()
+      read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValues || order != IndexOrder.NONE), predicates(i))
+      cursors(i) = cursor
+      i += 1
     }
-    throw new IllegalStateException("Unreachable code")
+    cursors
   }
 
-  def next(index: IndexReadSession,
-           cursor: NodeValueIndexCursor,
-           queries: CompositePredicateIterator,
-           order: IndexOrder,
-           needsValues: Boolean,
-           read: Read): Boolean = {
-    while (true) {
-      if (cursor.next()) {
-        return true
-      }
-      else if (queries.hasNext) {
-        var continue = true
-        while (continue) {
-          val indexQueries = queries.next()
-          if (!isImpossible(indexQueries)) {
-            val reallyNeedsValues = needsValues && !indexQueries.forall(_.isInstanceOf[ExactPredicate])
-            read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, reallyNeedsValues), indexQueries:_*)
-            continue = false
+  def compositeCreateCursors(predicates: Array[Array[IndexQuery]],
+                    index: IndexReadSession,
+                    order: IndexOrder,
+                    needsValues: Boolean,
+                    read: Read,
+                    cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+    val combinedPredicates = combine(predicates)
+    val cursors = new Array[NodeValueIndexCursor](combinedPredicates.length)
+    val pool = cursorPools.nodeValueIndexCursorPool
+    var i = 0
+    while (i < cursors.length) {
+      val cursor = pool.allocate()
+      val queries = combinedPredicates(i)
+      val reallyNeedsValues = needsValues || order != IndexOrder.NONE
+      val actualValues =
+      // We don't need property values from the index for an exact seek
+        if (reallyNeedsValues && queries.forall(_.isInstanceOf[ExactPredicate])) {
+            queries.map(_.asInstanceOf[ExactPredicate].value())
           } else {
-            continue = queries.hasNext
-          }
+          null
         }
+      val needsValuesFromIndexSeek = actualValues == null && reallyNeedsValues
+      read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValuesFromIndexSeek), queries:_*)
+      if (reallyNeedsValues && actualValues != null) {
+        cursors(i) = new ValuedNodeIndexCursor(cursor, actualValues)
       } else {
-        return false
+        cursors(i) = cursor
       }
+      i += 1
     }
-    throw new IllegalStateException("Unreachable code")
+    cursors
   }
 
-  def isImpossible(predicates: Array[IndexQuery]): Boolean = predicates.exists(isImpossible)
+  def isImpossible(predicates: Seq[IndexQuery]): Boolean = predicates.exists(isImpossible)
 
   def isImpossible(predicate: IndexQuery): Boolean = predicate match {
         case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
         case p: IndexQuery.RangePredicate[_] => !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
         case _ => false
   }
-
-  def getPropertyValue(iterator: ManyPredicateIterator, nodeCursor: NodeValueIndexCursor, offset: Int): Value =
-    propertyValue(iterator.previous, nodeCursor, offset)
 
   def getPropertyValue(iterator: CompositePredicateIterator, nodeCursor: NodeValueIndexCursor, offset: Int): Value =
     propertyValue(iterator.previous(offset), nodeCursor, offset)
@@ -746,10 +674,6 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     case exactPredicate: ExactPredicate => exactPredicate.value()
     case _ => nodeCursor.propertyValue(offset)
   }
-
-  def queryIterator(predicates: Array[IndexQuery]) =
-    new ManyPredicateIterator(predicates)
-
 
   def compositeQueryIterator(predicates: Array[Array[IndexQuery]]): CompositePredicateIterator = {
     //Combine predicates
@@ -764,43 +688,16 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     new CompositePredicateIterator(combine(predicates))
   }
 
-  val nextMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate,
-      Boolean,
-      IndexReadSession,
-      NodeValueIndexCursor,
-      ManyPredicateIterator,
-      IndexOrder,
-      Boolean,
-      Read]("next")
-
-  val compositeNextMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate,
-      Boolean,
-      IndexReadSession,
-      NodeValueIndexCursor,
-      CompositePredicateIterator,
-      IndexOrder,
-      Boolean,
-      Read]("next")
-
-  val getPropertyMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate,
-      Value,
-      ManyPredicateIterator,
-      NodeValueIndexCursor,
-      Int]("getPropertyValue")
-
+  val createCursorsMethod: Method =
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[IndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("createCursors")
+  val compositeCreateCursorsMethod: Method =
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[IndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("compositeCreateCursors")
   val compositeGetPropertyMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate,
       Value,
       CompositePredicateIterator,
       NodeValueIndexCursor,
       Int]("getPropertyValue")
-
-  val queryIteratorMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate, ManyPredicateIterator, Array[IndexQuery]]("queryIterator")
-
   val compositeQueryIteratorMethod: Method = method[ManyQueriesNodeIndexSeekTaskTemplate, CompositePredicateIterator, Array[Array[IndexQuery]]]("compositeQueryIterator")
 }
 

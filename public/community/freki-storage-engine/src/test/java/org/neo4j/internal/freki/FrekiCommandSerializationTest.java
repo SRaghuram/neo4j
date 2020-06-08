@@ -27,6 +27,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+<<<<<<< HEAD
+=======
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeMap;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
@@ -42,6 +48,11 @@ import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.token.api.NamedToken;
 
+<<<<<<< HEAD
+=======
+import static java.lang.Integer.max;
+import static java.util.Arrays.copyOf;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.freki.FrekiCommand.MODES;
 import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
@@ -61,6 +72,7 @@ public class FrekiCommandSerializationTest
         // given
         int sizeExp = randomSizeExp();
         long nodeId = randomLargeId();
+<<<<<<< HEAD
         long id = randomLargeId();
         Record before = new Record( sizeExp, id );
         Record after = new Record( sizeExp, id );
@@ -69,6 +81,13 @@ public class FrekiCommandSerializationTest
 
         // when/then
         shouldReadAndWriteSparseNode( nodeId, before, after );
+=======
+        long id = sizeExp == 0 ? nodeId : randomLargeId();
+        Record after = recordWithRandomData( sizeExp, id );
+
+        // when/then
+        shouldReadAndWriteSparseNode( nodeId, new FrekiCommand.RecordChange( null, after ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Test
@@ -77,6 +96,7 @@ public class FrekiCommandSerializationTest
         // given
         int sizeExp = randomSizeExp();
         long nodeId = randomLargeId();
+<<<<<<< HEAD
         long id = randomLargeId();
         Record before = new Record( sizeExp, id );
         before.setFlag( FLAG_IN_USE, true );
@@ -87,6 +107,14 @@ public class FrekiCommandSerializationTest
 
         // when/then
         shouldReadAndWriteSparseNode( nodeId, before, after );
+=======
+        long id = sizeExp == 0 ? nodeId : randomLargeId();
+        Record before = recordWithRandomData( sizeExp, id );
+        Record after = recordWithRandomData( sizeExp, id );
+
+        // when/then
+        shouldReadAndWriteSparseNode( nodeId, new FrekiCommand.RecordChange( before, after ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Test
@@ -95,6 +123,7 @@ public class FrekiCommandSerializationTest
         // given
         int sizeExp = randomSizeExp();
         long nodeId = randomLargeId();
+<<<<<<< HEAD
         long id = randomLargeId();
         Record before = new Record( sizeExp, id );
         before.setFlag( FLAG_IN_USE, true );
@@ -103,6 +132,31 @@ public class FrekiCommandSerializationTest
 
         // when/then
         shouldReadAndWriteSparseNode( nodeId, before, after );
+=======
+        long id = sizeExp == 0 ? nodeId : randomLargeId();
+        Record before = recordWithRandomData( sizeExp, id );
+
+        // when/then
+        shouldReadAndWriteSparseNode( nodeId, new FrekiCommand.RecordChange( before, null ) );
+    }
+
+    @Test
+    void shouldReadAndWriteSparseNodeWithMultipleChanges() throws IOException
+    {
+        // given
+        long nodeId = randomLargeId();
+        Record x1After = recordWithRandomData( 0, nodeId );
+        FrekiCommand.RecordChange x1 = new FrekiCommand.RecordChange( null, x1After );
+
+        int sizeExp = max( 1, randomSizeExp() );
+        long id = randomLargeId();
+        Record before = recordWithRandomData( sizeExp, id );
+        Record after = recordWithRandomData( sizeExp, id );
+        FrekiCommand.RecordChange xL = new FrekiCommand.RecordChange( before, after );
+
+        // when/then
+        shouldReadAndWriteSparseNode( nodeId, x1, xL );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Test
@@ -110,7 +164,11 @@ public class FrekiCommandSerializationTest
     {
         // given
         long nodeId = randomLargeId();
+<<<<<<< HEAD
         IntObjectMap<DenseRelationships> relationships = randomRelationships();
+=======
+        TreeMap<Integer,DenseRelationships> relationships = randomRelationships();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         FrekiCommand.DenseNode node = new FrekiCommand.DenseNode( nodeId, relationships );
 
         // when
@@ -127,6 +185,7 @@ public class FrekiCommandSerializationTest
     void shouldReadAndWriteBigValue() throws IOException
     {
         // given
+<<<<<<< HEAD
         long pointer = randomLargeId();
         byte[] data = new byte[random.nextInt( 20, 400 )];
         random.nextBytes( data );
@@ -134,12 +193,40 @@ public class FrekiCommandSerializationTest
 
         // when
         InMemoryClosableChannel channel = new InMemoryClosableChannel( 1_000 );
+=======
+        List<Record> records = new ArrayList<>();
+        int numRecords = random.nextInt( 1, 3 );
+        for ( int i = 0; i < numRecords; i++ )
+        {
+            byte[] data = new byte[random.nextInt( 20, 400 )];
+            random.nextBytes( data );
+            records.add( new Record( (byte) FLAG_IN_USE, randomLargeId(), ByteBuffer.wrap( data ) ) );
+        }
+        FrekiCommand.BigPropertyValue command = new FrekiCommand.BigPropertyValue( records );
+
+        // when
+        InMemoryClosableChannel channel = new InMemoryClosableChannel( 2_000 );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         command.serialize( channel );
 
         // then
         FrekiCommand.BigPropertyValue readCommand = readCommand( channel, FrekiCommand.BigPropertyValue.class );
+<<<<<<< HEAD
         assertThat( readCommand.pointer ).isEqualTo( pointer );
         assertThat( readCommand.bytes ).isEqualTo( data );
+=======
+        assertThat( readCommand.records.size() ).isEqualTo( numRecords );
+        for ( int i = 0; i < numRecords; i++ )
+        {
+            Record readRecord = readCommand.records.get( i );
+            Record record = records.get( i );
+            assertThat( readRecord.flags ).isEqualTo( record.flags );
+            assertThat( readRecord.id ).isEqualTo( record.id );
+            int length = readRecord.data().limit();
+            assertThat( length ).isEqualTo( record.data().limit() );
+            assertThat( copyOf( readRecord.data().array(), length ) ).isEqualTo( copyOf( record.data().array(), length ) );
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Test
@@ -255,6 +342,17 @@ public class FrekiCommandSerializationTest
         return random.nextInt( 0xFFFFFF );
     }
 
+<<<<<<< HEAD
+=======
+    private Record recordWithRandomData( int sizeExp, long id )
+    {
+        Record after = new Record( sizeExp, id );
+        after.setFlag( FLAG_IN_USE, true );
+        fillWithRandomData( after );
+        return after;
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private <T extends StorageCommand> T readCommand( InMemoryClosableChannel channel, Class<T> cls ) throws IOException
     {
         StorageCommand readCommand = FrekiCommandReader.INSTANCE.read( channel );
@@ -313,6 +411,7 @@ public class FrekiCommandSerializationTest
         return serializedValue;
     }
 
+<<<<<<< HEAD
     private IntObjectMap<DenseRelationships> randomRelationships()
     {
         MutableIntObjectMap<DenseRelationships> map = IntObjectMaps.mutable.empty();
@@ -326,24 +425,73 @@ public class FrekiCommandSerializationTest
             for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
             {
                 relationships.delete( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );
+=======
+    private TreeMap<Integer,DenseRelationships> randomRelationships()
+    {
+        TreeMap<Integer,DenseRelationships> map = new TreeMap<>();
+        for ( int type : randomTokens() )
+        {
+            DenseRelationships relationships = map.computeIfAbsent( type, t -> new DenseRelationships( 0, type ) );
+            for ( int i = 0, count = random.nextInt( 2, 10 ); i < count; i++ )
+            {
+                relationships.add( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties(),
+                        random.nextBoolean() ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             }
         }
         return map;
     }
 
+<<<<<<< HEAD
     private void shouldReadAndWriteSparseNode( long nodeId, Record before, Record after ) throws IOException
     {
         FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId, before, after );
 
         // when
         InMemoryClosableChannel channel = new InMemoryClosableChannel( 2_000 );
+=======
+    private void shouldReadAndWriteSparseNode( long nodeId, FrekiCommand.RecordChange... changes ) throws IOException
+    {
+        // given
+        FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId );
+        for ( FrekiCommand.RecordChange change : changes )
+        {
+            FrekiCommand.RecordChange addedChange = command.addChange( change.before, change.after );
+        }
+
+        // when
+        InMemoryClosableChannel channel = new InMemoryClosableChannel( 3_000 );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         command.serialize( channel );
 
         // then
         FrekiCommand.SparseNode readNode = readCommand( channel, FrekiCommand.SparseNode.class );
         assertThat( readNode.nodeId ).isEqualTo( nodeId );
+<<<<<<< HEAD
         assertThat( readNode.before.hasSameContentsAs( before ) ).isTrue();
         assertThat( readNode.after.hasSameContentsAs( after ) ).isTrue();
+=======
+        FrekiCommand.RecordChange readChange = readNode.change();
+        for ( FrekiCommand.RecordChange change : changes )
+        {
+            assertRecord( change.before, readChange.before );
+            assertRecord( change.after, readChange.after );
+            readChange = readChange.next();
+        }
+        assertThat( readChange ).isNull();
+    }
+
+    private void assertRecord( Record expected, Record actual )
+    {
+        if ( expected == null )
+        {
+            assertThat( actual ).isNull();
+        }
+        else
+        {
+            assertThat( actual.hasSameContentsAs( expected ) ).isTrue();
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     private void fillWithRandomData( Record after )

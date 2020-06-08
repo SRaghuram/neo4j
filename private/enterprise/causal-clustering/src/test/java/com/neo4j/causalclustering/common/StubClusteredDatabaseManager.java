@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.util.Collections;
@@ -111,7 +112,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         when( db.isStarted() ).thenReturn( config.databaseStarted );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
-                config.logProvider, config.catchupComponentsFactory );
+                config.logProvider, config.catchupComponentsFactory, config.leaderLocator );
 
         if ( config.storeId != null )
         {
@@ -138,6 +139,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         private LogFiles logFiles = mock( LogFiles.class );
         private DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );
         private Health health;
+        private LeaderLocator leaderLocator;
         private boolean databaseStarted = true;
 
         private DatabaseContextConfig()
@@ -213,6 +215,12 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         public DatabaseContextConfig withStoppedDatabase()
         {
             this.databaseStarted = false;
+            return this;
+        }
+
+        public DatabaseContextConfig withLeaderLocator( LeaderLocator leaderLocator )
+        {
+            this.leaderLocator = leaderLocator;
             return this;
         }
 

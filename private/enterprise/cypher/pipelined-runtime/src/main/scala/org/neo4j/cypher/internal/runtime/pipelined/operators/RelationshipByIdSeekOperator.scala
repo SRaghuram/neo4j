@@ -44,7 +44,7 @@ import org.neo4j.cypher.internal.logical.plans.SingleSeekableArg
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
@@ -63,6 +63,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleRelationship
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator.asIdMethod
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.Many
@@ -196,7 +197,7 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-    IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
+    singletonIndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
       override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
         while (outputRow.onValidRow() && ids.hasNext) {
           val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
@@ -240,7 +241,7 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-    IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
+    singletonIndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
       override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
         while (outputRow.onValidRow && (!forwardDirection || ids.hasNext)) {
           if (forwardDirection) {
@@ -336,7 +337,7 @@ abstract class SingleRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplat
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (relationshipExpression == null) {
-      relationshipExpression = codeGen.intermediateCompileExpression(relIdExpr)
+      relationshipExpression = codeGen.compileExpression(relIdExpr)
         .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdExpr"))
     }
 
@@ -499,7 +500,7 @@ abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (relationshipExpression == null) {
-      relationshipExpression = codeGen.intermediateCompileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
+      relationshipExpression = codeGen.compileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
     }
 
     /**

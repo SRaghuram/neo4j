@@ -48,10 +48,6 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
 
   private val testedOperators = mutable.Set[String]()
 
-  private val settings = new Settings()
-  settings.usejavacp.value = true
-  private val interpreter = new IMain(settings)
-
   testPlan("produceResults",
     new TestPlanBuilder()
       .produceResults("x")
@@ -79,7 +75,7 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
   testPlan("nodeByLabelScan",
     new TestPlanBuilder()
       .produceResults("x")
-      .nodeByLabelScan("x", "X", "foo")
+      .nodeByLabelScan("x", "X", IndexOrderDescending, "foo")
       .build())
 
   testPlan("expandAll",
@@ -106,6 +102,14 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
       .expand("(x)-[r*1..2]->(y)", expandMode = ExpandAll, projectedDir = BOTH)
       .expand("(x)-[r*1..2]->(y)", expandMode = ExpandAll, projectedDir = BOTH, nodePredicate = Predicate("n", "id(n) <> 5"))
       .expand("(x)-[r*1..3]->(y)", expandMode = ExpandAll, projectedDir = BOTH, relationshipPredicate = Predicate("r", "id(r) <> 5"))
+      .argument()
+      .build())
+
+  testPlan("expand with caching of properties",
+    new TestPlanBuilder()
+      .produceResults("x")
+      .expand("(x)-[r]->(y)", expandMode = ExpandAll, projectedDir = OUTGOING, cacheNodeProperties = Seq("n1"),
+        cacheRelProperties = Seq("r1", "r2"))
       .argument()
       .build())
 
@@ -153,6 +157,7 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
   testPlan("optionalExpandAll",
     new TestPlanBuilder()
       .produceResults("x")
+      .optionalExpandAll("(x)-[r]->(y)", cacheRelProperties = Seq("r1", "r2", "r3"))
       .optionalExpandAll("(x)-[r]->(y)")
       .optionalExpandAll("(x)-[r]->(y)", Some("y.num > 20"))
       .argument()
@@ -215,6 +220,30 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
     new TestPlanBuilder()
       .produceResults("x", "y")
       .antiSemiApply()
+      .|.allNodeScan("y", "x")
+      .allNodeScan("x")
+      .build())
+
+  testPlan("conditionalApply",
+    new TestPlanBuilder()
+      .produceResults("x")
+      .conditionalApply("x")
+      .|.allNodeScan("y", "x")
+      .allNodeScan("x")
+      .build())
+
+  testPlan("selectOrSemiApply",
+    new TestPlanBuilder()
+      .produceResults("x", "y")
+      .selectOrSemiApply("false")
+      .|.allNodeScan("y", "x")
+      .allNodeScan("x")
+      .build())
+
+  testPlan("selectOrAntiSemiApply",
+    new TestPlanBuilder()
+      .produceResults("x", "y")
+      .selectOrAntiSemiApply("false")
       .|.allNodeScan("y", "x")
       .allNodeScan("x")
       .build())
@@ -535,10 +564,11 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
 
   // Formatting paramExpr and customQueryExpression is currently not supported.
   // These cases will need manual fixup.
-  testPlan("nodeIndexOperator",
-    new TestPlanBuilder()
-      .produceResults("x", "y")
-      // NodeIndexSeek
+  testPlan("nodeIndexOperator", {
+    val builder = new TestPlanBuilder().produceResults("x", "y")
+
+    // NodeIndexSeek
+    builder
       .apply()
       .|.nodeIndexOperator("x:Honey(prop = 20)")
       .apply()
@@ -565,7 +595,9 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
       .|.nodeIndexOperator("x:Honey(prop = 10 OR 20, prop2 = '10' OR '30')", argumentIds = Set("a", "b"))
       .apply()
       .|.nodeIndexOperator("x:Label(text STARTS WITH 'as')", indexOrder = IndexOrderAscending)
-      // NodeUniqueIndexSeek
+
+    // NodeUniqueIndexSeek
+    builder
       .apply()
       .|.nodeIndexOperator("x:Honey(prop = 20)", unique = true)
       .apply()
@@ -584,7 +616,9 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
       .|.nodeIndexOperator("x:Honey(prop = 10 OR 20, prop2 = '10' OR '30')", argumentIds = Set("a", "b"), unique = true)
       .apply()
       .|.nodeIndexOperator("x:Label(text STARTS WITH 'as')", indexOrder = IndexOrderAscending, unique = true)
-      // NodeIndexScan
+
+    // NodeIndexScan
+    builder
       .apply()
       .|.nodeIndexOperator("x:Honey(calories)")
       .apply()
@@ -593,7 +627,9 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
       .|.nodeIndexOperator("x:Honey(calories, taste)", indexOrder = IndexOrderDescending)
       .apply()
       .|.nodeIndexOperator("x:Honey(calories, taste)", argumentIds = Set("a", "b"))
-      // NodeIndexContainsScan
+
+    // NodeIndexContainsScan
+    builder
       .apply()
       .|.nodeIndexOperator("x:Label(text CONTAINS 'as')")
       .apply()
@@ -602,7 +638,9 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
       .|.nodeIndexOperator("x:Honey(text CONTAINS 'as')", indexOrder = IndexOrderDescending)
       .apply()
       .|.nodeIndexOperator("x:Honey(text CONTAINS 'as')", argumentIds = Set("a", "b"))
-      // NodeIndexEndsWithScan
+
+    // NodeIndexEndsWithScan
+    builder
       .apply()
       .|.nodeIndexOperator("x:Label(text ENDS WITH 'as')")
       .apply()
@@ -610,7 +648,9 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
       .apply()
       .|.nodeIndexOperator("x:Honey(text ENDS WITH 'as')", indexOrder = IndexOrderDescending)
       .nodeIndexOperator("x:Honey(text ENDS WITH 'as')", argumentIds = Set("a", "b"))
-      .build())
+
+    builder.build()
+  })
 
   testPlan("multiNodeIndexSeekOperator",
     new TestPlanBuilder()
@@ -626,18 +666,29 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
          |$code""".stripMargin
     val res = Array[AnyRef](null)
 
-    interpreter.beSilentDuring {
-      // imports
-      interpreter.interpret(
-        """import org.neo4j.cypher.internal.logical.builder.AbstractLogicalPlanBuilder.createNode
-          |import org.neo4j.cypher.internal.logical.builder.AbstractLogicalPlanBuilder.Predicate
-          |import org.neo4j.cypher.internal.expressions.SemanticDirection.{INCOMING, OUTGOING, BOTH}
-          |import org.neo4j.cypher.internal.logical.plans._
-          |import org.neo4j.cypher.internal.logical.builder.TestException
-          |""".stripMargin)
-      interpreter.bind("result", "Array[AnyRef]", res)
+    val settings = new Settings()
+    settings.usejavacp.value = true
+    val interpreter = new IMain(settings)
+
+    try {
+      interpreter.beSilentDuring {
+        // imports
+        interpreter.interpret(
+          """import org.neo4j.cypher.internal.logical.builder.AbstractLogicalPlanBuilder.createNode
+            |import org.neo4j.cypher.internal.logical.builder.AbstractLogicalPlanBuilder.Predicate
+            |import org.neo4j.cypher.internal.expressions.SemanticDirection.{INCOMING, OUTGOING, BOTH}
+            |import org.neo4j.cypher.internal.logical.plans._
+            |import org.neo4j.cypher.internal.logical.builder.TestException
+            |""".stripMargin)
+        interpreter.bind("result", "Array[AnyRef]", res)
+      }
+      interpreter.interpret(s"result(0) = $completeCode")
+    } catch {
+      case t: Throwable =>
+        fail("Failed to interpret generated code: ", t)
+    } finally {
+      interpreter.close()
     }
-    interpreter.interpret(s"result(0) = $completeCode")
     res(0).asInstanceOf[LogicalPlan]
   }
 
@@ -667,9 +718,10 @@ class LogicalPlanToLogicalPlanBuilderStringTest extends CypherFunSuite with Test
    * Tests a plan by getting the string representation and then using scala REPL to execute that code, which yields a `rebuiltPlan`.
    * Compare that plan against the original plan.
    */
-  private def testPlan(name: String, plan: LogicalPlan): Unit = {
+  private def testPlan(name: String, buildPlan: => LogicalPlan): Unit = {
     testedOperators.add(name)
     test(name) {
+      val plan = buildPlan // to avoid running out of stack while compiling the huge LogicalPlanToLogicalPlanBuilderStringTest constructor
       val code = LogicalPlanToPlanBuilderString(plan)
       val rebuiltPlan = interpretPlanBuilder(code)
       if (rebuiltPlan == null) {

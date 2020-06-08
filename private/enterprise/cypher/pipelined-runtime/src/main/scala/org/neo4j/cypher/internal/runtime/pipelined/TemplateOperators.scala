@@ -47,6 +47,7 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
@@ -139,7 +140,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                              expressionCompiler: OperatorExpressionCompiler) {
 
     def compileExpression(astExpression: Expression): () => IntermediateExpression =
-      () => expressionCompiler.intermediateCompileExpression(astExpression)
+      () => expressionCompiler.compileExpression(astExpression)
         .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
   }
 
@@ -165,7 +166,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.slots.getLongOffsetFor(nodeVariableName),
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
-        case plan@plans.NodeByLabelScan(node, label, _) =>
+        case plan@plans.NodeByLabelScan(node, label, _, indexOrder) =>
           ctx: TemplateContext =>
             val maybeToken = ctx.tokenContext.getOptLabelId(label.name)
             new SingleThreadedLabelScanTaskTemplate(ctx.inner,
@@ -175,7 +176,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.slots.getLongOffsetFor(node),
               label.name,
               maybeToken,
-              ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+              ctx.argumentSizes(plan.id),
+              asKernelIndexOrder(indexOrder))(ctx.expressionCompiler)
 
         case plan@plans.NodeIndexScan(node, label, properties, _, indexOrder) =>
           ctx: TemplateContext =>
@@ -291,16 +293,14 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.argumentSizes(plan.id),
               ctx.expressionCompiler)
 
-        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode) if isHeadOperator || fuseOverPipelines =>
+        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode, expandProperties) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)
             val toSlot = ctx.slots(to)
             val tokensOrNames = types.map(r => ctx.tokenContext.getOptRelTypeId(r.name) match {
               case Some(token) => Left(token)
-              case None => Right(r.name)
-            }
-            )
+              case None => Right(r.name)})
 
             val typeTokens = tokensOrNames.collect {
               case Left(token: Int) => token
@@ -308,6 +308,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             val missingTypes = tokensOrNames.collect {
               case Right(name: String) => name
             }
+            val (nodePropsToCache, relPropsToCache) = getExpandProperties(ctx.slots, ctx.tokenContext, expandProperties)
 
             mode match {
               case ExpandAll =>
@@ -322,7 +323,9 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   toSlot.offset,
                   dir,
                   typeTokens.toArray,
-                  missingTypes.toArray)(ctx.expressionCompiler)
+                  missingTypes.toArray,
+                  nodePropsToCache,
+                  relPropsToCache)(ctx.expressionCompiler)
               case ExpandInto =>
                 new ExpandIntoOperatorTaskTemplate(ctx.inner,
                   plan.id,
@@ -337,7 +340,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   missingTypes.toArray)(ctx.expressionCompiler)
             }
 
-        case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, mode, maybePredicate) if isHeadOperator || fuseOverPipelines =>
+        case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, mode, maybePredicate, expandProperties) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)
@@ -356,6 +359,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
             mode match {
               case ExpandAll =>
+                val (nodePropsToCache, relPropsToCache) = getExpandProperties(ctx.slots, ctx.tokenContext, expandProperties)
                 new OptionalExpandAllOperatorTaskTemplate(ctx.inner,
                   plan.id,
                   ctx.innermost,
@@ -368,7 +372,9 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   dir,
                   typeTokens.toArray,
                   missingTypes.toArray,
-                  maybePredicate.map(ctx.compileExpression))(ctx.expressionCompiler)
+                  maybePredicate.map(ctx.compileExpression),
+                  nodePropsToCache,
+                  relPropsToCache)(ctx.expressionCompiler)
               case ExpandInto =>
                 new OptionalExpandIntoOperatorTaskTemplate(ctx.inner,
                   plan.id,
@@ -522,7 +528,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 plan.id,
                 argumentStateMapId,
                 groupMapping)(ctx.expressionCompiler),
-              Some(argumentStateMapId -> new SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory(plan.id))
+              Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory)
             )
 
         // Special case for limit with serial execution
@@ -719,18 +725,15 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           new ManyQueriesNodeIndexSeekTaskTemplate(ctx.inner,
             plan.id,
             ctx.innermost,
-            node,
             ctx.slots.getLongOffsetFor(node),
             property,
             SeekExpression(Seq(ctx.compileExpression(expr)), in => manyExactSeek(property.propertyKeyId, in.head)),
             ctx.indexRegistrator.registerQueryIndex(label, properties),
-            IndexOrder.NONE,
+            order,
             ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
       case RangeQueryExpression(rangeWrapper) if !needsLockingUnique =>
         require(properties.length == 1)
-        //NOTE: So far we only support fusing of single-bound inequalities. Not sure if it ever makes sense to have
-        //multiple bounds
         computeRangeExpression(rangeWrapper, properties.head).map(
           seek => {
             ctx: TemplateContext => {
@@ -753,7 +756,6 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   new ManyQueriesNodeIndexSeekTaskTemplate(ctx.inner,
                     plan.id,
                     ctx.innermost,
-                    node,
                     ctx.slots.getLongOffsetFor(node),
                     property,
                     seek,
@@ -778,7 +780,6 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             new CompositeNodeIndexSeekTaskTemplate(ctx.inner,
               plan.id,
               ctx.innermost,
-              node,
               ctx.slots.getLongOffsetFor(node),
               slottedIndexedProperties,
               predicates.map(predicate => predicate(ctx)),

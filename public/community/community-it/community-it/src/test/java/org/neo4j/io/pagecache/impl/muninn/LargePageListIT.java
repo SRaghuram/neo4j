@@ -31,6 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.io.ByteUnit.GibiByte;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 class LargePageListIT
 {
@@ -43,9 +45,9 @@ class LargePageListIT
         long pageCacheSize = ByteUnit.gibiBytes( 513 ) + pageSize;
         int pages = Math.toIntExact( pageCacheSize / pageSize );
 
-        MemoryAllocator mman = MemoryAllocator.createAllocator( "2 GiB", EmptyMemoryTracker.INSTANCE );
+        MemoryAllocator mman = MemoryAllocator.createAllocator( GibiByte.toBytes( 2 ), EmptyMemoryTracker.INSTANCE );
         SwapperSet swappers = new SwapperSet();
-        long victimPage = VictimPageReference.getVictimPage( pageSize );
+        long victimPage = VictimPageReference.getVictimPage( pageSize, INSTANCE );
 
         PageList pageList = new PageList( pages, pageSize, mman, swappers, victimPage, Long.BYTES );
 

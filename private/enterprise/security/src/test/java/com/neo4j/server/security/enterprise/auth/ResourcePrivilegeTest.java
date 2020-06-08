@@ -5,9 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.auth.Resource.AllLabelsResource;
 import com.neo4j.server.security.enterprise.auth.Resource.AllPropertiesResource;
 import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
 import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
+import com.neo4j.server.security.enterprise.auth.Resource.LabelResource;
 import com.neo4j.server.security.enterprise.auth.Resource.ProcedureResource;
 import com.neo4j.server.security.enterprise.auth.Resource.PropertyResource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
@@ -28,6 +30,9 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIO
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PROPERTY;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
@@ -58,6 +63,21 @@ class ResourcePrivilegeTest
                 else if ( MATCH.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new GraphResource() );
+                    assertOk( privilegeType, action, new AllPropertiesResource() );
+                    assertOk( privilegeType, action, new PropertyResource( "foo" ) );
+                }
+                else if ( SET_LABEL.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new AllLabelsResource() );
+                    assertOk( privilegeType, action, new LabelResource( "foo" ) );
+                }
+                else if ( REMOVE_LABEL.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new AllLabelsResource() );
+                    assertOk( privilegeType, action, new LabelResource( "foo" ) );
+                }
+                else if ( SET_PROPERTY.satisfies( action ) )
+                {
                     assertOk( privilegeType, action, new AllPropertiesResource() );
                     assertOk( privilegeType, action, new PropertyResource( "foo" ) );
                 }
@@ -114,6 +134,8 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( TRAVERSE.satisfies( action ) )
                 {
@@ -121,23 +143,45 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
                     assertFail( privilegeType, action, new DatabaseResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( READ.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
                     assertFail( privilegeType, action, new DatabaseResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( MATCH.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
                     assertFail( privilegeType, action, new DatabaseResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
+                }
+                else if ( SET_LABEL.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( REMOVE_LABEL.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new DatabaseResource() );
                 }
                 else if ( WRITE.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
-                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
-                    assertFail( privilegeType, action, new AllPropertiesResource() );
                     assertFail( privilegeType, action, new DatabaseResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( ADMIN.satisfies( action ) )
                 {
@@ -145,6 +189,8 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( INDEX.satisfies( action ) )
                 {
@@ -152,6 +198,8 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( CONSTRAINT.satisfies( action ) )
                 {
@@ -159,6 +207,8 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( TOKEN.satisfies( action ) )
                 {
@@ -166,6 +216,8 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( EXECUTE.satisfies( action ) )
                 {
@@ -173,6 +225,8 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new DatabaseResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( GRAPH_ACTIONS.satisfies( action ) )
                 {
@@ -184,6 +238,8 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else
                 {

@@ -19,33 +19,24 @@
  */
 package org.neo4j.cypher.planmatching
 
-import org.neo4j.cypher.internal.expressions.Property
-import org.neo4j.cypher.internal.expressions.PropertyKeyName
-import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.ir.ordering.ProvidedOrder
 import org.neo4j.cypher.internal.plandescription.Arguments.Order
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
-import org.neo4j.cypher.internal.plandescription.PlanDescriptionArgumentSerializer.removeGeneratedNames
+import org.neo4j.cypher.internal.plandescription.asPrettyString
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
 /**
-  * Asserts that the Order argument of a PlanDescription contains the expected provided order.
-  */
+ * Asserts that the Order argument of a PlanDescription contains the expected provided order.
+ */
 case class OrderArgumentMatcher(expected: ProvidedOrder) extends Matcher[InternalPlanDescription] {
   override def apply(plan: InternalPlanDescription): MatchResult = {
-    val args = plan.arguments.collect { case Order(providedOrder) => providedOrder }
-    val anonArgs = args.map(arg => arg.mapColumns(col => {
-      col.expression match {
-        case variable@Variable(varName) => ProvidedOrder.Column(Variable(removeGeneratedNames(varName))(variable.position), col.isAscending)
-        case prop@Property(v@Variable(varName), p@PropertyKeyName(propName)) =>
-          ProvidedOrder.Column(Property(Variable(removeGeneratedNames(varName))(v.position), PropertyKeyName(propName)(p.position))(prop.position), col.isAscending)
-      }
-    }))
+    val orderArgs = plan.arguments.collect { case o:Order => o }
+    val expectedAsOrder = asPrettyString.order(expected)
     MatchResult(
-      matches = anonArgs.contains(expected),
-      rawFailureMessage = s"Expected ${plan.name} to have order $expected but got $anonArgs.",
-      rawNegatedFailureMessage = s"Expected ${plan.name} not to have order $expected."
+      matches = orderArgs.contains(expectedAsOrder),
+      rawFailureMessage = s"Expected ${plan.name} to have order $expectedAsOrder but got $orderArgs.",
+      rawNegatedFailureMessage = s"Expected ${plan.name} not to have order $expectedAsOrder."
     )
   }
 }

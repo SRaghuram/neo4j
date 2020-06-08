@@ -49,6 +49,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityTokenUpdateListener;
@@ -144,6 +145,7 @@ public abstract class NativeTokenScanStore implements TokenScanStore, EntityToke
      */
     private final DatabaseLayout directoryStructure;
     private final PageCacheTracer cacheTracer;
+    private final MemoryTracker memoryTracker;
 
     /**
      * The index which backs this token scan store. Instantiated in {@link #init()} and considered
@@ -185,17 +187,20 @@ public abstract class NativeTokenScanStore implements TokenScanStore, EntityToke
 
     NativeTokenScanStore( PageCache pageCache, DatabaseLayout directoryStructure, FileSystemAbstraction fs, FullStoreChangeStream fullStoreChangeStream,
             boolean readOnly, Monitors monitors, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, EntityType entityType,
-            PageCacheTracer cacheTracer )
+            PageCacheTracer cacheTracer, MemoryTracker memoryTracker )
     {
         this.pageCache = pageCache;
         this.fs = fs;
         this.fullStoreChangeStream = fullStoreChangeStream;
         this.directoryStructure = directoryStructure;
         this.cacheTracer = cacheTracer;
-        this.storeFile = entityType == EntityType.NODE ? directoryStructure.labelScanStore() : directoryStructure.relationshipTypeScanStore();
+        this.memoryTracker = memoryTracker;
+        boolean isLabelScanStore = entityType == EntityType.NODE;
+        this.storeFile = isLabelScanStore ? directoryStructure.labelScanStore() : directoryStructure.relationshipTypeScanStore();
         this.readOnly = readOnly;
         this.monitors = monitors;
-        this.monitor = monitors.newMonitor( Monitor.class );
+        String monitorTag = isLabelScanStore ? TokenScanStore.LABEL_SCAN_STORE_MONITOR_TAG : TokenScanStore.RELATIONSHIP_TYPE_SCAN_STORE_MONITOR_TAG;
+        this.monitor = monitors.newMonitor( Monitor.class, monitorTag );
         this.recoveryCleanupWorkCollector = recoveryCleanupWorkCollector;
         this.fileSystem = fs;
         this.entityType = entityType;
@@ -340,12 +345,9 @@ public abstract class NativeTokenScanStore implements TokenScanStore, EntityToke
         {
             throw new RuntimeException( e );
         }
-        return new NativeAllEntriesTokenScanReader( seekProvider, highestTokenId );
+        return new NativeAllEntriesTokenScanReader( seekProvider, highestTokenId, entityType );
     }
 
-    /**
-     * @return store files, namely the single "neostore.labelscanstore.db" store file.
-     */
     @Override
     public ResourceIterator<File> snapshotStoreFiles()
     {
@@ -419,7 +421,7 @@ public abstract class NativeTokenScanStore implements TokenScanStore, EntityToke
         try
         {
             index = new GBPTree<>( pageCache, storeFile, new TokenScanLayout(), 0, monitor, readRebuilding,
-                    needsRebuildingWriter, recoveryCleanupWorkCollector, readOnly, PageCacheTracer.NULL, immutable.empty() );
+                    needsRebuildingWriter, recoveryCleanupWorkCollector, readOnly, cacheTracer, immutable.empty() );
             return isRebuilding.getValue();
         }
         catch ( TreeFileNotFoundException e )
@@ -432,7 +434,7 @@ public abstract class NativeTokenScanStore implements TokenScanStore, EntityToke
 
     private GBPTree.Monitor treeMonitor()
     {
-        return new LabelIndexTreeMonitor();
+        return new TokenIndexTreeMonitor();
     }
 
     @Override
@@ -476,7 +478,7 @@ public abstract class NativeTokenScanStore implements TokenScanStore, EntityToke
             final PageCursorTracer cursorTracer = cacheTracer.createPageCursorTracer( TOKEN_SCAN_REBUILD_TAG );
             try ( TokenScanWriter writer = newBulkAppendWriter( cursorTracer ) )
             {
-                numberOfEntities = fullStoreChangeStream.applyTo( writer, cursorTracer );
+                numberOfEntities = fullStoreChangeStream.applyTo( writer, cursorTracer, memoryTracker );
             }
 
             index.checkpoint( IOLimiter.UNLIMITED, writeClean, cursorTracer );
@@ -548,7 +550,7 @@ public abstract class NativeTokenScanStore implements TokenScanStore, EntityToke
         }
     }
 
-    private class LabelIndexTreeMonitor extends GBPTree.Monitor.Adaptor
+    private class TokenIndexTreeMonitor extends GBPTree.Monitor.Adaptor
     {
         @Override
         public void cleanupRegistered()

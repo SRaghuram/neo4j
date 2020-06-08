@@ -9,56 +9,61 @@ import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.RaftMessageHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
+import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.neo4j.logging.Log;
 
-import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
+import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
+import static java.lang.Long.max;
 
 class Candidate implements RaftMessageHandler
 {
     @Override
     public Outcome handle( RaftMessages.RaftMessage message, ReadableRaftState ctx, Log log ) throws IOException
     {
-        return message.dispatch( new Handler( ctx, log ) );
+        return message.dispatch( new Handler( ctx, log ) ).build();
     }
 
-    private static class Handler implements RaftMessages.Handler<Outcome, IOException>
+    private static class Handler implements RaftMessages.Handler<OutcomeBuilder,IOException>
     {
         private final ReadableRaftState ctx;
         private final Log log;
-        private final Outcome outcome;
+        private final OutcomeBuilder outcomeBuilder;
 
         private Handler( ReadableRaftState ctx, Log log )
         {
             this.ctx = ctx;
             this.log = log;
-            this.outcome = new Outcome( CANDIDATE, ctx );
+            this.outcomeBuilder = OutcomeBuilder.builder( CANDIDATE, ctx );
         }
 
         @Override
-        public Outcome handle( RaftMessages.Heartbeat req ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.Heartbeat req ) throws IOException
         {
             if ( req.leaderTerm() < ctx.term() )
             {
-                return outcome;
+                return outcomeBuilder;
             }
 
-            outcome.setNextRole( FOLLOWER );
+            outcomeBuilder.setRole( FOLLOWER );
             log.info( "Moving to FOLLOWER state after receiving heartbeat from %s at term %d (I am at %d)",
                     req.from(), req.leaderTerm(), ctx.term() );
-            Heart.beat( ctx, outcome, req, log );
-            return outcome;
+            Heart.beat( ctx, outcomeBuilder, req, log );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.AppendEntries.Request req ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.AppendEntries.Request req ) throws IOException
         {
             if ( req.leaderTerm() < ctx.term() )
             {
@@ -66,148 +71,177 @@ class Candidate implements RaftMessageHandler
                         new RaftMessages.AppendEntries.Response( ctx.myself(), ctx.term(), false,
                                 req.prevLogIndex(), ctx.entryLog().appendIndex() );
 
-                outcome.addOutgoingMessage( new RaftMessages.Directed( req.from(), appendResponse ) );
-                return outcome;
+                outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( req.from(), appendResponse ) );
+                return outcomeBuilder;
             }
 
-            outcome.setNextRole( FOLLOWER );
+            outcomeBuilder.setRole( FOLLOWER );
             log.info( "Moving to FOLLOWER state after receiving append entries request from %s at term %d (I am at %d)n",
                     req.from(), req.leaderTerm(), ctx.term() );
-            Appending.handleAppendEntriesRequest( ctx, outcome, req, log );
-            return outcome;
+            Appending.handleAppendEntriesRequest( ctx, outcomeBuilder, req );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Vote.Response res ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.Vote.Response res ) throws IOException
         {
             if ( res.term() > ctx.term() )
             {
-                outcome.setNextTerm( res.term() );
-                outcome.setNextRole( FOLLOWER );
+                outcomeBuilder.setTerm( res.term() )
+                        .setRole( FOLLOWER );
                 log.info( "Moving to FOLLOWER state after receiving vote response from %s at term %d (I am at %d)",
                         res.from(), res.term(), ctx.term() );
-                return outcome;
+                return outcomeBuilder;
             }
             else if ( res.term() < ctx.term() || !res.voteGranted() )
             {
-                return outcome;
+                return outcomeBuilder;
             }
 
+            var votesForMe = new HashSet<>( ctx.votesForMe() );
             if ( !res.from().equals( ctx.myself() ) )
             {
-                outcome.addVoteForMe( res.from() );
+                votesForMe.add( res.from() );
+                outcomeBuilder.setVotesForMe( votesForMe );
             }
 
-            if ( isQuorum( ctx.votingMembers(), outcome.getVotesForMe() ) )
+            if ( isQuorum( ctx.votingMembers(), votesForMe ) )
             {
-                outcome.setLeader( ctx.myself() );
-                Appending.appendNewEntry( ctx, outcome, new NewLeaderBarrier() );
-                Leader.sendHeartbeats( ctx, outcome );
+                outcomeBuilder.setLeader( ctx.myself() );
+                Appending.appendNewEntry( ctx, outcomeBuilder, new NewLeaderBarrier() );
+                Leader.sendHeartbeats( ctx, outcomeBuilder );
 
-                outcome.setLastLogIndexBeforeWeBecameLeader( ctx.entryLog().appendIndex() );
-                outcome.electedLeader();
-                outcome.renewElectionTimer( FAILURE_DETECTION );
-                outcome.setNextRole( LEADER );
-                log.info( "Moving to LEADER state at term %d (I am %s), voted for by %s",
-                        ctx.term(), ctx.myself(), outcome.getVotesForMe() );
+                outcomeBuilder.setLastLogIndexBeforeWeBecameLeader( ctx.entryLog().appendIndex() )
+                        .electedLeader()
+                        .renewElectionTimer( FAILURE_DETECTION )
+                        .setRole( LEADER );
+                log.info( "Moving to LEADER state at term %d (I am %s), voted for by %s", ctx.term(), ctx.myself(), votesForMe );
             }
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Vote.Request req ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.Vote.Request req ) throws IOException
         {
-            if ( req.term() > ctx.term() )
+            long term = max( req.term(), ctx.term() );
+            if ( term > ctx.term() )
             {
-                outcome.getVotesForMe().clear();
-                outcome.setNextRole( FOLLOWER );
+                outcomeBuilder.setTerm( term )
+                        .setVotesForMe( Set.of() )
+                        .setRole( FOLLOWER );
                 log.info( "Moving to FOLLOWER state after receiving vote request from %s at term %d (I am at %d)",
                         req.from(), req.term(), ctx.term() );
-                Voting.handleVoteRequest( ctx, outcome, req, log );
-                return outcome;
+                MemberId votedFor = null;
+                Voting.handleVoteVerdict( ctx, outcomeBuilder, term, req, log, votedFor );
+                return outcomeBuilder;
             }
 
-            outcome.addOutgoingMessage( new RaftMessages.Directed( req.from(),
-                    new RaftMessages.Vote.Response( ctx.myself(), outcome.getTerm(), false ) ) );
-            return outcome;
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( req.from(), new RaftMessages.Vote.Response( ctx.myself(), term, false ) ) );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Timeout.Election election ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.Timeout.Election election ) throws IOException
         {
             log.info( "Failed to get elected. Got votes from: %s", ctx.votesForMe() );
-            if ( !Election.startRealElection( ctx, outcome, log ) )
+            if ( !Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
             {
                 log.info( "Moving to FOLLOWER state after failing to start election" );
-                outcome.setNextRole( FOLLOWER );
+                outcomeBuilder.setRole( FOLLOWER );
             }
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.PreVote.Request req ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request req ) throws IOException
         {
             if ( ctx.supportPreVoting() )
             {
                 if ( req.term() > ctx.term() )
                 {
-                    outcome.getVotesForMe().clear();
-                    outcome.setNextRole( FOLLOWER );
+                    outcomeBuilder.setVotesForMe( Set.of() )
+                            .setRole( FOLLOWER );
                     log.info( "Moving to FOLLOWER state after receiving pre vote request from %s at term %d (I am at %d)",
                             req.from(), req.term(), ctx.term() );
                 }
-                Voting.declinePreVoteRequest( ctx, outcome, req );
+                var term = max( req.term(), ctx.term() );
+                if ( term > ctx.term() )
+                {
+                    outcomeBuilder.setTerm( term );
+                }
+                Voting.declinePreVoteRequest( ctx, outcomeBuilder, req, term );
             }
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.PreVote.Response response )
+        public OutcomeBuilder handle( RaftMessages.PreVote.Response response )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.AppendEntries.Response response )
+        public OutcomeBuilder handle( RaftMessages.AppendEntries.Response response )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.LogCompactionInfo logCompactionInfo )
+        public OutcomeBuilder handle( RaftMessages.LogCompactionInfo logCompactionInfo )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.HeartbeatResponse heartbeatResponse )
+        public OutcomeBuilder handle( RaftMessages.HeartbeatResponse heartbeatResponse )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Timeout.Heartbeat heartbeat )
+        public OutcomeBuilder handle( RaftMessages.Timeout.Heartbeat heartbeat )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.NewEntry.Request request )
+        public OutcomeBuilder handle( RaftMessages.NewEntry.Request request )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.NewEntry.BatchRequest batchRequest )
+        public OutcomeBuilder handle( RaftMessages.NewEntry.BatchRequest batchRequest )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.PruneRequest pruneRequest )
+        public OutcomeBuilder handle( RaftMessages.PruneRequest pruneRequest )
         {
-            Pruning.handlePruneRequest( outcome, pruneRequest );
-            return outcome;
+            Pruning.handlePruneRequest( outcomeBuilder, pruneRequest );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest )
+        {
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( leadershipTransferRequest.from(), rejection ) );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal )
+        {
+            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) );
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
+        {
+            outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
+            return outcomeBuilder;
         }
     }
 }

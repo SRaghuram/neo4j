@@ -27,6 +27,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.Level;
 
+import static com.neo4j.causalclustering.core.ServerGroupName.SERVER_GROUP_NAME;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
@@ -74,6 +75,22 @@ public class CausalClusteringSettings implements SettingsDeclaration
             "The window should be significantly larger than typical communication delays to make conflicts unlikely." )
     public static final Setting<DurationRange> failure_resolution_window =
             newBuilder( "causal_clustering.failure_resolution_window", DURATION_RANGE, DurationRange.fromSeconds( 3, 6 ) ).build();
+
+    @Internal
+    @Description( "The time limit within which a leadership transfer request should be completed, otherwise the leader will resume accepting writes." )
+    public static final Setting<Duration> leader_transfer_timeout =
+            newBuilder( "causal_clustering.leader_transfer_timeout", DURATION, ofSeconds( 3 ) ).build();
+
+    @Internal
+    @Description( "The frequency with which a leader will try and transfer leadership to another member" )
+    public static final Setting<Duration> leader_transfer_interval =
+            newBuilder( "causal_clustering.leader_transfer_interval", DURATION, ofSeconds( 15 ) ).build();
+
+    @Internal
+    @Description( "The amount of time we should wait before repeating an attempt to transfer the leadership of a given database to a member after" +
+            " that member rejects a previous transfer." )
+    public static final Setting<Duration> leader_transfer_member_backoff =
+            newBuilder( "causal_clustering.leader_transfer_member_backoff", DURATION, ofSeconds( 30 ) ).build();
 
     @Internal
     @Description( "Configures the time after which we give up trying to bind to a cluster formed of the other initial discovery members." )
@@ -483,12 +500,12 @@ public class CausalClusteringSettings implements SettingsDeclaration
     @Description( "Comma separated list of groups to be used by the connect-randomly-to-server-group selection strategy. " +
             "The connect-randomly-to-server-group strategy is used if the list of strategies (`causal_clustering.upstream_selection_strategy`) " +
             "includes the value `connect-randomly-to-server-group`. " )
-    public static final Setting<List<String>> connect_randomly_to_server_group_strategy =
-            newBuilder( "causal_clustering.connect-randomly-to-server-group", listOf( STRING ), emptyList() ).build();
+    public static final Setting<List<ServerGroupName>> connect_randomly_to_server_group_strategy =
+            newBuilder( "causal_clustering.connect-randomly-to-server-group", listOf( SERVER_GROUP_NAME ), emptyList() ).build();
 
     @Description( "A list of group names for the server used when configuring load balancing and replication policies." )
-    public static final Setting<List<String>> server_groups =
-            newBuilder( "causal_clustering.server_groups", listOf( STRING ), emptyList() ).build();
+    public static final Setting<List<ServerGroupName>> server_groups =
+            newBuilder( "causal_clustering.server_groups", listOf( SERVER_GROUP_NAME ), emptyList() ).build();
 
     @Description( "The load balancing plugin to use." )
     public static final Setting<String> load_balancing_plugin =

@@ -39,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -58,7 +59,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     if (parallelism == 1) {
       // Single threaded scan
-      IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
+      singletonIndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
     } else {
       // Parallel scan
       val scan = state.queryContext.transactionalContext.dataRead.allNodesScan()

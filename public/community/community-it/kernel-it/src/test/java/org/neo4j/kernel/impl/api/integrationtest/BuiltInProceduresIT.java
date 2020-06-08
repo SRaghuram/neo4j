@@ -21,8 +21,6 @@ package org.neo4j.kernel.impl.api.integrationtest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import scala.Option;
-import scala.collection.immutable.Map;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -35,9 +33,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.collection.RawIterator;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.cypher.internal.StringCacheMonitor;
+import org.neo4j.cypher.internal.ExecutionEngineQueryCacheMonitor;
 import org.neo4j.graphdb.Resource;
-import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.SchemaReadCore;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
@@ -449,7 +446,7 @@ class BuiltInProceduresIT extends CommunityProcedureITBase
         return monitorListener;
     }
 
-    private static class ReplanMonitor extends IndexingService.MonitorAdapter implements StringCacheMonitor
+    private static class ReplanMonitor extends IndexingService.MonitorAdapter implements ExecutionEngineQueryCacheMonitor
     {
         private long numberOfFlushedItems = -1L;
         private IndexSamplingMode samplingMode;
@@ -474,27 +471,6 @@ class BuiltInProceduresIT extends CommunityProcedureITBase
         IndexSamplingMode samplingMode()
         {
             return samplingMode;
-        }
-
-        @Override
-        public void cacheHit( Pair<String,scala.collection.immutable.Map<String,Class<?>>> key )
-        {
-        }
-
-        @Override
-        public void cacheMiss( Pair<String,scala.collection.immutable.Map<String,Class<?>>> key )
-        {
-        }
-
-        @Override
-        public void cacheDiscard( Pair<String,Map<String,Class<?>>> key, String userKey, int secondsSinceReplan,
-                Option<String> maybeReason )
-        {
-        }
-
-        @Override
-        public void cacheRecompile( Pair<String,scala.collection.immutable.Map<String,Class<?>>> key )
-        {
         }
     }
 }

@@ -22,6 +22,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
@@ -54,6 +55,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     private final long rotateAtSize;
     private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final FileNames fileNames;
+    private final MemoryTracker memoryTracker;
     private final JobScheduler scheduler;
     private final Log log;
 
@@ -63,11 +65,11 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
 
     private State state;
     private final ReaderPool readerPool;
-    private JobHandle readerPoolPruner;
+    private JobHandle<?> readerPoolPruner;
 
     public SegmentedRaftLog( FileSystemAbstraction fileSystem, File directory, long rotateAtSize,
             Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, int readerPoolSize, Clock clock,
-            JobScheduler scheduler, CoreLogPruningStrategy pruningStrategy )
+            JobScheduler scheduler, CoreLogPruningStrategy pruningStrategy, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.directory = directory;
@@ -77,6 +79,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
         this.scheduler = scheduler;
 
         this.fileNames = new FileNames( directory );
+        this.memoryTracker = memoryTracker;
         this.readerPool = new ReaderPool( readerPoolSize, logProvider, fileNames, fileSystem, clock );
         this.pruner = new SegmentedRaftLogPruner( pruningStrategy );
         this.log = logProvider.getLog( getClass() );
@@ -92,7 +95,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
 
         try
         {
-            state = new RecoveryProtocol( fileSystem, fileNames, readerPool, marshalSelector, logProvider ).run();
+            state = new RecoveryProtocol( fileSystem, fileNames, readerPool, marshalSelector, logProvider, memoryTracker ).run();
         }
         catch ( Exception e )
         {

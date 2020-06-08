@@ -21,18 +21,37 @@ package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.mutable.MutableLong;
+<<<<<<< HEAD
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
+=======
+import org.eclipse.collections.api.list.primitive.MutableLongList;
+import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
+import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
+import org.eclipse.collections.api.set.primitive.IntSet;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
+<<<<<<< HEAD
+=======
+import org.eclipse.collections.impl.factory.primitive.LongLists;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+<<<<<<< HEAD
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+=======
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,7 +62,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+<<<<<<< HEAD
 import java.util.Objects;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -59,7 +81,10 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.DefaultIdController;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+<<<<<<< HEAD
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexConfigCompleter;
@@ -80,9 +105,15 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
+<<<<<<< HEAD
 import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
+=======
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.Degrees;
@@ -91,7 +122,10 @@ import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
+<<<<<<< HEAD
 import org.neo4j.storageengine.api.RelationshipDirection;
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -117,21 +151,41 @@ import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
+<<<<<<< HEAD
 import org.neo4j.values.storable.Value;
 
+=======
+import org.neo4j.values.storable.IntValue;
+import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
+
+import static java.lang.Integer.min;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
+<<<<<<< HEAD
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+=======
+import static java.util.stream.Collectors.toMap;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+<<<<<<< HEAD
+=======
+import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
@@ -152,7 +206,10 @@ import static org.neo4j.values.storable.Values.stringValue;
 class FrekiStorageEngineGraphWritesIT
 {
     private static final SchemaDescriptor SCHEMA_DESCRIPTOR = SchemaDescriptor.forLabel( 5, 10 );
+<<<<<<< HEAD
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     @Inject
     private FileSystemAbstraction fs;
     @Inject
@@ -177,20 +234,34 @@ class FrekiStorageEngineGraphWritesIT
                 new DelegatingTokenHolder( new SimpleTokenCreator(), TokenHolder.TYPE_PROPERTY_KEY ),
                 new DelegatingTokenHolder( new SimpleTokenCreator(), TokenHolder.TYPE_LABEL ),
                 new DelegatingTokenHolder( new SimpleTokenCreator(), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+<<<<<<< HEAD
         DatabaseHealth databaseHealth = new DatabaseHealth( new DatabasePanicEventGenerator(
                 new DatabaseEventListeners( NullLog.getInstance() ), DEFAULT_DATABASE_NAME ), NullLog.getInstance() );
         life = new LifeSupport();
+=======
+        DatabaseHealth databaseHealth = new DatabaseHealth( causeOfPanic -> fail( "Should not panic", causeOfPanic ), NullLog.getInstance() );
+        life = new LifeSupport();
+        MemoryTracker memoryTracker = EmptyMemoryTracker.INSTANCE;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         storageEngine = life.add( new FrekiStorageEngine(
                 fs, layout, Config.defaults(), pageCache, tokenHolders, mock( SchemaState.class ), new StandardConstraintRuleAccessor(),
                         new NoopIndexConfigCompletor(), NO_LOCK_SERVICE, new DefaultIdGeneratorFactory( fs, RecoveryCleanupWorkCollector.immediate() ),
                         new DefaultIdController(), databaseHealth, NullLogProvider.getInstance(), RecoveryCleanupWorkCollector.immediate(),
+<<<<<<< HEAD
                         true, PageCacheTracer.NULL, CursorAccessPatternTracer.NO_TRACING ) );
+=======
+                        true, PageCacheTracer.NULL, CursorAccessPatternTracer.NO_TRACING, memoryTracker ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         nodeLabelUpdateListener = new RecordingNodeLabelUpdateListener();
         storageEngine.addNodeLabelUpdateListener( nodeLabelUpdateListener );
         indexUpdateListener = new RecordingIndexUpdatesListener();
         storageEngine.addIndexUpdateListener( indexUpdateListener );
         life.start();
+<<<<<<< HEAD
         commandCreationContext = storageEngine.newCommandCreationContext( NULL );
+=======
+        commandCreationContext = storageEngine.newCommandCreationContext( NULL, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @AfterEach
@@ -367,6 +438,49 @@ class FrekiStorageEngineGraphWritesIT
     }
 
     @Test
+<<<<<<< HEAD
+=======
+    void shouldAllowLabelsInXL() throws Exception
+    {
+        long nodeId = commandCreationContext.reserveNode();
+        MutableLongSet labels = LongSets.mutable.empty();
+        for ( int i = 0; i < 200; i++ ) //should not fit in x1
+        {
+            labels.add( i * 5 );
+        }
+        Set<StorageProperty> nodeProperties = new HashSet<>();
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+        } );
+
+        assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
+    }
+
+    @Test
+    void shouldHaveIndexUpdatesWhenLabelsAreInXL() throws Exception
+    {
+        long nodeId = commandCreationContext.reserveNode();
+        MutableLongSet labels = LongSets.mutable.empty();
+        for ( int i = 0; i < 200; i++ ) //should not fit in x1
+        {
+            labels.add( i * 5 );
+        }
+        labels.add( SCHEMA_DESCRIPTOR.getLabelId() );
+
+        IntValue afterValue = Values.intValue( 77 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+        }, target -> target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ), emptyList(),
+                IntSets.immutable.empty() ), index -> asSet( IndexEntryUpdate.add( nodeId, index, afterValue ) ) );
+    }
+
+    @Test
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     void shouldOverflowIntoLargerLargerAndDense() throws Exception
     {
         // given
@@ -687,10 +801,14 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // when
+<<<<<<< HEAD
         createAndApplyTransaction( target ->
         {
             target.visitDeletedNode( nodeId );
         } );
+=======
+        createAndApplyTransaction( target -> target.visitDeletedNode( nodeId ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
         // then
         try ( StorageReader reader = storageEngine.newReader();
@@ -754,7 +872,11 @@ class FrekiStorageEngineGraphWritesIT
     {
         // given a node with a property that has a big value
         long nodeId = commandCreationContext.reserveNode();
+<<<<<<< HEAD
         long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+=======
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         createAndApplyTransaction( target ->
         {
             target.visitCreatedNode( nodeId );
@@ -765,7 +887,11 @@ class FrekiStorageEngineGraphWritesIT
                 target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
             }
         } );
+<<<<<<< HEAD
         long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+=======
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
 
         // when
@@ -775,7 +901,11 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // then
+<<<<<<< HEAD
         assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+=======
+        assertThat( storageEngine.stores().bigPropertyValueStore.getHighId() ).isEqualTo( bigValuePosition );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Test
@@ -795,7 +925,11 @@ class FrekiStorageEngineGraphWritesIT
         // given a node with a property that has a big value
         long nodeId = commandCreationContext.reserveNode();
         long otherNodeId = commandCreationContext.reserveNode();
+<<<<<<< HEAD
         long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+=======
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         String value = random.nextAlphaNumericString( 100, 100 );
         RelationshipSpec relationship =
                 new RelationshipSpec( nodeId, 0, otherNodeId, asSet( new PropertyKeyValue( 0, stringValue( value ) ) ), commandCreationContext );
@@ -809,7 +943,11 @@ class FrekiStorageEngineGraphWritesIT
                 target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
             }
         } );
+<<<<<<< HEAD
         long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+=======
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.getHighId();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
 
         // when
@@ -820,7 +958,11 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // then
+<<<<<<< HEAD
         assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+=======
+        assertThat( storageEngine.stores().bigPropertyValueStore.getHighId() ).isEqualTo( bigValuePosition );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Test
@@ -920,8 +1062,11 @@ class FrekiStorageEngineGraphWritesIT
             int round = r;
             createAndApplyTransaction( target ->
             {
+<<<<<<< HEAD
                 CommandCreationContext txCommandCreationContext = storageEngine.newCommandCreationContext( NULL );
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 // === random label changes
                 int numLabelChanges = random.nextInt( 4 );
                 MutableLongSet addedLabels = LongSets.mutable.empty();
@@ -973,7 +1118,11 @@ class FrekiStorageEngineGraphWritesIT
                     if ( existenceOfNodeIds.add( otherNodeId ) )
                     {
                         target.visitCreatedNode( otherNodeId );
+<<<<<<< HEAD
                         Set<StorageProperty> otherNodeProperties = randomProperties();
+=======
+                        Set<StorageProperty> otherNodeProperties = randomProperties( random.nextInt( 3 ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                         target.visitNodePropertyChanges( otherNodeId, otherNodeProperties, emptyList(), IntSets.immutable.empty() );
                         expectedOtherNodesProperties.put( otherNodeId, otherNodeProperties );
                     }
@@ -990,7 +1139,12 @@ class FrekiStorageEngineGraphWritesIT
                         endNode = nodeId;
                     }
                     RelationshipSpec relationship =
+<<<<<<< HEAD
                             createRelationship( target, txCommandCreationContext, startNode, random.nextInt( 4 ), endNode, randomProperties() );
+=======
+                            createRelationship( target, commandCreationContext, startNode, random.nextInt( 4 ), endNode, randomProperties(
+                                    random.nextInt( 3 ) ) );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                     createdRelationships.add( relationship );
                 }
                 for ( int i = 0; i < round && !expectedRelationships.isEmpty(); i++ )
@@ -1005,7 +1159,11 @@ class FrekiStorageEngineGraphWritesIT
             // then
             try ( StorageReader storageReader = storageEngine.newReader();
                     StorageNodeCursor nodeCursor = storageReader.allocateNodeCursor( NULL );
+<<<<<<< HEAD
                     StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
+=======
+                    StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                     StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
             {
                 List<Runnable> checks = new ArrayList<>();
@@ -1044,12 +1202,19 @@ class FrekiStorageEngineGraphWritesIT
             {
                 target.visitCreatedNode( nodeId );
             }
+<<<<<<< HEAD
             CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             for ( int i = 0; i < 100 * nodeIds.length; i++ )
             {
                 long startNode = nodeIds[random.nextInt( nodeIds.length )];
                 long endNode = nodeIds[random.nextInt( nodeIds.length )];
+<<<<<<< HEAD
                 RelationshipSpec relationship = new RelationshipSpec( startNode, 0, endNode, emptySet(), context );
+=======
+                RelationshipSpec relationship = new RelationshipSpec( startNode, 0, endNode, emptySet(), commandCreationContext );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 relationship.create( target );
                 relationships.add( relationship );
             }
@@ -1063,10 +1228,16 @@ class FrekiStorageEngineGraphWritesIT
             long nodeId = nodeIds[id];
             createAndApplyTransaction( target ->
             {
+<<<<<<< HEAD
                 CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
                 long otherNodeId = context.reserveNode();
                 target.visitCreatedNode( otherNodeId );
                 RelationshipSpec relationship = new RelationshipSpec( nodeId, 1, otherNodeId, emptySet(), context );
+=======
+                long otherNodeId = commandCreationContext.reserveNode();
+                target.visitCreatedNode( otherNodeId );
+                RelationshipSpec relationship = new RelationshipSpec( nodeId, 1, otherNodeId, emptySet(), commandCreationContext );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 relationship.create( target );
                 createdRelationships.add( relationship );
             } );
@@ -1097,7 +1268,10 @@ class FrekiStorageEngineGraphWritesIT
         {
             createAndApplyTransaction( target ->
             {
+<<<<<<< HEAD
                 CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 for ( int i = 0; i < 10; i++ )
                 {
                     int type = random.nextInt( numTypes );
@@ -1117,7 +1291,11 @@ class FrekiStorageEngineGraphWritesIT
                     boolean outgoing = random.nextBoolean();
                     long startNode = outgoing ? nodeId : otherNodeId;
                     long endNode = outgoing ? otherNodeId : nodeId;
+<<<<<<< HEAD
                     RelationshipSpec relationship = new RelationshipSpec( startNode, type, endNode, emptySet(), context );
+=======
+                    RelationshipSpec relationship = new RelationshipSpec( startNode, type, endNode, emptySet(), commandCreationContext );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                     relationships.add( relationship );
                     relationship.create( target );
                 }
@@ -1160,7 +1338,11 @@ class FrekiStorageEngineGraphWritesIT
         try ( var reader = storageEngine.newReader();
                 var nodeCursor = reader.allocateNodeCursor( NULL );
                 var relationshipCursor = reader.allocateRelationshipTraversalCursor( NULL );
+<<<<<<< HEAD
                 var propertyCursor = reader.allocatePropertyCursor( NULL ) )
+=======
+                var propertyCursor = reader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE ) )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         {
             nodeCursor.single( nodeId );
             nodeCursor.next();
@@ -1175,11 +1357,500 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+<<<<<<< HEAD
+=======
+    @RandomRule.Seed( 1 )
+    @Test
+    void shouldChangeRelationshipProperties() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        createAndApplyTransaction( target -> target.visitCreatedNode( nodeId ) );
+
+        // when
+        Set<RelationshipSpec> expectedRelationships = new HashSet<>();
+        for ( int t = 0; t < 30; t++ )
+        {
+            createAndApplyTransaction( target ->
+            {
+                // Change some properties on existing relationships
+                RelationshipSpec[] existingRelationships = expectedRelationships.toArray( new RelationshipSpec[0] );
+                int numRelationshipsChanged = min( existingRelationships.length, random.nextInt( 1, 10 ) );
+                MutableLongSet changedRelationships = LongSets.mutable.empty();
+                for ( int r = 0; r < numRelationshipsChanged; r++ )
+                {
+                    RelationshipSpec relationship = random.among( existingRelationships );
+                    if ( !changedRelationships.add( relationship.id ) )
+                    {
+                        r--;
+                        continue;
+                    }
+
+                    List<StorageProperty> added = new ArrayList<>();
+                    List<StorageProperty> changed = new ArrayList<>();
+                    MutableIntSet removed = IntSets.mutable.empty();
+                    int numChanges = min( relationship.properties.size(), random.nextInt( 1, 3 ) );
+                    Map<Integer,Value> map = relationship.properties.stream().collect( toMap( StorageProperty::propertyKeyId, StorageProperty::value ) );
+                    MutableIntSet changedKeys = IntSets.mutable.empty();
+                    for ( int c = 0; c < numChanges; c++ )
+                    {
+                        int key = random.nextInt( 10 );
+                        if ( !changedKeys.add( key ) )
+                        {
+                            c--;
+                            continue;
+                        }
+                        Value existingValue = map.get( key );
+                        if ( existingValue != null )
+                        {
+                            if ( random.nextBoolean() )
+                            {
+                                Value newValue = random.nextValue();
+                                changed.add( new PropertyKeyValue( key, newValue ) );
+                                map.put( key, newValue );
+                            }
+                            else
+                            {
+                                removed.add( key );
+                                map.remove( key );
+                            }
+                        }
+                        else
+                        {
+                            Value newValue = random.nextValue();
+                            added.add( new PropertyKeyValue( key, newValue ) );
+                            map.put( key, newValue );
+                        }
+                    }
+
+                    target.visitRelPropertyChanges( relationship.id, relationship.type, relationship.startNodeId, relationship.endNodeId,
+                            added, changed, removed );
+                    relationship.properties.clear();
+                    map.forEach( ( key, value ) -> relationship.properties.add( new PropertyKeyValue( key, value ) ) );
+                }
+
+                // Create some more relationships
+                for ( int i = 0; i < 10; i++ )
+                {
+                    RelationshipSpec relationship =
+                            new RelationshipSpec( nodeId, 0, nodeId, randomProperties( random.nextInt( 1, 5 ) ), commandCreationContext );
+                    expectedRelationships.add( relationship );
+                    relationship.create( target );
+                }
+            } );
+
+            assertContentsOfNode( nodeId, LongSets.immutable.empty(), emptySet(), expectedRelationships );
+        }
+    }
+
+    @Test
+    void shouldFormXLChainBeforeDense() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        MutableLongList otherNodes = LongLists.mutable.empty();
+        for ( int i = 0; i < 100; i++ )
+        {
+            otherNodes.add( commandCreationContext.reserveNode() );
+        }
+        int x8Size = Record.recordSize( Record.sizeExpFromXFactor( 8 ) );
+        Set<StorageProperty> properties = new HashSet<>();
+        Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+        int sizePerProp = 10;
+        int propSize = (int) (x8Size * 0.8);
+        for ( int i = 0; i < propSize / sizePerProp; i++ )
+        {
+            properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
+        }
+
+        int relsToAdd = 100;
+        Set<RelationshipSpec> relationships = new HashSet<>();
+
+        createAndApplyTransaction( target ->
+        {
+            otherNodes.forEach( target::visitCreatedNode );
+        } );
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodePropertyChanges( nodeId, properties, emptyList(), IntSets.immutable.empty() );
+            for ( int i = 0; i < relsToAdd; i++ )
+            {
+                RelationshipSpec relationship =
+                        new RelationshipSpec( nodeId, i % 3, otherNodes.get( i % otherNodes.size() ), emptySet(), commandCreationContext );
+                relationship.create( target );
+                relationships.add( relationship );
+            }
+        } );
+
+        assertContentsOfNode( nodeId, LongSets.immutable.empty(), properties, relationships );
+        assertXLChainLength( nodeId, 2, false, true );
+    }
+
+    @TestFactory
+    Collection<DynamicTest> shouldHandlePermutationsOfDataBlocksXLChains()
+    {
+        List<DynamicTest> tests = new ArrayList<>();
+        Set<Double> fillRates = Set.of( 0d, 0.8d, 1.5d, 3.5d );
+        for ( double labelsFillRate : fillRates )
+        {
+            for ( double propertiesFillRate : fillRates )
+            {
+                for ( double degreesFillRate : fillRates )
+                {
+                    double totalSize = labelsFillRate + propertiesFillRate + degreesFillRate;
+                    if ( totalSize > .1 ) //skip case with no fill
+                    {
+                        tests.add( createXLChainTest( labelsFillRate, propertiesFillRate, degreesFillRate ) );
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
+    private DynamicTest createXLChainTest( double labelXLFill, double propertiesXLFill, double degreesXLFill )
+    {
+        Executable test = new Executable()
+        {
+            @Override
+            public void execute() throws Throwable
+            {
+                int x8Size = Record.recordSize( Record.sizeExpFromXFactor( 8 ) );
+
+                MutableLongSet labels = LongSets.mutable.empty();
+                double labelsSize = x8Size * labelXLFill;
+                double sizePerLabel = 1.3;
+                for ( int i = 0; i < labelsSize / sizePerLabel; i++ )
+                {
+                    labels.add( SCHEMA_DESCRIPTOR.getLabelId() + i + 1 );
+                }
+                labels.add( SCHEMA_DESCRIPTOR.getLabelId() );
+
+                Set<StorageProperty> properties = new HashSet<>();
+                Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+                int sizePerProp = 10;
+                int propSize = (int) (x8Size * propertiesXLFill);
+                for ( int i = 0; i < propSize / sizePerProp; i++ )
+                {
+                    properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
+                }
+                PropertyKeyValue before = new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), Values.intValue( 25 ) );
+                properties.add( before );
+
+                Set<RelationshipSpec> relationships = new HashSet<>();
+                double degSize = x8Size * degreesXLFill;
+                int numRelsOfDifferentType = (int) (degSize / 3.3d);
+
+                MutableLong nodeId = new MutableLong();
+                shouldGenerateIndexUpdates( target -> { /* do nothing */ }, target ->
+                {
+                    CommandCreationContext txContext = storageEngine.newCommandCreationContext( NULL, EmptyMemoryTracker.INSTANCE );
+                    long node = txContext.reserveNode();
+                    nodeId.setValue( node );
+                    target.visitCreatedNode( node );
+                    target.visitNodeLabelChanges( node, labels, LongSets.immutable.empty() );
+                    target.visitNodePropertyChanges( node, properties, Collections.emptyList(), IntSets.immutable.empty() );
+                    if ( numRelsOfDifferentType > 0 )
+                    {
+                        long otherNode = txContext.reserveNode();
+                        target.visitCreatedNode( otherNode );
+                        int relPad = x8Size / 2;
+                        int relType = 0;
+                        for ( int i = 0; i < numRelsOfDifferentType + relPad; i++ )
+                        {
+                            //only one rel/type ensures big degrees block
+                            RelationshipSpec relationshipSpec = new RelationshipSpec( node, relType, otherNode, emptySet(), txContext );
+                            relationships.add( relationshipSpec );
+                            relationshipSpec.create( target );
+
+                            if ( i < numRelsOfDifferentType )
+                            {
+                                relType++;
+                            }
+                        }
+                    }
+                }, index -> asSet( IndexEntryUpdate.add( nodeId.longValue(), index, before.value()) ) );
+                assertContentsOfNode( nodeId.longValue(), labels, properties, relationships );
+                assertXLChainLength( nodeId.longValue(), (int) (labelXLFill + propertiesXLFill + degreesXLFill + 0.65), degreesXLFill > 1e-3, false );
+            }
+
+            @Override
+            public String toString()
+            {
+                return String.format( "XL chains - Labels:%.1f Properties:%.1f Degrees:%.1f", labelXLFill, propertiesXLFill, degreesXLFill );
+            }
+        };
+        return DynamicTest.dynamicTest( test.toString(), test );
+    }
+
+    @TestFactory
+    Collection<DynamicTest> shouldSeeAllLabelPropertiesPermutations()
+    {
+        List<DynamicTest> tests = new ArrayList<>();
+        /*
+            -       ->  x1
+            -       ->  x1 + XL
+            x1      ->  -
+            x1 + XL ->  -
+            x1      ->  x1 + XL
+            x1 + XL ->  x1
+            x1 + x4 ->  x1 + x8
+            x1 + x8 ->  x1 + x4
+         */
+        tests.add( createIndexPermutationTest( 0, 1, false, false ) );
+        tests.add( createIndexPermutationTest( 1, 0, false, false ) );
+        for ( boolean labelsInXL : Set.of( true, false ) )
+        {
+            for ( boolean propsInXL : Set.of( true, false ) )
+            {
+                //avoid using x2 to make the code cleaner when ensuring both labels and props in XL
+                tests.add( createIndexPermutationTest( 0, 4, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 4, 0, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 1, 4, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 4, 1, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 4, 8, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 8, 4, labelsInXL, propsInXL ) );
+            }
+        }
+
+        return tests;
+    }
+
+    private DynamicTest createIndexPermutationTest( int beforeX, int afterX, boolean labelsInXL, boolean propsInXL )
+    {
+        Executable test = new Executable()
+        {
+            @Override
+            public void execute() throws Throwable
+            {
+                int beforeSize = beforeX == 0 ? 0 : Record.recordSize( Record.sizeExpFromXFactor( beforeX ) );
+                int afterSize = afterX == 0 ? 0 : Record.recordSize( Record.sizeExpFromXFactor( afterX ) );
+                assertNotEquals( beforeSize, afterSize );
+
+                MutableLongSet labels = LongSets.mutable.empty();
+                Set<StorageProperty> properties = new HashSet<>();
+
+                IntValue value = Values.intValue( 80 );
+                IntValue changedValue = Values.intValue( 90 );
+
+                int labelsSize = 2;
+                int propsSize = 3;
+                if ( labelsInXL )
+                {
+                    for ( int i = 0; i < Record.SIZE_BASE; i++ )
+                    {
+                        labels.add( SCHEMA_DESCRIPTOR.getLabelId() + i + 1 );
+                        labelsSize += 1;
+                    }
+                }
+                if ( propsInXL )
+                {
+                    Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+                    int sizePerProp = 10;
+                    for ( int i = 0; i < Record.SIZE_BASE / sizePerProp; i++ )
+                    {
+                        properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
+                        propsSize += sizePerProp;
+                    }
+                }
+                int labelsSizeBefore = beforeX > 1 ? labelsSize : 0;
+                int propsSizeBefore = beforeX > 1 ? propsSize : 0;
+                int labelsSizeAfter = afterX > 1 ? labelsSize : 0;
+                int propsSizeAfter = afterX > 1 ? propsSize : 0;
+
+                long nodeId = commandCreationContext.reserveNode();
+                long otherNodeId = commandCreationContext.reserveNode();
+
+                int beforeFillSize = beforeSize * 4 / 5; //should ensure correct record
+                int afterFillSize = afterSize * 4 / 5; //should ensure correct record
+
+                int relSize = 4;
+                int relsToAddBefore = beforeX > 1 ? (beforeFillSize - labelsSizeBefore - propsSizeBefore) / relSize : 0;
+                int relsToRemoveAfter = afterX == 1
+                                        ? relsToAddBefore
+                                        : ( afterX < beforeX
+                                            ? relsToAddBefore - ((afterFillSize - labelsSizeAfter - propsSizeAfter) / relSize)
+                                            : 0);
+                int relsToAddAfter = afterX != 1 && afterX > beforeX
+                                     ? ((afterFillSize - labelsSizeAfter - propsSizeAfter) / relSize) - relsToAddBefore
+                                     : 0;
+
+                shouldGenerateIndexUpdates( target ->
+                {
+                    //Setup (before state)
+                    target.visitCreatedNode( otherNodeId );
+                    if ( beforeX != 0 )
+                    {
+                        target.visitCreatedNode( nodeId );
+                        target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+                        target.visitNodePropertyChanges( nodeId, List.of( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                                IntSets.immutable.empty() );
+
+                        //padding to get correct before record size
+                        if ( beforeX > 1 )
+                        {
+                            //padding
+                            for ( int i = 0; i < relsToAddBefore; i++ )
+                            {
+                                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList());
+                            }
+                            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+                            target.visitNodePropertyChanges( nodeId, properties, emptyList(), IntSets.immutable.empty() );
+                        }
+                    }
+
+                }, target ->
+                {
+                    assertCorrectSizeXWithLabelPropertyLocation( nodeId, beforeX, labelsInXL, propsInXL );
+                    //Changes (after state)
+                    if ( afterX != 0 )
+                    {
+                        if ( beforeX == 0 )
+                        {
+                            target.visitCreatedNode( nodeId );
+                            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+                            target.visitNodePropertyChanges( nodeId, List.of( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                                    IntSets.immutable.empty() );
+                        }
+                        else
+                        {
+                            if ( beforeX > 1 && afterX <= 1 )
+                            {
+                                target.visitNodeLabelChanges( nodeId,  LongSets.immutable.empty(), labels );
+                                var toRemove =
+                                        IntSets.immutable.ofAll( properties.stream().map( StorageProperty::propertyKeyId ).collect( Collectors.toList() ) );
+                                target.visitNodePropertyChanges( nodeId, emptyList(), emptyList(), toRemove );
+                            }
+                            target.visitNodePropertyChanges( nodeId, emptyList(),
+                                    List.of( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), changedValue ) ), IntSets.immutable.empty() );
+                        }
+
+                        //padding to get labels/props in correct record
+                        if ( beforeX <= 1 && afterX > 1 )
+                        {
+                            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+                            target.visitNodePropertyChanges( nodeId, properties, emptyList(), IntSets.immutable.empty() );
+                        }
+
+                        if ( afterX > 1 )
+                        {
+                            for ( int i = 0; i < relsToAddAfter; i++ )
+                            {
+                                target.visitCreatedRelationship( i + relsToAddBefore, 0, nodeId, otherNodeId, emptyList());
+                            }
+                        }
+                        if ( beforeX > 1 )
+                        {
+                            for ( int i = 0; i < relsToRemoveAfter; i++ )
+                            {
+                                target.visitDeletedRelationship( i, 0, nodeId, otherNodeId );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for ( int i = 0; i < relsToAddBefore; i++ )
+                        {
+                            target.visitDeletedRelationship( i, 0, nodeId, otherNodeId );
+                        }
+                        target.visitDeletedNode( nodeId );
+                    }
+                }, index -> {
+                    assertCorrectSizeXWithLabelPropertyLocation( nodeId, afterX, labelsInXL, propsInXL );
+                    //Expected index updates
+                    Set<IndexEntryUpdate<IndexDescriptor>> updates = new HashSet<>();
+                    if ( afterX == 0 )
+                    {
+                        updates.add( IndexEntryUpdate.remove( nodeId, index, value ) );
+                    }
+                    else
+                    {
+                        if ( beforeX == 0 )
+                        {
+                            updates.add( IndexEntryUpdate.add( nodeId, index, value ) );
+                        }
+                        else
+                        {
+                            updates.add( IndexEntryUpdate.change( nodeId, index, value, changedValue ) );
+                        }
+                    }
+                    return updates;
+                }  );
+            }
+
+            @Override
+            public String toString()
+            {
+                return String.format( "IndexUpdatesTest:%s %s %s to %s",
+                        propsInXL ? " PropertiesInXL " : " ",
+                        labelsInXL ? " LabelsInXL " : " ",
+                        beforeX == 0 ? "created" : "x" + beforeX,
+                        afterX == 0 ? "deleted" : "x" + afterX
+                );
+            }
+        };
+        return DynamicTest.dynamicTest( test.toString(), test );
+    }
+
+    private void assertCorrectSizeXWithLabelPropertyLocation( long nodeId, int sizeX, boolean labelsInXL, boolean propsInXL )
+    {
+        try ( var storageReader = storageEngine.newReader();
+              var nodeCursor = storageReader.allocateNodeCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isEqualTo( sizeX > 0 );
+            if ( sizeX > 1 )
+            {
+                assertThat( nodeCursor.data.xLChainStartPointer ).isNotEqualTo( FrekiMainStoreCursor.NULL );
+                assertThat( nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) ).isEqualTo( labelsInXL );
+                assertThat( nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) ).isEqualTo( propsInXL );
+                int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.xLChainStartPointer );
+                assertThat( sizeX ).isEqualTo( Record.recordXFactor( sizeExp ) );
+            }
+            else if ( sizeX == 1 )
+            {
+                assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( FrekiMainStoreCursor.NULL );
+            }
+        }
+    }
+
+    private void assertXLChainLength( long nodeId, int expectedLength, boolean expectedDense, boolean exactLengthMatch )
+    {
+        try ( var storageReader = storageEngine.newReader();
+                var nodeCursor = storageReader.allocateNodeCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isTrue();
+            assertThat( nodeCursor.data.isDense ).isEqualTo( expectedDense );
+            assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( nodeCursor.data.xLChainNextLinkPointer ); //we have not yet loaded the chain
+
+            int actualChainLength = 0;
+            while ( nodeCursor.loadNextChainLink() )
+            {
+                actualChainLength++;
+            }
+            if ( exactLengthMatch )
+            {
+                assertThat( actualChainLength ).isEqualTo( expectedLength );
+            }
+            else
+            {
+                assertThat( actualChainLength ).isGreaterThanOrEqualTo( expectedLength );
+            }
+        }
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private void assertRelationshipsTo( long nodeId, Set<RelationshipSpec> relationships, RelationshipSelection selection, long otherNodeId )
     {
         try ( var storageReader = storageEngine.newReader();
                 var nodeCursor = storageReader.allocateNodeCursor( NULL );
+<<<<<<< HEAD
                 var propertyCursor = storageReader.allocatePropertyCursor( NULL );
+=======
+                var propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 var relationshipsCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
         {
             nodeCursor.single( nodeId );
@@ -1193,10 +1864,16 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+<<<<<<< HEAD
     private Set<StorageProperty> randomProperties()
     {
         Set<StorageProperty> properties = new HashSet<>();
         int numProperties = random.nextInt( 3 );
+=======
+    private Set<StorageProperty> randomProperties( int numProperties )
+    {
+        Set<StorageProperty> properties = new HashSet<>();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         for ( int i = 0; i < numProperties; i++ )
         {
             properties.add( new PropertyKeyValue( i, random.nextValue() ) );
@@ -1246,7 +1923,11 @@ class FrekiStorageEngineGraphWritesIT
     {
         try ( StorageReader storageReader = storageEngine.newReader();
                 StorageNodeCursor nodeCursor = storageReader.allocateNodeCursor( NULL );
+<<<<<<< HEAD
                 StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
+=======
+                StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
         {
             assertContentsOfNode( nodeId, labelIds, nodeProperties, relationships, nodeCursor, propertyCursor, relationshipCursor );
@@ -1272,7 +1953,12 @@ class FrekiStorageEngineGraphWritesIT
         assertThat( readRelationships ).isEqualTo( relationships );
 
         // degrees
+<<<<<<< HEAD
         Degrees degrees = nodeCursor.degrees( ALL_RELATIONSHIPS );
+=======
+        EagerDegrees degrees = new EagerDegrees();
+        nodeCursor.degrees( ALL_RELATIONSHIPS, degrees, true );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         Degrees expectedDegrees = buildExpectedDegrees( nodeId, relationships );
         assertThat( IntSets.immutable.of( degrees.types() ) ).isEqualTo( IntSets.immutable.of( expectedDegrees.types() ) );
         for ( int type : degrees.types() )
@@ -1281,6 +1967,21 @@ class FrekiStorageEngineGraphWritesIT
             assertThat( degrees.incomingDegree( type ) ).isEqualTo( expectedDegrees.incomingDegree( type ) );
             assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
         }
+<<<<<<< HEAD
+=======
+
+        // relationship types
+        IntSet relationshipTypes = IntSets.immutable.of( nodeCursor.relationshipTypes() );
+        IntSet expectedRelationshipTypes = buildExpectedRelationshipTypes( relationships );
+        assertThat( relationshipTypes ).isEqualTo( expectedRelationshipTypes );
+    }
+
+    private static IntSet buildExpectedRelationshipTypes( Set<RelationshipSpec> relationships )
+    {
+        MutableIntSet set = IntSets.mutable.empty();
+        relationships.forEach( rel -> set.add( rel.type ) );
+        return set;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     private Set<RelationshipSpec> readRelationships( StoragePropertyCursor propertyCursor, StorageRelationshipTraversalCursor relationshipCursor )
@@ -1425,6 +2126,7 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+<<<<<<< HEAD
     private static class RelationshipSpec
     {
         private final long id;
@@ -1500,6 +2202,8 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     private static class RecordingNodeLabelUpdateListener implements EntityTokenUpdateListener
     {
         private final MutableLongObjectMap<long[]> nodeLabels = LongObjectMaps.mutable.empty();

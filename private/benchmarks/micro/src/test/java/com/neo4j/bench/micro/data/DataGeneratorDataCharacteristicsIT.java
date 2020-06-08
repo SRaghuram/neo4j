@@ -7,12 +7,12 @@ package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.DataGenerator.GraphWriter;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
 import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

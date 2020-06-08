@@ -24,13 +24,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.zip.Checksum;
 
+import org.neo4j.io.memory.ScopedBuffer;
+
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;
+import static java.util.Objects.requireNonNull;
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.io.fs.ChecksumWriter.CHECKSUM_FACTORY;
 import static org.neo4j.io.fs.PhysicalFlushableChecksumChannel.DISABLE_WAL_CHECKSUM;
-import static org.neo4j.io.memory.ByteBuffers.allocateDirect;
-import static org.neo4j.io.memory.ByteBuffers.releaseBuffer;
 
 /**
  * A buffering implementation of {@link ReadableChannel}. This class also allows subclasses to read content
@@ -40,38 +41,30 @@ import static org.neo4j.io.memory.ByteBuffers.releaseBuffer;
 public class ReadAheadChannel<T extends StoreChannel> implements ReadableChecksumChannel, PositionableChannel
 {
     public static final int DEFAULT_READ_AHEAD_SIZE = toIntExact( kibiBytes( 4 ) );
+    private ScopedBuffer scopedBuffer;
 
     protected T channel;
     private final ByteBuffer aheadBuffer;
     private final int readAheadSize;
-    private final boolean cleanBufferOnClose;
     private final Checksum checksum;
     private final ByteBuffer checksumView;
 
-    public ReadAheadChannel( T channel )
-    {
-        this( channel, DEFAULT_READ_AHEAD_SIZE );
-    }
-
-    public ReadAheadChannel( T channel, int readAheadSize )
-    {
-        this( channel, allocateDirect( readAheadSize ), true );
-    }
-
     public ReadAheadChannel( T channel, ByteBuffer byteBuffer )
     {
-        this( channel, byteBuffer, false );
-    }
-
-    public ReadAheadChannel( T channel, ByteBuffer byteBuffer, boolean cleanBufferOnClose )
-    {
+        requireNonNull( channel );
+        requireNonNull( byteBuffer );
         this.aheadBuffer = byteBuffer;
         this.aheadBuffer.position( aheadBuffer.capacity() );
         this.channel = channel;
-        this.cleanBufferOnClose = cleanBufferOnClose;
-        this.readAheadSize = byteBuffer.capacity();
-        this.checksumView = byteBuffer.duplicate();
+        this.readAheadSize = aheadBuffer.capacity();
+        this.checksumView = aheadBuffer.duplicate();
         this.checksum = CHECKSUM_FACTORY.get();
+    }
+
+    public ReadAheadChannel( T channel, ScopedBuffer scopedBuffer )
+    {
+        this( channel, scopedBuffer.getBuffer() );
+        this.scopedBuffer = scopedBuffer;
     }
 
     /**
@@ -185,10 +178,14 @@ public class ReadAheadChannel<T extends StoreChannel> implements ReadableChecksu
     @Override
     public void close() throws IOException
     {
-        channel.close();
-        if ( cleanBufferOnClose )
+        if ( channel != null )
         {
-            releaseBuffer( aheadBuffer );
+            channel.close();
+            channel = null;
+        }
+        if ( scopedBuffer != null )
+        {
+            scopedBuffer.close();
         }
     }
 

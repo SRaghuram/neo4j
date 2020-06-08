@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
 import org.neo4j.cypher.internal.plandescription.Arguments.Rows
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription.TotalHits
+import org.neo4j.cypher.internal.plandescription.LogicalPlan2PlanDescriptionTest.anonVar
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
@@ -149,7 +150,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     plan should includeSomewhere.aPlan("ProcedureCall")
       .withRows(2)
       .withExactVariables("label")
-      .containingArgument("db.labels() :: (label :: String)")
+      .containingArgument("db.labels() :: (label :: STRING?)")
     plan.totalDbHits shouldBe TotalHits(0, uncertain = true)
   }
 
@@ -163,7 +164,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         plan should includeSomewhere.aPlan("ProcedureCall")
           .withRows(2)
           .withExactVariables("n", "label")
-          .containingArgument("db.labels() :: (label :: String)")
+          .containingArgument("db.labels() :: (label :: STRING?)")
           .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
         plan.totalDbHits shouldBe TotalHits(2, uncertain = true)
       }
@@ -412,18 +413,6 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         ))
   }
 
-  test("should show expand without types in a simple form") {
-    profile(Configs.All,
-      "MATCH (n)-->() RETURN *",
-      _.toString should include("()<--(n)"))
-  }
-
-  test("should show expand with types in a simple form") {
-    profile(Configs.All,
-      "MATCH (n)-[r:T]->() RETURN *",
-      _.toString should include("()<-[r:T]-(n)"))
-  }
-
   test("should report correct dbhits and rows for label scan") {
     // given
     createLabeledNode("Label1")
@@ -586,8 +575,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     result.executionPlanDescription() should includeSomewhere.aPlan("Distinct").withDBHits(2)
   }
 
-  //TODO: reenable once Pipelined Profile of NestedPlanExpression works
-  ignore("profile with filter using nested expressions pipe should report dbhits correctly") {
+  test("profile with filter using nested expressions pipe should report dbhits correctly") {
     // GIVEN
     createLabeledNode(Map("category_type" -> "cat"), "Category")
     createLabeledNode(Map("category_type" -> "cat"), "Category")
@@ -602,7 +590,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(anotherNode, createNode(), "HAS_CATEGORY")
 
     // THEN
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (cat:Category)
         |WITH collect(cat) as categories
         |MATCH (m:Entity)

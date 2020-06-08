@@ -96,7 +96,7 @@ object ValueConversion {
   }
 
   def asValues(params: Map[String, Any]): MapValue = {
-    if (params.isEmpty) return VirtualValues.EMPTY_MAP;
+    if (params.isEmpty) return VirtualValues.EMPTY_MAP
     val builder = new MapValueBuilder(params.size)
     params.foreach {
       case (key,value) => builder.add(key, asValue(value))
@@ -109,7 +109,7 @@ object ValueConversion {
     case s: String => Values.utf8Value(s)
     case c: Char => Values.charValue(c)
     case d: Double => Values.doubleValue(d)
-    case f: Float => Values.doubleValue(f)
+    case f: Float => Values.floatValue(f)
     case n: Number => Values.longValue(n.longValue())
     case b: Boolean => Values.booleanValue(b)
     case n: Node => ValueUtils.fromNodeEntity(n)

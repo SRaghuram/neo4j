@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation
 
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -27,10 +27,12 @@ import org.neo4j.values.storable.Values
 class CountStarFunction extends AggregationFunction {
   var count:Long = 0
 
-  override def apply(data: CypherRow, state: QueryState) {
+  override def apply(data: ReadableRow, state: QueryState) {
     count += 1
   }
 
   override def result(state: QueryState): AnyValue = Values.longValue(count)
+
+  override def recordMemoryDeallocation(): Unit = ()
 }
 

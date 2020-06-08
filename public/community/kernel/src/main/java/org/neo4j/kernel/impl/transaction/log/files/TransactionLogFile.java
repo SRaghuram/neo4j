@@ -22,11 +22,13 @@ package org.neo4j.kernel.impl.transaction.log.files;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.io.ByteUnit;
+import org.neo4j.io.IOUtils;
+import org.neo4j.io.fs.DelegatingStoreChannel;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
@@ -41,12 +43,11 @@ import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.LogVersionRepository;
 
 import static java.lang.Math.min;
 import static java.lang.Runtime.getRuntime;
-import static org.neo4j.io.memory.ByteBuffers.allocateDirect;
-import static org.neo4j.io.memory.ByteBuffers.releaseBuffer;
 
 /**
  * {@link LogFile} backed by one or more files in a {@link FileSystemAbstraction}.
@@ -59,11 +60,11 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
     private final TransactionLogFilesContext context;
     private final LogVersionBridge readerLogVersionBridge;
     private final PageCacheTracer pageCacheTracer;
-    private PositionAwarePhysicalFlushableChecksumChannel writer;
-    private LogVersionRepository logVersionRepository;
+    private final MemoryTracker memoryTracker;
 
     private volatile PhysicalLogVersionedStoreChannel channel;
-    private ByteBuffer byteBuffer;
+    private PositionAwarePhysicalFlushableChecksumChannel writer;
+    private LogVersionRepository logVersionRepository;
 
     TransactionLogFile( LogFiles logFiles, TransactionLogFilesContext context )
     {
@@ -72,6 +73,7 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
         this.logFiles = logFiles;
         this.readerLogVersionBridge = new ReaderLogVersionBridge( logFiles );
         this.pageCacheTracer = context.getDatabaseTracers().getPageCacheTracer();
+        memoryTracker = context.getMemoryTracker();
     }
 
     @Override
@@ -89,38 +91,58 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
         //try to set position
         seekChannelPosition( currentLogVersion );
 
-        this.byteBuffer = allocateDirect( calculateLogBufferSize() );
-        writer = new PositionAwarePhysicalFlushableChecksumChannel( channel, byteBuffer );
+        writer = new PositionAwarePhysicalFlushableChecksumChannel( channel, new NativeScopedBuffer( calculateLogBufferSize(), memoryTracker ) );
     }
 
     private void seekChannelPosition( long currentLogVersion ) throws IOException
     {
-        scrollToTheLastClosedTxPosition( currentLogVersion );
-        LogPosition position = scrollOverCheckpointRecords();
+        jumpToTheLastClosedTxPosition( currentLogVersion );
+        LogPosition position;
+        try
+        {
+            position = scanToEndOfLastLogEntry();
+        }
+        catch ( Exception e )
+        {
+            // If we can't read the log, it could be that the last-closed-transaction position in the meta-data store is wrong.
+            // We can try again by scanning the log file from the start.
+            jumpToLogStart( currentLogVersion );
+            try
+            {
+                position = scanToEndOfLastLogEntry();
+            }
+            catch ( Exception exception )
+            {
+                exception.addSuppressed( e );
+                throw exception;
+            }
+        }
         channel.position( position.getByteOffset() );
     }
 
-    private LogPosition scrollOverCheckpointRecords() throws IOException
+    private LogPosition scanToEndOfLastLogEntry() throws IOException
     {
         // scroll all over possible checkpoints
-        ReadAheadLogChannel readAheadLogChannel = new ReadAheadLogChannel( channel );
-        LogEntryReader logEntryReader = context.getLogEntryReader();
-        LogEntry entry;
-        do
+        try ( ReadAheadLogChannel readAheadLogChannel = new ReadAheadLogChannel( new UncloseableChannel( channel ), memoryTracker ) )
         {
-            // seek to the end the records.
-            entry = logEntryReader.readLogEntry( readAheadLogChannel );
+            LogEntryReader logEntryReader = context.getLogEntryReader();
+            LogEntry entry;
+            do
+            {
+                // seek to the end the records.
+                entry = logEntryReader.readLogEntry( readAheadLogChannel );
+            }
+            while ( entry != null );
+            return logEntryReader.lastPosition();
         }
-        while ( entry != null );
-        return logEntryReader.lastPosition();
     }
 
-    private void scrollToTheLastClosedTxPosition( long currentLogVersion ) throws IOException
+    private void jumpToTheLastClosedTxPosition( long currentLogVersion ) throws IOException
     {
         LogPosition logPosition = context.getLastClosedTransactionPosition();
         long lastTxOffset = logPosition.getByteOffset();
         long lastTxLogVersion = logPosition.getLogVersion();
-        final long headerSize = logFiles.extractHeader( currentLogVersion ).getStartPosition().getByteOffset();
+        long headerSize = logFiles.extractHeader( currentLogVersion ).getStartPosition().getByteOffset();
         if ( lastTxOffset < headerSize || channel.size() < lastTxOffset )
         {
             return;
@@ -131,20 +153,19 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
         }
     }
 
+    private void jumpToLogStart( long currentLogVersion ) throws IOException
+    {
+        long headerSize = logFiles.extractHeader( currentLogVersion ).getStartPosition().getByteOffset();
+        channel.position( headerSize );
+    }
+
     // In order to be able to write into a logfile after life.stop during shutdown sequence
     // we will close channel and writer only during shutdown phase when all pending changes (like last
     // checkpoint) are already in
     @Override
     public void shutdown() throws IOException
     {
-        if ( writer != null )
-        {
-            writer.close();
-        }
-        if ( byteBuffer != null )
-        {
-            releaseBuffer( byteBuffer );
-        }
+        IOUtils.closeAll( writer );
     }
 
     @Override
@@ -258,7 +279,7 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
     {
         PhysicalLogVersionedStoreChannel logChannel = logFiles.openForVersion( position.getLogVersion() );
         logChannel.position( position.getByteOffset() );
-        return new ReadAheadLogChannel( logChannel, logVersionBridge );
+        return new ReadAheadLogChannel( logChannel, logVersionBridge, memoryTracker );
     }
 
     @Override
@@ -285,5 +306,31 @@ class TransactionLogFile extends LifecycleAdapter implements LogFile
     private static int calculateLogBufferSize()
     {
         return (int) ByteUnit.kibiBytes( min( (getRuntime().availableProcessors() / 4) + 1, 8 ) * 512 );
+    }
+
+    private static class UncloseableChannel extends DelegatingStoreChannel<LogVersionedStoreChannel> implements LogVersionedStoreChannel
+    {
+        UncloseableChannel( LogVersionedStoreChannel channel )
+        {
+            super( channel );
+        }
+
+        @Override
+        public long getVersion()
+        {
+            return delegate.getVersion();
+        }
+
+        @Override
+        public byte getLogFormatVersion()
+        {
+            return delegate.getLogFormatVersion();
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+            // do not close since channel is shared
+        }
     }
 }

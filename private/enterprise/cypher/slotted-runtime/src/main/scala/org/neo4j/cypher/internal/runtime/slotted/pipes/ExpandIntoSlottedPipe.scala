@@ -59,7 +59,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[CypherRow],
                                       state: QueryState): Iterator[CypherRow] = {
     val query = state.query
-    val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection, state.memoryTracker, id.x)
+    val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection, state.memoryTracker.memoryTrackerForOperator(id.x))
     input.flatMap {
       inputRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)

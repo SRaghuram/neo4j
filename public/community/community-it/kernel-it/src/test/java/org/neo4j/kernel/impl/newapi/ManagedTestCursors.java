@@ -33,14 +33,15 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class ManagedTestCursors implements CursorFactory
 {
-    private List<Cursor> allCursors = new ArrayList<>();
+    private final List<Cursor> allCursors = new ArrayList<>();
 
-    private CursorFactory cursors;
+    private final CursorFactory cursors;
 
     ManagedTestCursors( CursorFactory c )
     {
@@ -53,7 +54,7 @@ public class ManagedTestCursors implements CursorFactory
         {
             if ( !n.isClosed() )
             {
-                fail( "The Cursor " + n.toString() + " was not closed properly." );
+                fail( "The Cursor " + n + " was not closed properly." );
             }
         }
 
@@ -101,41 +102,41 @@ public class ManagedTestCursors implements CursorFactory
     }
 
     @Override
-    public PropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
+    public PropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        PropertyCursor n = cursors.allocatePropertyCursor( cursorTracer );
+        PropertyCursor n = cursors.allocatePropertyCursor( cursorTracer, memoryTracker );
         allCursors.add( n );
         return n;
     }
 
     @Override
-    public PropertyCursor allocateFullAccessPropertyCursor( PageCursorTracer cursorTracer )
+    public PropertyCursor allocateFullAccessPropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        PropertyCursor n = cursors.allocateFullAccessPropertyCursor( cursorTracer );
+        PropertyCursor n = cursors.allocateFullAccessPropertyCursor( cursorTracer, memoryTracker );
         allCursors.add( n );
         return n;
     }
 
     @Override
-    public NodeValueIndexCursor allocateNodeValueIndexCursor()
+    public NodeValueIndexCursor allocateNodeValueIndexCursor( PageCursorTracer cursorTracer )
     {
-        NodeValueIndexCursor n = cursors.allocateNodeValueIndexCursor();
+        NodeValueIndexCursor n = cursors.allocateNodeValueIndexCursor( cursorTracer );
         allCursors.add( n );
         return n;
     }
 
     @Override
-    public NodeLabelIndexCursor allocateNodeLabelIndexCursor()
+    public NodeLabelIndexCursor allocateNodeLabelIndexCursor( PageCursorTracer cursorTracer )
     {
-        NodeLabelIndexCursor n = cursors.allocateNodeLabelIndexCursor();
+        NodeLabelIndexCursor n = cursors.allocateNodeLabelIndexCursor( cursorTracer );
         allCursors.add( n );
         return n;
     }
 
     @Override
-    public RelationshipIndexCursor allocateRelationshipIndexCursor()
+    public RelationshipIndexCursor allocateRelationshipIndexCursor( PageCursorTracer cursorTracer )
     {
-        RelationshipIndexCursor n = cursors.allocateRelationshipIndexCursor();
+        RelationshipIndexCursor n = cursors.allocateRelationshipIndexCursor( cursorTracer );
         allCursors.add( n );
         return n;
     }

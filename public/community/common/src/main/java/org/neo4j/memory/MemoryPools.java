@@ -19,38 +19,74 @@
  */
 package org.neo4j.memory;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+
 public final class MemoryPools
 {
-    public static final MemoryPool NO_TRACKING = new NoTrackingMemoryPool();
+    public static final ScopedMemoryPool NO_TRACKING = new NoTrackingMemoryPool();
+    private final List<GlobalMemoryGroupTracker> pools = new CopyOnWriteArrayList<>();
 
-    private MemoryPools()
+    public GlobalMemoryGroupTracker pool( MemoryGroup group, long limit )
     {
+        return this.pool( group, limit, true );
     }
 
-    /**
-     * Constructs a new memory pool.
-     *
-     * @param limit of the pool, passing 0 will result in an unbounded pool
-     * @return a new memory pool with the specified limit
-     */
-    public static MemoryPool fromLimit( long limit )
+    public GlobalMemoryGroupTracker pool( MemoryGroup group, long limit, boolean strict )
     {
-        if ( limit == 0 )
-        {
-            return new MemoryPoolImpl.UnboundedMemoryPool();
-        }
-        return new MemoryPoolImpl.BoundedMemoryPool( limit );
+        var pool = new GlobalMemoryGroupTracker( this, group, limit, strict );
+        pools.add( pool );
+        return pool;
     }
 
-    private static class NoTrackingMemoryPool implements MemoryPool
+    public void registerPool( GlobalMemoryGroupTracker pool )
+    {
+        pools.add( pool );
+    }
+
+    public boolean unregisterPool( GlobalMemoryGroupTracker pool )
+    {
+        return pools.remove( pool );
+    }
+
+    public List<GlobalMemoryGroupTracker> getPools()
+    {
+        return new ArrayList<>( pools );
+    }
+
+    void releasePool( GlobalMemoryGroupTracker globalMemoryGroupTracker )
+    {
+        pools.remove( globalMemoryGroupTracker );
+    }
+
+    private static class NoTrackingMemoryPool implements ScopedMemoryPool
     {
         @Override
-        public void reserve( long bytes )
+        public MemoryGroup group()
+        {
+            return MemoryGroup.NO_TRACKING;
+        }
+
+        @Override
+        public void reserveHeap( long bytes )
         {
         }
 
         @Override
-        public void release( long bytes )
+        public void reserveNative( long bytes )
+        {
+        }
+
+        @Override
+        public void releaseHeap( long bytes )
+        {
+        }
+
+        @Override
+        public void releaseNative( long bytes )
         {
         }
 
@@ -61,7 +97,19 @@ public final class MemoryPools
         }
 
         @Override
-        public long used()
+        public long usedHeap()
+        {
+            return 0;
+        }
+
+        @Override
+        public long usedNative()
+        {
+            return 0;
+        }
+
+        @Override
+        public long totalUsed()
         {
             return 0;
         }
@@ -70,6 +118,22 @@ public final class MemoryPools
         public long free()
         {
             return Long.MAX_VALUE;
+        }
+
+        @Override
+        public void close()
+        {
+        }
+
+        @Override
+        public MemoryTracker getPoolMemoryTracker()
+        {
+            return INSTANCE;
+        }
+
+        @Override
+        public void setSize( long size )
+        {
         }
     }
 }

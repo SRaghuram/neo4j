@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
@@ -29,11 +30,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
@@ -54,9 +56,10 @@ case class ExecutablePipeline(id: PipelineId,
                               needsMorsel: Boolean = true,
                               needsFilteringMorsel: Boolean = false) extends WorkIdentity {
 
-  def isFused: Boolean = start match {
-    case _: CompiledStreamingOperator => true
-    case _ => false
+  def startOperatorCanTrackTime: Boolean = start match {
+    case _: CompiledStreamingOperator => false
+    case _: SlottedPipeHeadOperator => false
+    case _ => true
   }
 
   def createState(executionState: ExecutionState,
@@ -67,9 +70,12 @@ case class ExecutablePipeline(id: PipelineId,
     // when a pipeline is fully fused (including output operator) the CompiledTask acts as OutputOperator
     def outputOperatorStateFor(operatorTask: OperatorTask): OutputOperatorState = (operatorTask, outputOperator) match {
       case (compiledTask: CompiledTask, NoOutputOperator) if middleOperators.isEmpty =>
-        compiledTask.createState(executionState)
+        compiledTask.createState(executionState, stateFactory)
+      case (compiledTask: CompiledTask, _) =>
+        compiledTask.createState(executionState, stateFactory) // Always call createState of the compiled task even if not used as the actual output
+        outputOperator.createState(executionState, stateFactory)
       case _ =>
-        outputOperator.createState(executionState)
+        outputOperator.createState(executionState, stateFactory)
     }
 
     val middleTasks = new Array[OperatorTask](middleOperators.length)
@@ -102,6 +108,13 @@ class PipelineState(val pipeline: ExecutablePipeline,
                     middleTasks: Array[OperatorTask],
                     outputOperatorStateCreator: OperatorTask => OutputOperatorState,
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
+
+  private val workLimiterASM =
+    pipeline.workLimiter match {
+      case None => null
+      case Some(id) =>
+        executionState.argumentStateMaps(id).asInstanceOf[ArgumentStateMap[WorkCanceller]]
+    }
 
   /**
    * Returns the next task for this pipeline, or `null` if no task is available.
@@ -172,11 +185,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
     }
   }
 
-  private def remainingRows = {
-    pipeline.workLimiter
-      .map(id => executionState.argumentStateMaps(id).asInstanceOf[UnorderedArgumentStateMap[WorkCanceller]].peek(TopLevelArgument.VALUE).remaining)
-      .getOrElse(Long.MaxValue)
-  }
+  private def remainingRows: Long =
+    if (workLimiterASM != null)
+      workLimiterASM.peek(TopLevelArgument.VALUE).remaining
+    else
+      Long.MaxValue
 
   private def innerNextTask(state: PipelinedQueryState,
                             resources: QueryResources): PipelineTask = {
@@ -191,7 +204,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     val parallelism = if (pipeline.serial) 1 else state.numberOfWorkers
     val startTasks = startState.nextTasks(state, this, parallelism, resources, executionState.argumentStateMaps)
     if (startTasks != null) {
-      Preconditions.checkArgument(startTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
+      AssertMacros.checkOnlyWhenAssertionsAreEnabled(startTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
 
       def asPipelineTask(startTask: ContinuableOperatorTask): PipelineTask =
         PipelineTask(startTask,

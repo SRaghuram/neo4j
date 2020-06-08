@@ -6,8 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,10 +25,10 @@ import org.neo4j.driver.internal.async.connection.EventLoopGroupFactory;
 import org.neo4j.driver.internal.cluster.RoutingSettings;
 import org.neo4j.driver.internal.retry.RetrySettings;
 import org.neo4j.driver.internal.shaded.io.netty.channel.EventLoopGroup;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
 import static org.apache.commons.lang3.builder.HashCodeBuilder.reflectionHashCode;
@@ -41,24 +40,22 @@ public class DriverPool extends LifecycleAdapter
     private final ConcurrentHashMap<Key,PooledDriver> idleDrivers = new ConcurrentHashMap<>();
     private final CredentialsProvider credentialsProvider;
     private final JobScheduler jobScheduler;
-    private final FabricConfig fabricConfig;
     private final Clock clock;
     private final DriverConfigFactory driverConfigFactory;
+    private final FabricEnterpriseConfig fabricConfig;
     private final EventLoopGroup eventLoopGroup;
 
     public DriverPool( JobScheduler jobScheduler,
-            FabricConfig fabricConfig,
-            org.neo4j.configuration.Config serverConfig,
+            DriverConfigFactory driverConfigFactory,
+            FabricEnterpriseConfig fabricConfig,
             Clock clock,
-            CredentialsProvider credentialsProvider,
-            SslPolicyLoader sslPolicyLoader )
+            CredentialsProvider credentialsProvider )
     {
         this.jobScheduler = jobScheduler;
-        this.fabricConfig = fabricConfig;
         this.clock = clock;
         this.credentialsProvider = credentialsProvider;
-
-        driverConfigFactory = new DriverConfigFactory( fabricConfig, serverConfig, sslPolicyLoader );
+        this.driverConfigFactory = driverConfigFactory;
+        this.fabricConfig = fabricConfig;
 
         var eventLoopCount = fabricConfig.getGlobalDriverConfig().getEventLoopCount();
         eventLoopGroup = EventLoopGroupFactory.newEventLoopGroup( eventLoopCount );
@@ -158,7 +155,7 @@ public class DriverPool extends LifecycleAdapter
                 eventLoopGroup,
                 securityPlan );
 
-        var driverApi = driverConfigFactory.getProperty( location, FabricConfig.DriverConfig::getDriverApi );
+        var driverApi = driverConfigFactory.getDriverApi( location );
         switch ( driverApi )
         {
         case RX:

@@ -16,7 +16,6 @@
  */
 package org.neo4j.cypher.internal.ast.prettifier
 
-import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier.failingExtender
 import org.neo4j.cypher.internal.expressions.Add
 import org.neo4j.cypher.internal.expressions.AllIterablePredicate
 import org.neo4j.cypher.internal.expressions.AllPropertiesSelector
@@ -25,6 +24,7 @@ import org.neo4j.cypher.internal.expressions.Ands
 import org.neo4j.cypher.internal.expressions.AnyIterablePredicate
 import org.neo4j.cypher.internal.expressions.BinaryOperatorExpression
 import org.neo4j.cypher.internal.expressions.CaseExpression
+import org.neo4j.cypher.internal.expressions.CoerceTo
 import org.neo4j.cypher.internal.expressions.ContainerIndex
 import org.neo4j.cypher.internal.expressions.Contains
 import org.neo4j.cypher.internal.expressions.CountStar
@@ -70,6 +70,8 @@ import org.neo4j.cypher.internal.expressions.ReduceExpression
 import org.neo4j.cypher.internal.expressions.ReduceScope
 import org.neo4j.cypher.internal.expressions.RegexMatch
 import org.neo4j.cypher.internal.expressions.RelationshipsPattern
+import org.neo4j.cypher.internal.expressions.SensitiveAutoParameter
+import org.neo4j.cypher.internal.expressions.SensitiveString
 import org.neo4j.cypher.internal.expressions.ShortestPathExpression
 import org.neo4j.cypher.internal.expressions.SingleIterablePredicate
 import org.neo4j.cypher.internal.expressions.StartsWith
@@ -83,10 +85,11 @@ import org.neo4j.cypher.internal.expressions.VariableSelector
 import org.neo4j.cypher.internal.expressions.Xor
 
 case class ExpressionStringifier(
-  extender: Expression => String = failingExtender,
-  alwaysParens: Boolean = false,
-  alwaysBacktick: Boolean = false,
-  preferSingleQuotes: Boolean = false
+  extension: ExpressionStringifier.Extension,
+  alwaysParens: Boolean,
+  alwaysBacktick: Boolean,
+  preferSingleQuotes: Boolean,
+  sensitiveParamsAsParams: Boolean
 ) {
 
   val patterns = PatternStringifier(this)
@@ -102,11 +105,13 @@ case class ExpressionStringifier(
 
   private def inner(outer: Expression)(inner: Expression): String = {
     val str = stringify(inner)
+
     def parens = (binding(outer), binding(inner)) match {
-      case (_, Syntactic) => false
-      case (Syntactic, _) => false
+      case (_, Syntactic)                 => false
+      case (Syntactic, _)                 => false
       case (Precedence(o), Precedence(i)) => i >= o
     }
+
     if (alwaysParens || parens) "(" + str + ")"
     else str
   }
@@ -281,8 +286,11 @@ case class ExpressionStringifier(
         val i = inner(ast)(r)
         s"-$i"
 
+      case CoerceTo(expr, typ) =>
+        apply(expr)
+
       case _ =>
-        extender(ast)
+        extension(this)(ast)
     }
   }
 
@@ -358,18 +366,7 @@ case class ExpressionStringifier(
   }
 
   def backtick(txt: String): String = {
-    def escaped = txt.replaceAll("`", "``")
-    if (alwaysBacktick)
-      s"`$escaped`"
-    else {
-      val isJavaIdentifier =
-        txt.codePoints().limit(1).allMatch(p => Character.isJavaIdentifierStart(p)) &&
-          txt.codePoints().skip(1).allMatch(p => Character.isJavaIdentifierPart(p))
-      if (!isJavaIdentifier)
-        s"`$escaped`"
-      else
-        txt
-    }
+    ExpressionStringifier.backtick(txt, alwaysBacktick)
   }
 
   def quote(txt: String): String = {
@@ -383,9 +380,54 @@ case class ExpressionStringifier(
     else
       "\"" + str + "\""
   }
+
+  def escapePassword(password: Expression): String = password match {
+    case _: SensitiveString => "'******'"
+    case _: SensitiveAutoParameter if !sensitiveParamsAsParams => "'******'"
+    case param: Parameter => s"$$${ExpressionStringifier.backtick(param.name)}"
+  }
 }
 
 object ExpressionStringifier {
+
+  def apply(
+    extender: Expression => String = failingExtender,
+    alwaysParens: Boolean = false,
+    alwaysBacktick: Boolean = false,
+    preferSingleQuotes: Boolean = false,
+    sensitiveParamsAsParams: Boolean = false
+  ): ExpressionStringifier = ExpressionStringifier(Extension.simple(extender), alwaysParens, alwaysBacktick, preferSingleQuotes, sensitiveParamsAsParams)
+
+  trait Extension {
+    def apply(ctx: ExpressionStringifier)(expression: Expression): String
+  }
+
+  object Extension {
+    def simple(func: Expression => String): Extension = new Extension {
+      def apply(ctx: ExpressionStringifier)(expression: Expression): String = func(expression)
+    }
+  }
+
+    /*
+   * Some strings (identifiers) were escaped with back-ticks to allow non-identifier characters
+   * When printing these again, the knowledge of the back-ticks is lost, but the same test for
+   * non-identifier characters can be used to recover that knowledge.
+   */
+  def backtick(txt: String, alwaysBacktick: Boolean = false): String = {
+    def escaped = txt.replaceAll("`", "``")
+
+    if (alwaysBacktick)
+      s"`$escaped`"
+    else {
+      val isJavaIdentifier =
+        txt.codePoints().limit(1).allMatch(p => Character.isJavaIdentifierStart(p) && Character.getType(p) != Character.CURRENCY_SYMBOL) &&
+          txt.codePoints().skip(1).allMatch(p => Character.isJavaIdentifierPart(p))
+      if (!isJavaIdentifier)
+        s"`$escaped`"
+      else
+        txt
+    }
+  }
 
   val failingExtender: Expression => String =
     e => throw new IllegalStateException(s"failed to pretty print $e")

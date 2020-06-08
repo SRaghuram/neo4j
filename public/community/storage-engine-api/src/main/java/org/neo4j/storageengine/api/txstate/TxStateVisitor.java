@@ -47,7 +47,11 @@ public interface TxStateVisitor extends AutoCloseable
     void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
             IntIterable removed ) throws ConstraintValidationException;
 
+<<<<<<< HEAD
     void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
+=======
+    void visitRelPropertyChanges( long id, int type, long startNode, long endNode, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             IntIterable removed ) throws ConstraintValidationException;
 
     void visitNodeLabelChanges( long id, LongSet added, LongSet removed ) throws ConstraintValidationException;
@@ -104,7 +108,11 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
+<<<<<<< HEAD
         public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added,
+=======
+        public void visitRelPropertyChanges( long id, int type, long startNode, long endNode, Iterable<StorageProperty> added,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 Iterable<StorageProperty> changed, IntIterable removed )
         {
         }
@@ -200,11 +208,15 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
+<<<<<<< HEAD
         public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added,
+=======
+        public void visitRelPropertyChanges( long id, int type, long startNode, long endNode, Iterable<StorageProperty> added,
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 Iterable<StorageProperty> changed, IntIterable removed )
                         throws ConstraintValidationException
         {
-            actual.visitRelPropertyChanges( id, added, changed, removed );
+            actual.visitRelPropertyChanges( id, type, startNode, endNode, added, changed, removed );
         }
 
         @Override

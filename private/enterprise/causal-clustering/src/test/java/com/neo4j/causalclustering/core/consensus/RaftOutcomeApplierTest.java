@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
@@ -17,10 +18,8 @@ import com.neo4j.causalclustering.messaging.Outbound;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
-import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,11 +29,11 @@ import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
-import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,7 +41,6 @@ import static org.mockito.Mockito.when;
 
 class RaftOutcomeApplierTest
 {
-
     private RaftState raftState = mock( RaftState.class );
     private LogProvider logProvider = NullLogProvider.getInstance();
     private Outbound<MemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
@@ -52,14 +50,15 @@ class RaftOutcomeApplierTest
     private RaftMembershipManager membershipManager = mock( RaftMembershipManager.class );
 
     private RaftOutcomeApplier raftOutcomeApplier =
-            new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping, membershipManager, logProvider );
+            new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping, membershipManager, logProvider,
+                                    rejection -> {} );
 
-    private OutcomeBuilder outcomeBuilder = OutcomeBuilder.builder();
+    private OutcomeBuilder outcomeTestBuilder = OutcomeTestBuilder.builder();
 
     @Test
     void shouldUpdateState() throws IOException
     {
-        var outcome = outcomeBuilder.build();
+        var outcome = outcomeTestBuilder.build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -75,9 +74,12 @@ class RaftOutcomeApplierTest
                 .limit( 3 )
                 .collect( Collectors.toList() );
 
-        var outcome = outcomeBuilder.setOutgoingMessages( outgoingMessages ).build();
+        for ( RaftMessages.Directed outgoingMessage : outgoingMessages )
+        {
+            outcomeTestBuilder.addOutgoingMessage( outgoingMessage ).build();
+        }
 
-        raftOutcomeApplier.handle( outcome );
+        raftOutcomeApplier.handle( outcomeTestBuilder.build() );
 
         outgoingMessages.forEach( msg -> verify( outbound ).send( msg.to(), msg.message() ) );
     }
@@ -85,7 +87,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldResetRaftMessageResetMonitorIfElectionRenewed() throws IOException
     {
-        var outcome = outcomeBuilder.setElectionTimerMode( ACTIVE_ELECTION ).build();
+        var outcome = outcomeTestBuilder.renewElectionTimer( ACTIVE_ELECTION ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -95,7 +97,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldRenewLeaderAvailabilityTimerIfSteppingDown() throws IOException
     {
-        var outcome = outcomeBuilder.setSteppingDownInTerm( OptionalLong.of( 3L ) ).build();
+        var outcome = outcomeTestBuilder.steppingDown( 3 ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -105,7 +107,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotResetRaftMessageResetMonitorIfElectionNotRenewedAndNotSteppingDown() throws IOException
     {
-        var outcome = outcomeBuilder.setElectionTimerMode( null ).build();
+        var outcome = outcomeTestBuilder.build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -116,7 +118,7 @@ class RaftOutcomeApplierTest
     @EnumSource( ElectionTimerMode.class )
     void shouldRenewLeaderAvailabilityTimerAndResetRaftMessageResetMonitorIfElectionTimerModeSet( ElectionTimerMode mode ) throws IOException
     {
-        var outcome = outcomeBuilder.setElectionTimerMode( mode ).build();
+        var outcome = outcomeTestBuilder.renewElectionTimer( mode ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -127,7 +129,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotRenewLeaderAvailabilityTimerIfElectionNotRenewed() throws IOException
     {
-        var outcome = outcomeBuilder.build();
+        var outcome = outcomeTestBuilder.build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -137,8 +139,8 @@ class RaftOutcomeApplierTest
     @Test
     void shouldResumeLogShippingIfElectedLeader() throws IOException
     {
-        var outcome = outcomeBuilder
-                .setElectedLeader( true )
+        var outcome = outcomeTestBuilder
+                .electedLeader()
                 .setTerm( 23423L )
                 .setLeaderCommit( 7589023470L )
                 .build();
@@ -151,8 +153,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotResumeLogShippingIfNotElectedLeader() throws IOException
     {
-        var outcome = outcomeBuilder
-                .setElectedLeader( false )
+        var outcome = outcomeTestBuilder
                 .setTerm( 23423L )
                 .setLeaderCommit( 7589023470L )
                 .build();
@@ -165,7 +166,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldPauseIfSteppingDown() throws IOException
     {
-        var outcome = outcomeBuilder.setSteppingDownInTerm( OptionalLong.of( 0L ) ).build();
+        var outcome = outcomeTestBuilder.steppingDown( 0 ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -175,7 +176,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotPauseIfNotSteppingDown() throws IOException
     {
-        var outcome = outcomeBuilder.setSteppingDownInTerm( OptionalLong.empty() ).build();
+        var outcome = outcomeTestBuilder.build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -185,8 +186,8 @@ class RaftOutcomeApplierTest
     @Test
     void shouldHandleLogShippingCommandsIfLeader() throws IOException
     {
-        var outcome = outcomeBuilder
-                .setNextRole( Role.LEADER )
+        var outcome = outcomeTestBuilder
+                .setRole( Role.LEADER )
                 .setTerm( 78493L )
                 .setLeaderCommit( 7589024379L )
                 .build();
@@ -199,8 +200,8 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotHandleLogShippingCommandsIfNotLeader() throws IOException
     {
-        var outcome = outcomeBuilder
-                .setNextRole( Role.FOLLOWER )
+        var outcome = outcomeTestBuilder
+                .setRole( Role.FOLLOWER )
                 .setTerm( 78493L )
                 .setLeaderCommit( 7589024379L )
                 .build();
@@ -213,7 +214,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldSetLeader() throws IOException
     {
-        var outcome = outcomeBuilder.build();
+        var outcome = outcomeTestBuilder.build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -224,13 +225,13 @@ class RaftOutcomeApplierTest
     void shouldNotifyLeaderChangesIfNewLeader() throws IOException
     {
         when( raftState.leader() ).thenReturn( new MemberId( UUID.randomUUID() ) );
-        var outcome = outcomeBuilder.build();
+        var outcome = outcomeTestBuilder.build();
         var listener = mock( LeaderListener.class );
         raftOutcomeApplier.registerListener( listener );
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener ).onLeaderEvent( outcome );
+        verifyListener( outcome, listener );
     }
 
     @Test
@@ -238,13 +239,14 @@ class RaftOutcomeApplierTest
     {
         MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( leader );
-        var outcome = outcomeBuilder.setLeader( leader ).build();
+        var outcome = outcomeTestBuilder.setLeader( leader ).build();
         var listener = mock( LeaderListener.class );
         raftOutcomeApplier.registerListener( listener );
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener, never() ).onLeaderEvent( any( Outcome.class ) );
+        verify( listener, never() ).onLeaderSwitch( any( LeaderInfo.class ) );
+        verify( listener, never() ).onLeaderStepDown( anyLong() );
     }
 
     @Test
@@ -252,13 +254,22 @@ class RaftOutcomeApplierTest
     {
         MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( leader );
-        var outcome = outcomeBuilder.setLeader( null ).build();
+        var outcome = outcomeTestBuilder.setLeader( null ).build();
         var listener = mock( LeaderListener.class );
         raftOutcomeApplier.registerListener( listener );
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener ).onLeaderEvent( outcome );
+        verifyListener( outcome, listener );
+    }
+
+    private void verifyListener( Outcome outcome, LeaderListener listener )
+    {
+        if ( outcome.stepDownTerm().isPresent() )
+        {
+            verify( listener ).onLeaderStepDown( outcome.stepDownTerm().getAsLong() );
+        }
+        verify( listener ).onLeaderSwitch( any( LeaderInfo.class ) );
     }
 
     @Test
@@ -266,19 +277,19 @@ class RaftOutcomeApplierTest
     {
         MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( null );
-        var outcome = outcomeBuilder.setLeader( leader ).build();
+        var outcome = outcomeTestBuilder.setLeader( leader ).build();
         var listener = mock( LeaderListener.class );
         raftOutcomeApplier.registerListener( listener );
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener ).onLeaderEvent( outcome );
+        verifyListener( outcome, listener );
     }
 
     @Test
     void shouldDriveMembership() throws IOException
     {
-        var outcome = outcomeBuilder.setCommitIndex( 78798L ).build();
+        var outcome = outcomeTestBuilder.setCommitIndex( 78798L ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -289,7 +300,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldDriveMembershipFollowerStateIfLeader() throws IOException
     {
-        var outcome = outcomeBuilder.setNextRole( Role.LEADER ).build();
+        var outcome = outcomeTestBuilder.setRole( Role.LEADER ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -299,7 +310,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotDriveMembershipFollowerStateIfNotLeader() throws IOException
     {
-        var outcome = outcomeBuilder.setNextRole( Role.FOLLOWER ).build();
+        var outcome = outcomeTestBuilder.setRole( Role.FOLLOWER ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -307,9 +318,37 @@ class RaftOutcomeApplierTest
     }
 
     @Test
+    void shouldChangeMembershipManagerStateIfTransferringLeadership() throws IOException
+    {
+        var transferTarget = new MemberId( UUID.randomUUID() );
+        var outcome = outcomeTestBuilder.setRole( Role.LEADER )
+                                        .startTransferringLeadership( transferTarget )
+                                        .build();
+        when( raftState.areTransferringLeadership() ).thenReturn( true );
+
+        raftOutcomeApplier.handle( outcome );
+
+        verify( membershipManager ).handleLeadershipTransfers( true );
+    }
+
+    @Test
+    void shouldNotChangeMembershipManagerStateIfNextRoleIsNotLeader() throws IOException
+    {
+        var transferTarget = new MemberId( UUID.randomUUID() );
+        var outcome = outcomeTestBuilder.setRole( Role.FOLLOWER )
+                                        .startTransferringLeadership( transferTarget )
+                                        .build();
+        when( raftState.areTransferringLeadership() ).thenReturn( true );
+
+        raftOutcomeApplier.handle( outcome );
+
+        verify( membershipManager, never() ).handleLeadershipTransfers( true );
+    }
+
+    @Test
     void shouldReturnNextRole() throws IOException
     {
-        var outcome = outcomeBuilder.setNextRole( Role.CANDIDATE ).build();
+        var outcome = outcomeTestBuilder.setRole( Role.CANDIDATE ).build();
 
         var role = raftOutcomeApplier.handle( outcome );
 

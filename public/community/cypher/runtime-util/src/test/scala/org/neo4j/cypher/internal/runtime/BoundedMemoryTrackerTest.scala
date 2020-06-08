@@ -22,6 +22,7 @@ package org.neo4j.cypher.internal.runtime
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.memory.LocalMemoryTracker
 import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryLimitExceeded
 import org.neo4j.memory.MemoryPools
 import org.neo4j.values.storable.Values
 
@@ -35,7 +36,7 @@ class BoundedMemoryTrackerTest extends CypherFunSuite {
 
   test("Tracks overall memory high water mark with bytes") {
     // Given
-    val tracker = new BoundedMemoryTracker(TestMemoryTracker())
+    val tracker = BoundedMemoryTracker(TestMemoryTracker())
     // When
     tracker.allocated(10, 0)
     tracker.allocated(5, 0)
@@ -48,7 +49,7 @@ class BoundedMemoryTrackerTest extends CypherFunSuite {
 
   test("Tracks overall memory high water mark with AnyValues") {
     // Given
-    val tracker = new BoundedMemoryTracker(TestMemoryTracker())
+    val tracker = BoundedMemoryTracker(TestMemoryTracker())
     val v1 = Values.intValue(5)
     val v2 = Values.booleanValue(true)
     val v3 = Values.stringValue("foo")
@@ -66,7 +67,7 @@ class BoundedMemoryTrackerTest extends CypherFunSuite {
 
   test("Tracks overall memory high water mark with WithHeapUsageEstimation") {
     // Given
-    val tracker = new BoundedMemoryTracker(TestMemoryTracker())
+    val tracker = BoundedMemoryTracker(TestMemoryTracker())
     // When
     tracker.allocated(IMem(10), 0)
     tracker.allocated(IMem(5), 0)
@@ -79,7 +80,7 @@ class BoundedMemoryTrackerTest extends CypherFunSuite {
 
   test("Iterator tracks memory") {
     // Given
-    val tracker = new BoundedMemoryTracker(TestMemoryTracker())
+    val tracker = BoundedMemoryTracker(TestMemoryTracker())
     val iterator = tracker.memoryTrackingIterator(Iterator(IMem(1), IMem(6), IMem(2), IMem(100)), 0)
     // When
     iterator.next() // 1
@@ -94,19 +95,19 @@ class BoundedMemoryTrackerTest extends CypherFunSuite {
 
   test("Throws exception if memory exceeds threshold") {
     // Given
-    val tracker = new BoundedMemoryTracker(TestMemoryTracker(20))
+    val tracker = BoundedMemoryTracker(TestMemoryTracker(20))
     // When
     tracker.allocated(10, 0)
     tracker.allocated(5, 0)
     tracker.deallocated(6, 0)
     tracker.allocated(9, 0)
     // Then
-    a[org.neo4j.memory.HeapMemoryLimitExceeded] should be thrownBy tracker.allocated(3, 0)
+    a[MemoryLimitExceeded] should be thrownBy tracker.allocated(3, 0)
   }
 
   test("Tracks individual memory per operator plus overall") {
     // Given
-    val tracker = new BoundedMemoryTracker(TestMemoryTracker())
+    val tracker = BoundedMemoryTracker(TestMemoryTracker())
     val iterator0 = tracker.memoryTrackingIterator(Iterator(IMem(1), IMem(6), IMem(8)), 0)
     val iterator1 = tracker.memoryTrackingIterator(Iterator(IMem(2), IMem(4), IMem(7)), 1)
     val iterator2 = tracker.memoryTrackingIterator(Iterator(IMem(3), IMem(13), IMem(2)), 2)

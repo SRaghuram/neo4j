@@ -5,9 +5,11 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
+
 import java.util.Set;
 
 public interface GroupedServer
 {
-    Set<String> groups();
+    Set<ServerGroupName> groups();
 }

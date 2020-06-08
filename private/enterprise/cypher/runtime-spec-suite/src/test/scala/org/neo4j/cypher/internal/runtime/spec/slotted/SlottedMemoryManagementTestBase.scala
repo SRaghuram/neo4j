@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.kernel.impl.util.ValueUtils
-import org.neo4j.memory.HeapMemoryLimitExceeded
+import org.neo4j.memory.MemoryLimitExceeded
 import org.neo4j.values.virtual.VirtualValues
 
 trait WithSlotsMemoryManagementTestBase {
@@ -41,7 +41,7 @@ trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase 
       .build()
 
     // then
-    a[HeapMemoryLimitExceeded] should be thrownBy {
+    a[MemoryLimitExceeded] should be thrownBy {
       consume(execute(logicalQuery, runtime, input))
     }
   }
@@ -58,7 +58,7 @@ trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase 
       .build()
 
     // then
-    a[HeapMemoryLimitExceeded] should be thrownBy {
+    a[MemoryLimitExceeded] should be thrownBy {
       consume(execute(logicalQuery, runtime, input))
     }
   }
@@ -75,7 +75,7 @@ trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase 
       .build()
 
     // then
-    a[HeapMemoryLimitExceeded] should be thrownBy {
+    a[MemoryLimitExceeded] should be thrownBy {
       consume(execute(logicalQuery, runtime, input))
     }
   }
@@ -93,7 +93,7 @@ trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase 
       .build()
 
     // then
-    a[HeapMemoryLimitExceeded] should be thrownBy {
+    a[MemoryLimitExceeded] should be thrownBy {
       consume(execute(logicalQuery, runtime, input))
     }
   }

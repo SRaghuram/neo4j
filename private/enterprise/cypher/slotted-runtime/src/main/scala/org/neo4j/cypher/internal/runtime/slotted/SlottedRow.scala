@@ -23,6 +23,8 @@ import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
+import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
@@ -30,6 +32,8 @@ import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.virtual.VirtualRelationshipValue
 
 object SlottedRow {
+  final val INSTANCE_SIZE = shallowSizeOfInstance(classOf[SlottedRow])
+
   def empty = new SlottedRow(SlotConfiguration.empty)
   val DEBUG = false
 }
@@ -174,7 +178,7 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
   override def getCachedProperty(key: ASTCachedProperty): Value = fail()
 
   override def estimatedHeapUsage: Long = {
-    var usage = longs.length * 8L
+    var usage = SlottedRow.INSTANCE_SIZE + HeapEstimator.sizeOf(longs) + HeapEstimator.shallowSizeOf(refs.asInstanceOf[Array[Object]])
     var i = 0
     while (i < refs.length) {
       val ref = refs(i)

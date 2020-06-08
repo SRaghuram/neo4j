@@ -15,23 +15,29 @@ import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.memory.MemoryTracker;
+
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 
 class RelationshipTypeDistributionStorage
 {
     private final FileSystemAbstraction fs;
     private final File file;
+    private final MemoryTracker memoryTracker;
 
-    RelationshipTypeDistributionStorage( FileSystemAbstraction fs, File file )
+    RelationshipTypeDistributionStorage( FileSystemAbstraction fs, File file, MemoryTracker memoryTracker )
     {
         this.fs = fs;
         this.file = file;
+        this.memoryTracker = memoryTracker;
     }
 
     void store( DataStatistics distribution ) throws IOException
     {
         // This could have been done using a writer and writing human readable text.
         // Perhaps simpler code, but this format is safe against any type of weird characters that the type may contain
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( file ) ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( file ), memoryTracker ) )
         {
             channel.putLong( distribution.getNodeCount() );
             channel.putLong( distribution.getPropertyCount() );
@@ -46,7 +52,7 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();

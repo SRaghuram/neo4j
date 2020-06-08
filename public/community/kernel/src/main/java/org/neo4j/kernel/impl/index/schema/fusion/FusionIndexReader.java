@@ -34,11 +34,9 @@ import org.neo4j.kernel.api.index.BridgingIndexProgressor;
 import org.neo4j.kernel.api.index.IndexProgressor;
 import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.IndexSampler;
-import org.neo4j.storageengine.api.NodePropertyAccessor;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
-import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unordered;
 
 class FusionIndexReader extends FusionIndexBase<IndexReader> implements IndexReader
 {
@@ -71,12 +69,12 @@ class FusionIndexReader extends FusionIndexBase<IndexReader> implements IndexRea
 
     @Override
     public void query( QueryContext context, IndexProgressor.EntityValueClient cursor, IndexQueryConstraints constraints,
-            PageCursorTracer cursorTracer, IndexQuery... predicates ) throws IndexNotApplicableKernelException
+            IndexQuery... predicates ) throws IndexNotApplicableKernelException
     {
         IndexSlot slot = slotSelector.selectSlot( predicates, IndexQuery::valueCategory );
         if ( slot != null )
         {
-            instanceSelector.select( slot ).query( context, cursor, constraints, cursorTracer, predicates );
+            instanceSelector.select( slot ).query( context, cursor, constraints, predicates );
         }
         else
         {
@@ -86,8 +84,7 @@ class FusionIndexReader extends FusionIndexBase<IndexReader> implements IndexRea
                         format( "Tried to query index with unsupported order %s. Supported orders for query %s are %s.",
                                 constraints.order(), Arrays.toString( predicates ), IndexOrder.NONE ) );
             }
-            BridgingIndexProgressor multiProgressor = new BridgingIndexProgressor( cursor,
-                    descriptor.schema().getPropertyIds() );
+            BridgingIndexProgressor multiProgressor = new BridgingIndexProgressor( cursor, descriptor.schema().getPropertyIds() );
             cursor.initialize( descriptor, multiProgressor, predicates, constraints, false );
             try
             {
@@ -95,7 +92,7 @@ class FusionIndexReader extends FusionIndexBase<IndexReader> implements IndexRea
                 {
                     try
                     {
-                        reader.query( context, multiProgressor, constraints, cursorTracer, predicates );
+                        reader.query( context, multiProgressor, constraints, predicates );
                     }
                     catch ( IndexNotApplicableKernelException e )
                     {
@@ -122,15 +119,6 @@ class FusionIndexReader extends FusionIndexBase<IndexReader> implements IndexRea
         {
             return (IndexNotApplicableKernelException) super.getCause();
         }
-    }
-
-    @Override
-    public void distinctValues( IndexProgressor.EntityValueClient cursor, NodePropertyAccessor propertyAccessor, boolean needsValues,
-            PageCursorTracer cursorTracer )
-    {
-        BridgingIndexProgressor multiProgressor = new BridgingIndexProgressor( cursor, descriptor.schema().getPropertyIds() );
-        cursor.initialize( descriptor, multiProgressor, new IndexQuery[0], unordered( needsValues ), false );
-        instanceSelector.forAll( reader -> reader.distinctValues( multiProgressor, propertyAccessor, needsValues, cursorTracer ) );
     }
 
     @Override

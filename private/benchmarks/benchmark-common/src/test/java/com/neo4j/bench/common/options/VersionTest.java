@@ -6,7 +6,7 @@
 package com.neo4j.bench.common.options;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.equalTo;

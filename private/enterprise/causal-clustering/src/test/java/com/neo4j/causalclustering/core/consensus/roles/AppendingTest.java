@@ -9,41 +9,36 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
-import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Test;
-
-import org.neo4j.logging.NullLog;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
-public class AppendingTest
+class AppendingTest
 {
     private MemberId aMember = member( 0 );
 
     @Test
-    public void shouldPerformTruncation() throws Exception
+    void shouldPerformTruncation() throws Exception
     {
         // when
         // we have a log appended up to appendIndex, and committed somewhere before that
         long appendIndex = 5;
         long localTermForAllEntries = 1L;
 
-        Outcome outcome = mock( Outcome.class );
-        ReadableRaftLog logMock = mock( ReadableRaftLog.class );
+        var outcomeBuilder = OutcomeTestBuilder.builder();
+        var logMock = mock( ReadableRaftLog.class );
         when( logMock.readEntryTerm( anyLong() ) ).thenReturn( localTermForAllEntries ); // for simplicity, all entries are at term 1
         when( logMock.appendIndex() ).thenReturn( appendIndex );
 
@@ -53,27 +48,28 @@ public class AppendingTest
 
         // when
         // the leader asks to append after the commit index an entry that mismatches on term
-        Appending.handleAppendEntriesRequest( state, outcome,
+        Appending.handleAppendEntriesRequest( state, outcomeBuilder,
                 new RaftMessages.AppendEntries.Request( aMember, localTermForAllEntries, appendIndex - 2,
                         localTermForAllEntries,
                         new RaftLogEntry[]{
                                 new RaftLogEntry( localTermForAllEntries + 1, ReplicatedInteger.valueOf( 2 ) )},
-                        appendIndex + 3 ), NullLog.getInstance() );
+                        appendIndex + 3 ) );
 
         // then
         // we must produce a TruncateLogCommand at the earliest mismatching index
-        verify( outcome ).addLogCommand( argThat( new LogCommandMatcher( appendIndex - 1 ) ) );
+        var outcome = outcomeBuilder.build();
+        assertThat( outcome.getLogCommands() ).contains( new TruncateLogCommand( appendIndex - 1 ) );
     }
 
     @Test
-    public void shouldNotAllowTruncationAtCommit() throws Exception
+    void shouldNotAllowTruncationAtCommit() throws Exception
     {
         // given
         long commitIndex = 5;
         long localTermForAllEntries = 1L;
 
-        Outcome outcome = mock( Outcome.class );
-        ReadableRaftLog logMock = mock( ReadableRaftLog.class );
+        var outcomeBuilder = OutcomeTestBuilder.builder();
+        var logMock = mock( ReadableRaftLog.class );
         when( logMock.readEntryTerm( anyLong() ) ).thenReturn( localTermForAllEntries ); // for simplicity, all entries are at term 1
         when( logMock.appendIndex() ).thenReturn( commitIndex );
 
@@ -84,13 +80,13 @@ public class AppendingTest
         // when - then
         try
         {
-            Appending.handleAppendEntriesRequest( state, outcome,
+            Appending.handleAppendEntriesRequest( state, outcomeBuilder,
                     new RaftMessages.AppendEntries.Request( aMember, localTermForAllEntries, commitIndex - 1,
                             localTermForAllEntries,
                             new RaftLogEntry[]{
                                     new RaftLogEntry( localTermForAllEntries + 1, ReplicatedInteger.valueOf( 2 ) )},
-                            commitIndex + 3 ), NullLog.getInstance() );
-            fail( "Appending should not allow truncation at or before the commit index" );
+                            commitIndex + 3 ) );
+            Assertions.fail( "Appending should not allow truncation at or before the commit index" );
         }
         catch ( IllegalStateException expected )
         {
@@ -99,31 +95,31 @@ public class AppendingTest
     }
 
     @Test
-    public void shouldNotAllowTruncationBeforeCommit() throws Exception
+    void shouldNotAllowTruncationBeforeCommit() throws Exception
     {
         // given
         long commitIndex = 5;
         long localTermForAllEntries = 1L;
 
-        Outcome outcome = mock( Outcome.class );
-        ReadableRaftLog logMock = mock( ReadableRaftLog.class );
+        var outcomeBuilder = OutcomeTestBuilder.builder();
+        var logMock = mock( ReadableRaftLog.class );
         when( logMock.readEntryTerm( anyLong() ) ).thenReturn( localTermForAllEntries ); // for simplicity, all entries are at term 1
         when( logMock.appendIndex() ).thenReturn( commitIndex );
 
-        ReadableRaftState state = mock( ReadableRaftState.class );
+        var state = mock( ReadableRaftState.class );
         when( state.entryLog() ).thenReturn( logMock );
         when( state.commitIndex() ).thenReturn( commitIndex );
 
         // when - then
         try
         {
-            Appending.handleAppendEntriesRequest( state, outcome,
+            Appending.handleAppendEntriesRequest( state, outcomeBuilder,
                     new RaftMessages.AppendEntries.Request( aMember, localTermForAllEntries, commitIndex - 2,
                             localTermForAllEntries,
                             new RaftLogEntry[]{
                                     new RaftLogEntry( localTermForAllEntries + 1, ReplicatedInteger.valueOf( 2 ) )},
-                            commitIndex + 3 ), NullLog.getInstance() );
-            fail( "Appending should not allow truncation at or before the commit index" );
+                            commitIndex + 3 ) );
+            Assertions.fail( "Appending should not allow truncation at or before the commit index" );
         }
         catch ( IllegalStateException expected )
         {
@@ -132,11 +128,11 @@ public class AppendingTest
     }
 
     @Test
-    public void shouldNotAttemptToTruncateAtIndexBeforeTheLogPrevIndex() throws Exception
+    void shouldNotAttemptToTruncateAtIndexBeforeTheLogPrevIndex() throws Exception
     {
         // given
         // a log with prevIndex and prevTerm set
-        ReadableRaftLog logMock = mock( ReadableRaftLog.class );
+        var logMock = mock( ReadableRaftLog.class );
         long prevIndex = 5;
         long prevTerm = 5;
         when( logMock.prevIndex() ).thenReturn( prevIndex );
@@ -146,7 +142,7 @@ public class AppendingTest
 
         // also, a state with a given commitIndex, obviously ahead of prevIndex
         long commitIndex = 10;
-        ReadableRaftState state = mock( ReadableRaftState.class );
+        var state = mock( ReadableRaftState.class );
         when( state.entryLog() ).thenReturn( logMock );
         when( state.commitIndex() ).thenReturn( commitIndex );
         // which is also the append index
@@ -154,17 +150,18 @@ public class AppendingTest
 
         // when
         // an appendEntriesRequest arrives for appending entries before the prevIndex (for whatever reason)
-        Outcome outcome = mock( Outcome.class );
-        Appending.handleAppendEntriesRequest( state, outcome,
+        var outcomeBuilder = OutcomeTestBuilder.builder();
+        Appending.handleAppendEntriesRequest( state, outcomeBuilder,
                 new RaftMessages.AppendEntries.Request( aMember, prevTerm, prevIndex - 2,
                         prevTerm,
                         new RaftLogEntry[]{
                                 new RaftLogEntry( prevTerm, ReplicatedInteger.valueOf( 2 ) )},
-                        commitIndex + 3 ), NullLog.getInstance() );
+                        commitIndex + 3 ) );
 
         // then
         // there should be no truncate commands. Actually, the whole thing should be a no op
-        verify( outcome, never() ).addLogCommand( any() );
+        var outcome = outcomeBuilder.build();
+        assertThat( outcome.getLogCommands() ).isEmpty();
     }
 
     private static class LogCommandMatcher extends TypeSafeMatcher<RaftLogCommand>

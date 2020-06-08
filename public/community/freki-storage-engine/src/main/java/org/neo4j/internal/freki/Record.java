@@ -27,13 +27,23 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.pagecache.PageCursor;
 
+<<<<<<< HEAD
+=======
+import static java.lang.String.format;
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 class Record
 {
     /*
       Header 1B
      [____,____]
+<<<<<<< HEAD
       │││| |└└└─ SizeExp (3b)
       │││| └──── InUse (1b)
+=======
+      ││││ │└└└─ SizeExp (3b)
+      ││││ └──── InUse (1b)
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
       └└└└────── Unused (4b)
      */
     static int MASK_SIZE_EXP = 0x7;
@@ -57,15 +67,31 @@ class Record
 
     Record( int sizeExp, long id )
     {
+<<<<<<< HEAD
         this( sizeExpAsFlagsByte( sizeExp ), id );
     }
 
     private Record( byte flags, long id )
+=======
+        this( sizeExpAsFlagsByte( sizeExp ), id, ByteBuffer.wrap( new byte[recordDataSize( sizeExp )] ) );
+    }
+
+    Record( byte flags, long id, ByteBuffer buffer )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         this.flags = flags;
         this.id = id;
         this.dataLength = recordDataSize( sizeExp() );
+<<<<<<< HEAD
         this.data = ByteBuffer.wrap( new byte[dataLength] );
+=======
+        this.data = buffer;
+    }
+
+    static Record deletedRecord( int sizeExp, long id )
+    {
+        return new Record( sizeExpAsFlagsByte( sizeExp ), id, null );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     static int recordSize( int sizeExp )
@@ -135,7 +161,11 @@ class Record
         channel.put( (byte) (flags | sizeExp()) );
         if ( hasFlag( FLAG_IN_USE ) )
         {
+<<<<<<< HEAD
             int length = data.position();
+=======
+            int length = data.limit();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             // write the length so that we save on tx-log command size
             channel.putShort( (short) length );
             channel.put( data.array(), length );
@@ -145,6 +175,7 @@ class Record
     static Record deserialize( ReadableChannel channel, long id ) throws IOException
     {
         byte flags = channel.get();
+<<<<<<< HEAD
         Record record = new Record( flags, id );
         if ( record.hasFlag( FLAG_IN_USE ) )
         {
@@ -157,6 +188,19 @@ class Record
 
     // === UNIFY THESE SOMEHOW LATER ===
 
+=======
+        if ( (flags & FLAG_IN_USE) != 0 )
+        {
+            short length = channel.getShort();
+            ByteBuffer buffer = ByteBuffer.wrap( new byte[length] );
+            channel.get( buffer.array(), length );
+            buffer.position( length ).flip();
+            return new Record( flags, id, buffer );
+        }
+        return new Record( (byte) 0, id, null );
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     void serialize( PageCursor cursor )
     {
         cursor.putByte( flags );
@@ -230,12 +274,17 @@ class Record
     public String toString()
     {
         String dataString;
+<<<<<<< HEAD
+=======
+        int dataLength = 0;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         if ( data == null )
         {
             dataString = "<null>";
         }
         else
         {
+<<<<<<< HEAD
             int highestNonZeroLimit = findHighestNonZeroLimit();
             int diff = data.limit() - highestNonZeroLimit;
             dataString = diff >= 8 ? Arrays.toString( Arrays.copyOf( data.array(), findHighestNonZeroLimit() ) ) + "..." + diff + " more zeros"
@@ -256,6 +305,13 @@ class Record
             nonZeroLimit--;
         }
         return nonZeroLimit;
+=======
+            dataString = Arrays.toString( Arrays.copyOf( data.array(), data.limit() ) );
+            dataLength = data.limit();
+        }
+        return format( "Record{x%d(%d)%s,len=%d, %s}", recordXFactor( sizeExp() ), id, hasFlag( FLAG_IN_USE ) ? "" : " UNUSED ", dataLength,
+                dataString );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     boolean hasSameContentsAs( Record other )

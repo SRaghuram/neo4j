@@ -19,15 +19,9 @@ public class InfraParams
     public static final String CMD_BATCH_STACK = "--batch-stack";
     public static final String CMD_WORKSPACE_DIR = "--workspace-dir";
     public static final String CMD_ARTIFACT_WORKER_URI = "--worker-artifact-uri";
-
     public static final String CMD_AWS_SECRET = "--aws-secret";
-    private String awsSecret;
-
     public static final String CMD_AWS_KEY = "--aws-key";
-    private String awsKey;
-
     public static final String CMD_AWS_REGION = "--aws-region";
-    private String awsRegion;
 
     public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
     private URI artifactBaseUri;
@@ -47,17 +41,16 @@ public class InfraParams
     public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     private URI resultsStoreUri;
 
-    public static final String CMD_ERROR_POLICY = RunMacroWorkloadParams.CMD_ERROR_POLICY;
     private ErrorReportingPolicy errorPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
+
+    private AWSCredentials awsCredentials;
 
     // needed for JSON serialization
     private InfraParams()
     {
     }
 
-    public InfraParams( String awsSecret,
-                        String awsKey,
-                        String awsRegion,
+    public InfraParams( AWSCredentials awsCredentials,
                         String resultsStoreUsername,
                         String resultsStorePasswordSecretName,
                         URI resultsStoreUri,
@@ -65,9 +58,7 @@ public class InfraParams
                         ErrorReportingPolicy errorPolicy,
                         Workspace workspaceStructure )
     {
-        this.awsSecret = awsSecret;
-        this.awsKey = awsKey;
-        this.awsRegion = awsRegion;
+        this.awsCredentials = awsCredentials;
         this.resultsStoreUsername = resultsStoreUsername;
         this.resultsStorePasswordSecretName = resultsStorePasswordSecretName;
         this.resultsStoreUri = resultsStoreUri;
@@ -76,24 +67,9 @@ public class InfraParams
         this.workspaceStructure = workspaceStructure;
     }
 
-    public String awsSecret()
+    public AWSCredentials awsCredentials()
     {
-        return awsSecret;
-    }
-
-    public String awsKey()
-    {
-        return awsKey;
-    }
-
-    public boolean hasAwsCredentials()
-    {
-        return awsSecret != null && awsKey != null;
-    }
-
-    public String awsRegion()
-    {
-        return awsRegion;
+        return awsCredentials;
     }
 
     public String resultsStoreUsername()

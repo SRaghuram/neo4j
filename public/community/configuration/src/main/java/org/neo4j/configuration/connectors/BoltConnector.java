@@ -49,7 +49,10 @@ import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.D
 public final class BoltConnector implements SettingsDeclaration
 {
     public static final int DEFAULT_PORT = 7687;
+    public static final int DEFAULT_CONNECTOR_PORT = 7688;
+
     public static final String NAME = "bolt";
+    public static final String INTERNAL_NAME = "bolt-internal";
 
     @Description( "Enable the bolt connector" )
     @DocumentedDefaultValue( "true" ) // Should document server defaults.
@@ -85,10 +88,32 @@ public final class BoltConnector implements SettingsDeclaration
     public static final Setting<Duration> thread_pool_shutdown_wait_time =
             newBuilder( "dbms.connector.bolt.unsupported_thread_pool_shutdown_wait_time", DURATION, ofSeconds( 5 ) ).build();
 
+    @Description( "Enable the additional routing connector for intra-cluster bolt communication" )
+    public static final Setting<Boolean> connector_routing_enabled =
+            newBuilder( "dbms.connector.bolt.routing.enabled", BOOL, false ).build();
+
+    @Description( "The address the routing connector should bind to" )
+    public static final Setting<SocketAddress> connector_routing_listen_address =
+            newBuilder( "dbms.connector.bolt.routing.listen_address", SOCKET_ADDRESS, new SocketAddress( DEFAULT_CONNECTOR_PORT ) ).build();
+
     @Description( "The queue size of the thread pool bound to this connector (-1 for unbounded, 0 for direct handoff, > 0 for bounded)" )
     @Internal
     public static final Setting<Integer> unsupported_thread_pool_queue_size =
             newBuilder( "dbms.connector.bolt.unsupported_thread_pool_queue_size", INT, 0 ).build();
+
+    @Description( "The maximum time to wait before sending a NOOP on connections waiting for responses from active " +
+                  "ongoing queries." )
+    @Internal
+    public static final Setting<Duration> connection_keep_alive =
+            newBuilder( "dbms.connector.bolt.connection_keep_alive", DURATION, ofMinutes( 1 ) )
+                    .build();
+
+    @Description( "The interval between every scheduled keep-alive check on all connections with active queries. " +
+                  "Zero duration turns off keep-alive service." )
+    @Internal
+    public static final Setting<Duration> connection_keep_alive_scheduling_interval =
+            newBuilder( "dbms.connector.bolt.connection_keep_alive_scheduling_interval", DURATION,
+                    ofMinutes( 0 ) ).build();
 
     @Description( "The maximum time to wait for a user to finish authentication before closing the connection." )
     @Internal

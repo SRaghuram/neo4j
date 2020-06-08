@@ -20,7 +20,7 @@ public class ReplicatedContentChunkDecoder extends ByteToMessageDecoder
     private final Codec<ReplicatedContent> codec;
     private boolean isLast;
 
-    ReplicatedContentChunkDecoder()
+    public ReplicatedContentChunkDecoder()
     {
         setCumulator( new ContentChunkCumulator() );
         this.codec = new ReplicatedContentCodec();

@@ -5,14 +5,14 @@
  */
 package com.neo4j.fabric.routing;
 
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 
 import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
@@ -23,11 +23,11 @@ import org.neo4j.values.virtual.MapValue;
 public class FabricSingleInstanceGetRoutingTableProcedure extends SingleInstanceGetRoutingTableProcedure
 {
 
-    private final FabricConfig fabricConfig;
+    private final FabricEnterpriseConfig fabricConfig;
     private final FabricDatabaseManager fabricDatabaseManager;
 
     public FabricSingleInstanceGetRoutingTableProcedure( List<String> namespace, DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister,
-            Config config, FabricDatabaseManager fabricDatabaseManager, FabricConfig fabricConfig, LogProvider logProvider )
+            Config config, FabricDatabaseManager fabricDatabaseManager, FabricEnterpriseConfig fabricConfig, LogProvider logProvider )
     {
         super( namespace, databaseManager, portRegister, config, logProvider );
         this.fabricDatabaseManager = fabricDatabaseManager;

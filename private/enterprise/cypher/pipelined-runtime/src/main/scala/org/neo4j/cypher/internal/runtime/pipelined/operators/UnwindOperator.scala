@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.ListSupport
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -34,6 +34,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -52,7 +53,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    IndexedSeq(new OTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new OTask(inputMorsel.nextCopy))
   }
 
   class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
@@ -115,7 +116,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (listExpression == null) {
-      listExpression = codeGen.intermediateCompileExpression(rawListExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $rawListExpression"))
+      listExpression = codeGen.compileExpression(rawListExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $rawListExpression"))
     }
 
     /**

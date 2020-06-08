@@ -75,7 +75,11 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     {
         if ( record.hasFlag( FLAG_IN_USE ) )
         {
+<<<<<<< HEAD
             Record copy = new Record( record.sizeExp(), record.id );
+=======
+            Record copy = new Record( record.sizeExp() );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             copy.copyContentsFrom( record );
             data.put( record.id, copy );
         }
@@ -132,6 +136,14 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
         return format( "TestStore[x%d,highId:%d]", recordXFactor( sizeExp ), nextId.get() );
     }
 
+<<<<<<< HEAD
+=======
+    void setHighId( long highId )
+    {
+        this.nextId.set( highId );
+    }
+
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     // Basically this isn't used, it's just something to call close()
     static PageCursor NO_PAGE_CURSOR = new ByteArrayPageCursor( new byte[0] );
 }

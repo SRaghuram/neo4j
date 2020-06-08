@@ -72,7 +72,7 @@ class BackupDelegatorTest
         subject.tryCatchingUp( fromAddress, expectedStoreId, namedDatabaseId, databaseLayout );
 
         // then
-        verify( remoteStore ).tryCatchingUp( any( CatchupAddressProvider.SingleAddressProvider.class ), eq( expectedStoreId ), eq( databaseLayout ), eq( true ),
+        verify( remoteStore ).tryCatchingUp( any( CatchupAddressProvider.SingleAddressProvider.class ), eq( expectedStoreId ), eq( databaseLayout ),
                 eq( true ) );
     }
 
@@ -126,7 +126,7 @@ class BackupDelegatorTest
 
         // then
         ArgumentCaptor<CatchupAddressProvider> argumentCaptor = ArgumentCaptor.forClass( CatchupAddressProvider.class );
-        verify( remoteStore ).copy( argumentCaptor.capture(), eq( storeId ), eq( databaseLayout ), eq( true ) );
+        verify( remoteStore ).copy( argumentCaptor.capture(), eq( storeId ), eq( databaseLayout ) );
 
         //and
         assertEquals( anyAddress, argumentCaptor.getValue().primary( new TestDatabaseIdRepository().defaultDatabase() ) );

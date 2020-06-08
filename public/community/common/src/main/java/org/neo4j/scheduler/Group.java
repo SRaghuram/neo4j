@@ -64,7 +64,7 @@ public enum Group
     METRICS_EVENT( "MetricsEvent" ),
     /** Threads that perform database manager operations necessary to bring databases to their desired states. */
     DATABASE_RECONCILER( "DatabaseReconciler" ),
-    DATABASE_RECONCILER_PRIORITY( "DatabaseReconcilerPriority" ),
+    DATABASE_RECONCILER_UNBOUND( "DatabaseReconcilerUnbound" ),
     /** Ensures DatabaseId lookup is not run from an outer transaction that will be tied to a database */
     DATABASE_ID_REPOSITORY( "DatabaseIdRepository" ),
 
@@ -88,6 +88,8 @@ public enum Group
     RAFT_LOG_PRUNING( "RaftLogPruning" ),
     RAFT_BATCH_HANDLER( "RaftBatchHandler" ),
     RAFT_READER_POOL_PRUNER( "RaftReaderPoolPruner" ),
+    LEADER_TRANSFER_SERICE( "LeaderTransferService" ),
+    CORE_STATE_APPLIER( "CoreStateApplier" ),
     AKKA_TOPOLOGY_WORKER( "AkkaTopologyWorkers", ExecutorServiceFactory.workStealingAsync() ),
     DOWNLOAD_SNAPSHOT( "DownloadSnapshot" ),
     CATCHUP_CLIENT( "CatchupClient" ),

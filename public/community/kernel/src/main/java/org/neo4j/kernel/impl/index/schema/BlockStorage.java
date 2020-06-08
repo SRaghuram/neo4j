@@ -35,10 +35,13 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.memory.ByteBufferFactory;
 import org.neo4j.io.memory.ByteBufferFactory.Allocator;
+import org.neo4j.io.memory.ScopedBuffer;
 import org.neo4j.io.pagecache.ByteArrayPageCursor;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.util.Preconditions;
 
 import static java.lang.Math.ceil;
+import static org.neo4j.kernel.impl.index.schema.BlockStorage.Cancellation.NOT_CANCELLABLE;
 
 /**
  * Transforms an unordered stream of key-value pairs ({@link BlockEntry}) to an ordered one. It does so in two phases:
@@ -62,6 +65,7 @@ class BlockStorage<KEY, VALUE> implements Closeable
     private final StoreChannel storeChannel;
     private final Monitor monitor;
     private final int blockSize;
+    private final MemoryTracker memoryTracker;
     private final ByteBufferFactory bufferFactory;
     private final File blockFile;
     private long numberOfBlocksInCurrentFile;
@@ -69,14 +73,15 @@ class BlockStorage<KEY, VALUE> implements Closeable
     private boolean doneAdding;
     private long entryCount;
 
-    BlockStorage( Layout<KEY,VALUE> layout, ByteBufferFactory bufferFactory, FileSystemAbstraction fs, File blockFile, Monitor monitor )
-            throws IOException
+    BlockStorage( Layout<KEY,VALUE> layout, ByteBufferFactory bufferFactory, FileSystemAbstraction fs, File blockFile, Monitor monitor,
+            MemoryTracker memoryTracker ) throws IOException
     {
         this.layout = layout;
         this.fs = fs;
         this.blockFile = blockFile;
         this.monitor = monitor;
         this.blockSize = bufferFactory.bufferSize();
+        this.memoryTracker = memoryTracker;
         this.bufferedEntries = Lists.mutable.empty();
         this.bufferFactory = bufferFactory;
         this.comparator = ( e0, e1 ) -> layout.compare( e0.key(), e1.key() );
@@ -124,7 +129,7 @@ class BlockStorage<KEY, VALUE> implements Closeable
         bufferedEntries.sortThis( comparator );
 
         ListBasedBlockEntryCursor<KEY,VALUE> entries = new ListBasedBlockEntryCursor<>( bufferedEntries );
-        ByteBuffer byteBuffer = bufferFactory.acquireThreadLocalBuffer();
+        ByteBuffer byteBuffer = bufferFactory.acquireThreadLocalBuffer( memoryTracker );
         try
         {
             writeBlock( storeChannel, entries, blockSize, bufferedEntries.size(), NOT_CANCELLABLE, count -> entryCount += count, byteBuffer );
@@ -146,9 +151,9 @@ class BlockStorage<KEY, VALUE> implements Closeable
      * When source only contain a single block we are finished and the extra file is deleted and {@link #blockFile} contains the result with a single sorted
      * block.
      *
-     * See {@link #performSingleMerge(int, BlockReader, StoreChannel, Cancellation, ByteBuffer[], ByteBuffer)} for further details.
+     * See {@link #performSingleMerge(int, BlockReader, StoreChannel, Cancellation, ScopedBuffer[], ByteBuffer)} for further details.
      *
-     * @param mergeFactor See {@link #performSingleMerge(int, BlockReader, StoreChannel, Cancellation, ByteBuffer[], ByteBuffer)}.
+     * @param mergeFactor See {@link #performSingleMerge(int, BlockReader, StoreChannel, Cancellation, ScopedBuffer[], ByteBuffer)}.
      * @param cancellation Injected so that this merge can be cancelled, if an external request to do that comes in.
      * A cancelled merge will leave the same end state file/channel-wise, just not quite completed, which is fine because the merge
      * was cancelled meaning that the result will not be used for anything other than deletion.
@@ -159,18 +164,13 @@ class BlockStorage<KEY, VALUE> implements Closeable
         monitor.mergeStarted( entryCount, calculateNumberOfEntriesWrittenDuringMerges( entryCount, numberOfBlocksInCurrentFile, mergeFactor ) );
         File sourceFile = blockFile;
         File tempFile = new File( blockFile.getParent(), blockFile.getName() + ".b" );
-        try ( Allocator mergeBufferAllocator = bufferFactory.newLocalAllocator() )
+        File targetFile = tempFile;
+        int bufferSize = bufferFactory.bufferSize();
+
+        try ( var mergeBufferAllocator = bufferFactory.newLocalAllocator();
+              var writeBuffer = mergeBufferAllocator.allocate( bufferSize, memoryTracker );
+              var readBuffers = new CompositeScopedBuffer( mergeFactor, bufferSize, mergeBufferAllocator, memoryTracker ) )
         {
-            File targetFile = tempFile;
-
-            // Allocate all buffers that will be used and reused for all merge iterations
-            ByteBuffer writeBuffer = mergeBufferAllocator.allocate( bufferFactory.bufferSize() );
-            ByteBuffer[] readBuffers = new ByteBuffer[mergeFactor];
-            for ( int i = 0; i < readBuffers.length; i++ )
-            {
-                readBuffers[i] = mergeBufferAllocator.allocate( bufferFactory.bufferSize() );
-            }
-
             while ( numberOfBlocksInCurrentFile > 1 )
             {
                 // Perform one complete merge iteration, merging all blocks from source into target.
@@ -182,7 +182,8 @@ class BlockStorage<KEY, VALUE> implements Closeable
                     long blocksInMergedFile = 0;
                     while ( !cancellation.cancelled() && blocksMergedSoFar < numberOfBlocksInCurrentFile )
                     {
-                        blocksMergedSoFar += performSingleMerge( mergeFactor, reader, targetChannel, cancellation, readBuffers, writeBuffer );
+                        blocksMergedSoFar += performSingleMerge( mergeFactor, reader, targetChannel, cancellation, readBuffers.getScopedBuffers(),
+                                writeBuffer.getBuffer() );
                         blocksInMergedFile++;
                     }
                     numberOfBlocksInCurrentFile = blocksInMergedFile;
@@ -251,7 +252,7 @@ class BlockStorage<KEY, VALUE> implements Closeable
      * @throws IOException If something goes wrong when reading from file.
      */
     private int performSingleMerge( int mergeFactor, BlockReader<KEY,VALUE> reader, StoreChannel targetChannel, Cancellation cancellation,
-            ByteBuffer[] readBuffers, ByteBuffer writeBuffer ) throws IOException
+            ScopedBuffer[] readBuffers, ByteBuffer writeBuffer ) throws IOException
     {
         try ( MergingBlockEntryReader<KEY,VALUE> merger = new MergingBlockEntryReader<>( layout ) )
         {
@@ -260,7 +261,7 @@ class BlockStorage<KEY, VALUE> implements Closeable
             int blocksMerged = 0;
             for ( int i = 0; i < mergeFactor; i++ )
             {
-                readBuffers[i].clear();
+                readBuffers[i].getBuffer().clear();
                 BlockEntryReader<KEY,VALUE> source = reader.nextBlock( readBuffers[i] );
                 if ( source != null )
                 {
@@ -478,10 +479,36 @@ class BlockStorage<KEY, VALUE> implements Closeable
         Monitor NO_MONITOR = new Adapter();
     }
 
+    @FunctionalInterface
     public interface Cancellation
     {
+        Cancellation NOT_CANCELLABLE = () -> false;
+
         boolean cancelled();
     }
 
-    static final Cancellation NOT_CANCELLABLE = () -> false;
+    private static class CompositeScopedBuffer implements AutoCloseable
+    {
+        private final ScopedBuffer[] scopedBuffers;
+
+        CompositeScopedBuffer( int numberOfBuffers, int bufferSize, Allocator allocator, MemoryTracker memoryTracker )
+        {
+            scopedBuffers = new ScopedBuffer[numberOfBuffers];
+            for ( int i = 0; i < scopedBuffers.length; i++ )
+            {
+                scopedBuffers[i] = allocator.allocate( bufferSize, memoryTracker );
+            }
+        }
+
+        public ScopedBuffer[] getScopedBuffers()
+        {
+            return scopedBuffers;
+        }
+
+        @Override
+        public void close()
+        {
+            IOUtils.closeAllSilently( scopedBuffers );
+        }
+    }
 }

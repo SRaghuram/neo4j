@@ -22,8 +22,15 @@ package org.neo4j.internal.freki;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
+<<<<<<< HEAD
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+=======
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -32,11 +39,19 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.MutableNodeRecordData.ARRAY_ENTRIES_PER_RELATIONSHIP;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
+=======
+import static org.neo4j.internal.freki.MutableNodeData.ARRAY_ENTRIES_PER_RELATIONSHIP;
+import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeData.otherNodeOf;
+import static org.neo4j.internal.freki.MutableNodeData.relationshipHasProperties;
+import static org.neo4j.internal.freki.MutableNodeData.relationshipIsOutgoing;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
@@ -53,6 +68,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private int currentTypeRelationshipIndex;
     private int currentTypePropertiesIndex;
     private int currentTypePropertiesOffset;
+<<<<<<< HEAD
+=======
+    private boolean currentTypeRelationshipStride; // true == forwards
+    private int currentTypeNumberOfRelationships;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
     // Accidental state from currentTypeData
     private long currentRelationshipOtherNode;
@@ -66,9 +86,16 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private int selectionCriterionIndex;
     private long neighbourNodeReferenceSelection;
 
+<<<<<<< HEAD
     public FrekiRelationshipTraversalCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
         super( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+    public FrekiRelationshipTraversalCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
+    {
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     @Override
@@ -132,13 +159,26 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public boolean next()
     {
+<<<<<<< HEAD
+=======
+        if ( selection == null )
+        {
+            // TODO this is a clear sign that this cursor hasn't been initialized. Ideally we should not get here ever, but as long as kernel cursors
+            //      do the wrong thing now and then we can play nice and return false here.
+            return false;
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         if ( !loadedCorrectNode )
         {
             if ( !load( nodeId ) )
             {
                 return false;
             }
+<<<<<<< HEAD
             ensureRelationshipsLoaded();
+=======
+            ensureRelationshipsLocated();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             if ( !data.isDense && data.relationshipOffset == 0 )
             {
                 return false;
@@ -150,7 +190,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
         if ( data.isDense )
         {
+<<<<<<< HEAD
             // TODO We could be clever and place a type[] in the quick access record so that we know which types even exist for this node
+=======
+            // TODO We could be clever and use the degrees type[] in the quick access record so that we know which types even exist for this node
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             //      if we do this we don't have to make a tree seek for every relationship type when there will be nothing there
             while ( selectionCriterionIndex < selection.numberOfCriteria() )
             {
@@ -200,6 +244,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                     currentTypePropertiesOffset = relationshipBuffer.position();
                     currentTypeRelationshipIndex = 0;
                     currentTypePropertiesIndex = -1;
+<<<<<<< HEAD
+=======
+                    currentTypeRelationshipStride = selection.direction() != Direction.INCOMING;
+                    currentTypeNumberOfRelationships = currentTypeData.length / ARRAY_ENTRIES_PER_RELATIONSHIP;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
                 }
 
                 if ( sparseNextFromCurrentType() )
@@ -210,6 +259,10 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             }
         }
         dereferenceData();
+<<<<<<< HEAD
+=======
+        selection = null;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         return false;
     }
 
@@ -221,13 +274,21 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
     private boolean sparseNextFromCurrentType()
     {
+<<<<<<< HEAD
         while ( currentTypeRelationshipIndex * ARRAY_ENTRIES_PER_RELATIONSHIP < currentTypeData.length )
         {
             int index = currentTypeRelationshipIndex++;
+=======
+        while ( currentTypeRelationshipIndex < currentTypeNumberOfRelationships )
+        {
+            int index = currentTypeRelationshipStride ? currentTypeRelationshipIndex : currentTypeNumberOfRelationships - currentTypeRelationshipIndex - 1;
+            currentTypeRelationshipIndex++;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             int dataArrayIndex = index * ARRAY_ENTRIES_PER_RELATIONSHIP; // because of two longs per relationship
             long currentRelationshipOtherNodeRaw = currentTypeData[dataArrayIndex];
             currentRelationshipInternalId = currentTypeData[dataArrayIndex + 1];
             currentRelationshipOtherNode = otherNodeOf( currentRelationshipOtherNodeRaw );
+<<<<<<< HEAD
             if ( currentRelationshipOtherNode == nodeId )
             {
                 currentRelationshipDirection = LOOP;
@@ -237,18 +298,32 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                 boolean outgoing = relationshipIsOutgoing( currentRelationshipOtherNodeRaw );
                 currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
             }
+=======
+            currentRelationshipDirection = currentRelationshipOtherNode == nodeId ? LOOP
+                    : relationshipIsOutgoing( currentRelationshipOtherNodeRaw ) ? OUTGOING : INCOMING;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             currentRelationshipHasProperties = relationshipHasProperties( currentRelationshipOtherNodeRaw );
             if ( currentRelationshipHasProperties )
             {
                 currentTypePropertiesIndex++;
             }
 
+<<<<<<< HEAD
             // TODO a thought about this filtering. It may be beneficial to order the relationships of: OUTGOING,LOOP,INCOMING
             //      so that filtering OUTGOING/INCOMING would basically then be to find the point where to stop, instead of going
             //      through all relationships of that type. This may also require an addition to RelationshipSelection so that
             //      it can be asked about requested direction.
             if ( selection.test( relationshipTypesInNode[currentTypeIndex], currentRelationshipDirection ) &&
                     (neighbourNodeReferenceSelection == NULL || neighbourNodeReferenceSelection == currentRelationshipOtherNode) )
+=======
+            if ( !selection.test( currentRelationshipDirection ) )
+            {
+                // Since the relationships are ordered OUTGOING,LOOP,INCOMING and we stride from the appropriate end of the array depending on selection
+                // we can abort immediately upon seeing a relationship not matching the selected direction.
+                return false;
+            }
+            if ( neighbourNodeReferenceSelection == NULL || neighbourNodeReferenceSelection == currentRelationshipOtherNode )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             {
                 return true;
             }
@@ -363,9 +438,21 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         cursorAccessTracer.registerNodeToRelationshipsDirect();
         initInternal( nodeCursor.entityReference(), NULL, selection );
+<<<<<<< HEAD
         ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this );
         startIterationAfterLoad();
         readRelationshipTypesAndOffsets();
+=======
+        if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) )
+        {
+            startIterationAfterLoad();
+            readRelationshipTypesAndOffsets();
+        }
+        else
+        {
+            reset();
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     }
 
     void init( StorageNodeCursor nodeCursor, RelationshipSelection selection, long neighbourNodeReference )

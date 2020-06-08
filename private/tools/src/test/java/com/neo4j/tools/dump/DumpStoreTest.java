@@ -22,6 +22,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
@@ -34,7 +35,7 @@ class DumpStoreTest
         ByteArrayOutputStream outStream = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( outStream );
         DumpStore dumpStore = new DumpStore( out );
-        ByteBuffer buffer = ByteBuffers.allocate( 1024 );
+        ByteBuffer buffer = ByteBuffers.allocate( 1024, INSTANCE );
         for ( byte i = 0; i < 10; i++ )
         {
             buffer.put( i );
@@ -58,7 +59,7 @@ class DumpStoreTest
         ByteArrayOutputStream outStream = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( outStream );
         DumpStore dumpStore = new DumpStore( out );
-        ByteBuffer buffer = ByteBuffers.allocate( 1024 );
+        ByteBuffer buffer = ByteBuffers.allocate( 1024, INSTANCE );
         AbstractBaseRecord record = Mockito.mock( AbstractBaseRecord.class );
 
         // When

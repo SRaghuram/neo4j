@@ -21,14 +21,12 @@ package org.neo4j.bolt.packstream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 
 import org.neo4j.bolt.BoltChannel;
 import org.neo4j.bolt.BoltProtocol;
@@ -39,6 +37,7 @@ import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.BookmarksParser;
 import org.neo4j.bolt.runtime.SynchronousBoltConnection;
 import org.neo4j.bolt.runtime.statemachine.BoltStateMachine;
+import org.neo4j.bolt.transport.TransportThrottleGroup;
 import org.neo4j.bolt.v4.BoltProtocolV4;
 import org.neo4j.bolt.v4.BoltRequestMessageWriterV4;
 import org.neo4j.bolt.v4.messaging.RunMessage;
@@ -46,8 +45,6 @@ import org.neo4j.common.HexPrinter;
 import org.neo4j.logging.internal.NullLogService;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.junit.runners.Parameterized.Parameter;
-import static org.junit.runners.Parameterized.Parameters;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -70,7 +67,6 @@ import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
  * For each permutation, it delivers the fragments to the protocol implementation, and asserts the protocol handled
  * them properly.
  */
-@RunWith( Parameterized.class )
 public class FragmentedMessageDeliveryTest
 {
     private EmbeddedChannel channel;
@@ -80,16 +76,7 @@ public class FragmentedMessageDeliveryTest
     // Only test one message for now. This can be parameterized later to test lots of different ones
     private RequestMessage[] messages = new RequestMessage[]{new RunMessage( "Mjölnir" )};
 
-    @Parameter
-    public Neo4jPack neo4jPack;
-
-    @Parameters( name = "{0}" )
-    public static List<Neo4jPack> parameters()
-    {
-        return Arrays.asList( new Neo4jPackV1(), new Neo4jPackV2() );
-    }
-
-    @After
+    @AfterEach
     public void cleanup()
     {
         if ( channel != null )
@@ -137,7 +124,8 @@ public class FragmentedMessageDeliveryTest
         SynchronousBoltConnection boltConnection = new SynchronousBoltConnection( machine );
         NullLogService logging = NullLogService.getInstance();
         var bookmarksParser = mock( BookmarksParser.class );
-        BoltProtocol boltProtocol = new BoltProtocolV4( boltChannel, ( ch, s ) -> boltConnection, ( v, ch ) -> machine, bookmarksParser, logging );
+        BoltProtocol boltProtocol = new BoltProtocolV4( boltChannel, ( ch, s, messageWriter ) -> boltConnection, ( v,
+                ch ) -> machine, bookmarksParser, logging, mock( TransportThrottleGroup.class ) );
         boltProtocol.install();
 
         // When data arrives split up according to the current permutation
@@ -170,7 +158,7 @@ public class FragmentedMessageDeliveryTest
         {
             if ( i > 0 )
             {
-                sb.append( "," );
+                sb.append( ',' );
             }
             sb.append( fragments[i].capacity() );
         }

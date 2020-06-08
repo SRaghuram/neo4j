@@ -144,7 +144,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
       case physicalplanning.ast.NullCheckProperty(offset, inner) =>
         val a = self.toCommandExpression(id, inner)
         Some(slotted.expressions.NullCheck(offset, a))
-      case physicalplanning.ast.NullCheckReference(offset, inner) =>
+      case physicalplanning.ast.NullCheckReferenceProperty(offset, inner) =>
         val a = self.toCommandExpression(id, inner)
         Some(slotted.expressions.NullCheckReference(offset, a))
       case e: expressions.PathExpression =>

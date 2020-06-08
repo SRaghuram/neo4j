@@ -125,13 +125,21 @@
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
+<<<<<<< HEAD
             <artifactId>test-utils</artifactId>
+=======
+            <artifactId>neo4j-random-values</artifactId>
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
+<<<<<<< HEAD
             <artifactId>neo4j-random-values</artifactId>
+=======
+            <artifactId>test-utils</artifactId>
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

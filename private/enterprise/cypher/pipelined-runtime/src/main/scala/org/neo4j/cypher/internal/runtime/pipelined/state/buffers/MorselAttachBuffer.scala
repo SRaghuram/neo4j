@@ -10,6 +10,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 
 /**
@@ -35,7 +37,7 @@ class MorselAttachBuffer(id: BufferId,
                          argumentNumRefs: Int
                         ) extends Sink[Morsel] {
 
-  def put(morsel: Morsel): Unit = {
+  def put(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
@@ -48,7 +50,7 @@ class MorselAttachBuffer(id: BufferId,
 
         outputMorsel.attach(view)
 
-        delegateApplyBuffer.put(outputMorsel)
+        delegateApplyBuffer.put(outputMorsel, resources)
       })
     }
   }

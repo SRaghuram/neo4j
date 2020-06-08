@@ -25,8 +25,8 @@ import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.attribution.SameId
 
 /**
-  * For every node with the given label and property values, produces rows with that node.
-  */
+ * For every node with the given label and property values, produces rows with that node.
+ */
 case class NodeIndexSeek(idName: String,
                          label: LabelToken,
                          properties: Seq[IndexedProperty],
@@ -36,6 +36,10 @@ case class NodeIndexSeek(idName: String,
                         (implicit idGen: IdGen) extends IndexSeekLeafPlan(idGen) {
 
   override val availableSymbols: Set[String] = argumentIds + idName
+
+  override def usedVariables: Set[String] = valueExpr.expressions.flatMap(_.dependencies).map(_.name).toSet
+
+  override def withoutArgumentIds(argsToExclude: Set[String]): NodeIndexSeek = copy(argumentIds = argumentIds -- argsToExclude)(SameId(this.id))
 
   override def copyWithoutGettingValues: NodeIndexSeek =
     NodeIndexSeek(idName, label, properties.map{ p => IndexedProperty(p.propertyKeyToken, DoNotGetValue) }, valueExpr, argumentIds, indexOrder)(SameId(this.id))

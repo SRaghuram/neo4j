@@ -124,18 +124,18 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
     (ctx, e) => throw new UnsupportedOperationException(s"Error in semantic analysis: Unknown expression $e")
 
   /**
-    * This fallback allow for a testing backdoor to insert custom Expressions. Do not use in production.
-    */
+   * This fallback allow for a testing backdoor to insert custom Expressions. Do not use in production.
+   */
   var semanticCheckFallback: (SemanticContext, Expression) => SemanticCheck = crashOnUnknownExpression
 
   /**
-    * Build a semantic check for the given expression using the simple expression context.
-    */
+   * Build a semantic check for the given expression using the simple expression context.
+   */
   def simple(expression: Expression): SemanticCheck = check(SemanticContext.Simple, expression)
 
   /**
-    * Build a semantic check for the given expression and context.
-    */
+   * Build a semantic check for the given expression and context.
+   */
   def check(ctx: SemanticContext, expression: Expression): SemanticCheck =
     expression match {
 
@@ -433,9 +433,9 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
                   val mapLookup = exprIsMap || idxIsString
 
                   if (listLookup && !mapLookup) {
-                    expectType(CTList(CTAny).covariant, x.expr) chain
-                      expectType(CTInteger.covariant, x.idx) chain
-                      specifyType(types(x.expr)(_).unwrapLists, x)
+                    expectType(CTList(CTAny).covariant, x.expr) ifOkChain
+                      specifyType(types(x.expr)(_).unwrapLists, x) chain
+                      expectType(CTInteger.covariant, x.idx)
                   }
                   else if (!listLookup && mapLookup) {
                     expectType(CTMap.covariant, x.expr) chain
@@ -536,8 +536,8 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
     }
 
   /**
-    * Build a semantic check over a traversable of expressions.
-    */
+   * Build a semantic check over a traversable of expressions.
+   */
   def simple(traversable: Traversable[Expression]): SemanticCheck = check(SemanticContext.Simple, traversable)
 
   def check(
@@ -547,8 +547,8 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
     semanticCheckFold(traversable)(expr => check(ctx, expr))
 
   /**
-    * Build a semantic check over an optional expression.
-    */
+   * Build a semantic check over an optional expression.
+   */
   def simple(option: Option[Expression]): SemanticCheck = check(SemanticContext.Simple, option)
 
   def check(ctx: SemanticContext, option: Option[Expression]): SemanticCheck =

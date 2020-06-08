@@ -34,6 +34,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 
 public class StubCursorFactory implements CursorFactory
 {
@@ -91,31 +92,31 @@ public class StubCursorFactory implements CursorFactory
     }
 
     @Override
-    public PropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
+    public PropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         return poll( propertyCursors );
     }
 
     @Override
-    public PropertyCursor allocateFullAccessPropertyCursor( PageCursorTracer cursorTracer )
+    public PropertyCursor allocateFullAccessPropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         return poll( fullPropertyCursors );
     }
 
     @Override
-    public NodeValueIndexCursor allocateNodeValueIndexCursor()
+    public NodeValueIndexCursor allocateNodeValueIndexCursor( PageCursorTracer cursorTracer )
     {
         return poll( nodeValueIndexCursors );
     }
 
     @Override
-    public NodeLabelIndexCursor allocateNodeLabelIndexCursor()
+    public NodeLabelIndexCursor allocateNodeLabelIndexCursor( PageCursorTracer cursorTracer )
     {
         return poll( nodeLabelIndexCursors );
     }
 
     @Override
-    public RelationshipIndexCursor allocateRelationshipIndexCursor()
+    public RelationshipIndexCursor allocateRelationshipIndexCursor( PageCursorTracer cursorTracer )
     {
         return poll( relationshipIndexCursors );
     }

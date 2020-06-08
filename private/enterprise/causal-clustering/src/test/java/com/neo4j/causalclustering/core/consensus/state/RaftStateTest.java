@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
-import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
@@ -22,8 +23,11 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,21 +36,24 @@ import java.util.List;
 import java.util.Set;
 
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.time.FakeClock;
 
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
+import static com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder.builder;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
+import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
+import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Collections.emptySet;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class RaftStateTest
+class RaftStateTest
 {
 
     @Test
-    public void shouldUpdateCacheState() throws Exception
+    void shouldUpdateCacheState() throws Exception
     {
         //Test that updates applied to the raft state will be reflected in the entry cache.
 
@@ -54,9 +61,10 @@ public class RaftStateTest
         InFlightCache cache = new ConsecutiveInFlightCache();
         RaftState raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
-                new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(), false, false );
+                new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(), false, false,
+                Set::of, new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
 
-        List<RaftLogCommand> logCommands = new LinkedList<RaftLogCommand>()
+        List<RaftLogCommand> logCommands = new LinkedList<>()
         {{
             add( new AppendLogEntry( 1, new RaftLogEntry( 0L, valueOf( 0 ) ) ) );
             add( new AppendLogEntry( 2, new RaftLogEntry( 0L, valueOf( 1 ) ) ) );
@@ -66,41 +74,135 @@ public class RaftStateTest
             add( new AppendLogEntry( 3, new RaftLogEntry( 0L, valueOf( 5 ) ) ) );
         }};
 
-        Outcome raftTestMemberOutcome =
-                new Outcome( CANDIDATE, 0, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), ACTIVE_ELECTION,
-                             logCommands, emptyOutgoingMessages(), emptySet(), -1, emptySet(), false );
+        OutcomeBuilder raftTestMemberOutcome = builder().setRole( CANDIDATE ).renewElectionTimer( ACTIVE_ELECTION );
+
+        for ( RaftLogCommand logCommand : logCommands )
+        {
+            raftTestMemberOutcome.addLogCommand( logCommand );
+        }
 
         //when
-        raftState.update(raftTestMemberOutcome);
+        raftState.update( raftTestMemberOutcome.build() );
 
         //then
-        assertNotNull( cache.get( 1L ) );
-        assertNotNull( cache.get( 2L ) );
-        assertNotNull( cache.get( 3L ) );
-        assertEquals( valueOf( 5 ), cache.get( 3L ).content() );
-        assertNull( cache.get( 4L ) );
+        Assertions.assertNotNull( cache.get( 1L ) );
+        Assertions.assertNotNull( cache.get( 2L ) );
+        Assertions.assertNotNull( cache.get( 3L ) );
+        Assertions.assertEquals( valueOf( 5 ), cache.get( 3L ).content() );
+        Assertions.assertNull( cache.get( 4L ) );
     }
 
     @Test
-    public void shouldRemoveFollowerStateAfterBecomingLeader() throws Exception
+    void shouldRemoveFollowerStateAfterBecomingLeader() throws Exception
     {
         // given
         RaftState raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
-                new InMemoryStateStorage<>( new VoteState( ) ),
+                new InMemoryStateStorage<>( new VoteState() ),
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
-                false, false );
+                false, false, Set::of,
+                new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
 
-        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), ACTIVE_ELECTION, emptyLogCommands(),
-                emptyOutgoingMessages(), emptySet(), -1, emptySet(), false ) );
+        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( initialFollowerStates() ).renewElectionTimer( ACTIVE_ELECTION ).build() );
 
         // when
-        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, new FollowerStates<>(), ACTIVE_ELECTION, emptyLogCommands(),
-                emptyOutgoingMessages(), emptySet(), -1, emptySet(), false ) );
+        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( new FollowerStates<>() ).renewElectionTimer( ACTIVE_ELECTION ).build() );
 
         // then
-        assertEquals( 0, raftState.followerStates().size() );
+        Assertions.assertEquals( 0, raftState.followerStates().size() );
+    }
+
+    @Test
+    void shouldCorrectlyTimeoutLeadershipTransfers()
+    {
+        // given
+        var clock = new FakeClock();
+        var leadershipTransfers = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), clock );
+
+        var raftState = new RaftState( member( 0 ),
+                new InMemoryStateStorage<>( new TermState() ),
+                new FakeMembership(), new InMemoryRaftLog(),
+                new InMemoryStateStorage<>( new VoteState() ),
+                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
+                false, false, Set::of,
+                leadershipTransfers );
+
+        // when
+        leadershipTransfers.add( member( 1 ) );
+        clock.forward( Duration.ofSeconds( 1 ) );
+
+        // then
+        assertTrue( raftState.areTransferringLeadership() );
+
+        // when
+        clock.forward( Duration.ofSeconds( 2 ) );
+        assertFalse( raftState.areTransferringLeadership() );
+    }
+
+    @Test
+    void shouldActivateDeactivateLeadershipTransferTimer() throws IOException
+    {
+        // given
+        var timer = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
+
+        var raftState = new RaftState( member( 0 ),
+                new InMemoryStateStorage<>( new TermState() ),
+                new FakeMembership(), new InMemoryRaftLog(),
+                new InMemoryStateStorage<>( new VoteState() ),
+                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
+                false, false, Set::of, timer );
+
+        var outcomeA = OutcomeBuilder.builder( LEADER, raftState );
+        outcomeA.startTransferringLeadership( member( 1 ) );
+
+        assertFalse( raftState.areTransferringLeadership() );
+
+        // when
+        raftState.update( outcomeA.build() );
+
+        // then
+        assertTrue( raftState.areTransferringLeadership() );
+
+        // when
+        var outcomeB = OutcomeBuilder.builder( LEADER, raftState );
+        var rejection = new RaftMessages.LeadershipTransfer.Rejection( member( 1 ), 2, 1 );
+        outcomeB.addLeaderTransferRejection( rejection );
+        raftState.update( outcomeB.build() );
+
+        assertFalse( raftState.areTransferringLeadership() );
+    }
+
+    @Test
+    void shouldDeactivateLeadershipTransferTimerIfNoLongerLeader() throws IOException
+    {
+        // given
+        var timer = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
+
+        var raftState = new RaftState( member( 0 ),
+                new InMemoryStateStorage<>( new TermState() ),
+                new FakeMembership(), new InMemoryRaftLog(),
+                new InMemoryStateStorage<>( new VoteState() ),
+                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
+                false, false, Set::of, timer );
+
+        assertFalse( raftState.areTransferringLeadership() );
+
+        // when
+        var outcomeA = OutcomeBuilder.builder( LEADER, raftState );
+        outcomeA.startTransferringLeadership( member( 1 ) );
+        raftState.update( outcomeA.build() );
+        outcomeA.startTransferringLeadership( member( 2 ) );
+        raftState.update( outcomeA.build() );
+
+        // then
+        assertTrue( raftState.areTransferringLeadership() );
+
+        // when
+        var outcomeB = OutcomeBuilder.builder( FOLLOWER, raftState );
+        raftState.update( outcomeB.build() );
+
+        assertFalse( raftState.areTransferringLeadership() );
     }
 
     private Collection<RaftMessages.Directed> emptyOutgoingMessages()
@@ -118,7 +220,7 @@ public class RaftStateTest
         return Collections.emptyList();
     }
 
-    private class FakeMembership implements RaftMembership
+    private static class FakeMembership implements RaftMembership
     {
         @Override
         public Set<MemberId> votingMembers()

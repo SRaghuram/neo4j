@@ -31,12 +31,15 @@ import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.logging.Log;
-import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryPools;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.SettingValueParsers.BYTES;
+import static org.neo4j.io.mem.MemoryAllocator.createAllocator;
+import static org.neo4j.memory.MemoryGroup.PAGE_CACHE;
 
 public class ConfiguringPageCacheFactory
 {
@@ -49,6 +52,7 @@ public class ConfiguringPageCacheFactory
     private PageCache pageCache;
     private final JobScheduler scheduler;
     private final SystemNanoClock clock;
+    private final MemoryPools memoryPools;
 
     /**
      * Construct configuring page cache factory
@@ -61,7 +65,7 @@ public class ConfiguringPageCacheFactory
      * @param clock the clock source used by the page cache.
      */
     public ConfiguringPageCacheFactory( FileSystemAbstraction fs, Config config, PageCacheTracer pageCacheTracer, Log log,
-            VersionContextSupplier versionContextSupplier, JobScheduler scheduler, SystemNanoClock clock )
+            VersionContextSupplier versionContextSupplier, JobScheduler scheduler, SystemNanoClock clock, MemoryPools memoryPools )
     {
         this.fs = fs;
         this.versionContextSupplier = versionContextSupplier;
@@ -70,6 +74,7 @@ public class ConfiguringPageCacheFactory
         this.log = log;
         this.scheduler = scheduler;
         this.clock = clock;
+        this.memoryPools = memoryPools;
     }
 
     public synchronized PageCache getOrCreatePageCache()
@@ -84,11 +89,19 @@ public class ConfiguringPageCacheFactory
 
     protected PageCache createPageCache()
     {
-        MemoryAllocator memoryAllocator = buildMemoryAllocator( config );
-        return new MuninnPageCache( swapperFactory, memoryAllocator, pageCacheTracer, versionContextSupplier, scheduler, clock );
+        long pageCacheMaxMemory = getPageCacheMaxMemory( config );
+        var memoryPool = memoryPools.pool( PAGE_CACHE, pageCacheMaxMemory, false );
+        var memoryTracker = memoryPool.getPoolMemoryTracker();
+        MemoryAllocator memoryAllocator = buildMemoryAllocator( pageCacheMaxMemory, memoryTracker );
+        return new MuninnPageCache( swapperFactory, memoryAllocator, pageCacheTracer, versionContextSupplier, scheduler, clock, memoryTracker );
     }
 
-    private MemoryAllocator buildMemoryAllocator( Config config )
+    private MemoryAllocator buildMemoryAllocator( long pageCacheMaxMemory, MemoryTracker memoryTracker )
+    {
+        return createAllocator( pageCacheMaxMemory, memoryTracker );
+    }
+
+    private long getPageCacheMaxMemory( Config config )
     {
         String pageCacheMemorySetting = config.get( pagecache_memory );
         if ( pageCacheMemorySetting == null )
@@ -100,8 +113,7 @@ public class ConfiguringPageCacheFactory
                       "Run `neo4j-admin memrec` for memory configuration suggestions." );
             pageCacheMemorySetting = "" + heuristic;
         }
-
-        return MemoryAllocator.createAllocator( pageCacheMemorySetting, EmptyMemoryTracker.INSTANCE );
+        return ByteUnit.parse( pageCacheMemorySetting );
     }
 
     public static long defaultHeuristicPageCacheMemory()

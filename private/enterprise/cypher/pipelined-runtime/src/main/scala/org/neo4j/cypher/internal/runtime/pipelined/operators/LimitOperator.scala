@@ -30,7 +30,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
@@ -57,7 +57,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
@@ -171,7 +170,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      profileRows(id, subtract(load(reservedVar), load(countLeftVar))),
+      profileRows(id, cast[Long](subtract(load(reservedVar), load(countLeftVar)))),
       super.genOperateExit
     )
   }
@@ -288,11 +287,11 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
   private def fetchState : IntermediateRepresentation =
     cast[SerialCountingState](
       invoke(
-        cast[UnorderedArgumentStateMapReader[_ <: ArgumentState]](
+        cast[ArgumentStateMap[_ <: ArgumentState]](
           invoke(loadField(argumentMaps),
             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
             constant(argumentStateMapId.x))),
-        method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
         load(argumentVarName(argumentStateMapId))))
 
   private def newState: IntermediateRepresentation = block(

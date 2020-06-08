@@ -19,10 +19,20 @@
  */
 package org.neo4j.cypher.internal;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.PriorityQueue;
+
+import org.neo4j.exceptions.CypherExecutionException;
+import org.neo4j.internal.helpers.collection.Iterators;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
+
+import static java.util.Objects.requireNonNull;
+import static org.neo4j.internal.helpers.ArrayUtil.MAX_ARRAY_SIZE;
+import static org.neo4j.memory.HeapEstimator.shallowSizeOfInstance;
+import static org.neo4j.memory.HeapEstimator.shallowSizeOfObjectArray;
+import static org.neo4j.util.Preconditions.checkArgument;
 
 /**
  * The default implementation of a Top N table used by all runtimes
@@ -41,50 +51,74 @@ import java.util.PriorityQueue;
  *     Iterator<T> iterator();
  * }
  *
- * Uses a max heap (Java's standard PriorityQueue) to collect a maximum of totalCount tuples in reverse order.
- * When sort() is called it collects them in reverse sorted order into an array.
- * The iterator() then traverses this array backwards.
- *
+ * Uses a max heap to collect a maximum of {@code totalCount} tuples in reverse order.
+ * When sort() is called, it does a heap sort in-place which will reverse the order
+ * again, resulting in a fully sorted array which the iterator will go through.
  */
-public class DefaultComparatorTopTable<T> implements Iterable<T> // implements SortTable<T>
+public class DefaultComparatorTopTable<T> implements Iterable<T>, AutoCloseable // implements SortTable<T>
 {
+    private static final long SHALLOW_SIZE = shallowSizeOfInstance( DefaultComparatorTopTable.class );
+
     private final Comparator<T> comparator;
-    private final int totalCount;
-    private int count = -1;
-    private PriorityQueue<T> heap;
-    private Object[] array; // TODO: Use Guava's MinMaxPriorityQueue to avoid having this array
+    private final MemoryTracker memoryTracker;
 
-    public DefaultComparatorTopTable( Comparator<T> comparator, int totalCount )
+    private long totalCount;
+    private long trackedSize;
+    private boolean heapified;
+    private boolean isSorted;
+    private int size;
+    private T[] heap;
+
+    public DefaultComparatorTopTable( Comparator<T> comparator, long totalCount )
     {
-        this.comparator = comparator;
-        if ( totalCount <= 0 )
-        {
-            throw new IllegalArgumentException( "Top table size must be greater than 0" );
-        }
-        this.totalCount = totalCount;
+        this( comparator, totalCount, EmptyMemoryTracker.INSTANCE );
+    }
 
-        heap = new PriorityQueue<>( Math.min( totalCount, 1024 ), comparator.reversed() );
+    @SuppressWarnings( "unchecked" )
+    public DefaultComparatorTopTable( Comparator<T> comparator, long totalCount, MemoryTracker memoryTracker )
+    {
+        checkArgument( totalCount > 0, "Top table size must be greater than 0" );
+        this.comparator = requireNonNull( comparator );
+        this.totalCount = totalCount;
+        this.memoryTracker = memoryTracker;
+
+        int initialSize = (int) Math.min( totalCount, 1024 );
+        trackedSize = shallowSizeOfObjectArray( initialSize );
+        memoryTracker.allocateHeap( SHALLOW_SIZE + trackedSize );
+        heap = (T[]) new Object[initialSize];
     }
 
     public boolean add( T e )
     {
-        if ( heap.size() < totalCount )
+        if ( size < totalCount )
         {
-            return heap.offer( e );
+            if ( size >= heap.length )
+            {
+                grow( size + 1 );
+            }
+            heap[size++] = e;
+            return true;
         }
         else
         {
-            T head = heap.peek();
+            if ( !heapified )
+            {
+                heapify();
+            }
+            T head = heap[0];
             if ( comparator.compare( head, e ) > 0 )
             {
-                heap.poll();
-                return heap.offer( e );
-            }
-            else
-            {
-                return false;
+                heap[0] = e;
+                siftDown( 0, e, size );
+                return true;
             }
         }
+        return false;
+    }
+
+    public int getSize()
+    {
+        return size;
     }
 
     /**
@@ -92,57 +126,144 @@ public class DefaultComparatorTopTable<T> implements Iterable<T> // implements S
      */
     public Iterator<T> unorderedIterator()
     {
-        return heap.iterator();
+        return getIterator();
     }
 
     /**
-     * Must call _before_ calling <code>iterator()</code>.
+     * Must call before calling <code>iterator()</code>.
      */
     public void sort()
     {
-        count = heap.size();
-        array = new Object[ count ];
-
-        // We keep the values in reverse order so that we can write from start to end
-        for ( int i = 0; i < count; i++ )
+        if ( isSorted )
         {
-            array[i] = heap.poll();
+            return;
+        }
+
+        if ( !heapified )
+        {
+            java.util.Arrays.sort(heap, 0, size, comparator);
+        }
+        else
+        {
+            // Heap sort the array
+            int n = size - 1;
+            while ( n > 0 )
+            {
+                T tmp = heap[n];
+                heap[n] = heap[0];
+                heap[0] = tmp;
+                siftDown( 0, tmp, n );
+                n--;
+            }
+        }
+        isSorted = true;
+    }
+
+    public void reset( long newTotalCount )
+    {
+        checkArgument( newTotalCount > 0, "Top table size must be greater than 0" );
+        totalCount = newTotalCount;
+
+        Arrays.fill( heap, 0, size, null );
+        heapified = false;
+        isSorted = false;
+        size = 0;
+    }
+
+    @Override
+    public void close()
+    {
+        if ( heap != null )
+        {
+            memoryTracker.releaseHeap( trackedSize + SHALLOW_SIZE );
+            heap = null;
         }
     }
 
     /**
-     * Must call _after_ calling <code>sort()</code>.
+     * Must call after calling <code>sort()</code>.
      */
     @Override
     public Iterator<T> iterator()
     {
-        if ( count == -1 )
+        if ( !isSorted )
         {
             // This should never happen in generated code but is here to simplify debugging if used incorrectly
             throw new IllegalStateException( "sort() needs to be called before requesting an iterator" );
         }
-        return new Iterator<>()
+        return getIterator();
+    }
+
+    private Iterator<T> getIterator()
+    {
+        return Iterators.iterator( size, heap );
+    }
+
+    /**
+     * Make a heap out of the backing array. O(n)
+     */
+    private void heapify()
+    {
+        for ( int i = (size >>> 1) - 1; i >= 0; i-- )
         {
-            private int cursor = count;
+            siftDown( i, heap[i], size );
+        }
+        heapified = true;
+    }
 
-            @Override
-            public boolean hasNext()
+    /**
+     * Sift down an element in the heap. O(log(n))
+     *
+     * @param k index to sift down from
+     * @param x element to sift down
+     * @param n the size of the heap
+     */
+    private void siftDown( int k, T x, int n )
+    {
+        int half = n >>> 1;
+        while ( k < half )
+        {
+            int child = (k << 1) + 1;
+            T c = heap[child];
+            int right = child + 1;
+            if ( right < n && comparator.compare( c, heap[right] ) < 0 )
             {
-                return cursor > 0;
+                child = right;
+                c = heap[child];
             }
-
-            @Override
-            @SuppressWarnings( "unchecked" )
-            public T next()
+            if ( comparator.compare( x, c ) >= 0 )
             {
-                if ( !hasNext() )
-                {
-                    throw new NoSuchElementException();
-                }
-
-                int offset = --cursor;
-                return (T) array[offset];
+                break;
             }
-        };
+            heap[k] = c;
+            k = child;
+        }
+        heap[k] = x;
+    }
+
+    /**
+     * Grow  heap.
+     */
+    private void grow( long minimumCapacity )
+    {
+        int oldCapacity = heap.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1) + 1; // Grow by 50%
+        if ( newCapacity > MAX_ARRAY_SIZE || newCapacity < 0 ) // Check for overflow
+        {
+            if ( minimumCapacity > MAX_ARRAY_SIZE )
+            {
+                // Nothing left to do here. We have failed to prevent an overflow.
+                throw new CypherExecutionException( "Top table cannot hold more than " + MAX_ARRAY_SIZE + " elements." );
+            }
+            newCapacity = MAX_ARRAY_SIZE;
+        }
+
+        long oldHeapUsage = trackedSize;
+        trackedSize = shallowSizeOfObjectArray( newCapacity );
+        memoryTracker.allocateHeap( trackedSize );
+        T[] newHeap = (T[]) new Object[newCapacity];
+        System.arraycopy( heap, 0, newHeap, 0, Math.min( size, newCapacity ) );
+        heap = newHeap;
+        memoryTracker.releaseHeap( oldHeapUsage );
     }
 }

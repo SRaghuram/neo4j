@@ -23,7 +23,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.jar.JarOutputStream;
@@ -38,8 +37,7 @@ public class JarBuilder
 {
     public URL createJarFor( File f, Class<?>... classesToInclude ) throws IOException
     {
-        try ( OutputStream fout = Files.newOutputStream( f.toPath() );
-              JarOutputStream jarOut = new JarOutputStream( fout ) )
+        try ( JarOutputStream jarOut = new JarOutputStream( Files.newOutputStream( f.toPath() ) ) )
         {
             for ( Class<?> target : classesToInclude )
             {

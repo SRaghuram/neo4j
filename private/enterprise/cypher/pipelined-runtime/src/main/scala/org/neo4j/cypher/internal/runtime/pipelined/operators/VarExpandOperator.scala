@@ -55,8 +55,13 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
-import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompiler
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompilerFront
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.CURSORS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.EXPRESSION_VARIABLES
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PARAMS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -72,13 +77,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXPRESSION_CURSORS
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXPRESSION_VARIABLES
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PARAMS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
@@ -133,7 +135,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                          parallelism: Int,
                          resources: QueryResources,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
-    IndexedSeq(new OTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
@@ -310,7 +312,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     def generateStartNodePredicate() = {
       if (startNodePredicate == null) {
         startNodePredicate = maybeNodeVariablePredicate
-          .map(p => codeGen.intermediateCompileExpression(p.predicate)
+          .map(p => codeGen.compileExpression(p.predicate)
             .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
       }
 
@@ -352,7 +354,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
             cast[CypherRow](INPUT_CURSOR),
             DB_ACCESS,
             PARAMS,
-            EXPRESSION_CURSORS,
+            CURSORS,
             EXPRESSION_VARIABLES)),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, CursorPools]("enterWorkUnit"), CURSOR_POOL),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, OperatorProfileEvent]("setTracer"), loadField(executionEventField)),
@@ -483,7 +485,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     //use the provided OperatorExpressionCompiler since it will try to read from local variables instead of accessing the context.
     //Here we assume we are always running as start operator of a pipeline and will always read from context unless we are
     //accessing fromNode and toNode which we already have stored in fields.
-    val newScopeExpressionCompiler = new DefaultExpressionCompiler(codeGen.slots, codeGen.readOnly, codeGen.codeGenerationMode, codeGen.namer) {
+    val newScopeExpressionCompiler = new DefaultExpressionCompilerFront(codeGen.slots, codeGen.readOnly, codeGen.namer) {
       override protected def getLongAt(offset: Int): IntermediateRepresentation =
         if (fromSlot.isLongSlot && offset == fromSlot.offset) {
           invoke(self(), method[VarExpandCursor, Long]("fromNode"))
@@ -514,13 +516,13 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
     if (nodePredicate == null) {
       nodePredicate = maybeNodeVariablePredicate
-        .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate)
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
     }
 
     if (relPredicate == null) {
       relPredicate = maybeRelVariablePredicate
-        .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate)
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
     }
 
@@ -543,19 +545,19 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         param[Int]("minLength"),
         param[Int]("maxLength"),
         param[Read]("read"),
-        param[CypherRow]("context"),
-        param[DbAccess]("dbAccess"),
-        param[Array[AnyValue]]("params"),
-        param[ExpressionCursors]("cursors"),
-        param[Array[AnyValue]]("expressionVariables")),
+        param[CypherRow](ExpressionCompilation.ROW_NAME),
+        param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
+        param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
       Seq(methodDeclaration[Boolean]("satisfyPredicates",
         generatePredicate,
         () => locals.toSeq,
-        param[CypherRow]("context"),
-        param[DbAccess]("dbAccess"),
-        param[Array[AnyValue]]("params"),
-        param[ExpressionCursors]("cursors"),
-        param[Array[AnyValue]]("expressionVariables"),
+        param[CypherRow](ExpressionCompilation.ROW_NAME),
+        param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
+        param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME),
         param[RelationshipTraversalCursor]("selectionCursor"))),
       fields)
   }

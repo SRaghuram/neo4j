@@ -23,6 +23,7 @@ import org.neo4j.collection.RawIterator
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -256,7 +257,7 @@ abstract class ProfileRowsTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("a")
       .optionalExpandAll("(a)-->(b)")
-      .nodeByLabelScan("a", "A")
+      .nodeByLabelScan("a", "A", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -354,8 +355,8 @@ abstract class ProfileRowsTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
       .produceResults("y")
       .shortestPath("(x)-[r*]-(y)", Some("path"))
       .cartesianProduct()
-      .|.nodeByLabelScan("y", "END")
-      .nodeByLabelScan("x", "START")
+      .|.nodeByLabelScan("y", "END", IndexOrderNone)
+      .nodeByLabelScan("x", "START", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -378,7 +379,7 @@ abstract class ProfileRowsTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
       .produceResults("x")
       .expandInto("(x)-[r]->(y)")
       .expandAll("(x)-->(y)")
-      .nodeByLabelScan("x", "A")
+      .nodeByLabelScan("x", "A", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -896,7 +897,7 @@ abstract class ProfileRowsTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
-      .nodeByLabelScan("x", "L1")
+      .nodeByLabelScan("x", "L1", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -976,7 +977,7 @@ abstract class ProfileRowsTestBase[CONTEXT <: RuntimeContext](edition: Edition[C
   }
 }
 
-trait ProcedureCallRowsTestBase[CONTEXT <: RuntimeContext] {
+trait NonParallelProfileRowsTestBase[CONTEXT <: RuntimeContext] {
   self: ProfileRowsTestBase[CONTEXT] =>
 
   test("should profile rows of procedure call") {
@@ -1001,5 +1002,99 @@ trait ProcedureCallRowsTestBase[CONTEXT <: RuntimeContext] {
     // then
     result.runtimeResult.queryProfile().operatorProfile(1).rows() shouldBe sizeHint * 2// procedure call
     result.runtimeResult.queryProfile().operatorProfile(2).rows() shouldBe sizeHint // unwind
+  }
+
+  test("should profile rows with ordered distinct") {
+    // given
+    val nodes = given {
+      nodeGraph(sizeHint)
+    }
+
+    val input = for (n <- nodes) yield Array[Any](nodes.head, n)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .orderedDistinct(Seq("x"), "y AS y")
+      .input(nodes = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input:_*))
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).rows() shouldBe sizeHint // produce results
+    queryProfile.operatorProfile(1).rows() shouldBe sizeHint // orderedDistinct
+    queryProfile.operatorProfile(2).rows() shouldBe sizeHint // input
+  }
+
+  test("should profile rows with ordered aggregation") {
+    // given
+    val nodes = given {
+      nodeGraph(sizeHint)
+    }
+
+    val input = for (n <- nodes) yield Array[Any](nodes.head, n)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("c")
+      .orderedAggregation(Seq("x AS x", "y AS y"), Seq("collect(y) AS c"), Seq("x"))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input:_*))
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).rows() shouldBe sizeHint // produce results
+    queryProfile.operatorProfile(1).rows() shouldBe sizeHint // orderedAggregation
+    queryProfile.operatorProfile(2).rows() shouldBe sizeHint // input
+  }
+
+  test("should profile rows of partial sort") {
+    val input = for (i <- 0 until sizeHint) yield Array[Any](1, i)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .partialSort(Seq(Ascending("x")), Seq(Ascending("y")))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input: _*))
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).rows() shouldBe sizeHint // produce results
+    queryProfile.operatorProfile(1).rows() shouldBe sizeHint // partial sort
+    queryProfile.operatorProfile(2).rows() shouldBe sizeHint // input
+  }
+
+  test("should profile rows with partial top") {
+    // given
+    val nodes = given {
+      nodeGraph(sizeHint)
+    }
+
+    val input = for (n <- nodes) yield Array[Any](nodes.head, n)
+
+    val limit = 123
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .partialTop(Seq(Ascending("x")), Seq(Ascending("y")), limit)
+      .input(nodes = Seq("x", "y"))
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input:_*))
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).rows() shouldBe limit // produce results
+    queryProfile.operatorProfile(1).rows() shouldBe limit // partial top
+    queryProfile.operatorProfile(2).rows() shouldBe sizeHint // input
   }
 }

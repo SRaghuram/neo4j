@@ -19,15 +19,15 @@
  */
 package org.neo4j.kernel.impl.newapi;
 
-import org.eclipse.collections.api.IntIterable;
+import org.eclipse.collections.api.iterator.IntIterator;
 import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
-import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
+import org.neo4j.collection.PrimitiveLongCollections;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
@@ -38,10 +38,16 @@ import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.Reference;
+<<<<<<< HEAD
+=======
+import org.neo4j.storageengine.api.RelationshipDirection;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.txstate.LongDiffSets;
 import org.neo4j.storageengine.api.txstate.NodeState;
+import org.neo4j.storageengine.util.EagerDegrees;
+import org.neo4j.storageengine.util.SingleDegree;
 
 import static org.neo4j.kernel.impl.newapi.Read.NO_ID;
 import static org.neo4j.storageengine.api.LongReference.NULL_REFERENCE;
@@ -49,19 +55,22 @@ import static org.neo4j.storageengine.api.LongReference.NULL_REFERENCE;
 class DefaultNodeCursor extends TraceableCursor implements NodeCursor
 {
     Read read;
-    HasChanges hasChanges = HasChanges.MAYBE;
+    boolean checkHasChanges;
+    boolean hasChanges;
     private LongIterator addedNodes;
     StorageNodeCursor storeCursor;
+    private StorageNodeCursor securityStoreCursor;
     private long currentAddedInTx;
     private long single;
     private AccessMode accessMode;
 
     private final CursorPool<DefaultNodeCursor> pool;
 
-    DefaultNodeCursor( CursorPool<DefaultNodeCursor> pool, StorageNodeCursor storeCursor )
+    DefaultNodeCursor( CursorPool<DefaultNodeCursor> pool, StorageNodeCursor storeCursor, StorageNodeCursor securityStoreCursor )
     {
         this.pool = pool;
         this.storeCursor = storeCursor;
+        this.securityStoreCursor = securityStoreCursor;
     }
 
     void scan( Read read )
@@ -70,7 +79,7 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         this.read = read;
         this.single = NO_ID;
         this.currentAddedInTx = NO_ID;
-        this.hasChanges = HasChanges.MAYBE;
+        this.checkHasChanges = true;
         this.addedNodes = ImmutableEmptyLongIterator.INSTANCE;
         if ( tracer != null )
         {
@@ -83,7 +92,8 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         this.read = read;
         this.single = NO_ID;
         this.currentAddedInTx = NO_ID;
-        this.hasChanges = hasChanges ? HasChanges.YES : HasChanges.NO;
+        this.checkHasChanges = false;
+        this.hasChanges = hasChanges;
         this.addedNodes = addedNodes;
         boolean scanBatch = storeCursor.scanBatch( scan, sizeHint );
         return addedNodes.hasNext() || scanBatch;
@@ -95,7 +105,7 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         this.read = read;
         this.single = reference;
         this.currentAddedInTx = NO_ID;
-        this.hasChanges = HasChanges.MAYBE;
+        this.checkHasChanges = true;
         this.addedNodes = ImmutableEmptyLongIterator.INSTANCE;
     }
 
@@ -240,49 +250,50 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
     @Override
     public Degrees degrees( RelationshipSelection selection )
     {
+        EagerDegrees degrees = new EagerDegrees();
+        fillDegrees( selection, degrees );
+        return degrees;
+    }
+
+    @Override
+    public int degree( RelationshipSelection selection )
+    {
+        SingleDegree degrees = new SingleDegree();
+        fillDegrees( selection, degrees );
+        return degrees.getTotal();
+    }
+
+    private void fillDegrees( RelationshipSelection selection, Degrees.Mutator degrees )
+    {
         boolean hasChanges = hasChanges();
         NodeState nodeTxState = hasChanges ? read.txState().getNodeState( nodeReference() ) : null;
-        Degrees storedDegrees = currentAddedInTx == NO_ID ? storeCursor.degrees( selection ) : null;
-        if ( nodeTxState == null )
+        if ( currentAddedInTx == NO_ID )
         {
-            return storedDegrees == null ? Degrees.EMPTY : storedDegrees;
-        }
-
-        IntIterable txTypes = nodeTxState.getAddedRelationshipTypes();
-        if ( storedDegrees == null )
-        {
-            return new Degrees()
+            if ( accessMode.allowsTraverseAllRelTypes() && accessMode.allowsTraverseAllLabels() )
             {
-                @Override
-                public int[] types()
-                {
-                    return txTypes.toArray();
-                }
-
-                @Override
-                public int degree( int type, Direction direction )
-                {
-                    return nodeTxState.augmentDegree( direction, 0, type );
-                }
-            };
-        }
-        return new Degrees()
-        {
-            @Override
-            public int[] types()
-            {
-                MutableIntSet allTypes = IntSets.mutable.of( storedDegrees.types() );
-                allTypes.addAll( txTypes.toArray() );
-                return allTypes.toArray();
+                storeCursor.degrees( selection, degrees, true );
             }
-
-            @Override
-            public int degree( int type, Direction direction )
+            else
             {
-                int storedDegree = storedDegrees.degree( type, direction );
-                return nodeTxState.augmentDegree( direction, storedDegree, type );
+                storeCursor.degrees( new SecureRelationshipSelection( selection ), degrees, false );
             }
-        };
+        }
+        if ( nodeTxState != null )
+        {
+            // Then add the remaining types that's only present in the tx-state
+            IntIterator txTypes = nodeTxState.getAddedAndRemovedRelationshipTypes().intIterator();
+            while ( txTypes.hasNext() )
+            {
+                int type = txTypes.next();
+                if ( selection.test( type ) )
+                {
+                    int outgoing = selection.test( RelationshipDirection.OUTGOING ) ? nodeTxState.augmentDegree( RelationshipDirection.OUTGOING, 0, type ) : 0;
+                    int incoming = selection.test( RelationshipDirection.INCOMING ) ? nodeTxState.augmentDegree( RelationshipDirection.INCOMING, 0, type ) : 0;
+                    int loop = selection.test( RelationshipDirection.LOOP ) ? nodeTxState.augmentDegree( RelationshipDirection.LOOP, 0, type ) : 0;
+                    degrees.add( type, outgoing, incoming, loop );
+                }
+            }
+        }
     }
 
     @Override
@@ -338,9 +349,10 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         if ( !isClosed() )
         {
             read = null;
-            hasChanges = HasChanges.MAYBE;
+            checkHasChanges = true;
             addedNodes = ImmutableEmptyLongIterator.INSTANCE;
             storeCursor.reset();
+            securityStoreCursor.reset();
             accessMode = null;
 
             pool.accept( this );
@@ -359,34 +371,27 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
      */
     boolean hasChanges()
     {
-        switch ( hasChanges )
+        if ( checkHasChanges )
         {
-        case MAYBE:
-            boolean changes = read.hasTxStateWithChanges();
-            if ( changes )
+            computeHasChanges();
+        }
+        return hasChanges;
+    }
+
+    private void computeHasChanges()
+    {
+        checkHasChanges = false;
+        if ( hasChanges = read.hasTxStateWithChanges() )
+        {
+            if ( single != NO_ID )
             {
-                if ( single != NO_ID )
-                {
-                    addedNodes = read.txState().nodeIsAddedInThisTx( single ) ?
-                                 LongSets.immutable.of( single ).longIterator() : ImmutableEmptyLongIterator.INSTANCE;
-                }
-                else
-                {
-                    addedNodes = read.txState().addedAndRemovedNodes().getAdded().freeze().longIterator();
-                }
-                hasChanges = HasChanges.YES;
+                addedNodes = read.txState().nodeIsAddedInThisTx( single ) ?
+                             PrimitiveLongCollections.single( single ) : ImmutableEmptyLongIterator.INSTANCE;
             }
             else
             {
-                hasChanges = HasChanges.NO;
+                addedNodes = read.txState().addedAndRemovedNodes().getAdded().freeze().longIterator();
             }
-            return changes;
-        case YES:
-            return true;
-        case NO:
-            return false;
-        default:
-            throw new IllegalStateException( "Style guide, why are you making me do this" );
         }
     }
 
@@ -399,12 +404,84 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         }
         else
         {
-            return "NodeCursor[id=" + nodeReference() + ", " + storeCursor.toString() + "]";
+            return "NodeCursor[id=" + nodeReference() + ", " + storeCursor + "]";
         }
     }
 
     void release()
     {
         storeCursor.close();
+        securityStoreCursor.close();
+    }
+
+    private class SecureRelationshipSelection extends RelationshipSelection
+    {
+        private final RelationshipSelection inner;
+
+        SecureRelationshipSelection( RelationshipSelection selection )
+        {
+            inner = selection;
+        }
+
+        @Override
+        public boolean test( int type, long sourceReference, long targetReference )
+        {
+            if ( accessMode.allowsTraverseRelType( type ) )
+            {
+                if ( sourceReference == targetReference )
+                {
+                    return inner.test( type );
+                }
+                long otherReference = sourceReference == nodeReference() ? targetReference : sourceReference;
+                securityStoreCursor.single( otherReference );
+                return securityStoreCursor.next() && accessMode.allowsTraverseNode( securityStoreCursor.labels() ) && inner.test( type );
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        @Override
+        public boolean test( int type )
+        {
+            return inner.test( type );
+        }
+
+        @Override
+        public boolean test( RelationshipDirection direction )
+        {
+            return inner.test( direction );
+        }
+
+        @Override
+        public Direction direction()
+        {
+            return inner.direction();
+        }
+
+        @Override
+        public boolean test( int type, RelationshipDirection direction )
+        {
+            return inner.test( type, direction );
+        }
+
+        @Override
+        public int numberOfCriteria()
+        {
+           return inner.numberOfCriteria();
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            return inner.criterion( index );
+        }
+
+        @Override
+        public LongIterator addedRelationship( NodeState transactionState )
+        {
+            return inner.addedRelationship( transactionState );
+        }
     }
 }

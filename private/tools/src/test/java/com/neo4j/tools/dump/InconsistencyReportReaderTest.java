@@ -15,7 +15,7 @@ import java.io.StringReader;
 import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.report.InconsistencyMessageLogger;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
+import org.neo4j.consistency.store.synthetic.TokenScanDocument;
 import org.neo4j.internal.index.label.EntityTokenRange;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
@@ -28,6 +28,8 @@ import org.neo4j.logging.FormattedLog;
 import org.neo4j.test.InMemoryTokens;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.common.EntityType.NODE;
+import static org.neo4j.common.EntityType.RELATIONSHIP;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
 
 class InconsistencyReportReaderTest
@@ -40,14 +42,15 @@ class InconsistencyReportReaderTest
         FormattedLog log = FormattedLog.toOutputStream( out );
         InconsistencyMessageLogger logger = new InconsistencyMessageLogger( log );
         InMemoryTokens tokens = new InMemoryTokens().label( 1, "label" ).propertyKey( 1, "prop" );
-        long nodeId = 5;
-        long indexNodeId = 7;
-        long nodeNotInTheIndexId = 17;
-        long nodeNotInTheLabelIndexId = 18;
-        long indexId = 99;
-        long relationshipGroupId = 10;
-        long relationshipId = 15;
-        long propertyId = 20;
+        long nodeId = 1;
+        long indexNodeId = 2;
+        long nodeNotInTheIndexId = 3;
+        long nodeNotInTheLabelIndexId = 4;
+        long indexId = 5;
+        long relationshipGroupId = 6;
+        long relationshipId = 7;
+        long relationshipNotInTypeIndexId = 8;
+        long propertyId = 9;
         logger.error( RecordType.NODE, new NodeRecord( nodeId ),
                 "Some error", "something" );
         logger.error( RecordType.RELATIONSHIP, new RelationshipRecord( relationshipId ),
@@ -60,8 +63,10 @@ class InconsistencyReportReaderTest
                 "Something wrong with index" );
         logger.error( RecordType.NODE, new NodeRecord( nodeNotInTheIndexId ), "Some index error",
                       IndexPrototype.forSchema( forLabel( 1, 2 ) ).withName( "index_" + indexId ).materialise( indexId ).userDescription( tokens ) );
-        logger.error( RecordType.LABEL_SCAN_DOCUMENT, new LabelScanDocument( new EntityTokenRange( 0, new long[0][] ) ),
+        logger.error( RecordType.LABEL_SCAN_DOCUMENT, new TokenScanDocument( new EntityTokenRange( 0, new long[0][], NODE ) ),
                 "Some label index error", new NodeRecord( nodeNotInTheLabelIndexId ) );
+        logger.error( RecordType.RELATIONSHIP_TYPE_SCAN_DOCUMENT, new TokenScanDocument( new EntityTokenRange( 0, new long[0][], RELATIONSHIP ) ),
+                "Some relationship type error", new RelationshipRecord( relationshipNotInTypeIndexId ) );
         String text = out.toString();
 
         // WHEN
@@ -75,6 +80,7 @@ class InconsistencyReportReaderTest
         assertTrue( inconsistencies.containsId( Type.NODE, nodeNotInTheIndexId ) );
         assertTrue( inconsistencies.containsId( Type.NODE, nodeNotInTheLabelIndexId ) );
         assertTrue( inconsistencies.containsId( Type.RELATIONSHIP, relationshipId ) );
+        assertTrue( inconsistencies.containsId( Type.RELATIONSHIP, relationshipNotInTypeIndexId ) );
         assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, relationshipGroupId ) );
         assertTrue( inconsistencies.containsId( Type.PROPERTY, propertyId ) );
         assertTrue( inconsistencies.containsId( Type.SCHEMA_INDEX, indexId ) );

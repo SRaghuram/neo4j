@@ -80,9 +80,11 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
     val expressionCompiler =
       _fusedPlans.head match {
         case Union(left, right) =>
-          new UnionOperatorExpressionCompiler(slots, inputSlotConfiguration, physicalPlan.slotConfigurations(left.id), physicalPlan.slotConfigurations(right.id), readOnly, codeGenerationMode, namer)
+          val leftSlots = physicalPlan.slotConfigurations(left.id)
+          val rightSlots = physicalPlan.slotConfigurations(right.id)
+          new UnionOperatorExpressionCompiler(slots, inputSlotConfiguration, leftSlots, rightSlots, readOnly, namer)
         case _ =>
-          new OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
+          new OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) // NOTE: We assume slots is the same within an entire pipeline
       }
 
     val innermost = new DelegateOperatorTaskTemplate()(expressionCompiler)
@@ -137,7 +139,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                                    slots: SlotConfiguration,
                                    orderToLeverage: Seq[Expression]): () => IntermediateExpression = {
               val orderedGroupingExpressions = orderGroupingKeyExpressions(astExpressions, orderToLeverage)(slots).map(_._2)
-              () => ctx.expressionCompiler.intermediateCompileGroupingKey(orderedGroupingExpressions)
+              () => ctx.expressionCompiler.compileGroupingKey(orderedGroupingExpressions)
                 .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpressions"))
             }
 

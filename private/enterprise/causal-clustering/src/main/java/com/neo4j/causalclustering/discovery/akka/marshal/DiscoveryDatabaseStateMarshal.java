@@ -22,7 +22,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 
 public class DiscoveryDatabaseStateMarshal extends SafeChannelMarshal<DiscoveryDatabaseState>
 {
-    public static DiscoveryDatabaseStateMarshal INSTANCE = new DiscoveryDatabaseStateMarshal();
+    public static final DiscoveryDatabaseStateMarshal INSTANCE = new DiscoveryDatabaseStateMarshal();
 
     private DiscoveryDatabaseStateMarshal()
     {

@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-public class InFlightLogEntryReaderTest
+class InFlightLogEntryReaderTest
 {
     private final ReadableRaftLog raftLog = mock( ReadableRaftLog.class );
     private final InFlightCache inFlightCache = mock( ConsecutiveInFlightCache.class );
@@ -37,7 +37,7 @@ public class InFlightLogEntryReaderTest
     private final RaftLogEntry entry = mock( RaftLogEntry.class );
 
     @TestWithCacheClearing
-    public void shouldUseTheCacheWhenTheIndexIsPresent( boolean clearCache ) throws Exception
+    void shouldUseTheCacheWhenTheIndexIsPresent( boolean clearCache ) throws Exception
     {
         // given
         var reader = new InFlightLogEntryReader( raftLog, inFlightCache, clearCache );
@@ -56,7 +56,7 @@ public class InFlightLogEntryReaderTest
     }
 
     @TestWithCacheClearing
-    public void shouldUseTheRaftLogWhenTheIndexIsNotPresent( boolean clearCache ) throws Exception
+    void shouldUseTheRaftLogWhenTheIndexIsNotPresent( boolean clearCache ) throws Exception
     {
         // given
         var reader = new InFlightLogEntryReader( raftLog, inFlightCache, clearCache );
@@ -77,7 +77,7 @@ public class InFlightLogEntryReaderTest
     }
 
     @TestWithCacheClearing
-    public void shouldNeverUseCacheAgainAfterHavingFallenBackToTheRaftLog( boolean clearCache ) throws Exception
+    void shouldNeverUseCacheAgainAfterHavingFallenBackToTheRaftLog( boolean clearCache ) throws Exception
     {
         // given
         var entriesCount = 10;

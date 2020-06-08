@@ -32,7 +32,7 @@ import org.neo4j.consistency.checking.cache.CacheSlots;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
+import org.neo4j.consistency.store.synthetic.TokenScanDocument;
 import org.neo4j.internal.helpers.collection.LongRange;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.internal.index.label.AllEntriesTokenScanReader;
@@ -126,14 +126,15 @@ class NodeChecker implements Checker
               AllEntriesTokenScanReader labelIndexReader = context.labelScanStore.allEntityTokenRanges( fromNodeId, last ? Long.MAX_VALUE : toNodeId,
                       cursorTracer );
               SafePropertyChainReader property = new SafePropertyChainReader( context, cursorTracer );
-              SchemaComplianceChecker schemaComplianceChecker = new SchemaComplianceChecker( context, mandatoryProperties, smallIndexes, cursorTracer ) )
+              SchemaComplianceChecker schemaComplianceChecker = new SchemaComplianceChecker( context, mandatoryProperties, smallIndexes, cursorTracer,
+                      context.memoryTracker ) )
         {
             ProgressListener localProgress = nodeProgress.threadLocalReporter();
             MutableIntObjectMap<Value> propertyValues = new IntObjectHashMap<>();
             CacheAccess.Client client = context.cacheAccess.client();
             long[] nextRelCacheFields = new long[]{-1, -1, 1/*inUse*/, 0, 0, 1/*note that this needs to be checked*/, 0};
             Iterator<EntityTokenRange> nodeLabelRangeIterator = labelIndexReader.iterator();
-            NodeLabelIndexCheckState labelIndexState = new NodeLabelIndexCheckState( null, fromNodeId - 1 );
+            EntityTokenIndexCheckState labelIndexState = new EntityTokenIndexCheckState( null, fromNodeId - 1 );
             for ( long nodeId = fromNodeId; nodeId < toNodeId && !context.isCancelled(); nodeId++ )
             {
                 localProgress.add( 1 );
@@ -267,27 +268,27 @@ class NodeChecker implements Checker
     }
 
     private void checkNodeVsLabelIndex( RecordNodeCursor nodeCursor, Iterator<EntityTokenRange> nodeLabelRangeIterator,
-            NodeLabelIndexCheckState labelIndexState, long nodeId, long[] labels, long fromNodeId, PageCursorTracer cursorTracer )
+            EntityTokenIndexCheckState labelIndexState, long nodeId, long[] labels, long fromNodeId, PageCursorTracer cursorTracer )
     {
         // Detect node-label combinations that exist in the label index, but not in the store
-        while ( labelIndexState.needToMoveRangeForwardToReachNode( nodeId ) && !context.isCancelled() )
+        while ( labelIndexState.needToMoveRangeForwardToReachEntity( nodeId ) && !context.isCancelled() )
         {
             if ( nodeLabelRangeIterator.hasNext() )
             {
                 if ( labelIndexState.currentRange != null )
                 {
-                    for ( long nodeIdMissingFromStore = labelIndexState.lastCheckedNodeId + 1;
-                            nodeIdMissingFromStore < nodeId & labelIndexState.currentRange.covers( nodeIdMissingFromStore ); nodeIdMissingFromStore++ )
+                    for ( long nodeIdMissingFromStore = labelIndexState.lastCheckedEntityId + 1;
+                          nodeIdMissingFromStore < nodeId & labelIndexState.currentRange.covers( nodeIdMissingFromStore ); nodeIdMissingFromStore++ )
                     {
                         if ( labelIndexState.currentRange.tokens( nodeIdMissingFromStore ).length > 0 )
                         {
-                            reporter.forNodeLabelScan( new LabelScanDocument( labelIndexState.currentRange ) ).nodeNotInUse(
+                            reporter.forNodeLabelScan( new TokenScanDocument( labelIndexState.currentRange ) ).nodeNotInUse(
                                     recordLoader.node( nodeIdMissingFromStore, cursorTracer ) );
                         }
                     }
                 }
                 labelIndexState.currentRange = nodeLabelRangeIterator.next();
-                labelIndexState.lastCheckedNodeId = max( fromNodeId, labelIndexState.currentRange.entities()[0] ) - 1;
+                labelIndexState.lastCheckedEntityId = max( fromNodeId, labelIndexState.currentRange.entities()[0] ) - 1;
             }
             else
             {
@@ -297,11 +298,11 @@ class NodeChecker implements Checker
 
         if ( labelIndexState.currentRange != null && labelIndexState.currentRange.covers( nodeId ) )
         {
-            for ( long nodeIdMissingFromStore = labelIndexState.lastCheckedNodeId + 1; nodeIdMissingFromStore < nodeId; nodeIdMissingFromStore++ )
+            for ( long nodeIdMissingFromStore = labelIndexState.lastCheckedEntityId + 1; nodeIdMissingFromStore < nodeId; nodeIdMissingFromStore++ )
             {
                 if ( labelIndexState.currentRange.tokens( nodeIdMissingFromStore ).length > 0 )
                 {
-                    reporter.forNodeLabelScan( new LabelScanDocument( labelIndexState.currentRange ) )
+                    reporter.forNodeLabelScan( new TokenScanDocument( labelIndexState.currentRange ) )
                             .nodeNotInUse( recordLoader.node( nodeIdMissingFromStore, cursorTracer ) );
                 }
             }
@@ -311,19 +312,19 @@ class NodeChecker implements Checker
                 validateLabelIds( nodeCursor, labels, sortAndDeduplicate( labelsInLabelIndex ) /* TODO remove when fixed */, labelIndexState.currentRange,
                         cursorTracer );
             }
-            labelIndexState.lastCheckedNodeId = nodeId;
+            labelIndexState.lastCheckedEntityId = nodeId;
         }
         else if ( labels != null )
         {
             for ( long label : labels )
             {
-                reporter.forNodeLabelScan( new LabelScanDocument( new EntityTokenRange( nodeId / Long.SIZE, EntityTokenRange.NO_TOKENS ) ) )
+                reporter.forNodeLabelScan( new TokenScanDocument( new EntityTokenRange( nodeId / Long.SIZE, EntityTokenRange.NO_TOKENS, NODE ) ) )
                         .nodeLabelNotInIndex( recordLoader.node( nodeId, cursorTracer ), label );
             }
         }
     }
 
-    private void reportRemainingLabelIndexEntries( Iterator<EntityTokenRange> nodeLabelRangeIterator, NodeLabelIndexCheckState labelIndexState, long toNodeId,
+    private void reportRemainingLabelIndexEntries( Iterator<EntityTokenRange> nodeLabelRangeIterator, EntityTokenIndexCheckState labelIndexState, long toNodeId,
             PageCursorTracer cursorTracer )
     {
         if ( labelIndexState.currentRange == null && nodeLabelRangeIterator.hasNext() )
@@ -334,16 +335,16 @@ class NodeChecker implements Checker
 
         while ( labelIndexState.currentRange != null && !context.isCancelled() )
         {
-            for ( long nodeIdMissingFromStore = labelIndexState.lastCheckedNodeId + 1;
-                    nodeIdMissingFromStore < toNodeId && !labelIndexState.needToMoveRangeForwardToReachNode( nodeIdMissingFromStore );
-                    nodeIdMissingFromStore++ )
+            for ( long nodeIdMissingFromStore = labelIndexState.lastCheckedEntityId + 1;
+                  nodeIdMissingFromStore < toNodeId && !labelIndexState.needToMoveRangeForwardToReachEntity( nodeIdMissingFromStore );
+                  nodeIdMissingFromStore++ )
             {
                 if ( labelIndexState.currentRange.covers( nodeIdMissingFromStore ) && labelIndexState.currentRange.tokens( nodeIdMissingFromStore ).length > 0 )
                 {
-                    reporter.forNodeLabelScan( new LabelScanDocument( labelIndexState.currentRange ) )
+                    reporter.forNodeLabelScan( new TokenScanDocument( labelIndexState.currentRange ) )
                             .nodeNotInUse( recordLoader.node( nodeIdMissingFromStore, cursorTracer ) );
                 }
-                labelIndexState.lastCheckedNodeId = nodeIdMissingFromStore;
+                labelIndexState.lastCheckedEntityId = nodeIdMissingFromStore;
             }
             labelIndexState.currentRange = nodeLabelRangeIterator.hasNext() ? nodeLabelRangeIterator.next() : null;
         }
@@ -353,13 +354,13 @@ class NodeChecker implements Checker
             PageCursorTracer cursorTracer )
     {
         compareTwoSortedLongArrays( PropertySchemaType.COMPLETE_ALL_TOKENS, labelsInStore, labelsInIndex,
-                indexLabel -> reporter.forNodeLabelScan( new LabelScanDocument( entityTokenRange ) )
+                indexLabel -> reporter.forNodeLabelScan( new TokenScanDocument( entityTokenRange ) )
                         .nodeDoesNotHaveExpectedLabel( recordLoader.node( node.getId(), cursorTracer ), indexLabel ),
-                storeLabel -> reporter.forNodeLabelScan( new LabelScanDocument( entityTokenRange ) )
+                storeLabel -> reporter.forNodeLabelScan( new TokenScanDocument( entityTokenRange ) )
                         .nodeLabelNotInIndex( recordLoader.node( node.getId(), cursorTracer ), storeLabel ) );
     }
 
-    private static void compareTwoSortedLongArrays( PropertySchemaType propertySchemaType, long[] a, long[] b,
+    static void compareTwoSortedLongArrays( PropertySchemaType propertySchemaType, long[] a, long[] b,
             LongConsumer bHasSomethingThatAIsMissingReport, LongConsumer aHasSomethingThatBIsMissingReport )
     {
         // The node must have all of the labels specified by the index.
@@ -473,26 +474,5 @@ class NodeChecker implements Checker
     public String toString()
     {
         return String.format( "%s[highId:%d,indexesToCheck:%d]", getClass().getSimpleName(), neoStores.getNodeStore().getHighId(), smallIndexes.size() );
-    }
-
-    private static class NodeLabelIndexCheckState
-    {
-        private EntityTokenRange currentRange;
-        private long lastCheckedNodeId;
-
-        NodeLabelIndexCheckState( EntityTokenRange currentRange, long lastCheckedNodeId )
-        {
-            this.currentRange = currentRange;
-            this.lastCheckedNodeId = lastCheckedNodeId;
-        }
-
-        boolean needToMoveRangeForwardToReachNode( long nodeId )
-        {
-            if ( currentRange == null )
-            {
-                return true;
-            }
-            return currentRange.isBelow( nodeId );
-        }
     }
 }

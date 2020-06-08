@@ -21,9 +21,23 @@ package org.neo4j.memory;
 
 public enum MemoryGroup
 {
-    TRANSACTION,
-    NETTY,
-    PAGE_CACHE,
-    REPLICATION_BUFFERS,
-    QUERY_CACHE
+    TRANSACTION( "Transaction" ),
+    NETTY( "Netty" ),
+    PAGE_CACHE( "Page Cache" ),
+    OTHER( "Other" ),
+    REPLICATION_BUFFERS( "Replication Buffers" ),
+    QUERY_CACHE( "Query Cache" ),
+    NO_TRACKING( "No Tracking" );
+
+    private final String name;
+
+    MemoryGroup( String name )
+    {
+        this.name = name;
+    }
+
+    public String getName()
+    {
+        return name;
+    }
 }

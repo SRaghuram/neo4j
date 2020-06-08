@@ -9,12 +9,15 @@ import com.codahale.metrics.MetricRegistry;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
 import com.neo4j.metrics.source.db.BoltMetrics;
+import com.neo4j.metrics.source.db.DatabaseOperationCountMetrics;
+import com.neo4j.metrics.source.db.GlobalMemoryPoolMetrics;
 import com.neo4j.metrics.source.db.PageCacheMetrics;
 import com.neo4j.metrics.source.jvm.FileDescriptorMetrics;
 import com.neo4j.metrics.source.jvm.GCMetrics;
 import com.neo4j.metrics.source.jvm.HeapMetrics;
-import com.neo4j.metrics.source.jvm.MemoryBuffersMetrics;
-import com.neo4j.metrics.source.jvm.MemoryPoolMetrics;
+import com.neo4j.metrics.source.jvm.JVMMemoryBuffersMetrics;
+import com.neo4j.metrics.source.jvm.JVMMemoryPoolMetrics;
+import com.neo4j.metrics.source.jvm.PauseMetrics;
 import com.neo4j.metrics.source.jvm.ThreadMetrics;
 import com.neo4j.metrics.source.server.ServerMetrics;
 
@@ -67,12 +70,12 @@ public class GlobalMetricsExporter
 
         if ( config.get( MetricsSettings.jvmMemoryEnabled ) )
         {
-            life.add( new MemoryPoolMetrics( globalMetricsPrefix, registry ) );
+            life.add( new JVMMemoryPoolMetrics( globalMetricsPrefix, registry ) );
         }
 
         if ( config.get( MetricsSettings.jvmBuffersEnabled ) )
         {
-            life.add( new MemoryBuffersMetrics( globalMetricsPrefix, registry ) );
+            life.add( new JVMMemoryBuffersMetrics( globalMetricsPrefix, registry ) );
         }
 
         if ( config.get( MetricsSettings.jvmFileDescriptorsEnabled ) )
@@ -80,9 +83,24 @@ public class GlobalMetricsExporter
             life.add( new FileDescriptorMetrics( globalMetricsPrefix, registry ) );
         }
 
+        if ( config.get( MetricsSettings.jvmPauseTimeEnabled ) )
+        {
+            life.add( new PauseMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
+        }
+
         if ( config.get( MetricsSettings.boltMessagesEnabled ) )
         {
             life.add( new BoltMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
+        }
+
+        if ( config.get( MetricsSettings.databaseOperationCountEnabled ) )
+        {
+            life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.databaseOperationCounts() ) );
+        }
+
+        if ( config.get( MetricsSettings.neoMemoryPoolsEnabled ) )
+        {
+            life.add( new GlobalMemoryPoolMetrics( globalMetricsPrefix, registry, dependencies.memoryPools() ) );
         }
 
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );

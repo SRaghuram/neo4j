@@ -76,6 +76,11 @@ public class SchemaCache
         return schemaCacheState.indexes();
     }
 
+    public boolean isEmpty()
+    {
+        return schemaCacheState.isEmpty();
+    }
+
     public Iterable<ConstraintDescriptor> constraints()
     {
         return schemaCacheState.constraints();
@@ -553,6 +558,11 @@ public class SchemaCache
                 selectIndexSetByEntityType( schema.entityType() ).remove( index );
             }
         }
+
+        boolean isEmpty()
+        {
+            return indexesById.isEmpty() && constraintsById.isEmpty();
+        }
     }
 
     /**
@@ -742,6 +752,14 @@ public class SchemaCache
                 return false;
             }
             return Arrays.equals( properties, that.properties );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "IndexesRelatedToKey{" + "entityType=" + entityType + ", changedEntityTokens=" + Arrays.toString( changedEntityTokens ) +
+                    ", unchangedEntityTokens=" + Arrays.toString( unchangedEntityTokens ) + ", properties=" + Arrays.toString( properties ) +
+                    ", propertyListIsComplete=" + propertyListIsComplete + '}';
         }
     }
 

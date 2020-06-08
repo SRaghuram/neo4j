@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.time.Instant;
@@ -22,7 +22,7 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
 import static org.mockito.Mockito.verify;
 
-public class LeaderAvailabilityHandlerTest
+class LeaderAvailabilityHandlerTest
 {
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
@@ -44,7 +44,7 @@ public class LeaderAvailabilityHandlerTest
             RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, new RaftMessages.Vote.Response( leader, term.getAsLong(), false ) );
 
     @Test
-    public void shouldRenewElectionForHeartbeats() throws Throwable
+    void shouldRenewElectionForHeartbeats() throws Throwable
     {
         // given
         handler.start( raftId );
@@ -57,7 +57,7 @@ public class LeaderAvailabilityHandlerTest
     }
 
     @Test
-    public void shouldRenewElectionForAppendEntriesRequests() throws Throwable
+    void shouldRenewElectionForAppendEntriesRequests() throws Throwable
     {
         // given
         handler.start( raftId );
@@ -70,7 +70,7 @@ public class LeaderAvailabilityHandlerTest
     }
 
     @Test
-    public void shouldNotRenewElectionForOtherMessages() throws Throwable
+    void shouldNotRenewElectionForOtherMessages() throws Throwable
     {
         // given
         handler.start( raftId );
@@ -83,7 +83,7 @@ public class LeaderAvailabilityHandlerTest
     }
 
     @Test
-    public void shouldNotRenewElectionTimeoutsForHeartbeatsFromEarlierTerm() throws Throwable
+    void shouldNotRenewElectionTimeoutsForHeartbeatsFromEarlierTerm() throws Throwable
     {
         // given
         RaftMessages.InboundRaftMessageContainer<?> heartbeat =  RaftMessages.InboundRaftMessageContainer.of(
@@ -99,7 +99,7 @@ public class LeaderAvailabilityHandlerTest
     }
 
     @Test
-    public void shouldNotRenewElectionTimeoutsForAppendEntriesRequestsFromEarlierTerms() throws Throwable
+    void shouldNotRenewElectionTimeoutsForAppendEntriesRequestsFromEarlierTerms() throws Throwable
     {
         RaftMessages.InboundRaftMessageContainer<?> appendEntries = RaftMessages.InboundRaftMessageContainer.of(
                 Instant.now(), raftId,
@@ -117,7 +117,7 @@ public class LeaderAvailabilityHandlerTest
     }
 
     @Test
-    public void shouldDelegateStart() throws Throwable
+    void shouldDelegateStart() throws Throwable
     {
         // when
         handler.start( raftId );
@@ -127,7 +127,7 @@ public class LeaderAvailabilityHandlerTest
     }
 
     @Test
-    public void shouldDelegateStop() throws Throwable
+    void shouldDelegateStop() throws Throwable
     {
         // when
         handler.stop();

@@ -43,6 +43,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -71,6 +72,7 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.record.Record.NULL_REFERENCE;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( RandomExtension.class )
@@ -132,6 +134,7 @@ public class DetectAllRelationshipInconsistenciesIT
             StoreAccess storeAccess = new StoreAccess( neoStores ).initialize();
             DirectStoreAccess directStoreAccess = new DirectStoreAccess( storeAccess,
                     db.getDependencyResolver().resolveDependency( LabelScanStore.class ),
+                    db.getDependencyResolver().resolveDependency( RelationshipTypeScanStore.class ),
                     db.getDependencyResolver().resolveDependency( IndexProviderMap.class ),
                     db.getDependencyResolver().resolveDependency( TokenHolders.class ),
                     db.getDependencyResolver().resolveDependency( IndexStatisticsStore.class ),
@@ -143,7 +146,7 @@ public class DetectAllRelationshipInconsistenciesIT
                             NodeBasedMemoryLimiter.DEFAULT );
             AssertableLogProvider logProvider = new AssertableLogProvider( true );
             ConsistencySummaryStatistics summary = checker.execute( resolver.resolveDependency( PageCache.class ), directStoreAccess, () -> counts,
-                    PageCacheTracer.NULL, logProvider.getLog( FullCheck.class ) );
+                    PageCacheTracer.NULL, INSTANCE, logProvider.getLog( FullCheck.class ) );
             int relationshipInconsistencies = summary.getInconsistencyCountForRecordType( RecordType.RELATIONSHIP );
 
             assertTrue( relationshipInconsistencies > 0, "Couldn't detect sabotaged relationship " + sabotage );

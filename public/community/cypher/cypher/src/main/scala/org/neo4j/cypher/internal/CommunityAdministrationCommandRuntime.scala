@@ -24,6 +24,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.logical.plans.AlterUser
 import org.neo4j.cypher.internal.logical.plans.AssertDatabaseAdmin
 import org.neo4j.cypher.internal.logical.plans.AssertDbmsAdmin
 import org.neo4j.cypher.internal.logical.plans.AssertDbmsAdminOrSelf
@@ -41,7 +42,7 @@ import org.neo4j.cypher.internal.logical.plans.ShowDatabases
 import org.neo4j.cypher.internal.logical.plans.ShowDefaultDatabase
 import org.neo4j.cypher.internal.logical.plans.ShowUsers
 import org.neo4j.cypher.internal.logical.plans.SystemProcedureCall
-import org.neo4j.cypher.internal.procs.AdminActionMapper
+import org.neo4j.cypher.internal.procs.ActionMapper
 import org.neo4j.cypher.internal.procs.AuthorizationPredicateExecutionPlan
 import org.neo4j.cypher.internal.procs.PredicateExecutionPlan
 import org.neo4j.cypher.internal.procs.QueryHandler
@@ -50,6 +51,7 @@ import org.neo4j.cypher.internal.procs.UpdatingSystemCommandExecutionPlan
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.slottedParameters
 import org.neo4j.cypher.internal.security.SystemGraphCredential
+import org.neo4j.cypher.rendering.QueryRenderer
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.DatabaseAdministrationOnFollowerException
 import org.neo4j.exceptions.Neo4jException
@@ -72,6 +74,7 @@ import org.neo4j.values.storable.StringArray
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.MapValueBuilder
 import org.neo4j.values.virtual.VirtualValues
 
 import scala.collection.JavaConverters.asScalaIteratorConverter
@@ -106,13 +109,13 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
     // Check Admin Rights for DBMS commands
     case AssertDbmsAdmin(actions) => (_, _) =>
       AuthorizationPredicateExecutionPlan((_, securityContext) => actions.forall { action =>
-        securityContext.allowsAdminAction(new AdminActionOnResource(AdminActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL))
+        securityContext.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL))
       }, violationMessage = PERMISSION_DENIED)
 
     // Check Admin Rights for DBMS commands or self
     case AssertDbmsAdminOrSelf(user, actions) => (_, _) =>
       AuthorizationPredicateExecutionPlan((params, securityContext) => securityContext.subject().hasUsername(runtimeValue(user, params)) || actions.forall { action =>
-        securityContext.allowsAdminAction(new AdminActionOnResource(AdminActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL))
+        securityContext.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL))
       }, violationMessage = PERMISSION_DENIED)
 
     // Check that the specified user is not the logged in user (eg. for some CREATE/DROP/ALTER USER commands)
@@ -125,7 +128,7 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
     // Check Admin Rights for some Database commands
     case AssertDatabaseAdmin(action, database) => (_, _) =>
       AuthorizationPredicateExecutionPlan((params, securityContext) =>
-        securityContext.allowsAdminAction(new AdminActionOnResource(AdminActionMapper.asKernelAction(action), new DatabaseScope(runtimeValue(database, params)), Segment.ALL)),
+        securityContext.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), new DatabaseScope(runtimeValue(database, params)), Segment.ALL)),
         violationMessage = PERMISSION_DENIED
       )
 
@@ -133,7 +136,7 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
     case ShowUsers(source) => (context, parameterMapping) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         """MATCH (u:User)
-          |RETURN u.name as user, u.passwordChangeRequired AS passwordChangeRequired""".stripMargin,
+          |RETURN u.name as user, null as role, u.passwordChangeRequired AS passwordChangeRequired, null as suspended""".stripMargin,
         VirtualValues.EMPTY_MAP,
         source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
@@ -152,11 +155,23 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
         makeCreateUserExecutionPlan(userName, password, requirePasswordChange, suspended = false)(sourcePlan, normalExecutionEngine)
       }
 
+    // ALTER USER foo [SET PASSWORD pw] [CHANGE [NOT] REQUIRED]
+    case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping) =>
+      val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+      if (suspended.isDefined) { // Users are always active in community
+        new PredicateExecutionPlan((_, _) => false, sourcePlan, (params, _) => {
+          val user = runtimeValue(userName, params)
+          throw new CantCompileQueryException(s"Failed to alter the specified user '$user': 'SET STATUS' is not available in community edition.")
+        })
+      } else {
+        makeAlterUserExecutionPlan(userName, password, requirePasswordChange, suspended = None)(sourcePlan, normalExecutionEngine)
+      }
+
     // DROP USER foo [IF EXISTS]
     case DropUser(source, userName) => (context, parameterMapping) =>
       val (userNameKey, userNameValue, userNameConverter) = getNameFields("username", userName)
       UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
-        s"""MATCH (user:User {name: $$$userNameKey}) DETACH DELETE user
+        s"""MATCH (user:User {name: $$`$userNameKey`}) DETACH DELETE user
           |RETURN 1 AS ignore""".stripMargin,
         VirtualValues.map(Array(userNameKey), Array(userNameValue)),
         QueryHandler
@@ -179,9 +194,9 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
       val (currentKeyBytes, currentValueBytes, currentConverterBytes) = getPasswordFieldsCurrent(currentPassword)
       def currentUser(p: MapValue): String = p.get(usernameKey).asInstanceOf[TextValue].stringValue()
       val query =
-        s"""MATCH (user:User {name: $$$usernameKey})
+        s"""MATCH (user:User {name: $$`$usernameKey`})
           |WITH user, user.credentials AS oldCredentials
-          |SET user.credentials = $$${newPw.key}
+          |SET user.credentials = $$`${newPw.key}`
           |SET user.passwordChangeRequired = false
           |RETURN oldCredentials""".stripMargin
 
@@ -196,8 +211,8 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
           }
           .handleResult((_, value, p) => {
             val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
-            val newValue = p.get(newPw.bytesKey).asInstanceOf[ByteArray].asObjectCopy()
-            val currentValue = p.get(currentKeyBytes).asInstanceOf[ByteArray].asObjectCopy()
+            val newValue = p.get(newPw.bytesKey).asInstanceOf[ByteArray].asObject()
+            val currentValue = p.get(currentKeyBytes).asInstanceOf[ByteArray].asObject()
             if (!oldCredentials.matchesPassword(currentValue))
               Some(new InvalidArgumentsException(s"User '${currentUser(p)}' failed to alter their own password: Invalid principal or credentials."))
             else if (oldCredentials.matchesPassword(newValue))
@@ -212,6 +227,10 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
               Some(new IllegalStateException(s"User '${currentUser(p)}' failed to alter their own password: User does not exist."))
           }),
         checkCredentialsExpired = false,
+        finallyFunction = p => {
+          p.get(newPw.bytesKey).asInstanceOf[ByteArray].zero()
+          p.get(currentKeyBytes).asInstanceOf[ByteArray].zero()
+        },
         parameterGenerator = (_, securityContext) => VirtualValues.map(Array(usernameKey), Array(Values.utf8Value(securityContext.subject().username()))),
         parameterConverter = m => newPw.mapValueConverter(currentConverterBytes(m))
       )
@@ -235,7 +254,7 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
       val (nameKey, nameValue, nameConverter) = getNameFields("name", name, valueMapper = valueMapper)
       UpdatingSystemCommandExecutionPlan("DoNothingIfNotExists", normalExecutionEngine,
         s"""
-           |MATCH (node:$label {name: $$$nameKey})
+           |MATCH (node:$label {name: $$`$nameKey`})
            |RETURN node.name AS name
         """.stripMargin, VirtualValues.map(Array(nameKey), Array(nameValue)),
         QueryHandler
@@ -253,7 +272,7 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
       val (nameKey, nameValue, nameConverter) = getNameFields("name", name, valueMapper = valueMapper)
       UpdatingSystemCommandExecutionPlan("DoNothingIfExists", normalExecutionEngine,
         s"""
-           |MATCH (node:$label {name: $$$nameKey})
+           |MATCH (node:$label {name: $$`$nameKey`})
            |RETURN node.name AS name
         """.stripMargin, VirtualValues.map(Array(nameKey), Array(nameValue)),
         QueryHandler
@@ -271,7 +290,7 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
     case EnsureNodeExists(source, label, name, valueMapper) => (context, parameterMapping) =>
       val (nameKey, nameValue, nameConverter) = getNameFields("name", name, valueMapper = valueMapper)
       UpdatingSystemCommandExecutionPlan("EnsureNodeExists", normalExecutionEngine,
-        s"""MATCH (node:$label {name: $$$nameKey})
+        s"""MATCH (node:$label {name: $$`$nameKey`})
            |RETURN node""".stripMargin,
         VirtualValues.map(Array(nameKey), Array(nameValue)),
         QueryHandler
@@ -286,8 +305,22 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
       )
 
     // SUPPORT PROCEDURES (need to be cleared before here)
-    case SystemProcedureCall(_, queryString, _, checkCredentialsExpired) => (_, _) =>
-      SystemCommandExecutionPlan("SystemProcedure", normalExecutionEngine, queryString, MapValue.EMPTY, checkCredentialsExpired = checkCredentialsExpired)
+    case SystemProcedureCall(_, call, _, checkCredentialsExpired) => (_, parameterMapping) =>
+      val queryString = QueryRenderer.render(Seq(call))
+
+      def addParameterDefaults(params: MapValue) = {
+        val builder = new MapValueBuilder()
+        parameterMapping.foreach((name, value) =>
+          value.default.foreach(builder.add(name, _))
+        )
+        val defaults = builder.build()
+        defaults.updatedWith(params)
+      }
+
+      SystemCommandExecutionPlan("SystemProcedure", normalExecutionEngine, queryString, MapValue.EMPTY,
+        checkCredentialsExpired = checkCredentialsExpired,
+        parameterConverter = addParameterDefaults
+      )
 
     // Ignore the log command in community
     case LogSystemCommand(source, _) => (context, parameterMapping) =>
@@ -310,13 +343,13 @@ case class CommunityAdministrationCommandRuntime(normalExecutionEngine: Executio
           val filteredDatabases = m.get(accessibleDbsKey).asInstanceOf[StringArray].asObjectCopy().filter(normalizedName.equals)
           converter(m.updatedWith(accessibleDbsKey, Values.stringArray(filteredDatabases:_*)))
         }
-        (s"AND d.name = $$$key", VirtualValues.map(Array(key), Array(value)), combinedConverter)
+        (s"AND d.name = $$`$key`", VirtualValues.map(Array(key), Array(value)), combinedConverter)
       // show all databases
       case _ => ("", VirtualValues.EMPTY_MAP, IdentityConverter)
     }
     val query = s"""
        |MATCH (d: Database)
-       |WHERE d.name IN $$$accessibleDbsKey $extraFilter
+       |WHERE d.name IN $$`$accessibleDbsKey` $extraFilter
        |CALL dbms.database.state(d.name) yield status, error, address, role
        |WITH d, status as currentStatus, error, address, role
        |RETURN d.name as name, address, role, d.status as requestedStatus, currentStatus, error $defaultColumn

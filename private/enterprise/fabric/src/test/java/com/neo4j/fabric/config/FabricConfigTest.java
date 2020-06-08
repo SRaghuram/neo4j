@@ -16,10 +16,8 @@ import org.neo4j.configuration.helpers.SocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FabricConfigTest
 {
@@ -39,15 +37,14 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
-        assertTrue( fabricConfig.isEnabled() );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
         assertEquals( Set.of(
-                new FabricConfig.Graph( 0L, FabricConfig.RemoteUri.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
-                new FabricConfig.Graph( 1L, FabricConfig.RemoteUri.create( "bolt://mega:2222" ), "db0", new NormalizedGraphName( "source-of-all-wisdom" ),
-                        emptyDriverConfig() )
+                new FabricEnterpriseConfig.Graph( 0L, FabricEnterpriseConfig.RemoteUri.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
+                new FabricEnterpriseConfig.Graph( 1L, FabricEnterpriseConfig.RemoteUri.create( "bolt://mega:2222" ), "db0",
+                        new NormalizedGraphName( "source-of-all-wisdom" ), emptyDriverConfig() )
         ), database.getGraphs() );
     }
 
@@ -62,8 +59,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
-        assertTrue( fabricConfig.isEnabled() );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
@@ -83,7 +79,7 @@ class FabricConfigTest
                 .build();
 
         assertThrows( IllegalArgumentException.class,
-                () -> FabricConfig.from( config ) );
+                () -> FabricEnterpriseConfig.from( config ) );
     }
 
     @Test
@@ -102,7 +98,7 @@ class FabricConfigTest
                 .build();
 
         var e = assertThrows( IllegalArgumentException.class,
-                () -> FabricConfig.from( config ) );
+                () -> FabricEnterpriseConfig.from( config ) );
 
         assertEquals( "Graphs with ids: 0, 1, have conflicting names", e.getMessage() );
     }
@@ -128,7 +124,7 @@ class FabricConfigTest
                 .build();
 
         var e = assertThrows( IllegalArgumentException.class,
-                () -> FabricConfig.from( config ) );
+                () -> FabricEnterpriseConfig.from( config ) );
 
         assertEquals( "Graphs with ids: 0, 1, 3, have conflicting names", e.getMessage() );
     }
@@ -175,8 +171,8 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
-        assertFalse( fabricConfig.isEnabled() );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
+        assertNull( fabricConfig.getDatabase() );
     }
 
     @Test
@@ -188,8 +184,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
-        assertFalse( fabricConfig.isEnabled() );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         assertNull( fabricConfig.getDatabase() );
     }
 
@@ -206,7 +201,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        assertThrows( IllegalArgumentException.class, () -> FabricConfig.from( config ) );
+        assertThrows( IllegalArgumentException.class, () -> FabricEnterpriseConfig.from( config ) );
     }
 
     @Test
@@ -233,27 +228,28 @@ class FabricConfigTest
     void testBufferSizeConstraint()
     {
         doTestStreamConstraint( "fabric.stream.buffer.size", "0",
-                "Error evaluating value for setting 'fabric.stream.buffer.size'. minimum allowed value is 1" );
+                "Failed to validate '0' for 'fabric.stream.buffer.size': minimum allowed value is 1" );
     }
 
     @Test
     void testBufferLowWatermarkConstraint()
     {
         doTestStreamConstraint( "fabric.stream.buffer.low_watermark", "-1",
-                "Error evaluating value for setting 'fabric.stream.buffer.low_watermark'. minimum allowed value is 0" );
+                "Failed to validate '-1' for 'fabric.stream.buffer.low_watermark': minimum allowed value is 0" );
     }
 
     @Test
     void testBatchSizeConstraint()
     {
-        doTestStreamConstraint( "fabric.stream.batch_size", "0", "Error evaluating value for setting 'fabric.stream.batch_size'. minimum allowed value is 1" );
+        doTestStreamConstraint( "fabric.stream.batch_size", "0",
+                "Failed to validate '0' for 'fabric.stream.batch_size': minimum allowed value is 1" );
     }
 
     @Test
     void testConcurrencyConstraint()
     {
         doTestStreamConstraint( "fabric.stream.concurrency", "0",
-                "Error evaluating value for setting 'fabric.stream.concurrency'. minimum allowed value is 1" );
+                "Failed to validate '0' for 'fabric.stream.concurrency': minimum allowed value is 1" );
     }
 
     @Test
@@ -269,7 +265,7 @@ class FabricConfigTest
 
         var config = Config.newBuilder().setRaw( properties ).build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         assertEquals( 10, fabricConfig.getDataStream().getBufferLowWatermark() );
     }
 
@@ -287,7 +283,7 @@ class FabricConfigTest
         assertThat( thrown.getMessage() ).contains( expectedMessage );
     }
 
-    private FabricConfig doTestRemoteUri( String uri )
+    private FabricEnterpriseConfig doTestRemoteUri( String uri )
     {
         var properties = Map.of(
                 "fabric.database.name", "mega",
@@ -298,11 +294,11 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        return FabricConfig.from( config );
+        return FabricEnterpriseConfig.from( config );
     }
 
-    private FabricConfig.GraphDriverConfig emptyDriverConfig()
+    private FabricEnterpriseConfig.GraphDriverConfig emptyDriverConfig()
     {
-        return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, true );
+        return new FabricEnterpriseConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, true );
     }
 }

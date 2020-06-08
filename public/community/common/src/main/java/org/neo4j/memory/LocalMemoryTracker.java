@@ -27,30 +27,32 @@ import static org.neo4j.util.Preconditions.requireNonNegative;
 import static org.neo4j.util.Preconditions.requirePositive;
 
 /**
- * Memory allocation tracker that can be used in local context that required
- * tracking of memory that is independent from global. You can impose a limit
- * on the total number of allocated bytes.
+ * Memory allocation tracker that can be used in local context that required tracking of memory that is independent from global. You can impose a limit on the
+ * total number of allocated bytes.
  * <p>
- * To reduce contention on the parent tracker, locally reserved bytes are batched
- * from the parent to a local pool. Once the pool is used up, new bytes will be
- * reserved. Calling {@link #reset()} will give back all the reserved bytes to
- * the parent. Forgetting to call this will "leak" bytes and starve the database
- * of allocations.
+ * To reduce contention on the parent tracker, locally reserved bytes are batched from the parent to a local pool. Once the pool is used up, new bytes will be
+ * reserved. Calling {@link #reset()} will give back all the reserved bytes to the parent. Forgetting to call this will "leak" bytes and starve the database of
+ * allocations.
  */
 public class LocalMemoryTracker implements MemoryTracker
 {
     private static final long NO_LIMIT = Long.MAX_VALUE;
-    private static final long DEFAULT_RESERVE = 1024;
+    private static final long DEFAULT_GRAB_SIZE = 1024;
 
     /**
      * Imposes limits on a {@link MemoryGroup} level, e.g. global maximum transactions size
      */
-    private final MemoryPool memoryGroupPool;
+    private final MemoryPool memoryPool;
+
+    /**
+     * The chunk size to reserve from the memory pool
+     */
+    private final long grabSize;
 
     /**
      * A per tracker limit.
      */
-    private final long localHeapBytesLimit;
+    private long localBytesLimit;
 
     /**
      * Number of bytes we are allowed to use on the heap. If this run out, we need to reserve more from the parent.
@@ -65,40 +67,55 @@ public class LocalMemoryTracker implements MemoryTracker
     /**
      * The currently allocated off heap
      */
-    private long allocatedBytesDirect;
+    private long allocatedBytesNative;
 
     /**
-     * The heap high water mark, i.e. the maximum observed alloced heap bytes
+     * The heap high water mark, i.e. the maximum observed allocated heap bytes
      */
     private long heapHighWaterMark;
 
     public LocalMemoryTracker()
     {
-        this( NO_TRACKING, NO_LIMIT, DEFAULT_RESERVE );
+        this( NO_TRACKING, NO_LIMIT, DEFAULT_GRAB_SIZE );
     }
 
-    public LocalMemoryTracker( MemoryPool memoryGroupPool )
+    public LocalMemoryTracker( MemoryPool memoryPool )
     {
-        this( memoryGroupPool, NO_LIMIT, DEFAULT_RESERVE );
+        this( memoryPool, NO_LIMIT, DEFAULT_GRAB_SIZE );
     }
 
-    public LocalMemoryTracker( MemoryPool memoryGroupPool, long localHeapBytesLimit, long initialReservedBytes )
+    public LocalMemoryTracker( MemoryPool memoryPool, long localBytesLimit, long grabSize )
     {
-        this.memoryGroupPool = requireNonNull( memoryGroupPool );
-        this.localHeapBytesLimit = localHeapBytesLimit == 0 ? NO_LIMIT : requireNonNegative( localHeapBytesLimit );
-        reserveHeap( initialReservedBytes );
-    }
-
-    @Override
-    public void allocateDirect( long bytes )
-    {
-        this.allocatedBytesDirect += bytes;
+        this.memoryPool = requireNonNull( memoryPool );
+        this.localBytesLimit = localBytesLimit == 0 ? NO_LIMIT : requireNonNegative( localBytesLimit );
+        this.grabSize = requireNonNegative( grabSize );
     }
 
     @Override
-    public void releaseDirect( long bytes )
+    public void allocateNative( long bytes )
     {
-        this.allocatedBytesDirect -= bytes;
+        if ( bytes == 0 )
+        {
+            return;
+        }
+        requirePositive( bytes );
+
+        this.allocatedBytesNative += bytes;
+
+        if ( allocatedBytesHeap + allocatedBytesNative > localBytesLimit )
+        {
+            allocatedBytesNative -= bytes;
+            throw new MemoryLimitExceeded( bytes, localBytesLimit, allocatedBytesHeap + allocatedBytesNative );
+        }
+
+        this.memoryPool.reserveNative( bytes );
+    }
+
+    @Override
+    public void releaseNative( long bytes )
+    {
+        this.allocatedBytesNative -= bytes;
+        this.memoryPool.releaseNative( bytes );
     }
 
     @Override
@@ -112,9 +129,10 @@ public class LocalMemoryTracker implements MemoryTracker
 
         allocatedBytesHeap += bytes;
 
-        if ( allocatedBytesHeap > localHeapBytesLimit )
+        if ( allocatedBytesHeap + allocatedBytesNative > localBytesLimit )
         {
-            throw new HeapMemoryLimitExceeded( bytes, localHeapBytesLimit, allocatedBytesHeap - bytes );
+            allocatedBytesHeap -= bytes;
+            throw new MemoryLimitExceeded( bytes, localBytesLimit, allocatedBytesHeap + allocatedBytesNative );
         }
 
         if ( allocatedBytesHeap > heapHighWaterMark )
@@ -124,8 +142,8 @@ public class LocalMemoryTracker implements MemoryTracker
 
         if ( allocatedBytesHeap > localHeapPool )
         {
-            long grab = max( bytes, localHeapPool ); // TODO: try different strategies, e.g. grow factor, static increment, etc... For now we double
-            reserveHeap( grab );
+            long grab = max( bytes, grabSize );
+            reserveHeapFromPool( grab );
         }
     }
 
@@ -146,9 +164,9 @@ public class LocalMemoryTracker implements MemoryTracker
      * @return number of used bytes.
      */
     @Override
-    public long usedDirectMemory()
+    public long usedNativeMemory()
     {
-        return allocatedBytesDirect;
+        return allocatedBytesNative;
     }
 
     @Override
@@ -160,22 +178,32 @@ public class LocalMemoryTracker implements MemoryTracker
     @Override
     public void reset()
     {
-        checkState( allocatedBytesDirect == 0, "Potential direct memory leak" );
-        memoryGroupPool.release( localHeapPool );
+        checkState( allocatedBytesNative == 0, "Potential direct memory leak" );
+        memoryPool.releaseHeap( localHeapPool );
         localHeapPool = 0;
         allocatedBytesHeap = 0;
         heapHighWaterMark = 0;
     }
 
+    public void setLimit( long localBytesLimit )
+    {
+        this.localBytesLimit = validateLimit( localBytesLimit );
+    }
+
     /**
-     * Will reserve heap on the parent tracker.
+     * Will reserve heap in the provided pool.
      *
      * @param size heap space to reserve for the local pool
-     * @throws HeapMemoryLimitExceeded if not enough free memory
+     * @throws MemoryLimitExceeded if not enough free memory
      */
-    private void reserveHeap( long size )
+    private void reserveHeapFromPool( long size )
     {
-        memoryGroupPool.reserve( size );
+        memoryPool.reserveHeap( size );
         localHeapPool += size;
+    }
+
+    private static long validateLimit( long localBytesLimit )
+    {
+        return localBytesLimit == 0 ? NO_LIMIT : requireNonNegative( localBytesLimit );
     }
 }

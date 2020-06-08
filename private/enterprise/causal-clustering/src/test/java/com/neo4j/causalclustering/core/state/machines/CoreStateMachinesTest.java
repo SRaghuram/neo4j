@@ -5,32 +5,32 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
-import java.util.function.Consumer;
-
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogIndex;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
+import java.util.function.Consumer;
+
 import static java.lang.Math.max;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class CoreStateMachinesTest
+class CoreStateMachinesTest
 {
     @Test
-    public void shouldAllowForBatchingOfTransactions()
+    void shouldAllowForBatchingOfTransactions()
     {
         try ( CommandDispatcher dispatcher = coreStateMachines.commandDispatcher() )
         {
@@ -47,7 +47,7 @@ public class CoreStateMachinesTest
     }
 
     @Test
-    public void shouldApplyTransactionBatchAsSoonAsThereIsADifferentKindOfRequestInTheBatch()
+    void shouldApplyTransactionBatchAsSoonAsThereIsADifferentKindOfRequestInTheBatch()
     {
         try ( CommandDispatcher dispatcher = coreStateMachines.commandDispatcher() )
         {
@@ -91,7 +91,7 @@ public class CoreStateMachinesTest
     }
 
     @Test
-    public void shouldReturnLastAppliedOfAllStateMachines()
+    void shouldReturnLastAppliedOfAllStateMachines()
     {
         // tx state machines are backed by the same store (the tx log) so they should return the same lastApplied
         StateMachine<?>[] txSMs = new StateMachine[]{labelTokenSM, relationshipTypeTokenSM, propertyKeyTokenSM, txSM};
@@ -122,7 +122,7 @@ public class CoreStateMachinesTest
             }
 
             // then
-            assertEquals( expected, coreStateMachines.getLastAppliedIndex() );
+            Assertions.assertEquals( expected, coreStateMachines.getLastAppliedIndex() );
         }
     }
 

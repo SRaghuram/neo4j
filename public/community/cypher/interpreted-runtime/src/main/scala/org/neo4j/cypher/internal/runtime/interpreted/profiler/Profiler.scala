@@ -32,7 +32,10 @@ import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.runtime.RelationshipOperations
 import org.neo4j.cypher.internal.runtime.interpreted.DelegatingOperations
 import org.neo4j.cypher.internal.runtime.interpreted.DelegatingQueryContext
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+=======
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeDecorator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -146,7 +149,7 @@ trait Counter {
       _count += 1L
   }
 
-  def increment(hits: Int): Unit = {
+  def increment(hits: Long): Unit = {
     if (count != OperatorProfile.NO_DATA)
       _count += hits
   }
@@ -271,7 +274,7 @@ final class ProfilingPipeQueryContext(inner: QueryContext)
       increment()
     }
 
-    override def dbHits(hits: Int): Unit = {
+    override def dbHits(hits: Long): Unit = {
       increment(hits)
     }
 
@@ -279,7 +282,7 @@ final class ProfilingPipeQueryContext(inner: QueryContext)
 
     override def row(hasRow: Boolean): Unit = {}
 
-    override def rows(n: Int): Unit = {}
+    override def rows(n: Long): Unit = {}
 
     override def close(): Unit = {
     }

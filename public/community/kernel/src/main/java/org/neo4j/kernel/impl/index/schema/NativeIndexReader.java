@@ -35,11 +35,9 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.index.IndexProgressor;
 import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.IndexSampler;
-import org.neo4j.storageengine.api.NodePropertyAccessor;
 import org.neo4j.values.storable.Value;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unordered;
 import static org.neo4j.kernel.impl.index.schema.NativeIndexKey.Inclusion.NEUTRAL;
 
 abstract class NativeIndexReader<KEY extends NativeIndexKey<KEY>, VALUE extends NativeIndexValue> implements IndexReader
@@ -122,7 +120,7 @@ abstract class NativeIndexReader<KEY extends NativeIndexKey<KEY>, VALUE extends 
 
     @Override
     public void query( QueryContext context, IndexProgressor.EntityValueClient cursor, IndexQueryConstraints constraints,
-            PageCursorTracer cursorTracer, IndexQuery... predicates )
+            IndexQuery... predicates )
     {
         validateQuery( constraints, predicates );
 
@@ -131,7 +129,7 @@ abstract class NativeIndexReader<KEY extends NativeIndexKey<KEY>, VALUE extends 
         initializeFromToKeys( treeKeyFrom, treeKeyTo );
 
         boolean needFilter = initializeRangeForQuery( treeKeyFrom, treeKeyTo, predicates );
-        startSeekForInitializedRange( cursor, treeKeyFrom, treeKeyTo, predicates, constraints, needFilter, cursorTracer );
+        startSeekForInitializedRange( cursor, treeKeyFrom, treeKeyTo, predicates, constraints, needFilter, context.cursorTracer() );
     }
 
     void initializeFromToKeys( KEY treeKeyFrom, KEY treeKeyTo )
@@ -142,27 +140,6 @@ abstract class NativeIndexReader<KEY extends NativeIndexKey<KEY>, VALUE extends 
 
     @Override
     public abstract boolean hasFullValuePrecision( IndexQuery... predicates );
-
-    @Override
-    public void distinctValues( IndexProgressor.EntityValueClient client, NodePropertyAccessor ignore, boolean needsValues, PageCursorTracer cursorTracer )
-    {
-        KEY lowest = layout.newKey();
-        lowest.initialize( Long.MIN_VALUE );
-        lowest.initValuesAsLowest();
-        KEY highest = layout.newKey();
-        highest.initialize( Long.MAX_VALUE );
-        highest.initValuesAsHighest();
-        try
-        {
-            Seeker<KEY,VALUE> seeker = tree.seek( lowest, highest, cursorTracer );
-            client.initialize( descriptor, new NativeDistinctValuesProgressor<>( seeker, client, layout, layout::compareValue ),
-                    new IndexQuery[0], unordered( needsValues ), false );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-    }
 
     abstract void validateQuery( IndexQueryConstraints constraints, IndexQuery[] predicates );
 

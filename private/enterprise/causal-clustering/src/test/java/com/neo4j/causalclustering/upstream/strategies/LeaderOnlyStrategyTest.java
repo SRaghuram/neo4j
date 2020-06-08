@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
@@ -28,11 +29,11 @@ class LeaderOnlyStrategyTest
     {
         // given
         MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
-        String groupName = "groupName";
+        var groupName = new ServerGroupName( "groupName" );
 
         // and
         LeaderOnlyStrategy leaderOnlyStrategy = new LeaderOnlyStrategy();
-        TopologyServiceThatPrioritisesItself topologyServiceNoRetriesStrategy = new TopologyServiceThatPrioritisesItself( myself, groupName )
+        var topologyServiceNoRetriesStrategy = new TopologyServiceThatPrioritisesItself( myself, groupName )
         {
             @Override
             public RoleInfo lookupRole( NamedDatabaseId databaseId, MemberId memberId )

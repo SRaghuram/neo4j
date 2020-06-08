@@ -57,6 +57,8 @@ import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
+import org.neo4j.memory.MemoryPools;
+import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -67,11 +69,13 @@ import org.neo4j.scheduler.ActiveGroup;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
+import static java.lang.String.valueOf;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
+import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.procedure.Mode.DBMS;
 
 @SuppressWarnings( "unused" )
@@ -209,6 +213,7 @@ public class EnterpriseBuiltInDbmsProcedures
         securityContext.assertCredentialsNotExpired();
         GlobalProcedures globalProcedures = resolver.resolveDependency( GlobalProcedures.class );
         return globalProcedures.getAllProcedures().stream()
+                .filter( proc -> !proc.internal() )
                 .sorted( Comparator.comparing( a -> a.name().toString() ) )
                 .map( ProcedureResult::new );
     }
@@ -216,11 +221,6 @@ public class EnterpriseBuiltInDbmsProcedures
     @SuppressWarnings( "WeakerAccess" )
     public static class ProcedureResult
     {
-        // These two procedures are admin procedures but may be executed for your own user,
-        // this is not documented anywhere but we cannot change the behaviour in a point release
-        private static final List<String> ADMIN_PROCEDURES =
-                Arrays.asList( "changeUserPassword", "listRolesForUser" );
-
         // These procedures have WRITE mode but an editor is not allowed to execute them. So we need to not add that role to the list of roles
         private static final List<String> NON_EDITOR_PROCEDURES =
                 Arrays.asList( "createLabel", "createProperty", "createRelationshipType" );
@@ -240,43 +240,49 @@ public class EnterpriseBuiltInDbmsProcedures
             this.mode = signature.mode().toString();
             this.worksOnSystem = signature.systemProcedure();
             defaultBuiltInRoles = new ArrayList<>();
-            switch ( signature.mode() )
+            if ( !isInvalidProcedure() )
             {
-            case DBMS:
-                if ( signature.admin() || isAdminProcedure( signature.name().name() ) )
+                if ( signature.admin() || isAdminProcedure() )
                 {
                     defaultBuiltInRoles.add( "admin" );
                 }
                 else
                 {
-                    defaultBuiltInRoles.add( "reader" );
-                    defaultBuiltInRoles.add( "editor" );
-                    defaultBuiltInRoles.add( "publisher" );
-                    defaultBuiltInRoles.add( "architect" );
+                    switch ( signature.mode() )
+                    {
+                    case SCHEMA:
+                        defaultBuiltInRoles.add( "architect" );
+                        break;
+                    case WRITE:
+                        if ( !NON_EDITOR_PROCEDURES.contains( signature.name().name() ) )
+                        {
+                            defaultBuiltInRoles.add( "editor" );
+                        }
+                        defaultBuiltInRoles.add( "publisher" );
+                        defaultBuiltInRoles.add( "architect" );
+                        break;
+                    default:
+                        defaultBuiltInRoles.add( "reader" );
+                        defaultBuiltInRoles.add( "editor" );
+                        defaultBuiltInRoles.add( "publisher" );
+                        defaultBuiltInRoles.add( "architect" );
+                    }
                     defaultBuiltInRoles.add( "admin" );
                     defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
                 }
-                break;
-            case DEFAULT:
-            case READ:
-                defaultBuiltInRoles.add( "reader" );
-            case WRITE:
-                if ( !NON_EDITOR_PROCEDURES.contains( signature.name().name() ) )
-                {
-                    defaultBuiltInRoles.add( "editor" );
-                }
-                defaultBuiltInRoles.add( "publisher" );
-            case SCHEMA:
-                defaultBuiltInRoles.add( "architect" );
-            default:
-                defaultBuiltInRoles.add( "admin" );
-                defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
             }
         }
 
-        private boolean isAdminProcedure( String procedureName )
+        private boolean isAdminProcedure()
         {
-            return name.startsWith( "dbms.security." ) && ADMIN_PROCEDURES.contains( procedureName );
+            // This procedure asserts admin right internally (to be able to execute for your own user) so we can't rely on the signature to detect that
+            return name.startsWith( "dbms.security.listRolesForUser" );
+        }
+
+        private boolean isInvalidProcedure()
+        {
+            // This procedure has been disabled and always throws an error
+            return name.startsWith( "dbms.security.changePassword" );
         }
     }
 
@@ -332,6 +338,23 @@ public class EnterpriseBuiltInDbmsProcedures
             }
         }
         return result.stream();
+    }
+
+    @SystemProcedure
+    @Description( "List all memory pools, including sub pools, currently registered at this instance that are visible to the user." )
+    @Procedure( name = "dbms.listPools", mode = DBMS )
+    public Stream<MemoryPoolResult> listMemoryPoolsExt()
+    {
+        var memoryPools = resolver.resolveDependency( MemoryPools.class );
+        var registeredPools = memoryPools.getPools();
+        List<ScopedMemoryPool> allPools = new ArrayList<>( registeredPools );
+        for ( var pool : registeredPools )
+        {
+            allPools.addAll( pool.getDatabasePools() );
+        }
+        allPools.sort( Comparator.comparing( ScopedMemoryPool::group )
+                .thenComparing( ScopedMemoryPool::databaseName ) );
+        return allPools.stream().map( MemoryPoolResult::new );
     }
 
     @SystemProcedure
@@ -728,6 +751,46 @@ public class EnterpriseBuiltInDbmsProcedures
         public ProfileResult( String profile )
         {
             this.profile = profile;
+        }
+    }
+
+    @SuppressWarnings( "WeakerAccess" )
+    public static class MemoryPoolResult
+    {
+        private static final String UNBOUNDED = "Unbounded";
+        public final String group;
+        public final String databaseName;
+        public final String heapMemoryUsed;
+        public final String heapMemoryUsedBytes;
+        public final String nativeMemoryUsed;
+        public final String nativeMemoryUsedBytes;
+        public final String freeMemory;
+        public final String freeMemoryBytes;
+        public final String totalPoolMemory;
+        public final String totalPoolMemoryBytes;
+
+        public MemoryPoolResult( ScopedMemoryPool memoryPool )
+        {
+            this.group = memoryPool.group().getName();
+            this.databaseName = memoryPool.databaseName();
+            this.heapMemoryUsed = bytesToString( memoryPool.usedHeap() );
+            this.heapMemoryUsedBytes = valueOf( memoryPool.usedHeap() );
+            this.nativeMemoryUsed = bytesToString( memoryPool.usedNative() );
+            this.nativeMemoryUsedBytes = valueOf( memoryPool.usedNative() );
+            if ( memoryPool.totalSize() != Long.MAX_VALUE )
+            {
+                this.freeMemory = bytesToString( memoryPool.free() );
+                this.freeMemoryBytes = valueOf( memoryPool.free() );
+                this.totalPoolMemory = bytesToString( memoryPool.totalSize() );
+                this.totalPoolMemoryBytes = valueOf( memoryPool.totalSize() );
+            }
+            else
+            {
+                this.freeMemory = UNBOUNDED;
+                this.freeMemoryBytes = UNBOUNDED;
+                this.totalPoolMemory = UNBOUNDED;
+                this.totalPoolMemoryBytes = UNBOUNDED;
+            }
         }
     }
 }

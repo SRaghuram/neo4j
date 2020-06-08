@@ -118,6 +118,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -211,7 +212,7 @@ class CoreDatabaseFactory
     }
 
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
-            BootstrapContext bootstrapContext, DatabaseLogService logService )
+            BootstrapContext bootstrapContext, DatabaseLogService logService, MemoryTracker memoryTracker )
     {
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
@@ -219,7 +220,7 @@ class CoreDatabaseFactory
 
         SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( namedDatabaseId.name(), debugLog );
         RaftBinder raftBinder = createRaftBinder( namedDatabaseId, config, monitors, raftIdStorage, bootstrapContext,
-                temporaryDatabaseFactory, databaseInitializer, debugLog, dbmsModel );
+                temporaryDatabaseFactory, databaseInitializer, debugLog, dbmsModel, memoryTracker );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life );
@@ -243,7 +244,7 @@ class CoreDatabaseFactory
     }
 
     CoreEditionKernelComponents createKernelComponents( NamedDatabaseId namedDatabaseId, LifeSupport life, CoreRaftContext raftContext,
-            CoreKernelResolvers kernelResolvers, DatabaseLogService logService, VersionContextSupplier versionContextSupplier )
+            CoreKernelResolvers kernelResolvers, DatabaseLogService logService, VersionContextSupplier versionContextSupplier, MemoryTracker memoryTracker )
     {
         RaftGroup raftGroup = raftContext.raftGroup();
         Replicator replicator = raftContext.replicator();
@@ -257,15 +258,15 @@ class CoreDatabaseFactory
 
         TokenRegistry relationshipTypeTokenRegistry = new TokenRegistry( TokenHolder.TYPE_RELATIONSHIP_TYPE );
         ReplicatedRelationshipTypeTokenHolder relationshipTypeTokenHolder = new ReplicatedRelationshipTypeTokenHolder( namedDatabaseId,
-                relationshipTypeTokenRegistry, replicator, idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
+                relationshipTypeTokenRegistry, replicator, idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer, memoryTracker );
 
         TokenRegistry propertyKeyTokenRegistry = new TokenRegistry( TokenHolder.TYPE_PROPERTY_KEY );
         ReplicatedPropertyKeyTokenHolder propertyKeyTokenHolder = new ReplicatedPropertyKeyTokenHolder( namedDatabaseId, propertyKeyTokenRegistry, replicator,
-                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
+                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer, memoryTracker );
 
         TokenRegistry labelTokenRegistry = new TokenRegistry( TokenHolder.TYPE_LABEL );
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, labelTokenRegistry, replicator,
-                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
+                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer, memoryTracker );
 
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,
@@ -349,8 +350,9 @@ class CoreDatabaseFactory
 
         CorePanicHandlers panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
 
+        TempBootstrapDir tempBootstrapDir = new TempBootstrapDir( fileSystem, kernelDatabase.getDatabaseLayout() );
         CoreBootstrap bootstrap = new CoreBootstrap( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService,
-                internalOperator, databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver );
+                internalOperator, databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver, tempBootstrapDir );
 
         return new CoreDatabase( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
                 clusterComponents, panicHandler, bootstrap, topologyNotifier );
@@ -358,11 +360,11 @@ class CoreDatabaseFactory
 
     private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, SimpleStorage<RaftId> raftIdStorage,
             BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
-            DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph )
+            DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker )
     {
         DatabasePageCache pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem, debugLog,
-                storageEngineFactory, config, bootstrapSaver, pageCacheTracer );
+                storageEngineFactory, config, bootstrapSaver, pageCacheTracer, memoryTracker );
 
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
@@ -393,7 +395,7 @@ class CoreDatabaseFactory
     {
         CommandApplicationProcess commandApplicationProcess = new CommandApplicationProcess( raftGroup.raftLog(),
                 config.get( state_machine_apply_max_batch_size ), config.get( state_machine_flush_window_size ), debugLog, progressTracker, sessionTracker,
-                coreState, raftGroup.inFlightCache(), monitors, panicker );
+                coreState, raftGroup.inFlightCache(), monitors, panicker, jobScheduler );
 
         dependencies.satisfyDependency( commandApplicationProcess ); // lastApplied() for CC-robustness
 

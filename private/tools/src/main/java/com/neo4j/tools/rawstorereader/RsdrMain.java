@@ -37,6 +37,7 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.string.HexString;
@@ -46,6 +47,7 @@ import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFac
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 /**
  * Tool to read raw data from various stores.
@@ -208,7 +210,7 @@ public class RsdrMain
         try ( StoreChannel channel = fileSystem.read( store.getStorageFile() ) )
         {
             int recordSize = store.getRecordSize();
-            ByteBuffer buf = ByteBuffers.allocate( recordSize );
+            ByteBuffer buf = ByteBuffers.allocate( recordSize, INSTANCE );
             for ( long i = fromId; i <= toId; i++ )
             {
                 buf.clear();

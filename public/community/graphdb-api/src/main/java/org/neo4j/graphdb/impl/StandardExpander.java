@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -480,7 +481,7 @@ public abstract class StandardExpander implements PathExpander
         @Override
         void buildString( StringBuilder result )
         {
-            result.append( typesMap.toString() );
+            result.append( typesMap );
         }
 
         @Override
@@ -569,7 +570,7 @@ public abstract class StandardExpander implements PathExpander
             result.append( "; filter:" );
             for ( Filter filter : filters )
             {
-                result.append( " " );
+                result.append( ' ' );
                 result.append( filter );
             }
         }
@@ -725,7 +726,7 @@ public abstract class StandardExpander implements PathExpander
     {
         StringBuilder result = new StringBuilder( "Expander[" );
         buildString( result );
-        result.append( "]" );
+        result.append( ']' );
         return result.toString();
     }
 
@@ -804,7 +805,7 @@ public abstract class StandardExpander implements PathExpander
         Map<Direction, Collection<RelationshipType>> map = new EnumMap<>( Direction.class );
         for ( Direction direction : Direction.values() )
         {
-            ArrayList<RelationshipType> types = new ArrayList<>();
+            List<RelationshipType> types = new ArrayList<>();
             map.put( direction, types );
             RelationshipType[] existing = typeMap.get( direction );
             if ( existing != null )

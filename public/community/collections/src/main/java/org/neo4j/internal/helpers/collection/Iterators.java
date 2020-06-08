@@ -435,7 +435,7 @@ public final class Iterators
     @SafeVarargs
     public static <T> Set<T> asUniqueSet( T... items )
     {
-        HashSet<T> set = new HashSet<>();
+        Set<T> set = new HashSet<>();
         for ( T item : items )
         {
             addUnique( set, item );
@@ -452,7 +452,7 @@ public final class Iterators
      */
     public static <T> Set<T> asUniqueSet( Iterator<T> items )
     {
-        HashSet<T> set = new HashSet<>();
+        Set<T> set = new HashSet<>();
         while ( items.hasNext() )
         {
             addUnique( set, items.next() );
@@ -462,49 +462,57 @@ public final class Iterators
 
     public static <T> SortedSet<T> asSortedSet( Comparator<T> comparator, T... items )
     {
-        TreeSet<T> set = new TreeSet<>( comparator );
+        SortedSet<T> set = new TreeSet<>( comparator );
         Collections.addAll( set, items );
         return set;
     }
 
     static Iterator<Long> asIterator( final long... array )
     {
-        return new PrefetchingIterator<>()
+        return new Iterator<>()
         {
             private int index;
 
             @Override
-            protected Long fetchNextOrNull()
+            public boolean hasNext()
             {
-                try
+                return index < array.length;
+            }
+
+            @Override
+            public Long next()
+            {
+                if ( !hasNext() )
                 {
-                    return index < array.length ? array[index] : null;
+                    throw new NoSuchElementException();
                 }
-                finally
-                {
-                    index++;
-                }
+
+                return array[index++];
             }
         };
     }
 
     public static Iterator<Integer> asIterator( final int... array )
     {
-        return new PrefetchingIterator<>()
+        return new Iterator<>()
         {
             private int index;
 
             @Override
-            protected Integer fetchNextOrNull()
+            public boolean hasNext()
             {
-                try
+                return index < array.length;
+            }
+
+            @Override
+            public Integer next()
+            {
+                if ( !hasNext() )
                 {
-                    return index < array.length ? array[index] : null;
+                    throw new NoSuchElementException();
                 }
-                finally
-                {
-                    index++;
-                }
+
+                return array[index++];
             }
         };
     }
@@ -512,21 +520,25 @@ public final class Iterators
     @SafeVarargs
     private static <T> Iterator<T> asIterator( final int maxItems, final T... array )
     {
-        return new PrefetchingIterator<>()
+        return new Iterator<>()
         {
-            private int index;
+            int index;
 
             @Override
-            protected T fetchNextOrNull()
+            public boolean hasNext()
             {
-                try
+                return index < maxItems;
+            }
+
+            @Override
+            public T next()
+            {
+                if ( !hasNext() )
                 {
-                    return index < array.length && index < maxItems ? array[index] : null;
+                    throw new NoSuchElementException();
                 }
-                finally
-                {
-                    index++;
-                }
+
+                return array[index++];
             }
         };
     }
@@ -558,12 +570,6 @@ public final class Iterators
                 T toReturn = myItem;
                 myItem = null;
                 return toReturn;
-            }
-
-            @Override
-            public void remove()
-            {
-                throw new UnsupportedOperationException();
             }
         };
     }

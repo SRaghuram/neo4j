@@ -17,9 +17,11 @@ import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
@@ -30,7 +32,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -46,10 +49,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.values.storable.Values
 
@@ -59,7 +65,10 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
                                 toOffset: Int,
                                 dir: SemanticDirection,
                                 types: RelationshipTypes,
-                                maybeExpression: Option[Expression]) extends StreamingOperator {
+                                maybeExpression: Option[Expression],
+                                nodePropsToRead: Option[SlottedPropertyKeys],
+                                relsPropsToRead: Option[SlottedPropertyKeys]
+                               ) extends StreamingOperator {
 
 
 
@@ -71,8 +80,8 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     maybeExpression match {
-      case None => IndexedSeq(new OptionalExpandAllTask(inputMorsel.nextCopy))
-      case Some(expression) => IndexedSeq(new FilteringOptionalExpandAllTask(inputMorsel.nextCopy, expression))
+      case None => singletonIndexedSeq(new OptionalExpandAllTask(inputMorsel.nextCopy))
+      case Some(expression) => singletonIndexedSeq(new FilteringOptionalExpandAllTask(inputMorsel.nextCopy, expression))
     }
   }
 
@@ -82,7 +91,9 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
     relOffset,
     toOffset,
     dir,
-    types) {
+    types,
+    nodePropsToRead,
+    relsPropsToRead) {
 
     override def toString: String = "OptionalExpandAllTask"
 
@@ -104,12 +115,16 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
         nodeCursor = pools.nodeCursorPool.allocateAndTrace()
         relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
       }
+      if (nodePropsToRead.isDefined || relsPropsToRead.isDefined) {
+        propertyCursor = resources.expressionCursors.propertyCursor
+      }
       true
     }
 
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
-
+      cacheNodeProperties(outputRow, state.query)
       while (outputRow.onValidRow && relationships.next()) {
+        cacheRelationshipProperties(outputRow, state.query)
         hasWritten = writeRow(outputRow,
           relationships.relationshipReference(),
           relationships.otherNodeReference())
@@ -176,7 +191,9 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                             dir: SemanticDirection,
                                             types: Array[Int],
                                             missingTypes: Array[String],
-                                            generatePredicate: Option[() => IntermediateExpression])
+                                            generatePredicate: Option[() => IntermediateExpression],
+                                            nodePropsToRead: Option[SlottedPropertyKeys],
+                                            relPropsToRead: Option[SlottedPropertyKeys])
                                            (codeGen: OperatorExpressionCompiler)
   extends ExpandAllOperatorTaskTemplate(inner,
     id,
@@ -189,7 +206,9 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     toOffset,
     dir,
     types,
-    missingTypes)(codeGen) {
+    missingTypes,
+    nodePropsToRead,
+    relPropsToRead)(codeGen) {
 
 
   private val hasWritten = field[Boolean](codeGen.namer.nextVariableName())
@@ -262,6 +281,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       doIfPredicate(declareAndAssign(typeRefOf[Boolean], shouldWriteRow, constant(false))),
       loop(or(not(loadField(hasWritten)), and(innermost.predicate, loadField(canContinue))))(
         block(
+          cacheProperties(relPropsToRead, invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"), PROPERTY_CURSOR)),
           ifElse(and(not(loadField(hasWritten)), not(loadField(canContinue))))(
             block(
               writeRow(constant(-1L), constant(-1L)),

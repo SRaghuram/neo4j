@@ -6,6 +6,7 @@
 package com.neo4j.bench.common.util;
 
 import com.google.common.io.CharStreams;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.IOException;
 import java.io.InputStream;

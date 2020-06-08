@@ -68,7 +68,7 @@ public class JvmVersion
         }
     }
 
-    static int parseMajorVersion( String version )
+    public static int parseMajorVersion( String version )
     {
         if ( version == null )
         {

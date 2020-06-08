@@ -104,18 +104,34 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
         false
     }
 
-    clauses
-      .filterNot(leadingGraphSelection.contains)
+    clausesExceptLeadingFrom
       .headOption.collect { case w: With if hasImportFormat(w) => w }
   }
 
-  def leadingGraphSelection: Option[GraphSelection] =
+  private def aliasingImportWith: Option[With] = {
+    def hasDependencies(w: With) = w match {
+      case With(false, ri, None, None, None, None) =>
+        ri.items.exists(_.expression.dependencies.nonEmpty)
+      case _ =>
+        false
+    }
+    if (importWith.isDefined)
+      None
+    else
+      clausesExceptLeadingFrom
+        .headOption.collect { case w: With if hasDependencies(w) => w }
+  }
+
+  private def leadingGraphSelection: Option[GraphSelection] =
     clauses.headOption.collect { case s: GraphSelection => s }
 
   def clausesExceptImportWith: Seq[Clause] =
     clauses.filterNot(importWith.contains)
 
-  def clausesExceptLeadingFromAndImportWith: Seq[Clause] =
+  private def clausesExceptLeadingFrom: Seq[Clause] =
+    clauses.filterNot(leadingGraphSelection.contains)
+
+  private def clausesExceptLeadingFromAndImportWith: Seq[Clause] =
     clauses
       .filterNot(importWith.contains)
       .filterNot(leadingGraphSelection.contains)
@@ -141,6 +157,7 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
       )
 
     checkCorrelatedSubQueriesFeature chain
+    checkAliasingImportWith chain
     checkLeadingFrom(outer) chain
     checkConcludesWithReturn(clausesExceptLeadingFromAndImportWith) chain
     semanticCheckAbstract(
@@ -167,6 +184,12 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
       case None       => success
     }
 
+  private def checkAliasingImportWith: SemanticCheck =
+    aliasingImportWith match {
+      case Some(wth) => error("Importing WITH should consist only of simple references to outside variables. Aliasing or expressions are not supported.", wth.position)
+      case None      => success
+    }
+
   private def checkIndexHints(clauses: Seq[Clause]): SemanticCheck = s => {
     val hints = clauses.collect { case m: Match => m.hints }.flatten
     val hasStartClause = clauses.exists(_.isInstanceOf[Start])
@@ -187,8 +210,8 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
   }
 
   private def checkOrder(clauses: Seq[Clause]): SemanticCheck = s => {
-    val (lastPair, errors) = clauses.sliding(2).foldLeft(Seq.empty[Clause] -> Vector.empty[SemanticError]) {
-      case ((_, semanticErrors), pair) =>
+    val sequenceErrors = clauses.sliding(2).foldLeft(Vector.empty[SemanticError]) {
+      case (semanticErrors, pair) =>
         val optError = pair match {
           case Seq(_: With, _: Start) =>
             None
@@ -211,18 +234,23 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
           case _ =>
             None
         }
-        (pair, optError.fold(semanticErrors)(semanticErrors :+ _))
+        optError.fold(semanticErrors)(semanticErrors :+ _)
     }
 
-    val lastError = {
-      val clause = lastPair.last
-      if (SingleQuery.canConcludeWith(clause, clauses.size))
-        None
-      else
-        Some(SemanticError(s"Query cannot conclude with ${clause.name} (must be RETURN or an update clause)", clause.position))
+    val concludeError = clauses match {
+      // standalone procedure call
+      case Seq(_: CallClause)                    => None
+      case Seq(_: GraphSelection, _: CallClause) => None
+
+      // otherwise
+      case seq => seq.last match {
+        case _: UpdateClause | _: Return | _: ReturnGraph => None
+        case clause                                       =>
+          Some(SemanticError(s"Query cannot conclude with ${clause.name} (must be RETURN or an update clause)", clause.position))
+      }
     }
 
-    semantics.SemanticCheckResult(s, errors ++ lastError)
+    semantics.SemanticCheckResult(s, sequenceErrors ++ concludeError)
   }
 
   private def checkClauses(clauses: Seq[Clause]): SemanticCheck = initialState => {
@@ -273,14 +301,6 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
 
   def finalScope(scope: Scope): Scope =
     scope.children.last
-}
-
-object SingleQuery {
-  def canConcludeWith(clause: Clause, numClauses: Int): Boolean = clause match {
-    case _: UpdateClause | _: Return | _: ReturnGraph => true
-    case _: CallClause if numClauses == 1             => true
-    case _                                            => false
-  }
 }
 
 object Union {

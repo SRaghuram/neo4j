@@ -5,7 +5,7 @@
  */
 package com.neo4j.dbms;
 
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -30,23 +30,27 @@ import org.neo4j.kernel.database.NamedDatabaseId;
  */
 public final class ReconcilerRequest
 {
-    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( Set.of(), null, null );
+    private enum RequestType
+    {
+        PRIORITY, EXPLICIT
+    }
+    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( Map.of(), null, null );
 
-    private final Set<String> priorityDatabases;
+    private final Map<String,RequestType> specifiedDatabases;
     private final boolean isSimple;
     private final NamedDatabaseId panickedDatabaseId;
     private final Throwable causeOfPanic;
 
-    private ReconcilerRequest( Set<String> namesOfPriorityDatabases, NamedDatabaseId panickedDatabaseId, Throwable causeOfPanic )
+    private ReconcilerRequest( Map<String,RequestType> specifiedDatabases, NamedDatabaseId panickedDatabaseId, Throwable causeOfPanic )
     {
-        this.priorityDatabases = Set.copyOf( namesOfPriorityDatabases );
-        this.isSimple = namesOfPriorityDatabases.isEmpty();
+        this.specifiedDatabases = Map.copyOf( specifiedDatabases );
+        this.isSimple = specifiedDatabases.isEmpty();
         this.panickedDatabaseId = panickedDatabaseId;
         this.causeOfPanic = causeOfPanic;
     }
 
     /**
-     * A request that does not mark any database reconciliations as high priority and does not mark any databases as failed.
+     * A request that does not specify any database reconciliations as high priority and does not specify any databases as failed.
      *
      * @return a reconciler request.
      */
@@ -56,7 +60,7 @@ public final class ReconcilerRequest
     }
 
     /**
-     * A request that forces state transitions and does not mark any databases as failed.
+     * A request that forces state transitions and does not specify any databases as failed.
      *
      * @return a reconciler request.
      * @param priorityDatabase the database to be treated as priority next reconciliation
@@ -67,7 +71,7 @@ public final class ReconcilerRequest
     }
 
     /**
-     * A request that forces state transitions and does not mark any databases as failed.
+     * A request that forces state transitions and ignores previous failures and executes out of order.
      *
      * @return a reconciler request.
      * @param priorityDatabases the subset of databases to be treated as priority next reconciliation
@@ -75,9 +79,21 @@ public final class ReconcilerRequest
     public static ReconcilerRequest priority( Set<NamedDatabaseId> priorityDatabases )
     {
         var priorityDbNames = priorityDatabases.stream()
-                .map( NamedDatabaseId::name )
-                .collect( Collectors.toSet() );
+                .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestType.PRIORITY ) );
         return new ReconcilerRequest( priorityDbNames, null, null );
+    }
+
+    /**
+     * A request that forces state transitions and ignores previous failures.
+     *
+     * @return a reconciler request.
+     * @param explicitDatabases the subset of databases to be treated as explicit next reconciliation
+     */
+    public static ReconcilerRequest explicit( Set<NamedDatabaseId> explicitDatabases )
+    {
+        var explicitDbNames = explicitDatabases.stream()
+                .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestType.EXPLICIT ) );
+        return new ReconcilerRequest( explicitDbNames, null, null );
     }
 
     /**
@@ -87,27 +103,52 @@ public final class ReconcilerRequest
      */
     public static ReconcilerRequest forPanickedDatabase( NamedDatabaseId namedDatabaseId, Throwable causeOfPanic )
     {
-        return new ReconcilerRequest( Set.of( namedDatabaseId.name() ), namedDatabaseId, causeOfPanic );
-    }
-
-    Set<String> priorityDatabaseNames()
-    {
-        return priorityDatabases;
+        return new ReconcilerRequest( Map.of( namedDatabaseId.name(), RequestType.PRIORITY ), namedDatabaseId, causeOfPanic );
     }
 
     /**
-     * Whether or not this request considers the reconciliation of the given database Id to be high priority.
+     * Set of the databases names which were specified as priority or explicit in this request
      *
-     * @return {@code true} if transitions for databaseId should be high priority, {@code false} otherwise.
+     * @return Set of the databases names
      */
-    boolean isPriorityRequestForDatabase( String databaseName )
+    Set<String> specifiedDatabaseNames()
     {
-        return priorityDatabases.contains( databaseName );
+        return specifiedDatabases.keySet();
     }
 
     /**
-     * Whether or not the given database panicked and should be marked as failed in {@link EnterpriseDatabaseState} after the reconciliation attempt.
-     * Returns an Optional cause, where the *lack* of a cause marks that the give database has not panicked.
+     * Whether or not this request considers the reconciliation of the given database Id to be done on a priority executor
+     *
+     * @return {@code true} if transitions should be executed on a priority executor for databaseId, {@code false} otherwise.
+     */
+    boolean shouldBeExecutedAsPriorityFor( String databaseName )
+    {
+        return specifiedDatabases.get( databaseName ) == RequestType.PRIORITY;
+    }
+
+    /**
+     * Whether or not this request allows the reconciliation of the given database Id if the prevoius transation failed
+     *
+     * @return {@code true} if transitions may heal previous failure, {@code false} otherwise.
+     */
+    boolean overridesPreviousFailuresFor( String databaseName )
+    {
+        return specifiedDatabases.containsKey( databaseName );
+    }
+
+    /**
+     * Whether or not this request allows the use the result of an already ongoing or queued reconciliation of the given database Id
+     *
+     * @return {@code true} if cache may be used, {@code false} otherwise.
+     */
+    boolean canUseCacheFor( String databaseName )
+    {
+        return !specifiedDatabases.containsKey( databaseName );
+    }
+
+    /**
+     * Whether or not the given database panicked and should be specified as failed in {@link EnterpriseDatabaseState} after the reconciliation attempt.
+     * Returns an Optional cause, where the *lack* of a cause specifies that the give database has not panicked.
      *
      * @return {@code Optional.of( cause )} if the state should be failed, {@code Optional.empty()} otherwise.
      */
@@ -118,7 +159,7 @@ public final class ReconcilerRequest
     }
 
     /**
-     * @return Whether this reconciler request is simple (i.e. isn't high priority for any databases and has no panic cause associated).
+     * @return Whether this reconciler request is simple (i.e. isn't high priority  or explicit for any databases and has no panic cause associated).
      */
     boolean isSimple()
     {
@@ -137,20 +178,20 @@ public final class ReconcilerRequest
             return false;
         }
         ReconcilerRequest that = (ReconcilerRequest) o;
-        return isSimple == that.isSimple && Objects.equals( priorityDatabases, that.priorityDatabases ) &&
-                Objects.equals( panickedDatabaseId, that.panickedDatabaseId ) && Objects.equals( causeOfPanic, that.causeOfPanic );
+        return isSimple == that.isSimple && Objects.equals( specifiedDatabases, that.specifiedDatabases ) &&
+               Objects.equals( panickedDatabaseId, that.panickedDatabaseId ) && Objects.equals( causeOfPanic, that.causeOfPanic );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( priorityDatabases, isSimple, panickedDatabaseId, causeOfPanic );
+        return Objects.hash( specifiedDatabases, isSimple, panickedDatabaseId, causeOfPanic );
     }
 
     @Override
     public String toString()
     {
-        return "ReconcilerRequest{" + "priorityDatabases=" + priorityDatabases + ", isSimple=" + isSimple + ", panickedDatabaseId=" + panickedDatabaseId +
-                ", causeOfPanic=" + causeOfPanic + '}';
+        return "ReconcilerRequest{" + "specifiedDatabases=" + specifiedDatabases + ", isSimple=" + isSimple + ", panickedDatabaseId=" + panickedDatabaseId +
+               ", causeOfPanic=" + causeOfPanic + '}';
     }
 }

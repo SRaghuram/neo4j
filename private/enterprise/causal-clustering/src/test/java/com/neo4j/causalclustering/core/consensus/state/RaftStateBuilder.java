@@ -5,14 +5,13 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
-import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
-import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
@@ -20,39 +19,35 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.time.Duration;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.time.FakeClock;
 
 import static java.util.Collections.emptySet;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class RaftStateBuilder
 {
-    public static RaftStateBuilder raftState()
+    private RaftStateBuilder()
+    {
+    }
+
+    public static RaftStateBuilder builder()
     {
         return new RaftStateBuilder();
     }
 
+    private Outcome outcome = OutcomeTestBuilder.builder().build();
     public MemberId myself;
     private Set<MemberId> votingMembers = emptySet();
     private Set<MemberId> replicationMembers = emptySet();
-    public long term;
-    public MemberId leader;
-    public long leaderCommit = -1;
-    private MemberId votedFor;
     private RaftLog entryLog = new InMemoryRaftLog();
     private boolean supportPreVoting;
-    private Set<MemberId> votesForMe = emptySet();
-    private Set<MemberId> preVotesForMe = emptySet();
-    private long lastLogIndexBeforeWeBecameLeader = -1;
-    public long commitIndex = -1;
-    private FollowerStates<MemberId> followerStates = new FollowerStates<>();
-    private boolean isPreElection;
     private boolean refusesToBeLeader;
+    private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() );
 
     public RaftStateBuilder myself( MemberId myself )
     {
@@ -60,51 +55,9 @@ public class RaftStateBuilder
         return this;
     }
 
-    public RaftStateBuilder votingMembers( Set<MemberId> currentMembers )
+    public RaftStateBuilder addInitialOutcome( Outcome outcome )
     {
-        this.votingMembers = currentMembers;
-        return this;
-    }
-
-    private RaftStateBuilder replicationMembers( Set<MemberId> replicationMembers )
-    {
-        this.replicationMembers = replicationMembers;
-        return this;
-    }
-
-    public RaftStateBuilder term( long term )
-    {
-        this.term = term;
-        return this;
-    }
-
-    public RaftStateBuilder leader( MemberId leader )
-    {
-        this.leader = leader;
-        return this;
-    }
-
-    public RaftStateBuilder leaderCommit( long leaderCommit )
-    {
-        this.leaderCommit = leaderCommit;
-        return this;
-    }
-
-    public RaftStateBuilder votedFor( MemberId votedFor )
-    {
-        this.votedFor = votedFor;
-        return this;
-    }
-
-    public RaftStateBuilder entryLog( RaftLog entryLog )
-    {
-        this.entryLog = entryLog;
-        return this;
-    }
-
-    public RaftStateBuilder votesForMe( Set<MemberId> votesForMe )
-    {
-        this.votesForMe = votesForMe;
+        this.outcome = outcome;
         return this;
     }
 
@@ -114,21 +67,21 @@ public class RaftStateBuilder
         return this;
     }
 
-    public RaftStateBuilder lastLogIndexBeforeWeBecameLeader( long lastLogIndexBeforeWeBecameLeader )
+    public RaftStateBuilder votingMembers( Set<MemberId> currentMembers )
     {
-        this.lastLogIndexBeforeWeBecameLeader = lastLogIndexBeforeWeBecameLeader;
+        this.votingMembers = currentMembers;
         return this;
     }
 
-    public RaftStateBuilder commitIndex( long commitIndex )
+    private RaftStateBuilder additionalReplicationMembers( Set<MemberId> replicationMembers )
     {
-        this.commitIndex = commitIndex;
+        this.replicationMembers = replicationMembers;
         return this;
     }
 
-    public RaftStateBuilder setPreElection( boolean isPreElection )
+    public RaftStateBuilder entryLog( RaftLog entryLog )
     {
-        this.isPreElection = isPreElection;
+        this.entryLog = entryLog;
         return this;
     }
 
@@ -141,18 +94,14 @@ public class RaftStateBuilder
     public RaftState build() throws IOException
     {
         StateStorage<TermState> termStore = new InMemoryStateStorage<>( new TermState() );
-        StateStorage<VoteState> voteStore = new InMemoryStateStorage<>( new VoteState( ) );
+        StateStorage<VoteState> voteStore = new InMemoryStateStorage<>( new VoteState() );
         StubMembership membership = new StubMembership( votingMembers, replicationMembers );
 
         RaftState state = new RaftState( myself, termStore, membership, entryLog,
-                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader );
+                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader,
+                Set::of, leadershipTransfers );
 
-        Collection<RaftMessages.Directed> noMessages = Collections.emptyList();
-        List<RaftLogCommand> noLogCommands = Collections.emptyList();
-
-        state.update( new Outcome( null, term, leader, leaderCommit, votedFor, votesForMe, preVotesForMe,
-                lastLogIndexBeforeWeBecameLeader, followerStates, null, noLogCommands,
-                noMessages, emptySet(), commitIndex, emptySet(), isPreElection ) );
+        state.update( outcome );
 
         return state;
     }
@@ -162,9 +111,9 @@ public class RaftStateBuilder
         return votingMembers( asSet( members ) );
     }
 
-    public RaftStateBuilder replicationMembers( MemberId... members )
+    public RaftStateBuilder additionalReplicationMembers( MemberId... members )
     {
-        return replicationMembers( asSet( members ) );
+        return additionalReplicationMembers( asSet( members ) );
     }
 
     public RaftStateBuilder messagesSentToFollower( MemberId member, long nextIndex )
@@ -177,10 +126,11 @@ public class RaftStateBuilder
         private Set<MemberId> votingMembers;
         private final Set<MemberId> replicationMembers;
 
-        private StubMembership( Set<MemberId> votingMembers, Set<MemberId> replicationMembers )
+        private StubMembership( Set<MemberId> votingMembers, Set<MemberId> additionalReplicationMembers )
         {
             this.votingMembers = votingMembers;
-            this.replicationMembers = replicationMembers;
+            this.replicationMembers = new HashSet<>( votingMembers );
+            this.replicationMembers.addAll( additionalReplicationMembers );
         }
 
         @Override

@@ -24,6 +24,7 @@ import org.neo4j.internal.kernel.api.IndexQueryConstraints;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.RelationshipIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.api.index.IndexProgressor;
 import org.neo4j.values.storable.Value;
@@ -33,13 +34,18 @@ import static org.neo4j.kernel.impl.newapi.Read.NO_ID;
 final class DefaultRelationshipIndexCursor extends IndexCursor<IndexProgressor> implements RelationshipIndexCursor, EntityIndexSeekClient
 {
     private final CursorPool<DefaultRelationshipIndexCursor> pool;
+    private final DefaultRelationshipScanCursor relationshipScanCursor;
     private Read read;
     private long relationship;
     private float score;
+    private AccessMode accessMode;
+    private int[] propertyIds;
+    private boolean shortcutSecurity;
 
-    DefaultRelationshipIndexCursor( CursorPool<DefaultRelationshipIndexCursor> pool )
+    DefaultRelationshipIndexCursor( CursorPool<DefaultRelationshipIndexCursor> pool, DefaultRelationshipScanCursor relationshipScanCursor )
     {
         this.pool = pool;
+        this.relationshipScanCursor = relationshipScanCursor;
         relationship = NO_ID;
         score = Float.NaN;
     }
@@ -76,13 +82,76 @@ final class DefaultRelationshipIndexCursor extends IndexCursor<IndexProgressor> 
                     "state into account. This means that the relationship index cursor has to account for the transaction state, but this has not been " +
                     "implemented." );
         }
+
+        shortcutSecurity = setupSecurity( descriptor, query );
     }
 
     @Override
     public boolean acceptEntity( long reference, float score, Value... values )
     {
+        if ( !allows( reference ) )
+        {
+            return false;
+        }
         this.relationship = reference;
         this.score = score;
+        return true;
+    }
+
+    private boolean allows( long reference )
+    {
+        if ( shortcutSecurity )
+        {
+            return true;
+        }
+
+        read.singleRelationship( reference, relationshipScanCursor );
+        if ( !relationshipScanCursor.next() )
+        {
+            return false;
+        }
+
+        int relType = relationshipScanCursor.type();
+        for ( int prop : propertyIds )
+        {
+            if ( !accessMode.allowsReadRelationshipProperty( () -> relType, prop ) )
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * If the current user is allowed to traverse all relationships  nodes and read the properties no matter what label
+     * the node has, we can skip checking on every node we get back.
+     */
+    private boolean setupSecurity( IndexDescriptor descriptor, IndexQuery[] query )
+    {
+        if ( accessMode == null )
+        {
+            accessMode = read.ktx.securityContext().mode();
+        }
+        propertyIds = descriptor.schema().getPropertyIds();
+
+        for ( int relType : descriptor.schema().getEntityTokenIds() )
+        {
+            if ( !accessMode.allowsTraverseRelType( relType ) )
+            {
+                return false;
+            }
+        }
+        if ( !accessMode.allowsTraverseAllLabels() )
+        {
+            return false;
+        }
+        for ( int propId : propertyIds )
+        {
+            if ( !accessMode.allowsReadPropertyAllRelTypes( propId ) )
+            {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -157,6 +226,7 @@ final class DefaultRelationshipIndexCursor extends IndexCursor<IndexProgressor> 
         if ( !isClosed() )
         {
             closeProgressor();
+            this.accessMode = null;
             this.relationship = NO_ID;
             this.score = Float.NaN;
             pool.accept( this );
@@ -171,6 +241,7 @@ final class DefaultRelationshipIndexCursor extends IndexCursor<IndexProgressor> 
 
     public void release()
     {
-        // nothing to do
+        relationshipScanCursor.close();
+        relationshipScanCursor.release();
     }
 }

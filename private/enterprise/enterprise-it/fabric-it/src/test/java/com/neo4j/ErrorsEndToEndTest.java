@@ -30,9 +30,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.ArithmeticError;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.EntityNotFound;
-import static org.neo4j.kernel.api.exceptions.Status.Statement.NotSystemDatabaseError;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.ParameterMissing;
-import static org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.SyntaxError;
 
 class ErrorsEndToEndTest
@@ -110,46 +108,6 @@ class ErrorsEndToEndTest
         assertEquals( SyntaxError.code().serialize(), e.code() );
         assertThat( e.getMessage() ).contains( "Variable `b` not defined" );
         assertThat( e.getMessage() ).contains( "\"UNWIND[1, 0] AS a RETURN b\"" );
-    }
-
-    @Test
-    void testLocalDDL()
-    {
-        var e = run( "CREATE USER me SET PASSWORD 'secret1234'" );
-
-        var expectedMessage = "This is an administration command and it should be executed against the system database: CREATE USER";
-        assertEquals( NotSystemDatabaseError.code().serialize(), e.code() );
-        assertEquals( expectedMessage, e.getMessage() );
-    }
-
-    @Test
-    void testRemoteDDL()
-    {
-        var e = run( "USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'" );
-
-        assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage() ).contains( "Invalid input ' '" );
-        assertThat( e.getMessage() ).contains( "\"USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'\"" );
-    }
-
-    @Test
-    void testLocalCommand()
-    {
-        var e = run( "CREATE INDEX ON :Person(firstname)" );
-
-        var expectedMessage = "Commands not supported in Fabric database";
-        assertEquals( SemanticError.code().serialize(), e.code() );
-        assertEquals( expectedMessage, e.getMessage() );
-    }
-
-    @Test
-    void testRemoteCommand()
-    {
-        var e = run( "USE mega.graph0 CREATE INDEX ON :Person(firstname)" );
-
-        assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage() ).contains( "Invalid input 'N'" );
-        assertThat( e.getMessage() ).contains( "\"USE mega.graph0 CREATE INDEX ON :Person(firstname)\"" );
     }
 
     @Test
@@ -321,6 +279,18 @@ class ErrorsEndToEndTest
 
         assertEquals( ArithmeticError.code().serialize(), e.code() );
         assertEquals( "/ by zero", e.getMessage() );
+    }
+
+    @Test
+    void testDeprecationNotification()
+    {
+        var notifications = driverUtils.inTx( clientDriver, tx ->
+                tx.run( "explain MATCH ()-[rs*]-() RETURN rs" ).consume().notifications()
+        );
+
+        assertThat( notifications.size() ).isEqualTo( 1 );
+        assertThat( notifications.get( 0 ).code() ).isEqualTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" );
+        assertThat( notifications.get( 0 ).description() ).startsWith( "Binding relationships" );
     }
 
     private void verifyCleanUp()

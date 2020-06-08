@@ -10,11 +10,11 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
-import com.neo4j.bench.common.model.ProfileLoader;
-import com.neo4j.bench.common.model.ProfilerRecordings;
-import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.common.profiling.ProfileLoader;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.model.profiling.ProfilerRecordings;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.File;
 import java.nio.file.Path;

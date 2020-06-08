@@ -9,15 +9,19 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
+import java.io.IOException;
+import java.util.Set;
+
 public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.OutboundRaftMessageContainer>
 {
     @Override
-    protected void encode( ChannelHandlerContext ctx, RaftMessages.OutboundRaftMessageContainer decoratedMessage, ByteBuf out ) throws Exception
+    public void encode( ChannelHandlerContext ctx, RaftMessages.OutboundRaftMessageContainer decoratedMessage, ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
         RaftId raftId = decoratedMessage.raftId();
@@ -159,6 +163,24 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         public Void handle( RaftMessages.PruneRequest pruneRequest )
         {
             return null; // Not network
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
+        {
+            throw new UnsupportedOperationException( "Leadership Transfer extension is not supported with Raft protocol v2!" );
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws Exception
+        {
+            return null; // Not network
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
+        {
+            throw new UnsupportedOperationException( "Leadership Transfer extension is not supported with Raft protocol v2!" );
         }
     }
 }

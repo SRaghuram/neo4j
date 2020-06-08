@@ -27,7 +27,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.neo4j.annotations.api.IgnoreApiCheck;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.internal.helpers.Exceptions;
 
 import static java.lang.String.format;
 
@@ -36,7 +38,7 @@ public final class SettingImpl<T> implements Setting<T>
 {
     private final String name;
     private final String suffix;
-    private SettingImpl<T> dependency;
+    private final SettingImpl<T> dependency;
     private final SettingValueParser<T> parser;
     private final T defaultValue;
     private final List<SettingConstraint<T>> constraints;
@@ -106,7 +108,7 @@ public final class SettingImpl<T> implements Setting<T>
         return parser.solveDependency( value, dependencyValue );
     }
 
-    public void validate( T value )
+    public void validate( T value, Configuration config )
     {
         if ( value != null )
         {
@@ -115,11 +117,19 @@ public final class SettingImpl<T> implements Setting<T>
                 throw new IllegalArgumentException( format( "Setting '%s' can not have value '%s'. Should be of type '%s', but is '%s'",
                                 name, value, parser.getType().getSimpleName(), value.getClass().getSimpleName() ) );
             }
-            parser.validate( value );
-            for ( SettingConstraint<T> constraint : constraints )
+            try
             {
-                constraint.validate( value );
+                parser.validate( value );
+                for ( SettingConstraint<T> constraint : constraints )
+                {
+                    constraint.validate( value, config );
+                }
             }
+            catch ( IllegalArgumentException e )
+            {
+                throw Exceptions.withMessage( e, format( "Failed to validate '%s' for '%s': %s", value, name(), e.getMessage() ) );
+            }
+
         }
     }
 
@@ -237,7 +247,7 @@ public final class SettingImpl<T> implements Setting<T>
         private final String name;
         private final SettingValueParser<T> parser;
         private final List<SettingConstraint<T>> constraints = new ArrayList<>();
-        private T defaultValue;
+        private final T defaultValue;
         private boolean dynamic;
         private boolean immutable;
         private SettingImpl<T> dependency;

@@ -19,7 +19,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
@@ -30,15 +29,12 @@ import org.neo4j.cypher.internal.util.attribution.Id
  */
 class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         val workIdentity: WorkIdentity,
-                        orderBy: Seq[ColumnOrder],
-                        argumentSlotOffset: Int)
+                        comparator: Comparator[MorselRow])
                        (val id: Id = Id.INVALID_ID)
   extends Operator
   with ReduceOperatorState[Morsel, ArgumentStateBuffer] {
 
   override def toString: String = "SortMerge"
-
-  private val comparator: Comparator[MorselRow] = MorselSorting.createComparator(orderBy)
 
   override def accumulatorsPerTask(morselSize: Int): Int = 1
 

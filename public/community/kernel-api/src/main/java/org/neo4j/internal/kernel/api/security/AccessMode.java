@@ -186,6 +186,54 @@ public interface AccessMode
         }
 
         @Override
+        public boolean allowsSetLabel( long labelId )
+        {
+            return write;
+        }
+
+        @Override
+        public boolean allowsRemoveLabel( long labelId )
+        {
+            return write;
+        }
+
+        @Override
+        public boolean allowsCreateNode( int[] labelIds )
+        {
+            return write;
+        }
+
+        @Override
+        public boolean allowsDeleteNode( Supplier<TokenSet> labelSupplier )
+        {
+            return write;
+        }
+
+        @Override
+        public boolean allowsCreateRelationship( int relType )
+        {
+            return write;
+        }
+
+        @Override
+        public boolean allowsDeleteRelationship( int relType )
+        {
+            return write;
+        }
+
+        @Override
+        public boolean allowsSetProperty( Supplier<TokenSet> labels, int propertyKey )
+        {
+            return write;
+        }
+
+        @Override
+        public boolean allowsSetProperty( IntSupplier relType, int propertyKey )
+        {
+            return write;
+        }
+
+        @Override
         public AuthorizationViolationException onViolation( String msg )
         {
             return new AuthorizationViolationException( msg );
@@ -240,6 +288,22 @@ public interface AccessMode
      * encoding permission
      */
     boolean allowsProcedureWith( String[] allowed );
+
+    boolean allowsSetLabel( long labelId );
+
+    boolean allowsRemoveLabel( long labelId );
+
+    boolean allowsCreateNode( int[] labelIds );
+
+    boolean allowsDeleteNode( Supplier<TokenSet> labelSupplier );
+
+    boolean allowsCreateRelationship( int relType );
+
+    boolean allowsDeleteRelationship( int relType );
+
+    boolean allowsSetProperty( Supplier<TokenSet> labels, int propertyKey );
+
+    boolean allowsSetProperty( IntSupplier relType, int propertyKey );
 
     AuthorizationViolationException onViolation( String msg );
     String name();

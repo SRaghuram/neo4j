@@ -49,7 +49,6 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
 
         if ( !config.get( metricsEnabled ) )
         {
-            logger.info( "Metric is disabled by config. To activate, set '" + metricsEnabled.name() + "' to `true`." );
             return;
         }
 

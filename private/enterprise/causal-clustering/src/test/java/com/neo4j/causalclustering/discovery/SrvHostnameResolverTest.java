@@ -7,7 +7,8 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.eclipse.collections.impl.factory.Maps;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -20,15 +21,13 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-public class SrvHostnameResolverTest
+class SrvHostnameResolverTest
 {
     private final MockSrvRecordResolver mockSrvRecordResolver =
             new MockSrvRecordResolver( Maps.mutable.with("emptyrecord.com", new ArrayList<>() ) );
@@ -41,7 +40,7 @@ public class SrvHostnameResolverTest
             config, RetryStrategyTest.testRetryStrategy( 1 ) );
 
     @Test
-    public void hostnamesAndPortsAreResolvedByTheResolver()
+    void hostnamesAndPortsAreResolvedByTheResolver()
     {
         // given
         mockSrvRecordResolver.addRecords( "_discovery._tcp.google.com",
@@ -57,19 +56,19 @@ public class SrvHostnameResolverTest
         );
 
         // then
-        assertEquals( 2, resolvedAddresses.size() );
+        Assertions.assertEquals( 2, resolvedAddresses.size() );
 
-        assertTrue( resolvedAddresses.removeIf(
+        Assertions.assertTrue( resolvedAddresses.removeIf(
                 address -> address.getHostname().equals( "1.2.3.4" ) && address.getPort() == 80
         ) );
 
-        assertTrue( resolvedAddresses.removeIf(
+        Assertions.assertTrue( resolvedAddresses.removeIf(
                 address -> address.getHostname().equals( "5.6.7.8" ) && address.getPort() == 8080
         ) );
     }
 
     @Test
-    public void resolutionDetailsAreLoggedToUserLogs()
+    void resolutionDetailsAreLoggedToUserLogs()
     {
         // given
         mockSrvRecordResolver.addRecord(
@@ -87,7 +86,7 @@ public class SrvHostnameResolverTest
     }
 
     @Test
-    public void unknownHostExceptionsAreLoggedAsErrors()
+    void unknownHostExceptionsAreLoggedAsErrors()
     {
         // when
         resolver.resolve( new SocketAddress( "unknown.com", 0 ) );
@@ -97,7 +96,7 @@ public class SrvHostnameResolverTest
     }
 
     @Test
-    public void emptyRecordListsAreLoggedAsErrors()
+    void emptyRecordListsAreLoggedAsErrors()
     {
         // when
         resolver.resolve( new SocketAddress( "emptyrecord.com", 0 ) );
@@ -107,7 +106,7 @@ public class SrvHostnameResolverTest
     }
 
     @Test
-    public void resolverRetriesUntilHostnamesAreFound() throws Exception
+    void resolverRetriesUntilHostnamesAreFound() throws Exception
     {
         // given
         mockSrvRecordResolver.addRecords( "_discovery._tcp.google.com",
@@ -133,13 +132,13 @@ public class SrvHostnameResolverTest
         // then
         verify( mockResolver, times( 3 ) ).resolveSrvRecord( "_discovery._tcp.google.com" );
 
-        assertEquals( 2, resolvedAddresses.size() );
+        Assertions.assertEquals( 2, resolvedAddresses.size() );
 
-        assertTrue( resolvedAddresses.removeIf(
+        Assertions.assertTrue( resolvedAddresses.removeIf(
                 address -> address.getHostname().equals( "1.2.3.4" ) && address.getPort() == 80
         ) );
 
-        assertTrue( resolvedAddresses.removeIf(
+        Assertions.assertTrue( resolvedAddresses.removeIf(
                 address -> address.getHostname().equals( "5.6.7.8" ) && address.getPort() == 8080
         ) );
 

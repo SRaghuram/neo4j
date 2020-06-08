@@ -20,6 +20,7 @@
 package org.neo4j.cypher.internal.logical.plans
 
 import org.neo4j.cypher.internal.ast.CallClause
+import org.neo4j.cypher.internal.ast.ProcedureResult
 import org.neo4j.cypher.internal.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.semantics.SemanticCheck
@@ -33,9 +34,11 @@ import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.Expression.SemanticContext
 import org.neo4j.cypher.internal.expressions.ImplicitProcedureArgument
 import org.neo4j.cypher.internal.expressions.LogicalVariable
+import org.neo4j.cypher.internal.expressions.Namespace
 import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.expressions.ProcedureName
 import org.neo4j.cypher.internal.expressions.SensitiveParameter
-import org.neo4j.cypher.internal.expressions.SensitiveStringLiteral
+import org.neo4j.cypher.internal.expressions.SensitiveString
 import org.neo4j.cypher.internal.expressions.StringLiteral
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.util.InputPosition
@@ -52,7 +55,7 @@ object ResolvedCall {
     val sensitiveArguments = signature.inputSignature.take(callArguments.length).map(_.sensitive)
     val callArgumentsWithSensitivityMarkers = callArguments.zipAll(sensitiveArguments, null, false).map {
       case (p: Parameter, true) => new Parameter(p.name, p.parameterType)(p.position) with SensitiveParameter
-      case (p: StringLiteral, true) => new StringLiteral(p.value)(p.position) with SensitiveStringLiteral
+      case (p: StringLiteral, true) => new StringLiteral(p.value)(p.position) with SensitiveString
       case (p, _) => p
     }
     val callResults = declaredResult.map(_.items).getOrElse(signatureResults(signature, position))
@@ -201,6 +204,14 @@ case class ResolvedCall(signature: ProcedureSignature,
 
   override def containsNoUpdates: Boolean = signature.accessMode match {
     case ProcedureReadOnlyAccess(_) => true
+    case ProcedureDbmsAccess(_) => true
     case _ => false
   }
+
+  def asUnresolvedCall: UnresolvedCall = UnresolvedCall(
+    procedureNamespace = Namespace(signature.name.namespace.toList)(position),
+    procedureName = ProcedureName(signature.name.name)(position),
+    declaredArguments = if (declaredArguments) Some(callArguments) else None,
+    declaredResult = if (declaredResults) Some(ProcedureResult(callResults)(position)) else None,
+  )(position)
 }

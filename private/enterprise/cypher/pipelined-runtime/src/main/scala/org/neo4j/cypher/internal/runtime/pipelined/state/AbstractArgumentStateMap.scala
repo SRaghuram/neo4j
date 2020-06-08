@@ -20,18 +20,12 @@ import scala.collection.mutable.ArrayBuffer
  * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
  */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
-  extends OrderedArgumentStateMap[STATE] with UnorderedArgumentStateMap[STATE] {
+  extends ArgumentStateMap[STATE] {
 
   /**
    * A Map of the controllers.
    */
   protected val controllers: java.util.Map[Long, CONTROLLER]
-
-  // Not assigned here since the Concurrent implementation needs to declare this volatile
-  /**
-   * A private counter for the methods [[takeNextIfCompletedOrElsePeek()]], [[nextArgumentStateIsCompletedOr()]], and [[peekNext()]]
-   */
-  protected var lastCompletedArgumentId: Long
 
   /**
    * Create a new state controller
@@ -99,36 +93,21 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       builder
   }
 
-  override def takeNextIfCompleted(): STATE = {
-    nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
-  }
+  override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
+    val iterator = controllers.values().iterator()
 
-  override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    nextIfCompletedOrNull((state, isCompleted) => ArgumentStateWithCompleted(state, isCompleted))
-  }
-
-  private def nextIfCompletedOrNull[T](stateMapper: (STATE, Boolean) => T): T = {
-    val controller = controllers.get(lastCompletedArgumentId + 1)
-    if (controller != null) {
+    if (iterator.hasNext) {
+      val controller = iterator.next()
       if (controller.tryTake()) {
-        lastCompletedArgumentId += 1
         controllers.remove(controller.state.argumentRowId)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
-        stateMapper(controller.state, true)
+        return ArgumentStateWithCompleted(controller.state, isCompleted = true)
       } else {
-        stateMapper(controller.state, false)
+        return ArgumentStateWithCompleted(controller.state, isCompleted = false)
       }
-    } else {
-      null.asInstanceOf[T]
     }
+    null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
   }
-
-  override def nextArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
-    val controller = controllers.get(lastCompletedArgumentId + 1)
-    controller != null && (controller.isZero || statePredicate(controller.state))
-  }
-
-  override def peekNext(): STATE = peek(lastCompletedArgumentId + 1)
 
   override def peekCompleted(): Iterator[STATE] = {
     controllers.values().stream().filter(_.isZero).map[STATE](_.state).iterator().asScala
@@ -155,9 +134,33 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     false
   }
 
+  override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
+    val iterator = controllers.values().iterator()
+
+    while(iterator.hasNext) {
+      val controller = iterator.next()
+      if (controller.isZero || statePredicate(controller.state)) {
+        return true
+      }
+    }
+    false
+  }
+
   override def hasCompleted(argument: Long): Boolean = {
     val controller = controllers.get(argument)
     controller != null && controller.isZero
+  }
+
+  override def exists(statePredicate: STATE => Boolean): Boolean = {
+    val iterator = controllers.values().iterator()
+
+    while(iterator.hasNext) {
+      val controller = iterator.next()
+      if (statePredicate(controller.state)) {
+        return true
+      }
+    }
+    false
   }
 
   override def remove(argument: Long): Boolean = {

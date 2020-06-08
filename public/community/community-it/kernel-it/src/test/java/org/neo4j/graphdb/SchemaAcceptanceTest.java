@@ -64,7 +64,7 @@ import org.neo4j.test.extension.actors.Actor;
 import org.neo4j.test.extension.actors.ActorsExtension;
 import org.neo4j.util.concurrent.BinaryLatch;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -319,7 +319,7 @@ class SchemaAcceptanceTest extends SchemaAcceptanceTestBase
             }
             catch ( ConstraintViolationException e )
             {
-                assertThat( e ).hasMessageContaining(  "Unable to drop index: Index does not exist: " +
+                assertThat( e ).hasMessageContaining( "Unable to drop index: Index does not exist: " +
                         "Index( id=1, name='index_a0d2924', type='GENERAL BTREE', schema=(:MY_LABEL {my_property_key}), indexProvider='native-btree-1.0' )" );
             }
             tx.commit();
@@ -1689,7 +1689,7 @@ class SchemaAcceptanceTest extends SchemaAcceptanceTestBase
     {
         try ( Transaction tx = beansAPI.beginTx() )
         {
-            tx.schema().awaitIndexOnline( indexDef, 30, SECONDS );
+            tx.schema().awaitIndexOnline( indexDef, 10, MINUTES );
         }
     }
 

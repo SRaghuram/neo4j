@@ -89,6 +89,14 @@
             <artifactId>neo4j-counts-store</artifactId>
             <version>${project.version}</version>
         </dependency>
+<<<<<<< HEAD
+=======
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-codec</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 
         <dependency>
             <groupId>org.neo4j</groupId>

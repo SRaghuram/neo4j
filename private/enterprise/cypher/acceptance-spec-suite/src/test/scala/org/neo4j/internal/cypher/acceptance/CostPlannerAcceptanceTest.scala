@@ -5,12 +5,12 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Long
+import java.lang
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.ExecutionEngineQueryCacheMonitor
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
-import org.neo4j.cypher.internal.StringCacheMonitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.monitoring.Monitors
@@ -27,7 +27,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
   private var missCounter: MissCounter = _
 
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
-    Map(GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> Long.valueOf(10))
+    Map(GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> lang.Long.valueOf(10))
 
   override protected def initTest() {
     super.initTest()
@@ -235,7 +235,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
     deleteAllEntities()
   }
 
-  class MissCounter() extends StringCacheMonitor {
+  class MissCounter() extends ExecutionEngineQueryCacheMonitor {
     var count = 0
     override def cacheMiss(key: Pair[String, ParameterTypeMap]) {
       count += 1

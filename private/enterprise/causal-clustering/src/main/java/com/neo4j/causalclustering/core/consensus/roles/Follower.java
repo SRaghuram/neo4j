@@ -5,21 +5,25 @@
  */
 package com.neo4j.causalclustering.core.consensus.roles;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessageHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.logging.Log;
 
-import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
+import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
+import static java.lang.Long.max;
 import static java.lang.Long.min;
 
 class Follower implements RaftMessageHandler
@@ -38,17 +42,17 @@ class Follower implements RaftMessageHandler
         return leaderSegmentPrevIndex > -1 && (leaderSegmentPrevIndex <= localLogPrevIndex || localSegmentPrevTerm == leaderSegmentPrevTerm);
     }
 
-    static void commitToLogOnUpdate( ReadableRaftState ctx, long indexOfLastNewEntry, long leaderCommit, Outcome outcome )
+    static void commitToLogOnUpdate( ReadableRaftState ctx, long indexOfLastNewEntry, long leaderCommit, OutcomeBuilder outcomeBuilder )
     {
         long newCommitIndex = min( leaderCommit, indexOfLastNewEntry );
 
         if ( newCommitIndex > ctx.commitIndex() )
         {
-            outcome.setCommitIndex( newCommitIndex );
+            outcomeBuilder.setCommitIndex( newCommitIndex );
         }
     }
 
-    private static void handleLeaderLogCompaction( ReadableRaftState ctx, Outcome outcome, RaftMessages.LogCompactionInfo compactionInfo )
+    private static void handleLeaderLogCompaction( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder, RaftMessages.LogCompactionInfo compactionInfo )
     {
         if ( compactionInfo.leaderTerm() < ctx.term() )
         {
@@ -60,210 +64,244 @@ class Follower implements RaftMessageHandler
 
         if ( localAppendIndex <= -1 || leaderPrevIndex > localAppendIndex )
         {
-            outcome.markNeedForFreshSnapshot( leaderPrevIndex, localAppendIndex );
+            outcomeBuilder.markNeedForFreshSnapshot( leaderPrevIndex, localAppendIndex );
         }
+    }
+
+    private static void handleLeadershipTransfer( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder, RaftMessages.LeadershipTransfer.Request request,
+            Log log ) throws IOException
+    {
+        var sameOrEarlierTerm = ctx.term() <= request.term();
+        var upToDate = ctx.commitIndex() >= request.previousIndex();
+        var myGroups = ctx.serverGroups();
+
+        if ( sameOrEarlierTerm && upToDate && (noRequestedPriority( request ) || iAmInPriority( myGroups, request )) )
+        {
+            if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
+            {
+                outcomeBuilder.setRole( CANDIDATE );
+                log.info( "Moving to CANDIDATE state after receiving Leadership Transfer Request" );
+            }
+        }
+        else
+        {
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(),
+                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) ) );
+        }
+    }
+
+    private static boolean noRequestedPriority( RaftMessages.LeadershipTransfer.Request request )
+    {
+        return request.groups().isEmpty();
+    }
+
+    private static boolean iAmInPriority( Set<ServerGroupName> myGroups, RaftMessages.LeadershipTransfer.Request request )
+    {
+        for ( var priorityGroup : request.groups() )
+        {
+            if ( myGroups.contains( priorityGroup ) )
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public Outcome handle( RaftMessages.RaftMessage message, ReadableRaftState ctx, Log log ) throws IOException
     {
-        return message.dispatch( visitor( ctx, log ) );
+        return message.dispatch( visitor( ctx, log ) ).build();
     }
 
-    private static class Handler implements RaftMessages.Handler<Outcome,IOException>
+    private static class Handler implements RaftMessages.Handler<OutcomeBuilder,IOException>
     {
         protected final ReadableRaftState ctx;
         protected final Log log;
-        protected final Outcome outcome;
+        protected final OutcomeBuilder outcomeBuilder;
         private final PreVoteRequestHandler preVoteRequestHandler;
         private final PreVoteResponseHandler preVoteResponseHandler;
-        private final ElectionTimeoutHandler electionTimeoutHandler;
 
-        Handler( PreVoteRequestHandler preVoteRequestHandler, PreVoteResponseHandler preVoteResponseHandler,
-                ElectionTimeoutHandler electionTimeoutHandler, ReadableRaftState ctx, Log log )
+        Handler( PreVoteRequestHandler preVoteRequestHandler, PreVoteResponseHandler preVoteResponseHandler, ReadableRaftState ctx, Log log )
         {
             this.ctx = ctx;
             this.log = log;
-            this.outcome = new Outcome( FOLLOWER, ctx );
+            this.outcomeBuilder = OutcomeBuilder.builder( FOLLOWER, ctx );
             this.preVoteRequestHandler = preVoteRequestHandler;
             this.preVoteResponseHandler = preVoteResponseHandler;
-            this.electionTimeoutHandler = electionTimeoutHandler;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Heartbeat heartbeat ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.Heartbeat heartbeat ) throws IOException
         {
-            Heart.beat( ctx, outcome, heartbeat, log );
-            return outcome;
+            Heart.beat( ctx, outcomeBuilder, heartbeat, log );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.AppendEntries.Request request ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.AppendEntries.Request request ) throws IOException
         {
-            Appending.handleAppendEntriesRequest( ctx, outcome, request, log );
-            return outcome;
+            Appending.handleAppendEntriesRequest( ctx, outcomeBuilder, request );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Vote.Request request ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.Vote.Request request ) throws IOException
         {
-            Voting.handleVoteRequest( ctx, outcome, request, log );
-            return outcome;
+            var term = max( request.term(), ctx.term() );
+            var votedFor = ctx.votedFor();
+            if ( term > ctx.term() )
+            {
+                outcomeBuilder.setTerm( term );
+                votedFor = null;
+            }
+            Voting.handleVoteVerdict( ctx, outcomeBuilder, term, request, log, votedFor );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.LogCompactionInfo logCompactionInfo )
+        public OutcomeBuilder handle( RaftMessages.LogCompactionInfo logCompactionInfo )
         {
-            handleLeaderLogCompaction( ctx, outcome, logCompactionInfo );
-            return outcome;
+            handleLeaderLogCompaction( ctx, outcomeBuilder, logCompactionInfo );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Vote.Response response )
+        public OutcomeBuilder handle( RaftMessages.Vote.Response response )
         {
             log.info( "Late vote response: %s", response );
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.PreVote.Request request ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request request ) throws IOException
         {
-            return preVoteRequestHandler.handle( request, outcome, ctx, log );
+            return preVoteRequestHandler.handle( request, outcomeBuilder, ctx, log );
         }
 
         @Override
-        public Outcome handle( RaftMessages.PreVote.Response response ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Response response ) throws IOException
         {
-            return preVoteResponseHandler.handle( response, outcome, ctx, log );
+            return preVoteResponseHandler.handle( response, outcomeBuilder, ctx, log );
         }
 
         @Override
-        public Outcome handle( RaftMessages.PruneRequest pruneRequest )
+        public OutcomeBuilder handle( RaftMessages.PruneRequest pruneRequest )
         {
-            Pruning.handlePruneRequest( outcome, pruneRequest );
-            return outcome;
+            Pruning.handlePruneRequest( outcomeBuilder, pruneRequest );
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.AppendEntries.Response response )
+        public OutcomeBuilder handle( RaftMessages.AppendEntries.Response response )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.HeartbeatResponse heartbeatResponse )
+        public OutcomeBuilder handle( RaftMessages.HeartbeatResponse heartbeatResponse )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.Timeout.Election election ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.Timeout.Election election ) throws IOException
         {
-            return electionTimeoutHandler.handle( election, outcome, ctx, log );
+            return handleElectionTimeout( outcomeBuilder, ctx, log );
         }
 
         @Override
-        public Outcome handle( RaftMessages.Timeout.Heartbeat heartbeat )
+        public OutcomeBuilder handle( RaftMessages.Timeout.Heartbeat heartbeat )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.NewEntry.Request request )
+        public OutcomeBuilder handle( RaftMessages.NewEntry.Request request )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         @Override
-        public Outcome handle( RaftMessages.NewEntry.BatchRequest batchRequest )
+        public OutcomeBuilder handle( RaftMessages.NewEntry.BatchRequest batchRequest )
         {
-            return outcome;
+            return outcomeBuilder;
         }
-    }
 
-    private interface ElectionTimeoutHandler
-    {
-        Outcome handle( RaftMessages.Timeout.Election election, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException;
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws IOException
+        {
+            handleLeadershipTransfer( ctx, outcomeBuilder, leadershipTransferRequest, log );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws IOException
+        {
+            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) );
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws IOException
+        {
+            outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
+            return outcomeBuilder;
+        }
     }
 
     private interface PreVoteRequestHandler
     {
-        Outcome handle( RaftMessages.PreVote.Request request, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException;
+        OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException;
 
     }
     private interface PreVoteResponseHandler
     {
-        Outcome handle( RaftMessages.PreVote.Response response, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException;
+        OutcomeBuilder handle( RaftMessages.PreVote.Response response, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException;
     }
 
-    private static class PreVoteSupportedHandler implements ElectionTimeoutHandler
+    private static OutcomeBuilder handleElectionTimeout( OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException
     {
-        @Override
-        public Outcome handle( RaftMessages.Timeout.Election election, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException
+        if ( ctx.supportPreVoting() && !ctx.refusesToBeLeader() )
         {
             log.info( "Election timeout triggered" );
-            if ( Election.startPreElection( ctx, outcome, log ) )
+            if ( Election.startPreElection( ctx, outcomeBuilder, log ) )
             {
-                outcome.setPreElection( true );
+                outcomeBuilder.setPreElection( true );
             }
-            return outcome;
         }
-
-        private static final ElectionTimeoutHandler INSTANCE = new PreVoteSupportedHandler();
-    }
-
-    private static class PreVoteUnsupportedHandler implements ElectionTimeoutHandler
-    {
-        @Override
-        public Outcome handle( RaftMessages.Timeout.Election election, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException
-        {
-            log.info( "Election timeout triggered" );
-            if ( Election.startRealElection( ctx, outcome, log ) )
-            {
-                outcome.setNextRole( CANDIDATE );
-                log.info( "Moving to CANDIDATE state after successfully starting election" );
-            }
-            return outcome;
-        }
-
-        private static final ElectionTimeoutHandler INSTANCE = new PreVoteUnsupportedHandler();
-    }
-
-    private static class PreVoteUnsupportedRefusesToLead implements ElectionTimeoutHandler
-    {
-        @Override
-        public Outcome handle( RaftMessages.Timeout.Election election, Outcome outcome, ReadableRaftState ctx, Log log )
-        {
-            log.info( "Election timeout triggered but refusing to be leader" );
-            return outcome;
-        }
-
-        private static final ElectionTimeoutHandler INSTANCE = new PreVoteUnsupportedRefusesToLead();
-    }
-
-    private static class PreVoteSupportedRefusesToLeadHandler implements ElectionTimeoutHandler
-    {
-        @Override
-        public Outcome handle( RaftMessages.Timeout.Election election, Outcome outcome, ReadableRaftState ctx, Log log )
+        else if ( ctx.supportPreVoting() && ctx.refusesToBeLeader() )
         {
             log.info( "Election timeout triggered but refusing to be leader" );
             Set<MemberId> memberIds = ctx.votingMembers();
             if ( memberIds != null && memberIds.contains( ctx.myself() ) )
             {
-                outcome.setPreElection( true );
+                outcomeBuilder.setPreElection( true );
             }
-            return outcome;
+        }
+        else if ( !ctx.supportPreVoting() && ctx.refusesToBeLeader() )
+        {
+            log.info( "Election timeout triggered but refusing to be leader" );
+        }
+        else
+        {
+            log.info( "Election timeout triggered" );
+            if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
+            {
+                outcomeBuilder.setRole( CANDIDATE );
+                log.info( "Moving to CANDIDATE state after successfully starting election" );
+            }
         }
 
-        private static final ElectionTimeoutHandler INSTANCE = new PreVoteSupportedRefusesToLeadHandler();
+        return outcomeBuilder;
     }
 
     private static class PreVoteRequestVotingHandler implements PreVoteRequestHandler
     {
         @Override
-        public Outcome handle( RaftMessages.PreVote.Request request, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcome, ReadableRaftState ctx, Log log ) throws IOException
         {
-            Voting.handlePreVoteRequest( ctx, outcome, request, log );
+            var term = max( ctx.term(), request.term() );
+            outcome.setTerm( term );
+            Voting.handlePreVoteVerdict( ctx, outcome, request, log, term );
             return outcome;
         }
 
@@ -273,10 +311,15 @@ class Follower implements RaftMessageHandler
     private static class PreVoteRequestDecliningHandler implements PreVoteRequestHandler
     {
         @Override
-        public Outcome handle( RaftMessages.PreVote.Request request, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException
         {
-            Voting.declinePreVoteRequest( ctx, outcome, request );
-            return outcome;
+            var term = max( request.term(), ctx.term() );
+            if ( term > ctx.term() )
+            {
+                outcomeBuilder.setTerm( term );
+            }
+            Voting.declinePreVoteRequest( ctx, outcomeBuilder, request, term );
+            return outcomeBuilder;
         }
 
         private static final PreVoteRequestHandler INSTANCE = new PreVoteRequestDecliningHandler();
@@ -285,9 +328,9 @@ class Follower implements RaftMessageHandler
     private static class PreVoteRequestNoOpHandler implements PreVoteRequestHandler
     {
         @Override
-        public Outcome handle( RaftMessages.PreVote.Request request, Outcome outcome, ReadableRaftState ctx, Log log )
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         private static final PreVoteRequestHandler INSTANCE = new PreVoteRequestNoOpHandler();
@@ -296,36 +339,40 @@ class Follower implements RaftMessageHandler
     private static class PreVoteResponseSolicitingHandler implements PreVoteResponseHandler
     {
         @Override
-        public Outcome handle( RaftMessages.PreVote.Response res, Outcome outcome, ReadableRaftState ctx, Log log ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Response res, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException
         {
-            if ( res.term() > ctx.term() )
+            long term = max( res.term(), ctx.term() );
+            if ( term > ctx.term() )
             {
-                outcome.setNextTerm( res.term() );
-                outcome.setPreElection( false );
+                outcomeBuilder.setTerm( res.term() )
+                        .setPreElection( false );
                 log.info( "Aborting pre-election after receiving pre-vote response from %s at term %d (I am at %d)", res.from(), res.term(), ctx.term() );
-                return outcome;
+                return outcomeBuilder;
             }
             else if ( res.term() < ctx.term() || !res.voteGranted() )
             {
-                return outcome;
+                return outcomeBuilder;
             }
+
+            var preVotesForMe = new HashSet<>( ctx.preVotesForMe() );
 
             if ( !res.from().equals( ctx.myself() ) )
             {
-                outcome.addPreVoteForMe( res.from() );
+                preVotesForMe.add( res.from() );
+                outcomeBuilder.setPreVotesForMe( preVotesForMe );
             }
 
-            if ( isQuorum( ctx.votingMembers(), outcome.getPreVotesForMe() ) )
+            if ( isQuorum( ctx.votingMembers(), preVotesForMe ) )
             {
-                outcome.renewElectionTimer( ACTIVE_ELECTION );
-                outcome.setPreElection( false );
-                if ( Election.startRealElection( ctx, outcome, log ) )
+                outcomeBuilder.renewElectionTimer( ACTIVE_ELECTION )
+                        .setPreElection( false );
+                if ( Election.startRealElection( ctx, outcomeBuilder, log, term ) )
                 {
-                    outcome.setNextRole( CANDIDATE );
+                    outcomeBuilder.setRole( CANDIDATE );
                     log.info( "Moving to CANDIDATE state after successful pre-election stage" );
                 }
             }
-            return outcome;
+            return outcomeBuilder;
         }
         private static final PreVoteResponseHandler INSTANCE = new PreVoteResponseSolicitingHandler();
     }
@@ -333,9 +380,9 @@ class Follower implements RaftMessageHandler
     private static class PreVoteResponseNoOpHandler implements PreVoteResponseHandler
     {
         @Override
-        public Outcome handle( RaftMessages.PreVote.Response response, Outcome outcome, ReadableRaftState ctx, Log log )
+        public OutcomeBuilder handle( RaftMessages.PreVote.Response response, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log )
         {
-            return outcome;
+            return outcomeBuilder;
         }
 
         private static final PreVoteResponseHandler INSTANCE = new PreVoteResponseNoOpHandler();
@@ -343,7 +390,6 @@ class Follower implements RaftMessageHandler
 
     private static Handler visitor( ReadableRaftState ctx, Log log )
     {
-        final ElectionTimeoutHandler electionTimeoutHandler;
         final PreVoteRequestHandler preVoteRequestHandler;
         final PreVoteResponseHandler preVoteResponseHandler;
 
@@ -352,7 +398,6 @@ class Follower implements RaftMessageHandler
             preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
             if ( ctx.supportPreVoting() )
             {
-                electionTimeoutHandler = PreVoteSupportedRefusesToLeadHandler.INSTANCE;
                 if ( ctx.isPreElection() )
                 {
                     preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
@@ -365,14 +410,12 @@ class Follower implements RaftMessageHandler
             else
             {
                 preVoteRequestHandler = PreVoteRequestNoOpHandler.INSTANCE;
-                electionTimeoutHandler = PreVoteUnsupportedRefusesToLead.INSTANCE;
             }
         }
         else
         {
             if ( ctx.supportPreVoting() )
             {
-                electionTimeoutHandler = PreVoteSupportedHandler.INSTANCE;
                 if ( ctx.isPreElection() )
                 {
                     preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
@@ -388,9 +431,8 @@ class Follower implements RaftMessageHandler
             {
                 preVoteRequestHandler = PreVoteRequestNoOpHandler.INSTANCE;
                 preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
-                electionTimeoutHandler = PreVoteUnsupportedHandler.INSTANCE;
             }
         }
-        return new Handler( preVoteRequestHandler, preVoteResponseHandler, electionTimeoutHandler, ctx, log );
+        return new Handler( preVoteRequestHandler, preVoteResponseHandler, ctx, log );
     }
 }

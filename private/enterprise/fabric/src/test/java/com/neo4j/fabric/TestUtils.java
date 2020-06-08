@@ -5,12 +5,11 @@
  */
 package com.neo4j.fabric;
 
-import com.neo4j.fabric.executor.Location;
-
 import java.net.URI;
 import java.util.List;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.fabric.executor.Location;
 
 public class TestUtils
 {

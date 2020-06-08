@@ -52,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 class TestLogPruning
 {
@@ -253,7 +254,7 @@ class TestLogPruning
             int counter = 0;
             LogVersionBridge bridge = channel -> channel;
             LogVersionedStoreChannel versionedStoreChannel = files.openForVersion( version );
-            try ( ReadableLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, bridge, 1000 ) )
+            try ( ReadableLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, bridge, INSTANCE ) )
             {
                 try ( PhysicalTransactionCursor physicalTransactionCursor =
                         new PhysicalTransactionCursor( channel, new VersionAwareLogEntryReader( db.getDependencyResolver().resolveDependency(

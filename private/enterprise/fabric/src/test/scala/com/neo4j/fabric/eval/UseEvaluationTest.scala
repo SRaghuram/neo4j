@@ -7,48 +7,60 @@ package com.neo4j.fabric.eval
 
 import java.time.Duration
 import java.util
+import java.util.UUID
 
-import com.neo4j.fabric.FabricTest
-import com.neo4j.fabric.ProcedureRegistryTestSupport
-import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
-import com.neo4j.fabric.config.FabricConfig.Graph
-import com.neo4j.fabric.eval
-import com.neo4j.fabric.eval.Catalog.ExternalGraph
-import com.neo4j.fabric.eval.Catalog.InternalGraph
-import com.neo4j.fabric.pipeline.SignatureResolver
+import com.neo4j.fabric.config.FabricEnterpriseConfig
+import com.neo4j.fabric.config.FabricEnterpriseConfig.GlobalDriverConfig
+import com.neo4j.fabric.config.FabricEnterpriseConfig.Graph
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.parser.Clauses
 import org.neo4j.cypher.internal.parser.Query
 import org.neo4j.cypher.internal.util.test_helpers.TestName
+import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.EntityNotFoundException
 import org.neo4j.exceptions.SyntaxException
+import org.neo4j.fabric.FabricTest
+import org.neo4j.fabric.ProcedureRegistryTestSupport
+import org.neo4j.fabric.config.FabricConfig
+import org.neo4j.fabric.eval.Catalog
+import org.neo4j.fabric.eval.Catalog.ExternalGraph
+import org.neo4j.fabric.eval.Catalog.InternalGraph
+import org.neo4j.fabric.eval.DatabaseLookup
+import org.neo4j.fabric.eval.StaticEvaluation
+import org.neo4j.fabric.eval.UseEvaluation
+import org.neo4j.fabric.pipeline.SignatureResolver
+import org.neo4j.kernel.database.DatabaseIdFactory
+import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.parboiled.scala.ReportingParseRunner
+import org.scalatest.mockito.MockitoSugar
 
-import scala.collection.mutable
 import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.mutable
 
 class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport with TestName {
 
-  private val mega0 = new Graph(0L, FabricConfig.RemoteUri.create("bolt://mega:1111"), "neo4j", new NormalizedGraphName("source_of_all_truth"), null)
-  private val mega1 = new Graph(1L, FabricConfig.RemoteUri.create("bolt://mega:2222"), "neo4j", null, null)
-  private val mega2 = new Graph(2L, FabricConfig.RemoteUri.create("bolt://mega:3333"), "neo4j", new NormalizedGraphName("mega"), null)
+  private val mega0 = new Graph(0L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:1111"), "neo4j", new NormalizedGraphName("source_of_all_truth"), null)
+  private val mega1 = new Graph(1L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:2222"), "neo4j", null, null)
+  private val mega2 = new Graph(2L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:3333"), "neo4j", new NormalizedGraphName("mega"), null)
 
-  private val config = new FabricConfig(
-    true,
-    new FabricConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
+  private val neo4jUuid = UUID.randomUUID()
+  private val testUuid = UUID.randomUUID()
+  private val megaUuid = UUID.randomUUID()
+
+  private val config = new FabricEnterpriseConfig(
+    new FabricEnterpriseConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
     new FabricConfig.DataStream(300, 1000, 50, 10)
   )
 
-  private val internalDbs = Set("neo4j", "test", "mega")
+  private val internalDbs = Set(dbId("neo4j", neo4jUuid), dbId("test", testUuid), dbId("mega", megaUuid))
 
   "Correctly evaluates:" - {
     "USE mega.graph(0)" in eval().shouldEqual(external(mega0))
@@ -67,12 +79,12 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     "USE mega.GRAPH(y)" in eval("y" -> Values.intValue(1)).shouldEqual(external(mega1))
     "USE mega.sOuRce_Of_aLL_tRuTH" in eval().shouldEqual(external(mega0))
     "USE Mega.MEGA" in eval().shouldEqual(external(mega2))
-    "USE mega" in eval().shouldEqual(internal(3, "mega"))
-    "USE MeGa" in eval().shouldEqual(internal(3, "mega"))
-    "USE neo4j" in eval().shouldEqual(internal(4, "neo4j"))
-    "USE Neo4j" in eval().shouldEqual(internal(4, "neo4j"))
-    "USE test" in eval().shouldEqual(internal(5, "test"))
-    "USE mega.graph(4)" in eval().shouldEqual(internal(4, "neo4j"))
+    "USE mega" in eval().shouldEqual(internal(3, megaUuid, "mega"))
+    "USE MeGa" in eval().shouldEqual(internal(3, megaUuid, "mega"))
+    "USE neo4j" in eval().shouldEqual(internal(4, neo4jUuid, "neo4j"))
+    "USE Neo4j" in eval().shouldEqual(internal(4, neo4jUuid, "neo4j"))
+    "USE test" in eval().shouldEqual(internal(5, testUuid, "test"))
+    "USE mega.graph(4)" in eval().shouldEqual(internal(4, neo4jUuid, "neo4j"))
   }
 
   "Fails for:" - {
@@ -94,7 +106,15 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
         ReportingParseRunner(this.UseGraph).run(use).result.get
     }
 
-    private val catalog = Catalog.create(config, internalDbs)
+    private val databaseLookup = new DatabaseLookup {
+
+      override def databaseIds: Set[NamedDatabaseId] = internalDbs
+
+      override def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] = ???
+    }
+    private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
+    private val catalogManager = new EnterpriseSingleCatalogManager(databaseLookup, databaseManagementService, config)
+    private val catalog = catalogManager.currentCatalog()
     private val signatures = new SignatureResolver(() => procedures)
     private val staticEvaluator = new StaticEvaluation.StaticEvaluator(() => procedures)
 
@@ -125,7 +145,8 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     }
   }
 
-  private def external(graph: FabricConfig.Graph) = ExternalGraph(graph)
-  private def internal(id: Long, name: String) = InternalGraph(id, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
+  private def external(graph: FabricEnterpriseConfig.Graph) = ExternalGraph(graph.getId, Option(graph.getName).map(_.name()), new UUID(graph.getId, 0))
+  private def internal(id: Long, uuid: UUID, name: String) = InternalGraph(id, uuid, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
+  private def dbId(name: String, uuid:UUID):NamedDatabaseId = DatabaseIdFactory.from(name, uuid)
 
 }

@@ -35,7 +35,7 @@ import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -96,6 +96,7 @@ import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_LO
 import static org.neo4j.kernel.recovery.RecoveryStartInformation.NO_RECOVERY_REQUIRED;
 import static org.neo4j.kernel.recovery.RecoveryStartInformationProvider.NO_MONITOR;
 import static org.neo4j.kernel.recovery.RecoveryStartupChecker.EMPTY_CHECKER;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
@@ -195,7 +196,7 @@ class TransactionLogsRecoveryTest
             TransactionMetadataCache metadataCache = new TransactionMetadataCache();
             LogicalTransactionStore txStore = new PhysicalLogicalTransactionStore( logFiles, metadataCache, reader,
                     monitors, false );
-            CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
+            CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem, INSTANCE );
             monitors.addMonitorListener( monitor );
             life.add( new TransactionLogsRecovery( new DefaultRecoveryService( storageEngine, tailScanner, transactionIdStore,
                     txStore, versionRepository, logFiles, NO_MONITOR, mock( Log.class ) )
@@ -287,7 +288,7 @@ class TransactionLogsRecoveryTest
             TransactionMetadataCache metadataCache = new TransactionMetadataCache();
             LogicalTransactionStore txStore = new PhysicalLogicalTransactionStore( logFiles, metadataCache, reader,
                     monitors, false );
-            CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
+            CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem, INSTANCE );
             monitors.addMonitorListener( new RecoveryMonitor()
             {
                 @Override
@@ -435,7 +436,7 @@ class TransactionLogsRecoveryTest
         RecoveryService recoveryService = mock( RecoveryService.class );
         when( recoveryService.getRecoveryStartInformation() ).thenReturn( NO_RECOVERY_REQUIRED );
 
-        CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
+        CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem, INSTANCE );
         RecoveryMonitor monitor = mock( RecoveryMonitor.class );
 
         TransactionLogsRecovery logsRecovery = new TransactionLogsRecovery( recoveryService, logPruner, schemaLife, monitor, ProgressReporter.SILENT,
@@ -510,7 +511,7 @@ class TransactionLogsRecoveryTest
 
             TransactionMetadataCache metadataCache = new TransactionMetadataCache();
             LogicalTransactionStore txStore = new PhysicalLogicalTransactionStore( logFiles, metadataCache, reader, monitors, false );
-            CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem );
+            CorruptedLogsTruncator logPruner = new CorruptedLogsTruncator( storeDir, logFiles, fileSystem, INSTANCE );
             monitors.addMonitorListener( monitor );
             life.add( new TransactionLogsRecovery( new DefaultRecoveryService( storageEngine, tailScanner, transactionIdStore,
                     txStore, versionRepository, logFiles, NO_MONITOR, mock( Log.class ) ),
@@ -527,15 +528,15 @@ class TransactionLogsRecoveryTest
 
     private LogTailScanner getTailScanner( LogFiles logFiles, LogEntryReader reader )
     {
-        return new LogTailScanner( logFiles, reader, monitors, false );
+        return new LogTailScanner( logFiles, reader, monitors, false, INSTANCE );
     }
 
     private void writeSomeData( File file, Visitor<Pair<LogEntryWriter,Consumer<LogPositionMarker>>,IOException> visitor ) throws IOException
     {
         try ( LogVersionedStoreChannel versionedStoreChannel = new PhysicalLogVersionedStoreChannel( fileSystem.write( file ), logVersion,
                 CURRENT_LOG_FORMAT_VERSION, file, logFiles.getChannelNativeAccessor() );
-              PositionAwarePhysicalFlushableChecksumChannel writableLogChannel = new PositionAwarePhysicalFlushableChecksumChannel( versionedStoreChannel,
-                        ByteBuffers.allocate( 1, KibiByte ) ) )
+              PositionAwarePhysicalFlushableChecksumChannel writableLogChannel =
+                      new PositionAwarePhysicalFlushableChecksumChannel( versionedStoreChannel, new HeapScopedBuffer( 1, KibiByte, INSTANCE ) ) )
         {
             writeLogHeader( writableLogChannel, new LogHeader( logVersion, 2L, StoreId.UNKNOWN ) );
             writableLogChannel.beginChecksum();

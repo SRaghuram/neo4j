@@ -26,8 +26,8 @@ object ExecutionGraphDefiner {
 
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
     ExecutionGraphDefinition(physicalPlan,
-      executionStateDefiner.buffers.map(_.result),
-      executionStateDefiner.argumentStateMaps,
+      new ReadOnlyArray(executionStateDefiner.buffers.map(_.result).toArray),
+      new ReadOnlyArray(executionStateDefiner.argumentStateMaps.toArray),
       pipelineTreeBuilder.pipelines.map(_.result),
       pipelineTreeBuilder.applyRhsPlans.toMap)
   }

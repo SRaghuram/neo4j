@@ -13,10 +13,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
 /**
  * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
+ *
+ * This is an unordered argument state map.
  */
 class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                          val argumentSlotOffset: Int,
@@ -24,9 +27,6 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
 
   override protected val controllers = new java.util.concurrent.ConcurrentHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
-
-  @volatile
-  override protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,

@@ -45,8 +45,18 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-infra-scheduler</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-random-values</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <!--TODO note: this is only used by IntelliJ build, not Maven+Terminal-->
         <dependency>
@@ -68,6 +78,16 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-data-collector</artifactId>
+            <version>${neo4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher-javacc-parser</artifactId>
+            <version>${neo4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher-ast-factory</artifactId>
             <version>${neo4j.version}</version>
         </dependency>
         <dependency>
@@ -137,7 +157,6 @@
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.binary.version}</artifactId>
-            <version>3.0.5</version>
             <exclusions>
                 <exclusion>
                     <artifactId>scala-library</artifactId>
@@ -235,6 +254,11 @@
                                             </excludes>
                                         </filter>
                                     </filters>
+                                    <artifactSet>
+                                        <excludes>
+                                            <exclude>org.slf4j:slf4j-nop</exclude>
+                                        </excludes>
+                                    </artifactSet>
                                 </configuration>
                             </execution>
                         </executions>
@@ -303,6 +327,9 @@
                     <args>
                         <arg>-target:jvm-${scala.target.vm}</arg>
                     </args>
+                    <javacArgs>
+                        <javacArg>-proc:none</javacArg>
+                    </javacArgs>
                 </configuration>
                 <executions>
                     <execution>
@@ -352,7 +379,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <compilerArgument>-proc:none</compilerArgument>
+                    <compilerArgs>
+                        <arg>-proc:none</arg>
+                        <arg>-Xpkginfo:always</arg><!-- Prevents recompilation due to missing package-info.class, see MCOMPILER-368,-205 -->
+                    </compilerArgs>
                 </configuration>
             </plugin>
 

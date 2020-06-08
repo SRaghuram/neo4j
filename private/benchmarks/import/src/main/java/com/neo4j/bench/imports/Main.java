@@ -17,20 +17,20 @@ import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkConfig;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.common.model.BenchmarkTool;
-import com.neo4j.bench.common.model.BranchAndVersion;
-import com.neo4j.bench.common.model.Environment;
-import com.neo4j.bench.common.model.Java;
-import com.neo4j.bench.common.model.Metrics;
-import com.neo4j.bench.common.model.Neo4j;
-import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.model.TestRun;
-import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkConfig;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.BenchmarkTool;
+import com.neo4j.bench.model.model.BranchAndVersion;
+import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Java;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.Neo4j;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.TestRun;
+import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Version;
 
 import java.io.File;
@@ -52,8 +52,8 @@ import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.test.proc.ProcessUtil;
 
-import static com.neo4j.bench.common.model.Repository.IMPORT_BENCH;
-import static com.neo4j.bench.common.model.Repository.NEO4J;
+import static com.neo4j.bench.model.model.Repository.IMPORT_BENCH;
+import static com.neo4j.bench.model.model.Repository.NEO4J;
 import static java.util.stream.Collectors.joining;
 
 @Command( name = "import-benchmarks", description = "benchmarks for import performance" )

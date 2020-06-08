@@ -34,6 +34,10 @@ import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor;
 import org.neo4j.internal.kernel.api.Scan;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.storageengine.api.Reference;
+<<<<<<< HEAD
+=======
+import org.neo4j.internal.schema.IndexOrder;
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.values.storable.Value;
 
@@ -48,12 +52,6 @@ public class StubRead implements Read
     @Override
     public void prepareForLabelScans()
     {
-    }
-
-    @Override
-    public void nodeIndexDistinctValues( IndexDescriptor index, NodeValueIndexCursor cursor, boolean needsValues )
-    {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -83,7 +81,7 @@ public class StubRead implements Read
     }
 
     @Override
-    public void nodeLabelScan( int label, NodeLabelIndexCursor cursor )
+    public void nodeLabelScan( int label, NodeLabelIndexCursor cursor, IndexOrder order )
     {
         ((StubNodeLabelIndexCursor) cursor).initialize( label );
     }

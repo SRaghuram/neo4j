@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.csv.reader.Configuration;
@@ -66,6 +65,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -92,6 +92,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 {
@@ -916,7 +917,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 new LdbcHeaderFactory( relationshipHeaders.stream().toArray( Header[]::new ) ),
                 IdType.INTEGER,
                 configuration,
-                CsvInput.NO_MONITOR
+                CsvInput.NO_MONITOR,
+                INSTANCE
         );
 
         FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
@@ -942,7 +944,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 NO_MONITOR,
                 jobScheduler,
                 badCollector,
-                TransactionLogsInitializer.INSTANCE
+                TransactionLogInitializer.getLogFilesInitializer(),
+                INSTANCE
         );
 
         System.out.println( "Loading CSV files" );

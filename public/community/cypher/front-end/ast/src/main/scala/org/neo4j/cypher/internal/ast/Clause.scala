@@ -259,12 +259,12 @@ case class CreateInConstruct(pattern: Pattern)
       SemanticPatternCheck.check(Pattern.SemanticContext.Construct, pattern)
 
   /**
-    * Checks if a relationship in new is cloned or newly created.
-    * If it is cloned, no type needs to be specified.
-    * Otherwise it has to have exactly one type.
-    *
-    * @return
-    */
+   * Checks if a relationship in new is cloned or newly created.
+   * If it is cloned, no type needs to be specified.
+   * Otherwise it has to have exactly one type.
+   *
+   * @return
+   */
   private def checkNewRelTypes: SemanticCheck = state => {
     pattern.patternParts.foldLeft(success) {
       case (acc, EveryPath(relChain: RelationshipChain)) => acc chain checkNewRelTypes(relChain, state)
@@ -588,6 +588,8 @@ case class Match(
     }
     labels.contains(label)
   }
+
+  def allExportedVariables: Set[LogicalVariable] = pattern.patternParts.findByAllClass[LogicalVariable].toSet
 }
 
 case class Merge(pattern: Pattern, actions: Seq[MergeAction], where: Option[Where] = None)(val position: InputPosition)
@@ -723,14 +725,14 @@ sealed trait HorizonClause extends Clause with SemanticAnalysisTooling {
 
 object ProjectionClause {
 
-  def unapply(arg: ProjectionClause): Option[(Boolean, ReturnItemsDef, Option[OrderBy], Option[Skip], Option[Limit], Option[Where])] = {
+  def unapply(arg: ProjectionClause): Option[(Boolean, ReturnItems, Option[OrderBy], Option[Skip], Option[Limit], Option[Where])] = {
     arg match {
       case With(distinct, ri, orderBy, skip, limit, where) => Some((distinct, ri, orderBy, skip, limit, where))
       case Return(distinct, ri, orderBy, skip, limit, _) => Some((distinct, ri, orderBy, skip, limit, None))
     }
   }
 
-  def checkAliasedReturnItems(returnItems: ReturnItemsDef, clauseName: String): SemanticState => Seq[SemanticError] =
+  def checkAliasedReturnItems(returnItems: ReturnItems, clauseName: String): SemanticState => Seq[SemanticError] =
     state => returnItems match {
       case li: ReturnItems =>
         li.items.filter(item => item.alias.isEmpty).map(i => SemanticError(s"Expression in $clauseName must be aliased (use AS)", i.position))
@@ -741,7 +743,7 @@ object ProjectionClause {
 sealed trait ProjectionClause extends HorizonClause {
   def distinct: Boolean
 
-  def returnItems: ReturnItemsDef
+  def returnItems: ReturnItems
 
   def orderBy: Option[OrderBy]
 
@@ -756,11 +758,11 @@ sealed trait ProjectionClause extends HorizonClause {
   def isReturn: Boolean = false
 
   def copyProjection(distinct: Boolean = this.distinct,
-           returnItems: ReturnItemsDef = this.returnItems,
-           orderBy: Option[OrderBy] = this.orderBy,
-           skip: Option[Skip] = this.skip,
-           limit: Option[Limit] = this.limit,
-           where: Option[Where] = this.where): ProjectionClause = {
+                     returnItems: ReturnItems = this.returnItems,
+                     orderBy: Option[OrderBy] = this.orderBy,
+                     skip: Option[Skip] = this.skip,
+                     limit: Option[Limit] = this.limit,
+                     where: Option[Where] = this.where): ProjectionClause = {
     this match {
       case w:With => w.copy(distinct, returnItems, orderBy, skip, limit, where)(this.position)
       case r:Return => r.copy(distinct, returnItems, orderBy, skip, limit, r.excludedNames)(this.position)
@@ -768,8 +770,8 @@ sealed trait ProjectionClause extends HorizonClause {
   }
 
   /**
-    * @return copy of this ProjectionClause with new return items
-    */
+   * @return copy of this ProjectionClause with new return items
+   */
   def withReturnItems(items: Seq[ReturnItem]): ProjectionClause
 
   override def semanticCheck: SemanticCheck =
@@ -850,15 +852,15 @@ sealed trait ProjectionClause extends HorizonClause {
   }
 
   /**
-    * If you access a previously defined variable in a WITH/RETURN with DISTINCT or aggregation, that is not OK. Example:
-    * MATCH (a) RETURN sum(a.age) ORDER BY a.name
-    *
-    * This method takes the "Variable not defined" errors we get from the semantic analysis and provides a more helpful
-    * error message
-    * @param previousScopeVars all variables defined in the previous scope.
-    * @param error the error
-    * @return an error with a possibly better error message
-    */
+   * If you access a previously defined variable in a WITH/RETURN with DISTINCT or aggregation, that is not OK. Example:
+   * MATCH (a) RETURN sum(a.age) ORDER BY a.name
+   *
+   * This method takes the "Variable not defined" errors we get from the semantic analysis and provides a more helpful
+   * error message
+   * @param previousScopeVars all variables defined in the previous scope.
+   * @param error the error
+   * @return an error with a possibly better error message
+   */
   private def warnOnAccessToRestrictedVariableInOrderByOrWhere(previousScopeVars: Set[String])(error: SemanticErrorDef): SemanticErrorDef = {
     previousScopeVars.collectFirst {
       case name if error.msg.equals(s"Variable `$name` not defined") => error.withMsg(
@@ -882,12 +884,12 @@ sealed trait ProjectionClause extends HorizonClause {
 }
 
 object With {
-  def apply(returnItems: ReturnItemsDef)(pos: InputPosition): With =
+  def apply(returnItems: ReturnItems)(pos: InputPosition): With =
     With(distinct = false, returnItems, None, None, None, None)(pos)
 }
 
 case class With(distinct: Boolean,
-                returnItems: ReturnItemsDef,
+                returnItems: ReturnItems,
                 orderBy: Option[OrderBy],
                 skip: Option[Skip],
                 limit: Option[Limit],
@@ -905,12 +907,12 @@ case class With(distinct: Boolean,
 }
 
 object Return {
-  def apply(returnItems: ReturnItemsDef)(pos: InputPosition): Return =
+  def apply(returnItems: ReturnItems)(pos: InputPosition): Return =
     Return(distinct = false, returnItems, None, None, None)(pos)
 }
 
 case class Return(distinct: Boolean,
-                  returnItems: ReturnItemsDef,
+                  returnItems: ReturnItems,
                   orderBy: Option[OrderBy],
                   skip: Option[Skip],
                   limit: Option[Limit],
@@ -933,7 +935,7 @@ case class Return(distinct: Boolean,
   override def withReturnItems(items: Seq[ReturnItem]): Return =
     this.copy(returnItems = ReturnItems(returnItems.includeExisting, items)(returnItems.position))(this.position)
 
-  def withReturnItems(returnItems: ReturnItemsDef): Return =
+  def withReturnItems(returnItems: ReturnItems): Return =
     this.copy(returnItems = returnItems)(this.position)
 
 

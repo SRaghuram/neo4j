@@ -8,22 +8,21 @@ package com.neo4j.causalclustering.core.consensus.outcome;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-public class TruncateLogCommandTest
+class TruncateLogCommandTest
 {
     @Test
-    public void applyTo()
+    void applyTo()
     {
         //Test that truncate commands correctly remove entries from the cache.
 
@@ -43,17 +42,17 @@ public class TruncateLogCommandTest
         truncateLogCommand.applyTo( inFlightCache, log );
 
         //then
-        assertNotNull( inFlightCache.get( 0L ) );
-        assertNotNull( inFlightCache.get( 1L ) );
-        assertNull( inFlightCache.get( 2L ) );
-        assertNull( inFlightCache.get( 3L ) );
+        Assertions.assertNotNull( inFlightCache.get( 0L ) );
+        Assertions.assertNotNull( inFlightCache.get( 1L ) );
+        Assertions.assertNull( inFlightCache.get( 2L ) );
+        Assertions.assertNull( inFlightCache.get( 3L ) );
 
         assertThat(logProvider).forClass( getClass() ).forLevel( DEBUG )
                 .containsMessageWithArguments( "Start truncating in-flight-map from index %d. Current map:%n%s", fromIndex, inFlightCache );
     }
 
     @Test
-    public void shouldTruncateWithGaps()
+    void shouldTruncateWithGaps()
     {
         //given
         long fromIndex = 1L;
@@ -70,7 +69,7 @@ public class TruncateLogCommandTest
         inFlightCache.put( 1L, new RaftLogEntry( 3L, valueOf( 1 ) ) );
         inFlightCache.put( 2L, new RaftLogEntry( 4L, valueOf( 2 ) ) );
 
-        assertNotNull( inFlightCache.get( 1L ) );
-        assertNotNull( inFlightCache.get( 2L ) );
+        Assertions.assertNotNull( inFlightCache.get( 1L ) );
+        Assertions.assertNotNull( inFlightCache.get( 2L ) );
     }
 }

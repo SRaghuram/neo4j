@@ -60,6 +60,7 @@ public class ThreadLeakageGuardExtension implements AfterAllCallback, BeforeAllC
             "Cleaner",
             "PageCacheRule",                    //Ignoring page cache
             "MuninnPageCache",                  //Ignoring page cache
+            "neo4j.FileIOHelper",               //Ignoring page cache
             "Attach Listener",                  //IDE thread
             "process reaper",                   //Unix system thread
             "neo4j.BoltNetworkIO",              //Bolt threads use non-blocking exit
@@ -110,7 +111,7 @@ public class ThreadLeakageGuardExtension implements AfterAllCallback, BeforeAllC
 
         if ( !leakedThreads.isEmpty() )
         {
-            String message = format( "%d leaked thread(s) detected:%n%s", leakedThreads.size(), leakedThreads.toString() );
+            String message = format( "%d leaked thread(s) detected:%n%s", leakedThreads.size(), leakedThreads );
             if ( PRINT_ONLY )
             {
                 printError( context, message );
@@ -241,7 +242,7 @@ public class ThreadLeakageGuardExtension implements AfterAllCallback, BeforeAllC
 
         while ( (group = group.getParent()) != null )
         {
-            str.append( ":" ).append( group.getName() );
+            str.append( ':' ).append( group.getName() );
         }
 
         return str.toString();

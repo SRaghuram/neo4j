@@ -19,8 +19,8 @@
  */
 package org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation
 
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.IsNoValue
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.values.AnyValue
@@ -36,12 +36,14 @@ trait MinMax extends AggregationFunction {
 
   override def result(state: QueryState): AnyValue = biggestSeen
 
-  override def apply(data: CypherRow, state: QueryState) {
+  override def apply(data: ReadableRow, state: QueryState) {
     value(data, state) match {
       case IsNoValue() =>
       case x: AnyValue => checkIfLargest(x)
     }
   }
+
+  override def recordMemoryDeallocation(): Unit = ()
 
   private def checkIfLargest(value: AnyValue) {
     if (biggestSeen eq Values.NO_VALUE) {
@@ -53,11 +55,11 @@ trait MinMax extends AggregationFunction {
 }
 
 class MaxFunction(val value: Expression) extends AggregationFunction with MinMax {
-  def keep(comparisonResult: Int) = comparisonResult < 0
+  def keep(comparisonResult: Int): Boolean = comparisonResult < 0
   override def name: String = "MAX"
 }
 
 class MinFunction(val value: Expression) extends AggregationFunction with MinMax {
-  def keep(comparisonResult: Int) = comparisonResult > 0
+  def keep(comparisonResult: Int): Boolean = comparisonResult > 0
   override def name: String = "MIN"
 }

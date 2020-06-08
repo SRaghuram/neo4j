@@ -6,12 +6,12 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.Plan;
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.model.Plan;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.Query;

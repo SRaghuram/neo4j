@@ -39,7 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 
@@ -58,7 +57,7 @@ class DefaultRelationshipTraversalCursorTest
     {
         // given
         StorageRelationshipTraversalCursor storeCursor = storeCursor( 100, 102, 104 );
-        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, NULL );
+        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, mock( DefaultNodeCursor.class ) );
         Read read = emptyTxState();
 
         // when
@@ -73,7 +72,7 @@ class DefaultRelationshipTraversalCursorTest
     {
         // given
         StorageRelationshipTraversalCursor storeCursor = storeCursor( 100, 102, 104 );
-        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, NULL );
+        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, mock( DefaultNodeCursor.class ) );
         Read read = txState( 3, 4 );
 
         // when
@@ -95,7 +94,7 @@ class DefaultRelationshipTraversalCursorTest
                         rel( 102, node, 51, type ),
                         rel( 104, node, 52, type ) );
 
-        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, NULL );
+        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, mock( DefaultNodeCursor.class ) );
         Read read = txState(
                 rel( 3, node, 50, type ),
                 rel( 4, 50, node, type ),
@@ -121,7 +120,7 @@ class DefaultRelationshipTraversalCursorTest
         // given
         StorageRelationshipTraversalCursor storeCursor = emptyStoreCursor();
 
-        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, NULL );
+        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, mock( DefaultNodeCursor.class ) );
         Read read = txState(
                 rel( 3, node, 50, type ),
                 rel( 4, 50, node, type ),
@@ -143,7 +142,7 @@ class DefaultRelationshipTraversalCursorTest
         // given
         StorageRelationshipTraversalCursor storeCursor = emptyStoreCursor();
 
-        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, NULL );
+        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, mock( DefaultNodeCursor.class ) );
         Read read = txState(
                 rel( 3, node, 50, type ),
                 rel( 4, 50, node, type ),
@@ -166,7 +165,7 @@ class DefaultRelationshipTraversalCursorTest
         // given
         StorageRelationshipTraversalCursor storeCursor = emptyStoreCursor();
 
-        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, NULL );
+        DefaultRelationshipTraversalCursor cursor = new DefaultRelationshipTraversalCursor( pool::accept, storeCursor, mock( DefaultNodeCursor.class ) );
         Read read = txState(
                 rel( 3, node, 50, type ),
                 rel( 2, node, node, type ),

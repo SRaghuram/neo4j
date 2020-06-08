@@ -24,8 +24,8 @@ import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.attribution.SameId
 
 /**
-  * This operator does a full scan of an index, producing one row per entry.
-  */
+ * This operator does a full scan of an index, producing one row per entry.
+ */
 case class NodeIndexScan(idName: String,
                          label: LabelToken,
                          properties: Seq[IndexedProperty],
@@ -35,6 +35,10 @@ case class NodeIndexScan(idName: String,
   extends IndexLeafPlan(idGen) {
 
   override val availableSymbols: Set[String] = argumentIds + idName
+
+  override def usedVariables: Set[String] = Set.empty
+
+  override def withoutArgumentIds(argsToExclude: Set[String]): NodeIndexScan = copy(argumentIds = argumentIds -- argsToExclude)(SameId(this.id))
 
   override def copyWithoutGettingValues: NodeIndexScan =
     NodeIndexScan(idName, label, properties.map{ p => IndexedProperty(p.propertyKeyToken, DoNotGetValue) }, argumentIds, indexOrder)(SameId(this.id))

@@ -21,11 +21,13 @@ import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
+import org.neo4j.kernel.database.DatabaseMemoryTrackers
 import org.neo4j.kernel.impl.query.QueryEngineProvider.SPI
 import org.neo4j.logging.Log
 
@@ -42,10 +44,13 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
   private val runtimeEnvironment: RuntimeEnvironment = {
     val resolver = graph.getDependencyResolver
     val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
-    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), spi.lifeSupport, workerManager)
+    val otherMemoryTracker = resolver.resolveDependency(classOf[DatabaseMemoryTrackers]).getOtherTracker
+    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), spi.lifeSupport, workerManager, otherMemoryTracker)
   }
 
   private val log: Log = spi.logProvider().getLog(getClass)
+
+  override def supportsAdministrativeCommands(): Boolean = plannerConfig.planSystemCommands
 
   override def createCompiler(cypherVersion: CypherVersion,
                               cypherPlanner: CypherPlannerOption,
@@ -102,7 +107,8 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     compileExpressions: Boolean,
                                     materializedEntitiesMode: Boolean,
                                     operatorEngine: CypherOperatorEngineOption,
-                                    interpretedPipesFallback: CypherInterpretedPipesFallbackOption) extends RuntimeContext
+                                    interpretedPipesFallback: CypherInterpretedPipesFallbackOption,
+                                    cachingExpressionCompilerTracer: CachingExpressionCompilerTracer) extends RuntimeContext
 
 /**
  * Manager of EnterpriseRuntimeContexts.
@@ -132,7 +138,8 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
       compileExpressions,
       materializedEntitiesMode,
       operatorEngine,
-      interpretedPipesFallback)
+      interpretedPipesFallback,
+      CachingExpressionCompilerTracer.NONE)
 
   override def assertAllReleased(): Unit = {
     // This is for test assertions only, and should run on the parallel executor.

@@ -97,9 +97,9 @@ public interface ProcedureITBase
                 proc( "dbms.components", "() :: (name :: STRING?, versions :: LIST? OF" + " STRING?, edition :: STRING?)",
                         "List DBMS components and their versions.", stringArray( "reader", "editor", "publisher", "architect", "admin" ), "DBMS" ),
                 proc( "dbms.queryJmx", "(query :: STRING?) :: (name :: STRING?, " + "description :: STRING?, attributes :: MAP?)",
-                        "Query JMX management data by domain and name." + " For instance, \"org.neo4j:*\"",
+                        "Query JMX management data by domain and name." + " For instance, \"*:*\"",
                         stringArray( "reader", "editor", "publisher", "architect", "admin" ), "DBMS" ),
-                proc( "db.createLabel", "(newLabel :: STRING?) :: VOID", "Create a label", stringArray(  "publisher", "architect", "admin" ), "WRITE",
+                proc( "db.createLabel", "(newLabel :: STRING?) :: VOID", "Create a label", stringArray( "publisher", "architect", "admin" ), "WRITE",
                         false ),
                 proc( "db.createProperty", "(newProperty :: STRING?) :: VOID", "Create a Property", stringArray( "publisher", "architect", "admin" ),
                         "WRITE", false ), proc( "db.createRelationshipType", "(newRelationshipType :: STRING?) :: VOID", "Create a RelationshipType",
@@ -146,25 +146,25 @@ public interface ProcedureITBase
                 proc( "db.prepareForReplanning", "(timeOutSeconds = 300 :: INTEGER?) :: VOID",
                         "Triggers an index resample and waits for it to complete, and after that clears query caches." +
                                 " After this procedure has finished queries will be planned using the latest database " + "statistics.",
-                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "READ" ),
+                        stringArray( "admin" ), "READ" ),
                 proc( "db.stats.retrieve", "(section :: STRING?, config = {} :: MAP?) :: (section :: STRING?, data :: MAP?)",
                         "Retrieve statistical data about the current database. Valid sections are 'GRAPH COUNTS', 'TOKENS', 'QUERIES', 'META'",
-                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "READ" ),
+                        stringArray( "admin" ), "READ" ),
                 proc( "db.stats.retrieveAllAnonymized", "(graphToken :: STRING?, config = {} :: MAP?) :: (section :: STRING?, data :: MAP?)",
                         "Retrieve all available statistical data about the current database, in an anonymized form.",
-                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "READ" ),
+                        stringArray( "admin" ), "READ" ),
                 proc( "db.stats.status", "() :: (section :: STRING?, status :: STRING?, data :: MAP?)",
                         "Retrieve the status of all available collector daemons, for this database.",
-                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "READ" ),
+                        stringArray( "admin" ), "READ" ),
                 proc( "db.stats.collect", "(section :: STRING?, config = {} :: MAP?) :: (section :: STRING?, success :: BOOLEAN?, message :: STRING?)",
                         "Start data collection of a given data section. Valid sections are 'QUERIES'",
-                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "READ" ),
+                        stringArray( "admin" ), "READ" ),
                 proc( "db.stats.stop", "(section :: STRING?) :: (section :: STRING?, success :: BOOLEAN?, message :: STRING?)",
                         "Stop data collection of a given data section. Valid sections are 'QUERIES'",
-                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "READ" ),
+                        stringArray( "admin" ), "READ" ),
                 proc( "db.stats.clear", "(section :: STRING?) :: (section :: STRING?, success :: BOOLEAN?, message :: STRING?)",
                         "Clear collected data of a given data section. Valid sections are 'QUERIES'",
-                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "READ" ),
+                        stringArray( "admin" ), "READ" ),
                 proc( "dbms.routing.getRoutingTable", "(context :: MAP?, database = null :: STRING?) :: (ttl :: INTEGER?, servers :: LIST? OF MAP?)",
                         "Returns endpoints of this instance.", stringArray( "reader", "editor", "publisher", "architect", "admin" ), "DBMS" ),
                 proc( "dbms.cluster.routing.getRoutingTable", "(context :: MAP?, database = null :: STRING?) :: (ttl :: INTEGER?, servers :: LIST? OF MAP?)",
@@ -189,9 +189,15 @@ public interface ProcedureITBase
 
     default List<Object[]> getExpectedEnterpriseProcs()
     {
-        ArrayList<Object[]> result = new ArrayList<>( getExpectedCommunityProcs() );
+        List<Object[]> result = new ArrayList<>( getExpectedCommunityProcs() );
         result.addAll( List.of(
                 // enterprise only functions
+                proc( "dbms.listPools",
+                        "() :: (group :: STRING?, databaseName :: STRING?, heapMemoryUsed :: STRING?, heapMemoryUsedBytes :: STRING?, " +
+                                "nativeMemoryUsed :: STRING?, nativeMemoryUsedBytes :: STRING?, freeMemory :: STRING?, freeMemoryBytes :: STRING?, " +
+                                "totalPoolMemory :: STRING?, totalPoolMemoryBytes :: STRING?)",
+                        "List all memory pools, including sub pools, currently registered at this instance that are visible to the user.",
+                        stringArray( "reader", "editor", "publisher", "architect", "admin" ), "DBMS" ),
                 proc( "dbms.listTransactions",
                         "() :: (transactionId :: STRING?, username :: STRING?, metaData :: MAP?, startTime :: STRING?, protocol :: STRING?," +
                                 " clientAddress :: STRING?, requestUri :: STRING?, currentQueryId :: STRING?, currentQuery :: STRING?, " +

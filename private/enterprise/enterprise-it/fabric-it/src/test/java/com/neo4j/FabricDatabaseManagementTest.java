@@ -5,9 +5,7 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.eval.CatalogManager;
-import com.neo4j.fabric.eval.UseEvaluation;
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import com.neo4j.fabric.localdb.FabricEnterpriseDatabaseManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +22,7 @@ import java.util.function.Function;
 import org.neo4j.configuration.Config;
 import org.neo4j.cypher.internal.ast.CatalogName;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.fabric.eval.CatalogManager;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
@@ -97,7 +96,7 @@ class FabricDatabaseManagementTest
 
         createServer( "mega" );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class )
+        assertThat( logProvider ).forClass( FabricEnterpriseDatabaseManager.Single.class )
                 .forLevel( INFO ).containsMessages( "Creating Fabric virtual database '%s'", "mega" );
 
         try ( var tx = openSystemDbTransaction() )
@@ -113,9 +112,9 @@ class FabricDatabaseManagementTest
 
         createServer( "giga" );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
-                .containsMessageWithArguments( "Creating Fabric virtual database '%s'", "giga" )
-                .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" );
+        assertThat( logProvider ).forClass( FabricEnterpriseDatabaseManager.Single.class ).forLevel( INFO )
+                                 .containsMessageWithArguments( "Creating Fabric virtual database '%s'", "giga" )
+                                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" );
 
         try ( var tx = openSystemDbTransaction() )
         {
@@ -134,10 +133,10 @@ class FabricDatabaseManagementTest
 
         createServer( null );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
-                            .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" )
-                            .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
-                            .doesNotContainMessage( "Creating Fabric virtual database" );
+        assertThat( logProvider ).forClass( FabricEnterpriseDatabaseManager.Single.class ).forLevel( INFO )
+                                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" )
+                                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
+                                 .doesNotContainMessage( "Creating Fabric virtual database" );
 
         try ( var tx = openSystemDbTransaction() )
         {
@@ -156,11 +155,11 @@ class FabricDatabaseManagementTest
 
         createServer( "mega" );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
-                .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to online", "mega" )
-                .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
-                .containsMessageWithArguments( "Using existing Fabric virtual database '%s'", "mega" )
-                .doesNotContainMessage( "Creating Fabric virtual database" );
+        assertThat( logProvider ).forClass( FabricEnterpriseDatabaseManager.Single.class ).forLevel( INFO )
+                                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to online", "mega" )
+                                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
+                                 .containsMessageWithArguments( "Using existing Fabric virtual database '%s'", "mega" )
+                                 .doesNotContainMessage( "Creating Fabric virtual database" );
 
         try ( var tx = openSystemDbTransaction() )
         {

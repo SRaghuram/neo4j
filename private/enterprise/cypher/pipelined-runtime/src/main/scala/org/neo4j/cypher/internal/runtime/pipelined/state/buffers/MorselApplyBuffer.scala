@@ -8,9 +8,12 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.Initialization
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.IdAllocator
@@ -31,18 +34,18 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.Accumul
  * @param argumentReducersOnTopOfThisApply ids of reducers _after_ the Apply this Buffer is for.
  */
 class MorselApplyBuffer(id: BufferId,
-                        workCancellersOnRHSOfThisApply: IndexedSeq[Initialization[ArgumentStateMapId]],
-                        argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentStateMapId],
-                        argumentReducersOnRHSOfThisApply: IndexedSeq[Initialization[AccumulatingBuffer]],
-                        argumentReducersOnTopOfThisApply: IndexedSeq[AccumulatingBuffer],
+                        workCancellersOnRHSOfThisApply: ReadOnlyArray[Initialization[ArgumentStateMapId]],
+                        argumentStatesOnRHSOfThisApply: ReadOnlyArray[ArgumentStateMapId],
+                        argumentReducersOnRHSOfThisApply: ReadOnlyArray[Initialization[AccumulatingBuffer]],
+                        argumentReducersOnTopOfThisApply: ReadOnlyArray[AccumulatingBuffer],
                         override val argumentStateMaps: ArgumentStateMaps,
                         argumentSlotOffset: Int,
                         idAllocator: IdAllocator,
-                        delegates: IndexedSeq[MorselBuffer]
+                        delegates: ReadOnlyArray[MorselBuffer]
                        ) extends ArgumentCountUpdater
                          with Sink[Morsel] {
 
-  def put(morsel: Morsel): Unit = {
+  def put(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
@@ -76,14 +79,22 @@ class MorselApplyBuffer(id: BufferId,
       incrementArgumentCounts(argumentReducersOnTopOfThisApply, morsel)
 
       var i = 0
-      while (i < delegates.size) {
-        delegates(i).putInDelegate(morsel.shallowCopy())
+      while (i < delegates.length) {
+        delegates(i).putInDelegate(morsel.shallowCopy(), resources)
         i += 1
       }
     }
   }
 
-  override def canPut: Boolean = delegates.forall(_.canPut)
+  override def canPut: Boolean = {
+    var i = 0
+    while (i < delegates.length) {
+      if (!delegates(i).canPut)
+        return false
+      i += 1
+    }
+    true
+  }
 
   override def toString: String = s"MorselApplyBuffer($id, argumentSlotOffset=$argumentSlotOffset)"
 }

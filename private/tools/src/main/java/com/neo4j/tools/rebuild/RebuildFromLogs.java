@@ -33,6 +33,7 @@ import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -66,6 +67,7 @@ import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.FormattedLog;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.token.TokenHolders;
@@ -219,7 +221,7 @@ class RebuildFromLogs
             int startVersion = 0;
             ReaderLogVersionBridge versionBridge = new ReaderLogVersionBridge( logFiles );
             PhysicalLogVersionedStoreChannel startingChannel = logFiles.openForVersion( startVersion );
-            ReadableLogChannel channel = new ReadAheadLogChannel( startingChannel, versionBridge );
+            ReadableLogChannel channel = new ReadAheadLogChannel( startingChannel, versionBridge, EmptyMemoryTracker.INSTANCE );
             long txId = BASE_TX_ID;
             TransactionQueue queue = new TransactionQueue( 10_000,
                     ( tx, last ) -> commitProcess.commit( tx, CommitEvent.NULL, EXTERNAL ) );
@@ -253,6 +255,7 @@ class RebuildFromLogs
     {
         private final GraphDatabaseAPI graphdb;
         private final LabelScanStore labelScanStore;
+        private final RelationshipTypeScanStore relationshipTypeScanStore;
         private final Config tuningConfiguration = Config.defaults();
         private final IndexProviderMap indexes;
         private final TokenHolders tokenHolders;
@@ -264,6 +267,7 @@ class RebuildFromLogs
             this.graphdb = startTemporaryDb( layout, pageCache );
             DependencyResolver resolver = graphdb.getDependencyResolver();
             this.labelScanStore = resolver.resolveDependency( LabelScanStore.class );
+            this.relationshipTypeScanStore = resolver.resolveDependency( RelationshipTypeScanStore.class );
             this.indexes = resolver.resolveDependency( IndexProviderMap.class );
             this.tokenHolders = resolver.resolveDependency( TokenHolders.class );
             this.indexStatisticsStore = resolver.resolveDependency( IndexStatisticsStore.class );
@@ -276,13 +280,15 @@ class RebuildFromLogs
             var pageCacheTracer = graphdb.getDependencyResolver().resolveDependency( Tracers.class ).getPageCacheTracer();
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore, idGeneratorFactory );
+            DirectStoreAccess stores =
+                    new DirectStoreAccess( nativeStores, labelScanStore, relationshipTypeScanStore, indexes, tokenHolders, indexStatisticsStore,
+                            idGeneratorFactory );
             FullCheck fullCheck = new FullCheck( ProgressMonitorFactory.textual( System.err ), Statistics.NONE,
                     ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), ConsistencyFlags.DEFAULT, tuningConfiguration, false,
                     NodeBasedMemoryLimiter.DEFAULT );
 
             ConsistencySummaryStatistics summaryStatistics = fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(),
-                    pageCacheTracer, FormattedLog.toOutputStream( System.err ) );
+                    pageCacheTracer, EmptyMemoryTracker.INSTANCE, FormattedLog.toOutputStream( System.err ) );
             if ( !summaryStatistics.isConsistent() )
             {
                 throw new InconsistentStoreException( summaryStatistics );

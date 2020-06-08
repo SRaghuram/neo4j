@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -168,7 +167,7 @@ abstract class GBPTreeReadWriteTestBase<KEY,VALUE>
         }
     }
 
-    private GBPTree<KEY,VALUE> index() throws IOException
+    private GBPTree<KEY,VALUE> index()
     {
         return new GBPTreeBuilder<>( pageCache, indexFile, layout ).build();
     }
@@ -211,6 +210,6 @@ abstract class GBPTreeReadWriteTestBase<KEY,VALUE>
     private void assertEqualsKey( KEY expected, KEY actual )
     {
         assertEquals( 0, layout.compare( expected, actual ),
-                format( "expected equal, expected=%s, actual=%s", expected.toString(), actual.toString() ) );
+                format( "expected equal, expected=%s, actual=%s", expected, actual ) );
     }
 }

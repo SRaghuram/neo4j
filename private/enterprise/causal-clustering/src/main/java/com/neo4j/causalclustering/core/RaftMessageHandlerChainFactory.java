@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider;
-import com.neo4j.causalclustering.core.consensus.ContinuousJob;
+import com.neo4j.causalclustering.core.batching.BatchingMessageHandler;
 import com.neo4j.causalclustering.core.consensus.LeaderAvailabilityHandler;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftMessageMonitoringHandler;
@@ -24,7 +24,6 @@ import java.time.Clock;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 /**
@@ -60,12 +59,13 @@ class RaftMessageHandlerChainFactory
             CommandApplicationProcess commandApplicationProcess )
     {
         RaftMessageApplier messageApplier = new RaftMessageApplier( logProvider, raftGroup.raftMachine(), downloaderService, commandApplicationProcess,
-                catchupAddressProvider, panicker );
+                                                                    catchupAddressProvider, panicker );
 
         ComposableMessageHandler monitoringHandler = RaftMessageMonitoringHandler.composable( clock, monitors );
-        ComposableMessageHandler batchingMessageHandler = createBatchingHandler();
+        ComposableMessageHandler batchingMessageHandler = BatchingMessageHandler.composable( config, jobScheduler, logProvider );
         ComposableMessageHandler leaderAvailabilityHandler = LeaderAvailabilityHandler.composable( raftGroup.getLeaderAvailabilityTimers(),
-                monitors.newMonitor( RaftMessageTimerResetMonitor.class ), raftGroup.raftMachine()::term );
+                                                                                                   monitors.newMonitor( RaftMessageTimerResetMonitor.class ),
+                                                                                                   raftGroup.raftMachine()::term );
         ComposableMessageHandler clusterBindingHandler = ClusterBindingHandler.composable( raftMessageDispatcher, logProvider );
 
         return clusterBindingHandler
@@ -73,20 +73,5 @@ class RaftMessageHandlerChainFactory
                 .compose( batchingMessageHandler )
                 .compose( monitoringHandler )
                 .apply( messageApplier );
-    }
-
-    private ComposableMessageHandler createBatchingHandler()
-    {
-        BoundedPriorityQueue.Config inQueueConfig = new BoundedPriorityQueue.Config( config.get( CausalClusteringSettings.raft_in_queue_size ),
-                config.get( CausalClusteringSettings.raft_in_queue_max_bytes ) );
-        BatchingMessageHandler.Config batchConfig = new BatchingMessageHandler.Config(
-                config.get( CausalClusteringSettings.raft_in_queue_max_batch ), config.get( CausalClusteringSettings.raft_in_queue_max_batch_bytes ) );
-
-        return BatchingMessageHandler.composable( inQueueConfig, batchConfig, this::jobFactory, logProvider );
-    }
-
-    private ContinuousJob jobFactory( Runnable runnable )
-    {
-        return new ContinuousJob( jobScheduler.threadFactory( Group.RAFT_BATCH_HANDLER ), runnable, logProvider );
     }
 }

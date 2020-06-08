@@ -127,7 +127,8 @@ public class InconsistencyReportReader
         case "IndexEntry":
             return InconsistentRecords.Type.NODE;
         case "NodeLabelRange":
-            return InconsistentRecords.Type.NODE_LABEL_RANGE;
+        case "RelationshipTypeRange":
+            return InconsistentRecords.Type.ENTITY_TOKEN_RANGE;
         default:
             // it's OK, we just haven't implemented support for this yet
             return null;

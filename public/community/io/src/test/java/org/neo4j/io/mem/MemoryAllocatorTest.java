@@ -30,11 +30,12 @@ import org.neo4j.memory.LocalMemoryTracker;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.io.ByteUnit.MebiByte;
 
 class MemoryAllocatorTest
 {
-    private static final String ONE_PAGE = PageCache.PAGE_SIZE + "";
-    private static final String EIGHT_PAGES = (8 * PageCache.PAGE_SIZE) + "";
+    private static final long ONE_PAGE = PageCache.PAGE_SIZE;
+    private static final long EIGHT_PAGES = 8 * PageCache.PAGE_SIZE;
 
     private MemoryAllocator allocator;
 
@@ -117,7 +118,7 @@ class MemoryAllocatorTest
     @Test
     void mustBeAbleToAllocateSlabsLargerThanGrabSize()
     {
-        MemoryAllocator mman = createAllocator( "2 MiB" );
+        MemoryAllocator mman = createAllocator( MebiByte.toBytes( 2 ) );
         long page1 = mman.allocateAligned( UnsafeUtil.pageSize(), 1 );
         long largeBlock = mman.allocateAligned( 1024 * 1024, 1 ); // 1 MiB
         long page2 = mman.allocateAligned( UnsafeUtil.pageSize(), 1 );
@@ -160,16 +161,46 @@ class MemoryAllocatorTest
     void trackMemoryAllocations()
     {
         LocalMemoryTracker memoryTracker = new LocalMemoryTracker();
-        GrabAllocator allocator = (GrabAllocator) MemoryAllocator.createAllocator( "2m", memoryTracker );
+        GrabAllocator allocator = (GrabAllocator) MemoryAllocator.createAllocator( MebiByte.toBytes( 2 ), memoryTracker );
 
-        assertEquals( 0, memoryTracker.usedDirectMemory() );
+        assertEquals( 0, memoryTracker.usedNativeMemory() );
 
         allocator.allocateAligned( ByteUnit.mebiBytes( 1 ), 1 );
 
-        assertEquals( ByteUnit.mebiBytes( 1 ), memoryTracker.usedDirectMemory() );
+        assertEquals( ByteUnit.mebiBytes( 1 ), memoryTracker.usedNativeMemory() );
 
         allocator.close();
-        assertEquals( 0, memoryTracker.usedDirectMemory() );
+        assertEquals( 0, memoryTracker.usedNativeMemory() );
+    }
+
+    @Test
+    void allAllocatedMemoryMustBeAccessibleForAllAlignments() throws Exception
+    {
+        // This test relies on the native access bounds checks that are enabled in Unsafeutil during tests.
+        int k512 = (int) ByteUnit.kibiBytes( 512 );
+        int maxAlign = PageCache.PAGE_SIZE >> 2;
+        for ( int align = 1; align <= maxAlign; align += Long.BYTES )
+        {
+            for ( int alloc = PageCache.PAGE_SIZE; alloc <= k512; alloc += PageCache.PAGE_SIZE )
+            {
+                createAllocator( MebiByte.toBytes( 2 ) );
+                long addr = allocator.allocateAligned( alloc, align );
+                int i = 0;
+                try
+                {
+                    // This must not throw any bad access exceptions.
+                    UnsafeUtil.getLong( addr + i ); // Start of allocation.
+                    i = alloc - Long.BYTES;
+                    UnsafeUtil.getLong( addr + i ); // End of allocation.
+                }
+                catch ( Throwable e )
+                {
+                    throw new Exception( String.format(
+                            "Access failed at offset %s (%x) into allocated address %s (%x) of size %s (align %s).",
+                            i, i, addr, addr, alloc, align ), e );
+                }
+            }
+        }
     }
 
     private void closeAllocator()
@@ -181,7 +212,7 @@ class MemoryAllocatorTest
         }
     }
 
-    private MemoryAllocator createAllocator( String expectedMaxMemory )
+    private MemoryAllocator createAllocator( long expectedMaxMemory )
     {
         closeAllocator();
         allocator = MemoryAllocator.createAllocator( expectedMaxMemory, new LocalMemoryTracker() );

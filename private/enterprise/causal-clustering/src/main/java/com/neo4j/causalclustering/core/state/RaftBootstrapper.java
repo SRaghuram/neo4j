@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.core.TempBootstrapDir;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
@@ -42,12 +43,12 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
@@ -87,10 +88,11 @@ public class RaftBootstrapper
     private final Config config;
     private final BootstrapSaver bootstrapSaver;
     private final PageCacheTracer pageCacheTracer;
+    private final MemoryTracker memoryTracker;
 
     public RaftBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
             PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config,
-            BootstrapSaver bootstrapSaver, PageCacheTracer pageCacheTracer )
+            BootstrapSaver bootstrapSaver, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         this.bootstrapContext = bootstrapContext;
         this.tempDatabaseFactory = tempDatabaseFactory;
@@ -102,6 +104,7 @@ public class RaftBootstrapper
         this.config = config;
         this.bootstrapSaver = bootstrapSaver;
         this.pageCacheTracer = pageCacheTracer;
+        this.memoryTracker = memoryTracker;
     }
 
     public CoreSnapshot bootstrap( Set<MemberId> members )
@@ -116,7 +119,7 @@ public class RaftBootstrapper
             log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + members );
             if ( isStorePresent() )
             {
-                ensureRecoveredOrThrow( bootstrapContext, config );
+                ensureRecoveredOrThrow( bootstrapContext, config, memoryTracker );
 
                 if ( bootstrapContext.databaseId().isSystemDatabase() )
                 {
@@ -163,15 +166,17 @@ public class RaftBootstrapper
      */
     private void bootstrapExistingSystemDatabase() throws IOException
     {
-        File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
-        File tempDefaultDatabaseDir = new File( bootstrapRootDir, SYSTEM_DATABASE_NAME );
+        try ( var bootstrapRootDir = TempBootstrapDir.cleanBeforeAndAfter( fs, bootstrapContext.databaseLayout() ) )
+        {
+            File tempDefaultDatabaseDir = new File( bootstrapRootDir.get(), SYSTEM_DATABASE_NAME );
 
-        fs.copyRecursively(  bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
-        fs.copyRecursively(  bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
 
-        DatabaseLayout databaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, true );
+            DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), true );
 
-        bootstrapContext.replaceWith( databaseLayout.databaseDirectory() );
+            bootstrapContext.replaceWith( tempDatabaseLayout.databaseDirectory() );
+        }
     }
 
     private boolean isStorePresent()
@@ -181,13 +186,11 @@ public class RaftBootstrapper
 
     private void createStore( StoreId storeId, PageCursorTracer cursorTracer, boolean isSystemDatabase ) throws IOException
     {
-        File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
-        fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
-        try
+        try ( var bootstrapRootDir = TempBootstrapDir.cleanBeforeAndAfter( fs, bootstrapContext.databaseLayout() ) )
         {
             String databaseName = bootstrapContext.databaseId().name();
             log.info( "Initializing the store for database " + databaseName + " using a temporary database in " + bootstrapRootDir );
-            DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, isSystemDatabase );
+            DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), isSystemDatabase );
             if ( storeId != null )
             {
                 log.info( "Changing store ID of bootstrapped database to " + storeId );
@@ -199,10 +202,6 @@ public class RaftBootstrapper
 
             // delete transaction logs so they will be recreated with the new store id, they should be empty so it's fine
             bootstrapContext.removeTransactionLogs();
-        }
-        finally
-        {
-            fs.deleteRecursively( bootstrapRootDir );
         }
     }
 
@@ -217,9 +216,9 @@ public class RaftBootstrapper
         return databaseLayout;
     }
 
-    private void ensureRecoveredOrThrow( BootstrapContext bootstrapContext, Config config ) throws Exception
+    private void ensureRecoveredOrThrow( BootstrapContext bootstrapContext, Config config, MemoryTracker memoryTracker ) throws Exception
     {
-        if ( Recovery.isRecoveryRequired( fs, bootstrapContext.databaseLayout(), config ) )
+        if ( Recovery.isRecoveryRequired( fs, bootstrapContext.databaseLayout(), config, memoryTracker ) )
         {
             String message = "Cannot bootstrap database " + bootstrapContext.databaseId().name() + ". " +
                              "Recovery is required. " +

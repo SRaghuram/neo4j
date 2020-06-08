@@ -662,6 +662,12 @@ class PrettifierIT extends CypherFunSuite {
           s"$action traverse on graph foo relationships A,B,C (*) $preposition x,y,z" ->
             s"$action TRAVERSE ON GRAPH foo RELATIONSHIPS A, B, C (*) $preposition x, y, z",
 
+          s"$action traverse on graphs $$foo, $$bar nodes * (*) $preposition $$role" ->
+            s"$action TRAVERSE ON GRAPHS $$foo, $$bar NODES * (*) $preposition $$role",
+
+          s"$action traverse on graph * elements A (*) $preposition role" ->
+            s"$action TRAVERSE ON GRAPH * ELEMENTS A (*) $preposition role",
+
           s"$action read {*} on graph * $preposition role" ->
             s"$action READ {*} ON GRAPH * ELEMENTS * (*) $preposition role",
 
@@ -688,6 +694,12 @@ class PrettifierIT extends CypherFunSuite {
 
           s"$action read {*} on graph $$foo relationships * (*) $preposition role" ->
             s"$action READ {*} ON GRAPH $$foo RELATIONSHIPS * (*) $preposition role",
+
+          s"$action read {*} on graph foo, bar relationships * (*) $preposition role" ->
+            s"$action READ {*} ON GRAPHS foo, bar RELATIONSHIPS * (*) $preposition role",
+
+          s"$action read {*} on graph * elements A (*) $preposition role" ->
+            s"$action READ {*} ON GRAPH * ELEMENTS A (*) $preposition role",
 
           s"$action match {*} on graph * $preposition role" ->
             s"$action MATCH {*} ON GRAPH * ELEMENTS * (*) $preposition role",
@@ -716,6 +728,12 @@ class PrettifierIT extends CypherFunSuite {
           s"$action match {foo,bar} on graph $$foo relationship A,B,C (*) $preposition x,y,z" ->
             s"$action MATCH {foo, bar} ON GRAPH $$foo RELATIONSHIPS A, B, C (*) $preposition x, y, z",
 
+          s"$action match {*} on graph $$foo, bar nodes * (*) $preposition role" ->
+            s"$action MATCH {*} ON GRAPHS $$foo, bar NODES * (*) $preposition role",
+
+          s"$action match {*} on graph * elements A (*) $preposition role" ->
+            s"$action MATCH {*} ON GRAPH * ELEMENTS A (*) $preposition role",
+
           s"$action write on graph * $preposition role" ->
             s"$action WRITE ON GRAPH * ELEMENTS * (*) $preposition role",
 
@@ -737,402 +755,153 @@ class PrettifierIT extends CypherFunSuite {
           s"$action write on graphs FoO elements * (*) $preposition $$role" ->
             s"$action WRITE ON GRAPH FoO ELEMENTS * (*) $preposition $$role",
 
-          s"$action access on database * $preposition role" ->
-            s"$action ACCESS ON DATABASE * $preposition role",
+          s"$action write on graph foo, $$bar elements foo $preposition role" ->
+            s"$action WRITE ON GRAPHS foo, $$bar ELEMENTS foo (*) $preposition role",
 
-          s"$action access on databases * $preposition role" ->
-            s"$action ACCESS ON DATABASE * $preposition role",
+          s"$action create on graph * $preposition role" ->
+            s"$action CREATE ON GRAPH * ELEMENTS * $preposition role",
 
-          s"$action access on database foo $preposition role" ->
-            s"$action ACCESS ON DATABASE foo $preposition role",
+          s"$action create on graph * elements * $preposition role" ->
+            s"$action CREATE ON GRAPH * ELEMENTS * $preposition role",
 
-          s"$action access on database $$foo $preposition $$role" ->
-            s"$action ACCESS ON DATABASE $$foo $preposition $$role",
+          s"$action create on graph * elements foo $preposition role" ->
+            s"$action CREATE ON GRAPH * ELEMENTS foo $preposition role",
 
-          s"$action access on databases FoO $preposition role" ->
-            s"$action ACCESS ON DATABASE FoO $preposition role",
+          s"$action create on graph foo $preposition role" ->
+            s"$action CREATE ON GRAPH foo ELEMENTS * $preposition role",
 
-          s"$action access on default database $preposition role" ->
-            s"$action ACCESS ON DEFAULT DATABASE $preposition role",
+          s"$action create on graph $$foo $preposition role" ->
+            s"$action CREATE ON GRAPH $$foo ELEMENTS * $preposition role",
 
-          s"$action start on database * $preposition role" ->
-            s"$action START ON DATABASE * $preposition role",
+          s"$action create on graph foo nodes * $preposition role" ->
+            s"$action CREATE ON GRAPH foo NODES * $preposition role",
 
-          s"$action start on databases * $preposition $$role" ->
-            s"$action START ON DATABASE * $preposition $$role",
+          s"$action create on graphs FoO relationships * $preposition $$role" ->
+            s"$action CREATE ON GRAPH FoO RELATIONSHIPS * $preposition $$role",
 
-          s"$action start on database foo $preposition role" ->
-            s"$action START ON DATABASE foo $preposition role",
+          s"$action create on graph foo, $$bar relationship * $preposition role" ->
+            s"$action CREATE ON GRAPHS foo, $$bar RELATIONSHIPS * $preposition role",
 
-          s"$action start on database $$foo $preposition role" ->
-            s"$action START ON DATABASE $$foo $preposition role",
+          s"$action delete on graph * $preposition role" ->
+            s"$action DELETE ON GRAPH * ELEMENTS * $preposition role",
 
-          s"$action start on databases FoO $preposition role" ->
-            s"$action START ON DATABASE FoO $preposition role",
+          s"$action delete on graph * elements * $preposition role" ->
+            s"$action DELETE ON GRAPH * ELEMENTS * $preposition role",
 
-          s"$action start on default database $preposition role" ->
-            s"$action START ON DEFAULT DATABASE $preposition role",
+          s"$action delete on graph * elements foo $preposition role" ->
+            s"$action DELETE ON GRAPH * ELEMENTS foo $preposition role",
 
-          s"$action stop on database * $preposition role" ->
-            s"$action STOP ON DATABASE * $preposition role",
+          s"$action delete on graph foo $preposition role" ->
+            s"$action DELETE ON GRAPH foo ELEMENTS * $preposition role",
 
-          s"$action stop on databases * $preposition role" ->
-            s"$action STOP ON DATABASE * $preposition role",
+          s"$action delete on graph $$foo $preposition role" ->
+            s"$action DELETE ON GRAPH $$foo ELEMENTS * $preposition role",
 
-          s"$action stop on database foo $preposition $$role" ->
-            s"$action STOP ON DATABASE foo $preposition $$role",
+          s"$action delete on graph foo nodes * $preposition role" ->
+            s"$action DELETE ON GRAPH foo NODES * $preposition role",
 
-          s"$action stop on database $$foo $preposition role" ->
-            s"$action STOP ON DATABASE $$foo $preposition role",
+          s"$action delete on graphs FoO relationships * $preposition $$role" ->
+            s"$action DELETE ON GRAPH FoO RELATIONSHIPS * $preposition $$role",
 
-          s"$action stop on databases FoO $preposition role" ->
-            s"$action STOP ON DATABASE FoO $preposition role",
+          s"$action delete on graph foo, $$bar relationship * $preposition role" ->
+            s"$action DELETE ON GRAPHS foo, $$bar RELATIONSHIPS * $preposition role",
 
-          s"$action stop on default database $preposition role" ->
-            s"$action STOP ON DEFAULT DATABASE $preposition role",
+          s"$action set label label on graph * $preposition role" ->
+            s"$action SET LABEL label ON GRAPH * $preposition role",
 
-          s"$action create index on database * $preposition role" ->
-            s"$action CREATE INDEX ON DATABASE * $preposition role",
+          s"$action set label label1, label2 on graph * $preposition role" ->
+            s"$action SET LABEL label1, label2 ON GRAPH * $preposition role",
 
-          s"$action create index on databases * $preposition role" ->
-            s"$action CREATE INDEX ON DATABASE * $preposition role",
+          s"$action set label * on graph * $preposition role" ->
+            s"$action SET LABEL * ON GRAPH * $preposition role",
 
-          s"$action create index on database foo $preposition role" ->
-            s"$action CREATE INDEX ON DATABASE foo $preposition role",
+          s"$action set label label on graph foo $preposition role1, role2, role3" ->
+            s"$action SET LABEL label ON GRAPH foo $preposition role1, role2, role3",
 
-          s"$action create index on database $$foo $preposition role" ->
-            s"$action CREATE INDEX ON DATABASE $$foo $preposition role",
+          s"$action set label label on graph foo, $$bar $preposition role" ->
+            s"$action SET LABEL label ON GRAPHS foo, $$bar $preposition role",
 
-          s"$action create index on databases FoO $preposition $$role" ->
-            s"$action CREATE INDEX ON DATABASE FoO $preposition $$role",
+          s"$action remove label label on graph * $preposition role" ->
+            s"$action REMOVE LABEL label ON GRAPH * $preposition role",
 
-          s"$action create index on default database $preposition role" ->
-            s"$action CREATE INDEX ON DEFAULT DATABASE $preposition role",
+          s"$action remove label label1, label2 on graph * $preposition role" ->
+            s"$action REMOVE LABEL label1, label2 ON GRAPH * $preposition role",
 
-          s"$action drop index on database * $preposition role" ->
-            s"$action DROP INDEX ON DATABASE * $preposition role",
+          s"$action remove label * on graph * $preposition role" ->
+            s"$action REMOVE LABEL * ON GRAPH * $preposition role",
 
-          s"$action drop index on databases * $preposition role" ->
-            s"$action DROP INDEX ON DATABASE * $preposition role",
+          s"$action remove label label on graph foo $preposition role1, role2, role3" ->
+            s"$action REMOVE LABEL label ON GRAPH foo $preposition role1, role2, role3",
 
-          s"$action drop index on database foo $preposition role" ->
-            s"$action DROP INDEX ON DATABASE foo $preposition role",
+          s"$action remove label label on graph foo, $$bar $preposition role" ->
+            s"$action REMOVE LABEL label ON GRAPHS foo, $$bar $preposition role",
 
-          s"$action drop index on database $$foo $preposition role" ->
-            s"$action DROP INDEX ON DATABASE $$foo $preposition role",
+          s"$action set property {*} on graph * $preposition role" ->
+            s"$action SET PROPERTY {*} ON GRAPH * ELEMENTS * (*) $preposition role",
 
-          s"$action drop index on databases FoO $preposition role" ->
-            s"$action DROP INDEX ON DATABASE FoO $preposition role",
+          s"$action set property {foo} on graph * NODES bar $preposition role" ->
+            s"$action SET PROPERTY {foo} ON GRAPH * NODES bar (*) $preposition role",
 
-          s"$action drop index on default database $preposition $$role" ->
-            s"$action DROP INDEX ON DEFAULT DATABASE $preposition $$role",
+          s"$action set property {*} on graph * RELATIONSHIPS bar, baz $preposition role" ->
+            s"$action SET PROPERTY {*} ON GRAPH * RELATIONSHIPS bar, baz (*) $preposition role",
 
-          s"$action index on database * $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE * $preposition role",
+          s"$action set property {Foo, BAR} on graph * $preposition role" ->
+            s"$action SET PROPERTY {Foo, BAR} ON GRAPH * ELEMENTS * (*) $preposition role",
 
-          s"$action index on databases * $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE * $preposition role",
+          s"$action set property {*} on graph foo, $$bar $preposition role1, role2, role3" ->
+            s"$action SET PROPERTY {*} ON GRAPHS foo, $$bar ELEMENTS * (*) $preposition role1, role2, role3",
 
-          s"$action index on database foo $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action index on database $$foo $preposition $$role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE $$foo $preposition $$role",
-
-          s"$action index on databases FoO $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE FoO $preposition role",
-
-          s"$action index on default database $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DEFAULT DATABASE $preposition role",
-
-          s"$action index management on database * $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action index management on databases * $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action index management on database foo $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action index management on database $$foo $preposition $$role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE $$foo $preposition $$role",
-
-          s"$action index management on databases foo $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action index management on default database $preposition role" ->
-            s"$action INDEX MANAGEMENT ON DEFAULT DATABASE $preposition role",
-
-          s"$action create constraint on database * $preposition role" ->
-            s"$action CREATE CONSTRAINT ON DATABASE * $preposition role",
-
-          s"$action create constraint on databases * $preposition $$role" ->
-            s"$action CREATE CONSTRAINT ON DATABASE * $preposition $$role",
-
-          s"$action create constraint on database foo $preposition role" ->
-            s"$action CREATE CONSTRAINT ON DATABASE foo $preposition role",
-
-          s"$action create constraint on database $$foo $preposition role" ->
-            s"$action CREATE CONSTRAINT ON DATABASE $$foo $preposition role",
-
-          s"$action create constraint on databases FoO $preposition role" ->
-            s"$action CREATE CONSTRAINT ON DATABASE FoO $preposition role",
-
-          s"$action create constraint on default database $preposition role" ->
-            s"$action CREATE CONSTRAINT ON DEFAULT DATABASE $preposition role",
-
-          s"$action drop constraint on database * $preposition role" ->
-            s"$action DROP CONSTRAINT ON DATABASE * $preposition role",
-
-          s"$action drop constraint on databases * $preposition role" ->
-            s"$action DROP CONSTRAINT ON DATABASE * $preposition role",
-
-          s"$action drop constraint on database foo $preposition $$role" ->
-            s"$action DROP CONSTRAINT ON DATABASE foo $preposition $$role",
-
-          s"$action drop constraint on database $$foo $preposition role" ->
-            s"$action DROP CONSTRAINT ON DATABASE $$foo $preposition role",
-
-          s"$action drop constraint on databases FoO $preposition role" ->
-            s"$action DROP CONSTRAINT ON DATABASE FoO $preposition role",
-
-          s"$action drop constraint on default database $preposition role" ->
-            s"$action DROP CONSTRAINT ON DEFAULT DATABASE $preposition role",
-
-          s"$action constraint on database * $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action constraint on databases * $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action constraint on database foo $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action constraint on database $$foo $preposition $$role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE $$foo $preposition $$role",
-
-          s"$action constraint on databases foo $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action constraint on default database $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DEFAULT DATABASE $preposition role",
-
-          s"$action constraint management on database * $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action constraint management on databases * $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action constraint management on database foo $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action constraint management on database $$foo $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE $$foo $preposition role",
-
-          s"$action constraint management on databases FoO $preposition $$role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DATABASE FoO $preposition $$role",
-
-          s"$action constraint management on default database $preposition role" ->
-            s"$action CONSTRAINT MANAGEMENT ON DEFAULT DATABASE $preposition role",
-
-          s"$action create new label on database * $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE * $preposition role",
-
-          s"$action create new label on databases * $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE * $preposition role",
-
-          s"$action create new label on database foo $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE foo $preposition role",
-
-          s"$action create new label on database $$foo $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE $$foo $preposition role",
-
-          s"$action create new label on databases foo $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE foo $preposition role",
-
-          s"$action create new label on default database $preposition $$role" ->
-            s"$action CREATE NEW NODE LABEL ON DEFAULT DATABASE $preposition $$role",
-
-          s"$action create new node label on database * $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE * $preposition role",
-
-          s"$action create new node label on databases * $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE * $preposition role",
-
-          s"$action create new node label on database foo $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE foo $preposition role",
-
-          s"$action create new node label on database $$foo $preposition $$role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE $$foo $preposition $$role",
-
-          s"$action create new node label on databases FoO $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DATABASE FoO $preposition role",
-
-          s"$action create new node label on default database $preposition role" ->
-            s"$action CREATE NEW NODE LABEL ON DEFAULT DATABASE $preposition role",
-
-          s"$action create new type on database * $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE * $preposition role",
-
-          s"$action create new type on databases * $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE * $preposition role",
-
-          s"$action create new type on database foo $preposition $$role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE foo $preposition $$role",
-
-          s"$action create new type on database $$foo $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE $$foo $preposition role",
-
-          s"$action create new type on databases foo $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE foo $preposition role",
-
-          s"$action create new type on default database $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DEFAULT DATABASE $preposition role",
-
-          s"$action create new relationship type on database * $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE * $preposition role",
-
-          s"$action create new relationship type on databases * $preposition $$role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE * $preposition $$role",
-
-          s"$action create new relationship type on database foo $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE foo $preposition role",
-
-          s"$action create new relationship type on database $$foo $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE $$foo $preposition role",
-
-          s"$action create new relationship type on databases FoO $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DATABASE FoO $preposition role",
-
-          s"$action create new relationship type on default database $preposition role" ->
-            s"$action CREATE NEW RELATIONSHIP TYPE ON DEFAULT DATABASE $preposition role",
-
-          s"$action create new name on database * $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE * $preposition role",
-
-          s"$action create new name on databases * $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE * $preposition role",
-
-          s"$action create new name on database foo $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE foo $preposition role",
-
-          s"$action create new name on database $$foo $preposition $$role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE $$foo $preposition $$role",
-
-          s"$action create new name on databases FoO $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE FoO $preposition role",
-
-          s"$action create new name on default database $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DEFAULT DATABASE $preposition role",
-
-          s"$action create new property name on database * $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE * $preposition role",
-
-          s"$action create new property name on databases * $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE * $preposition role",
-
-          s"$action create new property name on database foo $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE foo $preposition role",
-
-          s"$action create new property name on database $$foo $preposition $$role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE $$foo $preposition $$role",
-
-          s"$action create new property name on databases FoO $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DATABASE FoO $preposition role",
-
-          s"$action create new property name on default database $preposition role" ->
-            s"$action CREATE NEW PROPERTY NAME ON DEFAULT DATABASE $preposition role",
-
-          s"$action name on database * $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action name on databases * $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action name on database foo $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action name on database $$foo $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE $$foo $preposition role",
-
-          s"$action name on databases foo $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action name on default database $preposition $$role" ->
-            s"$action NAME MANAGEMENT ON DEFAULT DATABASE $preposition $$role",
-
-          s"$action name management on database * $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action name management on databases * $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE * $preposition role",
-
-          s"$action name management on database foo $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE foo $preposition role",
-
-          s"$action name management on database $$foo $preposition role" ->
-            s"$action NAME MANAGEMENT ON DATABASE $$foo $preposition role",
-
-          s"$action name management on databases FoO $preposition $$role" ->
-            s"$action NAME MANAGEMENT ON DATABASE FoO $preposition $$role",
-
-          s"$action name management on default database $preposition role" ->
-            s"$action NAME MANAGEMENT ON DEFAULT DATABASE $preposition role",
-
-          s"$action all on database * $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE * $preposition role",
-
-          s"$action all on databases * $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE * $preposition role",
-
-          s"$action all on database foo $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE foo $preposition role",
-
-          s"$action all on database $$foo $preposition $$role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE $$foo $preposition $$role",
-
-          s"$action all on databases foo $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE foo $preposition role",
-
-          s"$action all on default database $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DEFAULT DATABASE $preposition role",
-
-          s"$action all privileges on database * $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE * $preposition role",
-
-          s"$action all privileges on databases * $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE * $preposition role",
-
-          s"$action all privileges on database foo $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE foo $preposition role",
-
-          s"$action all privileges on database $$foo $preposition $$role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE $$foo $preposition $$role",
-
-          s"$action all privileges on databases foo $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE foo $preposition role",
-
-          s"$action all privileges on default database $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DEFAULT DATABASE $preposition role",
-
-          s"$action all database privileges on database * $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE * $preposition role",
-
-          s"$action all database privileges on databases * $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE * $preposition role",
-
-          s"$action all database privileges on database foo $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE foo $preposition role",
-
-          s"$action all database privileges on database $$foo $preposition $$role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE $$foo $preposition $$role",
-
-          s"$action all database privileges on databases FoO $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DATABASE FoO $preposition role",
-
-          s"$action all database privileges on default database $preposition role" ->
-            s"$action ALL DATABASE PRIVILEGES ON DEFAULT DATABASE $preposition role",
-
+        ) ++ Seq(
+          ("access", "ACCESS"),
+          ("start", "START"),
+          ("stop", "STOP"),
+          ("create index", "CREATE INDEX"),
+          ("drop index", "DROP INDEX"),
+          ("index", "INDEX MANAGEMENT"),
+          ("index management", "INDEX MANAGEMENT"),
+          ("create constraint", "CREATE CONSTRAINT"),
+          ("drop constraint", "DROP CONSTRAINT"),
+          ("constraint", "CONSTRAINT MANAGEMENT"),
+          ("constraint management", "CONSTRAINT MANAGEMENT"),
+          ("create new label", "CREATE NEW NODE LABEL"),
+          ("create new node label", "CREATE NEW NODE LABEL"),
+          ("create new type", "CREATE NEW RELATIONSHIP TYPE"),
+          ("create new relationship type", "CREATE NEW RELATIONSHIP TYPE"),
+          ("create new name", "CREATE NEW PROPERTY NAME"),
+          ("create new property name", "CREATE NEW PROPERTY NAME"),
+          ("name", "NAME MANAGEMENT"),
+          ("name management", "NAME MANAGEMENT"),
+          ("all", "ALL DATABASE PRIVILEGES"),
+          ("all privileges", "ALL DATABASE PRIVILEGES"),
+          ("all database privileges", "ALL DATABASE PRIVILEGES")
+        ).flatMap {
+        case (databaseAction, prettifiedDatabaseAction) =>
+            Seq(
+              s"$action $databaseAction on database * $preposition role" ->
+                s"$action $prettifiedDatabaseAction ON DATABASE * $preposition role",
+
+              s"$action $databaseAction on databases * $preposition role" ->
+                s"$action $prettifiedDatabaseAction ON DATABASE * $preposition role",
+
+              s"$action $databaseAction on database foo $preposition role" ->
+                s"$action $prettifiedDatabaseAction ON DATABASE foo $preposition role",
+
+              s"$action $databaseAction on database foo, bar $preposition role" ->
+                s"$action $prettifiedDatabaseAction ON DATABASES foo, bar $preposition role",
+
+              s"$action $databaseAction on database $$foo $preposition $$role" ->
+                s"$action $prettifiedDatabaseAction ON DATABASE $$foo $preposition $$role",
+
+              s"$action $databaseAction on databases $$foo, bar $preposition $$role" ->
+                s"$action $prettifiedDatabaseAction ON DATABASES $$foo, bar $preposition $$role",
+
+              s"$action $databaseAction on databases FoO $preposition role" ->
+                s"$action $prettifiedDatabaseAction ON DATABASE FoO $preposition role",
+
+              s"$action $databaseAction on default database $preposition role" ->
+                s"$action $prettifiedDatabaseAction ON DEFAULT DATABASE $preposition role",
+            )
+        } ++ Seq(
           s"$action show transaction (*) on database * $preposition role" ->
             s"$action SHOW TRANSACTION (*) ON DATABASE * $preposition role",
 
@@ -1207,6 +976,15 @@ class PrettifierIT extends CypherFunSuite {
 
           s"$action show user on dbms $preposition role" ->
             s"$action SHOW USER ON DBMS $preposition role",
+
+          s"$action set password on dbms $preposition role" ->
+            s"$action SET PASSWORDS ON DBMS $preposition role",
+
+          s"$action set passwords on dbms $preposition role" ->
+            s"$action SET PASSWORDS ON DBMS $preposition role",
+
+          s"$action set user status on dbms $preposition role" ->
+            s"$action SET USER STATUS ON DBMS $preposition role",
 
           s"$action alter user on dbms $preposition role" ->
             s"$action ALTER USER ON DBMS $preposition role",

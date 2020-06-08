@@ -5,13 +5,12 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit;
 
-import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
-import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.IOException;
 
+import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
+import org.junit.jupiter.api.Test;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -20,7 +19,6 @@ import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.internal.batchimport.LogFilesInitializer;
 import org.neo4j.internal.batchimport.StandardBatchImporterFactory;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -40,7 +38,9 @@ import org.neo4j.kernel.impl.storemigration.legacy.SchemaStore35;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.storageengine.api.format.CapabilityType;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -55,6 +55,7 @@ import static org.mockito.Mockito.mock;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @PageCacheExtension
 @Neo4jLayoutExtension
@@ -88,7 +89,7 @@ class HighLimitStoreMigrationTest
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler,
-                    NULL, batchImporterFactory );
+                    NULL, batchImporterFactory, INSTANCE );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
             fileSystem.mkdirs( migrationLayout.databaseDirectory() );
 
@@ -115,7 +116,7 @@ class HighLimitStoreMigrationTest
             TrackingBatchImporterFactory batchImporterFactory = new TrackingBatchImporterFactory();
 
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, config, NullLogService.getInstance(), jobScheduler,
-                    NULL, batchImporterFactory );
+                    NULL, batchImporterFactory, INSTANCE );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
             fileSystem.mkdirs( migrationLayout.databaseDirectory() );
 
@@ -171,15 +172,16 @@ class HighLimitStoreMigrationTest
         }
 
         @Override
-        public BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+        public BatchImporter instantiate(
+                DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
                 PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
                 AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler,
-                Collector badCollector, LogFilesInitializer logFilesInitializer )
+                Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker )
         {
             this.configuration = config;
             return delegate
                     .instantiate( directoryStructure, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
-                            additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer );
+                            additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer, memoryTracker );
         }
 
         @Override

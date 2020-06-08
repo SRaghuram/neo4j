@@ -20,5 +20,5 @@ import org.neo4j.dbms.DatabaseState;
 @FunctionalInterface
 public interface DatabaseStateChangedListener
 {
-    void stateChange( DatabaseState newState );
+    void stateChange( DatabaseState previousState, DatabaseState newState );
 }

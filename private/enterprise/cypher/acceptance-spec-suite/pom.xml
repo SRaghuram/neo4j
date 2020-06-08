@@ -61,7 +61,6 @@
         <dependency>
           <groupId>org.json4s</groupId>
           <artifactId>json4s-native_2.12</artifactId>
-          <version>3.6.1</version>
           <scope>test</scope>
         </dependency>
 
@@ -233,11 +232,6 @@
         <!-- other -->
 
         <dependency>
-            <groupId>com.github.salat</groupId>
-            <artifactId>salat-core_${scala.binary.version}</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
             <scope>test</scope>
@@ -247,6 +241,40 @@
             <artifactId>jetty-servlet</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-random-values</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+    <profiles>
+        <profile>
+            <id>skip-cypher-it</id>
+            <activation>
+                <property>
+                    <name>skipCypherIT</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

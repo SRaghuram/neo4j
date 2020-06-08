@@ -241,7 +241,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   class ArgumentStateBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
-  class OptionalBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
+  class ArgumentStreamBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
   class AntiBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
@@ -278,27 +278,27 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       new ArgumentStateBufferSequence(bd)
     }
 
-    def optionalBuffer(id: Int, argumentSlotOffset: Int,  asmId: Int = -1, planId: Int = -1): OptionalBufferSequence = {
+    def argumentStreamBuffer(id: Int, argumentSlotOffset: Int, asmId: Int = -1, planId: Int = -1): ArgumentStreamBufferSequence = {
       val bd = buffers.getOrElseUpdate(id,
         BufferDefinition(
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
-          OptionalBufferVariant(ArgumentStateMapId(asmId), OptionalType))(SlotConfiguration.empty))
+          ArgumentStreamBufferVariant(ArgumentStateMapId(asmId), ArgumentStreamType))(SlotConfiguration.empty))
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
-      new OptionalBufferSequence(bd)
+      new ArgumentStreamBufferSequence(bd)
     }
 
-    def antiBuffer(id: Int, argumentSlotOffset: Int,  asmId: Int = -1, planId: Int = -1): AntiBufferSequence = {
+    def antiBuffer(id: Int, argumentSlotOffset: Int, asmId: Int = -1, planId: Int = -1): AntiBufferSequence = {
       val bd = buffers.getOrElseUpdate(id,
         BufferDefinition(
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
-          OptionalBufferVariant(ArgumentStateMapId(asmId), AntiType))(SlotConfiguration.empty))
+          ArgumentStreamBufferVariant(ArgumentStateMapId(asmId), AntiType))(SlotConfiguration.empty))
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new AntiBufferSequence(bd)
@@ -386,13 +386,13 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   override def apply(graph: ExecutionGraphDefinition): MatchResult = {
     val expectedBuffers = buffers.values.toSeq.sortBy(_.id.x)
-    val gotBuffers = graph.buffers
+    val gotBuffers = graph.buffers.toSeq
     if (expectedBuffers != gotBuffers) {
       return MatcherWords.equal(expectedBuffers).matcher[Seq[BufferDefinition]].apply(gotBuffers)
     }
 
     val expectedASMs = argumentStates.values.toSeq.sortBy(_.id.x)
-    val gotASMs = graph.argumentStateMaps
+    val gotASMs = graph.argumentStateMaps.toSeq
     if (expectedASMs != gotASMs) {
       return MatcherWords.equal(expectedASMs).matcher[Seq[ArgumentStateDefinition]].apply(gotASMs)
     }

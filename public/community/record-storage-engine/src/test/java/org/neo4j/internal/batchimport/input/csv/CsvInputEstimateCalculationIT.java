@@ -36,7 +36,6 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.EmptyLogFilesInitializer;
 import org.neo4j.internal.batchimport.ImportLogic;
 import org.neo4j.internal.batchimport.ParallelBatchImporter;
 import org.neo4j.internal.batchimport.input.Collector;
@@ -68,7 +67,9 @@ import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.RandomExtension;
@@ -96,6 +97,7 @@ import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.kernel.impl.store.NoStoreHeader.NO_STORE_HEADER;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_RECORD_FORMATS;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
@@ -164,7 +166,7 @@ class CsvInputEstimateCalculationIT
         {
             new ParallelBatchImporter( databaseLayout, fs, null, PageCacheTracer.NULL, PBI_CONFIG, NullLogService.getInstance(),
                     invisible(), EMPTY, config, format, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
-                    EmptyLogFilesInitializer.INSTANCE ).doImport( input );
+                    LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE ).doImport( input );
 
             // then compare estimates with actual disk sizes
             VersionContextSupplier contextSupplier = EmptyVersionContextSupplier.EMPTY;
@@ -197,7 +199,7 @@ class CsvInputEstimateCalculationIT
         Collection<DataFactory> relationshipData = singletonList(
                 generateData( defaultFormatRelationshipFileHeader(), new MutableLong(), 0, 0, ":START_ID,:TYPE,:END_ID", "rels-1.csv", groups ) );
         Input input = new CsvInput( nodeData, defaultFormatNodeFileHeader(), relationshipData, defaultFormatRelationshipFileHeader(),
-                IdType.INTEGER, COMMAS, CsvInput.NO_MONITOR, groups );
+                IdType.INTEGER, COMMAS, CsvInput.NO_MONITOR, groups, INSTANCE );
 
         // when
         Input.Estimates estimates = input.calculateEstimates( new PropertyValueRecordSizeCalculator(
@@ -241,7 +243,7 @@ class CsvInputEstimateCalculationIT
         relationshipData.add( generateData( defaultFormatRelationshipFileHeader(), start, RELATIONSHIP_COUNT - start.longValue(),
                 NODE_COUNT, ":START_ID,:TYPE,:END_ID,prop1,prop2", "relationships-2.csv", groups ) );
         return new CsvInput( nodeData, defaultFormatNodeFileHeader(), relationshipData, defaultFormatRelationshipFileHeader(),
-                IdType.INTEGER, COMMAS, CsvInput.NO_MONITOR, groups );
+                IdType.INTEGER, COMMAS, CsvInput.NO_MONITOR, groups, INSTANCE );
     }
 
     private static long calculateNumberOfProperties( NeoStores stores )

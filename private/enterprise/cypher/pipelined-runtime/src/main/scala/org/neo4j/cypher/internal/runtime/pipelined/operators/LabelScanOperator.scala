@@ -47,17 +47,20 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeLabelScan
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
+import org.neo4j.internal.schema.IndexOrder
 
 
 class LabelScanOperator(val workIdentity: WorkIdentity,
                         offset: Int,
                         label: LazyLabel,
-                        argumentSize: SlotConfiguration.Size)
+                        argumentSize: SlotConfiguration.Size,
+                        indexOrder: IndexOrder)
   extends StreamingOperator {
 
   override protected def nextTasks(state: PipelinedQueryState,
@@ -67,7 +70,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     // Single threaded scan
-    IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
   }
 
   /**
@@ -89,7 +92,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       else {
         cursor = resources.cursorPools.nodeLabelIndexCursorPool.allocateAndTrace()
         val read = state.queryContext.transactionalContext.dataRead
-        read.nodeLabelScan(id, cursor)
+        read.nodeLabelScan(id, cursor, indexOrder)
         true
       }
     }
@@ -123,7 +126,8 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
                                           offset: Int,
                                           labelName: String,
                                           maybeLabelId: Option[Int],
-                                          argumentSize: SlotConfiguration.Size)
+                                          argumentSize: SlotConfiguration.Size,
+                                          indexOrder: IndexOrder)
                                          (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
 
@@ -162,7 +166,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
          */
         block(
           allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
-          nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField)),
+          nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField), indexOrder),
           setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id)),
           constant(true)
         )
@@ -194,7 +198,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
           condition(load(hasInnerLoop)) {
             block(
               allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
-              nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField)),
+              nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField), indexOrder),
               setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id)),
             )
           },

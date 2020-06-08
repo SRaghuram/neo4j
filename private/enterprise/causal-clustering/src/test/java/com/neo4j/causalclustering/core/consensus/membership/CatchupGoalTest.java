@@ -8,19 +8,18 @@ package com.neo4j.causalclustering.core.consensus.membership;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
-public class CatchupGoalTest
+class CatchupGoalTest
 {
     @Test
-    public void goalAchievedWhenCatchupRoundDurationLessThanTarget()
+    void goalAchievedWhenCatchupRoundDurationLessThanTarget()
     {
         FakeClock clock = Clocks.fakeClock();
         long electionTimeout = 15;
@@ -31,18 +30,18 @@ public class CatchupGoalTest
 
         log.setAppendIndex( 20 );
         clock.forward( 10, MILLISECONDS );
-        assertFalse( goal.achieved( new FollowerState() ) );
+        Assertions.assertFalse( goal.achieved( new FollowerState() ) );
 
         log.setAppendIndex( 30 );
         clock.forward( 10, MILLISECONDS );
-        assertFalse( goal.achieved( new FollowerState().onSuccessResponse( 10 ) ) );
+        Assertions.assertFalse( goal.achieved( new FollowerState().onSuccessResponse( 10 ) ) );
 
         log.setAppendIndex( 40 );
         clock.forward( 10, MILLISECONDS );
-        assertTrue( goal.achieved( new FollowerState().onSuccessResponse( 30 ) ) );
+        Assertions.assertTrue( goal.achieved( new FollowerState().onSuccessResponse( 30 ) ) );
     }
 
-    private class StubLog implements ReadableRaftLog
+    private static class StubLog implements ReadableRaftLog
     {
         private long appendIndex;
 

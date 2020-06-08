@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
@@ -24,6 +25,7 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.web.WebContainerThreadInfo;
@@ -33,7 +35,6 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Neo4jLayoutExtension
 class GlobalMetricsExtensionTest
@@ -79,7 +80,7 @@ class GlobalMetricsExtensionTest
         {
             try ( Lifespan ignored = new Lifespan( globalMetricsExtension ) )
             {
-                assertTrue( globalMetricsExtension.isConfigured() );
+                assertFalse( globalMetricsExtension.isConfigured() );
             }
         } );
     }
@@ -95,7 +96,7 @@ class GlobalMetricsExtensionTest
         {
             try ( Lifespan ignored = new Lifespan( globalMetricsExtension ) )
             {
-                assertTrue( globalMetricsExtension.isConfigured() );
+                assertFalse( globalMetricsExtension.isConfigured() );
                 assertNotNull( globalMetricsExtension.getRegistry() );
                 assertNotNull( globalMetricsExtension.getReporter() );
             }
@@ -119,6 +120,12 @@ class GlobalMetricsExtensionTest
 
         @Override
         public PageCacheCounters pageCacheCounters()
+        {
+            return null;
+        }
+
+        @Override
+        public DatabaseOperationCounts databaseOperationCounts()
         {
             return null;
         }
@@ -155,6 +162,12 @@ class GlobalMetricsExtensionTest
 
         @Override
         public Supplier<WebContainerThreadInfo> webContainerThreadInfo()
+        {
+            return null;
+        }
+
+        @Override
+        public MemoryPools memoryPools()
         {
             return null;
         }

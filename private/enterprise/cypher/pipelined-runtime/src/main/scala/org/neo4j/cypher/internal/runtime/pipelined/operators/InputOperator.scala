@@ -21,6 +21,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -38,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.relat
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
@@ -60,7 +62,7 @@ class InputOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     if (parallelism == 1)
-      IndexedSeq(new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
+      singletonIndexedSeq(new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
     else
       new Array[InputTask](parallelism).map(_ => new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
   }
@@ -85,12 +87,12 @@ class InputOperator(val workIdentity: WorkIdentity,
         }
         i = 0
         while (i < relationshipOffsets.length) {
-          outputCursor.setLongAt(relationshipOffsets(i), relationshipOrNoValue(input.value(i)))
+          outputCursor.setLongAt(relationshipOffsets(i), relationshipOrNoValue(input.value(nodeOffsets.length + i)))
           i += 1
         }
         i = 0
         while (i < refOffsets.length) {
-          outputCursor.setRefAt(refOffsets(i), input.value(i))
+          outputCursor.setRefAt(refOffsets(i), input.value(nodeOffsets.length + relationshipOffsets.length + i))
           i += 1
         }
       }
@@ -186,8 +188,8 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
    *      outputRow.setLongAt(nodeOffsets(0), nodeOrNoValue(cursor.value(0));
    *      outputRow.setLongAt(nodeOffsets(1), nodeOrNoValue(cursor.value(1));
    *      ...
-   *      outputRow.setRefAt(refOffset(10), nodeOrNoValue(cursor.value(10));
-   *      outputRow.setRefAt(refOffsets(11), cursor.value(11);
+   *      outputRow.setRefAt(refOffset(0), nodeOrNoValue(cursor.value(10));
+   *      outputRow.setRefAt(refOffsets(1), cursor.value(11);
    *      ...
    *      [[inner]]
    *      this.canContinue = input.nextInput()
@@ -205,11 +207,12 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
     val setRelationships = relationshipOffsets.zipWithIndex.map {
       case (relationshipOffset, i) =>
         codeGen.setLongAt(relationshipOffset, invokeStatic(method[InputOperator, Long, AnyValue]("relationshipOrNoValue"),
-          invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(i))))
+          invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(nodeOffsets.length + i))))
     }
     val setRefs = refOffsets.zipWithIndex.map {
       case (refOffset, i) =>
-        codeGen.setRefAt(refOffset, invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(i)))
+        codeGen.setRefAt(refOffset,
+          invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(nodeOffsets.length + relationshipOffsets.length + i)))
     }
     val setters = block(setNodes ++ setRelationships ++ setRefs:_*)
     block(
@@ -249,4 +252,6 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
 }

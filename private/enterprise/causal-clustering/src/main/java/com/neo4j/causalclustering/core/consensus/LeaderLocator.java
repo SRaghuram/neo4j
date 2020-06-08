@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import java.util.Optional;
 
 public interface LeaderLocator
 {
-    LeaderInfo getLeaderInfo();
+    Optional<LeaderInfo> getLeaderInfo();
 
     void registerListener( LeaderListener listener );
 

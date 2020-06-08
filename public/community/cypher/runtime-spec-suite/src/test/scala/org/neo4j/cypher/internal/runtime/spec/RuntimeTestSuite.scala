@@ -19,6 +19,10 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
+import java.io.File
+import java.io.PrintWriter
+
+import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.ExecutionPlan
@@ -37,6 +41,7 @@ import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.graphdb.GraphDatabaseService
@@ -44,9 +49,11 @@ import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.api.procedure.CallableProcedure
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade
+import org.neo4j.kernel.impl.query.NonRecordingQuerySubscriber
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.impl.query.RecordingQuerySubscriber
 import org.neo4j.kernel.impl.util.ValueUtils
+import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.logging.LogProvider
 import org.neo4j.values.AnyValue
@@ -132,6 +139,10 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
 
   // HELPERS
 
+  def getConfig: Config = {
+    graphDb.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[Config])
+  }
+
   override def getLabelId(label: String): Int = {
     tx.kernelTransaction().tokenRead().nodeLabel(label)
   }
@@ -182,9 +193,17 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
   override def buildPlan(logicalQuery: LogicalQuery,
                          runtime: CypherRuntime[CONTEXT]): ExecutionPlan = runtimeTestSupport.buildPlan(logicalQuery, runtime)
 
+  override def buildPlanAndContext(logicalQuery: LogicalQuery,
+                                   runtime: CypherRuntime[CONTEXT]): (ExecutionPlan, CONTEXT) = runtimeTestSupport.buildPlanAndContext(logicalQuery, runtime)
+
   override def profile(logicalQuery: LogicalQuery,
                        runtime: CypherRuntime[CONTEXT],
                        inputDataStream: InputDataStream = NoInput): RecordingRuntimeResult = runtimeTestSupport.profile(logicalQuery, runtime, inputDataStream)
+
+  override def profileNonRecording(logicalQuery: LogicalQuery,
+                                   runtime: CypherRuntime[CONTEXT],
+                                   inputDataStream: InputDataStream = NoInput): NonRecordingRuntimeResult =
+    runtimeTestSupport.profileNonRecording(logicalQuery, runtime, inputDataStream)
 
   override def executeAndContext(logicalQuery: LogicalQuery,
                                  runtime: CypherRuntime[CONTEXT],
@@ -195,6 +214,29 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
                                  runtime: CypherRuntime[CONTEXT],
                                  input: InputValues
                                 ): (RecordingRuntimeResult, InternalPlanDescription) = runtimeTestSupport.executeAndExplain(logicalQuery, runtime, input)
+
+  def printQueryProfile(fileName: String, queryProfile: QueryProfile, logToStdOut: Boolean = false, lastAllocation: Long = 0, stackTrace: Option[String] = None): Unit = {
+    val pw = new PrintWriter(new File(fileName))
+    val maxAllocatedMemory = queryProfile.maxAllocatedMemory()
+    val logString = new StringBuilder("Estimation of max allocated memory: ")
+    logString.append(maxAllocatedMemory)
+    if (lastAllocation > 0) {
+      logString.append("\nLast allocation before peak reached: ")
+      logString.append(lastAllocation)
+      logString.append("\nEstimation of max allocated memory before peak reached: ")
+      logString.append(maxAllocatedMemory - lastAllocation)
+    }
+    if (stackTrace.isDefined) {
+      logString.append("\nStack trace of the allocation where peak was reached: ")
+      logString.append(stackTrace.get)
+    }
+    if (logToStdOut) println(logString)
+    try {
+      pw.println(logString)
+    } finally {
+      pw.close()
+    }
+  }
 
   // PROCEDURES
 
@@ -254,8 +296,8 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
       } else {
         val rows = consume(left)
         rowsMatcher.matches(columns, rows) match {
-          case RowsMatch => MatchResult(true, "", "")
-          case RowsDontMatch(msg) => MatchResult(false, msg, "")
+          case RowsMatch => MatchResult(matches = true, "", "")
+          case RowsDontMatch(msg) => MatchResult(matches = false, msg, "")
         }
       }
     }
@@ -265,6 +307,12 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
     val seq = left.awaitAll()
     left.runtimeResult.close()
     seq
+  }
+
+  def consumeNonRecording(left: NonRecordingRuntimeResult): Long = {
+    val count = left.awaitAll()
+    left.runtimeResult.close()
+    count
   }
 
   def inOrder(rows: Iterable[Array[_]], listInAnyOrder: Boolean = false): RowsMatcher = {
@@ -289,7 +337,7 @@ abstract class RuntimeTestSuite[CONTEXT <: RuntimeContext](edition: Edition[CONT
 
   def singleRow(values: Any*): RowsMatcher = {
     val anyValues = Array(values.toArray.map(ValueUtils.asAnyValue))
-    EqualInAnyOrder(anyValues, listInAnyOrder = false)
+    EqualInAnyOrder(anyValues)
   }
 
   def rowCount(value: Int): RowsMatcher = {
@@ -323,4 +371,17 @@ case class RecordingRuntimeResult(runtimeResult: RuntimeResult, recordingQuerySu
   def pageCacheMisses: Long = runtimeResult.asInstanceOf[ClosingRuntimeResult].pageCacheMisses
 
 }
+
+case class NonRecordingRuntimeResult(runtimeResult: RuntimeResult, nonRecordingQuerySubscriber: NonRecordingQuerySubscriber) {
+  def awaitAll(): Long = {
+    runtimeResult.consumeAll()
+    runtimeResult.close()
+    nonRecordingQuerySubscriber.assertNoErrors()
+    nonRecordingQuerySubscriber.recordCount()
+  }
+
+  def pageCacheHits: Long = runtimeResult.asInstanceOf[ClosingRuntimeResult].pageCacheHits
+  def pageCacheMisses: Long = runtimeResult.asInstanceOf[ClosingRuntimeResult].pageCacheMisses
+}
+
 case class ContextCondition[CONTEXT <: RuntimeContext](test: CONTEXT => Boolean, errorMsg: String)

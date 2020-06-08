@@ -12,20 +12,36 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 
 import scala.collection.mutable.ArrayBuffer
 
-trait UnorderedArgumentStateMap[S <: ArgumentState] extends ArgumentStateMap[S] with UnorderedArgumentStateMapReader[S]
-
-trait OrderedArgumentStateMap[S <: ArgumentState] extends ArgumentStateMap[S] with OrderedArgumentStateMapReader[S]
-
 /**
  * Maps every argument to one `ArgumentState`/`S`.
+ *
+ * An ArgumentStateMap can be either ordered or unordered, and the semantics of some methods change depending on that.
+ *
+ * The semantics for ordered argument state maps are such that certain methods will always interact with the next argument
+ * state according to argument row if. After an argument state is taken, "next" moves by one.
+ *
+ * The semantics for unordered argument state maps are such that certain methods will always interact with _some_ argument state.
+ *
+ * These semantics help us to
+ * a) make progress as fast as possible if no ordering by argument row id is needed.
+ * b) get data in the right argument row id order if needed.
  */
 trait ArgumentStateMap[S <: ArgumentState] {
 
+  /**
+   * Try to take all the argument states and apply the given function to all the ones which could be taken.
+   *
+   * This function will break any ordering guarantees from ordered ArgumentStateMaps.
+   *
+   * @param f the function to apply to all taken argument states.
+   */
   def clearAll(f: S => Unit): Unit
 
   /**
@@ -94,16 +110,53 @@ trait ArgumentStateMap[S <: ArgumentState] {
    * Slot offset of the argument slot.
    */
   def argumentSlotOffset: Int
-}
 
-trait UnorderedArgumentStateMapReader[S <: ArgumentState] {
   /**
-   * Take the [[ArgumentState]] of one complete argument. The [[ArgumentState]] will
+   * The semantics of this call differ depending on whether this ASM is ordered.
+   *
+   * Ordered:
+   * Returns the [[ArgumentState]] for up to the next n argumentIds, as long as they are completed.
+   * If the next argument state is not completed, returns `null`.
+   *
+   * Unordered:
+   * Take the [[ArgumentState]] of n complete arguments. The [[ArgumentState]] will
    * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
     *
     * @param n the maximum number of arguments to take
    */
   def takeCompleted(n: Int): IndexedSeq[S]
+
+  /**
+   * The semantics of this call differ depending on whether this ASM is ordered.
+   *
+   * Ordered:
+   * Look at the next [[ArgumentState]] by argumentId.
+   *
+   * Returns an [[ArgumentStateWithCompleted]] of that [[ArgumentState]]
+   * which indicates whether the state was completed or not,
+   * or `null` if no state exist. The [[ArgumentState]] will
+   * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
+   *
+   * Unordered:
+   * Look at one [[ArgumentState]].
+   *
+   * Returns an [[ArgumentStateWithCompleted]] of that [[ArgumentState]]
+   * which indicates whether the state was completed or not,
+   * or `null` if no state exist. The [[ArgumentState]] will
+   * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
+   */
+  def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[S]
+
+  /**
+   * The semantics of this call differ depending on whether this ASM is ordered.
+   *
+   * Ordered:
+   * Returns `true` if the next [[ArgumentState]] is either completed or fulfills the given predicate.
+   *
+   * Unordered:
+   * Returns `true` if the some [[ArgumentState]] is either completed or fulfills the given predicate.
+   */
+  def someArgumentStateIsCompletedOr(statePredicate: S => Boolean): Boolean
 
   /**
    * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
@@ -126,42 +179,11 @@ trait UnorderedArgumentStateMapReader[S <: ArgumentState] {
    * Returns `true` iff the argument is completed.
    */
   def hasCompleted(argument: Long): Boolean
-}
-
-/**
- * This interface groups all methods that make use of the [[AbstractArgumentStateMap.lastCompletedArgumentId]]. We split this out so that
- * users of [[ArgumentStateMap]] do not accidentally mix calls with other methods.
- */
-trait OrderedArgumentStateMapReader[S <: ArgumentState] {
-  /**
-   * When using this method to take argument states, an internal counter of the argument id of the last completed argument state is kept.
-   * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
-   *
-   * Returns an [[ArgumentStateWithCompleted]] of the [[ArgumentState]] for the specified argumentId, if is completed, otherwise `null`.
-   * Will also return `null` if no state exist for that argumentId.
-   */
-  def takeNextIfCompleted(): S
 
   /**
-   * When using this method to take argument states, an internal counter of the argument id of the last completed argument state is kept.
-   * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
-   *
-   * Returns an [[ArgumentStateWithCompleted]] of the [[ArgumentState]] for the specified argumentId
-   * which indicated whether the state was completed or not,
-   * or `null` if no state exist for that argumentId.
+   * Returns `true` if the some [[ArgumentState]] fulfills the given predicate.
    */
-  def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[S]
-
-  /**
-   * Returns `true` if the next [[ArgumentState]] according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]]
-   * is either completed or fulfills the given predicate.
-   */
-  def nextArgumentStateIsCompletedOr(statePredicate: S => Boolean): Boolean
-
-  /**
-   * Peeks at the next argument state according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]].
-   */
-  def peekNext(): S
+  def exists(statePredicate: S => Boolean): Boolean
 }
 
 /**
@@ -172,7 +194,7 @@ object ArgumentStateMap {
   /**
    * State that belongs to one argumentRowId and is kept in the [[ArgumentStateMap]]
    */
-  trait ArgumentState {
+  trait ArgumentState extends AutoCloseable {
     /**
      * The ID of the argument row for this state.
      */
@@ -186,6 +208,8 @@ object ArgumentStateMap {
      * reducers.
      */
     def argumentRowIdsForReducers: Array[Long]
+
+    override def close(): Unit = {}
   }
 
   /**
@@ -211,7 +235,7 @@ object ArgumentStateMap {
     /**
      * Update internal state using the provided data.
      */
-    def update(data: DATA): Unit
+    def update(data: DATA, resources: QueryResources): Unit
   }
 
   /**

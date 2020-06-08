@@ -10,18 +10,26 @@ import com.neo4j.causalclustering.core.state.StateRecoveryManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
+
+import static java.lang.Math.toIntExact;
+import static org.neo4j.io.ByteUnit.kibiBytes;
 
 public class DurableStateStorage<STATE> extends LifecycleAdapter implements StateStorage<STATE>
 {
     private final StateRecoveryManager<STATE> recoveryManager;
     private final Log log;
+    private final MemoryTracker memoryTracker;
     private STATE initialState;
     private final File fileA;
     private final File fileB;
@@ -36,14 +44,15 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private PhysicalFlushableChannel currentStoreChannel;
 
     public DurableStateStorage( FileSystemAbstraction fsa, File baseDir, CoreStateFiles<STATE> fileType,
-            int numberOfEntriesBeforeRotation, LogProvider logProvider )
+            int numberOfEntriesBeforeRotation, LogProvider logProvider, MemoryTracker memoryTracker )
     {
         this.fsa = fsa;
         this.fileType = fileType;
         this.marshal = fileType.marshal();
         this.numberOfEntriesBeforeRotation = numberOfEntriesBeforeRotation;
         this.log = logProvider.getLog( getClass() );
-        this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal );
+        this.memoryTracker = memoryTracker;
+        this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal, memoryTracker );
         this.fileA = new File( baseDir, fileType.name() + ".a" );
         this.fileB = new File( baseDir, fileType.name() + ".b" );
     }
@@ -65,7 +74,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         if ( !fsa.fileExists( file ) )
         {
             fsa.mkdirs( file.getParentFile() );
-            try ( FlushableChannel channel = new PhysicalFlushableChannel( fsa.write( file ) ) )
+            try ( FlushableChannel channel = channelForFile( file ) )
             {
                 marshal.marshal( marshal.startState(), channel );
             }
@@ -146,7 +155,11 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private PhysicalFlushableChannel resetStoreFile( File nextStore ) throws IOException
     {
         fsa.truncate( nextStore, 0 );
-        return new PhysicalFlushableChannel( fsa.write( nextStore ) );
+        return channelForFile( nextStore );
     }
 
+    private PhysicalFlushableChannel channelForFile( File file ) throws IOException
+    {
+        return new PhysicalFlushableChannel( fsa.write( file ), new HeapScopedBuffer( toIntExact( kibiBytes( 512 ) ), memoryTracker ) );
+    }
 }

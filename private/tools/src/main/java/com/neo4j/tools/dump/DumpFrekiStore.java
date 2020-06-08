@@ -25,6 +25,14 @@ public class DumpFrekiStore
     public static void main( String[] arguments ) throws IOException
     {
         var args = Args.parse( arguments );
+<<<<<<< HEAD
+=======
+        if ( args.orphans().isEmpty() )
+        {
+            System.err.println( "Missing database directory" );
+            System.exit( 1 );
+        }
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
         var databaseLayout = DatabaseLayout.ofFlat( new File( args.orphans().get( 0 ) ) );
         var fs = new DefaultFileSystemAbstraction();
         var scheduler = JobSchedulerFactory.createScheduler();
@@ -50,7 +58,11 @@ public class DumpFrekiStore
             var stats = args.getBoolean( "stats", false );
             if ( stats )
             {
+<<<<<<< HEAD
                 analysis.dumpStats();
+=======
+                analysis.dumpStoreStats();
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             }
         }
     }

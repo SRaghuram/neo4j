@@ -7,8 +7,8 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.options.Edition;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;

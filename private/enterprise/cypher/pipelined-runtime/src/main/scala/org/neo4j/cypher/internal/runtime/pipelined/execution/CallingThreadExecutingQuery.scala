@@ -24,12 +24,28 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
 
   private val workerResources = workerResourceProvider.resourcesForWorker(worker.workerId)
 
+  sealed trait STATE
+  case object Idle extends STATE
+  case object Working extends STATE
+  case class CancelledWhileWorking(hasEnded: Boolean) extends STATE
+
+  private var state: STATE = Idle
+
   override def request(numberOfRecords: Long): Unit = {
     super.request(numberOfRecords)
     while (!executionState.hasEnded && flowControl.hasDemand) {
-      val worked = worker.workOnQuery(this, workerResources)
-      if (!worked && !executionState.hasEnded && flowControl.hasDemand) {
-        return
+      try {
+        state = Working
+        val worked = worker.workOnQuery(this, workerResources)
+        if (!worked && !executionState.hasEnded && flowControl.hasDemand) {
+          return
+        }
+      } finally {
+        state match {
+          case CancelledWhileWorking(hasEnded) => cleanUpOnCancel(hasEnded)
+          case _ =>
+        }
+        state = Idle
       }
     }
   }
@@ -38,26 +54,33 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
     // We have to check this before we call cancel on the flow control
     val hasEnded = executionState.hasEnded
     flowControl.cancel()
+    if (state == Idle) {
+      cleanUpOnCancel(hasEnded)
+    } else {
+      state = CancelledWhileWorking(hasEnded)
+    }
+  }
+
+  private def cleanUpOnCancel(hasEnded: Boolean): Unit = {
     if (!hasEnded) {
       executionState.cancelQuery(workerResources)
     }
+    assertClosedAndShutdown()
+  }
+
+  override def await(): Boolean = {
+    if (executionState.hasEnded) {
+      assertClosedAndShutdown()
+    }
+    super.await()
+  }
+
+  private def assertClosedAndShutdown(): Unit = {
     try {
       checkOnlyWhenAssertionsAreEnabled(worker.assertIsNotActive() &&
         workerResourceProvider.assertAllReleased())
     } finally {
       workerResourceProvider.shutdown()
     }
-  }
-
-  override def await(): Boolean = {
-    if (executionState.hasEnded) {
-      try {
-        checkOnlyWhenAssertionsAreEnabled(worker.assertIsNotActive() && workerResourceProvider.assertAllReleased())
-      } finally {
-        workerResourceProvider.shutdown()
-      }
-    }
-
-    super.await()
   }
 }

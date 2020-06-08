@@ -7,18 +7,18 @@ package com.neo4j.causalclustering.core.consensus.explorer;
 
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-public class ComparableRaftStateTest
+class ComparableRaftStateTest
 {
     @Test
-    public void twoIdenticalStatesShouldBeEqual()
+    void twoIdenticalStatesShouldBeEqual()
     {
         // given
         NullLogProvider logProvider = NullLogProvider.getInstance();

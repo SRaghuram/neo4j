@@ -23,6 +23,9 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.io.memory.ScopedBuffer;
+import org.neo4j.memory.MemoryTracker;
 
 /**
  * Basically a sequence of {@link StoreChannel channels} seamlessly seen as one.
@@ -31,19 +34,22 @@ public class ReadAheadLogChannel extends ReadAheadChannel<LogVersionedStoreChann
 {
     private final LogVersionBridge bridge;
 
-    public ReadAheadLogChannel( LogVersionedStoreChannel startingChannel )
+    public ReadAheadLogChannel( LogVersionedStoreChannel startingChannel, MemoryTracker memoryTracker )
     {
-        this( startingChannel, LogVersionBridge.NO_MORE_CHANNELS, DEFAULT_READ_AHEAD_SIZE );
+        this( startingChannel, LogVersionBridge.NO_MORE_CHANNELS, new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) );
     }
 
-    public ReadAheadLogChannel( LogVersionedStoreChannel startingChannel, LogVersionBridge bridge )
+    public ReadAheadLogChannel( LogVersionedStoreChannel startingChannel, LogVersionBridge bridge, MemoryTracker memoryTracker )
     {
-        this( startingChannel, bridge, DEFAULT_READ_AHEAD_SIZE );
+        this( startingChannel, bridge, new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) );
     }
 
-    public ReadAheadLogChannel( LogVersionedStoreChannel startingChannel, LogVersionBridge bridge, int readAheadSize )
+    /**
+     * This constructor is private to ensure that the given buffer always comes form one of our own constructors.
+     */
+    private ReadAheadLogChannel( LogVersionedStoreChannel startingChannel, LogVersionBridge bridge, ScopedBuffer scopedBuffer )
     {
-        super( startingChannel, readAheadSize );
+        super( startingChannel, scopedBuffer );
         this.bridge = bridge;
     }
 
@@ -70,5 +76,11 @@ public class ReadAheadLogChannel extends ReadAheadChannel<LogVersionedStoreChann
     protected LogVersionedStoreChannel next( LogVersionedStoreChannel channel ) throws IOException
     {
         return bridge.next( channel );
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+        super.close();
     }
 }

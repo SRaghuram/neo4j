@@ -52,4 +52,29 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     result.toList shouldBe empty
   }
+
+  test("Pruning var expand should not break for unusual input node") {
+    // Given the graph:
+    val p =
+      executeSingle(
+        """CREATE (p:Person)
+          |CREATE (p)-[:HAS_INTEREST]->(:Tag)
+          |CREATE (p)-[:KNOWS]->()-[:KNOWS]->()
+          |RETURN p""".stripMargin
+      ).head("p")
+
+    val query = """CALL {
+                  |    MATCH (pX:Person)
+                  |    RETURN pX
+                  |}
+                  |WITH collect(pX) AS pXs
+                  |UNWIND pXs AS p1
+                  |MATCH
+                  |  (p1)-[:HAS_INTEREST]->(t:Tag),
+                  |  (p1)-[:KNOWS*1..2]-(p2)
+                  |RETURN p1, count(DISTINCT t) AS numTags""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    result.toList shouldBe List(Map("p1" -> p, "numTags" -> 1))
+  }
 }

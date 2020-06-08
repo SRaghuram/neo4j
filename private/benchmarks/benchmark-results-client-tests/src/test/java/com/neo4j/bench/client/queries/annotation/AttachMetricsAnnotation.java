@@ -6,18 +6,18 @@
 package com.neo4j.bench.client.queries.annotation;
 
 import com.neo4j.bench.client.queries.Query;
-import com.neo4j.bench.common.model.Annotation;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.Annotation;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.Session;
 import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
 
-import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
+import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 

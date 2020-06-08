@@ -48,6 +48,16 @@ import static org.neo4j.collection.PrimitiveLongCollections.mergeToSet;
 class PrimitiveLongCollectionsTest
 {
     @Test
+    void singleIterator()
+    {
+        LongIterator iterator = PrimitiveLongCollections.single( 42 );
+        assertTrue( iterator.hasNext() );
+        assertEquals( 42, iterator.next() );
+        assertFalse( iterator.hasNext() );
+        assertThrows( NoSuchElementException.class, iterator::next );
+    }
+
+    @Test
     void arrayOfItemsAsIterator()
     {
         // GIVEN
@@ -58,6 +68,19 @@ class PrimitiveLongCollectionsTest
 
         // THEN
         assertItems( iterator, items );
+    }
+
+    @Test
+    void reverseArrayOfItemsAsIterator()
+    {
+        // GIVEN
+        long[] items = new long[] { 2, 5, 234 };
+
+        // WHEN
+        LongIterator iterator = PrimitiveLongCollections.reverseIterator( items );
+
+        // THEN
+        assertItems( iterator, 234, 5, 2 );
     }
 
     @Test
@@ -134,7 +157,7 @@ class PrimitiveLongCollectionsTest
         {
             long[] array = ThreadLocalRandom.current().longs( arrayLength, 0, arrayLength ).sorted().toArray();
             long[] dedupedActual = PrimitiveLongCollections.deduplicate( array );
-            TreeSet<Long> set = new TreeSet<>();
+            Set<Long> set = new TreeSet<>();
             for ( long value : array )
             {
                 set.add( value );

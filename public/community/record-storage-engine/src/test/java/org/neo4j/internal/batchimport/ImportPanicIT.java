@@ -46,7 +46,9 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.RandomExtension;
@@ -57,6 +59,7 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.csv.reader.Configuration.COMMAS;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
@@ -80,9 +83,11 @@ class ImportPanicIT
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            BatchImporter importer = new ParallelBatchImporter( databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL,
-                Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
-                Config.defaults(), StandardV3_4.RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, EmptyLogFilesInitializer.INSTANCE );
+            BatchImporter importer = new ParallelBatchImporter(
+                    databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL,
+                    Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
+                    Config.defaults(), StandardV3_4.RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
+                    LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE );
             Iterable<DataFactory> nodeData =
                 DataFactories.datas( DataFactories.data( InputEntityDecorators.NO_DECORATOR, fileAsCharReadable( nodeCsvFileWithBrokenEntries() ) ) );
             Input brokenCsvInput = new CsvInput(
@@ -90,7 +95,7 @@ class ImportPanicIT
                 DataFactories.datas(), DataFactories.defaultFormatRelationshipFileHeader(),
                 IdType.ACTUAL,
                 csvConfigurationWithLowBufferSize(),
-                CsvInput.NO_MONITOR );
+                CsvInput.NO_MONITOR, INSTANCE );
             var e = assertThrows( InputException.class, () -> importer.doImport( brokenCsvInput ) );
             assertTrue( e.getCause() instanceof DataAfterQuoteException );
         }

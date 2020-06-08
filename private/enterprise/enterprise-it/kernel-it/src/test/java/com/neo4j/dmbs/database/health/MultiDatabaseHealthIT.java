@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.DatabaseHealth;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -44,40 +43,27 @@ class MultiDatabaseHealthIT
     {
         String testDatabaseName = "testDatabase";
         managementService.createDatabase( testDatabaseName );
-        CompositeDatabaseHealth globalHealth = getGlobalHealth( testDatabaseName );
+        checkDatabaseAndGlobalLife( getDatabaseHealth( testDatabaseName ) );
 
-        checkDatabaseAndGlobalLife( globalHealth, getDatabaseHealth( testDatabaseName ) );
-
-        managementService.shutdownDatabase( testDatabaseName );
         managementService.startDatabase( testDatabaseName );
 
-        checkDatabaseAndGlobalLife( globalHealth, getDatabaseHealth( testDatabaseName ) );
+        checkDatabaseAndGlobalLife( getDatabaseHealth( testDatabaseName ) );
     }
 
-    private static void checkDatabaseAndGlobalLife( CompositeDatabaseHealth globalHealth, DatabaseHealth databaseHealth )
+    private static void checkDatabaseAndGlobalLife( DatabaseHealth databaseHealth )
     {
         assertTrue( databaseHealth.isHealthy() );
-        assertTrue( globalHealth.isHealthy() );
-
         databaseHealth.panic( new RuntimeException( "any" ) );
 
         assertFalse( databaseHealth.isHealthy() );
-        assertFalse( globalHealth.isHealthy() );
-
         assertTrue( databaseHealth.healed() );
 
         assertTrue( databaseHealth.isHealthy() );
-        assertTrue( globalHealth.isHealthy() );
     }
 
     private DatabaseHealth getDatabaseHealth( String testDatabaseName )
     {
         return getDependencyResolver( testDatabaseName ).resolveDependency( DatabaseHealth.class );
-    }
-
-    private CompositeDatabaseHealth getGlobalHealth( String testDatabaseName )
-    {
-        return getDependencyResolver( testDatabaseName ).resolveDependency( CompositeDatabaseHealth.class );
     }
 
     private DependencyResolver getDependencyResolver( String testDatabaseName )

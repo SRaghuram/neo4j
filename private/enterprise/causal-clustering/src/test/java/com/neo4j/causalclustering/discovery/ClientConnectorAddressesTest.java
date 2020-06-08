@@ -6,7 +6,8 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 
@@ -14,12 +15,11 @@ import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Sche
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.http;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.https;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
 
-public class ClientConnectorAddressesTest
+class ClientConnectorAddressesTest
 {
     @Test
-    public void shouldSerializeToString()
+    void shouldSerializeToString()
     {
         // given
         ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( asList(
@@ -37,17 +37,17 @@ public class ClientConnectorAddressesTest
         String connectorAddressesString = connectorAddresses.toString();
 
         // then
-        assertEquals( expectedString, connectorAddressesString );
+        Assertions.assertEquals( expectedString, connectorAddressesString );
 
         // when
         ClientConnectorAddresses out = ClientConnectorAddresses.fromString( connectorAddressesString );
 
         // then
-        assertEquals( connectorAddresses, out );
+        Assertions.assertEquals( connectorAddresses, out );
     }
 
     @Test
-    public void shouldSerializeWithNoHttpsAddress()
+    void shouldSerializeWithNoHttpsAddress()
     {
         // given
         ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( asList(
@@ -59,6 +59,6 @@ public class ClientConnectorAddressesTest
         ClientConnectorAddresses out = ClientConnectorAddresses.fromString( connectorAddresses.toString() );
 
         // then
-        assertEquals( connectorAddresses, out );
+        Assertions.assertEquals( connectorAddresses, out );
     }
 }

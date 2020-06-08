@@ -58,12 +58,12 @@ import org.neo4j.index.internal.gbptree.InspectingVisitor;
 import org.neo4j.index.internal.gbptree.LayoutBootstrapper;
 import org.neo4j.internal.counts.CountsLayout;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -107,7 +107,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
     private EphemeralFileSystemAbstraction fs;
 
     @BeforeAll
-    void createIndex()
+    void createIndex() throws Exception
     {
         final EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
         fs.mkdirs( neo4jHome );
@@ -161,7 +161,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
                     PageCursorTracer.NULL );
         }, indexFiles );
 
-        ConsistencyFlags flags = new ConsistencyFlags( true, false, false, true, true );
+        ConsistencyFlags flags = new ConsistencyFlags( true, false, false, true, true, true );
         ConsistencyCheckService.Result result = runConsistencyCheck( NullLogProvider.getInstance(), flags );
 
         assertTrue( result.isSuccessful(), "Expected store to be consistent when not checking indexes." );
@@ -178,7 +178,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
                     PageCursorTracer.NULL );
         }, indexFiles );
 
-        ConsistencyFlags flags = new ConsistencyFlags( true, false, true, true, true );
+        ConsistencyFlags flags = new ConsistencyFlags( true, false, true, true, true, true );
         ConsistencyCheckService.Result result = runConsistencyCheck( NullLogProvider.getInstance(), flags );
 
         assertFalse( result.isSuccessful(), "Expected store to be inconsistent when checking index structure." );
@@ -195,7 +195,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
             tree.unsafe( GBPTreeCorruption.addFreelistEntry( 5 ), PageCursorTracer.NULL );
         }, indexFiles );
 
-        ConsistencyFlags flags = new ConsistencyFlags( true, true, false, true, true );
+        ConsistencyFlags flags = new ConsistencyFlags( true, true, false, true, true, true );
         ConsistencyCheckService.Result result = runConsistencyCheck( NullLogProvider.getInstance(), flags );
 
         assertTrue( result.isSuccessful(), "Expected store to be consistent when not checking indexes." );
@@ -581,6 +581,23 @@ class ConsistencyCheckWithCorruptGBPTreeIT
     }
 
     @Test
+    void corruptionInRelationshipTypeScanStore() throws Exception
+    {
+        MutableObject<Long> rootNode = new MutableObject<>();
+        File relationshipTypeScanStoreFile = relationshipTypeScanStoreFile();
+        corruptIndexes( true, ( tree, inspection ) -> {
+            rootNode.setValue( inspection.getRootNode() );
+            tree.unsafe( pageSpecificCorruption( rootNode.getValue(), GBPTreeCorruption.broken( GBPTreePointerType.leftSibling() ) ),
+                    PageCursorTracer.NULL );
+        }, relationshipTypeScanStoreFile );
+
+        ConsistencyCheckService.Result result = runConsistencyCheck( NullLogProvider.getInstance() );
+        assertFalse( result.isSuccessful() );
+        assertResultContainsMessage( result, "Index inconsistency: Broken pointer found in tree node " + rootNode.getValue() + ", pointerType='left sibling'" );
+        assertResultContainsMessage( result, "Number of inconsistent RELATIONSHIP_TYPE_SCAN_DOCUMENT records: 1" );
+    }
+
+    @Test
     void corruptionInIndexStatisticsStore() throws Exception
     {
         MutableObject<Long> rootNode = new MutableObject<>();
@@ -609,7 +626,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
                     PageCursorTracer.NULL );
         }, countsLayoutBootstrapper, countsStoreFile );
 
-        ConsistencyFlags flags = new ConsistencyFlags( false, false, true, false, false );
+        ConsistencyFlags flags = new ConsistencyFlags( false, false, true, false, false, false );
         ConsistencyCheckService.Result result = runConsistencyCheck( NullLogProvider.getInstance(), flags );
         assertFalse( result.isSuccessful() );
         assertResultContainsMessage( result, "Index inconsistency: Broken pointer found in tree node " + rootNode.getValue() + ", pointerType='left sibling'" );
@@ -628,7 +645,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
                     PageCursorTracer.NULL );
         }, idStoreFiles );
 
-        ConsistencyFlags flags = new ConsistencyFlags( false, false, true, false, false );
+        ConsistencyFlags flags = new ConsistencyFlags( false, false, true, false, false, false );
         ConsistencyCheckService.Result result = runConsistencyCheck( NullLogProvider.getInstance(), flags );
         assertFalse( result.isSuccessful() );
         assertResultContainsMessage( result, "Index inconsistency: Broken pointer found in tree node " + rootNode.getValue() + ", pointerType='left sibling'" );
@@ -736,6 +753,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
     {
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
         Config config = Config.defaults( neo4j_home, neo4jHome.toPath() );
+        config.set( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store, true );
         return consistencyCheckService.runFullConsistencyCheck( databaseLayout, config, progressFactory, logProvider, fs, false, consistencyFlags );
     }
 
@@ -747,6 +765,7 @@ class ConsistencyCheckWithCorruptGBPTreeIT
     {
         final DatabaseManagementService dbms = new TestDatabaseManagementServiceBuilder( neo4jHome )
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs ) )
+                .setConfig( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store, true )
                 .setConfig( GraphDatabaseSettings.default_schema_provider, schemaIndex.providerName() )
                 .build();
         try
@@ -762,20 +781,22 @@ class ConsistencyCheckWithCorruptGBPTreeIT
 
     private File labelScanStoreFile()
     {
-        final File dataDir = databaseLayout.databaseDirectory();
-        return new File( dataDir, DatabaseFile.LABEL_SCAN_STORE.getName() );
+        return databaseLayout.labelScanStore();
+    }
+
+    private File relationshipTypeScanStoreFile()
+    {
+        return databaseLayout.relationshipTypeScanStore();
     }
 
     private File indexStatisticsStoreFile()
     {
-        final File dataDir = databaseLayout.databaseDirectory();
-        return new File( dataDir, DatabaseFile.INDEX_STATISTICS_STORE.getName() );
+        return databaseLayout.indexStatisticsStore();
     }
 
     private File countsStoreFile()
     {
-        final File dataDir = databaseLayout.databaseDirectory();
-        return new File( dataDir, DatabaseFile.COUNTS_STORE.getName() );
+        return databaseLayout.countStore();
     }
 
     private File[] idStoreFiles()

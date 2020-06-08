@@ -13,7 +13,8 @@ import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShipper;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,12 +26,11 @@ import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueO
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertThat;
 
-public class CatchUpTest
+class CatchUpTest
 {
     @Test
-    public void happyClusterPropagatesUpdates() throws Throwable
+    void happyClusterPropagatesUpdates() throws Throwable
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -51,12 +51,12 @@ public class CatchUpTest
         // then
         for ( MemberId aMember : allMembers )
         {
-            assertThat( fixture.messageLog(), integerValues( fixture.members().withId( aMember ).raftLog() ), hasItems( 42 ) );
+            MatcherAssert.assertThat( fixture.messageLog(), integerValues( fixture.members().withId( aMember ).raftLog() ), hasItems( 42 ) );
         }
     }
 
     @Test
-    public void newMemberWithNoLogShouldCatchUpFromPeers() throws Throwable
+    void newMemberWithNoLogShouldCatchUpFromPeers() throws Throwable
     {
         DirectNetworking net = new DirectNetworking();
 
@@ -89,11 +89,11 @@ public class CatchUpTest
         // then
         for ( MemberId awakeMember : awakeMembers )
         {
-            assertThat( integerValues( fixture.members().withId( awakeMember ).raftLog() ),
+            MatcherAssert.assertThat( integerValues( fixture.members().withId( awakeMember ).raftLog() ),
                     hasItems( 10, 20, 30, 40 ) );
         }
 
-        assertThat( integerValues( fixture.members().withId( sleepyId ).raftLog() ), empty() );
+        MatcherAssert.assertThat( integerValues( fixture.members().withId( sleepyId ).raftLog() ), empty() );
 
         // when
         net.reconnect( sleepyId );
@@ -101,7 +101,7 @@ public class CatchUpTest
         net.processMessages();
 
         // then
-        assertThat( fixture.messageLog(), integerValues( fixture.members().withId( sleepyId ).raftLog() ), hasItems( 10, 20, 30, 40 ) );
+        MatcherAssert.assertThat( fixture.messageLog(), integerValues( fixture.members().withId( sleepyId ).raftLog() ), hasItems( 10, 20, 30, 40 ) );
     }
 
     private List<Integer> integerValues( ReadableRaftLog log ) throws IOException

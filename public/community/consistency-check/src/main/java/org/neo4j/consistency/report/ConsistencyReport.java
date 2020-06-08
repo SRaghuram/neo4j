@@ -30,7 +30,7 @@ import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.checking.RecordCheck;
 import org.neo4j.consistency.store.synthetic.CountsEntry;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
+import org.neo4j.consistency.store.synthetic.TokenScanDocument;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -77,8 +77,11 @@ public interface ConsistencyReport
         void forDynamicLabelBlock( RecordType type, DynamicRecord record,
                                    RecordCheck<DynamicRecord, DynamicLabelConsistencyReport> checker, PageCursorTracer cursorTracer );
 
-        void forNodeLabelScan( LabelScanDocument document,
-                               RecordCheck<LabelScanDocument, ConsistencyReport.LabelScanConsistencyReport> checker, PageCursorTracer cursorTracer );
+        void forNodeLabelScan( TokenScanDocument document,
+                               RecordCheck<TokenScanDocument, ConsistencyReport.LabelScanConsistencyReport> checker, PageCursorTracer cursorTracer );
+
+        void forRelationshipTypeScan( TokenScanDocument document,
+                RecordCheck<TokenScanDocument,ConsistencyReport.RelationshipTypeScanConsistencyReport> checker, PageCursorTracer cursorTracer );
 
         void forIndexEntry( IndexEntry entry,
                             RecordCheck<IndexEntry, ConsistencyReport.IndexConsistencyReport> checker, PageCursorTracer cursorTracer );
@@ -107,7 +110,9 @@ public interface ConsistencyReport
 
         DynamicLabelConsistencyReport forDynamicLabelBlock( RecordType type, DynamicRecord record );
 
-        LabelScanConsistencyReport forNodeLabelScan( LabelScanDocument document );
+        LabelScanConsistencyReport forNodeLabelScan( TokenScanDocument document );
+
+        RelationshipTypeScanConsistencyReport forRelationshipTypeScan( TokenScanDocument document );
 
         IndexConsistencyReport forIndexEntry( IndexEntry entry );
 
@@ -555,6 +560,8 @@ public interface ConsistencyReport
         void relationshipNotInUse( RelationshipRecord referredRelationshipRecord );
 
         void relationshipDoesNotHaveExpectedRelationshipType( RelationshipRecord referredRelationshipRecord, long expectedRelationshipTypeId );
+
+        void relationshipTypeNotInIndex( RelationshipRecord referredRelationshipRecord, long missingTypeId );
     }
 
     interface LabelScanConsistencyReport extends NodeInUseWithCorrectLabelsReport
@@ -573,6 +580,25 @@ public interface ConsistencyReport
 
         @Warning
         @Documented( "Label index was not properly shutdown and rebuild is required." )
+        void dirtyIndex();
+    }
+
+    interface RelationshipTypeScanConsistencyReport extends RelationshipInUseWithCorrectRelationshipTypeReport
+    {
+        @Override
+        @Documented( "This relationship type scan document refers to a relationship record that is not in use." )
+        void relationshipNotInUse( RelationshipRecord referredRelationshipRecord );
+
+        @Override
+        @Documented( "This relationship type scan document refers to a relationship that does not have the expected type." )
+        void relationshipDoesNotHaveExpectedRelationshipType( RelationshipRecord referredRelationshipRecord, long expectedRelationshipTypeId );
+
+        @Override
+        @Documented( "This relationship record has a type that is not found in the relationship type scan store entry for this relationship." )
+        void relationshipTypeNotInIndex( RelationshipRecord referredRelationshipRecord, long missingTypeId );
+
+        @Warning
+        @Documented( "Relationship type index was not properly shutdown and rebuild is required." )
         void dirtyIndex();
     }
 
@@ -696,7 +722,14 @@ public interface ConsistencyReport
         }
 
         @Override
-        public void forNodeLabelScan( LabelScanDocument document, RecordCheck<LabelScanDocument,LabelScanConsistencyReport> checker,
+        public void forNodeLabelScan( TokenScanDocument document, RecordCheck<TokenScanDocument,LabelScanConsistencyReport> checker,
+                PageCursorTracer cursorTracer )
+        {
+
+        }
+
+        @Override
+        public void forRelationshipTypeScan( TokenScanDocument document, RecordCheck<TokenScanDocument,RelationshipTypeScanConsistencyReport> checker,
                 PageCursorTracer cursorTracer )
         {
 
@@ -776,9 +809,15 @@ public interface ConsistencyReport
         }
 
         @Override
-        public LabelScanConsistencyReport forNodeLabelScan( LabelScanDocument document )
+        public LabelScanConsistencyReport forNodeLabelScan( TokenScanDocument document )
         {
             return (LabelScanConsistencyReport) proxy;
+        }
+
+        @Override
+        public RelationshipTypeScanConsistencyReport forRelationshipTypeScan( TokenScanDocument document )
+        {
+            return (RelationshipTypeScanConsistencyReport) proxy;
         }
 
         @Override

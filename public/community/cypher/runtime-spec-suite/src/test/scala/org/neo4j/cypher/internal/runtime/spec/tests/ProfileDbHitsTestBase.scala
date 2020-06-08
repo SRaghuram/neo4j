@@ -21,6 +21,7 @@ package org.neo4j.cypher.internal.runtime.spec.tests
 
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -71,7 +72,7 @@ abstract class ProfileDbHitsTestBase[CONTEXT <: RuntimeContext](
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
-      .nodeByLabelScan("x", "It")
+      .nodeByLabelScan("x", "It", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -204,7 +205,7 @@ abstract class ProfileDbHitsTestBase[CONTEXT <: RuntimeContext](
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
       .optionalExpandAll("(x)-->(y)")
-      .nodeByLabelScan("x", "Ring")
+      .nodeByLabelScan("x", "Ring", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -243,8 +244,8 @@ abstract class ProfileDbHitsTestBase[CONTEXT <: RuntimeContext](
       .optionalExpandInto("(x)-->(y)")
       .apply()
       .|.filter("x.prop = y.prop") // Make sure we get pairs of x/y nodes with each node only appearing once
-      .|.nodeByLabelScan("y", "Y", "x")
-      .nodeByLabelScan("x", "X")
+      .|.nodeByLabelScan("y", "Y", IndexOrderNone, "x")
+      .nodeByLabelScan("x", "X", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)
@@ -308,8 +309,9 @@ abstract class ProfileDbHitsTestBase[CONTEXT <: RuntimeContext](
 
     // then
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    val fusedCostOfGetPropertyChain = if (canFuseOverPipelines) 0 else costOfGetPropertyChain
     queryProfile.operatorProfile(1).dbHits() shouldBe 0 // projection
-    queryProfile.operatorProfile(2).dbHits() shouldBe (sizeHint * (costOfGetPropertyChain + costOfProperty)) // cacheProperties
+    queryProfile.operatorProfile(2).dbHits() shouldBe (sizeHint * (fusedCostOfGetPropertyChain + costOfProperty)) // cacheProperties
   }
 
   test("should profile dbHits with apply") {
@@ -472,7 +474,6 @@ abstract class ProfileDbHitsTestBase[CONTEXT <: RuntimeContext](
     consume(result)
 
     // then
-    val numberOfChunks = Math.ceil(size / cartesianProductChunkSize.toDouble).toInt
     result.runtimeResult.queryProfile().operatorProfile(1).dbHits() shouldBe 0 // union
     result.runtimeResult.queryProfile().operatorProfile(2).dbHits() should (be (size) or be (size + 1)) // all node scan
     result.runtimeResult.queryProfile().operatorProfile(3).dbHits() should (be (size) or be (size + 1)) // all node scan
@@ -500,5 +501,28 @@ trait ProcedureCallDbHitsTestBase[CONTEXT <: RuntimeContext] {
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
     queryProfile.operatorProfile(1).dbHits() shouldBe OperatorProfile.NO_DATA // procedure call
     queryProfile.operatorProfile(2).dbHits() should (be (sizeHint) or be (sizeHint + 1)) // all node scan
+  }
+}
+
+trait NestedPlanDbHitsTestBase[CONTEXT <: RuntimeContext] {
+  self: ProfileDbHitsTestBase[CONTEXT] =>
+
+  test("should profile dbHits of nested plan expression") {
+    val size = Math.sqrt(sizeHint).toInt
+    given { nodeGraph(size) }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("a", "list")
+      .nestedPlanCollectExpressionProjection("list", "b")
+      .|.allNodeScan("b")
+      .allNodeScan("a")
+      .build()
+
+    val result = profile(logicalQuery, runtime)
+    consume(result)
+
+    // then
+    result.runtimeResult.queryProfile().operatorProfile(1).dbHits() should (be (size * size) or be (size * (size + 1))) // projection w. nested plan expression
   }
 }

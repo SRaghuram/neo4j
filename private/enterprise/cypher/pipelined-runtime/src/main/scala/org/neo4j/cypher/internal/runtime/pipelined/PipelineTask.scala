@@ -42,7 +42,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
    * in order to retain the produced row order. Also we can never cancel a task with
    * unprocessed _output.
    */
-  private var _output: Morsel = _
+  private[this] var _output: Morsel = _
 
   override def executeWorkUnit(resources: QueryResources,
                                workUnitEvent: WorkUnitEvent,

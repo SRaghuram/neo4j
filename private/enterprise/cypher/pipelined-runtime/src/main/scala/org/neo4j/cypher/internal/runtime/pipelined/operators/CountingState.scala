@@ -25,7 +25,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
@@ -41,12 +41,15 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
 
 object CountingState {
+  // Only a single empty row instance needed, no need to allocate a new one for every count evaluation.
+  private val EMPTY_ROW = CypherRow.empty
+
   def evaluateCountValue(state: PipelinedQueryState,
                          resources: QueryResources,
                          countExpression: Expression): Long = {
     val queryState = state.queryStateForExpressionEvaluation(resources)
 
-    val countValue = countExpression(CypherRow.empty, queryState)
+    val countValue = countExpression(EMPTY_ROW, queryState)
     evaluateCountValue(countValue)
   }
 

@@ -34,8 +34,10 @@ public class EnterpriseManagementServiceFactory
             return new CoreGraphDatabase( config, dependencies, newDiscoveryServiceFactory(), CoreEditionModule::new ).getManagementService();
         case READ_REPLICA:
             return new ReadReplicaGraphDatabase( config, dependencies, newDiscoveryServiceFactory(), ReadReplicaEditionModule::new ).getManagementService();
-        default:
+        case SINGLE:
             return new DatabaseManagementServiceFactory( DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new ).build( config, dependencies );
+        default:
+            throw new IllegalArgumentException( "Unknown mode: " + mode );
         }
     }
 

@@ -15,8 +15,6 @@ import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
-    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
-
     // GIVEN
     execute("CREATE ROLE custom")
 
@@ -67,6 +65,24 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(write).role("custom").database("foo").node("*").map,
           grantedOrDenied(write).role("custom").database("foo").relationship("*").map
+        ))
+      }
+
+      test(s"should $grantOrDeny write privilege to custom role for multiple databases and all elements") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand WRITE ON GRAPH foo, bar ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(write).role("custom").database("foo").node("*").map,
+          grantedOrDenied(write).role("custom").database("foo").relationship("*").map,
+          grantedOrDenied(write).role("custom").database("bar").node("*").map,
+          grantedOrDenied(write).role("custom").database("bar").relationship("*").map
         ))
       }
 
@@ -1187,7 +1203,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE (n:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Write operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Create node with labels 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
@@ -1216,9 +1232,26 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE (:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Write operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Create node with labels 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
   }
+
+  test("should be able to set and remove a label with just WRITE privilege") {
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
+    execute("CREATE ({name:'Bob'})")
+
+    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set(Map("n.name" -> "Bob")))
+
+    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set.empty)
+  }
+
 }

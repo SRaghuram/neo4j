@@ -20,6 +20,7 @@
 package org.neo4j.bolt.runtime;
 
 import org.neo4j.bolt.BoltChannel;
+import org.neo4j.bolt.messaging.BoltResponseMessageWriter;
 import org.neo4j.bolt.runtime.statemachine.BoltStateMachine;
 
 public interface BoltConnectionFactory
@@ -29,8 +30,10 @@ public interface BoltConnectionFactory
      *
      * @param channel the underlying channel
      * @param boltStateMachine to handle state change of the connection
+     * @param messageWriter holds the protocol specific message writer
      * @return the newly created connection instance
      */
-    BoltConnection newConnection( BoltChannel channel, BoltStateMachine boltStateMachine );
+    BoltConnection newConnection( BoltChannel channel, BoltStateMachine boltStateMachine,
+            BoltResponseMessageWriter messageWriter );
 
 }

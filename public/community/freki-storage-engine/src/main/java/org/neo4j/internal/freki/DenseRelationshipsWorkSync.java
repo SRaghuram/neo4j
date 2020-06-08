@@ -30,9 +30,15 @@ import org.neo4j.util.concurrent.WorkSync;
 
 class DenseRelationshipsWorkSync
 {
+<<<<<<< HEAD
     private WorkSync<DenseRelationshipStore,DenseRelationshipsWork> workSync;
 
     DenseRelationshipsWorkSync( DenseRelationshipStore store )
+=======
+    private WorkSync<SimpleDenseRelationshipStore,DenseRelationshipsWork> workSync;
+
+    DenseRelationshipsWorkSync( SimpleDenseRelationshipStore store )
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         workSync = new WorkSync<>( store );
     }
@@ -57,7 +63,11 @@ class DenseRelationshipsWorkSync
         }
     }
 
+<<<<<<< HEAD
     private static class DenseRelationshipsWork implements Work<DenseRelationshipStore,DenseRelationshipsWork>
+=======
+    private static class DenseRelationshipsWork implements Work<SimpleDenseRelationshipStore,DenseRelationshipsWork>
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
     {
         private final List<FrekiCommand.DenseNode> commands;
         private PageCacheTracer tracer;
@@ -76,6 +86,7 @@ class DenseRelationshipsWorkSync
         }
 
         @Override
+<<<<<<< HEAD
         public void apply( DenseRelationshipStore store ) throws Exception
         {
             try ( PageCursorTracer cursorTracer = tracer.createPageCursorTracer( "Dense relationships" ) )
@@ -93,6 +104,13 @@ class DenseRelationshipsWorkSync
                         } );
                     }
                 }
+=======
+        public void apply( SimpleDenseRelationshipStore store ) throws Exception
+        {
+            try ( PageCursorTracer cursorTracer = tracer.createPageCursorTracer( "Dense relationships" ) )
+            {
+                FrekiTransactionApplier.writeDenseNode( commands, store, cursorTracer );
+>>>>>>> f26a3005d9b9a7f42b480941eb059582c7469aaa
             }
         }
     }

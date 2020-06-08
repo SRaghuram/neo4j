@@ -6,8 +6,8 @@
 package com.neo4j.bench.client.queries.schema;
 
 import com.neo4j.bench.client.queries.Query;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;

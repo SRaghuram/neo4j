@@ -234,6 +234,30 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.toList should contain theSameElementsAs List(Map("result" -> 1), Map("result" -> 2), Map("result" -> 3))
   }
 
+  test("generic CASE with null check") {
+    val query = """MATCH (n)
+                  |WITH collect(n)[0] AS x
+                  |RETURN
+                  |  CASE
+                  |    WHEN x:L THEN "has-label"
+                  |    ELSE "default"
+                  |  END AS nullCheck,
+                  |  CASE
+                  |    WHEN true THEN x:L
+                  |    ELSE "default"
+                  |  END AS nullResult,
+                  |  CASE
+                  |    WHEN false THEN "false"
+                  |    ELSE x:L
+                  |  END AS nullDefault
+                  |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+    result.toList should contain theSameElementsAs
+      List(Map("nullCheck" -> "default", "nullResult" -> null, "nullDefault" -> null))
+  }
+
   test("compiled expressions should handle null path in nested functions 1") {
     createNode()
     val query =

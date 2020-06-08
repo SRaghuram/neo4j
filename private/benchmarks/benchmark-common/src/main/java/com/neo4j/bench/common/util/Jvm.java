@@ -21,16 +21,6 @@ public class Jvm
     private static final String JAVA_EXECUTABLE = osSpecificExecutable( "java" );
     private static final String JAVAC_EXECUTABLE = osSpecificExecutable( "javac" );
 
-    public static String currentJvmDescription()
-    {
-        return SystemUtils.JAVA_VM_VENDOR + ", " + SystemUtils.JAVA_VM_NAME;
-    }
-
-    public static String currentVersionDescription()
-    {
-        return SystemUtils.JAVA_VERSION + ", " + SystemUtils.JAVA_VM_VERSION;
-    }
-
     /**
      * Try to find JVM at provided path.
      * If path does not point at valid java, try to find java via JAVA_HOME.
@@ -134,7 +124,7 @@ public class Jvm
      * @param jdkPath
      * @return
      */
-    static Jvm fromJdkPath( Path jdkPath )
+    public static Jvm fromJdkPath( Path jdkPath )
     {
         return bestEffort( jdkPath.resolve( "bin" ).resolve( JAVA_EXECUTABLE ) );
     }

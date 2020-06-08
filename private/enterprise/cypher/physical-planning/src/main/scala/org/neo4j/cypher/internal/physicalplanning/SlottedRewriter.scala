@@ -48,7 +48,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
-import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReference
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReferenceProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
@@ -249,7 +249,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
                                                               nullable)
             }
             if (nullable)
-              NullCheckReference(offset, propExpression)
+              NullCheckReferenceProperty(offset, propExpression)
             else
               propExpression
         }
@@ -511,4 +511,21 @@ class SlottedRewriter(tokenContext: TokenContext) {
     case _ =>
       false
   }
+}
+
+object SlottedRewriter {
+  /**
+   * Most expressions that are specialized by the SlottedRewriter only give benefits
+   * with long slots, so an expression containing only an offset without specification
+   * on whether it's for the ref or long slots, the offset should be interpreted as being
+   * a long slot offset.
+   */
+  val DEFAULT_OFFSET_IS_FOR_LONG_SLOT = true
+
+  /**
+   * Most specializations in the SlottedRewriter deal with slot nullability by wrapping
+   * the slot expression in a NullCheck(..), meaning that the specialized expression
+   * itself can assume the slot to not be nullable.
+   */
+  val DEFAULT_NULLABLE = false
 }
