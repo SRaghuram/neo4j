@@ -30,6 +30,10 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.memory.MemoryTracker;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
+import static org.neo4j.internal.freki.IntermediateBuffer.isFirstFromPieceHeader;
+import static org.neo4j.internal.freki.IntermediateBuffer.isLastFromPieceHeader;
+import static org.neo4j.internal.freki.IntermediateBuffer.ordinalFromPieceHeader;
+import static org.neo4j.internal.freki.IntermediateBuffer.versionFromPieceHeader;
 import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
@@ -158,31 +162,26 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         boolean reused = ensureFreshDataInstanceForLoadingNewNode();
         cursorAccessTracer.registerNode( nodeId, reused );
         Record x1Record = loadRecord( 0, nodeId );
-        if ( x1Record == null )
+        if ( x1Record == null || !data.gatherDataFromX1( x1Record ) )
         {
             return false;
         }
 
         data.nodeId = nodeId;
-        data.gatherDataFromX1( x1Record );
         return true;
     }
 
     private boolean ensureX1Loaded()
     {
-        if ( !data.x1Loaded )
-        {
-            Record x1Record = loadRecord( 0, data.nodeId );
-            if ( x1Record == null )
-            {
-                return false;
-            }
-            data.gatherDataFromX1( x1Record );
-        }
-        return true;
+        return data.x1Loaded || load( data.nodeId );
     }
 
     //Package-private for testing/analysis purposes
+
+    /**
+     * @return {@code true} means the next chain link record was loaded correctly. {@code false} means either end of chain or that there was
+     * a piece header mismatch, either way a retry is required.
+     */
     boolean loadNextChainLink()
     {
         //This is only capable of reading chain in one direction, until reached end.
@@ -190,12 +189,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             int sizeExp = sizeExponentialFromRecordPointer( data.xLChainNextLinkPointer );
             Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.xLChainNextLinkPointer ) );
-            if ( xLRecord != null )
-            {
-                data.gatherDataFromXL( xLRecord );
-                return true;
-            }
-            //Record has version mismatch or been deleted, likely reading while writing.
+            return xLRecord != null && data.gatherDataFromXL( xLRecord );
+            //Returning false means record has version mismatch or been deleted, likely reading while writing.
             //Caller is responsible for have to reload everything again.
         }
         // else: we reached end of chain
@@ -210,16 +205,13 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
      * This is done so that the book keeping for where data for various parts are is as slim as possible to not penalise the non-split case,
      * which btw is by far the most common one, so if this split-reading is slightly suboptimal then that's fine a.t.m.
      *
-     * @param buffer the buffer containing a piece of the data part that was just read. This buffer also contains information about how to get to
-     * the next record in the chain. This information is used to load the next record and return a buffer positioned to start reading the next
-     * piece of this part.
      * @param headerSlot which part to look for.
-     * @return ByteBuffer (may be a different one than was passed in) filled with data and positioned to read the next piece of this data part,
-     * or {@code null} if there were no more pieces to load for this part.
+     * @param pieceLoadingState struct for holding state between calls for loading more pieces.
      */
-    ByteBuffer loadNextSplitPiece( ByteBuffer buffer, int headerSlot, byte expectedVersion )
+    void loadNextSplitPiece( int headerSlot, FrekiCursorData.PieceLoadingState pieceLoadingState )
     {
-        Header header = new Header();
+        ByteBuffer buffer = pieceLoadingState.buffer;
+        Header header = pieceLoadingState.header;
         header.deserialize( buffer.position( 0 ) );
         long forwardPointer;
         while ( (forwardPointer = forwardPointer( readLongs( buffer.position( header.getOffset( Header.OFFSET_RECORD_POINTER ) ) ),
@@ -233,19 +225,33 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                         "Wanted to follow forward pointer " + recordPointerToString( forwardPointer ) + ", but ended up on an unused record" );
             }
             buffer = record.data();
+            pieceLoadingState.buffer = buffer;
             header.deserialize( buffer );
             if ( header.hasMark( headerSlot ) )
             {
                 if ( header.hasReferenceMark( headerSlot ) )
                 {
                     buffer.position( header.getOffset( headerSlot ) );
-                    byte partVersion = buffer.get();
-                    if ( partVersion != expectedVersion )
+                    short pieceHeader = buffer.getShort();
+                    byte partVersion = versionFromPieceHeader( pieceHeader );
+                    if ( partVersion != pieceLoadingState.version )
                     {
                         throw new IllegalStateException(
-                                "Reading split data from records with different version. Expected " + expectedVersion + " but got " + partVersion );
+                                "Reading split data from records with different version. Expected " + pieceLoadingState.version + " but got " + partVersion );
                     }
-                    return buffer;
+                    byte pieceOrdinal = ordinalFromPieceHeader( pieceHeader );
+                    pieceLoadingState.ordinal++;
+                    if ( isFirstFromPieceHeader( pieceHeader ) )
+                    {
+                        throw new IllegalStateException( "Reading split data from records with piece reporting being first." );
+                    }
+                    if ( pieceOrdinal != pieceLoadingState.ordinal )
+                    {
+                        throw new IllegalStateException(
+                                "Reading split data from records with unexpected ordinal. Expected " + pieceLoadingState.ordinal + " but got " + pieceOrdinal );
+                    }
+                    pieceLoadingState.last = isLastFromPieceHeader( pieceHeader );
+                    return;
                 }
                 else
                 {
@@ -259,7 +265,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             }
             // else there could be another record in between the pieces for this data part, so just skip on through it
         }
-        return null;
+        throw new IllegalStateException( "Reading split data and reached end of record chain w/o seeing a 'last' piece" );
     }
 
     private boolean ensureLoaded( ToIntFunction<FrekiCursorData> test, int headerSlot )
@@ -306,7 +312,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
         while ( System.currentTimeMillis() < end );
         throw new TransientTransactionFailureException(
-                "Failed to load a consistent state of Node[" + data.nodeId + "]. Was modified to many times during read." );
+                "Failed to load a consistent state of Node[" + data.nodeId + "]. Was modified too many times during read." );
     }
 
     void prepareForReload()

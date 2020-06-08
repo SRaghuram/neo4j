@@ -30,6 +30,11 @@ import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
+import static org.neo4j.internal.freki.IntermediateBuffer.PIECE_HEADER_SIZE;
+import static org.neo4j.internal.freki.IntermediateBuffer.isFirstFromPieceHeader;
+import static org.neo4j.internal.freki.IntermediateBuffer.isLastFromPieceHeader;
+import static org.neo4j.internal.freki.IntermediateBuffer.ordinalFromPieceHeader;
+import static org.neo4j.internal.freki.IntermediateBuffer.versionFromPieceHeader;
 import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 
@@ -53,17 +58,14 @@ class FrekiCursorData
 
     int labelOffset;
     private ByteBuffer labelBuffer;
-    boolean labelIsSplit;
-    byte labelsVersion;
+    PieceLoadingState labelsSplitState;
     int propertyOffset;
     private ByteBuffer propertyBuffer;
-    boolean propertyIsSplit;
-    byte propertyVersion;
+    PieceLoadingState propertySplitState;
     int relationshipOffset;
     int relationshipTypeOffsetsOffset;
     private ByteBuffer relationshipBuffer;
-    boolean degreesIsSplit;
-    byte degreesVersion;
+    PieceLoadingState degreesSplitState;
 
     int refCount = 1;
 
@@ -75,31 +77,38 @@ class FrekiCursorData
         Arrays.fill( recordIndex, -1 );
     }
 
-    void gatherDataFromX1( Record record )
+    boolean gatherDataFromX1( Record record )
     {
         x1Loaded = true;
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
-        assignDataOffsets( buffer );
+        if ( !assignDataOffsets( buffer ) )
+        {
+            return false;
+        }
         if ( header.hasMark( OFFSET_RECORD_POINTER ) )
         {
             xLChainStartPointer = forwardPointer( readRecordPointers( buffer ), false );
             xLChainNextLinkPointer = xLChainStartPointer;
-            // xL can be loaded lazily when/if needed
         }
+        return true;
     }
 
-    void gatherDataFromXL( Record record )
+    boolean gatherDataFromXL( Record record )
     {
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
-        assignDataOffsets( buffer );
+        if ( !assignDataOffsets( buffer ) )
+        {
+            return false;
+        }
         assert header.hasMark( OFFSET_RECORD_POINTER );
         long[] pointers = readRecordPointers( buffer );
         xLChainNextLinkPointer = forwardPointer( pointers, true );
+        return true;
     }
 
-    private void assignDataOffsets( ByteBuffer buffer )
+    private boolean assignDataOffsets( ByteBuffer buffer )
     {
         if ( header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) )
         {
@@ -111,9 +120,12 @@ class FrekiCursorData
             labelBuffer = buffer;
             if ( header.hasReferenceMark( FLAG_LABELS ) )
             {
-                labelIsSplit = true;
-                labelsVersion = labelBuffer.get( labelOffset );
-                labelOffset++; //version is 1 byte
+                labelsSplitState = assignFirstPiece( labelBuffer.position( labelOffset ) );
+                if ( labelsSplitState == null )
+                {
+                    return false;
+                }
+                labelOffset += PIECE_HEADER_SIZE;
             }
         }
         if ( propertyOffset == 0 && header.hasMark( OFFSET_PROPERTIES ) )
@@ -122,9 +134,12 @@ class FrekiCursorData
             propertyBuffer = buffer;
             if ( header.hasReferenceMark( OFFSET_PROPERTIES ) )
             {
-                propertyIsSplit = true;
-                propertyVersion = propertyBuffer.get( propertyOffset );
-                propertyOffset++; //version is 1 byte
+                propertySplitState = assignFirstPiece( propertyBuffer.position( propertyOffset ) );
+                if ( propertySplitState == null )
+                {
+                    return false;
+                }
+                propertyOffset += PIECE_HEADER_SIZE;
             }
         }
         if ( header.hasMark( OFFSET_RELATIONSHIPS ) )
@@ -139,11 +154,25 @@ class FrekiCursorData
             relationshipBuffer = buffer;
             if ( header.hasReferenceMark( OFFSET_DEGREES ) )
             {
-                degreesIsSplit = true;
-                degreesVersion = relationshipBuffer.get( relationshipOffset );
-                relationshipOffset++; //version is 1 byte
+                degreesSplitState = assignFirstPiece( relationshipBuffer.position( relationshipOffset ) );
+                if ( degreesSplitState == null )
+                {
+                    return false;
+                }
+                relationshipOffset += PIECE_HEADER_SIZE;
             }
         }
+        return true;
+    }
+
+    private PieceLoadingState assignFirstPiece( ByteBuffer buffer )
+    {
+        short pieceHeader = buffer.getShort();
+        PieceLoadingState splitState = new PieceLoadingState( buffer, versionFromPieceHeader( pieceHeader ) );
+        boolean isFirst = isFirstFromPieceHeader( pieceHeader );
+        assert isFirst == (ordinalFromPieceHeader( pieceHeader ) == 0);
+        assert !isLastFromPieceHeader( pieceHeader );
+        return isFirst ? splitState : null;
     }
 
     private long[] readRecordPointers( ByteBuffer buffer )
@@ -185,12 +214,12 @@ class FrekiCursorData
         xLChainNextLinkPointer = NULL;
         isDense = false;
         labelOffset = 0;
-        labelIsSplit = false;
+        labelsSplitState = null;
         propertyOffset = 0;
-        propertyIsSplit = false;
+        propertySplitState = null;
         relationshipOffset = 0;
         relationshipTypeOffsetsOffset = 0;
-        degreesIsSplit = false;
+        degreesSplitState = null;
         Arrays.fill( recordIndex, -1 );
     }
 
@@ -200,5 +229,32 @@ class FrekiCursorData
         return isLoaded() ? String.format( "NodeData[%d,fw:%s%s,lo:%d,po:%d,ro:%d]", nodeId, recordPointerToString( xLChainStartPointer ),
                 isDense ? "->DENSE" : "", labelOffset, propertyOffset, relationshipOffset )
                           : "<not loaded>";
+    }
+
+    /**
+     * Struct used both for holding first piece as well as carrying over information for verification when loading other pieces later.
+     */
+    static class PieceLoadingState
+    {
+        Header header = new Header();
+        final byte version;
+        byte ordinal;
+        boolean last;
+        ByteBuffer buffer;
+        private final ByteBuffer firstPieceBuffer;
+
+        PieceLoadingState( ByteBuffer firstPieceBuffer, byte version )
+        {
+            this.firstPieceBuffer = firstPieceBuffer;
+            this.version = version;
+            reset();
+        }
+
+        void reset()
+        {
+            buffer = firstPieceBuffer;
+            ordinal = 0;
+            last = false;
+        }
     }
 }

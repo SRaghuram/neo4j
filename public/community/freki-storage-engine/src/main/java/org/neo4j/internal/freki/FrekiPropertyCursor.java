@@ -179,12 +179,21 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             }
 
             boolean hasNextProperty = ++propertyKeyIndex < propertyKeyArray.length;
-            if ( !hasNextProperty && data.propertyIsSplit &&
-                    readPropertyKeys( buffer = loadNextSplitPiece( buffer, Header.OFFSET_PROPERTIES, data.propertyVersion ) ) )
+            if ( !hasNextProperty && data.propertySplitState != null )
             {
-                hasNextProperty = true;
-                assert propertyKeyArray.length > 0;
-                propertyKeyIndex++;
+                if ( !data.propertySplitState.last )
+                {
+                    loadNextSplitPiece( Header.OFFSET_PROPERTIES, data.propertySplitState );
+                    readPropertyKeys( buffer = data.propertySplitState.buffer );
+
+                    hasNextProperty = true;
+                    assert propertyKeyArray.length > 0;
+                    propertyKeyIndex++;
+                }
+                else
+                {
+                    data.propertySplitState.reset();
+                }
             }
 
             if ( !hasNextProperty )
@@ -238,6 +247,10 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             // This is properties for a node
             ensurePropertiesLocated();
             buffer = data.propertyBuffer();
+            if ( data.propertySplitState != null )
+            {
+                data.propertySplitState.reset();
+            }
         }
         return readPropertyKeys( buffer );
     }

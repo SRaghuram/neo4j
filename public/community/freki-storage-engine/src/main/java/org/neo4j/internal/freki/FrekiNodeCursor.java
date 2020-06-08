@@ -69,13 +69,16 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         long[] labels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
 
         // === Logic for split label data
-        if ( data.labelIsSplit )
+        if ( data.labelsSplitState != null )
         {
-            while ( (buffer = loadNextSplitPiece( buffer, Header.FLAG_LABELS, data.labelsVersion )) != null )
+            data.labelsSplitState.reset();
+            do
             {
-                long[] moreLabels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
+                loadNextSplitPiece( Header.FLAG_LABELS, data.labelsSplitState );
+                long[] moreLabels = (long[]) readInts( data.labelsSplitState.buffer, true, LONG_CREATOR, LONG_CONSUMER );
                 labels = addAll( labels, moreLabels );
             }
+            while ( !data.labelsSplitState.last );
         }
         assert isOrdered( labels );
         return labels;
@@ -125,15 +128,18 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public int[] relationshipTypes()
     {
-        ByteBuffer buffer = readRelationshipTypes();
+        readRelationshipTypes();
         int[] types = relationshipTypesInNode.clone();
-        if ( data.isDense && data.degreesIsSplit )
+        if ( data.isDense && data.degreesSplitState != null )
         {
-            while ( (buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES, data.degreesVersion )) != null )
+            data.degreesSplitState.reset();
+            do
             {
-                readRelationshipTypes( buffer );
+                loadNextSplitPiece( Header.OFFSET_DEGREES, data.degreesSplitState );
+                readRelationshipTypes( data.degreesSplitState.buffer );
                 types = addAll( types, relationshipTypesInNode );
             }
+            while ( !data.degreesSplitState.last );
         }
         return types;
     }
@@ -147,6 +153,11 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         if ( data.isDense )
         {
             ByteBuffer buffer = readRelationshipTypes();
+            if ( data.degreesSplitState != null )
+            {
+                data.degreesSplitState.reset();
+            }
+
             while ( buffer != null )
             {
                 if ( relationshipTypesInNode.length > 0 )
@@ -178,13 +189,11 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
                         }
                     }
                 }
-                if ( data.degreesIsSplit )
+                if ( data.degreesSplitState != null && !data.degreesSplitState.last )
                 {
-                    buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES, data.degreesVersion );
-                    if ( buffer != null )
-                    {
-                        readRelationshipTypes( buffer );
-                    }
+                    loadNextSplitPiece( Header.OFFSET_DEGREES, data.degreesSplitState );
+                    buffer = data.degreesSplitState.buffer;
+                    readRelationshipTypes( buffer );
                 }
                 else
                 {

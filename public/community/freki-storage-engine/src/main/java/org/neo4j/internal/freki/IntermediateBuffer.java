@@ -26,9 +26,14 @@ import java.nio.ByteBuffer;
 
 class IntermediateBuffer
 {
-    static final int PART_SPLIT_VERSION_SIZE = 1;
+    static final int PIECE_HEADER_SIZE = Short.BYTES;
     private static final int LEEWAY_SIZE = 50;
     static final byte FIRST_VERSION = -1;
+    private static final int PIECE_HEADER_VERSION_MASK = 0b111_1111;
+    private static final int PIECE_HEADER_ORDINAL_MASK = 0b111_1111;
+    private static final int PIECE_HEADER_ORDINAL_SHIFT = 7;
+    private static final int PIECE_HEADER_FIRST_MASK = 0x8000;
+    private static final int PIECE_HEADER_LAST_MASK = 0x4000;
 
     private final MutableList<ByteBuffer> buffers = Lists.mutable.empty();
     private final int bufferCapacity;
@@ -157,8 +162,41 @@ class IntermediateBuffer
         this.version = version;
     }
 
-    byte getVersion()
+    short getPieceHeader()
     {
-        return version;
+        // Piece header:
+        // 2B [FLOO,OOOO][OVVV,VVVV]
+        // F: is first piece
+        // L: is last piece
+        // O: ordinal in piece chain
+        // V: version
+
+        assert isSplit();
+        boolean isFirst = readIndex == 0;
+        boolean isLast = readIndex == count - 1;
+        return (short) ((isFirst ? PIECE_HEADER_FIRST_MASK : 0)
+                | (isLast ? PIECE_HEADER_LAST_MASK : 0)
+                | ((readIndex & PIECE_HEADER_ORDINAL_MASK) << PIECE_HEADER_ORDINAL_SHIFT)
+                | (version & PIECE_HEADER_VERSION_MASK));
+    }
+
+    static byte versionFromPieceHeader( short pieceHeader )
+    {
+        return (byte) (pieceHeader & PIECE_HEADER_VERSION_MASK);
+    }
+
+    static byte ordinalFromPieceHeader( short pieceHeader )
+    {
+        return (byte) ((pieceHeader >>> PIECE_HEADER_ORDINAL_SHIFT) & PIECE_HEADER_ORDINAL_MASK);
+    }
+
+    static boolean isFirstFromPieceHeader( short pieceHeader )
+    {
+        return (pieceHeader & PIECE_HEADER_FIRST_MASK) != 0;
+    }
+
+    static boolean isLastFromPieceHeader( short pieceHeader )
+    {
+        return (pieceHeader & PIECE_HEADER_LAST_MASK) != 0;
     }
 }

@@ -319,14 +319,14 @@ public class FrekiCursorReadTearTest extends FrekiCursorsTest
         FrekiNodeCursor nodeCursorAtV2 = existingNode( id ).removeLabels( labelsAfterRemove ).storeAndPlaceNodeCursorAt();
 
         long[] expectedLabels = toLong( ArrayUtils.removeAll( labelsBefore, labelsAfterRemove ) );
-        long[] acceptedBefore = toLong( labelsBefore );
-
-        long[] v1Labels = nodeCursorAtV1.labels();
-        assertThat( v1Labels ).isSorted();
-        assertThat( v1Labels ).doesNotHaveDuplicates();
-        assertThat( v1Labels ).satisfiesAnyOf(
-                l -> assertThat( l ).containsExactly( expectedLabels ),
-                l -> assertThat( l ).containsExactly( acceptedBefore ) );
+        assertThatThrownBy( nodeCursorAtV1::labels ).hasMessageContaining( "Reading split data and reached end of record chain w/o seeing a 'last' piece" );
+//        long[] acceptedBefore = toLong( labelsBefore );
+//        long[] v1Labels = nodeCursorAtV1.labels();
+//        assertThat( v1Labels ).isSorted();
+//        assertThat( v1Labels ).doesNotHaveDuplicates();
+//        assertThat( v1Labels ).satisfiesAnyOf(
+//                l -> assertThat( l ).containsExactly( expectedLabels ),
+//                l -> assertThat( l ).containsExactly( acceptedBefore ) );
 
         long[] v2Labels = nodeCursorAtV2.labels();
         assertThat( v2Labels ).isSorted();

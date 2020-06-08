@@ -51,7 +51,7 @@ import org.neo4j.values.storable.Value;
 
 import static java.lang.Math.toIntExact;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.IntermediateBuffer.PART_SPLIT_VERSION_SIZE;
+import static org.neo4j.internal.freki.IntermediateBuffer.PIECE_HEADER_SIZE;
 import static org.neo4j.internal.freki.MutableNodeData.buildRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
@@ -68,7 +68,7 @@ import static org.neo4j.internal.freki.StreamVByte.SINGLE_VLONG_MAX_SIZE;
  */
 class GraphUpdates
 {
-    private static final int WORST_CASE_HEADER_AND_STUFF_SIZE = Header.WORST_CASE_SIZE + DUAL_VLONG_MAX_SIZE + PART_SPLIT_VERSION_SIZE;
+    private static final int WORST_CASE_HEADER_AND_STUFF_SIZE = Header.WORST_CASE_SIZE + DUAL_VLONG_MAX_SIZE + PIECE_HEADER_SIZE;
 
     //Intermediate buffer slots
     static final int PROPERTIES = 0;
@@ -642,7 +642,7 @@ class GraphUpdates
                 }
                 if ( part.isSplit() )
                 {
-                    into.put( part.getVersion() );
+                    into.putShort( part.getPieceHeader() );
                 }
                 into.put( part.get() );
                 part.prev();

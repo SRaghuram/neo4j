@@ -52,6 +52,7 @@ import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.IntermediateBuffer.FIRST_VERSION;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
@@ -77,13 +78,13 @@ class MutableNodeData
     private ByteBuffer labelsBuffer;
     private int labelsOffset;
     private int labelsLength;
-    private byte labelsVersion = IntermediateBuffer.FIRST_VERSION;
+    private byte labelsVersion = FIRST_VERSION;
 
     private MutableIntObjectMap<Value> properties;
     private ByteBuffer propertiesBuffer;
     private int propertiesOffset;
     private int propertiesLength;
-    private byte propertiesVersion = IntermediateBuffer.FIRST_VERSION;
+    private byte propertiesVersion = FIRST_VERSION;
 
     private MutableIntObjectMap<Relationships> relationships;
     private ByteBuffer relationshipsBuffer;
@@ -98,7 +99,7 @@ class MutableNodeData
     private ByteBuffer degreesBuffer;
     private int degreesOffset;
     private int degreesLength;
-    private byte degreesVersion = IntermediateBuffer.FIRST_VERSION;
+    private byte degreesVersion = FIRST_VERSION;
 
     private long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
     private long forwardPointer = NULL;
@@ -874,7 +875,7 @@ class MutableNodeData
                 //Splitted, deserialize now!
                 ensureLabelsDeserialized();
                 buffer.position( header.getOffset( Header.FLAG_LABELS ) );
-                labelsVersion = buffer.get();
+                labelsVersion = readPieceHeaderVersion( labelsVersion, buffer );
                 addLabels( buffer );
             }
         }
@@ -893,7 +894,7 @@ class MutableNodeData
                 //Splitted, deserialize now!
                 ensurePropertiesDeserialized();
                 buffer.position( header.getOffset( Header.OFFSET_PROPERTIES ) );
-                propertiesVersion = buffer.get();
+                propertiesVersion = readPieceHeaderVersion( propertiesVersion, buffer );
                 readProperties( properties, buffer );
             }
         }
@@ -912,7 +913,7 @@ class MutableNodeData
                 //Splitted, deserialize now!
                 ensureDegreesDeserialized();
                 buffer.position( header.getOffset( Header.OFFSET_DEGREES ) );
-                degreesVersion = buffer.get();
+                degreesVersion = readPieceHeaderVersion( degreesVersion, buffer );
                 readDegrees( buffer );
             }
         }
@@ -938,6 +939,13 @@ class MutableNodeData
             readNextInternalRelationshipId( buffer );
         }
         return header;
+    }
+
+    private byte readPieceHeaderVersion( byte previousVersion, ByteBuffer buffer )
+    {
+        byte version = IntermediateBuffer.versionFromPieceHeader( buffer.getShort() );
+        assert previousVersion == FIRST_VERSION || version == previousVersion;
+        return version;
     }
 
     private void readNextInternalRelationshipId( ByteBuffer buffer )
