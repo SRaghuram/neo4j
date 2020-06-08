@@ -219,6 +219,19 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(Map("name" -> "system"),Map("name" -> "neo4j"),Map("name" -> "baz"),Map("name" -> "bar")))
   }
 
+  test("should show default database using where clause") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DATABASES WHERE default").toList
+
+    // THEN
+    result.size shouldBe(1)
+    result.head("name") shouldBe("neo4j")
+    result.head("default") shouldBe(true)
+  }
+
   test("should not show database with invalid yield") {
     // GIVEN
     setup()

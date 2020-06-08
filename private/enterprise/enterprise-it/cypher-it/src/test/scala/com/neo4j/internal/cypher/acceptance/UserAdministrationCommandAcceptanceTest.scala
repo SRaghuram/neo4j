@@ -9,9 +9,9 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.internal.DatabaseStatus.Online
 import org.neo4j.cypher.CacheCounts
 import org.neo4j.cypher.ExecutionEngineCacheCounter
-import org.neo4j.cypher.internal.DatabaseStatus.Online
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.exceptions.ParameterWrongTypeException
@@ -84,6 +84,23 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toSet should be(Set(Map("user"->"neo4j", "suspended"-> false)))
+  }
+
+  test("should show users where not suspended") {
+    // WHEN
+    val result = execute("SHOW USERS WHERE NOT suspended")
+
+    // THEN
+    result.toSet should be(Set(adminUser("neo4j")))
+  }
+
+  test("should show users WHERE 'admin' IN roles") {
+
+    // WHEN
+    val result = execute("SHOW USERS WHERE 'admin' IN roles")
+
+    // THEN
+    result.toSet should be (Set(adminUser("neo4j")))
   }
 
   test("should show users with yield and where") {
