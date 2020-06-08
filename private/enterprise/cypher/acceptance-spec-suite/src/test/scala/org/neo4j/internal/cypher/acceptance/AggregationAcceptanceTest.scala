@@ -13,6 +13,17 @@ import org.neo4j.values.storable.DurationValue
 
 class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
+  test("should allow RETURN * after aggregation inside of expression") {
+    val node = createNode()
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (owner)
+        |WITH HEAD(COLLECT(42)) AS sortValue, owner
+        |RETURN *
+        |""".stripMargin)
+    result.toList should equal(List(Map("sortValue" -> 42, "owner" -> node)))
+  }
+
   // Non-deterministic query -- needs TCK design
   test("should aggregate using as grouping key expressions using variables in scope and nothing else") {
     val userId = createLabeledNode(Map("userId" -> 11), "User")
