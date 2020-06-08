@@ -1,0 +1,20 @@
+{
+  "name": "alacrity",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Compare Versions",
+      "queryFile": "queries/compare_versions.cypher",
+      "parameters": {
+        "file": "parameters/compare_versions.txt"
+      }
+    },
+    {
+      "name": "Release",
+      "queryFile": "queries/release.cypher",
+      "parameters": {
+        "file": "parameters/release.txt"
+      }
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+versionPrefixes:String[]|benchmarkToolName:String|benchmarkGroupName:String
+[3.3.10,3.4.0,3.5.0]|macro|levelstory
+[3.5.0,3.5.2,3.5.3]|macro|elections
+[4.0.1,4.0.2,4.0.3]|macro|elections
+[3.5.0,4.0.0,4.1.0]|macro|bubble_eye
+[4.0.0,4.0.1,4.0.2]|macro|ldbc_sf001
+[4.0.1,4.0.2,4.0.3]|macro|cineasts
+[3.3.9,3.4.11,3.5.11]|macro|ldbc_sf001
+[4.0.0,4.0.1,4.0.2]|macro|levelstory
+[3.3.9,3.4.11,3.5.11]|macro|levelstory
+[4.0.0,4.0.2,4.0.4]|ldbc|LdbcSnbInteractive-Write
+[4.0.0,4.0.1,4.0.2]|macro|cineasts
+[4.0.0,4.0.2,4.0.4]|micro|Procedures
+[3.5.2,4.0.2,4.1.0]|micro|Kernel API
+[3.5.0,4.0.0,4.1.0]|macro|levelstory
+[3.5.0,4.0.0,4.1.0]|macro|elections
+[3.3.9,3.4.11,3.5.11]|ldbc|LdbcSnbInteractive-Read
+[4.0.0,4.0.2,4.0.4]|macro|ldbc_sf001
+[3.5.0,3.5.10,3.5.18]|macro|index_backed_order_by
+[3.3.9,3.4.11,3.5.11]|micro|Cypher
+[4.0.0,4.0.2,4.0.4]|macro|index_backed_order_by
+[4.0.0,4.0.2,4.0.4]|macro|elections
+[3.3.9,3.4.11,3.5.11]|micro|Core API
+[4.0.1,4.0.2,4.0.3]|macro|index_backed_order_by
+[4.0]|micro|Procedures
+[3.5.0,3.5.2,3.5.3]|ldbc|LdbcSnbInteractive-Write
+[3.3.9,3.4.11,3.5.11]|micro|Procedures
+[3.5.0,3.5.2,3.5.3]|macro|accesscontrol
+[4.0.0,4.0.1,4.0.2]|micro|Procedures
+[3.5.0,3.5.2,3.5.3]|macro|ldbc_sf001
+[4.0]|micro|Cypher
+[3.5.0,3.5.10,3.5.18]|ldbc|LdbcSnbInteractive-Read
+[4.0.0,4.0.2,4.0.4]|micro|Cypher
+[3.5.2,4.0.2,4.1.0]|micro|Procedures
+[4.0.1,4.0.2,4.0.3]|macro|levelstory
+[3.5.0,3.5.10,3.5.18]|macro|bubble_eye
+[4.0.0,4.0.1,4.0.2]|ldbc|LdbcSnbInteractive-Read
+[3.5.0,3.5.10,3.5.18]|micro|Cypher
+[4.0.1,4.0.2,4.0.3]|macro|bubble_eye
+[4.0]|macro|levelstory
+[3.5.0,4.0.0,4.1.0]|micro|Cypher
+[3.5.2,4.0.2,4.1.0]|macro|cineasts
+[3.5.0,4.0.0,4.1.0]|ldbc|LdbcSnbInteractive-Read
+[3.3.10,3.4.0,3.5.0]|ldbc|LdbcSnbInteractive-Write
+[4.0.0,4.0.1,4.0.2]|macro|index_backed_order_by
+[3.5.0,3.5.2,3.5.3]|ldbc|LdbcSnbInteractive-Read
+[3.5.2,4.0.2,4.1.0]|macro|accesscontrol
+[3.3.9,3.4.11,3.5.11]|micro|Kernel API
+[3.5.0,3.5.10,3.5.18]|macro|ldbc_sf001
+[3.5.0,3.5.10,3.5.18]|micro|Kernel API
+[3.3.10,3.4.0,3.5.0]|micro|Kernel API
+[4.0.1,4.0.2,4.0.3]|ldbc|LdbcSnbInteractive-Read
+[3.5.0,3.5.10,3.5.18]|macro|accesscontrol
+[3.5.0,4.0.0,4.1.0]|macro|cineasts
+[4.0.0,4.0.2,4.0.4]|macro|bubble_eye
+[4.0.0,4.0.2,4.0.4]|micro|Core API
+[4.0.0,4.0.1,4.0.2]|macro|bubble_eye
+[3.5.2,4.0.2,4.1.0]|ldbc|LdbcSnbInteractive-Read
+[4.0.1,4.0.2,4.0.3]|ldbc|LdbcSnbInteractive-Write
+[4.0]|macro|elections
+[3.3.9,3.4.11,3.5.11]|macro|accesscontrol
+[3.3.10,3.4.0,3.5.0]|macro|cineasts
+[3.3.9,3.4.11,3.5.11]|macro|bubble_eye
+[3.3.10,3.4.0,3.5.0]|ldbc|LdbcSnbInteractive-Read
+[3.3.9,3.4.11,3.5.11]|ldbc|LdbcSnbInteractive-Write
+[3.5.0,3.5.10,3.5.18]|macro|levelstory
+[3.5.0,4.0.0,4.1.0]|macro|index_backed_order_by
+[4.0.0,4.0.1,4.0.2]|micro|Kernel API
+[3.5.0,4.0.0,4.1.0]|macro|accesscontrol
+[3.5.0,3.5.10,3.5.18]|micro|Core API
+[4.0.0,4.0.1,4.0.2]|macro|accesscontrol
+[4.0]|macro|bubble_eye
+[3.5.0,3.5.2,3.5.3]|macro|bubble_eye
+[3.5.0,3.5.2,3.5.3]|micro|Kernel API
+[3.5.0,3.5.10,3.5.18]|macro|cineasts
+[3.3.10,3.4.0,3.5.0]|micro|Cypher
+[3.5.2,4.0.2,4.1.0]|macro|elections
+[3.5.0,3.5.2,3.5.3]|micro|Procedures
+[4.0.1,4.0.2,4.0.3]|macro|accesscontrol
+[4.0.0,4.0.2,4.0.4]|macro|cineasts
+[3.5.0,4.0.0,4.1.0]|micro|Procedures
+[3.5.0,3.5.10,3.5.18]|micro|Procedures
+[3.5.0,4.0.0,4.1.0]|micro|Kernel API
+[4.0]|ldbc|LdbcSnbInteractive-Write
+[4.0.1,4.0.2,4.0.3]|micro|Procedures
+[4.0]|macro|accesscontrol
+[4.0.0,4.0.1,4.0.2]|micro|Core API
+[3.3.9,3.4.11,3.5.11]|macro|cineasts
+[4.0.0,4.0.2,4.0.4]|macro|accesscontrol
+[3.5.2,4.0.2,4.1.0]|ldbc|LdbcSnbInteractive-Write
+[4.0]|macro|cineasts
+[3.5.2,4.0.2,4.1.0]|macro|levelstory
+[4.0]|macro|index_backed_order_by
+[3.3.10,3.4.0,3.5.0]|micro|Core API
+[3.5.0,3.5.2,3.5.3]|macro|index_backed_order_by
+[4.0.1,4.0.2,4.0.3]|macro|ldbc_sf001
+[3.5.2,4.0.2,4.1.0]|micro|Core API
+[3.3.9,3.4.11,3.5.11]|macro|index_backed_order_by
+[4.0]|ldbc|LdbcSnbInteractive-Read
+[3.3.10,3.4.0,3.5.0]|macro|accesscontrol
+[3.3.10,3.4.0,3.5.0]|micro|Procedures
+[4.0.0,4.0.2,4.0.4]|micro|Kernel API
+[3.3.10,3.4.0,3.5.0]|macro|ldbc_sf001
+[3.5.0,3.5.2,3.5.3]|macro|cineasts
+[4.0]|micro|Core API
+[3.5.2,4.0.2,4.1.0]|macro|index_backed_order_by
+[3.5.2,4.0.2,4.1.0]|macro|ldbc_sf001
+[4.0]|macro|ldbc_sf001
+[4.0.1,4.0.2,4.0.3]|micro|Kernel API
+[3.5.0,3.5.2,3.5.3]|micro|Cypher
+[4.0.0,4.0.2,4.0.4]|ldbc|LdbcSnbInteractive-Read
+[3.5.0,4.0.0,4.1.0]|macro|ldbc_sf001
+[3.3.10,3.4.0,3.5.0]|macro|index_backed_order_by
+[3.3.10,3.4.0,3.5.0]|macro|elections
+[4.0.0,4.0.1,4.0.2]|micro|Cypher
+[3.5.0,3.5.10,3.5.18]|macro|elections
+[3.5.0,3.5.10,3.5.18]|ldbc|LdbcSnbInteractive-Write
+[3.3.9,3.4.11,3.5.11]|macro|elections
+[4.0.1,4.0.2,4.0.3]|micro|Cypher
+[4.0.0,4.0.1,4.0.2]|ldbc|LdbcSnbInteractive-Write
+[4.0.0,4.0.1,4.0.2]|macro|elections
+[3.5.2,4.0.2,4.1.0]|micro|Cypher
+[4.0.0,4.0.2,4.0.4]|macro|levelstory
+[3.5.0,3.5.2,3.5.3]|macro|levelstory
+[4.0]|micro|Kernel API
+[3.5.2,4.0.2,4.1.0]|macro|bubble_eye
+[3.5.0,3.5.2,3.5.3]|micro|Core API
+[3.5.0,4.0.0,4.1.0]|micro|Core API
+[3.5.0,4.0.0,4.1.0]|ldbc|LdbcSnbInteractive-Write
+[3.3.10,3.4.0,3.5.0]|macro|bubble_eye
+[4.0.1,4.0.2,4.0.3]|micro|Core API
