@@ -17,6 +17,7 @@ import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
@@ -34,7 +35,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -44,8 +44,8 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static java.util.Collections.emptyList;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @TestDirectoryExtension
 class ConvenientLocalExecutionIT
@@ -94,43 +94,43 @@ class ConvenientLocalExecutionIT
         Path resultsJson = RESULT_DIR.resolve( "results-summary.json" );
         Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
 
-        List<String> runWorkloadArgs = RunMacroWorkloadCommand.argsFor(
-                STORE_DIR,
-                neo4jConfigFile(),
-                RESULT_DIR,
-                resultsJson,
-                profilerRecordingsDir,
-                new RunMacroWorkloadParams(
-                        WORKLOAD_NAME,
-                        emptyList(),
-                        EDITION,
-                        jvmPath,
-                        PROFILERS,
-                        WARMUP_COUNT,
-                        MEASUREMENT_COUNT,
-                        Duration.ofSeconds( 0 ),
-                        Duration.ofMinutes( 10 ),
-                        FORK_COUNT,
-                        TimeUnit.MICROSECONDS,
-                        RUNTIME,
-                        PLANNER,
-                        EXECUTION_MODE,
-                        JVM_ARGS,
-                        RECREATE_SCHEMA,
-                        SKIP_FLAME_GRAPHS,
-                        DEPLOYMENT,
-                        neo4jCommit,
-                        new Version( neo4jVersion ),
-                        neo4jBranch,
-                        neo4jBranchOwner,
-                        toolCommit,
-                        toolBranchOwner,
-                        toolBranch,
-                        teamcityBuild,
-                        parentTeamcityBuild,
-                        triggeredBy ) );
+        RunMacroWorkloadParams workloadParams = new RunMacroWorkloadParams(
+                WORKLOAD_NAME,
+                emptyList(),
+                EDITION,
+                jvmPath,
+                PROFILERS,
+                WARMUP_COUNT,
+                MEASUREMENT_COUNT,
+                Duration.ofSeconds( 0 ),
+                Duration.ofSeconds( 10 ),
+                FORK_COUNT,
+                TimeUnit.MICROSECONDS,
+                RUNTIME,
+                PLANNER,
+                ExecutionMode.EXECUTE,
+                JVM_ARGS,
+                RECREATE_SCHEMA,
+                SKIP_FLAME_GRAPHS,
+                DEPLOYMENT,
+                neo4jCommit,
+                new Version( neo4jVersion ),
+                neo4jBranch,
+                neo4jBranchOwner,
+                toolCommit,
+                toolBranchOwner,
+                toolBranch,
+                teamcityBuild,
+                parentTeamcityBuild,
+                triggeredBy
+        );
 
-        Main.main( runWorkloadArgs.stream().toArray( String[]::new ) );
+        RunMacroWorkloadCommand.runReport( workloadParams,
+                                           RESULT_DIR.toFile(),
+                                           STORE_DIR.toFile(), profilerRecordingsDir.toFile(), neo4jConfigFile().toFile(),
+                                           ErrorReporter.ErrorPolicy.SKIP,
+                                           null
+        );
     }
 
     // Required fields for running Single query

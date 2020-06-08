@@ -9,13 +9,26 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.google.common.collect.Lists;
-import com.neo4j.bench.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.macro.execution.Neo4jDeployment;
+import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
+import com.neo4j.bench.macro.execution.measurement.Results;
+import com.neo4j.bench.macro.execution.process.ForkFailureException;
+import com.neo4j.bench.macro.execution.process.ForkRunner;
+import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkPlan;
@@ -28,22 +41,8 @@ import com.neo4j.bench.model.model.Plan;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
-import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.common.tool.macro.ExecutionMode;
-import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
-import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.model.util.JsonUtil;
-import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.macro.execution.Neo4jDeployment;
-import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
-import com.neo4j.bench.macro.execution.measurement.Results;
-import com.neo4j.bench.macro.execution.process.ForkFailureException;
-import com.neo4j.bench.macro.execution.process.ForkRunner;
-import com.neo4j.bench.macro.workload.Query;
-import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.reporter.ResultsReporter;
 
 import java.io.File;
 import java.net.URI;
@@ -169,6 +168,33 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     @Override
     protected void doRun( RunMacroWorkloadParams params )
     {
+        TestRunReport testRunReport = runReport( params,
+                                                 workDir,
+                                                 storeDir, profilerRecordingsOutputDir, neo4jConfigFile,
+                                                 errorPolicy,
+                                                 batchJobId
+        );
+        ResultsReporter resultsReporter = new ResultsReporter( profilerRecordingsOutputDir,
+                                                               testRunReport,
+                                                               s3Bucket,
+                                                               true,
+                                                               resultsStoreUsername,
+                                                               resultsStorePassword,
+                                                               resultsStoreUri,
+                                                               workDir,
+                                                               awsEndpointURL );
+
+        resultsReporter.report();
+    }
+
+    public static TestRunReport runReport( RunMacroWorkloadParams params,
+                                           File workDir,
+                                           File storeDir,
+                                           File profilerRecordingsOutputDir,
+                                           File neo4jConfigFile,
+                                           ErrorReporter.ErrorPolicy errorPolicy,
+                                           String batchJobId )
+    {
         for ( ParameterizedProfiler profiler : params.profilers() )
         {
             boolean errorOnMissingFlameGraphDependencies = !params.isSkipFlameGraphs();
@@ -195,6 +221,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                                       .removeSetting( load_csv_file_url_root );
             if ( params.executionMode().equals( ExecutionMode.PLAN ) )
             {
+
                 neo4jConfigBuilder = neo4jConfigBuilder.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
             }
             Neo4jConfig neo4jConfig = neo4jConfigBuilder.build();
@@ -326,18 +353,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             Path profilerRecordingsOutputFile = workDir.toPath().resolve( profilerRecordingsOutputDir.toPath() );
             System.out.println( "Copying profiler recordings to: " + profilerRecordingsOutputFile.toAbsolutePath() );
             groupDir.copyProfilerRecordings( profilerRecordingsOutputFile );
-
-            ResultsReporter resultsReporter = new ResultsReporter( profilerRecordingsOutputDir,
-                                                                   testRunReport,
-                                                                   s3Bucket,
-                                                                   true,
-                                                                   resultsStoreUsername,
-                                                                   resultsStorePassword,
-                                                                   resultsStoreUri,
-                                                                   workDir,
-                                                                   awsEndpointURL );
-
-            resultsReporter.report();
+            return testRunReport;
         }
     }
 
@@ -354,30 +370,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         }
     }
 
-    public static List<String> argsFor( Path storeDir,
-                                        Path neo4jConfigFile,
-                                        Path workDir,
-                                        Path resultsJson,
-                                        Path profilerRecordingsDir,
-                                        RunMacroWorkloadParams params )
-    {
-        List<String> args = Lists.newArrayList(
-                "run-workload",
-                CMD_DB_PATH,
-                storeDir.toAbsolutePath().toString(),
-                CMD_NEO4J_CONFIG,
-                neo4jConfigFile.toAbsolutePath().toString(),
-                CMD_WORK_DIR,
-                workDir.toAbsolutePath().toString(),
-                CMD_RESULTS_JSON,
-                resultsJson.toAbsolutePath().toString(),
-                CMD_PROFILER_RECORDINGS_DIR,
-                profilerRecordingsDir.toAbsolutePath().toString() );
-        args.addAll( params.asArgs() );
-        return args;
-    }
-
-    private void assertQueryNames( RunMacroWorkloadParams params, Workload workload )
+    private static void assertQueryNames( RunMacroWorkloadParams params, Workload workload )
     {
         List<String> allQueryNames = workload.queries().stream().map( Query::name ).collect( toList() );
         List<String> matchedQueries = new ArrayList<>( params.queryNames() );
