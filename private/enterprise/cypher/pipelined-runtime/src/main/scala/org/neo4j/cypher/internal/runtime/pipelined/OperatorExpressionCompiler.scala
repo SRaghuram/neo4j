@@ -725,9 +725,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       // Use the WritableRow.copyFrom method (which may use array copy)
       writeOps += doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, nLongsToCopy, nRefsToCopy)
       writeOps ++= writeLongSlotOps
+      //Add ExecutionContext.setLongAt operations for argument slots
+      var i = nLongsToCopy + 1
+      while (i < nLongSlotsToCopyFromInput) {
+        writeOps += setLongInExecutionContext(i,  getLongFromExecutionContext(i, INPUT_CURSOR))
+        i += 1
+      }
       writeOps ++= writeRefSlotOps
     } else {
-      // Add ExecutionContext.setLongAt operations for argument slots?
       if (nLongsToCopy > 0) {
         var i = 0
         while (i < nLongsToCopy) {
@@ -738,6 +743,11 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
             else
               load(local)
           writeOps += setLongInExecutionContext(i, getOp)
+          i += 1
+        }
+        //Add ExecutionContext.setLongAt operations for argument slots
+        while (i < nLongSlotsToCopyFromInput) {
+          writeOps += setLongInExecutionContext(i,  getLongFromExecutionContext(i, INPUT_CURSOR))
           i += 1
         }
       }
