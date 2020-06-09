@@ -170,5 +170,4 @@ class InterpretCypherLiteralState {
 
 class TestExceptionFactory extends ASTExceptionFactory {
   override def syntaxException(source: Exception, offset: Int, line: Int, column: Int): Exception = new SyntaxException("", source)
-  override def invalidUnicodeLiteral(msg: String): Exception = new InvalidUnicodeLiteral(msg)
 }
