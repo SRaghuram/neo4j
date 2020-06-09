@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
@@ -21,6 +22,7 @@ import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
@@ -55,6 +57,20 @@ class Selection extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var propertyType: String = _
 
+  @ParamValues(
+    allowed = Array("true", "false"),
+    base = Array("true")
+  )
+  @Param(Array[String]())
+  var auth: Boolean = _
+
+  @ParamValues(
+    allowed = Array("full", "white", "black"),
+    base = Array("full", "white", "black")
+  )
+  @Param(Array[String]())
+  var user: String = _
+
   override def description = "MATCH (n) WHERE n.key=$val RETURN n"
 
   private val NODE_COUNT = 1000000
@@ -72,6 +88,8 @@ class Selection extends AbstractCypherBenchmark {
       .withNodeCount(NODE_COUNT)
       .withNodeProperties(new PropertyDefinition(KEY, discrete(buckets: _*)))
       .isReusableStore(true)
+      .withNeo4jConfig(Neo4jConfigBuilder.empty()
+        .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
@@ -108,7 +126,7 @@ class SelectionThreadState {
   @Setup
   def setUp(benchmarkState: Selection): Unit = {
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
-    tx = benchmarkState.beginInternalTransaction()
+    tx = benchmarkState.beginInternalTransaction(benchmarkState.users(benchmarkState.user))
   }
 
   @TearDown

@@ -37,7 +37,6 @@ import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.IndexedProperty
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
-import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.graphdb.spatial.Point
@@ -247,7 +246,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     val resultColumns = List(node.name)
 
     val produceResults = if (filtered) {
-      val filter = Selection(
+      val filter = plans.Selection(
         Seq(LessThanOrEqual(distanceFunction(astProperty(node, KEY), point), distanceLiteral)(Pos)),
         indexSeek)(IdGen)
       ProduceResult(filter, resultColumns)(IdGen)
