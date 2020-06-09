@@ -75,7 +75,8 @@ workloads=("accesscontrol M5DLargeJobQueue accesscontrol"
   "qmul_write M5DLargeJobQueue qmul"
   "recommendations M5DLargeJobQueue recommendations"
   "socialnetwork M5DLargeJobQueue socialnetwork"
-  "osmnodes M5D2XLargeJobQueue osmnodes")
+  "osmnodes M5D2XLargeJobQueue osmnodes"
+  "offshore_leaks M5D2XLargeJobQueue offshore_leaks")
 
 for i in "${workloads[@]}"; do
   workload=($(echo ${i}))

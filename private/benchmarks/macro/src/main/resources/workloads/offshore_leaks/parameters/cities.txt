@@ -1,0 +1,11 @@
+city
+London
+Hong Kong
+Bangkok
+SHANGHAI
+Jakarta
+BUENOS AIRES
+Singapore
+San Francisco
+Moscow
+PANAMA CITY

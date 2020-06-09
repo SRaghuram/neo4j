@@ -167,3 +167,9 @@ Queen Mary University of London dataset exhibiting pathological performance. Pri
 #### socialnetwork
 
 [A real-world use case from the Graph Databases book. This encompasses bits from Adobe, as well as another client "X"; sub-domains/entities of interest include HR, recruitment, skills and projects.](https://github.com/iansrobinson/graph-databases-use-cases)
+
+---
+#### offshore_leaks
+
+[A real-world use case with Panama papers and Paradise papers](https://offshoreleaks.icij.org/pages/database)
+[Example queries](https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/examples.html) which were used to create the workload.

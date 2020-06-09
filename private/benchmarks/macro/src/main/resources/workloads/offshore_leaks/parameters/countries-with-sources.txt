@@ -1,0 +1,161 @@
+country|source
+MLT|Panama Papers
+MLT|Offshore Leaks
+MLT|Bahamas Leaks
+MLT|Paradise Papers - Bahamas corporate registry
+MLT|Paradise Papers - Appleby
+MLT|Paradise Papers - Aruba corporate registry
+MLT|Paradise Papers - Barbados corporate
+MLT|Paradise Papers - Nevis corporate registry
+XXX|Panama Papers
+XXX|Offshore Leaks
+XXX|Bahamas Leaks
+XXX|Paradise Papers - Bahamas corporate registry
+XXX|Paradise Papers - Appleby
+XXX|Paradise Papers - Aruba corporate registry
+XXX|Paradise Papers - Barbados corporate
+XXX|Paradise Papers - Nevis corporate registry
+CHN|Panama Papers
+CHN|Offshore Leaks
+CHN|Bahamas Leaks
+CHN|Paradise Papers - Bahamas corporate registry
+CHN|Paradise Papers - Appleby
+CHN|Paradise Papers - Aruba corporate registry
+CHN|Paradise Papers - Barbados corporate
+CHN|Paradise Papers - Nevis corporate registry
+HKG|Panama Papers
+HKG|Offshore Leaks
+HKG|Bahamas Leaks
+HKG|Paradise Papers - Bahamas corporate registry
+HKG|Paradise Papers - Appleby
+HKG|Paradise Papers - Aruba corporate registry
+HKG|Paradise Papers - Barbados corporate
+HKG|Paradise Papers - Nevis corporate registry
+USA|Panama Papers
+USA|Offshore Leaks
+USA|Bahamas Leaks
+USA|Paradise Papers - Bahamas corporate registry
+USA|Paradise Papers - Appleby
+USA|Paradise Papers - Aruba corporate registry
+USA|Paradise Papers - Barbados corporate
+USA|Paradise Papers - Nevis corporate registry
+TWN|Panama Papers
+TWN|Offshore Leaks
+TWN|Bahamas Leaks
+TWN|Paradise Papers - Bahamas corporate registry
+TWN|Paradise Papers - Appleby
+TWN|Paradise Papers - Aruba corporate registry
+TWN|Paradise Papers - Barbados corporate
+TWN|Paradise Papers - Nevis corporate registry
+VGB|Panama Papers
+VGB|Offshore Leaks
+VGB|Bahamas Leaks
+VGB|Paradise Papers - Bahamas corporate registry
+VGB|Paradise Papers - Appleby
+VGB|Paradise Papers - Aruba corporate registry
+VGB|Paradise Papers - Barbados corporate
+VGB|Paradise Papers - Nevis corporate registry
+GBR|Panama Papers
+GBR|Offshore Leaks
+GBR|Bahamas Leaks
+GBR|Paradise Papers - Bahamas corporate registry
+GBR|Paradise Papers - Appleby
+GBR|Paradise Papers - Aruba corporate registry
+GBR|Paradise Papers - Barbados corporate
+GBR|Paradise Papers - Nevis corporate registry
+JEY|Panama Papers
+JEY|Offshore Leaks
+JEY|Bahamas Leaks
+JEY|Paradise Papers - Bahamas corporate registry
+JEY|Paradise Papers - Appleby
+JEY|Paradise Papers - Aruba corporate registry
+JEY|Paradise Papers - Barbados corporate
+JEY|Paradise Papers - Nevis corporate registry
+RUS|Panama Papers
+RUS|Offshore Leaks
+RUS|Bahamas Leaks
+RUS|Paradise Papers - Bahamas corporate registry
+RUS|Paradise Papers - Appleby
+RUS|Paradise Papers - Aruba corporate registry
+RUS|Paradise Papers - Barbados corporate
+RUS|Paradise Papers - Nevis corporate registry
+ITA|Panama Papers
+ITA|Offshore Leaks
+ITA|Bahamas Leaks
+ITA|Paradise Papers - Bahamas corporate registry
+ITA|Paradise Papers - Appleby
+ITA|Paradise Papers - Aruba corporate registry
+ITA|Paradise Papers - Barbados corporate
+ITA|Paradise Papers - Nevis corporate registry
+CHE|Panama Papers
+CHE|Offshore Leaks
+CHE|Bahamas Leaks
+CHE|Paradise Papers - Bahamas corporate registry
+CHE|Paradise Papers - Appleby
+CHE|Paradise Papers - Aruba corporate registry
+CHE|Paradise Papers - Barbados corporate
+CHE|Paradise Papers - Nevis corporate registry
+SGP|Panama Papers
+SGP|Offshore Leaks
+SGP|Bahamas Leaks
+SGP|Paradise Papers - Bahamas corporate registry
+SGP|Paradise Papers - Appleby
+SGP|Paradise Papers - Aruba corporate registry
+SGP|Paradise Papers - Barbados corporate
+SGP|Paradise Papers - Nevis corporate registry
+PAN|Panama Papers
+PAN|Offshore Leaks
+PAN|Bahamas Leaks
+PAN|Paradise Papers - Bahamas corporate registry
+PAN|Paradise Papers - Appleby
+PAN|Paradise Papers - Aruba corporate registry
+PAN|Paradise Papers - Barbados corporate
+PAN|Paradise Papers - Nevis corporate registry
+WSM|Panama Papers
+WSM|Offshore Leaks
+WSM|Bahamas Leaks
+WSM|Paradise Papers - Bahamas corporate registry
+WSM|Paradise Papers - Appleby
+WSM|Paradise Papers - Aruba corporate registry
+WSM|Paradise Papers - Barbados corporate
+WSM|Paradise Papers - Nevis corporate registry
+CYP|Panama Papers
+CYP|Offshore Leaks
+CYP|Bahamas Leaks
+CYP|Paradise Papers - Bahamas corporate registry
+CYP|Paradise Papers - Appleby
+CYP|Paradise Papers - Aruba corporate registry
+CYP|Paradise Papers - Barbados corporate
+CYP|Paradise Papers - Nevis corporate registry
+GGY|Panama Papers
+GGY|Offshore Leaks
+GGY|Bahamas Leaks
+GGY|Paradise Papers - Bahamas corporate registry
+GGY|Paradise Papers - Appleby
+GGY|Paradise Papers - Aruba corporate registry
+GGY|Paradise Papers - Barbados corporate
+GGY|Paradise Papers - Nevis corporate registry
+ARE|Panama Papers
+ARE|Offshore Leaks
+ARE|Bahamas Leaks
+ARE|Paradise Papers - Bahamas corporate registry
+ARE|Paradise Papers - Appleby
+ARE|Paradise Papers - Aruba corporate registry
+ARE|Paradise Papers - Barbados corporate
+ARE|Paradise Papers - Nevis corporate registry
+IDN|Panama Papers
+IDN|Offshore Leaks
+IDN|Bahamas Leaks
+IDN|Paradise Papers - Bahamas corporate registry
+IDN|Paradise Papers - Appleby
+IDN|Paradise Papers - Aruba corporate registry
+IDN|Paradise Papers - Barbados corporate
+IDN|Paradise Papers - Nevis corporate registry
+BMU|Panama Papers
+BMU|Offshore Leaks
+BMU|Bahamas Leaks
+BMU|Paradise Papers - Bahamas corporate registry
+BMU|Paradise Papers - Appleby
+BMU|Paradise Papers - Aruba corporate registry
+BMU|Paradise Papers - Barbados corporate
+BMU|Paradise Papers - Nevis corporate registry

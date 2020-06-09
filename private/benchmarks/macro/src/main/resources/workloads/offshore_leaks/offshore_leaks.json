@@ -1,0 +1,66 @@
+{
+  "name": "offshore_leaks",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Discover the shortest paths between two entity officers",
+      "comment": "parameters were obtained with: MATCH (a:Officer) WITH a ORDER BY rand() LIMIT 1 MATCH p=(a)-[:OFFICER_OF|:INTERMEDIARY_OF|:REGISTERED_ADDRESS*8..10]-(b:Officer) RETURN a.name, b.name, length(p) LIMIT 1",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/officer-tuples.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "Jurisdiction distribution of intermediaries",
+      "comment": "parameters were obtained with: MATCH (i:Intermediary) WHERE (i)-[:INTERMEDIARY_OF]->(:Entity)  RETURN i.name ORDER BY rand() LIMIT 100",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/intermediaries.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "Which intermediaries have the most connections to which entities",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "Officers with most entities",
+      "queryFile": "queries/Q4.cypher"
+    },
+    {
+      "name": "Q5",
+      "description": "Let’s see with which entities our officer was involved with, including second degree connections",
+      "comment": "parameters were obtained with: MATCH (o:Officer) WHERE (o)-[]->(:Entity)<-[]-(:Officer)-[]->(:Entity) RETURN o.name ORDER BY rand() LIMIT 100",
+      "queryFile": "queries/Q5.cypher",
+      "parameters": {
+        "file": "parameters/officers-with-entities.txt"
+      }
+    },
+    {
+      "name": "Q6",
+      "description": "Joint involvement",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "description": "Most popular offshore jurisdiction for people connected to a country",
+      "comment": "all sources: MATCH (i:Intermediary) RETURN DISTINCT i.sourceID \n most popular countries: MATCH (i:Officer) UNWIND i.country_codes AS c RETURN c, count(c) AS f ORDER BY f DESC LIMIT 20",
+      "queryFile": "queries/Q7.cypher",
+      "parameters": {
+        "file": "parameters/countries-with-sources.txt"
+      }
+    },
+    {
+      "name": "Q8",
+      "description": "Most popular offshore jurisdictions for people with addresses in a certain city",
+      "comment": "get some addresses: MATCH (a:Address) RETURN a.address ORDER BY rand() LIMIT 100 \n verify if city is frequent enough: WITH $city AS city MATCH (a:Address) WHERE a.address contains city RETURN city, count(a)",
+      "queryFile": "queries/Q8.cypher",
+      "parameters": {
+        "file": "parameters/cities.txt"
+      }
+    }
+  ]
+}
