@@ -129,7 +129,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
       RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
         NotificationDetail.Factory.message("Runtime unsupported",
-          "Expression of ReduceExpression(ReduceScope(Variable(y),Variable(x),Variable(x)),Parameter(  AUTOINT0,Integer),Parameter(  AUTOLIST1,List<Any>)) not yet supported"))))
+          "Expression of ReduceExpression(ReduceScope(Variable(y),Variable(x),Variable(x)),AutoExtractedParameter(  AUTOINT0,Integer,SignedDecimalIntegerLiteral(0)),AutoExtractedParameter(  AUTOLIST1,List<Any>,ListOfLiteralWriter(List(SignedDecimalIntegerLiteral(0))))) not yet supported"))))
   }
 
   test("Warn for cartesian product with runtime=interpreted") {
