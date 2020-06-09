@@ -60,6 +60,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
   private val initialSeed = Seed.random() // use `Seed.fromBase64(...).get` to reproduce test failures
   private val maxCost = Cost(sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_COST", "1000000").toInt)
   private val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "1000").toInt
+  private val graphConfig = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_GRAPH", "DEFAULT")
   private val maxIterationTimeSpan = Span(
     sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_ITERATION_TIME_SECONDS", "60").toInt,
     Seconds)
@@ -97,7 +98,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     // Create the data (all executors use the same database instance)
     runtimeTestSupport.start()
     runtimeTestSupport.startTx()
-    LogicalPlanFuzzTesting.createData(runtimeTestSupport)
+    LogicalPlanFuzzTesting.createData(runtimeTestSupport, graphConfig)
     // Commit and get a new TX. Keep it around, it is used when generating plans.
     runtimeTestSupport.restartTx()
     (runtimeTestSupport.tx, runtimeTestSupport.txContext)
@@ -248,7 +249,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
        |
        |  // Change this when data creation is randomized!
        |  given {
-       |    LogicalPlanFuzzTesting.createData(this)
+       |    LogicalPlanFuzzTesting.createData(this, "$graphConfig")
        |  }
        |
        |  // when
@@ -285,11 +286,33 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
 }
 
 object LogicalPlanFuzzTesting {
-  def createData[CONTEXT <: RuntimeContext](graphCreation: GraphCreation[CONTEXT]): Unit = {
+  def createData[CONTEXT <: RuntimeContext](graphCreation: RuntimeTestSupport[CONTEXT] with GraphCreation[CONTEXT], graphConfig: String): Unit = {
+    createLabelsAndRelationships(graphCreation)
+
+    graphConfig match {
+      case "EMPTY" =>
+      case "TWO_NODES" =>
+        graphCreation.nodeGraph(2, "Label")
+      case "TWO_NODES_WITH_RELATIONSHIP" =>
+        val nodes = graphCreation.nodeGraph(2, "Label")
+        graphCreation.connect(nodes, Seq((0, 1, "AB")))
+      case "DEFAULT" =>
+        defaultGraph(graphCreation)
+    }
+  }
+
+  private def defaultGraph[CONTEXT <: RuntimeContext](graphCreation: GraphCreation[CONTEXT]) = {
     graphCreation.bidirectionalBipartiteGraph(10, "A", "B", "AB", "BA")
     graphCreation.nodeGraph(10, "A")
     graphCreation.nodeGraph(12, "B")
     graphCreation.nodeGraph(5, "C")
+  }
+
+  private def createLabelsAndRelationships[CONTEXT <: RuntimeContext](graphCreation: RuntimeTestSupport[CONTEXT] with GraphCreation[CONTEXT]) = {
+    graphCreation.bidirectionalBipartiteGraph(2, "A", "B", "AB", "BA")
+    graphCreation.nodeGraph(1, "A", "B", "C")
+
+    graphCreation.tx.execute("MATCH (n) DETACH DELETE n")
   }
 
   case class beSameResultAs(expected: IndexedSeq[Array[AnyValue]], columns: IndexedSeq[String]) extends Matcher[IndexedSeq[Array[AnyValue]]] {
