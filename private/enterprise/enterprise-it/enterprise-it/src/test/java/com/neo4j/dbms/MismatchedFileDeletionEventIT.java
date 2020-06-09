@@ -67,6 +67,7 @@ class MismatchedFileDeletionEventIT
     private void showDatabases()
     {
         var list = ShowDatabasesHelpers.showDatabases( managementService );
+        assertThat( list ).hasSize( 3 + next - last ); // 2 default databases + 1 database that was created by a test rule for test
         list.forEach( row ->
         {
             assertEquals( row.currentStatus(), "online" );
