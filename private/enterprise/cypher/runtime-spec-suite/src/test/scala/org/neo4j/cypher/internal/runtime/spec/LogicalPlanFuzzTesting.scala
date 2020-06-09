@@ -23,7 +23,6 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlanToPlanBuilderString
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.runtime.spec.LogicalPlanFuzzTesting.beSameResultAs
-import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.util.Cost
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
@@ -84,13 +83,13 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     override protected def runtimeTestSupport: RuntimeTestSupport[EnterpriseRuntimeContext] = this
   }
 
-  case class TestRunrime(runtime: CypherRuntime[EnterpriseRuntimeContext], rts: RuntimeTestSupport[EnterpriseRuntimeContext], name: String)
+  case class TestRuntime(runtime: CypherRuntime[EnterpriseRuntimeContext], rts: RuntimeTestSupport[EnterpriseRuntimeContext], name: String)
 
   private val runtimes = Seq(
-    TestRunrime(InterpretedRuntime, runtimeTestSupport, "interpreted"),
-    TestRunrime(SlottedRuntime, runtimeTestSupport, "slotted"),
-    TestRunrime(PIPELINED, runtimeTestSupport, "pipelined with fusion"),
-    TestRunrime(PIPELINED, runtimeTestSupportNoFusion, "pipelined without fusion")
+    TestRuntime(InterpretedRuntime, runtimeTestSupport, "interpreted"),
+    TestRuntime(SlottedRuntime, runtimeTestSupport, "slotted"),
+    TestRuntime(PIPELINED, runtimeTestSupport, "pipelined with fusion"),
+    TestRuntime(PIPELINED, runtimeTestSupportNoFusion, "pipelined without fusion")
   )
 
   // Start tx with runtimeTestSupport, create data
@@ -145,9 +144,9 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
 
       try {
         val results = {
-          val TestRunrime(referenceRuntime, rts, name) = runtimes.head
+          val TestRuntime(referenceRuntime, rts, name) = runtimes.head
           // If the reference runtime does not finish in time, let's just ignore this case.
-          withCluesCancelAfter(maxIterationTimeSpan, s"runtime = ${name}") {
+          withCluesCancelAfter(maxIterationTimeSpan, s"runtime = $name") {
             Try(rts.executeAndConsumeTransactionally(logicalQuery, referenceRuntime, parameters))
           }
         } +: runtimes.tail.map {
@@ -205,8 +204,8 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     }
   }
 
-  private def resultFailingIfHangs(logicalQuery: LogicalQuery, runtime: TestRunrime, parameters: Map[String, AnyRef]): IndexedSeq[Array[AnyValue]] = {
-    val TestRunrime(r, rts, name) = runtime
+  private def resultFailingIfHangs(logicalQuery: LogicalQuery, runtime: TestRuntime, parameters: Map[String, AnyRef]): IndexedSeq[Array[AnyValue]] = {
+    val TestRuntime(r, rts, name) = runtime
     val testCase = testCaseString(logicalQuery.logicalPlan, "",
       """consume(runtimeResult)
         |
