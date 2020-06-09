@@ -11,9 +11,6 @@ Feature "MiscellaneousErrorAcceptance": Scenario "Failing on merging relationshi
 Feature "MiscellaneousErrorAcceptance": Scenario "Failing on merging node with null property"
 Feature "MiscellaneousErrorAcceptance": Scenario "Failing when setting a list of maps as a property"
 
-// Bug in TCK parser
-Feature "LargeCreateQuery": Scenario "Generate the movie graph correctly"
-
 // TCK expects error but query is valid
 Feature "SemanticErrorAcceptance": Scenario "Failing when using MATCH after OPTIONAL MATCH"
 
