@@ -29,8 +29,8 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Optional;
@@ -63,11 +63,12 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
-@Disabled
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class AkkaDistributedDataLeakIT
 {
     private static final int TIMEOUT = 60;
+    private static final int WAIT_FOR_RESTART = 3_000;
+
     /** Part of Akka cluster. Bootstraps cluster. Listens to changes in distributed data, exposes for assertions */
     private Harness harness;
     /** Will be started/stopped during test. Metadata from this should be cleaned up in distributed data by repairer */
@@ -120,7 +121,7 @@ class AkkaDistributedDataLeakIT
     }
 
     @RepeatedTest( 10 )
-    void shouldNotLeakMetadataOnUncleanLeave() throws Throwable
+    void shouldNotLeakMetadataOnUncleanLeave( RepetitionInfo repetitionInfo ) throws Throwable
     {
         uncleanRestarter.start();
 
@@ -129,6 +130,14 @@ class AkkaDistributedDataLeakIT
         uncleanRestarter.stop();
 
         assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount - 1 ), TIMEOUT, SECONDS );
+
+        /* There seems to be a race condition in Akka where if a member restarts too soon after being Downed it cannot receive a Welcome message,
+           so the cluster does not correctly form. This leaves the cluster in a state where all subsequent runs (including the other, otherwise stable test)
+           will fail. */
+        if ( repetitionInfo.getCurrentRepetition() < repetitionInfo.getTotalRepetitions() )
+        {
+            Thread.sleep( WAIT_FOR_RESTART );
+        }
     }
 
     private CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory )
