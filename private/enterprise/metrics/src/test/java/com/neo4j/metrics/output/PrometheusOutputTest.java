@@ -7,6 +7,7 @@ package com.neo4j.metrics.output;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -15,14 +16,11 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
-import java.util.TreeMap;
-import java.util.function.LongConsumer;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 
-import static java.util.Collections.emptySortedMap;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -34,15 +32,9 @@ class PrometheusOutputTest
     {
         MetricRegistry registry = new MetricRegistry();
         DynamicAddressPrometheusOutput dynamicOutput = new DynamicAddressPrometheusOutput( "localhost", registry, mock( Log.class ) );
+        MutableLong value = new MutableLong( 10 );
 
-        LongConsumer callback = l ->
-        {
-            TreeMap<String,Gauge> gauges = new TreeMap<>();
-            gauges.put( "my.event", () -> l );
-            dynamicOutput.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
-        };
-
-        callback.accept( 10 );
+        registry.register( "my.event", (Gauge<Integer>) value::intValue );
 
         dynamicOutput.init();
         dynamicOutput.start();
@@ -51,7 +43,7 @@ class PrometheusOutputTest
         assertTrue( getResponse( serverAddress ).contains( "my_event 10.0" ) );
         assertTrue( getResponse( serverAddress ).contains( "my_event 10.0" ) );
 
-        callback.accept( 20 );
+        value.setValue( 20 );
         assertTrue( getResponse( serverAddress ).contains( "my_event 20.0" ) );
         assertTrue( getResponse( serverAddress ).contains( "my_event 20.0" ) );
 
@@ -64,19 +56,12 @@ class PrometheusOutputTest
         MetricRegistry registry = new MetricRegistry();
         DynamicAddressPrometheusOutput dynamicOutput = new DynamicAddressPrometheusOutput( "localhost", registry, mock( Log.class ) );
 
-        LongConsumer callback = l ->
-        {
-            TreeMap<String,Gauge> gauges = new TreeMap<>();
-            gauges.put( "my.event", () -> l );
-            dynamicOutput.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
-        };
-
-        registry.register( "my.metric", (Gauge) () -> 10 );
+        registry.register( "my.metric", (Gauge<Integer>) () -> 10 );
 
         dynamicOutput.init();
         dynamicOutput.start();
 
-        callback.accept( 20 );
+        registry.register( "my_event", (Gauge<Integer>) () -> 20 );
 
         String serverAddress = dynamicOutput.getServerAddress();
         String response = getResponse( serverAddress );

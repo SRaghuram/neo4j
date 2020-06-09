@@ -5,18 +5,12 @@
  */
 package com.neo4j.metrics.output;
 
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.neo4j.configuration.MetricsSettings;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
-import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
@@ -33,7 +27,7 @@ import static com.neo4j.configuration.MetricsSettings.csv_enabled;
 import static com.neo4j.configuration.MetricsSettings.csv_interval;
 import static com.neo4j.configuration.MetricsSettings.csv_path;
 
-public class CsvOutput implements Lifecycle, EventReporter
+public class CsvOutput implements Lifecycle
 {
     private final Config config;
     private final MetricRegistry registry;
@@ -94,13 +88,6 @@ public class CsvOutput implements Lifecycle, EventReporter
     public void shutdown()
     {
         csvReporter = null;
-    }
-
-    @Override
-    public void report( SortedMap<String,Gauge> gauges, SortedMap<String,Counter> counters,
-            SortedMap<String,Histogram> histograms, SortedMap<String,Meter> meters, SortedMap<String,Timer> timers )
-    {
-        csvReporter.report( gauges, counters, histograms, meters, timers );
     }
 
     private BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> getFileRotatingFileOutputStreamSupplier(

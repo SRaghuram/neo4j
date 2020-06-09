@@ -58,19 +58,19 @@ public class EventReporterBuilder
         this.portRegister = portRegister;
     }
 
-    public CompositeEventReporter build()
+    public boolean configure()
     {
-        CompositeEventReporter reporter = new CompositeEventReporter();
+        boolean consumersConfigured = false;
         if ( !config.get( metrics_enabled ) )
         {
-            return reporter;
+            return consumersConfigured;
         }
 
         if ( config.get( csv_enabled ) )
         {
             CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem, scheduler );
-            reporter.add( csvOutput );
             life.add( csvOutput );
+            consumersConfigured = true;
         }
 
         if ( config.get( graphite_enabled ) )
@@ -78,16 +78,16 @@ public class EventReporterBuilder
             SocketAddress server = config.get( graphite_server );
             long period = config.get( graphite_interval ).toMillis();
             GraphiteOutput graphiteOutput = new GraphiteOutput( server, period, registry, logger );
-            reporter.add( graphiteOutput );
             life.add( graphiteOutput );
+            consumersConfigured = true;
         }
 
         if ( config.get( prometheus_enabled ) )
         {
             SocketAddress server = config.get( prometheus_endpoint );
             PrometheusOutput prometheusOutput = new PrometheusOutput( server, registry, logger, portRegister );
-            reporter.add( prometheusOutput );
             life.add( prometheusOutput );
+            consumersConfigured = true;
         }
 
         if ( config.get( MetricsSettings.jmx_enabled ) )
@@ -96,9 +96,10 @@ public class EventReporterBuilder
             JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( domain )
                     .createsObjectNamesWith( new MetricsObjectNameFactory() ).build();
             life.add( new JmxOutput( jmxReporter ) );
+            consumersConfigured = true;
         }
 
-        return reporter;
+        return consumersConfigured;
     }
 
     private static class MetricsObjectNameFactory implements ObjectNameFactory

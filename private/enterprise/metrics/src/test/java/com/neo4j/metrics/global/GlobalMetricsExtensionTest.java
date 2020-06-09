@@ -54,7 +54,8 @@ class GlobalMetricsExtensionTest
     @Test
     void extensionCanBeStartedWithoutRegisteredReporters()
     {
-        Config config = Config.defaults( MetricsSettings.csv_enabled, false );
+        Config config = Config.newBuilder().set( MetricsSettings.csv_enabled, false )
+                                           .set( MetricsSettings.jmx_enabled, false ).build();
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 
@@ -98,7 +99,6 @@ class GlobalMetricsExtensionTest
             {
                 assertFalse( globalMetricsExtension.isConfigured() );
                 assertNotNull( globalMetricsExtension.getRegistry() );
-                assertNotNull( globalMetricsExtension.getReporter() );
             }
         } );
     }

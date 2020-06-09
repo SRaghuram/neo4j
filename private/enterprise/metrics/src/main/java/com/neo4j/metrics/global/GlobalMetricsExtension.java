@@ -7,8 +7,6 @@ package com.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
-import com.neo4j.metrics.output.CompositeEventReporter;
-import com.neo4j.metrics.output.EventReporter;
 import com.neo4j.metrics.output.EventReporterBuilder;
 
 import org.neo4j.configuration.Config;
@@ -24,11 +22,10 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
 {
     private final LifeSupport life = new LifeSupport();
     private final Log logger;
-    private final CompositeEventReporter reporter;
     private final MetricRegistry registry;
     private final ExtensionContext context;
     private final GlobalMetricsExtensionFactory.Dependencies dependencies;
-    private boolean configured;
+    private final boolean configured;
 
     public GlobalMetricsExtension( ExtensionContext context, Dependencies dependencies )
     {
@@ -37,14 +34,13 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
         this.dependencies = dependencies;
         this.logger = logService.getUserLog( getClass() );
         this.registry = new MetricRegistry();
-        this.reporter = new EventReporterBuilder( dependencies.configuration(), registry, logger, context, life, dependencies.fileSystemAbstraction(),
-                dependencies.scheduler(), dependencies.portRegister() ).build();
+        this.configured = new EventReporterBuilder( dependencies.configuration(), registry, logger, context, life, dependencies.fileSystemAbstraction(),
+                dependencies.scheduler(), dependencies.portRegister() ).configure();
     }
 
     @Override
     public void init()
     {
-        configured = !reporter.isEmpty();
         Config config = dependencies.configuration();
 
         if ( !config.get( metrics_enabled ) )
@@ -79,12 +75,6 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     public void shutdown()
     {
         life.shutdown();
-    }
-
-    @Override
-    public EventReporter getReporter()
-    {
-        return reporter;
     }
 
     @Override

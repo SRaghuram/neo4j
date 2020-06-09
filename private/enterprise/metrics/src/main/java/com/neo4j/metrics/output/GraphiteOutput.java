@@ -5,24 +5,18 @@
  */
 package com.neo4j.metrics.output;
 
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteReporter;
 
-import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 
-public class GraphiteOutput implements Lifecycle, EventReporter
+public class GraphiteOutput implements Lifecycle
 {
     private final SocketAddress socketAddress;
     private final long period;
@@ -69,20 +63,5 @@ public class GraphiteOutput implements Lifecycle, EventReporter
     public void shutdown()
     {
         graphiteReporter = null;
-    }
-
-    @Override
-    public void report( SortedMap<String,Gauge> gauges, SortedMap<String,Counter> counters,
-            SortedMap<String,Histogram> histograms, SortedMap<String,Meter> meters, SortedMap<String,Timer> timers )
-    {
-        /*
-         * The synchronized is needed here since the `report` method called below is also called by the recurring
-         * scheduled thread.  In order to avoid races with that thread we synchronize on the same monitor
-         * before reporting.
-         */
-        synchronized ( graphiteReporter )
-        {
-            graphiteReporter.report( gauges, counters, histograms, meters, timers );
-        }
     }
 }

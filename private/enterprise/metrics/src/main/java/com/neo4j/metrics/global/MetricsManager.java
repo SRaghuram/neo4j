@@ -6,12 +6,9 @@
 package com.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.metrics.output.EventReporter;
 
 public interface MetricsManager
 {
-    EventReporter getReporter();
-
     MetricRegistry getRegistry();
 
     boolean isConfigured();
