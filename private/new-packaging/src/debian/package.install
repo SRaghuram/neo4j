@@ -8,5 +8,6 @@ server/bin/tools    usr/share/neo4j
 server/bin          usr/share/neo4j
 server/lib          usr/share/neo4j
 server/plugins      var/lib/neo4j
+server/labs         var/lib/neo4j
 
 server/conf/*       etc/neo4j

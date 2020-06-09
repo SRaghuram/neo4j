@@ -130,6 +130,7 @@ mkdir -p %{buildroot}/%{_datadir}/neo4j/bin/tools
 mkdir -p %{buildroot}/%{_datadir}/doc/neo4j
 mkdir -p %{buildroot}/%{neo4jhome}/certificates
 mkdir -p %{buildroot}/%{neo4jhome}/plugins
+mkdir -p %{buildroot}/%{neo4jhome}/labs
 mkdir -p %{buildroot}/%{neo4jhome}/data/databases
 mkdir -p %{buildroot}/%{neo4jhome}/data/dbms
 mkdir -p %{buildroot}/%{neo4jhome}/data/dumps
@@ -153,6 +154,7 @@ install -m 0644 server/conf/* %{buildroot}/%{_sysconfdir}/neo4j
 install -m 0755 server/scripts/* %{buildroot}/%{_bindir}
 install -m 0755 server/lib/* %{buildroot}/%{_datadir}/neo4j/lib
 install -m 0755 server/plugins/* %{buildroot}/%{neo4jhome}/plugins
+install -m 0755 server/labs/* %{buildroot}/%{neo4jhome}/labs
 
 cp -r server/bin/* %{buildroot}/%{_datadir}/neo4j/bin
 chmod -R 0755 %{buildroot}/%{_datadir}/neo4j/bin
@@ -167,6 +169,7 @@ install -m 0644 manpages/* %{buildroot}/%{_mandir}/man1
 %defattr(-,root,root)
 # Needed to make sure empty directories get created
 %dir %{neo4jhome}/plugins
+%dir %{neo4jhome}/labs
 %dir %{neo4jhome}/import
 %dir %{neo4jhome}/data/databases
 %dir %{neo4jhome}/data/dbms
