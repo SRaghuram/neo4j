@@ -32,6 +32,7 @@ public class Query
     private static final String DESCRIPTION = "description";
     private static final String WARMUP_QUERY_FILE = "warmupQueryFile";
     private static final String QUERY_FILE = "queryFile";
+    private static final String COMMENT = "comment";
     private static final String IS_SINGLE_SHOT = "isSingleShot";
     private static final String IS_MUTATING = "isMutating";
     private static final String PARAMETERS = "parameters";
@@ -45,7 +46,8 @@ public class Query
                                                                    QUERY_FILE,
                                                                    IS_SINGLE_SHOT,
                                                                    IS_MUTATING,
-                                                                   PARAMETERS );
+                                                                   PARAMETERS,
+                                                                   COMMENT );
 
     private final String group;
     private final String name;
