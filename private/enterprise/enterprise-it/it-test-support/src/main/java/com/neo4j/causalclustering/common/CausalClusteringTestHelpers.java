@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -34,6 +36,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
@@ -83,6 +86,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -97,6 +101,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
+import static org.neo4j.function.Predicates.await;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
@@ -185,6 +190,55 @@ public final class CausalClusteringTestHelpers
                 .resolveDependency( ConnectorPortRegister.class )
                 .getLocalAddress( TransactionBackupServiceProvider.BACKUP_SERVER_NAME )
                 .toString();
+    }
+
+    public static CoreClusterMember switchLeader( Cluster cluster ) throws Exception
+    {
+        return switchLeader( cluster, DEFAULT_DATABASE_NAME );
+    }
+
+    public static CoreClusterMember switchLeader( Cluster cluster, String databaseName ) throws Exception
+    {
+        return switchLeaderTo( cluster, databaseName, null );
+    }
+
+    public static CoreClusterMember switchLeaderTo( Cluster cluster, CoreClusterMember desiredLeader ) throws Exception
+    {
+        return switchLeaderTo( cluster, DEFAULT_DATABASE_NAME, desiredLeader );
+    }
+
+    public static CoreClusterMember switchLeaderTo( Cluster cluster, String databaseName, CoreClusterMember desiredLeader ) throws Exception
+    {
+        return await( () -> switchLeaderTo0( cluster, databaseName, desiredLeader ), Objects::nonNull, 2, MINUTES );
+    }
+
+    private static CoreClusterMember switchLeaderTo0( Cluster cluster, String databaseName, CoreClusterMember desiredLeader )
+    {
+        try
+        {
+            var leader = cluster.awaitLeader( databaseName );
+            var raftMachine = leader.resolveDependency( databaseName, RaftMachine.class );
+            var followers = cluster.coreMembers().stream().filter( member -> !member.equals( leader ) ).collect( Collectors.toList() );
+            if ( desiredLeader != null )
+            {
+                if ( leader.equals( desiredLeader ) )
+                {
+                    return desiredLeader;
+                }
+                assertThat( "Desired leader is not one of the followers", followers.contains( desiredLeader ), is( true ) );
+            }
+            else
+            {
+                desiredLeader = followers.get( 0 ); // maybe randomize
+            }
+            // this here is the magic, where in the name of the current leader the desired leader is proposed as a new leader
+            raftMachine.handle( new RaftMessages.LeadershipTransfer.Proposal( leader.id(), desiredLeader.id(), Set.of() ) );
+            return await( () -> cluster.getMemberWithAnyRole( DEFAULT_DATABASE_NAME, Role.LEADER ), desiredLeader::equals, 15, SECONDS );
+        }
+        catch ( Exception e )
+        {
+            return null;
+        }
     }
 
     public static void forceReelection( Cluster cluster, String databaseName ) throws Exception

@@ -8,36 +8,30 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogCommitIndexMonitor;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongConsumer;
-import java.util.function.Predicate;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.switchLeaderTo;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -65,41 +59,41 @@ class CCIdReuseBySwitchAndRollbackIT
     private ClusterFactory clusterFactory;
 
     private ExecutorService executorService;
+    private Cluster cluster;
 
     @BeforeEach
-    void startExecutor()
+    void start() throws ExecutionException, InterruptedException
     {
         executorService = Executors.newSingleThreadExecutor();
+        cluster = clusterFactory.createCluster( clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "NO_BALANCING" ) );
+        cluster.start();
     }
 
     @AfterEach
-    void stopExecutor()
+    void stop()
     {
         executorService.shutdown();
+        cluster.shutdown();
     }
 
     @Test
     void shouldTryToReproduceIt() throws Exception
     {
-        // given
-        Cluster cluster = clusterFactory.createCluster( clusterConfig()
-                .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "2s-3s" )
-                .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "2s-3s" ) );
-        cluster.start();
         //add monitors
-        List<RaftLogCommitIndexMonitor> monitors = registerMonitors( cluster );
+        var monitors = registerMonitors( cluster );
 
         // Instance A is leader
-        CoreClusterMember instanceA = cluster.awaitLeader();
-        Set<CoreClusterMember> allMembers = cluster.coreMembers();
+        var instanceA = cluster.awaitLeader();
+        var allMembers = cluster.coreMembers();
         // Relationship R, created and in use
-        long node = createNode( instanceA );
-        long otherNode = createNode( instanceA );
+        var node = createNode( instanceA );
+        var otherNode = createNode( instanceA );
         createRelationship( instanceA, node, null, null ); // <-- simply to sit there in the chain so that R locks it on createCommands
-        long relationship = createRelationship( instanceA, node, null, null );
-        long unrelatedRelationship = createRelationship( instanceA, otherNode, null, null );
+        var relationship = createRelationship( instanceA, node, null, null );
+        var unrelatedRelationship = createRelationship( instanceA, otherNode, null, null );
         // Relationship R deleted, and therefore in the freelist of course
         deleteRelationship( instanceA, relationship );
         doIdMaintenance( allMembers );
@@ -107,16 +101,16 @@ class CCIdReuseBySwitchAndRollbackIT
 
         // when
         // A transaction T that creates a relationship, which will be R (assert this)... DON'T COMMIT, BUT KEEP THE TX OPEN!
-        Barrier.Control barrier = new Barrier.Control();
-        Future<Long> t = executorService.submit( () -> createRelationship( instanceA, node, barrier::reached, id -> assertEquals( relationship, id ) ) );
+        var barrier = new Barrier.Control();
+        var t = executorService.submit( () -> createRelationship( instanceA, node, barrier::reached, id -> assertEquals( relationship, id ) ) );
         barrier.await();
         // Do a leader switch, so that instance B is now leader
         // Instance B performs a transaction that creates a relationship, which will also be R (assert this)
-        CoreClusterMember instanceB = switchLeaderFrom( cluster, monitors, instanceA );
+        var instanceB = switchLeader( cluster, monitors, null );
         doIdMaintenance( allMembers );
         createRelationship( instanceB, node, null, id -> assertEquals( relationship, id ) );
         // Now do a leader switch back to instance A
-        switchLeaderTo( cluster, monitors, instanceA );
+        switchLeader( cluster, monitors, instanceA );
         // Let T continue and fail, which will then mark R as deleted when it's rolling back     <---- this is the bug, right there
         barrier.release();
         assertThrows( Exception.class, t::get );
@@ -124,24 +118,10 @@ class CCIdReuseBySwitchAndRollbackIT
         doIdMaintenance( allMembers );
 
         // then
-        for ( int i = 0; i < 10; i++ )
+        for ( var i = 0; i < 10; i++ )
         {
             createRelationship( instanceA, otherNode, null, id -> assertNotEquals( relationship, id ) );
         }
-    }
-
-    private CoreClusterMember switchLeaderFrom( Cluster cluster,
-            List<RaftLogCommitIndexMonitor> monitors,
-            CoreClusterMember expectedCurrentLeader ) throws Exception
-    {
-        return switchLeader( cluster, monitors, memberId -> expectedCurrentLeader.id().equals( memberId ) );
-    }
-
-    private void switchLeaderTo( Cluster cluster,
-            List<RaftLogCommitIndexMonitor> monitors,
-            CoreClusterMember expectedNewLeader ) throws Exception
-    {
-        switchLeader( cluster, monitors, memberId -> !memberId.equals( expectedNewLeader.id() ) );
     }
 
     private void doIdMaintenance( Iterable<CoreClusterMember> members )
@@ -151,28 +131,22 @@ class CCIdReuseBySwitchAndRollbackIT
 
     private void doIdMaintenance( CoreClusterMember instance )
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) instance.managementService().database( DEFAULT_DATABASE_NAME );
+        var db = (GraphDatabaseAPI) instance.managementService().database( DEFAULT_DATABASE_NAME );
         db.getDependencyResolver().resolveDependency( IdController.class ).maintenance();
     }
 
     private CoreClusterMember switchLeader( Cluster cluster,
             List<RaftLogCommitIndexMonitor> monitors,
-            Predicate<MemberId> shouldRetry ) throws Exception
+            CoreClusterMember expectedNewLeader ) throws Exception
     {
         assertEventually( "Members could not catch up", () -> allMonitorsHaveSameIndex( monitors ), same -> same, 30, TimeUnit.SECONDS );
-        forceReelection( cluster, DEFAULT_DATABASE_NAME );
-        var newLeader = cluster.awaitLeader();
-        if ( shouldRetry.test( newLeader.id() ) )
-        {
-            return switchLeader( cluster, monitors, shouldRetry );
-        }
-        return newLeader;
+        return switchLeaderTo( cluster, expectedNewLeader );
     }
 
     private void deleteRelationship( CoreClusterMember instance, long relationship )
     {
-        GraphDatabaseService db = instance.managementService().database( DEFAULT_DATABASE_NAME );
-        try ( Transaction tx = db.beginTx() )
+        var db = instance.managementService().database( DEFAULT_DATABASE_NAME );
+        try ( var tx = db.beginTx() )
         {
             tx.getRelationshipById( relationship ).delete();
             tx.commit();
@@ -181,11 +155,11 @@ class CCIdReuseBySwitchAndRollbackIT
 
     private long createRelationship( CoreClusterMember instance, long nodeId, Runnable waiter, LongConsumer relationshipIdVerifier )
     {
-        GraphDatabaseService db = instance.managementService().database( DEFAULT_DATABASE_NAME );
-        try ( Transaction tx = db.beginTx() )
+        var db = instance.managementService().database( DEFAULT_DATABASE_NAME );
+        try ( var tx = db.beginTx() )
         {
-            Node node = tx.getNodeById( nodeId );
-            Relationship relationship = node.createRelationshipTo( node, MyRelTypes.TEST );
+            var node = tx.getNodeById( nodeId );
+            var relationship = node.createRelationshipTo( node, MyRelTypes.TEST );
             if ( relationshipIdVerifier != null )
             {
                 relationshipIdVerifier.accept( relationship.getId() );
@@ -201,10 +175,10 @@ class CCIdReuseBySwitchAndRollbackIT
 
     private long createNode( CoreClusterMember instance )
     {
-        GraphDatabaseService db = instance.managementService().database( DEFAULT_DATABASE_NAME );
-        try ( Transaction tx = db.beginTx() )
+        var db = instance.managementService().database( DEFAULT_DATABASE_NAME );
+        try ( var tx = db.beginTx() )
         {
-            Node node = tx.createNode();
+            var node = tx.createNode();
             tx.commit();
             return node.getId();
         }
@@ -212,7 +186,7 @@ class CCIdReuseBySwitchAndRollbackIT
 
     private static List<RaftLogCommitIndexMonitor> registerMonitors( Cluster cluster )
     {
-        List<RaftLogCommitIndexMonitor> monitors = new ArrayList<>();
+        var monitors = new ArrayList<RaftLogCommitIndexMonitor>();
         cluster.coreMembers().forEach( coreClusterMember -> {
             var monitor = new StubRaftLogCommitIndexMonitor();
             var clusterMonitors = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( RaftMonitors.class );
