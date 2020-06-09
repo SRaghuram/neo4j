@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
-import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -74,7 +73,7 @@ class PanicServiceTest
         assertFalse( lockedEventHandler1.isComplete );
         lockedEventHandler1.unlock();
 
-        assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler1.isComplete, TRUE, 1, SECONDS );
+        assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler1.isComplete, TRUE, 30, SECONDS );
         assertEquals( 1, lockedEventHandler1.numberOfPanicEvents.get() );
 
         assertEquals( 0, lockedEventHandler2.numberOfPanicEvents.get() );
@@ -114,8 +113,7 @@ class PanicServiceTest
         var panicker = panicService.panickerFor( namedDatabaseId1 );
         panicker.panic( new Exception() );
 
-        assertEventually( numberOfInvokedHandlers::get, value -> value == handlers.size(), 30,
-                SECONDS );
+        assertEventually( numberOfInvokedHandlers::get, value -> value == handlers.size(), 30, SECONDS );
     }
 
     @Test
