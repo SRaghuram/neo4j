@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StandardReducer
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -32,16 +33,23 @@ object AggregatedRowAccumulator {
 
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): AggregatedRowAccumulator =
+                                          argumentRowIdsForReducers: Array[Long]): AggregatedRowAccumulator = {
+      var i = 0
+      val reducers = new Array[StandardReducer](aggregators.length)
+      while (i < reducers.length) {
+        reducers(i) = aggregators(i).newStandardReducer(memoryTracker)
+        i += 1
+      }
       AggregatedRowAccumulator(
         argumentRowId,
         argumentRowIdsForReducers,
         argumentMorsel.snapshot(),
-        if (needToApplyUpdates)
-          new StandardAggregators(aggregators.map(_.newStandardReducer(memoryTracker)))
-        else
-          new StandardDirectAggregators(aggregators.map(_.newStandardReducer(memoryTracker)))
-      )
+        if (needToApplyUpdates) {
+          new StandardAggregators(reducers)
+        } else {
+          new StandardDirectAggregators(reducers)
+        })
+    }
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
