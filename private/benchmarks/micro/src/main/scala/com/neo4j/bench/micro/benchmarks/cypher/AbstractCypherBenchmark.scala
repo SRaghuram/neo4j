@@ -126,14 +126,25 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       labels.foreach { label =>
         systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
         systemDb().executeTransactionally(s"GRANT CREATE ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
-        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES ${label.name()} TO RoleWithGrants"))
+        nodeProperties.foreach(p => {
+          systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
+          systemDb().executeTransactionally(s"GRANT SET PROPERTY {${p.key()}} ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
+        })
+        if (nodeProperties.isEmpty) {
+          systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
+          systemDb().executeTransactionally(s"GRANT SET PROPERTY {*} ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
+        }
       }
       if (labels.isEmpty) {
         systemDb().executeTransactionally("GRANT TRAVERSE ON GRAPH * NODES * TO RoleWithGrants")
         systemDb().executeTransactionally(s"GRANT CREATE ON GRAPH * NODES * TO RoleWithGrants")
-        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES * TO RoleWithGrants"))
+        nodeProperties.foreach(p => {
+          systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES * TO RoleWithGrants")
+          systemDb().executeTransactionally(s"GRANT SET PROPERTY {${p.key()}} ON GRAPH * NODES * TO RoleWithGrants")
+        })
         if (nodeProperties.isEmpty) {
-          nodeProperties.foreach(_ => systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES * TO RoleWithGrants"))
+          systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES * TO RoleWithGrants")
+          systemDb().executeTransactionally(s"GRANT SET PROPERTY {*} ON GRAPH * NODES * TO RoleWithGrants")
         }
       }
       relTypes.foreach { relDefinition =>
@@ -148,6 +159,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       systemDb().executeTransactionally("DENY TRAVERSE ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
       systemDb().executeTransactionally("DENY CREATE ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
       systemDb().executeTransactionally("DENY READ {deniedProp} ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
+      systemDb().executeTransactionally("DENY SET PROPERTY {deniedProp} ON GRAPH * ELEMENTS DENIED TO RoleWithDenies")
 
       // User with grants
       systemDb().executeTransactionally("CREATE USER userWithGrants IF NOT EXISTS SET PASSWORD 'abc123' CHANGE NOT REQUIRED")
