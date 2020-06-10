@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.procs;
 
 import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.ProcedureHelpers.LongResult;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -83,20 +84,10 @@ public class ProcedureCall extends AbstractProceduresBenchmark
                 ThreadLocal.withInitial( () -> RNGState.newRandom( 42L ) );
 
         @Procedure( name = "tester.procedure" )
-        public Stream<LongValue> procedure( @Name( "value" ) Long value )
+        public Stream<LongResult> procedure( @Name( "value" ) Long value )
         {
             SplittableRandom rng = THREAD_LOCAL_RNG.get();
-            return LongStream.range( 0, value ).mapToObj( l -> new LongValue( rng.nextLong() ) );
-        }
-    }
-
-    public static class LongValue
-    {
-        public Long value;
-
-        public LongValue( Long value )
-        {
-            this.value = value;
+            return LongStream.range( 0, value ).mapToObj( l -> new LongResult( rng.nextLong() ) );
         }
     }
 

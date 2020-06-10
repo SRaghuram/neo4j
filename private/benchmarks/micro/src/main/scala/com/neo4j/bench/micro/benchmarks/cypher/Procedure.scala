@@ -8,11 +8,12 @@ package com.neo4j.bench.micro.benchmarks.cypher
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
+import com.neo4j.bench.micro.ProcedureHelpers.TestProcedures
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
+import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astFunctionInvocation
 import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.TypeParamValues
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
@@ -52,7 +53,7 @@ class Procedure extends AbstractProcedureCall {
   var outputRowsPerInputRow: Int = _
 
   override protected def procedureName(procedures: GlobalProcedures): plans.QualifiedName = {
-    procedures.registerProcedure(classOf[TestProcedure])
+    procedures.registerProcedure(classOf[TestProcedures])
     new plans.QualifiedName(Array[String]("bench"), "procedure")
   }
 

@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import com.neo4j.bench.micro.benchmarks.procs.ProcedureCall.LongValue
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.Plans.Pos
 import com.neo4j.bench.micro.data.Plans.astVariable
@@ -25,7 +24,6 @@ import org.neo4j.cypher.internal.spi.procsHelpers.asOption
 import org.neo4j.internal.kernel
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.kernel.internal.GraphDatabaseAPI
-import org.neo4j.procedure.Name
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 
@@ -78,9 +76,3 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
 
   protected def procedureName(procedures: GlobalProcedures): QualifiedName
 }
-
-class TestProcedure {
-  @org.neo4j.procedure.Procedure(name = "bench.procedure")
-  def procedure(@Name("value") value: Long): java.util.stream.Stream[LongValue] = java.util.stream.LongStream.range(0, value).mapToObj(new LongValue(_))
-}
-
