@@ -91,6 +91,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
@@ -360,6 +361,8 @@ class PipelinedLetSemiApplyNoFusingTest extends LetSemiApplyTestBase(NO_FUSING, 
 // SELECT OR SEMI APPLY
 class PipelinedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedSelectOrSemiApplyNoFusingTest extends SelectOrSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedSelectOrAntiSemiApplyTest extends SelectOrAntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedSelectOrAntiSemiApplyNoFusingTest extends SelectOrAntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 //CONDITIONAL APPLY
 class PipelinedConditionalApplyTest extends ConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
