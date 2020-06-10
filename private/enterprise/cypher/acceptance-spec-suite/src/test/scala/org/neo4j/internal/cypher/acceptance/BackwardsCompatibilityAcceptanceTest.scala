@@ -343,11 +343,11 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     }
     exception_40.getMessage should include("DEFAULT DATABASE is not supported in this Cypher version.")
 
-    // WHEN 4.1
-    val exception_41 = the[InvalidArgumentsException] thrownBy {
+    // WHEN 4.2
+    val exception_42 = the[InvalidArgumentsException] thrownBy {
       executeSingle("DENY INDEX ON DEFAULT DATABASE TO role")
     }
-    exception_41.getMessage should include("Failed to deny index privilege to role 'role': Role does not exist.")
+    exception_42.getMessage should include("Failed to deny index privilege to role 'role': Role does not exist.")
   }
 
   test("revoke DEFAULT DATABASE is not supported in 3.5 or 4.0") {
