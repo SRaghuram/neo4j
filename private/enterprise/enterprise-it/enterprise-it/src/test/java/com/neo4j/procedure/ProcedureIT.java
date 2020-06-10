@@ -369,7 +369,7 @@ public class ProcedureIT
                     "Procedure call does not provide the required number of arguments: " +
                     "got 0 expected at least 2 (total: 3, 1 of which have default values).%n%n" +
                     "Procedure com.neo4j.procedure.sideEffectWithDefault has signature: com.neo4j.procedure" +
-                    ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID%n" +
+                    ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  'Zhang Wei' :: STRING?) :: VOID%n" +
                     "meaning that it expects at least 2 arguments of types STRING?, STRING?%n " +
                     "(line 1, column 1 (offset: 0))" ) );
         }
