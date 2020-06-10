@@ -34,9 +34,10 @@ abstract class SemiApplyRewriterTestBase[CONTEXT <: RuntimeContext](
     // then
     val (runtimeResult, executionPlanDescription) = executeAndExplain(logicalQuery, runtime, inputValues(inputRows: _*))
 
-    executionPlanDescription should includeSomewhere.nTimes(1, aPlan("Apply"))
-    executionPlanDescription should includeSomewhere.nTimes(1, aPlan("Limit"))
-    executionPlanDescription shouldNot includeSomewhere.aPlan("SemiApply")
+    executionPlanDescription should includeSomewhere
+      .aPlan("Apply")
+        .withLHS(aPlan("Input"))
+        .withRHS(aPlan("Limit").onTopOf(aPlan("Argument")))
 
     runtimeResult should beColumns("x").withRows(inputRows)
   }
@@ -57,9 +58,10 @@ abstract class SemiApplyRewriterTestBase[CONTEXT <: RuntimeContext](
     // then
     val (runtimeResult, executionPlanDescription) = executeAndExplain(logicalQuery, runtime, inputValues(inputRows: _*))
 
-    executionPlanDescription should includeSomewhere.nTimes(1, aPlan("SelectOrSemiApply"))
-    executionPlanDescription should includeSomewhere.nTimes(1, aPlan("Limit"))
-    executionPlanDescription shouldNot includeSomewhere.aPlan("SemiApply")
+    executionPlanDescription should includeSomewhere
+      .aPlan("SelectOrSemiApply")
+      .withLHS(aPlan("Input"))
+      .withRHS(aPlan("Limit").onTopOf(aPlan("Argument")))
 
     runtimeResult should beColumns("x").withRows(inputRows)
   }

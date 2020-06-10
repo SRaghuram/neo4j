@@ -28,16 +28,18 @@ case class semiApplyToLimitApply(cardinalities: Cardinalities,
                                  idGen: IdGen) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o @ SemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
-      val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
-      cardinalities.set(limit.id, cardinalities.get(lhs.id))
-      providedOrders.copy(rhs.id, limit.id)
-      Apply(lhs, limit)(SameId(o.id))
+      Apply(lhs, newRhs(lhs, rhs))(SameId(o.id))
     case o @ SelectOrSemiApply(lhs: LogicalPlan, rhs: LogicalPlan, _) =>
-      val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
-      cardinalities.set(limit.id, cardinalities.get(lhs.id))
-      providedOrders.copy(rhs.id, limit.id)
-      o.copy(right = limit)(SameId(o.id))
+      o.copy(right = newRhs(lhs, rhs))(SameId(o.id))
   })
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
+
+  private def newRhs(lhs: LogicalPlan, rhs: LogicalPlan) = {
+    val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
+    cardinalities.set(limit.id, cardinalities.get(lhs.id))
+    providedOrders.copy(rhs.id, limit.id)
+    limit
+  }
 }
+

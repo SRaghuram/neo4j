@@ -29,29 +29,24 @@ case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
                                          idGen: IdGen) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o@AntiSemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
-      val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
-      val anti = Anti(limit)(idGen)
-      val lhsCardinality = cardinalities.get(lhs.id)
-      def updateAttributes(newPlan: LogicalPlan): Unit = {
-        cardinalities.set(newPlan.id, lhsCardinality)
-        providedOrders.copy(rhs.id, newPlan.id)
-      }
-      updateAttributes(limit)
-      updateAttributes(anti)
-      Apply(lhs, anti)(SameId(o.id))
+      Apply(lhs, newRhs(lhs, rhs))(SameId(o.id))
 
     case o@SelectOrAntiSemiApply(lhs: LogicalPlan, rhs: LogicalPlan, _) =>
-      val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
-      val anti = Anti(limit)(idGen)
-      val lhsCardinality = cardinalities.get(lhs.id)
-      def updateAttributes(newPlan: LogicalPlan): Unit = {
-        cardinalities.set(newPlan.id, lhsCardinality)
-        providedOrders.copy(rhs.id, newPlan.id)
-      }
-      updateAttributes(limit)
-      updateAttributes(anti)
-      o.copy(right = anti)(SameId(o.id))
+      o.copy(right = newRhs(lhs, rhs))(SameId(o.id))
   })
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
+
+  private def newRhs(lhs: LogicalPlan, rhs: LogicalPlan) = {
+    val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
+    val anti = Anti(limit)(idGen)
+    val lhsCardinality = cardinalities.get(lhs.id)
+    def updateAttributes(newPlan: LogicalPlan): Unit = {
+      cardinalities.set(newPlan.id, lhsCardinality)
+      providedOrders.copy(rhs.id, newPlan.id)
+    }
+    updateAttributes(limit)
+    updateAttributes(anti)
+    anti
+  }
 }

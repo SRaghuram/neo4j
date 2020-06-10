@@ -732,13 +732,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val expression = if (vars.size == 1) vars.head else Ors(vars.toSet)(InputPosition.NONE)
         outputToConditionalSink(expression, lhs, argumentSlotOffset, plan)
 
-      case plans.SelectOrSemiApply(_, _, expression) =>
+      case p: plans.AbstractSelectOrSemiApply =>
         val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
-        outputToConditionalSink(expression, lhs, argumentSlotOffset, plan)
-
-      case plans.SelectOrAntiSemiApply(_, _, expression) =>
-        val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
-        outputToConditionalSink(expression, lhs, argumentSlotOffset, plan)
+        outputToConditionalSink(p.expression, lhs, argumentSlotOffset, plan)
 
       case _: plans.CartesianProduct =>
         val rhsSlots = slotConfigurations(plan.rhs.get.id)

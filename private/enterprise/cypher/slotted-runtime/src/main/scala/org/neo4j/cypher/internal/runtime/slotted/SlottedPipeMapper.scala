@@ -501,10 +501,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Apply(_, _) =>
         ApplySlottedPipe(lhs, rhs)(id)
 
-//      case _: AbstractSemiApply |
-//           _: AbstractSelectOrSemiApply =>
-//        fallback.onTwoChildPlan(plan, lhs, rhs)
-
       case RollUpApply(_, rhsPlan, collectionName, identifierToCollect, nullables) =>
         val rhsSlots = slotConfigs(rhsPlan.id)
         val identifierToCollectExpression = createProjectionForIdentifier(rhsSlots)(identifierToCollect)
