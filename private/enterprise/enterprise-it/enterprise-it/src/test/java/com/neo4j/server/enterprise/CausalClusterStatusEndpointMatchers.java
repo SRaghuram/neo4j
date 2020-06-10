@@ -5,7 +5,8 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.harness.internal.CausalClusterInProcessBuilder.CausalCluster;
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
 import org.assertj.core.api.Condition;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -17,10 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
-
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.Neo4j;
 
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryStatusEndpoint;
 import static java.lang.String.format;
@@ -162,7 +159,7 @@ class CausalClusterStatusEndpointMatchers
         return new Condition<>( values -> values.stream().distinct().count() == 1, "Values should be equal" );
     }
 
-    static Callable<Map<String,Object>> statusEndpoint( Neo4j server, String databaseName )
+    static Callable<Map<String,Object>> statusEndpoint( ClusterMember server, String databaseName )
     {
         return () -> queryStatusEndpoint( server, databaseName ).body();
     }
@@ -170,15 +167,6 @@ class CausalClusterStatusEndpointMatchers
     static Callable<Boolean> canVote( Callable<Map<String,Object>> statusDescription )
     {
         return () -> Boolean.parseBoolean( statusDescription.call().get( FIELD_PARTICIPATING ).toString() );
-    }
-
-    static Long getNodeCount( Neo4j serverControls )
-    {
-        GraphDatabaseService db = serverControls.defaultDatabaseService();
-        try ( Transaction transaction = db.beginTx() )
-        {
-            return transaction.getAllNodes().stream().count();
-        }
     }
 
     static <T> Callable<Collection<T>> asCollection( Callable<T> supplier )
@@ -195,17 +183,16 @@ class CausalClusterStatusEndpointMatchers
                 .collect( toList() );
     }
 
-    static Callable<Collection<Map<String,Object>>> allStatusEndpointValues( CausalCluster cluster, String databaseName )
+    static Callable<Collection<Map<String,Object>>> allStatusEndpointValues( Cluster cluster, String databaseName )
     {
-        return () -> cluster.getCoresAndReadReplicas()
+        return () -> cluster.allMembers()
                 .stream()
                 .map( controls -> queryStatusEndpoint( controls, databaseName ).body() )
                 .collect( toList() );
     }
 
-    static <T> Callable<Collection<T>> allReplicaFieldValues( CausalCluster cluster,
-            Function<Neo4j,T> mapper )
+    static <T> Callable<Collection<T>> allReplicaFieldValues( Cluster cluster, Function<ClusterMember,T> mapper )
     {
-        return () -> cluster.getReadReplicas().stream().map( mapper ).collect( toList() );
+        return () -> cluster.readReplicas().stream().map( mapper ).collect( toList() );
     }
 }

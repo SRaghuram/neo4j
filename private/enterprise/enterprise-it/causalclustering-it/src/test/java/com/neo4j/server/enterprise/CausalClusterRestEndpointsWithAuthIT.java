@@ -5,65 +5,62 @@
  */
 package com.neo4j.server.enterprise;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.configuration.CausalClusteringSettings;
-import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.net.http.HttpResponse;
-import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.config.Setting;
-import org.neo4j.harness.Neo4j;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.awaitLeader;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterStatusEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.startCluster;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.hamcrest.Matchers.oneOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@TestInstance( PER_CLASS )
-@TestDirectoryExtension
-@ExtendWith( SuppressOutputExtension.class )
+@ClusterExtension
 class CausalClusterRestEndpointsWithAuthIT
 {
     @Inject
-    private static TestDirectory testDirectory;
+    private ClusterFactory clusterFactory;
 
-    private static CausalClusterInProcessBuilder.CausalCluster cluster;
+    private Cluster cluster;
 
     @BeforeAll
-    static void setupClass() throws Exception
+    void setupClass() throws Exception
     {
-        Map<Setting<?>,?> additionalConf = Map.of(
-                GraphDatabaseSettings.auth_enabled, true,
-                CausalClusteringSettings.status_auth_enabled, false );
+        var clusterConfig = ClusterConfig
+                .clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 2 )
+                .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
+                .withSharedReadReplicaParam( GraphDatabaseSettings.auth_enabled, "true" )
+                .withSharedCoreParam( CausalClusteringSettings.status_auth_enabled, "false" )
+                .withSharedReadReplicaParam( CausalClusteringSettings.status_auth_enabled, "false" );
 
-        cluster = startCluster( testDirectory, additionalConf );
-        assertNotNull( awaitLeader( cluster, SYSTEM_DATABASE_NAME ) );
-        assertNotNull( awaitLeader( cluster, DEFAULT_DATABASE_NAME ) );
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+
+        cluster.awaitLeader( SYSTEM_DATABASE_NAME );
+        cluster.awaitLeader( DEFAULT_DATABASE_NAME );
     }
 
     @AfterAll
-    static void shutdownClass()
+    void shutdownClass()
     {
         if ( cluster != null )
         {
@@ -113,16 +110,16 @@ class CausalClusterRestEndpointsWithAuthIT
         verifyEndpointAccessible( ( member, ignore ) -> queryLegacyClusterStatusEndpoint( member ) );
     }
 
-    private static void verifyEndpointAccessible( BiFunction<Neo4j,String,HttpResponse<?>> requestExecutor ) throws Exception
+    private void verifyEndpointAccessible( BiFunction<ClusterMember,String,HttpResponse<?>> requestExecutor ) throws Exception
     {
         // HTTP response status code should be either 200 or 404. Some endpoints return 404 to indicate a negative response
         // The response status code should never be 401 Unauthorized.
         var endpointAccessible = new HamcrestCondition<>( oneOf( OK.getStatusCode(), NOT_FOUND.getStatusCode() ) );
 
-        for ( var core : cluster.getCoresAndReadReplicas() )
+        for ( var member : cluster.allMembers() )
         {
-            assertEventually( () -> requestExecutor.apply( core, SYSTEM_DATABASE_NAME ).statusCode(), endpointAccessible, 1, MINUTES );
-            assertEventually( () -> requestExecutor.apply( core, DEFAULT_DATABASE_NAME ).statusCode(), endpointAccessible, 1, MINUTES );
+            assertEventually( () -> requestExecutor.apply( member, SYSTEM_DATABASE_NAME ).statusCode(), endpointAccessible, 1, MINUTES );
+            assertEventually( () -> requestExecutor.apply( member, DEFAULT_DATABASE_NAME ).statusCode(), endpointAccessible, 1, MINUTES );
         }
     }
 }

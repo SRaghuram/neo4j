@@ -5,24 +5,23 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.awaitLeader;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.httpURI;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryAvailabilityEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryClusterEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterEndpoint;
@@ -30,7 +29,6 @@ import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.query
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryReadOnlyEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryStatusEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryWritableEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.startCluster;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.writeSomeData;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.coreFieldIs;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.discoveryHealthFieldIs;
@@ -65,39 +63,41 @@ import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.assertion.Assert.awaitUntilAsserted;
-import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
-@TestInstance( PER_CLASS )
-@TestDirectoryExtension
-@ExtendWith( SuppressOutputExtension.class )
+@ClusterExtension
 class CausalClusterRestEndpointsIT
 {
     private static final String KNOWN_DB = DEFAULT_DATABASE_NAME;
     private static final String UNKNOWN_DB = "foobar";
 
     @Inject
-    private static TestDirectory testDirectory;
+    private ClusterFactory clusterFactory;
 
-    private static CausalClusterInProcessBuilder.CausalCluster cluster;
+    private Cluster cluster;
 
     @BeforeAll
-    static void setupClass()
+    void setupClass() throws ExecutionException, InterruptedException
     {
-        cluster = startCluster( testDirectory );
+        var clusterConfig = ClusterConfig
+                .clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 2 );
 
-        for ( var core : cluster.getCores() )
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+
+        for ( var core : cluster.coreMembers() )
         {
             assertEventually( canVote( statusEndpoint( core, KNOWN_DB ) ), TRUE, 1, MINUTES );
         }
     }
 
     @AfterAll
-    static void shutdownClass()
+    void shutdownClass()
     {
         if ( cluster != null )
         {
@@ -108,14 +108,14 @@ class CausalClusterRestEndpointsIT
     @Test
     void clusterEndpointsAreReachable()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryClusterEndpoint( neo4j, KNOWN_DB );
                 assertEquals( OK.getStatusCode(), response.statusCode() );
 
-                var baseUri = neo4j.httpURI().resolve( "/db/" + KNOWN_DB + "/cluster/" );
+                var baseUri = httpURI( neo4j ).resolve( "/db/" + KNOWN_DB + "/cluster/" );
 
                 var expectedBody = Map.<String,Object>of(
                         "available", baseUri.resolve( "available" ).toString(),
@@ -131,7 +131,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void clusterEndpointsAreNotReachableForUnknownDatabase()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -145,14 +145,14 @@ class CausalClusterRestEndpointsIT
     @Test
     void shouldRedirectClusterEndpoints()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryLegacyClusterEndpoint( neo4j );
                 assertEquals( OK.getStatusCode(), response.statusCode() );
 
-                var baseUri = neo4j.httpURI().resolve( "/db/manage/server/causalclustering/" );
+                var baseUri = httpURI( neo4j ).resolve( "/db/manage/server/causalclustering/" );
 
                 var expectedBody = Map.<String,Object>of(
                         "available", baseUri.resolve( "available" ).toString(),
@@ -168,7 +168,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void availabilityEndpointsAreReachable()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -182,7 +182,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void availabilityEndpointsAreNotReachableForUnknownDatabase()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -196,7 +196,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void shouldRedirectAvailabilityEndpoints()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -208,15 +208,16 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void writableEndpointsAreReachable()
+    void writableEndpointsAreReachable() throws TimeoutException
     {
-        for ( var core : cluster.getCores() )
+        var leader = cluster.awaitLeader( KNOWN_DB );
+        for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryWritableEndpoint( core, KNOWN_DB );
 
-                if ( core == awaitLeader( cluster, KNOWN_DB ) )
+                if ( core == leader )
                 {
                     assertEquals( OK.getStatusCode(), response.statusCode() );
                     assertTrue( response.body() );
@@ -229,7 +230,7 @@ class CausalClusterRestEndpointsIT
             } );
         }
 
-        for ( var replica : cluster.getReadReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
             awaitUntilAsserted( () ->
             {
@@ -243,7 +244,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void writableEndpointsAreNotReachableForUnknownDatabase()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -255,15 +256,16 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void shouldRedirectWritableEndpoints()
+    void shouldRedirectWritableEndpoints() throws TimeoutException
     {
-        for ( var core : cluster.getCores() )
+        var leader = cluster.awaitLeader( KNOWN_DB );
+        for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryLegacyClusterEndpoint( core, "writable" );
 
-                if ( core == awaitLeader( cluster, KNOWN_DB ) )
+                if ( core == leader )
                 {
                     assertEquals( OK.getStatusCode(), response.statusCode() );
                     assertTrue( response.body() );
@@ -276,7 +278,7 @@ class CausalClusterRestEndpointsIT
             } );
         }
 
-        for ( var replica : cluster.getReadReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
             awaitUntilAsserted( () ->
             {
@@ -288,15 +290,16 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void readOnlyEndpointsAreReachable()
+    void readOnlyEndpointsAreReachable() throws TimeoutException
     {
-        for ( var core : cluster.getCores() )
+        var leader = cluster.awaitLeader( KNOWN_DB );
+        for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryReadOnlyEndpoint( core, KNOWN_DB );
 
-                if ( core == awaitLeader( cluster, KNOWN_DB ) )
+                if ( core == leader )
                 {
                     assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
                     assertFalse( response.body() );
@@ -309,7 +312,7 @@ class CausalClusterRestEndpointsIT
             } );
         }
 
-        for ( var replica : cluster.getReadReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
             awaitUntilAsserted( () ->
             {
@@ -323,7 +326,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void readOnlyEndpointsAreNotReachableForUnknownDatabase()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -335,15 +338,16 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void shouldRedirectReadOnlyEndpoints()
+    void shouldRedirectReadOnlyEndpoints() throws TimeoutException
     {
-        for ( var core : cluster.getCores() )
+        var leader = cluster.awaitLeader( KNOWN_DB );
+        for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryLegacyClusterEndpoint( core, "read-only" );
 
-                if ( core == awaitLeader( cluster, KNOWN_DB ) )
+                if ( core == leader )
                 {
                     assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
                     assertFalse( response.body() );
@@ -356,7 +360,7 @@ class CausalClusterRestEndpointsIT
             } );
         }
 
-        for ( var replica : cluster.getReadReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
             var response = queryLegacyClusterEndpoint( replica, "read-only" );
             assertEquals( OK.getStatusCode(), response.statusCode() );
@@ -367,7 +371,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void statusEndpointsAreNotReachableForUnknownDatabase()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -383,11 +387,11 @@ class CausalClusterRestEndpointsIT
     {
         // given there is data
         writeSomeData( cluster, KNOWN_DB );
-        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ),
+        assertEventually( allReplicaFieldValues( cluster, DataCreator::countNodes ),
                 new HamcrestCondition<>( everyItem( greaterThan( 0L ) ) ), 3, MINUTES );
 
         // then cores are valid
-        for ( var core : cluster.getCores() )
+        for ( var core : cluster.coreMembers() )
         {
             writeSomeData( cluster, KNOWN_DB );
             assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( coreFieldIs( equalTo( true ) ) ), 1, MINUTES );
@@ -404,7 +408,7 @@ class CausalClusterRestEndpointsIT
         }
 
         // and replicas are valid
-        for ( var replica : cluster.getReadReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
             writeSomeData( cluster, KNOWN_DB );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( coreFieldIs( equalTo( false ) ) ), 1, MINUTES );
@@ -424,7 +428,7 @@ class CausalClusterRestEndpointsIT
     @Test
     void shouldRedirectStatusEndpoints()
     {
-        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        for ( var neo4j : cluster.allMembers() )
         {
             awaitUntilAsserted( () ->
             {
@@ -438,10 +442,12 @@ class CausalClusterRestEndpointsIT
     void replicasContainTheSameRaftIndexAsCores() throws Exception
     {
         // given starting conditions
+        var leader = cluster.awaitLeader( KNOWN_DB );
+
         writeSomeData( cluster, KNOWN_DB );
-        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), allValuesEqual(), 1, MINUTES );
+        assertEventually( allReplicaFieldValues( cluster, DataCreator::countNodes ), allValuesEqual(), 1, MINUTES );
         var initialLastAppliedRaftIndex = lastAppliedRaftIndex( asCollection(
-                statusEndpoint( awaitLeader( cluster, KNOWN_DB ), KNOWN_DB ) ) ).call()
+                statusEndpoint( leader, KNOWN_DB ) ) ).call()
                 .stream()
                 .findFirst()
                 .orElseThrow( () -> new RuntimeException( "List is empty" ) );
@@ -449,35 +455,16 @@ class CausalClusterRestEndpointsIT
 
         // when more data is added
         writeSomeData( cluster, KNOWN_DB );
-        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ),
+        assertEventually( allReplicaFieldValues( cluster, DataCreator::countNodes ),
                 new HamcrestCondition<>( everyItem( greaterThan( 1L ) ) ), 1, MINUTES );
 
         // then all status endpoints have a matching last appliedRaftIndex
         assertEventually( lastAppliedRaftIndex( allStatusEndpointValues( cluster, KNOWN_DB ) ), allValuesEqual(), 1, MINUTES );
 
         // and endpoint last applied raft index has incremented
-        assertEventually( statusEndpoint( awaitLeader( cluster, KNOWN_DB ), KNOWN_DB ),
+        assertEventually( statusEndpoint( leader, KNOWN_DB ),
                 new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ) ),
                 1, MINUTES );
-    }
-
-    @Test
-    void participatingInRaftGroupFalseWhenNotInGroup() throws TimeoutException
-    {
-        try
-        {
-            var cores = cluster.getCores();
-            assertThat( cores, hasSize( greaterThan( 1 ) ) );
-            var leader = awaitLeader( cluster, KNOWN_DB );
-            // stop all cores except the leader
-            cores.stream().filter( core -> !core.equals( leader ) ).forEach( InProcessNeo4j::close );
-            assertEventually( canVote( statusEndpoint( leader, KNOWN_DB ) ), FALSE, 2, MINUTES );
-        }
-        finally
-        {
-            cluster.shutdown();
-            cluster = startCluster( testDirectory );
-        }
     }
 
     @Test
