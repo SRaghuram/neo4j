@@ -39,18 +39,18 @@ import static java.lang.String.format;
 public class DataStatistics implements Iterable<DataStatistics.RelationshipTypeCount>
 {
     private final List<Client> clients = new ArrayList<>();
-    private final DataImporter.Monitor entityCounts;
+    private final DataImporterMonitor entityCounts;
     private int opened;
     private RelationshipTypeCount[] typeCounts;
 
     public DataStatistics( long nodeCount, long propertyCount, RelationshipTypeCount[] sortedTypes )
     {
-        this( new DataImporter.Monitor(), sortedTypes );
+        this( new DataImporterMonitor(), sortedTypes );
         entityCounts.nodesImported( nodeCount );
         entityCounts.propertiesImported( propertyCount );
     }
 
-    public DataStatistics( DataImporter.Monitor entityCounts, RelationshipTypeCount[] sortedTypes )
+    public DataStatistics( DataImporterMonitor entityCounts, RelationshipTypeCount[] sortedTypes )
     {
         this.entityCounts = entityCounts;
         this.typeCounts = sortedTypes;

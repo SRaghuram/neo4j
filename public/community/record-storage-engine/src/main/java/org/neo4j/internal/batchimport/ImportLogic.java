@@ -144,7 +144,7 @@ public class ImportLogic implements Closeable
     private final MemoryTracker memoryTracker;
     private final ExecutionMonitor executionMonitor;
     private final RecordFormats recordFormats;
-    private final DataImporter.Monitor storeUpdateMonitor = new DataImporter.Monitor();
+    private final DataImporterMonitor storeUpdateMonitor = new DataImporterMonitor();
     private final long maxMemory;
     private final Dependencies dependencies = new Dependencies();
     private final Monitor monitor;

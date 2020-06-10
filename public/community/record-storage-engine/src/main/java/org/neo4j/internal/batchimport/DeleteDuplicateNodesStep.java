@@ -41,14 +41,14 @@ public class DeleteDuplicateNodesStep extends LonelyProcessingStep
     private final NodeStore nodeStore;
     private final PropertyStore propertyStore;
     private final LongIterator nodeIds;
-    private final DataImporter.Monitor storeMonitor;
+    private final DataImporterMonitor storeMonitor;
     private final PageCacheTracer pageCacheTracer;
 
     private long nodesRemoved;
     private long propertiesRemoved;
 
     public DeleteDuplicateNodesStep( StageControl control, Configuration config, LongIterator nodeIds, NodeStore nodeStore,
-            PropertyStore propertyStore, DataImporter.Monitor storeMonitor, PageCacheTracer pageCacheTracer )
+            PropertyStore propertyStore, DataImporterMonitor storeMonitor, PageCacheTracer pageCacheTracer )
     {
         super( control, "DEDUP", config );
         this.nodeStore = nodeStore;

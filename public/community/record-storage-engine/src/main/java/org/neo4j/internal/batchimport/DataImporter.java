@@ -73,55 +73,6 @@ public class DataImporter
     public static final String NODE_IMPORT_NAME = "Nodes";
     public static final String RELATIONSHIP_IMPORT_NAME = "Relationships";
 
-    public static class Monitor
-    {
-        private final LongAdder nodes = new LongAdder();
-        private final LongAdder relationships = new LongAdder();
-        private final LongAdder properties = new LongAdder();
-
-        public void nodesImported( long nodes )
-        {
-            this.nodes.add( nodes );
-        }
-
-        public void nodesRemoved( long nodes )
-        {
-            this.nodes.add( -nodes );
-        }
-
-        public void relationshipsImported( long relationships )
-        {
-            this.relationships.add( relationships );
-        }
-
-        public void propertiesImported( long properties )
-        {
-            this.properties.add( properties );
-        }
-
-        public void propertiesRemoved( long properties )
-        {
-            this.properties.add( -properties );
-        }
-
-        public long nodesImported()
-        {
-            return this.nodes.sum();
-        }
-
-        public long propertiesImported()
-        {
-            return this.properties.sum();
-        }
-
-        @Override
-        public String toString()
-        {
-            return format( "Imported:%n  %d nodes%n  %d relationships%n  %d properties",
-                    nodes.sum(), relationships.sum(), properties.sum() );
-        }
-    }
-
     private static long importData( String title, int numRunners, InputIterable data, BatchingNeoStores stores,
             Supplier<EntityImporter> visitors, ExecutionMonitor executionMonitor, StatsProvider memoryStatsProvider )
             throws IOException
@@ -174,7 +125,7 @@ public class DataImporter
     }
 
     static void importNodes( int numRunners, Input input, BatchingNeoStores stores, IdMapper idMapper, Collector badCollector,
-            ExecutionMonitor executionMonitor, Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
+            ExecutionMonitor executionMonitor, DataImporterMonitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
     {
         Supplier<EntityImporter> importers = () -> new NodeImporter( stores, idMapper, monitor, pageCacheTracer, memoryTracker );
         importData( NODE_IMPORT_NAME, numRunners, input.nodes( badCollector ), stores, importers, executionMonitor,
@@ -183,7 +134,7 @@ public class DataImporter
 
     static DataStatistics importRelationships( int numRunners, Input input,
             BatchingNeoStores stores, IdMapper idMapper, Collector badCollector, ExecutionMonitor executionMonitor,
-            Monitor monitor, boolean validateRelationshipData, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
+                                               DataImporterMonitor monitor, boolean validateRelationshipData, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
     {
         DataStatistics typeDistribution = new DataStatistics( monitor, new DataStatistics.RelationshipTypeCount[0] );
         Supplier<EntityImporter> importers = () -> new RelationshipImporter( stores, idMapper, typeDistribution, monitor,

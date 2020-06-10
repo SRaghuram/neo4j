@@ -21,7 +21,7 @@ package org.neo4j.internal.batchimport;
 
 import java.util.Collections;
 
-import org.neo4j.internal.batchimport.DataImporter.Monitor;
+import org.neo4j.internal.batchimport.DataImporterMonitor;
 import org.neo4j.internal.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.InputChunk;
@@ -63,7 +63,7 @@ public class NodeImporter extends EntityImporter
     private long highestId = -1;
     private boolean hasLabelField;
 
-    NodeImporter( BatchingNeoStores stores, IdMapper idMapper, Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+    NodeImporter( BatchingNeoStores stores, IdMapper idMapper, DataImporterMonitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         super( stores, monitor, pageCacheTracer, memoryTracker );
         this.labelTokenRepository = stores.getLabelRepository();

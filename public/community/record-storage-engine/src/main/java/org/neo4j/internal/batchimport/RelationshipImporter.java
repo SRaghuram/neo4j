@@ -67,7 +67,7 @@ public class RelationshipImporter extends EntityImporter
     private String type;
 
     protected RelationshipImporter( BatchingNeoStores stores, IdMapper idMapper, DataStatistics typeDistribution,
-            DataImporter.Monitor monitor, Collector badCollector, boolean validateRelationshipData, boolean doubleRecordUnits,
+            DataImporterMonitor monitor, Collector badCollector, boolean validateRelationshipData, boolean doubleRecordUnits,
             PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         super( stores, monitor, pageCacheTracer, memoryTracker );

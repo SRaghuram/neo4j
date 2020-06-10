@@ -98,7 +98,7 @@ class DeleteDuplicateNodesStepTest
     {
         // given
         Ids[] ids = new Ids[9];
-        DataImporter.Monitor monitor = new DataImporter.Monitor();
+        DataImporterMonitor monitor = new DataImporterMonitor();
         ids[0] = createNode( monitor, neoStores, 10, 10 ); // node with many properties and many labels
         ids[1] = createNode( monitor, neoStores, 10, 1 ); // node with many properties and few labels
         ids[2] = createNode( monitor, neoStores, 10, 0 ); // node with many properties and no labels
@@ -174,7 +174,7 @@ class DeleteDuplicateNodesStepTest
     {
         // given
         Ids[] ids = new Ids[10];
-        DataImporter.Monitor monitor = new DataImporter.Monitor();
+        DataImporterMonitor monitor = new DataImporterMonitor();
         for ( int i = 0; i < ids.length; i++ )
         {
             ids[i] = createNode( monitor, neoStores, 1, 1 );
@@ -229,7 +229,7 @@ class DeleteDuplicateNodesStepTest
         }
     }
 
-    private Ids createNode( DataImporter.Monitor monitor, NeoStores neoStores, int propertyCount, int labelCount )
+    private Ids createNode( DataImporterMonitor monitor, NeoStores neoStores, int propertyCount, int labelCount )
     {
         PropertyStore propertyStore = neoStores.getPropertyStore();
         NodeStore nodeStore = neoStores.getNodeStore();

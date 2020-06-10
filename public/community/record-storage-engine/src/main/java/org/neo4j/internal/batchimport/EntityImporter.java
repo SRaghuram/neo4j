@@ -21,7 +21,7 @@ package org.neo4j.internal.batchimport;
 
 import java.util.Arrays;
 
-import org.neo4j.internal.batchimport.DataImporter.Monitor;
+import org.neo4j.internal.batchimport.DataImporterMonitor;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.internal.batchimport.store.BatchingTokenRepository;
@@ -57,7 +57,7 @@ abstract class EntityImporter extends InputEntityVisitor.Adapter
     private final BatchingIdGetter propertyIds;
     private final BatchingIdGetter stringPropertyIds;
     private final BatchingIdGetter arrayPropertyIds;
-    protected final Monitor monitor;
+    protected final DataImporterMonitor monitor;
     protected final MemoryTracker memoryTracker;
     private long propertyCount;
     protected int entityPropertyCount; // just for the current entity
@@ -67,7 +67,7 @@ abstract class EntityImporter extends InputEntityVisitor.Adapter
     private final DynamicRecordAllocator dynamicArrayRecordAllocator;
     protected final PageCursorTracer cursorTracer;
 
-    EntityImporter( BatchingNeoStores stores, Monitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+    EntityImporter( BatchingNeoStores stores, DataImporterMonitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         this.cursorTracer = pageCacheTracer.createPageCursorTracer( ENTITY_IMPORTER_TAG );
         this.propertyStore = stores.getPropertyStore();
