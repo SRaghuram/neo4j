@@ -1046,10 +1046,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |WHERE realm.id = permission.realmId
         |RETURN realm""".stripMargin
 
-    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined + TestConfiguration(
-      """4.0 runtime=legacy_compiled debug=generate_java_source
-        |3.5 runtime=legacy_compiled debug=generate_java_source
-      """.stripMargin), q)
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined +
+      TestConfiguration("runtime=legacy_compiled debug=generate_java_source"), q)
     res.toList should equal(List(Map("realm" -> realm)))
   }
 

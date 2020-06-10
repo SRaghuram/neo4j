@@ -15,7 +15,7 @@ import org.neo4j.cypher.CypherUpdateStrategy
 import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.phases.Compatibility3_5
-import org.neo4j.cypher.internal.compiler.phases.Compatibility4_0
+import org.neo4j.cypher.internal.compiler.phases.Compatibility4_1
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_2
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -37,7 +37,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
                                 runtimeConfig: CypherRuntimeConfiguration
                                ) extends CompilerFactory {
   /*
-  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Pipelined-3.5 & Cost-Pipelined-4.0.
+  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Pipelined-3.5 & Cost-Pipelined-4.2.
   Each compiler contains a runtime instance, and each pipelined runtime instance requires a dispatcher instance.
   This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple pipelined runtime instances.
    */
@@ -60,7 +60,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
 
     val compatibilityMode = cypherVersion match {
       case CypherVersion.v3_5 => Compatibility3_5
-      case CypherVersion.v4_0 => Compatibility4_0
+      case CypherVersion.v4_1 => Compatibility4_1
       case CypherVersion.v4_2 => Compatibility4_2
     }
 

@@ -32,7 +32,6 @@ import org.neo4j.graphdb.Relationship
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.io.fs.FileUtils
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
@@ -668,14 +667,8 @@ order by a.COL1""".format(a, b))
     val labelName = "Person"
     val propertyKeys = Seq("name")
 
-    val testConfiguration =
-      TestConfiguration(
-        """3.5
-          |4.0
-        """.stripMargin)
-
     // WHEN
-    executeWith(testConfiguration, s"""CREATE INDEX ON :$labelName(${propertyKeys.reduce(_ ++ "," ++ _)})""")
+    executeWith(Configs.All, s"""CREATE INDEX ON :$labelName(${propertyKeys.reduce(_ ++ "," ++ _)})""")
 
     // THEN
     graph.withTx( tx => {
