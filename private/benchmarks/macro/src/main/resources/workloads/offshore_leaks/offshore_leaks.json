@@ -45,6 +45,11 @@
       "queryFile": "queries/Q6.cypher"
     },
     {
+      "name": "Q6-no-hint",
+      "description": "Joint involvement, but without hinting to use a join.",
+      "queryFile": "queries/Q6-no-hint.cypher"
+    },
+    {
       "name": "Q7",
       "description": "Most popular offshore jurisdiction for people connected to a country",
       "comment": "all sources: MATCH (i:Intermediary) RETURN DISTINCT i.sourceID \n most popular countries: MATCH (i:Officer) UNWIND i.country_codes AS c RETURN c, count(c) AS f ORDER BY f DESC LIMIT 20",
