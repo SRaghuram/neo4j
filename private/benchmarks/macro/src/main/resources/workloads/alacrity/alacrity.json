@@ -15,6 +15,53 @@
       "parameters": {
         "file": "parameters/release.txt"
       }
+    },
+    {
+      "name": "Benchmarks Overview",
+      "queryFile": "queries/benchmarks_overview.cypher",
+      "parameters": {
+        "file": "parameters/benchmarks_overview.txt"
+      }
+    },
+    {
+      "name": "Macro Compare Runtime Focus",
+      "queryFile": "queries/compare_macro_runtime_focus.cypher",
+      "parameters": {
+        "file": "parameters/compare_macro_runtime_focus.txt"
+      }
+    },
+    {
+      "name": "Get Benchmarks Info",
+      "queryFile": "queries/get_all_benchmarks_info.cypher"
+    },
+    {
+      "name": "Get Neo4j Versions",
+      "queryFile": "queries/get_all_neo4j_versions.cypher"
+    },
+    {
+      "name": "Get Personal Branches",
+      "queryFile": "queries/get_all_personal_neo4j_branches.cypher"
+    },
+    {
+      "name": "Micro Coverage",
+      "queryFile": "queries/micro_benchmark_coverage.cypher",
+      "parameters": {
+        "file": "parameters/micro_benchmark_coverage.txt"
+      }
+    },
+    {
+      "name": "Workloads With Operator By Description",
+      "queryFile": "queries/workloads_with_operator_by_description.cypher",
+      "parameters": {
+        "file": "parameters/workloads_with_operator.txt"
+      }
+    },
+    {
+      "name": "Workloads With Operator By Description",
+      "queryFile": "queries/workloads_with_operator_by_pattern.cypher",
+      "parameters": {
+        "file": "parameters/workloads_with_operator.txt"
+      }
     }
   ]
 }
