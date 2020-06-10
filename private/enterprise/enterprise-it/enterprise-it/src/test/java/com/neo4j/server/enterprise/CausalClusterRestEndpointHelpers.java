@@ -98,9 +98,14 @@ final class CausalClusterRestEndpointHelpers
         return httpURI( server ).resolve( "/db/manage/server/causalclustering" );
     }
 
+    static URI legacyClusterEndpointBase( ClusterMember server )
+    {
+        return httpURI( server ).resolve( "/db/manage/server/causalclustering/" );
+    }
+
     private static URI legacyClusterEndpoint( ClusterMember server, String path )
     {
-        return httpURI( server ).resolve( "/db/manage/server/causalclustering/" + path );
+        return legacyClusterEndpointBase( server ).resolve( path );
     }
 
     private static URI clusterEndpoint( ClusterMember server, String databaseName )
@@ -108,24 +113,29 @@ final class CausalClusterRestEndpointHelpers
         return httpURI( server ).resolve( "/db/" + databaseName + "/cluster" );
     }
 
+    static URI clusterEndpointBase( ClusterMember server, String databaseName )
+    {
+        return httpURI( server ).resolve( "/db/" + databaseName + "/cluster/" );
+    }
+
     private static URI readOnlyEndpoint( ClusterMember server, String databaseName )
     {
-        return httpURI( server ).resolve( "/db/" + databaseName + "/cluster/read-only" );
+        return clusterEndpointBase( server, databaseName ).resolve( "read-only" );
     }
 
     private static URI writableEndpoint( ClusterMember server, String databaseName )
     {
-        return httpURI( server ).resolve( "/db/" + databaseName + "/cluster/writable" );
+        return clusterEndpointBase( server, databaseName ).resolve( "writable" );
     }
 
     private static URI availabilityEndpoint( ClusterMember server, String databaseName )
     {
-        return httpURI( server ).resolve( "/db/" + databaseName + "/cluster/available" );
+        return clusterEndpointBase( server, databaseName ).resolve( "available" );
     }
 
     private static URI statusEndpoint( ClusterMember server, String databaseName )
     {
-        return httpURI( server ).resolve( "/db/" + databaseName + "/cluster/status" );
+        return clusterEndpointBase( server, databaseName ).resolve( "status" );
     }
 
     private static HttpResponse<Boolean> queryBooleanEndpoint( URI uri )

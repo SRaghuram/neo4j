@@ -21,7 +21,8 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.httpURI;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.clusterEndpointBase;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.legacyClusterEndpointBase;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryAvailabilityEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryClusterEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterEndpoint;
@@ -115,7 +116,7 @@ class CausalClusterRestEndpointsIT
                 var response = queryClusterEndpoint( neo4j, KNOWN_DB );
                 assertEquals( OK.getStatusCode(), response.statusCode() );
 
-                var baseUri = httpURI( neo4j ).resolve( "/db/" + KNOWN_DB + "/cluster/" );
+                var baseUri = clusterEndpointBase( neo4j, KNOWN_DB );
 
                 var expectedBody = Map.<String,Object>of(
                         "available", baseUri.resolve( "available" ).toString(),
@@ -152,7 +153,7 @@ class CausalClusterRestEndpointsIT
                 var response = queryLegacyClusterEndpoint( neo4j );
                 assertEquals( OK.getStatusCode(), response.statusCode() );
 
-                var baseUri = httpURI( neo4j ).resolve( "/db/manage/server/causalclustering/" );
+                var baseUri = legacyClusterEndpointBase( neo4j );
 
                 var expectedBody = Map.<String,Object>of(
                         "available", baseUri.resolve( "available" ).toString(),
@@ -210,14 +211,13 @@ class CausalClusterRestEndpointsIT
     @Test
     void writableEndpointsAreReachable() throws TimeoutException
     {
-        var leader = cluster.awaitLeader( KNOWN_DB );
         for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryWritableEndpoint( core, KNOWN_DB );
 
-                if ( core == leader )
+                if ( cluster.isCoreLeader( core,  KNOWN_DB ) )
                 {
                     assertEquals( OK.getStatusCode(), response.statusCode() );
                     assertTrue( response.body() );
@@ -258,14 +258,13 @@ class CausalClusterRestEndpointsIT
     @Test
     void shouldRedirectWritableEndpoints() throws TimeoutException
     {
-        var leader = cluster.awaitLeader( KNOWN_DB );
         for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryLegacyClusterEndpoint( core, "writable" );
 
-                if ( core == leader )
+                if ( cluster.isCoreLeader( core,  KNOWN_DB )  )
                 {
                     assertEquals( OK.getStatusCode(), response.statusCode() );
                     assertTrue( response.body() );
@@ -292,14 +291,13 @@ class CausalClusterRestEndpointsIT
     @Test
     void readOnlyEndpointsAreReachable() throws TimeoutException
     {
-        var leader = cluster.awaitLeader( KNOWN_DB );
         for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryReadOnlyEndpoint( core, KNOWN_DB );
 
-                if ( core == leader )
+                if ( cluster.isCoreLeader( core,  KNOWN_DB )  )
                 {
                     assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
                     assertFalse( response.body() );
@@ -340,14 +338,13 @@ class CausalClusterRestEndpointsIT
     @Test
     void shouldRedirectReadOnlyEndpoints() throws TimeoutException
     {
-        var leader = cluster.awaitLeader( KNOWN_DB );
         for ( var core : cluster.coreMembers() )
         {
             awaitUntilAsserted( () ->
             {
                 var response = queryLegacyClusterEndpoint( core, "read-only" );
 
-                if ( core == leader )
+                if ( cluster.isCoreLeader( core,  KNOWN_DB )  )
                 {
                     assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
                     assertFalse( response.body() );
@@ -442,12 +439,10 @@ class CausalClusterRestEndpointsIT
     void replicasContainTheSameRaftIndexAsCores() throws Exception
     {
         // given starting conditions
-        var leader = cluster.awaitLeader( KNOWN_DB );
-
         writeSomeData( cluster, KNOWN_DB );
         assertEventually( allReplicaFieldValues( cluster, DataCreator::countNodes ), allValuesEqual(), 1, MINUTES );
         var initialLastAppliedRaftIndex = lastAppliedRaftIndex( asCollection(
-                statusEndpoint( leader, KNOWN_DB ) ) ).call()
+                statusEndpoint( cluster.awaitLeader( KNOWN_DB ), KNOWN_DB ) ) ).call()
                 .stream()
                 .findFirst()
                 .orElseThrow( () -> new RuntimeException( "List is empty" ) );
@@ -462,7 +457,7 @@ class CausalClusterRestEndpointsIT
         assertEventually( lastAppliedRaftIndex( allStatusEndpointValues( cluster, KNOWN_DB ) ), allValuesEqual(), 1, MINUTES );
 
         // and endpoint last applied raft index has incremented
-        assertEventually( statusEndpoint( leader, KNOWN_DB ),
+        assertEventually( statusEndpoint( cluster.awaitLeader( KNOWN_DB ), KNOWN_DB ),
                 new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ) ),
                 1, MINUTES );
     }

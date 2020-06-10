@@ -405,6 +405,11 @@ public class Cluster
         return dependencyResolver.resolveDependency( RoleProvider.class ).currentRole();
     }
 
+    public boolean isCoreLeader( CoreClusterMember core, String databaseName )
+    {
+        return getCurrentDatabaseRole( core.database( databaseName ) ) == Role.LEADER;
+    }
+
     public CoreClusterMember awaitLeader() throws TimeoutException
     {
         return awaitCoreMemberWithRole( Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
