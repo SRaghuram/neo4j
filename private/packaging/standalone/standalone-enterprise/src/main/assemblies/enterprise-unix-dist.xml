@@ -113,7 +113,6 @@
       <useProjectArtifact>false</useProjectArtifact>
       <useStrictFiltering>true</useStrictFiltering>
       <excludes>
-        <exclude>org.neo4j.client:neo4j-browser</exclude> <!-- TODO: temporary workaround for browser dependency -->
       </excludes>
     </dependencySet>
  </dependencySets>
