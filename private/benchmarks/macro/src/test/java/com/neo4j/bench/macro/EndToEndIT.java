@@ -137,7 +137,6 @@ class EndToEndIT extends BaseEndToEndIT
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
     @Test
-    @Disabled( "https://trello.com/c/l5xaVHck/1558-re-enable-server-tests-in-runworkloadcommandit-in-40" )
     public void executeReadWorkloadForkedWithServer() throws Exception
     {
 
@@ -163,7 +162,6 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Disabled
     @Test
     public void executeWriteWorkloadsForkedWithServer() throws Exception
     {

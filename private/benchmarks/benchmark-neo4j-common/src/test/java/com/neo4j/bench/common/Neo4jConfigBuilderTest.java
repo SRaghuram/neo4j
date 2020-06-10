@@ -104,6 +104,17 @@ public class Neo4jConfigBuilderTest
         assertEquals( "false", neo4jConfig.toMap().get( GraphDatabaseSettings.auth_enabled.name() ) );
     }
 
+    @Test
+    public void shouldReadJvmArgsFromFile() throws Exception
+    {
+
+        Neo4jConfig neo4jConfig = Neo4jConfig.empty()
+                                             .addJvmArg( "-Xmx1g" )
+                                             .addJvmArg( "-Djava.io.tmpdir=/tmp/" )
+                                             .addJvmArg( "-Xlog:gc,safepoint,gc+age=trace:file=gc.log:tags,time,uptime,level" );
+        assertSerialization( neo4jConfig );
+    }
+
     private Object serializeAndDeserialize( Object before ) throws IOException
     {
         File jsonFile = temporaryFolder.newFile();

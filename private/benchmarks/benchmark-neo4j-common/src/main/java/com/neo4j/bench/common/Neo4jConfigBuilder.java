@@ -7,6 +7,7 @@ package com.neo4j.bench.common;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.configuration.OnlineBackupSettings;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
@@ -64,7 +65,10 @@ public class Neo4jConfigBuilder
         try
         {
             BenchmarkUtil.assertFileExists( neo4jConfigFile );
-            PropertiesConfiguration config = new PropertiesConfiguration( neo4jConfigFile.toFile() );
+            PropertiesConfiguration config = new PropertiesConfiguration();
+            // because new JVM logging contains commas, we need disable parsing single line into multiple values
+            config.setDelimiterParsingDisabled( true );
+            config.load( neo4jConfigFile.toFile() );
             Iterator<String> keys = config.getKeys();
             while ( keys.hasNext() )
             {
