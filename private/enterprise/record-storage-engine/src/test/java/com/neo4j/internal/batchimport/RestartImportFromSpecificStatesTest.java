@@ -11,14 +11,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.BatchImporterFactory;
-import org.neo4j.internal.batchimport.DataImporter;
-import org.neo4j.internal.batchimport.RelationshipCountsAndTypeIndexBuildStage;
-import org.neo4j.internal.batchimport.RelationshipLinkbackStage;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -71,7 +68,7 @@ class RestartImportFromSpecificStatesTest
 
         // when
         SimpleRandomizedInput input = input();
-        importer( new PanicSpreadingExecutionMonitor( DataImporter.RELATIONSHIP_IMPORT_NAME, true ) ).doImport( input );
+        importer( new PanicSpreadingExecutionMonitor( BaseImportLogic.RELATIONSHIP_IMPORT_NAME, true ) ).doImport( input );
 
         // then good :)
         verifyDb( input );
@@ -101,13 +98,13 @@ class RestartImportFromSpecificStatesTest
         return new SimpleRandomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
     }
 
-    private BatchImporter importer( ExecutionMonitor monitor )
+    private BatchImporter importer( ExecutionMonitor monitor ) throws IOException
     {
-        BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-        return factory.instantiate(
-                databaseLayout, fs, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
-                Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY,
-                TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, PageCacheTracer.NULL,
+                DEFAULT, NullLogService.getInstance(), monitor,
+                EMPTY, Config.defaults(),
+                //RecordFormatSelector.defaultFormat(),
+                NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE, INSTANCE );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException

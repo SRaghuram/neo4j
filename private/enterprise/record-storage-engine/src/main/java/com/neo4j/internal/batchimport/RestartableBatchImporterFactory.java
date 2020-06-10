@@ -7,12 +7,7 @@ package com.neo4j.internal.batchimport;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.batchimport.AdditionalInitialIds;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.BatchImporterFactory;
-import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.storageengine.api.LogFilesInitializer;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -39,13 +34,13 @@ public class RestartableBatchImporterFactory extends BatchImporterFactory
     }
 
     @Override
-    public BatchImporter instantiate( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
-            PageCacheTracer pageCacheTracer, Configuration config,
-            LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats,
-            ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer,
-            MemoryTracker memoryTracker )
+    public BatchImporter instantiate(DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+                                     PageCacheTracer pageCacheTracer, Configuration config,
+                                     LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig,
+                                     //RecordFormats recordFormats,
+                                     ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker  )
     {
         return new RestartableParallelBatchImporter( databaseLayout, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
-                additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer, memoryTracker );
+                additionalInitialIds, dbConfig, monitor, jobScheduler, badCollector, logFilesInitializer, memoryTracker  );
     }
 }

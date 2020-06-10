@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -33,6 +34,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -41,6 +43,7 @@ import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
+import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.service.Services;
 
@@ -48,9 +51,10 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Comparator.comparingInt;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.internal.helpers.collection.Iterables.concat;
 import static org.neo4j.internal.helpers.collection.Iterables.map;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.store.format.FormatFamily.isSameFamily;
 
 /**
@@ -112,14 +116,40 @@ public class RecordFormatSelector
      * <p>
      * If format is not specified {@link #DEFAULT_FORMAT} will be used.
      *
+     * @param fileSystem file system abstraction
      * @param config configuration parameters
-     * @param logProvider logging provider
      * @return selected record format
      * @throws IllegalArgumentException if requested format not found
      */
     @Nonnull
     public static RecordFormats selectForConfig( Config config, LogProvider logProvider )
     {
+        String recordFormat = configuredRecordFormat( config );
+        if ( StringUtils.isEmpty( recordFormat ) )
+        {
+            info( logProvider, "Record format not configured, selected default: " + defaultFormat() );
+            return defaultFormat();
+        }
+        RecordFormats format = selectSpecificFormat( recordFormat );
+        info( logProvider, "Selected record format based on config: " + format );
+        return format;
+    }
+    @Nonnull
+    public static RecordFormats selectForConfig( FileSystemAbstraction fileSystem, Config config )
+    {
+        File internalLogFile = config.get(store_internal_log_path).toFile();
+        OutputStream outputStream = null;
+        try {
+
+            outputStream = FileSystemUtils.createOrOpenAsOutputStream(fileSystem, internalLogFile, true);
+        } catch (IOException e)
+        {
+            return RecordFormatSelector.defaultFormat();
+        }
+        LogProvider logProvider = FormattedLogProvider
+                .withZoneId( config.get( GraphDatabaseSettings.db_timezone ).getZoneId() )
+                .withDefaultLogLevel( config.get( GraphDatabaseSettings.store_internal_log_level ) )
+                .toOutputStream( outputStream );
         String recordFormat = configuredRecordFormat( config );
         if ( StringUtils.isEmpty( recordFormat ) )
         {

@@ -21,17 +21,23 @@ package org.neo4j.internal.batchimport;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
+import org.neo4j.importer.PrintingImportLogicMonitor;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.store.BatchingNeoStores;
+import org.neo4j.internal.batchimport.BaseImportLogic.Monitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.LogFilesInitializer;
+
+import java.io.IOException;
+import java.io.PrintStream;
 
 @ServiceProvider
 public class StandardBatchImporterFactory extends BatchImporterFactory
@@ -41,6 +47,8 @@ public class StandardBatchImporterFactory extends BatchImporterFactory
         super( 1 );
     }
 
+    private final PrintStream stdOut = null;
+    private final PrintStream stdErr = null;
     @Override
     public String getName()
     {
@@ -48,13 +56,36 @@ public class StandardBatchImporterFactory extends BatchImporterFactory
     }
 
     @Override
-    public BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
-            PageCacheTracer pageCacheTracer, Configuration config,
-            LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats,
-            ImportLogic.Monitor monitor, JobScheduler scheduler, Collector badCollector,
-            LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker )
-    {
-        return new ParallelBatchImporter( directoryStructure, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
-                additionalInitialIds, dbConfig, recordFormats, monitor, scheduler, badCollector, logFilesInitializer, memoryTracker );
+    public BatchImporter instantiate(DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+                                     PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
+                                     AdditionalInitialIds additionalInitialIds, Config dbConfig, Monitor monitor, JobScheduler jobScheduler,
+                                     Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker) throws IOException {
+
+        BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseLayout,
+                externalPageCache, pageCacheTracer, config, logService, additionalInitialIds, dbConfig, jobScheduler, memoryTracker );
+        ImportLogic importLogic = new ImportLogic( fileSystem, databaseLayout, store, config, dbConfig, logService,
+                executionMonitor, badCollector, monitor, pageCacheTracer, memoryTracker );
+
+        BatchImporter batchImporter = new ParallelBatchImporter(databaseLayout, fileSystem, externalPageCache, pageCacheTracer, config,
+                logService, executionMonitor, additionalInitialIds,
+                dbConfig, importLogic, store,
+                new PrintingImportLogicMonitor(stdOut, stdErr), jobScheduler, badCollector, logFilesInitializer, memoryTracker);
+        return batchImporter;
     }
+
+    public static BatchingNeoStores instantiateNeoStores( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout,
+                                                          PageCache externalPageCache, PageCacheTracer cacheTracer, Configuration config,
+                                                          LogService logService, AdditionalInitialIds additionalInitialIds, Config dbConfig, JobScheduler scheduler, MemoryTracker memoryTracker )
+    {
+        RecordFormats recordFormats = RecordFormatSelector.selectForConfig(fileSystem, dbConfig);
+        if ( externalPageCache == null )
+        {
+            return BatchingNeoStores.batchingNeoStores( fileSystem, databaseLayout, recordFormats, config, logService,
+                    additionalInitialIds, dbConfig, scheduler, cacheTracer, memoryTracker );
+        }
+
+        return BatchingNeoStores.batchingNeoStoresWithExternalPageCache( fileSystem, externalPageCache,
+                cacheTracer, databaseLayout, recordFormats, config, logService, additionalInitialIds, dbConfig, memoryTracker );
+    }
+
 }

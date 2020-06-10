@@ -164,9 +164,10 @@ class CsvInputEstimateCalculationIT
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            new ParallelBatchImporter( databaseLayout, fs, null, PageCacheTracer.NULL, PBI_CONFIG, NullLogService.getInstance(),
-                    invisible(), EMPTY, config, format, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
-                    LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE ).doImport( input );
+            // has to be rewritten with ImportLogic and BatchingNeoStore created before calling ParallelBatchImporter
+            //new ParallelBatchImporter( databaseLayout, fs, null, PageCacheTracer.NULL, PBI_CONFIG, NullLogService.getInstance(),
+            //        invisible(), EMPTY, config, format, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,
+            //       LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE ).doImport( input );
 
             // then compare estimates with actual disk sizes
             VersionContextSupplier contextSupplier = EmptyVersionContextSupplier.EMPTY;

@@ -30,10 +30,10 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.storageengine.api.TransactionId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_VERSION;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_CHECKSUM;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_CLOSED_TRANSACTION_LOG_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_TRANSACTION_CHECKSUM;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.MetaDataStore.getRecord;
 
 public class ReadOnlyTransactionIdStore implements TransactionIdStore

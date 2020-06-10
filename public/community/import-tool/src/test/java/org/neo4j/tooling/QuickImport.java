@@ -164,10 +164,13 @@ public class QuickImport
             {
                 System.out.println( "Seed " + randomSeed );
                 final JobScheduler jobScheduler = life.add( createScheduler() );
-                consumer = BatchImporterFactory.withHighestPriority().instantiate(
-                        DatabaseLayout.ofFlat( dir ), fileSystem, null, PageCacheTracer.NULL, importConfig, new SimpleLogService( logging, logging ),
-                        defaultVisible(), EMPTY, dbConfig, RecordFormatSelector.selectForConfig( dbConfig, logging ), NO_MONITOR, jobScheduler,
-                        Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+                consumer = BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( dir ), fileSystem, null,
+                        PageCacheTracer.NULL,
+                        importConfig,
+                        new SimpleLogService( logging, logging ), defaultVisible(), EMPTY, dbConfig,
+                        NO_MONITOR, jobScheduler, Collector.EMPTY,
+                        null,
+                        INSTANCE );
             }
             consumer.doImport( input );
         }

@@ -39,6 +39,8 @@ import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.io.IOUtils.closeAll;
 
 public abstract class BaseImportLogic implements ImportLogicInterface {
+    public static final String NODE_IMPORT_NAME = "Nodes";
+    public static final String RELATIONSHIP_IMPORT_NAME = "Relationships";
     public interface Monitor
     {
         void doubleRelationshipRecordUnitsEnabled();

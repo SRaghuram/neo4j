@@ -81,9 +81,6 @@ public class BaseSimpleStore
             File tempDirectory,
             PageCache pageCache)
     {
-        //this.temporaryDatabaseLayout = DatabaseLayout.ofFlat( databaseLayout.file( "temp" ) );
-        //storageFile = new File( temporaryDatabaseLayout.databaseDirectory(), "LookupNodeId.db" );
-        //idFile = new File( temporaryDatabaseLayout.databaseDirectory(), "LookupNodeId.id" );
         if (!tempDirectory.exists())
                 tempDirectory.mkdir();
         storageFile = new File(tempDirectory, "LookupNodeId.db");

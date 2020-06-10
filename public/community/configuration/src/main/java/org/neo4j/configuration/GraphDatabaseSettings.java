@@ -1224,6 +1224,8 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     @Internal
     public static final Setting<String> storage_engine = newBuilder( "unsupported.dbms.storage_engine", STRING, "Freki" ).build();
 
+    @Description( "Storage engine factory to be use in import command specified in the additionalConfig file" )
+    public static final Setting<String> storageEngineFactory = newBuilder( "dbms.import.storageEngineFactory", STRING , "StandardBatchImporterFactory").build();
     /**
      * Default settings for connectors. The default values are assumes to be default for embedded deployments through the code.
      * This map contains default connector settings that you can pass to the builders.

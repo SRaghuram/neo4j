@@ -20,7 +20,7 @@
 package org.neo4j.kernel.impl.store.format.standard;
 
 import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.kernel.impl.store.MetaDataStore.Position;
+import org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position;
 import org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat;
 import org.neo4j.kernel.impl.store.record.MetaDataRecord;
 import org.neo4j.kernel.impl.store.record.Record;

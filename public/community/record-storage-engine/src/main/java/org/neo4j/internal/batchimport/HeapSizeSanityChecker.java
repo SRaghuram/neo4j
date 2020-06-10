@@ -50,14 +50,14 @@ class HeapSizeSanityChecker
         this.actualHeapSizeLookup = actualHeapSizeLookup;
     }
 
-    void sanityCheck( Input.Estimates inputEstimates, RecordFormats recordFormats, MemoryStatsVisitor.Visitable baseMemory,
-            MemoryStatsVisitor.Visitable... memoryVisitables )
+    void sanityCheck( Input.Estimates inputEstimates, RecordSizes recordSizes, MemoryStatsVisitor.Visitable baseMemory,
+                      MemoryStatsVisitor.Visitable... memoryVisitables )
     {
         // At this point in time the store hasn't started so it won't show up in free memory reported from OS,
         // i.e. we have to include it here in the calculations.
         long estimatedCacheSize = ImportMemoryCalculator.estimatedCacheSize( baseMemory, memoryVisitables );
         long freeMemory = freeMemoryLookup.getAsLong();
-        long optimalMinimalHeapSize = ImportMemoryCalculator.optimalMinimalHeapSize( inputEstimates, recordFormats );
+        long optimalMinimalHeapSize = ImportMemoryCalculator.optimalMinimalHeapSize( inputEstimates, recordSizes );
         long actualHeapSize = actualHeapSizeLookup.getAsLong();
         boolean freeMemoryIsKnown = freeMemory != VALUE_UNAVAILABLE;
 

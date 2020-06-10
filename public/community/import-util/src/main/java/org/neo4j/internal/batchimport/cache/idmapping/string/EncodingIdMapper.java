@@ -37,6 +37,7 @@ import org.neo4j.internal.batchimport.cache.LongBitsManipulator;
 import org.neo4j.internal.batchimport.cache.MemoryStatsVisitor;
 import org.neo4j.internal.batchimport.cache.NumberArrayFactory;
 import org.neo4j.internal.batchimport.cache.idmapping.IdMapper;
+import org.neo4j.internal.batchimport.cache.idmapping.reverseIdMap.NodeInputIdPropertyLookup;
 import org.neo4j.internal.batchimport.cache.idmapping.string.ParallelSort.Comparator;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Group;
@@ -534,6 +535,7 @@ public class EncodingIdMapper implements IdMapper
         // We won't be needing these anymore
         collisionTrackerCache.close();
         collisionTrackerCache = null;
+        ((NodeInputIdPropertyLookup)inputIdLookup).close();
     }
 
     private void detectDuplicateInputIds( Radix radix, Collector collector, ProgressListener progress )

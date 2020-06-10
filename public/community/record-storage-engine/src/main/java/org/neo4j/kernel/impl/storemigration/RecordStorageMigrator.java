@@ -42,13 +42,7 @@ import org.neo4j.common.EntityType;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.batchimport.AdditionalInitialIds;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.BatchImporterFactory;
-import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.internal.batchimport.InputIterable;
-import org.neo4j.internal.batchimport.InputIterator;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.BadCollector;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Collectors;
@@ -108,7 +102,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 import org.neo4j.storageengine.api.TransactionId;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -122,18 +115,19 @@ import org.neo4j.token.api.TokenNotFoundException;
 import static java.util.Arrays.asList;
 import static org.eclipse.collections.impl.factory.Sets.immutable;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.staging.ExecutionSupervisors.withDynamicProcessorAssignment;
 import static org.neo4j.internal.recordstorage.StoreTokens.allTokens;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_VERSION;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_CHECKSUM;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_COMMIT_TIMESTAMP;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TIME;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TRANSACTION_CHECKSUM;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TRANSACTION_COMMIT_TIMESTAMP;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TRANSACTION_ID;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_CLOSED_TRANSACTION_LOG_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_TRANSACTION_CHECKSUM;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_TRANSACTION_COMMIT_TIMESTAMP;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.LAST_TRANSACTION_ID;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.UPGRADE_TIME;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.UPGRADE_TRANSACTION_CHECKSUM;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.UPGRADE_TRANSACTION_COMMIT_TIMESTAMP;
+import static org.neo4j.kernel.impl.store.MetaDataStoreInterface.Position.UPGRADE_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForVersion;
 import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
 import static org.neo4j.kernel.impl.storemigration.FileOperation.COPY;
@@ -452,7 +446,7 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
             BatchImporter importer = batchImporterFactory.instantiate(
                     migrationDirectoryStructure, fileSystem, pageCache, cacheTracer, importConfig, logService,
                     withDynamicProcessorAssignment( migrationBatchImporterMonitor( legacyStore, progressReporter,
-                            importConfig ), importConfig ), additionalInitialIds, config, newFormat, ImportLogic.NO_MONITOR, jobScheduler, badCollector,
+                            importConfig ), importConfig ), additionalInitialIds, config, NO_MONITOR, jobScheduler, badCollector,
                     LogFilesInitializer.NULL, memoryTracker );
             InputIterable nodes = () -> legacyNodesAsInput( legacyStore, requiresPropertyMigration, cacheTracer, memoryTracker );
             InputIterable relationships = () -> legacyRelationshipsAsInput( legacyStore, requiresPropertyMigration, cacheTracer, memoryTracker );

@@ -35,7 +35,7 @@ import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.DataGeneratorInput;
 import org.neo4j.internal.batchimport.input.IdType;
 import org.neo4j.internal.batchimport.input.Input;
-import org.neo4j.internal.batchimport.staging.HumanUnderstandableExecutionMonitor.ImportStage;
+import org.neo4j.internal.batchimport.staging.BaseHumanUnderstandableExecutionMonitor.ImportStage;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -92,9 +92,10 @@ class HumanUnderstandableExecutionMonitorIT
         // when
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            new ParallelBatchImporter( databaseLayout, fileSystem, pageCache, NULL, Configuration.DEFAULT, NullLogService.getInstance(), monitor,
-                    EMPTY, defaults(), LATEST_RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, LogFilesInitializer.NULL,
-                    EmptyMemoryTracker.INSTANCE ).doImport( input );
+            // has to be rewritten with ImportLogic and BatchingNeoStore created before calling ParallelBatchImporter
+            //new ParallelBatchImporter( databaseLayout, fileSystem, pageCache, NULL, Configuration.DEFAULT, NullLogService.getInstance(), monitor,
+            //        EMPTY, defaults(), LATEST_RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, LogFilesInitializer.NULL,
+            //        EmptyMemoryTracker.INSTANCE ).doImport( input );
 
             // then
             progress.assertAllProgressReachedEnd();

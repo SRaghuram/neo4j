@@ -11,24 +11,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.BatchImporterFactory;
-import org.neo4j.internal.batchimport.CountGroupsStage;
-import org.neo4j.internal.batchimport.DataImporter;
-import org.neo4j.internal.batchimport.IdMapperPreparationStage;
-import org.neo4j.internal.batchimport.NodeCountsAndLabelIndexBuildStage;
-import org.neo4j.internal.batchimport.NodeDegreeCountStage;
-import org.neo4j.internal.batchimport.NodeFirstGroupStage;
-import org.neo4j.internal.batchimport.RelationshipCountsAndTypeIndexBuildStage;
-import org.neo4j.internal.batchimport.RelationshipGroupStage;
-import org.neo4j.internal.batchimport.RelationshipLinkbackStage;
-import org.neo4j.internal.batchimport.RelationshipLinkforwardStage;
-import org.neo4j.internal.batchimport.ScanAndCacheGroupsStage;
-import org.neo4j.internal.batchimport.SparseNodeFirstRelationshipStage;
-import org.neo4j.internal.batchimport.WriteGroupsStage;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -78,13 +65,13 @@ class RestartableParallelBatchImporterIT
     @Test
     void shouldRestartImportAfterNodeImportStart() throws Exception
     {
-        shouldRestartImport( DataImporter.NODE_IMPORT_NAME, true );
+        shouldRestartImport( BaseImportLogic.NODE_IMPORT_NAME, true );
     }
 
     @Test
     void shouldRestartImportAfterNodeImportEnd() throws Exception
     {
-        shouldRestartImport( DataImporter.NODE_IMPORT_NAME, false );
+        shouldRestartImport( BaseImportLogic.NODE_IMPORT_NAME, false );
     }
 
     @Test
@@ -102,13 +89,13 @@ class RestartableParallelBatchImporterIT
     @Test
     void shouldRestartImportAfterRelationshipImportStart() throws Exception
     {
-        shouldRestartImport( DataImporter.RELATIONSHIP_IMPORT_NAME, true );
+        shouldRestartImport( BaseImportLogic.RELATIONSHIP_IMPORT_NAME, true );
     }
 
     @Test
     void shouldRestartImportAfterRelationshipImportEnd() throws Exception
     {
-        shouldRestartImport( DataImporter.RELATIONSHIP_IMPORT_NAME, false );
+        shouldRestartImport( BaseImportLogic.RELATIONSHIP_IMPORT_NAME, false );
     }
 
     @Test
@@ -269,12 +256,12 @@ class RestartableParallelBatchImporterIT
         }
     }
 
-    private BatchImporter importer( ExecutionMonitor monitor )
+    private BatchImporter importer( ExecutionMonitor monitor ) throws IOException
     {
-        BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-        return factory.instantiate(
-                databaseLayout, fs, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
-                Config.defaults( preallocate_logical_logs, false ), RecordFormatSelector.defaultFormat(), NO_MONITOR,
-                jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
+        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, PageCacheTracer.NULL,
+                DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
+                Config.defaults( preallocate_logical_logs, false ),
+                NO_MONITOR, jobScheduler, Collector.EMPTY,
+                TransactionLogsInitializer.INSTANCE, INSTANCE );
     }
 }

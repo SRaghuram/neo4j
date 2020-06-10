@@ -30,6 +30,7 @@ import java.util.function.ToIntFunction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.TokenStore;
+import org.neo4j.kernel.impl.store.TokenStoreInterface;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
@@ -45,7 +46,7 @@ import static org.neo4j.kernel.impl.store.PropertyStore.encodeString;
  * to storage as part of {@link #flush(PageCursorTracer) flush}. Instances of this class are thread safe
  * to call {@link #getOrCreateId(String)} methods on.
  */
-public abstract class BatchingTokenRepository<RECORD extends TokenRecord> implements ToIntFunction<Object>
+public abstract class BatchingTokenRepository<RECORD extends TokenRecord> implements ToIntFunction<Object>, TokenStoreInterface
 {
     private final Map<String,Integer> tokens = new HashMap<>();
     private final TokenStore<RECORD> store;
@@ -200,6 +201,12 @@ public abstract class BatchingTokenRepository<RECORD extends TokenRecord> implem
         }
         return sorted.entrySet();
     }
+
+    @Override
+    public int nextTokenId(PageCursorTracer cursorTracer) {
+        return 0;
+    }
+
 
     public static class BatchingPropertyKeyTokenRepository
             extends BatchingTokenRepository<PropertyKeyTokenRecord>

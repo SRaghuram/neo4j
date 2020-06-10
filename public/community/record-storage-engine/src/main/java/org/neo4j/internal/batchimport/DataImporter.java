@@ -54,6 +54,8 @@ import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
+import static org.neo4j.internal.batchimport.BaseImportLogic.NODE_IMPORT_NAME;
+import static org.neo4j.internal.batchimport.BaseImportLogic.RELATIONSHIP_IMPORT_NAME;
 
 /**
  * Imports data from {@link Input} into a store. Only linkage between property records is done, not between nodes/relationships
@@ -70,9 +72,6 @@ import static java.lang.System.currentTimeMillis;
  */
 public class DataImporter
 {
-    public static final String NODE_IMPORT_NAME = "Nodes";
-    public static final String RELATIONSHIP_IMPORT_NAME = "Relationships";
-
     private static long importData( String title, int numRunners, InputIterable data, BatchingNeoStores stores,
             Supplier<EntityImporter> visitors, ExecutionMonitor executionMonitor, StatsProvider memoryStatsProvider )
             throws IOException
