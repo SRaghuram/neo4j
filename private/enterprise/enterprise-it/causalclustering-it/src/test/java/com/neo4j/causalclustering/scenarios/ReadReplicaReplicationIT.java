@@ -34,7 +34,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BinaryOperator;
@@ -69,6 +68,7 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1;
 import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1_PREFIX;
 import static com.neo4j.causalclustering.common.DataCreator.createDataInOneTransaction;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_topology_refresh;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.time.Duration.ofSeconds;
@@ -76,10 +76,8 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
@@ -134,7 +132,7 @@ class ReadReplicaReplicationIT
         for ( var readReplica : cluster.readReplicas() )
         {
             Callable<Boolean> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
-            assertEventually( "read replica becomes available", availability, TRUE, 10, SECONDS );
+            assertEventually( "read replica becomes available", availability, TRUE, 30, SECONDS );
         }
     }
 
@@ -213,7 +211,7 @@ class ReadReplicaReplicationIT
 
         createDataInOneTransaction( cluster, 10 );
 
-        cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 2, TimeUnit.SECONDS );
+        cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 30, SECONDS );
 
         // Get a read replica and make sure that it is operational
         var readReplica = cluster.addReadReplicaWithId( 4 );
@@ -245,20 +243,15 @@ class ReadReplicaReplicationIT
         cluster.removeReadReplicaWithMemberId( readReplicaId );
 
         // let's spend some time by adding more data
-        createDataInOneTransaction( cluster, 10 );
+        var lastMember = createDataInOneTransaction( cluster, 10 );
 
         cluster.addReadReplicaWithId( readReplicaId ).start();
 
         assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
-        var dbs = cluster.allMembers()
-                .stream()
-                .map( member -> DbRepresentation.of( member.defaultDatabase() ) )
-                .collect( toSet() );
+        dataMatchesEventually( lastMember, cluster.allMembers() );
 
         cluster.shutdown();
-
-        assertEquals( 1, dbs.size() );
     }
 
     @Test
@@ -275,7 +268,7 @@ class ReadReplicaReplicationIT
         for ( var readReplica : cluster.readReplicas() )
         {
             Callable<Boolean> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
-            assertEventually( "read replica becomes available", availability, TRUE, 10, SECONDS );
+            assertEventually( "read replica becomes available", availability, TRUE, 30, SECONDS );
         }
     }
 
@@ -313,7 +306,7 @@ class ReadReplicaReplicationIT
 
         assertEventually( "The read replica has the same data as the core members",
                 () -> DbRepresentation.of( readReplica.defaultDatabase() ),
-                equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
+                equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 30, SECONDS );
     }
 
     @Test
@@ -351,7 +344,7 @@ class ReadReplicaReplicationIT
         // then
         assertEventually( "The read replica has the same data as the core members",
                 () -> DbRepresentation.of( readReplica.defaultDatabase() ),
-                equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
+                equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 30, SECONDS );
     }
 
     @Test
@@ -377,11 +370,11 @@ class ReadReplicaReplicationIT
 
         // when the poller is paused, transaction doesn't make it to the read replica
         assertThrows( TransactionIdTrackerException.class,
-                () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 15 ) ) );
+                () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) ) );
 
         // when the poller is resumed, it does make it to the read replica
         catchupProcessManager.start();
-        transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 15 ) );
+        transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) );
     }
 
     private static TransactionIdTracker transactionIdTracker( ClusterMember member )
@@ -466,7 +459,7 @@ class ReadReplicaReplicationIT
         }
 
         var raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
-        assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), v -> v > baseVersion, 5, SECONDS );
+        assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), v -> v > baseVersion, 30, SECONDS );
 
         // when
         cluster.addReadReplicaWithIdAndRecordFormat( 4, HighLimit.NAME ).start();
@@ -474,7 +467,7 @@ class ReadReplicaReplicationIT
         // then
         for ( var readReplica : cluster.readReplicas() )
         {
-            assertEventually( "read replica available", () -> readReplica.defaultDatabase().isAvailable( 0 ), TRUE, 10, SECONDS );
+            assertEventually( "read replica available", () -> readReplica.defaultDatabase().isAvailable( 0 ), TRUE, 30, SECONDS );
         }
     }
 
@@ -519,7 +512,7 @@ class ReadReplicaReplicationIT
                 }
             }
             return membersWithIncreasedPinCount;
-        }, v -> v >= minimumUpdatedMembersCount, 10, SECONDS );
+        }, v -> v >= minimumUpdatedMembersCount, 30, SECONDS );
     }
 
     @SuppressWarnings( "SameParameterValue" )
