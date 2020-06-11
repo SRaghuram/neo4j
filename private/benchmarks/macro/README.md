@@ -182,3 +182,13 @@ Basic stats of the 'fraud-poc' dataset:
  * Relationships: ~192,000,000
 The full POC contained two groups of queries named 'credit fraud' and 'data science'. 
 The workload contains queries from the 'credit fraud' group only. 
+---
+
+#### alacrity
+
+Based on our internal [benchmark reporting infrastructure, 'Alacrity'](http://benchmarking.neohq.net/).
+The dataset is a snapshot of the results store from 2020-6-8:
+ * Size: ~24 GB
+ * Nodes: ~37,000,000
+ * Relationships: ~53,000,000
+Queries are taken from both the UI (read queries used to create reports) and the "result client" (various updates) which reports results.

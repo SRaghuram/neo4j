@@ -40,6 +40,7 @@ db_and_workloads=(
  "osmnodes;osmnodes"
  "offshore_leaks;offshore_leaks"
  "fraud-poc-credit;fraud-poc"
+ "alacrity;alacrity"
  "zero;zero")
 
 for i in "${db_and_workloads[@]}"; do

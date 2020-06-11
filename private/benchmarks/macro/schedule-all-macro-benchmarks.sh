@@ -77,6 +77,8 @@ workloads=("accesscontrol M5DLargeJobQueue accesscontrol"
   "socialnetwork M5DLargeJobQueue socialnetwork"
   "osmnodes M5D2XLargeJobQueue osmnodes"
   "offshore_leaks M5D2XLargeJobQueue offshore_leaks"
+  "alacrity M5D2XLargeJobQueue alacrity")
+  "offshore_leaks M5D2XLargeJobQueue offshore_leaks"
   "fraud-poc-credit M5D2XLargeJobQueue fraud-poc")
 
 for i in "${workloads[@]}"; do
