@@ -1,4 +1,4 @@
-old_branch|new_branch|execution_mode|deployment|difference_threshold
+old_branch:String|new_branch:String|execution_mode:String|deployment:String|difference_threshold:Double
 4.0|4.1|EXECUTE|EMBEDDED|1.1
 3.5|4.0|EXECUTE|SERVER|1.1
 3.5|4.0|EXECUTE|EMBEDDED|1.1
