@@ -251,7 +251,7 @@ class CommandApplicationProcessTest
         raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
         applicationProcess.notifyCommitted( 0 );
 
-        assertEventually( "failed apply", () -> panicker.hasPanicked, value -> value, 5, SECONDS );
+        assertEventually( "failed apply", () -> panicker.hasPanicked, value -> value, 30, SECONDS );
     }
 
     @Test
@@ -348,8 +348,8 @@ class CommandApplicationProcessTest
             var notifyFuture = runAsync( () -> applicationProcess.notifyCommitted( current + 1 ) );
 
             // then
-            assertThat(pauseFuture).succeedsWithin( 1, SECONDS );
-            assertThat(notifyFuture).succeedsWithin( 1, SECONDS );
+            assertThat(pauseFuture).succeedsWithin( 30, SECONDS );
+            assertThat(notifyFuture).succeedsWithin( 30, SECONDS );
 
             // reset state
             applicationProcess.resumeApplier( "Testing" );
