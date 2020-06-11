@@ -289,7 +289,7 @@ object LogicalPlanFuzzTesting {
   def createData[CONTEXT <: RuntimeContext](graphCreation: RuntimeTestSupport[CONTEXT] with GraphCreation[CONTEXT], graphConfig: String): Unit = {
     createLabelsAndRelationships(graphCreation)
 
-    graphConfig match {
+    graphConfig.toUpperCase match {
       case "EMPTY" =>
       case "TWO_NODES" =>
         graphCreation.nodeGraph(2, "Label")
