@@ -10,8 +10,11 @@ import java.util.Set;
 
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
+import org.neo4j.internal.kernel.api.security.AdminActionOnResource.DatabaseScope;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.internal.kernel.api.security.Segment;
 
 /**
  * A logged in and authorized user.
@@ -20,6 +23,7 @@ public class EnterpriseSecurityContext extends SecurityContext
 {
     private final Set<String> roles;
     private final AdminAccessMode adminAccessMode;
+    private static final AdminActionOnResource executeAdminProc = new AdminActionOnResource( PrivilegeAction.ADMIN_PROCEDURE, DatabaseScope.ALL, Segment.ALL );
 
     public EnterpriseSecurityContext( AuthSubject subject, AccessMode mode, Set<String> roles, AdminAccessMode adminAccessMode )
     {
@@ -29,9 +33,9 @@ public class EnterpriseSecurityContext extends SecurityContext
     }
 
     @Override
-    public boolean isAdmin()
+    public boolean allowExecuteAdminProcedure()
     {
-        return adminAccessMode.allows( AdminActionOnResource.ALL );
+        return adminAccessMode.allows( executeAdminProc );
     }
 
     @Override

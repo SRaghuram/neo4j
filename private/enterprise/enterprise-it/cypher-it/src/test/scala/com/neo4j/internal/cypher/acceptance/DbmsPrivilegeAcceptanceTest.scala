@@ -5,6 +5,8 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
@@ -221,7 +223,11 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").database("*").map))
 
+    // Should be able to execute @admin procedure
+    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')") should be(1)
+
     // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ALL DBMS PRIVILEGES ON DBMS FROM custom")
 
     // THEN
@@ -249,6 +255,11 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
     } should have message "Permission denied."
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").database("*").map))
+
+    // Should not be able to execute @admin procedure
+    the[QueryExecutionException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')")
+    } should have message "Permission denied."
   }
 
   test("should fail dbms management when denied all dbms privileges privilege") {

@@ -936,7 +936,7 @@ public class EnterpriseBuiltInDbmsProcedures
 
     private boolean isAdminOrSelf( String username )
     {
-        return securityContext.isAdmin() || securityContext.subject().hasUsername( username );
+        return securityContext.allowExecuteAdminProcedure() || securityContext.subject().hasUsername( username );
     }
 
     public static class QueryTerminationResult

@@ -105,7 +105,7 @@ class EnterpriseLoginContextTest
         // Then
         assertTrue( securityContext.mode().allowsWrites() );
         assertTrue( securityContext.mode().allowsSchemaWrites() );
-        assertTrue( securityContext.isAdmin() );
+        assertTrue( securityContext.allowExecuteAdminProcedure() );
     }
 
     @Test
