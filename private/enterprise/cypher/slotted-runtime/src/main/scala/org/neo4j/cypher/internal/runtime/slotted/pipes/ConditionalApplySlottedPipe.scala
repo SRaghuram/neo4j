@@ -7,7 +7,10 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util
 
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
@@ -37,7 +40,16 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
         else {
           val output = SlottedRow(slots)
           util.Arrays.fill(output.longs, -1L)
-          util.Arrays.fill(output.refs.asInstanceOf[Array[AnyRef]], Values.NO_VALUE)
+
+          // Breaks cached properties?..
+          // util.Arrays.fill(output.refs.asInstanceOf[Array[AnyRef]], Values.NO_VALUE)
+
+          output.slots.foreachSlotAndAliasesOrdered {
+            case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) =>
+              output.setRefAt(offset, Values.NO_VALUE)
+            case _ => //Do nothing
+          }
+
           output.copyAllFrom(lhsContext)
           Iterator.single(output)
         }
