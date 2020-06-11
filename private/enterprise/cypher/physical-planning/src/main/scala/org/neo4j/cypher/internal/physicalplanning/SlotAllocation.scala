@@ -271,6 +271,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             argumentSlots.newArgument(current.id)
 
           allocateLhsOfApply(current, nullable, argumentSlots, semanticTable)
+          allocateExpressions(current, nullable, argumentSlots, semanticTable, compingFromLeft = true)
           argumentStack.push(SlotsAndArgument(argumentSlots, argumentSlots.size(), current.id))
           populate(right, nullable)
 
@@ -293,8 +294,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           else argumentStack.top
           // NOTE: If we introduce a two sourced logical plan with an expression that needs to be evaluated in a
           //       particular scope (lhs or rhs) we need to add handling of it to allocateExpressions.
-          allocateExpressions(current, nullable, lhsSlots, semanticTable, shouldAllocateLhs = true)
-          allocateExpressions(current, nullable, rhsSlots, semanticTable, shouldAllocateLhs = false)
+          allocateExpressions(current, nullable, lhsSlots, semanticTable, shouldAllocateLhs = true, compingFromLeft = false)
+          allocateExpressions(current, nullable, rhsSlots, semanticTable, shouldAllocateLhs = false, compingFromLeft = false)
           val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), argument)
           allocations.set(current.id, result)
           if (current.isInstanceOf[ApplyPlan] || argumentRowIdSlotForCartesianProductNeeded(current)) {
@@ -314,8 +315,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                                   nullable: Boolean,
                                   slots: SlotConfiguration,
                                   semanticTable: SemanticTable,
-                                  shouldAllocateLhs: Boolean = true): Unit = {
-    allocateExpressionsInternal(lp, nullable, slots, semanticTable, shouldAllocateLhs, lp.id)
+                                  shouldAllocateLhs: Boolean = true,
+                                  compingFromLeft: Boolean = true): Unit = {
+    allocateExpressionsInternal(lp, nullable, slots, semanticTable, shouldAllocateLhs, compingFromLeft, lp.id)
   }
 
   private def allocateExpressionsInternal(p: Foldable,
@@ -323,6 +325,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                                           slots: SlotConfiguration,
                                           semanticTable: SemanticTable,
                                           shouldAllocateLhs: Boolean = true,
+                                          comingFromLeft: Boolean = true,
                                           planId: Id): Unit = {
     case class Accumulator(doNotTraverseExpression: Option[Expression])
 
@@ -336,6 +339,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case otherPlan: LogicalPlan if otherPlan.id != planId =>
         acc: Accumulator => SkipChildren(acc) // Do not traverse the logical plan tree! We are only looking at the given lp
 
+      case ValueHashJoin(_, _, Equals(_, rhsExpression)) if comingFromLeft =>
+        acc: Accumulator => (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
       case ValueHashJoin(_, _, Equals(_, rhsExpression)) if shouldAllocateLhs =>
         _: Accumulator =>
           TraverseChildren(Accumulator(doNotTraverseExpression = Some(rhsExpression))) // Only look at lhsExpression
@@ -360,7 +365,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
 
       // Only allocate expression on the LHS for these other two-child plans (which have expressions)
-      case _: ApplyPlan if !shouldAllocateLhs =>
+      case _: ApplyPlan if !comingFromLeft =>
         acc: Accumulator =>
           SkipChildren(acc)
 
@@ -390,7 +395,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             val nestedSlots = nestedPhysicalPlan.slotConfigurations(e.plan.id)
             e match {
               case NestedPlanCollectExpression(_, projection, _) =>
-                allocateExpressionsInternal(projection, nullable, nestedSlots, semanticTable, shouldAllocateLhs, planId)
+                allocateExpressionsInternal(projection, nullable, nestedSlots, semanticTable, shouldAllocateLhs, comingFromLeft, planId)
               case _ => // do nothing
             }
 
