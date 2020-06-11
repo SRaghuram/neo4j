@@ -22,22 +22,19 @@ package org.neo4j.internal.batchimport;
 import java.util.Arrays;
 
 import org.neo4j.internal.batchimport.DataImporterMonitor;
-import org.neo4j.internal.batchimport.input.InputEntityVisitor;
+import org.neo4j.internal.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.internal.batchimport.store.BatchingTokenRepository;
 import org.neo4j.internal.id.IdGenerator.Marker;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.store.CommonAbstractStore;
-import org.neo4j.kernel.impl.store.DynamicRecordAllocator;
-import org.neo4j.kernel.impl.store.PropertyStore;
-import org.neo4j.kernel.impl.store.PropertyType;
-import org.neo4j.kernel.impl.store.StandardDynamicRecordAllocator;
+import org.neo4j.kernel.impl.store.*;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.storageengine.api.BatchingStoreInterface;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -46,9 +43,8 @@ import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
 /**
  * Abstract class containing logic for importing properties for an entity (node/relationship).
  */
-abstract class EntityImporter extends InputEntityVisitor.Adapter
+abstract class EntityImporter extends BaseEntityImporter
 {
-    private static final String ENTITY_IMPORTER_TAG = "entityImporter";
     private final BatchingTokenRepository.BatchingPropertyKeyTokenRepository propertyKeyTokenRepository;
     private final PropertyStore propertyStore;
     private final PropertyRecord propertyRecord;
@@ -57,57 +53,48 @@ abstract class EntityImporter extends InputEntityVisitor.Adapter
     private final BatchingIdGetter propertyIds;
     private final BatchingIdGetter stringPropertyIds;
     private final BatchingIdGetter arrayPropertyIds;
-    protected final DataImporterMonitor monitor;
     protected final MemoryTracker memoryTracker;
-    private long propertyCount;
-    protected int entityPropertyCount; // just for the current entity
-    private boolean hasPropertyId;
-    private long propertyId;
     private final DynamicRecordAllocator dynamicStringRecordAllocator;
     private final DynamicRecordAllocator dynamicArrayRecordAllocator;
-    protected final PageCursorTracer cursorTracer;
 
-    EntityImporter( BatchingNeoStores stores, DataImporterMonitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+    EntityImporter(IdMapper idMapper, PropertyValueLookup inputIdLookup, BatchingStoreBase stores, DataImporterMonitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
-        this.cursorTracer = pageCacheTracer.createPageCursorTracer( ENTITY_IMPORTER_TAG );
-        this.propertyStore = stores.getPropertyStore();
-        this.propertyKeyTokenRepository = stores.getPropertyKeyRepository();
-        this.monitor = monitor;
+        super( stores, idMapper, inputIdLookup, monitor, pageCacheTracer );
+        this.propertyStore = ((BatchingNeoStores)stores).getPropertyStore();;
+        this.propertyKeyTokenRepository = ((BatchingNeoStores)stores).getPropertyKeyRepository();
         this.memoryTracker = memoryTracker;
+
         for ( int i = 0; i < propertyBlocks.length; i++ )
         {
             propertyBlocks[i] = new PropertyBlock();
         }
         this.propertyRecord = propertyStore.newRecord();
-        this.propertyIds = new BatchingIdGetter( propertyStore );
-        this.stringPropertyIds = new BatchingIdGetter( propertyStore.getStringStore(), propertyStore.getStringStore().getRecordsPerPage() );
+        this.propertyIds = new BatchingIdGetter( propertyStore.getIdGenerator(), propertyStore.getRecordSize() );
+        this.stringPropertyIds = new BatchingIdGetter( propertyStore.getStringStore().getIdGenerator(), propertyStore.getStringStore().getRecordsPerPage() );
         this.dynamicStringRecordAllocator = new StandardDynamicRecordAllocator( stringPropertyIds, propertyStore.getStringStore().getRecordDataSize() );
-        this.arrayPropertyIds = new BatchingIdGetter( propertyStore.getArrayStore(), propertyStore.getArrayStore().getRecordsPerPage() );
+        this.arrayPropertyIds = new BatchingIdGetter( propertyStore.getArrayStore().getIdGenerator(), propertyStore.getArrayStore().getRecordsPerPage() );
         this.dynamicArrayRecordAllocator = new StandardDynamicRecordAllocator( arrayPropertyIds, propertyStore.getStringStore().getRecordDataSize() );
     }
 
     @Override
     public boolean property( String key, Object value )
     {
-        assert !hasPropertyId;
+        super.property(key, value);
         return property( propertyKeyTokenRepository.getOrCreateId( key ), value );
     }
 
     @Override
     public boolean property( int propertyKeyId, Object value )
     {
-        assert !hasPropertyId;
+        super.property(propertyKeyId, value);
         encodeProperty( nextPropertyBlock(), propertyKeyId, value );
-        entityPropertyCount++;
         return true;
     }
 
     @Override
     public boolean propertyId( long nextProp )
     {
-        assert !hasPropertyId;
-        hasPropertyId = true;
-        propertyId = nextProp;
+        super.propertyId( nextProp );
         return true;
     }
 
@@ -115,9 +102,7 @@ abstract class EntityImporter extends InputEntityVisitor.Adapter
     public void endOfEntity()
     {
         propertyBlocksCursor = 0;
-        hasPropertyId = false;
-        propertyCount += entityPropertyCount;
-        entityPropertyCount = 0;
+        super.endOfEntity();
     }
 
     private PropertyBlock nextPropertyBlock()
@@ -195,10 +180,11 @@ abstract class EntityImporter extends InputEntityVisitor.Adapter
     @Override
     public void close()
     {
-        monitor.propertiesImported( propertyCount );
+        super.close();
     }
 
-    void freeUnusedIds()
+    @Override
+    public void freeUnusedIds()
     {
         freeUnusedIds( propertyStore, propertyIds, cursorTracer );
         freeUnusedIds( propertyStore.getStringStore(), stringPropertyIds, cursorTracer );

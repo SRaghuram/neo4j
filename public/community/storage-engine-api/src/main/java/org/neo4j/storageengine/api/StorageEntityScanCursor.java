@@ -21,6 +21,7 @@ package org.neo4j.storageengine.api;
 
 public interface StorageEntityScanCursor<S extends Scan> extends StorageEntityCursor
 {
+    public static final int NO_ID = -1;
     /**
      * Initializes this cursor so that it will scan over all existing entities. Each call to {@link #next()} will
      * advance the cursor so that the next entity is read.

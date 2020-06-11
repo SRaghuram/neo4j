@@ -67,10 +67,10 @@ public class RelationshipImporter extends EntityImporter
     private String type;
 
     protected RelationshipImporter( BatchingNeoStores stores, IdMapper idMapper, DataStatistics typeDistribution,
-            DataImporterMonitor monitor, Collector badCollector, boolean validateRelationshipData, boolean doubleRecordUnits,
-            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+                                    DataImporterMonitor monitor, Collector badCollector, boolean validateRelationshipData, boolean doubleRecordUnits,
+                                    PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
-        super( stores, monitor, pageCacheTracer, memoryTracker );
+        super( idMapper, null, stores, monitor, pageCacheTracer, memoryTracker );
         this.doubleRecordUnits = doubleRecordUnits;
         this.relationshipTypeTokenRepository = stores.getRelationshipTypeRepository();
         this.idMapper = idMapper;
@@ -78,7 +78,7 @@ public class RelationshipImporter extends EntityImporter
         this.validateRelationshipData = validateRelationshipData;
         this.relationshipStore = stores.getRelationshipStore();
         this.relationshipRecord = relationshipStore.newRecord();
-        this.relationshipIds = new BatchingIdGetter( relationshipStore );
+        this.relationshipIds = new BatchingIdGetter( relationshipStore.getIdGenerator(), relationshipStore.getRecordSize() );
         this.typeCounts = typeDistribution.newClient();
         this.prepareIdSequence = PrepareIdSequence.of( doubleRecordUnits ).apply( stores.getRelationshipStore() );
         relationshipRecord.setInUse( true );
@@ -235,7 +235,7 @@ public class RelationshipImporter extends EntityImporter
     }
 
     @Override
-    void freeUnusedIds()
+    public void freeUnusedIds()
     {
         super.freeUnusedIds();
         freeUnusedIds( relationshipStore, relationshipIds, cursorTracer );

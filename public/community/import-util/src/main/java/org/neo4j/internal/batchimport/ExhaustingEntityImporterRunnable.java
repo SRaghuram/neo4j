@@ -32,12 +32,12 @@ import org.neo4j.internal.batchimport.staging.StageControl;
 class ExhaustingEntityImporterRunnable implements Runnable
 {
     private final InputIterator data;
-    private final EntityImporter visitor;
+    private final BaseEntityImporter visitor;
     private final LongAdder roughEntityCountProgress;
     private final StageControl control;
 
     ExhaustingEntityImporterRunnable( StageControl control,
-            InputIterator data, EntityImporter visitor, LongAdder roughEntityCountProgress )
+            InputIterator data, BaseEntityImporter visitor, LongAdder roughEntityCountProgress )
     {
         this.control = control;
         this.data = data;

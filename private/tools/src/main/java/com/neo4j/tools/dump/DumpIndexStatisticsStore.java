@@ -11,7 +11,7 @@ import java.io.PrintStream;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
-import org.neo4j.internal.recordstorage.StoreTokens;
+import org.neo4j.kernel.impl.store.StoreTokens;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;

@@ -20,6 +20,7 @@
 package org.neo4j.internal.batchimport;
 
 import java.util.Collections;
+import java.util.function.LongFunction;
 
 import org.neo4j.internal.batchimport.DataImporterMonitor;
 import org.neo4j.internal.batchimport.cache.idmapping.IdMapper;
@@ -51,7 +52,6 @@ public class NodeImporter extends EntityImporter
     private final BatchingTokenRepository.BatchingLabelTokenRepository labelTokenRepository;
     private final NodeStore nodeStore;
     private final NodeRecord nodeRecord;
-    private final IdMapper idMapper;
     private final BatchingIdGetter nodeIds;
     private final PropertyStore idPropertyStore;
     private final PropertyRecord idPropertyRecord;
@@ -63,14 +63,13 @@ public class NodeImporter extends EntityImporter
     private long highestId = -1;
     private boolean hasLabelField;
 
-    NodeImporter( BatchingNeoStores stores, IdMapper idMapper, DataImporterMonitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+    NodeImporter(BatchingNeoStores stores, IdMapper idMapper, PropertyValueLookup inputIdLookup, DataImporterMonitor monitor, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
-        super( stores, monitor, pageCacheTracer, memoryTracker );
+        super( idMapper, inputIdLookup, stores, monitor, pageCacheTracer, memoryTracker );
         this.labelTokenRepository = stores.getLabelRepository();
-        this.idMapper = idMapper;
         this.nodeStore = stores.getNodeStore();
         this.nodeRecord = nodeStore.newRecord();
-        this.nodeIds = new BatchingIdGetter( nodeStore );
+        this.nodeIds = new BatchingIdGetter( nodeStore.getIdGenerator(), nodeStore.getRecordSize() );
         this.idPropertyStore = stores.getTemporaryPropertyStore();
         this.idPropertyRecord = idPropertyStore.newRecord();
         nodeRecord.setInUse( true );
@@ -89,7 +88,7 @@ public class NodeImporter extends EntityImporter
     {
         long nodeId = nodeIds.nextId( cursorTracer );
         nodeRecord.setId( nodeId );
-        idMapper.put( id, nodeId, group );
+        putIdInIdMapper( id, nodeId, group );
 
         // also store this id as property in temp property store
         if ( id != null )
@@ -170,7 +169,7 @@ public class NodeImporter extends EntityImporter
     }
 
     @Override
-    void freeUnusedIds()
+    public void freeUnusedIds()
     {
         super.freeUnusedIds();
         freeUnusedIds( nodeStore, nodeIds, cursorTracer );

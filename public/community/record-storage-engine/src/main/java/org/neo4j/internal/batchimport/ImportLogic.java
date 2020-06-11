@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -156,11 +157,13 @@ public class ImportLogic extends BaseImportLogic implements Closeable
     {
         // Import nodes, properties, labels
         neoStore.startFlushingPageCache();
-        DataImporter.importNodes( config.maxNumberOfProcessors(), input, neoStore, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
-                pageCacheTracer, memoryTracker );
+        Supplier<BaseEntityImporter> importers = () -> new NodeImporter( neoStore, idMapper, inputIdLookup, storeUpdateMonitor, pageCacheTracer, memoryTracker  );
+        DataImporter.importNodes( config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor,
+                pageCacheTracer, memoryTracker  );
         neoStore.stopFlushingPageCache();
         updatePeakMemoryUsage();
     }
+
 
     /**
      * Uses {@link IdMapper} as lookup for ID --> nodeId and imports all relationships from {@link Input#relationships(Collector)}
@@ -173,9 +176,12 @@ public class ImportLogic extends BaseImportLogic implements Closeable
     {
         // Import relationships (unlinked), properties
         neoStore.startFlushingPageCache();
-        DataStatistics typeDistribution = DataImporter.importRelationships(
-                config.maxNumberOfProcessors(), input, neoStore, idMapper, badCollector, executionMonitor, storeUpdateMonitor,
-                !badCollector.isCollectingBadRelationships(), pageCacheTracer, memoryTracker );
+        DataStatistics typeDistribution = new DataStatistics( storeUpdateMonitor, new DataStatistics.RelationshipTypeCount[0] );
+        Supplier<BaseEntityImporter> importers = () -> new RelationshipImporter( neoStore, idMapper, typeDistribution, storeUpdateMonitor,
+                badCollector, !badCollector.isCollectingBadRelationships(), neoStore.usesDoubleRelationshipRecordUnits(), pageCacheTracer, memoryTracker  );
+        DataImporter.importRelationships(
+                config.maxNumberOfProcessors(), input, neoStore, importers, idMapper, badCollector, executionMonitor,
+                !badCollector.isCollectingBadRelationships(), pageCacheTracer, memoryTracker  );
         neoStore.stopFlushingPageCache();
         updatePeakMemoryUsage();
         idMapper.close();

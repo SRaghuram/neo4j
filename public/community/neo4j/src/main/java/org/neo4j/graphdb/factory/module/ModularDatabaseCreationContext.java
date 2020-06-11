@@ -160,6 +160,7 @@ public class ModularDatabaseCreationContext implements DatabaseCreationContext
         this.databaseAvailabilityGuardFactory =
                 databaseTimeoutMillis -> databaseAvailabilityGuardFactory( namedDatabaseId, globalModule, databaseTimeoutMillis );
         this.storageEngineFactory = selectStorageEngineBasedOnName( globalModule.getStorageEngineFactory(), namedDatabaseId );
+        System.out.println("Engine["+this.storageEngineFactory.toString()+"] for database["+namedDatabaseId.name()+"]");
         this.fileLockerService = globalModule.getFileLockerService();
         this.accessCapabilityFactory = editionComponents.getAccessCapabilityFactory();
         this.leaseService = leaseService;

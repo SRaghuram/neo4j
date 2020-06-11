@@ -57,6 +57,11 @@ public class InputEntityArray implements InputEntityVisitor
     }
 
     @Override
+    public boolean property(String key, Object value, Object stringValue) {
+        return currentEntity().property(key, value, stringValue);
+    }
+
+    @Override
     public boolean property( int propertyKeyId, Object value )
     {
         return currentEntity().property( propertyKeyId, value );

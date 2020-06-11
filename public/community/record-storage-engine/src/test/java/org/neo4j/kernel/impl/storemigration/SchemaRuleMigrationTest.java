@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.recordstorage.StoreTokens;
+import org.neo4j.kernel.impl.store.StoreTokens;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
