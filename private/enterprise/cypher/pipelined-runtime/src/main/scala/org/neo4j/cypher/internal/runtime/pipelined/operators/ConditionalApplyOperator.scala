@@ -77,7 +77,7 @@ class ConditionalApplyOperator(val workIdentity: WorkIdentity,
 
     val morsel = inputMorsel.nextCopy
     val task =
-      if (morsel.slots eq lhsSlotConfig) new ConditionalApplyLHSTask(morsel, workIdentity, lhsSlotConfig, computeRefsToNullOnLHS())
+      if (morsel.slots eq lhsSlotConfig) new ConditionalApplyLHSTask(morsel, workIdentity, lhsSlotConfig, rhsSlotConfig, computeRefsToNullOnLHS())
       else if (morsel.slots eq rhsSlotConfig) new ConditionalApplyRHSTask(morsel, workIdentity, rhsSlotConfig.size())
       else throw new IllegalStateException(s"Unknown slot configuration in UnionOperator. Got: ${morsel.slots}. LHS: $lhsSlotConfig. RHS: $rhsSlotConfig")
 
@@ -108,6 +108,7 @@ abstract class ConditionalApplyTask(val inputMorsel: Morsel,
 class ConditionalApplyLHSTask(inputMorsel: Morsel,
                               workIdentity: WorkIdentity,
                               lhsSlotConfig: SlotConfiguration,
+                              rhsSlotConfig: SlotConfiguration,
                               refsToNull: Array[Int]) extends ConditionalApplyTask(inputMorsel, workIdentity){
 
   override def operate(outputMorsel: Morsel,
@@ -117,7 +118,7 @@ class ConditionalApplyLHSTask(inputMorsel: Morsel,
     val inputCursor = inputMorsel.readCursor()
     val outputCursor = outputMorsel.writeCursor()
     val lhsSize = lhsSlotConfig.size()
-    val rhsSize = lhsSlotConfig.size()
+    val rhsSize = rhsSlotConfig.size()
 
     while (outputCursor.next() && inputCursor.next()) {
       outputCursor.copyFrom(inputCursor, lhsSize.nLongs, lhsSize.nReferences)
