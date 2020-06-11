@@ -685,7 +685,13 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: AbstractSelectOrSemiApply =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        breakingPolicy.invoke(lp, rhs, argument.slotConfiguration, applyPlans(lp.id))
+        val result = breakingPolicy.invoke(lp, rhs, argument.slotConfiguration, applyPlans(lp.id))
+        rhs.foreachSlotAndAliases {
+          case SlotWithKeyAndAliases(VariableSlotKey(key), slot, _) if slot.offset >= lhs.numberOfLongs =>
+            result.add(key, slot.asNullable)
+          case _ => //do nothing
+        }
+        result
 
       case LetSemiApply(_, _, name) =>
         lhs.newReference(name, false, CTBoolean)
