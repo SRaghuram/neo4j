@@ -15,6 +15,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.configuration.GraphDatabaseInternalSettings.block_create_drop_database
 import org.neo4j.dbms.api.DatabaseExistsException
 import org.neo4j.dbms.api.DatabaseLimitReachedException
 import org.neo4j.dbms.api.DatabaseNotFoundException
@@ -94,6 +95,51 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       Config.defaults(default_database, name)
       // THEN
     } should have message startOfError + "Failed to validate '" + name + "' for 'dbms.default_database': The provided database name must have a length between 3 and 63 characters."
+  }
+
+  test("should not fail at startup when config setting block_create_drop_database is set to true ") {
+    val config = Config.defaults()
+    config.set(block_create_drop_database, java.lang.Boolean.TRUE)
+    setup(config)
+  }
+
+  test("should fail CREATE DATABASE when config setting block_create_drop_database is set to true ") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_create_drop_database, java.lang.Boolean.TRUE)
+    setup(config)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN & THEN
+    the[UnsupportedOperationException] thrownBy {
+      execute("CREATE DATABASE foo")
+    } should have message "CREATE DATABASE is not supported because it has been manually disabled."
+  }
+
+  test("should fail CREATE OR REPLACE DATABASE when config setting block_create_drop_database is set to true ") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_create_drop_database, java.lang.Boolean.TRUE)
+    setup(config)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN & THEN
+    the[UnsupportedOperationException] thrownBy {
+      execute("CREATE OR REPLACE DATABASE neo4j")
+    } should have message "CREATE DATABASE is not supported because it has been manually disabled."
+  }
+
+  test("should fail DROP DATABASE when config setting block_create_drop_database is set to true ") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_create_drop_database, java.lang.Boolean.TRUE)
+    setup(config)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN & THEN
+    the[UnsupportedOperationException] thrownBy {
+      execute("DROP DATABASE neo4j")
+    } should have message "DROP DATABASE is not supported because it has been manually disabled."
   }
 
   // Tests for showing databases

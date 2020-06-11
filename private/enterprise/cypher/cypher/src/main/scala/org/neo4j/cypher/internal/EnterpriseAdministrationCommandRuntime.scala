@@ -19,6 +19,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDataba
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.helpers.DatabaseNameValidator
@@ -559,6 +560,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
     case CreateDatabase(source, dbName) => (context, parameterMapping) =>
+      if (resolver.resolveDependency(classOf[Config]).get(GraphDatabaseInternalSettings.block_create_drop_database)) {
+        throw new UnsupportedOperationException("CREATE DATABASE is not supported because it has been manually disabled.")
+      }
+
       // Ensuring we don't exceed the max number of databases is a separate step
       val (nameKey, nameValue, nameConverter) = getNameFields("databaseName", dbName, valueMapper = s => {
         val normalizedName = new NormalizedDatabaseName(s)
@@ -657,6 +662,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // DROP DATABASE foo [IF EXISTS] [DESTROY | DUMP DATA]
     case DropDatabase(source, dbName, additionalAction) => (context, parameterMapping) =>
+      if (resolver.resolveDependency(classOf[Config]).get(GraphDatabaseInternalSettings.block_create_drop_database)) {
+        throw new UnsupportedOperationException("DROP DATABASE is not supported because it has been manually disabled.")
+      }
       val dumpDataKey = internalKey("dumpData")
       val shouldDumpData = additionalAction == DumpData
       val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
