@@ -11,4 +11,6 @@ import org.neo4j.cypher.internal.util.InputPosition
 /**
   * Special aggregating function for checking if rows are produced. Not exposed in Cypher.
   */
-case class NonEmpty()(val position: InputPosition) extends Expression
+case class NonEmpty()(val position: InputPosition) extends Expression {
+  override def asCanonicalStringVal: String = "nonEmpty()"
+}
