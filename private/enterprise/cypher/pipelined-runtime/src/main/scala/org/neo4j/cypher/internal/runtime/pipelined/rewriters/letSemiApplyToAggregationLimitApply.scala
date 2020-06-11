@@ -44,8 +44,10 @@ case class letSemiApplyToAggregationLimitApply(cardinalities: Cardinalities,
     case o@LetSemiApply(lhs: LogicalPlan, rhs: LogicalPlan, idName: String) =>
       val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
       val aggregation = Aggregation(limit, Map.empty, Map(idName -> NonEmpty()(InputPosition.NONE)))(idGen)
-      cardinalities.set(limit.id, cardinalities.get(lhs.id))
+      cardinalities.copy(lhs.id, limit.id)
+      cardinalities.copy(lhs.id, aggregation.id)
       providedOrders.copy(rhs.id, limit.id)
+      providedOrders.copy(rhs.id, aggregation.id)
 
       Apply(lhs, aggregation)(SameId(o.id))
   })

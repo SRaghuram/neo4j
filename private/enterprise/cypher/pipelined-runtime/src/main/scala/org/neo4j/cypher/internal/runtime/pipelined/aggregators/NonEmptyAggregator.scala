@@ -23,30 +23,28 @@ case object NonEmptyAggregator extends Aggregator {
 }
 
 class NonEmptyStandardReducer() extends DirectStandardReducer {
-  private var isEmpty = false
+  private var nonEmpty = false
 
   // Reducer
   override def newUpdater(): Updater = this
 
-  override def result: AnyValue = Values.booleanValue(isEmpty)
+  override def result: AnyValue = Values.booleanValue(nonEmpty)
 
   // Updater
   override def add(value: AnyValue): Unit =
-    isEmpty = true
+    nonEmpty = true
 }
 
 class NonEmptyConcurrentReducer() extends Reducer {
-  private var isEmpty = false
+  @volatile private var nonEmpty = false
 
   override def newUpdater(): Updater = new Upd()
 
-  override def result: AnyValue = Values.booleanValue(isEmpty)
+  override def result: AnyValue = Values.booleanValue(nonEmpty)
 
   class Upd() extends Updater {
-    var partCount = 0L
-
     override def add(value: AnyValue): Unit =
-      isEmpty = true
+      nonEmpty = true
 
     override def applyUpdates(): Unit = {}
   }
