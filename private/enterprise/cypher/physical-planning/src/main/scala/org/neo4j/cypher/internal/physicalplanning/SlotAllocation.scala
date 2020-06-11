@@ -387,7 +387,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             // from the inner plan
             val nestedSlots = nestedPhysicalPlan.slotConfigurations(e.plan.id)
             e match {
-              case NestedPlanCollectExpression(_, projection) =>
+              case NestedPlanCollectExpression(_, projection, _) =>
                 allocateExpressionsInternal(projection, nullable, nestedSlots, semanticTable, shouldAllocateLhs, planId)
               case _ => // do nothing
             }

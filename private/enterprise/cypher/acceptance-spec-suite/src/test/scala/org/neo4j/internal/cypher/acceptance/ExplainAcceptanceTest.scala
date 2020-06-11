@@ -61,6 +61,17 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     val plan = result.executionPlanDescription().toString
 
-    plan.toString should include("NestedPlanExistsExpression(VarExpand-Argument)")
+    plan should include("exists((`perDay`)-[:NEXT*]->(`bknEnd`))")
+  }
+
+  test("should handle query with nested collect expression") {
+    val query = """EXPLAIN
+                  |MATCH (start:Start)
+                  |RETURN head([path IN (start)-[:NEXT*]->(:End) | last(nodes(path))]) AS result""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    val plan = result.executionPlanDescription().toString
+
+    plan should include("(start)-[:NEXT*]->(:End)")
   }
 }

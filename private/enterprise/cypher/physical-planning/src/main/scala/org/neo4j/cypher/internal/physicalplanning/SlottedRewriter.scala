@@ -162,7 +162,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
           throw new InternalException(s"Missing slot configuration for plan with ${e.plan.id}"))
         val rewriter = rewriteCreator(innerSlotConf, thisPlan, slotConfigurations)
         e match {
-          case ce@NestedPlanCollectExpression(_, projection) =>
+          case ce@NestedPlanCollectExpression(_, projection, _) =>
             val rewrittenProjection = projection.endoRewrite(rewriter)
             ce.copy(plan = rewrittenPlan, projection = rewrittenProjection)(e.position)
           case ee: NestedPlanExistsExpression =>
