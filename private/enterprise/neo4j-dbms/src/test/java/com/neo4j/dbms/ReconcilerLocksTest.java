@@ -21,6 +21,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,7 +65,7 @@ class ReconcilerLocksTest
 
         // then
         started.await();
-        assertFalse( stopped.await( 1000, MILLISECONDS ) );
+        assertFalse( stopped.await( 500, MILLISECONDS ) );
         locks.releaseLockOn( "foo" );
         stopped.await();
     }
@@ -93,7 +94,7 @@ class ReconcilerLocksTest
             }
         }, executor );
 
-        reLock.get( 1000, MILLISECONDS );
+        reLock.get( 30, SECONDS );
         assertTrue( reLock.isDone() );
         assertFalse( reLock.isCompletedExceptionally() );
     }
@@ -164,11 +165,11 @@ class ReconcilerLocksTest
 
         // when/then
         acquiring.await();
-        Thread.sleep( 1000 );
+        Thread.sleep( 500 );
         locks.releaseLockOn( foo.name() );
 
         // then
-        assertTrue( acquired.await( 1000, MILLISECONDS ) );
+        assertTrue( acquired.await( 30, SECONDS ) );
         order.verify( markerA ).acquired();
         order.verify( markerB ).acquired();
     }
