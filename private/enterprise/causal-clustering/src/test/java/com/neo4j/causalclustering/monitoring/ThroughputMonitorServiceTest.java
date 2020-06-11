@@ -12,20 +12,46 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssertions;
 import org.neo4j.test.FakeClockJobScheduler;
 
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ThroughputMonitorServiceTest
 {
     private final FakeClockJobScheduler jobScheduler = new FakeClockJobScheduler();
     private final Duration sampleWindow = ofSeconds( 5 );
 
+    private AssertableLogProvider logProvider = new AssertableLogProvider();
+
     private final ThroughputMonitorService throughputMonitorService =
-            new ThroughputMonitorService( jobScheduler, jobScheduler, sampleWindow, nullLogProvider() );
+            new ThroughputMonitorService( jobScheduler, jobScheduler, sampleWindow, logProvider );
+
+    @Test
+    void justCreatingTheMonitorShouldNotStartSampling() throws Exception
+    {
+        throughputMonitorService.start();
+
+        var cit = mock( CommandIndexTracker.class );
+        when( cit.getAppliedCommandIndex() ).thenReturn( 1L );
+        var monitor = throughputMonitorService.createMonitor( cit );
+
+        forward( sampleWindow.toSeconds() );
+        LogAssertions.assertThat( logProvider ).doesNotHaveAnyLogs();
+        verify( cit, never() ).getAppliedCommandIndex();
+
+        monitor.start();
+        forward( sampleWindow.toSeconds() );
+        verify( cit, atLeast( 1 ) ).getAppliedCommandIndex();
+    }
 
     @Test
     void shouldBeAbleToUnRegisterMonitors() throws Exception

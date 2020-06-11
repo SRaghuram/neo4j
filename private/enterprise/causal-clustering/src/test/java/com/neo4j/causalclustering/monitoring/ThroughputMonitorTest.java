@@ -49,10 +49,16 @@ class ThroughputMonitorTest
     }
 
     @Test
-    void shouldUnregisterOnStop()
+    void shouldRegisterOnStart()
     {
         monitor.start();
 
+        verify( throughputMonitorService, times( 1 ) ).registerMonitor( monitor );
+    }
+
+    @Test
+    void shouldUnregisterOnStop()
+    {
         monitor.stop();
 
         verify( throughputMonitorService, times( 1 ) ).unregisterMonitor( monitor );

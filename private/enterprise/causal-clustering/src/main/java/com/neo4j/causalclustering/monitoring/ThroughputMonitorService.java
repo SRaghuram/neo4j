@@ -50,13 +50,16 @@ public class ThroughputMonitorService extends LifecycleAdapter
     {
         var lagTolerance = sampleInterval.multipliedBy( LAG_TOLERANCE_MULTIPLIER );
         var acceptableOffset = throughputWindow.dividedBy( TOLERANCE_DIVISOR );
-        var throughputMonitor = new ThroughputMonitor( logProvider, clock, lagTolerance, throughputWindow, acceptableOffset,
+        return new ThroughputMonitor( logProvider, clock, lagTolerance, throughputWindow, acceptableOffset,
                 new QualitySampler<>( clock, sampleInterval.dividedBy( TOLERANCE_DIVISOR ), commandIndexTracker::getAppliedCommandIndex ), SAMPLES, this );
-        monitors.add( throughputMonitor );
-        return throughputMonitor;
     }
 
-    public void unregisterMonitor( ThroughputMonitor throughputMonitor )
+    void registerMonitor( ThroughputMonitor throughputMonitor )
+    {
+        monitors.add( throughputMonitor );
+    }
+
+    void unregisterMonitor( ThroughputMonitor throughputMonitor )
     {
         monitors.remove( throughputMonitor );
     }

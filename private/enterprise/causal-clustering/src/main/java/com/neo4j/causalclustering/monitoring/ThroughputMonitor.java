@@ -53,6 +53,7 @@ public class ThroughputMonitor extends LifecycleAdapter
     @Override
     public void start()
     {
+        throughputMonitorService.registerMonitor( this );
         isRunning = true;
     }
 
