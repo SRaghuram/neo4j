@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import java.util
+
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -34,6 +36,8 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
         }
         else {
           val output = SlottedRow(slots)
+          util.Arrays.fill(output.longs, -1L)
+          util.Arrays.fill(output.refs.asInstanceOf[Array[AnyRef]], Values.NO_VALUE)
           output.copyAllFrom(lhsContext)
           Iterator.single(output)
         }
