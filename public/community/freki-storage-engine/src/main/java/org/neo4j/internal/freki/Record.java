@@ -29,7 +29,7 @@ import org.neo4j.io.pagecache.PageCursor;
 
 import static java.lang.String.format;
 
-class Record
+public class Record
 {
     /*
       Header 1B
@@ -70,7 +70,7 @@ class Record
         this.data = buffer;
     }
 
-    static Record deletedRecord( int sizeExp, long id )
+    public static Record deletedRecord(int sizeExp, long id)
     {
         return new Record( sizeExpAsFlagsByte( sizeExp ), id, null );
     }

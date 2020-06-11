@@ -28,30 +28,30 @@ import org.neo4j.util.concurrent.AsyncApply;
 import org.neo4j.util.concurrent.Work;
 import org.neo4j.util.concurrent.WorkSync;
 
-class DenseRelationshipsWorkSync
+public class DenseRelationshipsWorkSync
 {
     private WorkSync<SimpleDenseRelationshipStore,DenseRelationshipsWork> workSync;
 
-    DenseRelationshipsWorkSync( SimpleDenseRelationshipStore store )
+    public DenseRelationshipsWorkSync(SimpleDenseRelationshipStore store)
     {
         workSync = new WorkSync<>( store );
     }
 
-    Batch newBatch()
+    public Batch newBatch()
     {
         return new Batch();
     }
 
-    class Batch
+    public class Batch
     {
         private final List<FrekiCommand.DenseNode> commands = new ArrayList<>();
 
-        void add( FrekiCommand.DenseNode node )
+        public void add(FrekiCommand.DenseNode node)
         {
             commands.add( node );
         }
 
-        AsyncApply applyAsync( PageCacheTracer cacheTracer )
+        public AsyncApply applyAsync(PageCacheTracer cacheTracer)
         {
             return workSync.applyAsync( new DenseRelationshipsWork( commands, cacheTracer ) );
         }

@@ -44,7 +44,7 @@ import static org.neo4j.internal.freki.StreamVByte.LONG_ENCODER;
 import static org.neo4j.internal.freki.StreamVByte.decodeIntValue;
 import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
 
-class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBigValueStore
+public class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBigValueStore
 {
     // [bbaa,  fl]
     // f: first one

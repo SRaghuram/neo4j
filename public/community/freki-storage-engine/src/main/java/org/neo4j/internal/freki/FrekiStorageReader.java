@@ -46,14 +46,14 @@ import static org.neo4j.collection.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
-class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
+public class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
 {
     private final Stores stores;
     private final SchemaCache schemaCache;
     private final GBPTreeCountsStore counts;
     private final TokenHolders tokenHolders;
 
-    FrekiStorageReader( Stores stores, CursorAccessPatternTracer cursorAccessPatternTracer, TokenHolders tokenHolders )
+    public FrekiStorageReader(Stores stores, CursorAccessPatternTracer cursorAccessPatternTracer, TokenHolders tokenHolders)
     {
         super( stores, cursorAccessPatternTracer );
         this.stores = stores;

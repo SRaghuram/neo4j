@@ -56,7 +56,7 @@ import static java.lang.String.format;
 import static org.neo4j.token.api.TokenIdPrettyPrinter.label;
 import static org.neo4j.token.api.TokenIdPrettyPrinter.relationshipType;
 
-abstract class FrekiCommand implements StorageCommand
+public abstract class FrekiCommand implements StorageCommand
 {
     private final byte commandType;
 
@@ -73,7 +73,7 @@ abstract class FrekiCommand implements StorageCommand
 
     abstract boolean accept( Dispatcher applier ) throws IOException;
 
-    static class SparseNode extends FrekiCommand implements Iterable<RecordChange>
+    public static class SparseNode extends FrekiCommand implements Iterable<RecordChange>
     {
         static final byte TYPE = 1;
 
@@ -233,12 +233,12 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    static class RecordChange
+    static public class RecordChange
     {
         private static final RecordChange DESERIALIZATION_HAS_NEXT_MARKER = new RecordChange( null, null );
 
         final Record before;
-        final Record after;
+        public final Record after;
         private RecordChange next;
 
         RecordChange( Record before, Record after )
@@ -257,12 +257,12 @@ abstract class FrekiCommand implements StorageCommand
             return after != null ? before == null ? Mode.CREATE : Mode.UPDATE : Mode.DELETE;
         }
 
-        byte sizeExp()
+        public byte sizeExp()
         {
             return anyUsed().sizeExp();
         }
 
-        long recordId()
+        public long recordId()
         {
             return anyUsed().id;
         }
@@ -321,7 +321,7 @@ abstract class FrekiCommand implements StorageCommand
      * that it's recoverable because we're not allowed to remove anything not covered by the command because otherwise we
      * cannot recreated that data when doing reverse recovery.
      */
-    static class DenseNode extends FrekiCommand
+    public static class DenseNode extends FrekiCommand
     {
         static final byte TYPE = 2;
 
@@ -514,11 +514,11 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    static class BigPropertyValue extends FrekiCommand
+    public static class BigPropertyValue extends FrekiCommand
     {
         static final byte TYPE = 3;
 
-        final List<Record> records;
+        public final List<Record> records;
 
         BigPropertyValue( List<Record> records )
         {

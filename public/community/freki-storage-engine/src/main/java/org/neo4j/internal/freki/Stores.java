@@ -161,7 +161,7 @@ public class Stores extends MainStores
     }
 
     @Override
-    void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer ) throws IOException
+    public void flushAndForce(IOLimiter limiter, PageCursorTracer cursorTracer) throws IOException
     {
         super.flushAndForce( limiter, cursorTracer );
         metaDataStore.flush( cursorTracer );

@@ -144,7 +144,7 @@ class MainStores extends Life
         idGeneratorsToRegisterOnTheWorkSync.forEach( idGenerator -> visitor.accept( idGenerator.getKey().get( idGenerator.getValue() ) ) );
     }
 
-    SimpleStore mainStore( int sizeExp )
+    public SimpleStore mainStore(int sizeExp)
     {
         return sizeExp >= mainStores.length ? null : mainStores[sizeExp];
     }

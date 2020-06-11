@@ -26,7 +26,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 
-class FrekiCommandCreationContext extends FrekiRelationshipIdGenerator implements CommandCreationContext
+public class FrekiCommandCreationContext extends FrekiRelationshipIdGenerator implements CommandCreationContext
 {
     private final IdGenerator nodes;
     private final IdGenerator labelTokens;
@@ -34,7 +34,7 @@ class FrekiCommandCreationContext extends FrekiRelationshipIdGenerator implement
     private final IdGenerator propertyKeyTokens;
     private final IdGenerator schema;
 
-    FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    public FrekiCommandCreationContext(MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker)
     {
         super( stores, cursorTracer, memoryTracker );
         nodes = idGeneratorFactory.get( IdType.NODE );

@@ -44,7 +44,7 @@ import static java.lang.Math.toIntExact;
 import static org.neo4j.internal.freki.MutableNodeData.internalRelationshipIdFromRelationshipId;
 import static org.neo4j.internal.helpers.collection.Iterators.loop;
 
-class CommandCreator implements TxStateVisitor
+public class CommandCreator implements TxStateVisitor
 {
     private final Collection<StorageCommand> commands;
     private final Stores stores;
@@ -52,8 +52,8 @@ class CommandCreator implements TxStateVisitor
     private final PageCursorTracer cursorTracer;
     private final GraphUpdates graphUpdates;
 
-    CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer,
-            MemoryTracker memoryTracker )
+    public CommandCreator(Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer,
+                          MemoryTracker memoryTracker)
     {
         this.commands = commands;
         this.stores = stores;
