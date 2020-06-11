@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import org.neo4j.graphdb.TransientTransactionFailureException;
+import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.impl.api.LeaseException;
 
@@ -18,7 +19,8 @@ class TransientFailurePredicate implements Predicate<Throwable>
 {
     private static final List<Class<? extends Throwable>> transientFailureClasses = List.of(
             LeaseException.class,
-            TransientTransactionFailureException.class );
+            TransientTransactionFailureException.class,
+            WriteOperationsNotAllowedException.class );
 
     @Override
     public boolean test( Throwable error )
