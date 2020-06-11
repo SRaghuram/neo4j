@@ -118,7 +118,6 @@ import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationExcep
 import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.LongValue
-import org.neo4j.values.storable.StringArray
 import org.neo4j.values.storable.TextArray
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Value
@@ -127,7 +126,6 @@ import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 
 import scala.collection.JavaConverters.asScalaSetConverter
-import scala.collection.mutable
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -138,7 +136,9 @@ import scala.util.Try
  */
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
-  private val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(EnterpriseEditionSettings.max_number_of_databases)
+  private val config: Config = resolver.resolveDependency(classOf[Config])
+  private val maxDBLimit: Long = config.get(EnterpriseEditionSettings.max_number_of_databases)
+  private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
 
   override def name: String = "enterprise administration-commands"
 
@@ -560,7 +560,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
     case CreateDatabase(source, dbName) => (context, parameterMapping) =>
-      if (resolver.resolveDependency(classOf[Config]).get(GraphDatabaseInternalSettings.block_create_drop_database)) {
+      if (create_drop_database_is_blocked) {
         throw new UnsupportedOperationException("CREATE DATABASE is not supported because it has been manually disabled.")
       }
 
@@ -574,7 +574,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         }
         normalizedName.name()
       })
-      val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
+      val defaultDbName = config.get(GraphDatabaseSettings.default_database)
       def isDefault(dbName: String) = dbName.equals(defaultDbName)
 
       val virtualKeys: Array[String] = Array(
@@ -662,7 +662,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // DROP DATABASE foo [IF EXISTS] [DESTROY | DUMP DATA]
     case DropDatabase(source, dbName, additionalAction) => (context, parameterMapping) =>
-      if (resolver.resolveDependency(classOf[Config]).get(GraphDatabaseInternalSettings.block_create_drop_database)) {
+      if (create_drop_database_is_blocked) {
         throw new UnsupportedOperationException("DROP DATABASE is not supported because it has been manually disabled.")
       }
       val dumpDataKey = internalKey("dumpData")
