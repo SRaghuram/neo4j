@@ -193,7 +193,7 @@ class SlottedSelectOrAntiSemiApplyTest extends SelectOrAntiSemiApplyTestBase(ENT
 class SlottedLetSelectOrSemiApplyTest extends LetSelectOrSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLetSelectOrAntiSemiApplyTest extends LetSelectOrAntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedConditionalApplyTest extends ConditionalApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-class SlottedAtiConditionalApplyTest extends AntiConditionalApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedAntiConditionalApplyTest extends AntiConditionalApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedLetSemiApplyTest extends LetSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLetAntiSemiApplyTest extends LetAntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
