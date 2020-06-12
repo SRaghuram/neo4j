@@ -41,9 +41,7 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
           val output = SlottedRow(slots)
           util.Arrays.fill(output.longs, -1L)
 
-          // Breaks cached properties?..
-          // util.Arrays.fill(output.refs.asInstanceOf[Array[AnyRef]], Values.NO_VALUE)
-
+          //NOTE: we should not include cached properties here since that will break cached property lookup
           output.slots.foreachSlotAndAliasesOrdered {
             case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) =>
               output.setRefAt(offset, Values.NO_VALUE)
