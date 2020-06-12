@@ -14,17 +14,19 @@ import org.neo4j.lock.ResourceTypes;
 
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.lock.LockType.EXCLUSIVE;
+import static org.neo4j.lock.LockType.SHARED;
 
 class LockUnitTest
 {
     @Test
     void exclusiveLocksAppearFirst()
     {
-        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, 1, true );
-        LockUnit unit2 = new LockUnit( ResourceTypes.NODE, 2, false );
-        LockUnit unit3 = new LockUnit( ResourceTypes.RELATIONSHIP, 1, false );
-        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP, 2, true );
-        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, 1, false );
+        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1 );
+        LockUnit unit2 = new LockUnit( ResourceTypes.NODE, SHARED, 2 );
+        LockUnit unit3 = new LockUnit( ResourceTypes.RELATIONSHIP, SHARED, 1 );
+        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 2 );
+        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, SHARED, 1 );
 
         List<LockUnit> list = asList( unit1, unit2, unit3, unit4, unit5 );
         Collections.sort( list );
@@ -35,11 +37,11 @@ class LockUnitTest
     @Test
     void exclusiveOrderedByResourceTypes()
     {
-        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, 1, true );
-        LockUnit unit2 = new LockUnit( ResourceTypes.RELATIONSHIP, 1, true );
-        LockUnit unit3 = new LockUnit( ResourceTypes.NODE, 2, true );
-        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, 1, true );
-        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP, 2, true );
+        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1 );
+        LockUnit unit2 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 1 );
+        LockUnit unit3 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 2 );
+        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, EXCLUSIVE, 1 );
+        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 2 );
 
         List<LockUnit> list = asList( unit1, unit2, unit3, unit4, unit5 );
         Collections.sort( list );

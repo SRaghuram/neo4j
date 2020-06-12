@@ -64,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier.ON_HEAP;
+import static org.neo4j.lock.LockType.SHARED;
 import static org.neo4j.test.rule.DatabaseRule.mockedTokenHolders;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
@@ -227,7 +228,7 @@ class TransactionStatusResultTest
         @Override
         public Stream<ActiveLock> activeLocks()
         {
-            return Stream.of( ActiveLock.sharedLock( ResourceTypes.NODE, 3 ) );
+            return Stream.of( new ActiveLock( ResourceTypes.NODE, SHARED, 3 ) );
         }
 
         @Override

@@ -1018,7 +1018,7 @@ public class EnterpriseBuiltInDbmsProcedures
 
         public LockResult( ActiveLock activeLock )
         {
-            this( activeLock.mode(), activeLock.resourceType().name(), activeLock.resourceId() );
+            this( activeLock.lockType().getDescription(), activeLock.resourceType().name(), activeLock.resourceId() );
         }
 
         public LockResult( String mode, String resourceType, long resourceId )

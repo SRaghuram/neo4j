@@ -29,6 +29,7 @@ import org.neo4j.lock.ResourceType;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static org.neo4j.lock.LockType.EXCLUSIVE;
 
 class TransactionDependenciesResolver
 {
@@ -124,7 +125,7 @@ class TransactionDependenciesResolver
 
     private static boolean isBlocked( ActiveLock activeLock, List<ActiveLock> activeLocks )
     {
-        return ActiveLock.EXCLUSIVE_MODE.equals( activeLock.mode() ) ?
+        return EXCLUSIVE == activeLock.lockType() ?
                haveAnyLocking( activeLocks, activeLock.resourceType(), activeLock.resourceId() ) :
                haveExclusiveLocking( activeLocks, activeLock.resourceType(), activeLock.resourceId() );
     }
@@ -136,7 +137,7 @@ class TransactionDependenciesResolver
 
     private static boolean haveExclusiveLocking( List<ActiveLock> locks, ResourceType resourceType, long resourceId )
     {
-        return locks.stream().anyMatch( lock -> ActiveLock.EXCLUSIVE_MODE.equals( lock.mode() ) &&
+        return locks.stream().anyMatch( lock -> EXCLUSIVE == lock.lockType() &&
                 lock.resourceId() == resourceId &&
                 lock.resourceType() == resourceType );
     }

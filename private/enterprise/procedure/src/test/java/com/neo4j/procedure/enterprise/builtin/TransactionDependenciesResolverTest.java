@@ -58,7 +58,7 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 0,
-                singletonList( ActiveLock.exclusiveLock( ResourceTypes.NODE, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
@@ -74,7 +74,7 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 0,
-                singletonList( ActiveLock.sharedLock( ResourceTypes.NODE, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, SHARED, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
@@ -105,7 +105,7 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 3,
-                singletonList( ActiveLock.exclusiveLock( ResourceTypes.NODE, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
@@ -121,9 +121,9 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 4,
-                singletonList( ActiveLock.exclusiveLock( ResourceTypes.NODE, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(),
-                5, singletonList( ActiveLock.sharedLock( ResourceTypes.NODE, 2) ) );
+                5, singletonList( new ActiveLock( ResourceTypes.NODE, SHARED, 2 ) ) );
         TestKernelTransactionHandle handle3 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 6 );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );

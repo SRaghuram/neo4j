@@ -22,6 +22,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
+import org.neo4j.lock.LockType;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
 import org.neo4j.test.extension.Inject;
@@ -33,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.lock.LockType.EXCLUSIVE;
+import static org.neo4j.lock.LockType.SHARED;
 
 @ExtendWith( RandomExtension.class )
 class DeferringLockClientTest
@@ -77,7 +80,7 @@ class DeferringLockClientTest
         for ( int i = 0; i < 10_000; i++ )
         {
             boolean exclusive = random.nextBoolean();
-            LockUnit lockUnit = new LockUnit( random.among( types ), abs( random.nextLong() ), exclusive );
+            LockUnit lockUnit = new LockUnit( random.among( types ), exclusive ? EXCLUSIVE : SHARED, abs( random.nextLong() ) );
 
             if ( exclusive )
             {
@@ -223,7 +226,7 @@ class DeferringLockClientTest
         client.acquireDeferredLocks( LockTracer.NONE );
 
         // THEN
-        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, 1, true ) ) );
+        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
     }
 
     @Test
@@ -242,7 +245,7 @@ class DeferringLockClientTest
         client.acquireDeferredLocks( LockTracer.NONE );
 
         // THEN
-        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, 1, false ) ) );
+        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, SHARED, 1 ) ) );
     }
 
     @Test
@@ -261,7 +264,7 @@ class DeferringLockClientTest
         client.acquireDeferredLocks( LockTracer.NONE );
 
         // THEN
-        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, 1, true ) ) );
+        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
     }
 
     @Test
@@ -285,13 +288,13 @@ class DeferringLockClientTest
 
         // THEN
         Set<LockUnit> expectedLocks = new LinkedHashSet<>(
-                Arrays.asList( new LockUnit( ResourceTypes.NODE, 2, true ),
-                        new LockUnit( ResourceTypes.NODE, 3, true ),
-                        new LockUnit( ResourceTypes.NODE, 42, true ),
-                        new LockUnit( ResourceTypes.RELATIONSHIP, 1, true ),
-                        new LockUnit( ResourceTypes.NODE, 1, false ),
-                        new LockUnit( ResourceTypes.RELATIONSHIP, 2, false ),
-                        new LockUnit( ResourceTypes.LABEL, 1, false ) )
+                Arrays.asList( new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 2 ),
+                        new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 3 ),
+                        new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 42 ),
+                        new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 1 ),
+                        new LockUnit( ResourceTypes.NODE, SHARED, 1 ),
+                        new LockUnit( ResourceTypes.RELATIONSHIP, SHARED, 2 ),
+                        new LockUnit( ResourceTypes.LABEL, SHARED, 1 ) )
         );
 
         actualClient.assertRegisteredLocks( expectedLocks );
@@ -313,7 +316,7 @@ class DeferringLockClientTest
         client.acquireDeferredLocks( LockTracer.NONE );
 
         // THEN
-        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, 1, false ) ) );
+        actualClient.assertRegisteredLocks( Collections.singleton( new LockUnit( ResourceTypes.NODE, SHARED, 1 ) ) );
     }
 
     private static class TestLocks extends LifecycleAdapter implements Locks
@@ -347,7 +350,7 @@ class DeferringLockClientTest
         @Override
         public void acquireShared( LockTracer tracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException
         {
-            register( resourceType, false, resourceIds );
+            register( resourceType, SHARED, resourceIds );
         }
 
         void assertRegisteredLocks( Set<LockUnit> expectedLocks )
@@ -355,11 +358,11 @@ class DeferringLockClientTest
             assertEquals( expectedLocks, actualLockUnits );
         }
 
-        private boolean register( ResourceType resourceType, boolean exclusive, long... resourceIds )
+        private boolean register( ResourceType resourceType, LockType lockType, long... resourceIds )
         {
             for ( long resourceId : resourceIds )
             {
-                actualLockUnits.add( new LockUnit( resourceType, resourceId, exclusive ) );
+                actualLockUnits.add( new LockUnit( resourceType, lockType, resourceId ) );
             }
             return true;
         }
@@ -368,19 +371,19 @@ class DeferringLockClientTest
         public void acquireExclusive( LockTracer tracer, ResourceType resourceType, long... resourceIds )
                 throws AcquireLockTimeoutException
         {
-            register( resourceType, true, resourceIds );
+            register( resourceType, EXCLUSIVE, resourceIds );
         }
 
         @Override
         public boolean tryExclusiveLock( ResourceType resourceType, long resourceId )
         {
-            return register( resourceType, true, resourceId );
+            return register( resourceType, EXCLUSIVE, resourceId );
         }
 
         @Override
         public boolean trySharedLock( ResourceType resourceType, long resourceId )
         {
-            return register( resourceType, false, resourceId );
+            return register( resourceType, SHARED, resourceId );
         }
 
         @Override

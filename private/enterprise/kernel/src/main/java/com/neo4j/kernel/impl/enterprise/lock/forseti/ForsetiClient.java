@@ -37,6 +37,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
+import org.neo4j.lock.LockType;
 import org.neo4j.lock.LockWaitEvent;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
@@ -736,8 +737,8 @@ public class ForsetiClient implements Locks.Client
     public Stream<ActiveLock> activeLocks()
     {
         List<ActiveLock> locks = new ArrayList<>();
-        collectActiveLocks( exclusiveLockCounts, locks, ActiveLock.Factory.EXCLUSIVE_LOCK );
-        collectActiveLocks( sharedLockCounts, locks, ActiveLock.Factory.SHARED_LOCK );
+        collectActiveLocks( exclusiveLockCounts, locks, EXCLUSIVE );
+        collectActiveLocks( sharedLockCounts, locks, SHARED );
         return locks.stream();
     }
 
@@ -750,7 +751,7 @@ public class ForsetiClient implements Locks.Client
     private static void collectActiveLocks(
             LongIntMap[] counts,
             List<ActiveLock> locks,
-            ActiveLock.Factory activeLock )
+            LockType lockType )
     {
         for ( int typeId = 0; typeId < counts.length; typeId++ )
         {
@@ -758,7 +759,7 @@ public class ForsetiClient implements Locks.Client
             if ( lockCounts != null )
             {
                 ResourceType resourceType = ResourceTypes.fromId( typeId );
-                lockCounts.forEachKeyValue( ( resourceId, count ) -> locks.add( activeLock.create( resourceType, resourceId ) ) );
+                lockCounts.forEachKeyValue( ( resourceId, count ) -> locks.add( new ActiveLock( resourceType, lockType, resourceId ) ) );
             }
         }
     }

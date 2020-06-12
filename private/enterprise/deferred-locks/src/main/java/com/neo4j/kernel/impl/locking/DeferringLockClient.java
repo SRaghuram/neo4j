@@ -18,9 +18,12 @@ import org.neo4j.kernel.impl.locking.LockClientStoppedException;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
+import org.neo4j.lock.LockType;
 import org.neo4j.lock.ResourceType;
 
 import static java.util.function.Function.identity;
+import static org.neo4j.lock.LockType.EXCLUSIVE;
+import static org.neo4j.lock.LockType.SHARED;
 
 public class DeferringLockClient implements Locks.Client
 {
@@ -46,7 +49,7 @@ public class DeferringLockClient implements Locks.Client
 
         for ( long resourceId : resourceIds )
         {
-            addLock( resourceType, resourceId, false );
+            addLock( resourceType, SHARED, resourceId );
         }
     }
 
@@ -58,7 +61,7 @@ public class DeferringLockClient implements Locks.Client
 
         for ( long resourceId : resourceIds )
         {
-            addLock( resourceType, resourceId, true );
+            addLock( resourceType, EXCLUSIVE, resourceId );
         }
     }
 
@@ -92,7 +95,7 @@ public class DeferringLockClient implements Locks.Client
         assertNotStopped();
         for ( long resourceId : resourceIds )
         {
-            removeLock( resourceType, resourceId, false );
+            removeLock( resourceType, SHARED, resourceId );
         }
 
     }
@@ -103,7 +106,7 @@ public class DeferringLockClient implements Locks.Client
         assertNotStopped();
         for ( long resourceId : resourceIds )
         {
-            removeLock( resourceType, resourceId, true );
+            removeLock( resourceType, EXCLUSIVE, resourceId );
         }
     }
 
@@ -202,21 +205,21 @@ public class DeferringLockClient implements Locks.Client
         }
     }
 
-    private void addLock( ResourceType resourceType, long resourceId, boolean exclusive )
+    private void addLock( ResourceType resourceType, LockType lockType, long resourceId )
     {
-        LockUnit lockUnit = new LockUnit( resourceType, resourceId, exclusive );
+        LockUnit lockUnit = new LockUnit( resourceType, lockType, resourceId );
         MutableInt lockCount = locks.computeIfAbsent( lockUnit, k -> new MutableInt() );
         lockCount.increment();
     }
 
-    private void removeLock( ResourceType resourceType, long resourceId, boolean exclusive )
+    private void removeLock( ResourceType resourceType, LockType lockType, long resourceId )
     {
-        LockUnit lockUnit = new LockUnit( resourceType, resourceId, exclusive );
+        LockUnit lockUnit = new LockUnit( resourceType, lockType, resourceId );
         MutableInt lockCount = locks.get( lockUnit );
         if ( lockCount == null )
         {
             throw new IllegalStateException(
-                    "Cannot release " + (exclusive ? "exclusive" : "shared") + " lock that it " +
+                    "Cannot release " + lockType + " lock that it " +
                     "does not hold: " + resourceType + "[" + resourceId + "]." );
         }
 
