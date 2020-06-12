@@ -50,7 +50,6 @@
     {
       "name": "Q10",
       "description": "Credit Fraud - Accounts that transferred 50% or more of their line of credit within a given date range to a deposit account, and then did wire transfer overseas to a medium or high risk geo",
-      "comment": "date parameter chosen uniformly random from dates in database, minus 1.5 months from highest date",
       "queryFile": "queries/q10.cypher",
       "parameters": {
         "file": "parameters/q10.txt"
@@ -59,7 +58,10 @@
     {
       "name": "Q11",
       "description": "Credit fraud - Find customers that have requested a line of credit with a stated income on their financial statements that does not match the total deposits (all forms) that was made into their account for that year",
-      "queryFile": "queries/q11.cypher"
+      "queryFile": "queries/q11.cypher",
+      "parameters": {
+        "file": "parameters/q11.txt"
+      }
     },
     {
       "name": "Q12",

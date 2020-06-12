@@ -1,7 +1,7 @@
 MATCH (bc:BusinessCustomer:AccountHolder)-[:HAS_LINEOFCREDIT]->(loc:LOC:CreditAccount)-[:BASED_ON]->(app:CreditApplication),
       (app)-[:STATED_INCOME]->(finstmt:FinancialStatement),
       (bc)-[:HAS_ACCOUNT]->(dep:DepositAccount)<-[:DEPOSITS]-(txn:Transaction)
-WHERE loc.dateOpened>date("2020-01-01") AND date("2019-01-01") <= txn.transactionDate <= date("2019-12-31")
+WHERE loc.dateOpened>$date AND date("2019-01-01") <= txn.transactionDate <= ($date - duration({days: 1}))
 WITH bc, loc, finstmt, toInteger(sum(txn.amount)) as TotalDeposits
 WHERE finstmt.incomeLastYear > TotalDeposits*1.3 AND finstmt.lastYear=2019
 RETURN bc.accountHolderID,
