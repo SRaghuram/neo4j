@@ -32,9 +32,9 @@ case class SelectOrSemiApplySlottedPipe(lhs: Pipe,
           if (negated) !innerResult.hasNext else innerResult.hasNext
         }
     }.flatMap {
-      row =>
+      row: CypherRow =>
         val output = SlottedRow(slots)
-        row.copyTo(output)
+        output.copyAllFrom(row)
         Iterator.single(output)
     }
   }
