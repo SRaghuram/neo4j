@@ -21,6 +21,7 @@ import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.locking.ActiveLock;
+import org.neo4j.lock.LockType;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
 import org.neo4j.resources.CpuClock;
@@ -32,6 +33,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.lock.LockType.EXCLUSIVE;
+import static org.neo4j.lock.LockType.SHARED;
 
 class TransactionDependenciesResolverTest
 {
@@ -59,7 +62,7 @@ class TransactionDependenciesResolverTest
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, false, ResourceTypes.NODE, 1 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, SHARED, ResourceTypes.NODE, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertFalse( resolver.isBlocked( handle1 ) );
@@ -75,7 +78,7 @@ class TransactionDependenciesResolverTest
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, true, ResourceTypes.NODE, 1 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, EXCLUSIVE, ResourceTypes.NODE, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertFalse( resolver.isBlocked( handle1 ) );
@@ -106,7 +109,7 @@ class TransactionDependenciesResolverTest
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, false, ResourceTypes.NODE, 1 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, SHARED, ResourceTypes.NODE, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertThat( resolver.describeBlockingTransactions( handle1 ) ).isEmpty();
@@ -124,8 +127,8 @@ class TransactionDependenciesResolverTest
         TestKernelTransactionHandle handle3 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 6 );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, false, ResourceTypes.NODE, 1 ) ) );
-        map.put( handle3, Optional.of( createQuerySnapshotWaitingForLock( 3, true, ResourceTypes.NODE, 2 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, EXCLUSIVE, ResourceTypes.NODE, 1 ) ) );
+        map.put( handle3, Optional.of( createQuerySnapshotWaitingForLock( 3, EXCLUSIVE, ResourceTypes.NODE, 2 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertThat( resolver.describeBlockingTransactions( handle1 ) ).isEmpty();
@@ -138,10 +141,10 @@ class TransactionDependenciesResolverTest
         return createExecutingQuery( queryId ).snapshot();
     }
 
-    private static QuerySnapshot createQuerySnapshotWaitingForLock( long queryId, boolean exclusive, ResourceType resourceType, long id )
+    private static QuerySnapshot createQuerySnapshotWaitingForLock( long queryId, LockType lockType, ResourceType resourceType, long id )
     {
         ExecutingQuery executingQuery = createExecutingQuery( queryId );
-        executingQuery.lockTracer().waitForLock( exclusive, resourceType, id );
+        executingQuery.lockTracer().waitForLock( lockType, resourceType, id );
         return executingQuery.snapshot();
     }
 

@@ -43,6 +43,8 @@ import org.neo4j.lock.ResourceTypes;
 import org.neo4j.lock.WaitStrategy;
 
 import static java.lang.String.format;
+import static org.neo4j.lock.LockType.EXCLUSIVE;
+import static org.neo4j.lock.LockType.SHARED;
 
 // Please note. Except separate test cases for particular classes related to community locking
 // see also LockingCompatibilityTestSuite test suite
@@ -258,7 +260,7 @@ public class ForsetiClient implements Locks.Client
 
                     if ( waitEvent == null )
                     {
-                        waitEvent = tracer.waitForLock( false, resourceType, resourceId );
+                        waitEvent = tracer.waitForLock( SHARED, resourceType, resourceId );
                     }
                     // And take note of who we are waiting for. This is used for deadlock detection.
                     waitFor( existingLock, resourceType, resourceId, false, tries++ );
@@ -328,7 +330,7 @@ public class ForsetiClient implements Locks.Client
 
                     if ( waitEvent == null )
                     {
-                        waitEvent = tracer.waitForLock( true, resourceType, resourceId );
+                        waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, resourceId );
                     }
                     waitFor( existingLock, resourceType, resourceId, true, tries++ );
                 }
@@ -919,7 +921,7 @@ public class ForsetiClient implements Locks.Client
                     assertValid( waitStartMillis, resourceType, resourceId );
                     if ( waitEvent == null && priorEvent == null )
                     {
-                        waitEvent = tracer.waitForLock( true, resourceType, resourceId );
+                        waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, resourceId );
                     }
                     waitFor( sharedLock, resourceType, resourceId, true, tries++ );
                 }
