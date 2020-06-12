@@ -14,37 +14,49 @@ import org.neo4j.values.storable.Values
  * Aggregator for NonEmpty(...).
  */
 case object NonEmptyAggregator extends Aggregator {
-  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new NonEmptyStandardReducer()
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CheckEmptyStandardReducer(false)
 
-  override def newConcurrentReducer: Reducer = new NonEmptyConcurrentReducer()
+  override def newConcurrentReducer: Reducer = new CheckEmptyConcurrentReducer(false)
 
   override val standardShallowSize: Long =
-    HeapEstimator.shallowSizeOfInstance(classOf[NonEmptyStandardReducer])
+    HeapEstimator.shallowSizeOfInstance(classOf[CheckEmptyStandardReducer])
 }
 
-class NonEmptyStandardReducer() extends DirectStandardReducer {
-  private var nonEmpty = false
+/**
+ * Aggregator for NonEmpty(...).
+ */
+case object IsEmptyAggregator extends Aggregator {
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CheckEmptyStandardReducer(true)
+
+  override def newConcurrentReducer: Reducer = new CheckEmptyConcurrentReducer(true)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[CheckEmptyStandardReducer])
+}
+
+class CheckEmptyStandardReducer(shouldBeEmpty: Boolean) extends DirectStandardReducer {
+  private var isEmpty = true
 
   // Reducer
   override def newUpdater(): Updater = this
 
-  override def result: AnyValue = Values.booleanValue(nonEmpty)
+  override def result: AnyValue = if (shouldBeEmpty) Values.booleanValue(isEmpty) else Values.booleanValue(!isEmpty)
 
   // Updater
   override def add(value: AnyValue): Unit =
-    nonEmpty = true
+    isEmpty = false
 }
 
-class NonEmptyConcurrentReducer() extends Reducer {
-  @volatile private var nonEmpty = false
+class CheckEmptyConcurrentReducer(shouldBeEmpty: Boolean) extends Reducer {
+  @volatile private var isEmpty = true
 
   override def newUpdater(): Updater = new Upd()
 
-  override def result: AnyValue = Values.booleanValue(nonEmpty)
+  override def result: AnyValue = if (shouldBeEmpty) Values.booleanValue(isEmpty) else Values.booleanValue(!isEmpty)
 
   class Upd() extends Updater {
     override def add(value: AnyValue): Unit =
-      nonEmpty = true
+      isEmpty = false
 
     override def applyUpdates(): Unit = {}
   }

@@ -47,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionWithTxStateChanges
 import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LetAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
@@ -357,6 +358,10 @@ class PipelinedSemiApplyRewriterNoFusingTest extends SemiApplyRewriterTestBase(N
 // LET SEMI APPLY
 class PipelinedLetSemiApplyTest extends LetSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedLetSemiApplyNoFusingTest extends LetSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// LET ANTI SEMI APPLY
+class PipelinedLetAntiSemiApplyTest extends LetAntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedLetAntiSemiApplyNoFusingTest extends LetAntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // SELECT OR SEMI APPLY
 class PipelinedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)

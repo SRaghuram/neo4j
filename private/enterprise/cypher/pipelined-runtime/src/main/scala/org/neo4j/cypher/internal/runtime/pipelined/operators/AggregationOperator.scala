@@ -47,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CollectDistinctAg
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountStarAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.IsEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.NonEmptyAggregator
@@ -237,6 +238,7 @@ object AggregationMapperOperatorTaskTemplate {
       case CollectAllAggregator => getStatic[Aggregators,Aggregator]("COLLECT_ALL")
       case CollectDistinctAggregator => getStatic[Aggregators,Aggregator]("COLLECT_DISTINCT")
       case NonEmptyAggregator => getStatic[Aggregators,Aggregator]("NON_EMPTY")
+      case IsEmptyAggregator => getStatic[Aggregators,Aggregator]("IS_EMPTY")
       case aggregator =>
         throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
     }

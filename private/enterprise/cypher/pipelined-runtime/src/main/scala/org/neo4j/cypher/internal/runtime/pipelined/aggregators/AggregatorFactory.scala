@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.expressions.functions
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ast.CollectAll
+import org.neo4j.cypher.internal.physicalplanning.ast.IsEmpty
 import org.neo4j.cypher.internal.physicalplanning.ast.NonEmpty
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.SyntaxException
@@ -34,6 +35,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
       case _: CountStar => (CountStarAggregator, Null.NULL)
       case CollectAll(expr) => (CollectAllAggregator, expr)
       case NonEmpty() => (NonEmptyAggregator, Null.NULL)
+      case IsEmpty() => (IsEmptyAggregator, Null.NULL)
 
       case c: FunctionInvocation =>
         c.function match {

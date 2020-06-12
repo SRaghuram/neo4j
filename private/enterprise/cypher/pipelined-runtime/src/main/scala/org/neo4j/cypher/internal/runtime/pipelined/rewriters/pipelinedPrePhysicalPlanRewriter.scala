@@ -33,7 +33,8 @@ case object pipelinedPrePhysicalPlanRewriter {
       semiApplyToLimitApply(cardinalities, providedOrders, idGen),
       antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen),
       rollupApplyToAggregationApply(cardinalities, providedOrders, idGen),
-      letSemiApplyToAggregationLimitApply(cardinalities, providedOrders, idGen)
+      letSemiApplyToAggregationLimitApply(cardinalities, providedOrders, idGen),
+      letAntiSemiApplyToAggregationLimitApply(cardinalities, providedOrders, idGen)
     )
   }
 
