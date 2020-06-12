@@ -110,7 +110,6 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.util.Foldable
 import org.neo4j.cypher.internal.util.Foldable.SkipChildren
 import org.neo4j.cypher.internal.util.Foldable.TraverseChildren
 import org.neo4j.cypher.internal.util.UnNamedNameGenerator
@@ -158,8 +157,9 @@ object SlotAllocation {
 
   private[physicalplanning] def NO_ARGUMENT(allocateArgumentSlots: Boolean): SlotsAndArgument = {
     val slots = SlotConfiguration.empty
-    if (allocateArgumentSlots)
+    if (allocateArgumentSlots) {
       slots.newArgument(Id.INVALID_ID)
+    }
     SlotsAndArgument(slots, Size.zero, Id.INVALID_ID)
   }
 
@@ -220,9 +220,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       var nullable = nullIn
       var current = plan
       while (!current.isLeaf) {
-        if (current.isInstanceOf[Optional])
+        if (current.isInstanceOf[Optional]) {
           nullable = true
-
+        }
         planStack.push((nullable, current))
 
         current = current.lhs.get // this should not fail unless we are on a leaf
@@ -241,23 +241,28 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
       (current.lhs, current.rhs) match {
         case (None, None) =>
-          val argument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots)
-          else argumentStack.top
+          val argument = if (argumentStack.isEmpty) {
+            NO_ARGUMENT(allocateArgumentSlots)
+          } else {
+            argumentStack.top
+          }
           recordArgument(current, argument)
 
           val slots = breakingPolicy.invoke(current, argument.slotConfiguration, argument.slotConfiguration, applyPlans(current.id))
 
-          allocateExpressions(current, nullable, slots, semanticTable)
+          allocateExpressionsOneChild(current, nullable, slots, semanticTable)
           allocateLeaf(current, nullable, slots)
           allocations.set(current.id, slots)
           resultStack.push(slots)
 
         case (Some(_), None) =>
           val sourceSlots = resultStack.pop()
-          val argument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots)
-          else argumentStack.top
-
-          allocateExpressions(current, nullable, sourceSlots, semanticTable)
+          val argument = if (argumentStack.isEmpty) {
+            NO_ARGUMENT(allocateArgumentSlots)
+          } else {
+            argumentStack.top
+          }
+          allocateExpressionsOneChild(current, nullable, sourceSlots, semanticTable)
 
           val slots = breakingPolicy.invoke(current, sourceSlots, argument.slotConfiguration, applyPlans(current.id))
           allocateOneChild(current, nullable, sourceSlots, slots, recordArgument(_, argument))
@@ -267,35 +272,40 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         case (Some(left), Some(right)) if (comingFrom eq left) && current.isInstanceOf[ApplyPlan] =>
           planStack.push((nullable, current))
           val argumentSlots = resultStack.top
-          if (allocateArgumentSlots)
+          if (allocateArgumentSlots) {
             argumentSlots.newArgument(current.id)
-
+          }
           allocateLhsOfApply(current, nullable, argumentSlots, semanticTable)
-          allocateExpressions(current, nullable, argumentSlots, semanticTable, compingFromLeft = true)
+          allocateExpressionsTwoChild(current, argumentSlots, semanticTable, comingFromLeft = true)
           argumentStack.push(SlotsAndArgument(argumentSlots, argumentSlots.size(), current.id))
           populate(right, nullable)
 
         case (Some(left), Some(right)) if comingFrom eq left =>
           planStack.push((nullable, current))
+          val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots) else argumentStack.top
           if (argumentRowIdSlotForCartesianProductNeeded(current)) {
-            val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots)
-            else argumentStack.top
             // We put a new argument on the argument stack, but in contrast to Apply, we create a copy of the previous argument, because
             // the RHS does not need any slots from the LHS.
             val newArgument = previousArgument.slotConfiguration.copy().newArgument(current.id)
             argumentStack.push(SlotsAndArgument(newArgument, newArgument.size(), current.id))
           }
+          val lhsSlots = allocations.get(left.id)
+          allocateExpressionsTwoChild(current, lhsSlots, semanticTable, comingFromLeft = true)
+
           populate(right, nullable)
 
         case (Some(_), Some(right)) if comingFrom eq right =>
           val rhsSlots = resultStack.pop()
           val lhsSlots = resultStack.pop()
-          val argument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots)
-          else argumentStack.top
+          val argument = if (argumentStack.isEmpty) {
+            NO_ARGUMENT(allocateArgumentSlots)
+          } else {
+            argumentStack.top
+          }
           // NOTE: If we introduce a two sourced logical plan with an expression that needs to be evaluated in a
-          //       particular scope (lhs or rhs) we need to add handling of it to allocateExpressions.
-          allocateExpressions(current, nullable, lhsSlots, semanticTable, shouldAllocateLhs = true, compingFromLeft = false)
-          allocateExpressions(current, nullable, rhsSlots, semanticTable, shouldAllocateLhs = false, compingFromLeft = false)
+          //       particular scope (lhs or rhs) we need to add handling of it to allocateExpressionsTwoChild.
+          allocateExpressionsTwoChild(current, rhsSlots, semanticTable, comingFromLeft = false)
+
           val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), argument)
           allocations.set(current.id, result)
           if (current.isInstanceOf[ApplyPlan] || argumentRowIdSlotForCartesianProductNeeded(current)) {
@@ -310,44 +320,20 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     SlotMetaData(allocations, argumentSizes, applyPlans, nestedPlanArgumentConfigurations)
   }
 
-  // NOTE: If we find a NestedPlanExpression within the given LogicalPlan, the slotConfigurations and argumentSizes maps will be updated
-  private def allocateExpressions(lp: LogicalPlan,
-                                  nullable: Boolean,
-                                  slots: SlotConfiguration,
-                                  semanticTable: SemanticTable,
-                                  shouldAllocateLhs: Boolean = true,
-                                  compingFromLeft: Boolean = true): Unit = {
-    allocateExpressionsInternal(lp, nullable, slots, semanticTable, shouldAllocateLhs, compingFromLeft, lp.id)
-  }
+  case class Accumulator(doNotTraverseExpression: Option[Expression])
 
-  private def allocateExpressionsInternal(p: Foldable,
+  private val TRAVERSE_INTO_CHILDREN = Some((s: Accumulator) => s)
+  private val DO_NOT_TRAVERSE_INTO_CHILDREN = None
+
+  private def allocateExpressionsOneChild(plan: LogicalPlan,
                                           nullable: Boolean,
                                           slots: SlotConfiguration,
-                                          semanticTable: SemanticTable,
-                                          shouldAllocateLhs: Boolean = true,
-                                          comingFromLeft: Boolean = true,
-                                          planId: Id): Unit = {
-    case class Accumulator(doNotTraverseExpression: Option[Expression])
+                                          semanticTable: SemanticTable): Unit = {
 
-    val TRAVERSE_INTO_CHILDREN = Some((s: Accumulator) => s)
-    val DO_NOT_TRAVERSE_INTO_CHILDREN = None
 
-    p.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
-      //-----------------------------------------------------
-      // Logical plans
-      //-----------------------------------------------------
-      case otherPlan: LogicalPlan if otherPlan.id != planId =>
+    plan.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
+      case otherPlan: LogicalPlan if otherPlan.id != plan.id =>
         acc: Accumulator => SkipChildren(acc) // Do not traverse the logical plan tree! We are only looking at the given lp
-
-      case ValueHashJoin(_, _, Equals(_, rhsExpression)) if comingFromLeft =>
-        acc: Accumulator => (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
-      case ValueHashJoin(_, _, Equals(_, rhsExpression)) if shouldAllocateLhs =>
-        _: Accumulator =>
-          TraverseChildren(Accumulator(doNotTraverseExpression = Some(rhsExpression))) // Only look at lhsExpression
-
-      case ValueHashJoin(_, _, Equals(lhsExpression, _)) if !shouldAllocateLhs =>
-        _: Accumulator =>
-          TraverseChildren(Accumulator(doNotTraverseExpression = Some(lhsExpression))) // Only look at rhsExpression
 
       case FindShortestPaths(_, shortestPathPattern, _, _, _) =>
         acc: Accumulator => {
@@ -357,26 +343,60 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
       case ProjectEndpoints(_, _, start, startInScope, end, endInScope, _, _, _) =>
         acc: Accumulator => {
-          if (!startInScope)
+          if (!startInScope) {
             slots.newLong(start, nullable, CTNode)
-          if (!endInScope)
+          }
+          if (!endInScope) {
             slots.newLong(end, nullable, CTNode)
+          }
           TraverseChildren(acc)
         }
 
+      case e: Expression => allocateExpressionsInternal(e, slots, semanticTable, plan.id)
+        acc: Accumulator =>
+         SkipChildren(acc)
+    }
+  }
+
+  private def allocateExpressionsTwoChild(plan: LogicalPlan,
+                                                  slots: SlotConfiguration,
+                                                  semanticTable: SemanticTable,
+                                                  comingFromLeft: Boolean): Unit = {
+    plan.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
+      case otherPlan: LogicalPlan if otherPlan.id != plan.id =>
+        acc: Accumulator => SkipChildren(acc) // Do not traverse the logical plan tree! We are only looking at the given lp
+
+      case ValueHashJoin(_, _, Equals(_, rhsExpression)) if comingFromLeft =>
+        _: Accumulator =>
+          TraverseChildren(Accumulator(doNotTraverseExpression = Some(rhsExpression))) // Only look at lhsExpression
+
+      case ValueHashJoin(_, _, Equals(lhsExpression, _)) if !comingFromLeft =>
+        _: Accumulator =>
+          TraverseChildren(Accumulator(doNotTraverseExpression = Some(lhsExpression))) // Only look at rhsExpression
+
       // Only allocate expression on the LHS for these other two-child plans (which have expressions)
       case _: ApplyPlan if !comingFromLeft =>
-        acc: Accumulator =>
-          SkipChildren(acc)
+        acc: Accumulator => SkipChildren(acc)
 
-      //-----------------------------------------------------
-      // Expressions
-      //-----------------------------------------------------
+      case e: Expression =>
+        allocateExpressionsInternal(e, slots, semanticTable, plan.id)
+        acc: Accumulator => SkipChildren(acc)
+    }
+  }
+
+  private def allocateExpressionsInternal(expression: Expression,
+                                          slots: SlotConfiguration,
+                                          semanticTable: SemanticTable,
+                                          planId: Id): Unit = {
+    expression.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
+      case otherPlan: LogicalPlan if otherPlan.id != planId =>
+        acc: Accumulator => SkipChildren(acc) // Do not traverse the logical plan tree! We are only looking at the given lp
+
       case e: NestedPlanExpression =>
         acc: Accumulator => {
-          if (acc.doNotTraverseExpression.contains(e))
+          if (acc.doNotTraverseExpression.contains(e)) {
             SkipChildren(acc)
-          else {
+          } else {
             breakingPolicy.onNestedPlanBreak()
             val argumentSlotConfiguration = slots.copy()
             availableExpressionVariables(e.plan.id).foreach { expVar =>
@@ -395,7 +415,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             val nestedSlots = nestedPhysicalPlan.slotConfigurations(e.plan.id)
             e match {
               case NestedPlanCollectExpression(_, projection, _) =>
-                allocateExpressionsInternal(projection, nullable, nestedSlots, semanticTable, shouldAllocateLhs, comingFromLeft, planId)
+
+                allocateExpressionsInternal(projection, nestedSlots, semanticTable, planId)
               case _ => // do nothing
             }
 
@@ -415,7 +436,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                 slots.newCachedProperty(c)
               case _ => // Do nothing
             }
-           TraverseChildren(acc)
+            TraverseChildren(acc)
           }
         }
     }
@@ -886,8 +907,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
     // Allocate slots
     slots.newReference(pathName, nullable, CTPath)
-    if (relIteratorName.isDefined)
+    if (relIteratorName.isDefined) {
       slots.newReference(relIteratorName.get, nullable, CTList(CTRelationship))
+    }
   }
 }
 
