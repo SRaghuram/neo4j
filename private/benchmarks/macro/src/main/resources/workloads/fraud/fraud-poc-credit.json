@@ -1,0 +1,90 @@
+{
+  "name": "fraud-poc-credit",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Fraudulent Accounts - Show customers that share personal attributes that have credit accounts",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "Credit Fraud - Show customers that asked for a credit increase and then stopped paying within 6 months, and the account is now delinquent",
+      "queryFile": "queries/Q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "Credit Fraud - Show customers that opened multiple accounts within a short period of time, that are delinquent, and how much is at risk",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "Fraudulent Accounts - Show customers that share personal attributes (e.g. SSN) and opened accounts within X days of another account under different identity",
+      "queryFile": "queries/Q4.cypher"
+    },
+    {
+      "name": "Q5",
+      "description": "Credit Fraud - Show customers that opened multiple accounts within a very short period of time (<1 week) and how much is at risk",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "description": "Fraudulent Accounts - Mortgages with more than one mortgage on same property, along with the employees who approved the mortgage",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "description": "Credit Fraud - Show addresses that have multiple loans or lines of credit open with a total balance greater than some amount",
+      "queryFile": "queries/Q7.cypher"
+    },
+    {
+      "name": "Q8",
+      "description": "Credit Fraud - Show customers that opened multiple accounts with disparate incomes",
+      "queryFile": "queries/Q8.cypher"
+    },
+    {
+      "name": "Q9",
+      "description": "Credit Fraud - Identify relationships between fraudsters and people that are employees (e.g. CEO) or related (e.g. large shareholder) to a financial institution",
+      "queryFile": "queries/Q9.cypher"
+    },
+    {
+      "name": "Q10",
+      "description": "Credit Fraud - Accounts that transferred 50% or more of their line of credit within a given date range to a deposit account, and then did wire transfer overseas to a medium or high risk geo",
+      "queryFile": "queries/Q10.cypher"
+    },
+    {
+      "name": "Q11",
+      "description": "Credit fraud - Find customers that have requested a line of credit with a stated income on their financial statements that does not match the total deposits (all forms) that was made into their account for that year",
+      "queryFile": "queries/Q11.cypher"
+    },
+    {
+      "name": "Q12",
+      "description": "Credit Fraud - Show customers that opened multiple LOCs with disparate incomes as stated on application financial statements",
+      "queryFile": "queries/Q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "description": "Credit Fraud - Show customers that opened multiple accounts with disparate incomes. In this case, rather than showing via reported incomes on application, we will look at reported incomes on financial statements (e.g. IRS 1040's)",
+      "queryFile": "queries/Q13.cypher"
+    },
+    {
+      "name": "Q14",
+      "description": "Credit Fraud - look for circular payments where an account is trying to boost their income by paying others to pay them. Focus on which accounts payed more than 5% of their gross reported income and received back more than 10% of their income (trying to boost income by 10%)",
+      "queryFile": "queries/Q14.cypher"
+    },
+    {
+      "name": "Q15",
+      "description": "Find employees that have transacted business - e.g. one paid another one, where the one paid off had a role in reviewing or approving a credit application for the employee making the payment, directly or indirectly up to 3 hops",
+      "queryFile": "queries/Q15.cypher"
+    },
+    {
+      "name": "Q18",
+      "description": "Which delinquent accounts (>60 days) opened after a credit report that referred to a previous account (not delinquent) for same person. If we are assuming credit building the person should have opened the account > 30 days after the first to allow time for it to show on credit report but then opened the account within 90 days of the first account",
+      "queryFile": "queries/Q18.cypher"
+    },
+    {
+      "name": "Q20",
+      "queryFile": "queries/Q20.cypher"
+    }
+  ]
+}

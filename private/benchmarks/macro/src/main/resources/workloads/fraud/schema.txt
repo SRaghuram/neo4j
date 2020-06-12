@@ -1,0 +1,94 @@
+CONSTRAINT ON (n:ABA_RoutingCode) ASSERT (n.routingNumber) IS NODE KEY
+CONSTRAINT ON (n:ATMLocation) ASSERT (n.locationID) IS NODE KEY
+CONSTRAINT ON (n:AccountHolder) ASSERT (n.accountHolderID) IS NODE KEY
+CONSTRAINT ON (n:AccountProfile) ASSERT (n.accountHolderID,n.profileDate) IS NODE KEY
+CONSTRAINT ON (n:AccountSession) ASSERT (n.accountHolderID,n.accountID,n.sessionDateTime) IS NODE KEY
+CONSTRAINT ON (n:AccountStatus) ASSERT (n.accountStatus) IS NODE KEY
+CONSTRAINT ON (n:AutoLien) ASSERT (n.vehicle_VIN) IS NODE KEY
+CONSTRAINT ON (n:BranchLocation) ASSERT (n.locationID) IS NODE KEY
+CONSTRAINT ON (n:BusinessClassification) ASSERT (n.SIC_CODE) IS NODE KEY
+CONSTRAINT ON (n:CalendarDate) ASSERT (n.date) IS NODE KEY
+CONSTRAINT ON (n:CalendarMonth) ASSERT (n.month,n.year) IS NODE KEY
+CONSTRAINT ON (n:CalendarQuarter) ASSERT (n.quarter,n.year) IS NODE KEY
+CONSTRAINT ON (n:CalendarWeek) ASSERT (n.week,n.year) IS NODE KEY
+CONSTRAINT ON (n:CalendarYear) ASSERT (n.year) IS NODE KEY
+CONSTRAINT ON (n:City) ASSERT (n.CITYNAME,n.stateCode,n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:City) ASSERT (n.cityName,n.stateCode,n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:Country) ASSERT (n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:Country) ASSERT n.countryAbbrev IS UNIQUE
+CONSTRAINT ON (n:Country) ASSERT n.countryName IS UNIQUE
+CONSTRAINT ON (n:County) ASSERT (n.countyName,n.stateCode,n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:CreditAccount) ASSERT (n.accountID) IS NODE KEY
+CONSTRAINT ON (n:CreditAccount) ASSERT n.accountNumber IS UNIQUE
+CONSTRAINT ON (n:CreditApplication) ASSERT (n.accountID,n.accountHolderID) IS NODE KEY
+CONSTRAINT ON (n:CreditInquiry) ASSERT (n.accountHolderID,n.bankID,n.inquiryDate) IS NODE KEY
+CONSTRAINT ON (n:CreditInquiryAccount) ASSERT (n.accountHolderID,n.bankID,n.inquiryDate,n.acctBankID,n.accountNumber) IS NODE KEY
+CONSTRAINT ON (n:CreditLimitRequest) ASSERT (n.accountID,n.requestDate) IS NODE KEY
+CONSTRAINT ON (n:CreditTransaction) ASSERT (n.issuingBankID,n.transactionID) IS NODE KEY
+CONSTRAINT ON (n:DepositAccount) ASSERT (n.accountID) IS NODE KEY
+CONSTRAINT ON (n:DepositAccount) ASSERT n.accountNumber IS UNIQUE
+CONSTRAINT ON (n:Device) ASSERT (n.deviceID) IS NODE KEY
+CONSTRAINT ON (n:Dispute) ASSERT (n.accountID,n.disputedTxn) IS NODE KEY
+CONSTRAINT ON (n:Email) ASSERT (n.emailAddress) IS NODE KEY
+CONSTRAINT ON (n:Employee) ASSERT (n.employeeID) IS NODE KEY
+CONSTRAINT ON (n:Employer) ASSERT (n.employerName) IS NODE KEY
+CONSTRAINT ON (n:EmploymentHistory) ASSERT (n.accountHolderID,n.accountID,n.employedFrom) IS NODE KEY
+CONSTRAINT ON (n:ExposedPerson) ASSERT (n.exposedName) IS NODE KEY
+CONSTRAINT ON (n:ExternalAccount) ASSERT (n.accountID) IS NODE KEY
+CONSTRAINT ON (n:FATF_List) ASSERT (n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:FinancialInstitution) ASSERT (n.bankID) IS NODE KEY
+CONSTRAINT ON (n:FinancialStatement) ASSERT (n.accountID,n.accountHolderID) IS NODE KEY
+CONSTRAINT ON (n:GovtIssuedID) ASSERT (n.govtAgencyCode,n.IDNumber,n.issueDate,n.expirationDate) IS NODE KEY
+CONSTRAINT ON (n:HighProfilePerson) ASSERT (n.personName) IS NODE KEY
+CONSTRAINT ON (n:IBAN_Code) ASSERT (n.ibanNumber) IS NODE KEY
+CONSTRAINT ON (n:IPAddress) ASSERT (n.ipAddress) IS NODE KEY
+CONSTRAINT ON (n:IntermediateRegion) ASSERT (n.intermediateRegion) IS NODE KEY
+CONSTRAINT ON (n:LegalEntity) ASSERT (n.legalEntityID) IS NODE KEY
+CONSTRAINT ON (n:Merchant) ASSERT (n.merchantID) IS NODE KEY
+CONSTRAINT ON (n:MortgageLien) ASSERT (n.lienID) IS NODE KEY
+CONSTRAINT ON (n:Payment) ASSERT (n.accountID,n.paymentDate) IS NODE KEY
+CONSTRAINT ON (n:PhoneNumber) ASSERT (n.phone) IS NODE KEY
+CONSTRAINT ON (n:PhoneticSoundex) ASSERT (n.phoneticSoundex) IS NODE KEY
+CONSTRAINT ON (n:PostalCode) ASSERT (n.postalCode,n.CITYNAME,n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:PostalCode) ASSERT (n.postalCode,n.cityName,n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:Region) ASSERT (n.region) IS NODE KEY
+CONSTRAINT ON (n:ResolvedEntity) ASSERT (n.entityID) IS NODE KEY
+CONSTRAINT ON (n:State) ASSERT (n.stateCode,n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:Statement) ASSERT (n.accountID,n.stmtDate) IS NODE KEY
+CONSTRAINT ON (n:StreetAddress) ASSERT (n.streetAddress,n.postalCode,n.cityName,n.countryCode) IS NODE KEY
+CONSTRAINT ON (n:SubRegion) ASSERT (n.subRegion) IS NODE KEY
+CONSTRAINT ON (n:TaxNumber) ASSERT (n.taxPayerID) IS NODE KEY
+CONSTRAINT ON (n:Transaction) ASSERT (n.accountID,n.transactionID) IS NODE KEY
+CONSTRAINT ON (n:WatchList) ASSERT (n.watchEntityName) IS NODE KEY
+CONSTRAINT ON (n:_Bloom_Perspective_) ASSERT n.id IS UNIQUE
+INDEX ON :ATMtxn(transactionDate)
+INDEX ON :AccountHolder(accountName)
+INDEX ON :AccountSession(accountHolderID,sessionDateTime)
+INDEX ON :AutoLien(carModel,carYear,carBrand)
+INDEX ON :BusinessCustomer(businessName)
+INDEX ON :Card(transactionDate)
+INDEX ON :Cash(transactionDate)
+INDEX ON :City(CITYNAME)
+INDEX ON :City(CITYNAME,countryCode)
+INDEX ON :City(cityName)
+INDEX ON :City(cityNum)
+INDEX ON :CreditAccount(dateOpened)
+INDEX ON :CreditTransaction(accountID)
+INDEX ON :CreditTransaction(accountID,transactionDate)
+INDEX ON :CreditTransaction(transactionDate)
+INDEX ON :Customer(lastName,firstName)
+INDEX ON :DepositAccount(dateOpened)
+INDEX ON :DirectPayment(transactionDate)
+INDEX ON :ExternalAccount(accountNumber)
+INDEX ON :FinancialInstitution(bankName)
+INDEX ON :LOC(dateOpened)
+INDEX ON :LOCtxn(transactionDate)
+INDEX ON :LegalEntity(LEGALNAME)
+INDEX ON :Merchant(merchantName)
+INDEX ON :PostalCode(postalCode)
+INDEX ON :ResolvedEntity(entityName)
+INDEX ON :State(stateName)
+INDEX ON :Statement(accountID,dueDate)
+INDEX ON :Transaction(accountID,transactionDate)
+INDEX ON :Transaction(transactionDate)
+INDEX ON :Transaction(transactionID)
