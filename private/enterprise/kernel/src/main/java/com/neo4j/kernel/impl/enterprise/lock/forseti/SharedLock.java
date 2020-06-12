@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
+import org.neo4j.lock.LockType;
 
 /**
  * A Forseti share lock. Can be upgraded to an update lock, which will block new attempts at acquiring shared lock,
@@ -215,6 +216,12 @@ class SharedLock implements ForsetiLockManager.Lock
                 }
             }
         }
+    }
+
+    @Override
+    public LockType type()
+    {
+        return LockType.SHARED;
     }
 
     @Override

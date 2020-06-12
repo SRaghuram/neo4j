@@ -553,8 +553,8 @@ public class EnterpriseBuiltInDbmsProcedures
 
         var locks = resolver.resolveDependency( Locks.class );
         var currentLocks = new ArrayList<LockResult>();
-        locks.accept( ( resourceType, resourceId, description, estimatedWaitTime, lockIdentityHashCode ) -> currentLocks.add(
-                new LockResult( "", resourceType.name(), resourceId ) ) );
+        locks.accept( ( resourceType, resourceId, lockType, description, estimatedWaitTime, lockIdentityHashCode ) -> currentLocks.add(
+                new LockResult( lockType.getDescription(), resourceType.name(), resourceId ) ) );
         return currentLocks.stream();
     }
 

@@ -20,6 +20,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
+import org.neo4j.lock.LockType;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.WaitStrategy;
 
@@ -130,6 +131,8 @@ public class ForsetiLockManager implements Locks
          * @param owners The set into which to collect the current owners of this lock.
          */
         void collectOwners( Set<ForsetiClient> owners );
+
+        LockType type();
     }
 
     /**
@@ -231,11 +234,11 @@ public class ForsetiLockManager implements Locks
         {
             if ( lockMaps[i] != null )
             {
-                ResourceType type = resourceTypes[i];
+                var resourceType = resourceTypes[i];
                 for ( Map.Entry<Long,Lock> entry : lockMaps[i].entrySet() )
                 {
                     Lock lock = entry.getValue();
-                    out.visit( type, entry.getKey(), lock.describeWaitList(), 0, System.identityHashCode( lock ) );
+                    out.visit( resourceType, entry.getKey(), lock.type(), lock.describeWaitList(), 0, System.identityHashCode( lock ) );
                 }
             }
         }
