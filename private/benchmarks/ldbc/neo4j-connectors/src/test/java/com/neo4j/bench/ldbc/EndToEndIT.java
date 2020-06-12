@@ -55,7 +55,6 @@ public class EndToEndIT extends BaseEndToEndIT
 
     @Test
     @Tag( "endtoend" )
-    @Disabled( "https://trello.com/c/gwwr7U1l/1657-enable-ldbc-endtoendit-in-40" )
     public void runReportBenchmark() throws Exception
     {
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
