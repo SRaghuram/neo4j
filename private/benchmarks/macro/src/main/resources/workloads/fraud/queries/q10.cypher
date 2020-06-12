@@ -1,5 +1,6 @@
-MATCH (loc:LOC:CreditAccount)-[:LOC_WITHDRAWAL]-(credTxn:CreditTransaction)-[:CREDIT_XFER]->	(depTxnIn:Transaction)-[:DEPOSITS]->(depAcct:DepositAccount)
-WHERE date("2019-11-15")<=credTxn.transactionDate<=date("2019-12-31")
+// e.g., $startDate = date("2019-11-15")
+MATCH (loc:LOC:CreditAccount)-[:LOC_WITHDRAWAL]-(credTxn:CreditTransaction)-[:CREDIT_XFER]->(depTxnIn:Transaction)-[:DEPOSITS]->(depAcct:DepositAccount)
+WHERE $startDate<=credTxn.transactionDate<=($startDate + duration({days: 45}))/*1.5 months*/
 WITH loc,
      depAcct,
      sum(abs(credTxn.amount)) AS sumXfered,
@@ -13,7 +14,7 @@ MATCH (depAcct)-[:WITHDRAWALS]->(txn:Wire:Transaction)-[:RECEIVES_WIRE]->(extAcc
       (extAcct)-[:IBAN_ROUTING]->(iban:IBAN_Code)<-[:HAS_IBAN_CODE]-(fi:FinancialInstitution)-[:OPERATES_IN]->(cntry:Country)
 WHERE NOT cntry.countryCode="US" AND
       left(iban.ibanNumber,2)=cntry.countryCode AND
-      date("2019-11-15")<=txn.transactionDate<=date("2020-01-15")
+      $startDate<=txn.transactionDate<=($startDate + duration({days: 60}))/*2 months*/
 WITH loc, depAcct, sumXfered, numXfers, firstDraw, lastDraw, abs(sum(txn.amount)) AS sumWires, count(txn) AS numWires
 WHERE sumWires >= sumXfered * 0.5
 
@@ -21,7 +22,7 @@ WHERE sumWires >= sumXfered * 0.5
 MATCH (ourParty:AccountHolder)-[:HAS_ACCOUNT]->(depAcct)-[:WITHDRAWALS]->(txnOut:Wire:Transaction),
 	    (txnOut)-[:RECEIVES_WIRE]->(extAcct:ExternalAccount)-[:IBAN_ROUTING]->(iban:IBAN_Code),
       (iban)<-[:HAS_IBAN_CODE]-(fi:FinancialInstitution)-[:OPERATES_IN]->(cntry:Country)
-WHERE date("2019-11-15")<=txnOut.transactionDate<=date("2020-01-15") AND
+WHERE $startDate<=txnOut.transactionDate<=($startDate + duration({days: 60}))/*2 months*/ AND
       NOT cntry.countryCode="US" AND
       // ignore vetted companies unless wiring to a country with high score
       ((depAcct.FinCEN_110_status is NULL) OR
