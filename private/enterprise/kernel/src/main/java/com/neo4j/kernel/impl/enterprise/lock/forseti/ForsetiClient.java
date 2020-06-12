@@ -263,7 +263,7 @@ public class ForsetiClient implements Locks.Client
                         waitEvent = tracer.waitForLock( SHARED, resourceType, resourceId );
                     }
                     // And take note of who we are waiting for. This is used for deadlock detection.
-                    waitFor( existingLock, resourceType, resourceId, false, tries++ );
+                    waitFor( existingLock, resourceType, resourceId, tries++ );
                 }
 
                 // Make a local note about the fact that we now hold this lock
@@ -332,7 +332,7 @@ public class ForsetiClient implements Locks.Client
                     {
                         waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, resourceId );
                     }
-                    waitFor( existingLock, resourceType, resourceId, true, tries++ );
+                    waitFor( existingLock, resourceType, resourceId, tries++ );
                 }
 
                 heldLocks.put( resourceId, 1 );
@@ -923,7 +923,7 @@ public class ForsetiClient implements Locks.Client
                     {
                         waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, resourceId );
                     }
-                    waitFor( sharedLock, resourceType, resourceId, true, tries++ );
+                    waitFor( sharedLock, resourceType, resourceId, tries++ );
                 }
 
                 return true;
@@ -955,7 +955,7 @@ public class ForsetiClient implements Locks.Client
         waitListCheckPoint = waitList.checkPointAndPut( waitListCheckPoint, clientId );
     }
 
-    private void waitFor( ForsetiLockManager.Lock lock, ResourceType type, long resourceId, boolean exclusive, int tries )
+    private void waitFor( ForsetiLockManager.Lock lock, ResourceType type, long resourceId, int tries )
     {
         waitingForLock = lock;
         clearAndCopyWaitList( lock );
