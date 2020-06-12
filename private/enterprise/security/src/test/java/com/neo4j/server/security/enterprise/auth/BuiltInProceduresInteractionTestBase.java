@@ -7,7 +7,9 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.procedure.enterprise.builtin.QueryId;
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -60,6 +62,7 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
+import org.neo4j.values.storable.LongValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 
@@ -112,6 +115,86 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     //---------- list running transactions -----------
+
+    @Test
+    void listLocksEmptyWhenNoLocksAreTaken()
+    {
+        String query = "CALL dbms.listLocks()";
+        assertEmpty( adminSubject, query );
+    }
+
+    @Test
+    void listWriteLocks() throws Throwable
+    {
+        var nodeId = new MutableLong();
+        assertSuccess( adminSubject, "CREATE (n) return ID(n) as id", iterator ->
+        {
+            assertTrue( iterator.hasNext() );
+            var value = iterator.next().get( "id" );
+            nodeId.setValue( extractNodeId( value ) );
+        } );
+
+        String modifier = "MATCH (n) set n.prop=3";
+        DoubleLatch latch = new DoubleLatch( 2 );
+
+        ThreadedTransaction<S> tx = new ThreadedTransaction<>( neo, latch );
+        tx.execute( threading, writeSubject, modifier );
+        latch.start();
+        latch.waitForAllToStart();
+
+        String query = "CALL dbms.listLocks()";
+        assertSuccess( adminSubject, query, r ->
+        {
+            List<Map<String,Object>> locksInfo = collectResults( r );
+            Assertions.assertThat( locksInfo ).hasSizeGreaterThanOrEqualTo( 1 );
+            Assertions.assertThat( locksInfo ).containsAnyOf(
+                    //TODO:exclusive
+                    Map.of("mode", "", "resourceId", nodeId.intValue(), "resourceType", "NODE"),
+                    Map.of("mode", "", "resourceId", nodeId.longValue(), "resourceType", "NODE") );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+        tx.closeAndAssertSuccess();
+    }
+
+    @Test
+    void listReadLocks() throws Throwable
+    {
+        long labelId = 5;
+        assertEmpty( adminSubject, "CREATE (n:Marker)" );
+
+        String modifier = "MATCH (n:Marker) set n.prop=3";
+        DoubleLatch latch = new DoubleLatch( 2 );
+
+        ThreadedTransaction<S> tx = new ThreadedTransaction<>( neo, latch );
+        tx.execute( threading, writeSubject, modifier );
+        latch.start();
+        latch.waitForAllToStart();
+
+        String query = "CALL dbms.listLocks()";
+        assertSuccess( adminSubject, query, r ->
+        {
+            List<Map<String,Object>> locksInfo = collectResults( r );
+            Assertions.assertThat( locksInfo ).hasSizeGreaterThanOrEqualTo( 1 );
+            Assertions.assertThat( locksInfo ).containsAnyOf(
+                    //TODO:shared
+                    Map.of("mode", "", "resourceId", (int) labelId, "resourceType", "LABEL"),
+                    Map.of("mode", "", "resourceId", labelId, "resourceType", "LABEL") );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+        tx.closeAndAssertSuccess();
+    }
+
+    @Test
+    void failToListLocksWhenNotAdmin()
+    {
+        assertFail( schemaSubject, "CALL dbms.listLocks()", "Permission denied." );
+        assertFail( writeSubject, "CALL dbms.listLocks()", "Permission denied." );
+        assertFail( editorSubject, "CALL dbms.listLocks()", "Permission denied." );
+        assertFail( readSubject, "CALL dbms.listLocks()", "Permission denied." );
+        assertFail( pwdSubject, "CALL dbms.listLocks()", "Permission denied." );
+    }
 
     @Test
     void shouldListSelfTransaction()
@@ -2748,6 +2831,19 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             }
         } );
         return server;
+    }
+
+    private long extractNodeId( Object value )
+    {
+        if ( value instanceof LongValue )
+        {
+            return ((LongValue) value).longValue();
+        }
+        else if ( value instanceof Number )
+        {
+            return ((Number) value).longValue();
+        }
+        throw new IllegalArgumentException( "Unexpected argument type:" + value );
     }
 
     private static OffsetDateTime getStartTime()

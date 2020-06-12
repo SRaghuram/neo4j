@@ -61,6 +61,8 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.locking.ActiveLock;
+import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.query.FunctionInformation;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -380,7 +382,7 @@ public class EnterpriseBuiltInDbmsProcedures
     @SystemProcedure
     @Description( "List all memory pools, including sub pools, currently registered at this instance that are visible to the user." )
     @Procedure( name = "dbms.listPools", mode = DBMS )
-    public Stream<MemoryPoolResult> listMemoryPoolsExt()
+    public Stream<MemoryPoolResult> listMemoryPools()
     {
         var memoryPools = resolver.resolveDependency( MemoryPools.class );
         var registeredPools = memoryPools.getPools();
@@ -507,7 +509,7 @@ public class EnterpriseBuiltInDbmsProcedures
     @SystemProcedure
     @Description( "List the active lock requests granted for the transaction executing the query with the given query id." )
     @Procedure( name = "dbms.listActiveLocks", mode = DBMS )
-    public Stream<ActiveLocksResult> listActiveLocks( @Name( "queryId" ) String queryIdText )
+    public Stream<LockResult> listActiveLocks( @Name( "queryId" ) String queryIdText )
             throws InvalidArgumentsException
     {
         securityContext.assertCredentialsNotExpired();
@@ -528,7 +530,7 @@ public class EnterpriseBuiltInDbmsProcedures
                     {
                         if ( isAdminOrSelf( query.username() ) )
                         {
-                            return tx.activeLocks().map( ActiveLocksResult::new );
+                            return tx.activeLocks().map( LockResult::new );
                         }
                         else
                         {
@@ -539,6 +541,21 @@ public class EnterpriseBuiltInDbmsProcedures
             }
         }
         return Stream.empty();
+    }
+
+    @Admin
+    @SystemProcedure
+    @Description( "List all lock requests at this instance." )
+    @Procedure( name = "dbms.listLocks", mode = DBMS )
+    public Stream<LockResult> listLocks()
+    {
+        securityContext.assertCredentialsNotExpired();
+
+        var locks = resolver.resolveDependency( Locks.class );
+        var currentLocks = new ArrayList<LockResult>();
+        locks.accept( ( resourceType, resourceId, description, estimatedWaitTime, lockIdentityHashCode ) -> currentLocks.add(
+                new LockResult( "", resourceType.name(), resourceId ) ) );
+        return currentLocks.stream();
     }
 
     @SystemProcedure
@@ -990,6 +1007,25 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             this.status = status;
             this.upgradeResult = upgradeResult;
+        }
+    }
+
+    public static class LockResult
+    {
+        public final String mode;
+        public final String resourceType;
+        public final long resourceId;
+
+        public LockResult( ActiveLock activeLock )
+        {
+            this( activeLock.mode(), activeLock.resourceType().name(), activeLock.resourceId() );
+        }
+
+        public LockResult( String mode, String resourceType, long resourceId )
+        {
+            this.mode = mode;
+            this.resourceType = resourceType;
+            this.resourceId = resourceId;
         }
     }
 
