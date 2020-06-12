@@ -238,7 +238,7 @@ public class ForsetiLockManager implements Locks
                 for ( Map.Entry<Long,Lock> entry : lockMaps[i].entrySet() )
                 {
                     Lock lock = entry.getValue();
-                    out.visit( resourceType, entry.getKey(), lock.type(), lock.describeWaitList(), 0, System.identityHashCode( lock ) );
+                    out.visit( lock.type(), resourceType, entry.getKey(), lock.describeWaitList(), 0, System.identityHashCode( lock ) );
                 }
             }
         }
