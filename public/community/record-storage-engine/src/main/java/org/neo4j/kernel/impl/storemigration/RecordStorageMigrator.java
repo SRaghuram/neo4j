@@ -111,6 +111,7 @@ import org.neo4j.storageengine.migration.SchemaRuleMigrationAccess;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
 import org.neo4j.token.api.TokenNotFoundException;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 
 import static java.util.Arrays.asList;
 import static org.eclipse.collections.impl.factory.Sets.immutable;

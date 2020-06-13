@@ -40,7 +40,7 @@ public interface BatchingStoreInterface extends Closeable, MemoryStatsVisitor.Vi
     public PageCache getPageCache();
     public Supplier getRelationshipSupplier();
     public void markHighIds();
-    public MetaDataStoreInterface getMetaDataStore();
+    public TransactionMetaDataStore getMetaDataStore();
     public IdGeneratorFactory getIdGeneratorFactory();
 
     public TokenStoreInterface getPropertyKeyRepository();

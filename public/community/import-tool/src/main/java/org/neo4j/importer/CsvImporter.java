@@ -38,7 +38,6 @@ import org.neo4j.csv.reader.IllegalMultilineFieldException;
 import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.LogFilesInitializer;
 import org.neo4j.internal.batchimport.cache.idmapping.string.DuplicateInputIdException;
 import org.neo4j.internal.batchimport.input.BadCollector;
 import org.neo4j.internal.batchimport.input.Collector;
@@ -184,7 +183,7 @@ class CsvImporter implements Importer
                 if (engineFactoryName.endsWith(configuredEngineFactoryName))
                     chosenOne = candidate;
             }
-            BatchImporter importer = chosenOne.instantiate( databaseLayout,//BatchImporterFactory.withHighestPriority().instantiate( databaseLayout,
+            BatchImporter importer = chosenOne.instantiate( databaseLayout,
                     fileSystem,
                     null, // no external page cache
                     pageCacheTracer,
@@ -196,7 +195,7 @@ class CsvImporter implements Importer
                     new PrintingImportLogicMonitor( stdOut, stdErr ),
                     jobScheduler,
                     badCollector,
-                    LogFilesInitializer.NULL,
+                    TransactionLogInitializer.getLogFilesInitializer(),
                     memoryTracker );
 
             printOverview( databaseLayout.databaseDirectory(), nodeFiles, relationshipFiles, importConfig, stdOut );

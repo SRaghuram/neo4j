@@ -42,13 +42,14 @@ import org.neo4j.internal.batchimport.input.csv.CsvInput;
 import org.neo4j.internal.batchimport.input.csv.DataFactories;
 import org.neo4j.internal.batchimport.input.csv.DataFactory;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
+import org.neo4j.internal.batchimport.store.BatchingNeoStores;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.RandomExtension;
@@ -58,7 +59,9 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.csv.reader.Configuration.COMMAS;
+import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
@@ -83,8 +86,16 @@ class ImportPanicIT
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            // has to be rewritten with ImportLogic and BatchingNeoStore created before calling ParallelBatchImporter
-            BatchImporter importer = null;//new ParallelBatchImporter(
+            BatchingNeoStores store = StandardBatchImporterFactory.instantiateNeoStores( testDirectory.getFileSystem(), databaseLayout,
+                    null, PageCacheTracer.NULL, Configuration.DEFAULT, NullLogService.getInstance(), AdditionalInitialIds.EMPTY, Config.defaults(), jobScheduler, EmptyMemoryTracker.INSTANCE );
+            ImportLogic importLogic = new ImportLogic( testDirectory.getFileSystem(), databaseLayout, store, Configuration.DEFAULT, defaults(), NullLogService.getInstance(),
+                    ExecutionMonitors.invisible(), Collector.EMPTY, ImportLogic.NO_MONITOR, PageCacheTracer.NULL, EmptyMemoryTracker.INSTANCE );
+
+            BatchImporter importer = new ParallelBatchImporter(databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL, Configuration.DEFAULT,
+                    NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
+                    Config.defaults(), importLogic, store,
+                    ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY , LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE);
+            //new ParallelBatchImporter(
             //        databaseLayout, testDirectory.getFileSystem(), null, PageCacheTracer.NULL,
             //        Configuration.DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), AdditionalInitialIds.EMPTY,
             //        Config.defaults(), StandardV3_4.RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY,

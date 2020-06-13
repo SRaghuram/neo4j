@@ -28,21 +28,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 import org.neo4j.csv.reader.Extractors;
-import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.internal.batchimport.ParallelBatchImporter;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.DataGeneratorInput;
 import org.neo4j.internal.batchimport.input.IdType;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.internal.batchimport.staging.BaseHumanUnderstandableExecutionMonitor.ImportStage;
+import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.RandomExtension;
@@ -57,6 +57,7 @@ import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.input.DataGeneratorInput.bareboneNodeHeader;
 import static org.neo4j.internal.batchimport.input.DataGeneratorInput.bareboneRelationshipHeader;
+import static org.neo4j.internal.batchimport.staging.ExecutionMonitors.invisible;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_RECORD_FORMATS;
 
@@ -92,6 +93,15 @@ class HumanUnderstandableExecutionMonitorIT
         // when
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
+            BatchingNeoStores store = StandardBatchImporterFactory.instantiateNeoStores( fileSystem, databaseLayout,
+                    pageCache, PageCacheTracer.NULL, Configuration.DEFAULT, NullLogService.getInstance(), EMPTY, defaults(), jobScheduler, EmptyMemoryTracker.INSTANCE );
+            ImportLogic importLogic = new ImportLogic( fileSystem, databaseLayout, store, Configuration.DEFAULT, defaults(), NullLogService.getInstance(),
+                    monitor, Collector.EMPTY, ImportLogic.NO_MONITOR, PageCacheTracer.NULL, EmptyMemoryTracker.INSTANCE );
+
+            new ParallelBatchImporter(databaseLayout, fileSystem, pageCache, PageCacheTracer.NULL, Configuration.DEFAULT,
+                    NullLogService.getInstance(), monitor, EMPTY,
+                    defaults(), importLogic, store,
+                    ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY , LogFilesInitializer.NULL, EmptyMemoryTracker.INSTANCE).doImport( input );
             // has to be rewritten with ImportLogic and BatchingNeoStore created before calling ParallelBatchImporter
             //new ParallelBatchImporter( databaseLayout, fileSystem, pageCache, NULL, Configuration.DEFAULT, NullLogService.getInstance(), monitor,
             //        EMPTY, defaults(), LATEST_RECORD_FORMATS, ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, LogFilesInitializer.NULL,

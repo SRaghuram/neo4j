@@ -30,6 +30,7 @@ import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 
 import static java.util.Arrays.asList;
 import static org.neo4j.internal.batchimport.ImportLogic.instantiateNeoStores;
@@ -85,7 +86,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
                                             AdditionalInitialIds additionalInitialIds, Config dbConfig,
                                             //RecordFormats recordFormats,
                                             BaseImportLogic.Monitor monitor, JobScheduler jobScheduler,
-                                            Collector badCollector, org.neo4j.internal.batchimport.LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker  )
+                                            Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker  )
     {
         this.externalPageCache = externalPageCache;
         this.databaseLayout = databaseLayout;
@@ -183,7 +184,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
             void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.buildCountsStore();
-                logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store, fileSystem );
+                logFilesInitializer.initializeLogFiles( databaseLayout, store.getMetaDataStore(), fileSystem );
             }
         } );
 

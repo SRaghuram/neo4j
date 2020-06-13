@@ -52,9 +52,7 @@ import org.neo4j.csv.reader.Configuration;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.internal.batchimport.AdditionalInitialIds;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.ParallelBatchImporter;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.Groups;
@@ -67,7 +65,10 @@ import org.neo4j.internal.batchimport.input.csv.DataFactory;
 import org.neo4j.internal.batchimport.input.csv.Header;
 import org.neo4j.internal.batchimport.input.csv.Type;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
+import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
@@ -728,7 +729,20 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         Config dbConfig = null == importerProperties ? Config.defaults() : Config.newBuilder().fromFile( importerProperties ).build();
         dbConfig.set( GraphDatabaseSettings.dense_node_threshold, 1 );
         Collector badCollector = Collector.EMPTY;
-        BatchImporter batchImporter = new ParallelBatchImporter(
+        DatabaseLayout databaseLayout = Neo4jDb.layoutWithTxLogLocation( storeDir );
+        FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+        org.neo4j.internal.batchimport.Configuration config = new LdbcImporterConfig();
+        BatchingNeoStores store = StandardBatchImporterFactory.instantiateNeoStores( fs, databaseLayout,
+                null, PageCacheTracer.NULL, config, logService, AdditionalInitialIds.EMPTY, dbConfig, jobScheduler, INSTANCE );
+        ImportLogic importLogic = new ImportLogic( fs, databaseLayout, store, config, dbConfig, logService,
+                ExecutionMonitors.defaultVisible(), badCollector, NO_MONITOR, PageCacheTracer.NULL, INSTANCE );
+
+        BatchImporter batchImporter = new ParallelBatchImporter(databaseLayout, fs, null, PageCacheTracer.NULL, config,
+                logService, ExecutionMonitors.defaultVisible(), AdditionalInitialIds.EMPTY,
+                dbConfig, importLogic, store,
+                NO_MONITOR, jobScheduler, badCollector, TransactionLogInitializer.getLogFilesInitializer1(), INSTANCE);
+
+        /*BatchImporter batchImporter = new ParallelBatchImporter(
                 Neo4jDb.layoutWithTxLogLocation( storeDir ),
                 new DefaultFileSystemAbstraction(),
                 null,
@@ -744,7 +758,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 badCollector,
                 TransactionLogInitializer.getLogFilesInitializer(),
                 INSTANCE
-        );
+        );*/
 
         System.out.println( "Loading CSV files" );
         long startTime = System.currentTimeMillis();

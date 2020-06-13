@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -161,7 +160,7 @@ class RestartableImportIT
             File databaseDirectory = new File( args[0] );
             BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(),
                     null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
-                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE, INSTANCE )
+                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for real
             new File( databaseDirectory, COMPLETED ).createNewFile();

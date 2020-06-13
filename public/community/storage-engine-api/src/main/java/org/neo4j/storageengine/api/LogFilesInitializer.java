@@ -21,6 +21,7 @@ package org.neo4j.storageengine.api;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 
 public interface LogFilesInitializer
 {

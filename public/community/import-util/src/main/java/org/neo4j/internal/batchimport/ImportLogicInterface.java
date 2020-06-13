@@ -2,6 +2,7 @@ package org.neo4j.internal.batchimport;
 
 import org.neo4j.internal.batchimport.cache.NumberArrayFactory;
 import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 
 import java.io.Closeable;
 import java.io.IOException;

@@ -23,11 +23,13 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.lang3.mutable.MutableLong;
+import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.BatchingStoreBase;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
@@ -39,11 +41,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.lifecycle.Lifespan;
-import org.neo4j.storageengine.api.CommandReaderFactory;
-import org.neo4j.storageengine.api.LogFilesInitializer;
-import org.neo4j.storageengine.api.StorageEngineFactory;
-import org.neo4j.storageengine.api.TransactionId;
-import org.neo4j.storageengine.api.TransactionMetaDataStore;
+import org.neo4j.storageengine.api.*;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;

@@ -34,6 +34,7 @@ import org.neo4j.kernel.impl.store.BatchingStoreBase;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -102,7 +103,7 @@ public class ParallelBatchImporter implements BatchImporter
         importLogic.calculateNodeDegrees();
         importLogic.buildInternalStructures();
         importLogic.buildCountsStore();
-        logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store, fileSystem );
+        logFilesInitializer.initializeLogFiles( databaseLayout, store.getMetaDataStore(), fileSystem );
         importLogic.success();
         store.close();
         importLogic.close();

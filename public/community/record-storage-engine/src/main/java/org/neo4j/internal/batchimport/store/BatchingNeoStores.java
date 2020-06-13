@@ -73,6 +73,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.BatchingStoreInterface;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.TransactionMetaDataStore;
 import org.neo4j.time.Clocks;
 import org.neo4j.token.api.NamedToken;
 
@@ -603,7 +604,7 @@ public class BatchingNeoStores extends BatchingStoreBase implements AutoCloseabl
         return null;
     }
     @Override
-    public MetaDataStoreInterface getMetaDataStore() {
+    public TransactionMetaDataStore getMetaDataStore() {
         return neoStores.getMetaDataStore();
     }
 }

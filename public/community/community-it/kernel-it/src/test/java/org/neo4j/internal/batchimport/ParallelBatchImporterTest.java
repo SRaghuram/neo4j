@@ -62,17 +62,21 @@ import org.neo4j.internal.batchimport.input.InputChunk;
 import org.neo4j.internal.batchimport.input.InputEntity;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.internal.batchimport.staging.StageExecution;
+import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -93,6 +97,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.input.Input.knownEstimates;
@@ -181,7 +186,16 @@ public class ParallelBatchImporterTest
         JobScheduler jobScheduler = new ThreadPoolJobScheduler();
         // This will have statistically half the nodes be considered dense
         Config dbConfig = Config.defaults( GraphDatabaseSettings.dense_node_threshold, RELATIONSHIPS_PER_NODE * 2 );
-        final BatchImporter inserter = null;//new ParallelBatchImporter(
+        BatchingNeoStores store = StandardBatchImporterFactory.instantiateNeoStores( fs, databaseLayout,
+                null, pageCacheTracer, config, NullLogService.getInstance(), EMPTY, dbConfig, jobScheduler, INSTANCE );
+        ImportLogic importLogic = new ImportLogic( fs, databaseLayout, store, config, dbConfig, NullLogService.getInstance(),
+                monitor, Collector.EMPTY, ImportLogic.NO_MONITOR, pageCacheTracer, INSTANCE );
+
+        final BatchImporter inserter = new ParallelBatchImporter(databaseLayout, fs, null, pageCacheTracer, config,
+                NullLogService.getInstance(), monitor, EMPTY,
+                dbConfig, importLogic, store,
+                ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY , TransactionLogInitializer.getLogFilesInitializer(), INSTANCE);
+        //new ParallelBatchImporter(
                 //databaseLayout, fs, null, pageCacheTracer, config, NullLogService.getInstance(), monitor, EMPTY, dbConfig, getFormat(),
                 //ImportLogic.NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
         LongAdder propertyCount = new LongAdder();

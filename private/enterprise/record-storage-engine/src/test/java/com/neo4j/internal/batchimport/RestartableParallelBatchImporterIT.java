@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
-import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -262,6 +261,6 @@ class RestartableParallelBatchImporterIT
                 DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
                 Config.defaults( preallocate_logical_logs, false ),
                 NO_MONITOR, jobScheduler, Collector.EMPTY,
-                TransactionLogsInitializer.INSTANCE, INSTANCE );
+                TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
     }
 }

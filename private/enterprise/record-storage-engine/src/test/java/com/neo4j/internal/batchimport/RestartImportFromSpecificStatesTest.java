@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
-import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -104,7 +103,7 @@ class RestartImportFromSpecificStatesTest
                 DEFAULT, NullLogService.getInstance(), monitor,
                 EMPTY, Config.defaults(),
                 //RecordFormatSelector.defaultFormat(),
-                NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE, INSTANCE );
+                NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException

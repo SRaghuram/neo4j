@@ -17,9 +17,10 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.internal.batchimport.ParallelBatchImporter;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
+import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -74,12 +75,23 @@ class CheckPointingLogRotationStressTesting
               JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             Config dbConfig = Config.defaults();
-            new ParallelBatchImporter(
+
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) );
+            BatchingNeoStores store = StandardBatchImporterFactory.instantiateNeoStores( fileSystem, databaseLayout,
+                    null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), AdditionalInitialIds.EMPTY, dbConfig, jobScheduler, INSTANCE );
+            ImportLogic importLogic = new ImportLogic( fileSystem, databaseLayout, store, DEFAULT, dbConfig, NullLogService.getInstance(),
+                    ExecutionMonitors.defaultVisible(), Collector.EMPTY, NO_MONITOR, PageCacheTracer.NULL, INSTANCE );
+
+            new ParallelBatchImporter(databaseLayout, fileSystem, null, PageCacheTracer.NULL, DEFAULT,
+                    NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), AdditionalInitialIds.EMPTY,
+                    dbConfig, importLogic, store,
+                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer1(), INSTANCE).doImport( new NodeCountInputs( nodeCount ) );
+            /*new ParallelBatchImporter(
                     DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL,
                     DEFAULT, NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
                     RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler,
                     Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
-                    .doImport( new NodeCountInputs( nodeCount ) );
+                    .doImport( new NodeCountInputs( nodeCount ) );*/
         }
 
         System.out.println( "2/6\tStarting database..." );

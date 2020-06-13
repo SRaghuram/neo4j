@@ -12,6 +12,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.BatchingStoreInterface;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.TransactionMetaDataStore;
 import org.neo4j.token.api.NamedToken;
 
 import java.io.IOException;
