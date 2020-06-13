@@ -148,8 +148,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             List<Map<String,Object>> locksInfo = collectResults( r );
             Assertions.assertThat( locksInfo ).hasSizeGreaterThanOrEqualTo( 1 );
             Assertions.assertThat( locksInfo ).containsAnyOf(
-                    Map.of("mode", "Exclusive", "resourceId", nodeId.intValue(), "resourceType", "NODE"),
-                    Map.of("mode", "Exclusive", "resourceId", nodeId.longValue(), "resourceType", "NODE") );
+                    Map.of("mode", "EXCLUSIVE", "resourceId", nodeId.intValue(), "resourceType", "NODE"),
+                    Map.of("mode", "EXCLUSIVE", "resourceId", nodeId.longValue(), "resourceType", "NODE") );
         } );
 
         latch.finishAndWaitForAllToFinish();
@@ -176,8 +176,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             List<Map<String,Object>> locksInfo = collectResults( r );
             Assertions.assertThat( locksInfo ).hasSizeGreaterThanOrEqualTo( 1 );
             Assertions.assertThat( locksInfo ).containsAnyOf(
-                    Map.of("mode", "Shared", "resourceId", (int) labelId, "resourceType", "LABEL"),
-                    Map.of("mode", "Shared", "resourceId", labelId, "resourceType", "LABEL") );
+                    Map.of("mode", "SHARED", "resourceId", (int) labelId, "resourceType", "LABEL"),
+                    Map.of("mode", "SHARED", "resourceId", labelId, "resourceType", "LABEL") );
         } );
 
         latch.finishAndWaitForAllToFinish();
