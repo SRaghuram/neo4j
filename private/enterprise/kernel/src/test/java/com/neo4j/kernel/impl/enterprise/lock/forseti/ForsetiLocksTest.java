@@ -26,7 +26,7 @@ public class ForsetiLocksTest extends LockingCompatibilityTestSuite
     protected boolean isAwaitingLockAcquisition( Actor actor ) throws Exception
     {
         actor.untilWaitingIn( ForsetiClient.class.getDeclaredMethod(
-                "waitFor", ForsetiLockManager.Lock.class, ResourceType.class, long.class, boolean.class, int.class) );
+                "waitFor", ForsetiLockManager.Lock.class, ResourceType.class, long.class, int.class) );
         return true;
     }
 }
