@@ -76,6 +76,9 @@ object OperatorExpressionCompiler {
   // (`slot offset`, `local variable name`, `is modified`)
   type FOREACH_LOCAL_FUN = (Int, String, Boolean) => Unit
 
+  // - A `modified` local needs to be written to the output row, and its slot should not be copied from the input row to the output row by writeLocalsToSlots()
+  // - An `initialized` local has been written to before it is first read, so it does not need to be initialized from a slot in the input row.
+  //   (It is always also modified and hence `initialized` locals is a subset of `modified` locals.)
   case class LocalVariableSlotMapper(scopeId: String, slots: SlotConfiguration)(
     private val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs),
     private val longSlotToLocalModified: Array[Boolean] = new Array[Boolean](slots.numberOfLongs),
@@ -138,13 +141,17 @@ object OperatorExpressionCompiler {
 
     val foreachLocalForLongSlot: (FOREACH_LOCAL_FUN) => Unit = foreachLocalFor(longSlotToLocal, longSlotToLocalModified)
     val foreachLocalForRefSlot: (FOREACH_LOCAL_FUN) => Unit = foreachLocalFor(refSlotToLocal, refSlotToLocalModified)
+    val foreachLongSlot: (FOREACH_LOCAL_FUN) => Unit = foreachLocalFor(longSlotToLocal, longSlotToLocalModified, includeSlotsWithNoLocal = true)
+    val foreachRefSlot: (FOREACH_LOCAL_FUN) => Unit = foreachLocalFor(refSlotToLocal, refSlotToLocalModified, includeSlotsWithNoLocal = true)
 
-    private def foreachLocalFor(slotToLocal: Array[String], slotToLocalModified: Array[Boolean])
+    private def foreachLocalFor(slotToLocal: Array[String],
+                                slotToLocalModified: Array[Boolean],
+                                includeSlotsWithNoLocal: Boolean = false)
                                (f: FOREACH_LOCAL_FUN): Unit = {
       var i = 0
       while (i < slotToLocal.length) {
         val name = slotToLocal(i)
-        if (name != null) {
+        if (includeSlotsWithNoLocal || name != null) {
           val modified = slotToLocalModified(i)
           f(i, name, modified)
         }
@@ -695,80 +702,52 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     // Merge all scopes (into a copy, without modifying the original scope stack)
     val mergedLocals = locals.mergeAllScopesCopy()
 
-    // Collect all write operations for modified slots
+    // Collect all write operations for slots that has been modified or needs to be copied as arguments (in slot offset order)
     var firstModifiedLongSlot = Int.MaxValue
-    mergedLocals.foreachLocalForLongSlot { case (offset, local, modified) =>
-      if (modified) {
-        if (firstModifiedLongSlot > offset) {
+    mergedLocals.foreachLongSlot { case (offset, local, modified) =>
+      if (local != null) {
+        if (modified && firstModifiedLongSlot > offset) {
           firstModifiedLongSlot = offset
         }
-        writeLongSlotOps += setLongInExecutionContext(offset, load(local))
-      }
-    }
-    var firstModifiedRefSlot = Int.MaxValue
-    mergedLocals.foreachLocalForRefSlot { case (offset, local, modified) =>
-      if (modified) {
-        if (firstModifiedRefSlot > offset) {
-          firstModifiedRefSlot = offset
+        if (modified || offset < nLongSlotsToCopyFromInput) {
+          val writeOp = setLongInExecutionContext(offset, load(local))
+          writeLongSlotOps += writeOp
         }
-        writeRefSlotOps += setRefInExecutionContext(offset, load(local))
+      } else if (offset < nLongSlotsToCopyFromInput) {
+        // If we do not have a local we need to copy the slot directly from the input row
+        val writeOp = setLongInExecutionContext(offset,  getLongFromExecutionContext(offset, INPUT_CURSOR))
+        writeLongSlotOps += writeOp
       }
     }
 
-    // Now we can compute how many arguments slots we actually need to copy
+    var firstModifiedRefSlot = Int.MaxValue
+    mergedLocals.foreachRefSlot { case (offset, local, modified) =>
+      if (local != null) {
+        if (modified && firstModifiedRefSlot > offset) {
+          firstModifiedRefSlot = offset
+        }
+        if (modified || offset < nRefSlotsToCopyFromInput) {
+          val writeOp = setRefInExecutionContext(offset, load(local))
+          writeRefSlotOps += writeOp
+        }
+      } else if (offset < nRefSlotsToCopyFromInput) {
+        // If we do not have a local we need to copy the slot directly from the input row
+        val writeOp = setRefInExecutionContext(offset,  getRefFromExecutionContext(offset, INPUT_CURSOR))
+        writeRefSlotOps += writeOp
+      }
+    }
+
+    // Check if we should replace the individual write operations in the initial range with a range copy instead
     val nLongsToCopy = Math.min(nLongSlotsToCopyFromInput, firstModifiedLongSlot)
     val nRefsToCopy = Math.min(nRefSlotsToCopyFromInput, firstModifiedRefSlot)
 
-    // Prepend the write operations for argument slots
-    // Decide if we should use WritableRow.copyFrom or just prepend individual set operations for the remaining slots?
     if (nLongsToCopy > USE_ARRAY_COPY_THRESHOLD || nRefsToCopy > USE_ARRAY_COPY_THRESHOLD) {
       // Use the WritableRow.copyFrom method (which may use array copy)
       writeOps += doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, nLongsToCopy, nRefsToCopy)
-      writeOps ++= writeLongSlotOps
-      //Add ExecutionContext.setLongAt operations for argument slots
-      var i = nLongsToCopy + 1
-      while (i < nLongSlotsToCopyFromInput) {
-        writeOps += setLongInExecutionContext(i,  getLongFromExecutionContext(i, INPUT_CURSOR))
-        i += 1
-      }
-      writeOps ++= writeRefSlotOps
+      writeOps ++= writeLongSlotOps.drop(nLongsToCopy)
+      writeOps ++= writeRefSlotOps.drop(nRefsToCopy)
     } else {
-      if (nLongsToCopy > 0) {
-        var i = 0
-        while (i < nLongsToCopy) {
-          val local = mergedLocals.getLocalForLongSlot(i)
-          val getOp =
-            if (local == null)
-              getLongFromExecutionContext(i, INPUT_CURSOR)
-            else
-              load(local)
-          writeOps += setLongInExecutionContext(i, getOp)
-          i += 1
-        }
-        //Add ExecutionContext.setLongAt operations for argument slots
-        while (i < nLongSlotsToCopyFromInput) {
-          writeOps += setLongInExecutionContext(i,  getLongFromExecutionContext(i, INPUT_CURSOR))
-          i += 1
-        }
-      }
-      // Add the write operations for the modified long slots
       writeOps ++= writeLongSlotOps
-
-      // Add ExecutionContext.setRefAt operations for argument slots?
-      if (nRefsToCopy > 0) {
-        var i = 0
-        while (i < nRefsToCopy) {
-          val local = mergedLocals.getLocalForRefSlot(i)
-          val getOp =
-            if (local == null)
-              getRefFromExecutionContext(i, INPUT_CURSOR)
-            else
-              load(local)
-          setRefInExecutionContext(i, getOp) +=: writeRefSlotOps
-          i += 1
-        }
-      }
-      // Add the write operations for the modified ref slots
       writeOps ++= writeRefSlotOps
     }
 

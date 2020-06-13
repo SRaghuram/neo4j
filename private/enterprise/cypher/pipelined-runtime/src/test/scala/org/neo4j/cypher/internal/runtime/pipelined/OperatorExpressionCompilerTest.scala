@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompilerTest.matchIR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_LONG_SLOT_VALUE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_REF_SLOT_VALUE
 import org.neo4j.cypher.internal.util.InputPosition.NONE
@@ -616,6 +617,288 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       variable[AnyValue]("refSlot1", oec.getRefFromExecutionContext(1, INPUT_CURSOR)),
       variable[AnyValue]("refSlot2", UNINITIALIZED_REF_SLOT_VALUE),
     )
+  }
+
+  //-----------------------------------------------------------------------------------------------
+  // Tests for writeLocalsToSlots
+  //-----------------------------------------------------------------------------------------------
+
+  private def slotConfigurationForWriteLocalsToSlots: SlotConfiguration = {
+    val cachedProp3 = SlottedCachedPropertyWithoutPropertyToken("r3", PropertyKeyName("prop")(NONE), 3, offsetIsForLongSlot = false, "prop", 3, NODE_TYPE, nullable = true)
+    val cachedProp9 = SlottedCachedPropertyWithoutPropertyToken("r9", PropertyKeyName("prop")(NONE), 9, offsetIsForLongSlot = false, "prop", 9, NODE_TYPE, nullable = false)
+    SlotConfiguration.empty
+      .newLong("l0", nullable = false, CTNode)
+      .newLong("l1", nullable = false, CTRelationship)
+      .newLong("l2", nullable = true, CTNode)
+      .newLong("l3", nullable = false, CTNode)
+      .newLong("l4", nullable = false, CTRelationship)
+      .newLong("l5", nullable = true, CTNode)
+      .newLong("l6", nullable = false, CTNode)
+      .newLong("l7", nullable = false, CTRelationship)
+      .newLong("l8", nullable = true, CTNode)
+      .newReference("r0", nullable = false, CTInteger)
+      .newReference("r1", nullable = false, CTString)
+      .newReference("r2", nullable = true, CTAny)
+      .newCachedProperty(cachedProp3)
+      .newReference("r4", nullable = false, CTString)
+      .newReference("r5", nullable = true, CTAny)
+      .newReference("r6", nullable = false, CTInteger)
+      .newReference("r7", nullable = false, CTString)
+      .newReference("r8", nullable = true, CTAny)
+      .newCachedProperty(cachedProp9)
+  }
+
+  test("should handle writeLocalsToSlots with overlapping input slot ranges - below range copy threshold") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(5, 5)
+    oec.setLongAt(1, setLongIr)
+    oec.setLongAt(3, setLongIr)
+    oec.setLongAt(5, setLongIr)
+    oec.setLongAt(7, setLongIr)
+    oec.setRefAt(1, setRefIr)
+    oec.setCachedPropertyAt(3, getFromStoreIr)
+    oec.setRefAt(5, setRefIr)
+    oec.setRefAt(7, setRefIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.setLongInExecutionContext(0, oec.getLongFromExecutionContext(0, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
+      oec.setLongInExecutionContext(2, oec.getLongFromExecutionContext(2, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(3, load(longSlotLocal(3))),
+      oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setRefInExecutionContext(0, oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
+      oec.setRefInExecutionContext(2, oec.getRefFromExecutionContext(2, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+    )
+  }
+
+  test("should handle writeLocalsToSlots with overlapping input slot ranges - with range copy 1") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(5, 5)
+    oec.setLongAt(3, setLongIr)
+    oec.setLongAt(5, setLongIr)
+    oec.setLongAt(7, setLongIr)
+    oec.setRefAt(2, setRefIr)
+    oec.setCachedPropertyAt(3, getFromStoreIr)
+    oec.setRefAt(5, setRefIr)
+    oec.setRefAt(7, setRefIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 3, 2),
+      oec.setLongInExecutionContext(3, load(longSlotLocal(3))),
+      oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setRefInExecutionContext(2, load(refSlotLocal(2))),
+      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+    )
+  }
+
+  test("should handle writeLocalsToSlots with overlapping input slot ranges - with range copy 2") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(5, 5)
+    oec.setLongAt(1, setLongIr)
+    oec.setLongAt(5, setLongIr)
+    oec.setLongAt(7, setLongIr)
+    oec.setCachedPropertyAt(3, getFromStoreIr)
+    oec.setRefAt(6, setRefIr)
+    oec.setRefAt(7, setRefIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 1, 3),
+      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
+      oec.setLongInExecutionContext(2, oec.getLongFromExecutionContext(2, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(3, oec.getLongFromExecutionContext(3, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(6, load(refSlotLocal(6))),
+      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+    )
+  }
+
+  test("should handle writeLocalsToSlots with no overlapping input slot range") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(5, 5)
+    oec.setLongAt(7, setLongIr)
+    oec.setRefAt(8, setRefIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 5, 5),
+      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setRefInExecutionContext(8, load(refSlotLocal(8))),
+    )
+  }
+
+  test("should handle writeLocalsToSlots with input slot range below range copy threshold") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(2, 2)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.setLongInExecutionContext(0, oec.getLongFromExecutionContext(0, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(1, oec.getLongFromExecutionContext(1, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(0, oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(1, oec.getRefFromExecutionContext(1, INPUT_CURSOR)),
+    )
+  }
+
+  test("should handle writeLocalsToSlots with overlapping input slot ranges - below range copy threshold 2") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(2, 2)
+    oec.setLongAt(0, setLongIr)
+    oec.setRefAt(0, setRefIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.setLongInExecutionContext(0, load(longSlotLocal(0))),
+      oec.setLongInExecutionContext(1, oec.getLongFromExecutionContext(1, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(0, load(refSlotLocal(0))),
+      oec.setRefInExecutionContext(1, oec.getRefFromExecutionContext(1, INPUT_CURSOR)),
+    )
+  }
+
+  test("should use locals in writeLocalsToSlots - below range copy threshold") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(2, 2)
+    oec.getLongAt(0)
+    oec.getRefAt(1)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.setLongInExecutionContext(0, load(longSlotLocal(0))),
+      oec.setLongInExecutionContext(1, oec.getLongFromExecutionContext(1, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(0, oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
+    )
+  }
+
+  test("should use locals in writeLocalsToSlots - below range copy threshold 2") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(5, 5)
+    oec.setLongAt(1, setLongIr)
+    oec.setLongAt(3, setLongIr)
+    oec.setLongAt(5, setLongIr)
+    oec.setLongAt(7, setLongIr)
+    oec.setRefAt(1, setRefIr)
+    oec.setCachedPropertyAt(3, getFromStoreIr)
+    oec.setRefAt(5, setRefIr)
+    oec.setRefAt(7, setRefIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.setLongInExecutionContext(0, oec.getLongFromExecutionContext(0, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
+      oec.setLongInExecutionContext(2, oec.getLongFromExecutionContext(2, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(3, load(longSlotLocal(3))),
+      oec.setLongInExecutionContext(4, oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setRefInExecutionContext(0, oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
+      oec.setRefInExecutionContext(2, oec.getRefFromExecutionContext(2, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setRefInExecutionContext(4, oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+      )
+  }
+
+  test("should use locals in writeLocalsToSlots - with range copy") {
+    // Given
+    val slots = slotConfigurationForWriteLocalsToSlots
+    val oec = createOperatorExpressionCompiler(slots)
+
+    oec.copyFromInput(6, 6)
+    oec.getLongAt(1) // Should be ignored and overridden with range copy
+    oec.getLongAt(2) // Should be ignored and overridden with range copy
+    oec.getLongAt(3) // Should be ignored and overridden with range copy
+    oec.setLongAt(4, setLongIr)
+    oec.getLongAt(5)
+    oec.setLongAt(8, setLongIr)
+    oec.getRefAt(0) // Should be ignored and overridden with range copy
+    oec.getRefAt(2) // Should be ignored and overridden with range copy
+    oec.setCachedPropertyAt(3, getFromStoreIr)
+    oec.getRefAt(4)
+    oec.setCachedPropertyAt(9, getFromStoreIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, 4, 3),
+      oec.setLongInExecutionContext(4, load(longSlotLocal(4))),
+      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
+      oec.setLongInExecutionContext(8, load(longSlotLocal(8))),
+      oec.setRefInExecutionContext(3, load(refSlotLocal(3))),
+      oec.setRefInExecutionContext(4, load(refSlotLocal(4))),
+      oec.setRefInExecutionContext(5, oec.getRefFromExecutionContext(5, INPUT_CURSOR)),
+      oec.setRefInExecutionContext(9, load(refSlotLocal(9))),
+      )
   }
 
   private def longSlotLocal(offset: Int): String =
