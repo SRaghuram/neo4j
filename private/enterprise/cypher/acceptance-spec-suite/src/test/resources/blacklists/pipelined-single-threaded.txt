@@ -44,8 +44,6 @@ Feature "MergeLegacyAcceptance": Scenario "Using bound nodes in mid-pattern when
 Feature "MergeLegacyAcceptance": Scenario "Using bound nodes in mid-pattern"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one negated subquery, two subqueries, and an equality expression 2"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one negated subquery, two subqueries, and an equality expression"
-Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between two subqueries"
-Feature "PatternPredicates": Scenario "Matching with complex composite pattern predicate"
 Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop side effects"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate on all relationships"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate"
