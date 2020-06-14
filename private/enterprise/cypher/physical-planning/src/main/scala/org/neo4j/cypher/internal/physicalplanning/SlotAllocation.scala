@@ -276,7 +276,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             argumentSlots.newArgument(current.id)
           }
           allocateLhsOfApply(current, nullable, argumentSlots, semanticTable)
-          allocateExpressionsTwoChild(current, argumentSlots, semanticTable, comingFromLeft = true)
+          val lhsSlots = allocations.get(left.id)
+          allocateExpressionsTwoChild(current, lhsSlots, semanticTable, comingFromLeft = true)
           argumentStack.push(SlotsAndArgument(argumentSlots, argumentSlots.size(), current.id))
           populate(right, nullable)
 
