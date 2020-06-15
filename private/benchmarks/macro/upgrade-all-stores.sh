@@ -39,6 +39,7 @@ db_and_workloads=(
  "socialnetwork;socialnetwork"
  "osmnodes;osmnodes"
  "offshore_leaks;offshore_leaks"
+ "fraud-poc-credit;fraud-poc"
  "zero;zero")
 
 for i in "${db_and_workloads[@]}"; do

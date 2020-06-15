@@ -173,3 +173,12 @@ Queen Mary University of London dataset exhibiting pathological performance. Pri
 
 [A real-world use case with Panama papers and Paradise papers](https://offshoreleaks.icij.org/pages/database)
 [Example queries](https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/examples.html) which were used to create the workload.
+---
+#### fraud-poc-credit
+Based on a customer POC acquired from field team.
+Basic stats of the 'fraud-poc' dataset:
+ * Size: ~24 GB
+ * Nodes: ~64,000,000
+ * Relationships: ~192,000,000
+The full POC contained two groups of queries named 'credit fraud' and 'data science'. 
+The workload contains queries from the 'credit fraud' group only. 
