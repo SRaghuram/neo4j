@@ -238,7 +238,7 @@ public abstract class BaseEndToEndIT
             // start watching outputlog
             tailerExecutor.submit( tailer );
             int processExitCode = process.waitFor();
-            assertEquals( 0, processExitCode, scriptName + " finished with non-zero code" );
+            assertEquals( 0, processExitCode, scriptName + " finished with non-zero code\n" + Files.readString( outputLog.toPath() ) );
             assertStoreSchema( boltUri );
             assertRecordingFilesExist( s3Path, profilers, resources, recordingsAssertion, recordingDirsCount );
         }

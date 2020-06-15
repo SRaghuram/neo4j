@@ -6,6 +6,7 @@
 package com.neo4j.bench.macro;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
@@ -81,8 +82,8 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Test
     @Disabled( "long running test" )
+    @Test
     public void runWriteWorkloadForkedWithEmbedded() throws Exception
     {
 
@@ -108,7 +109,7 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Disabled
+    @Disabled( "timed out after 20 minutes" )
     @Test
     public void executeLoadCsvWorkloadForkedWithEmbedded() throws Exception
     {
@@ -162,6 +163,7 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
+    @Disabled( "long running test" )
     @Test
     public void executeWriteWorkloadsForkedWithServer() throws Exception
     {
@@ -187,7 +189,7 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Disabled
+    @Disabled( "Executing queries that use periodic commit in an open transaction is not possible" )
     @Test
     public void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
@@ -241,7 +243,7 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Disabled
+    @Disabled( "long running test" )
     @Test
     public void executeWriteWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -267,7 +269,7 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Disabled
+    @Disabled( "timed out after 20 minutes" )
     @Test
     public void executeLoadCsvWorkloadInProcessWithEmbedded() throws Exception
     {
@@ -297,7 +299,6 @@ class EndToEndIT extends BaseEndToEndIT
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
 
     @Test
-    @Disabled( "https://trello.com/c/l5xaVHck/1558-re-enable-server-tests-in-runworkloadcommandit-in-40" )
     public void executeReadWorkloadInProcessWithServer() throws Exception
     {
 
@@ -323,7 +324,7 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Disabled
+    @Disabled( "long running test" )
     @Test
     public void executeWriteWorkloadInProcessWithServer() throws Exception
     {
@@ -350,7 +351,7 @@ class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    @Disabled
+    @Disabled( "Executing queries that use periodic commit in an open transaction is not possible" )
     @Test
     public void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
@@ -409,9 +410,10 @@ class EndToEndIT extends BaseEndToEndIT
         // create empty store
         Path dbPath = temporaryFolder.directory( "db" ).toPath();
         Workload workload = Workload.fromName( workloadName, resources, deployment );
-        StoreTestUtil.createEmptyStoreFor( workload,
-                                           dbPath, // store
-                                           neo4jConfig );
+        System.out.println( "creating empty db store at " + dbPath );
+        Store emptyStoreFor = StoreTestUtil.createEmptyStoreFor( workload,
+                                                                 dbPath, // store
+                                                                 neo4jConfig );
 
         Path resultsPath = temporaryFolder.createFile( "results.json" ).toPath();
 
@@ -421,7 +423,7 @@ class EndToEndIT extends BaseEndToEndIT
                        // workload
                        workloadName,
                        // db
-                       dbPath.toString(),
+                       emptyStoreFor.topLevelDirectory().toString(),
                        // warmup_count
                        "1",
                        // measurement_count
@@ -479,7 +481,7 @@ class EndToEndIT extends BaseEndToEndIT
                        "--aws-endpoint-url", awsEndpointUrl );
     }
 
-    protected AssertOnRecordings assertOnRecordings( Deployment deployment, String workloadName, int forks ) throws Exception
+    protected AssertOnRecordings assertOnRecordings( Deployment deployment, String workloadName, int forks )
     {
         return ( Path recordingDir, List<ProfilerType> profilers, Resources resources ) ->
         {
