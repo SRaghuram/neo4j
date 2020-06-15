@@ -8,6 +8,7 @@ package com.neo4j.bench.common.util;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.util.UnitConverter;
 
+import java.text.DecimalFormat;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -16,6 +17,15 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class Units
 {
+    private static final DecimalFormat FLT_FORMAT = new DecimalFormat( "###,###,###,##0.00" );
+
+    public static String saneUnitString( double value, TimeUnit timeUnit, Benchmark.Mode mode )
+    {
+        TimeUnit saneUnit = Units.findSaneUnit( value, timeUnit, mode, 1, 1000 );
+        double saneValue = Units.convertValueTo( value, timeUnit, saneUnit, mode );
+        return format( "%s %s", FLT_FORMAT.format( saneValue ), toAbbreviation( saneUnit, mode ) );
+    }
+
     public static String toAbbreviation( TimeUnit timeUnit, Benchmark.Mode mode )
     {
         return (mode.equals( Benchmark.Mode.THROUGHPUT ))
