@@ -94,6 +94,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(Set(adminUser("neo4j")))
   }
 
+  test("should not accept exists subclause in show commands") {
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USERS WHERE true AND EXISTS { MATCH (n) }")
+    }
+    exception.getMessage should startWith("The EXISTS clause is not valid on SHOW commands. (line 1, column 27 (offset: 26))")
+  }
+
   test("should show users WHERE 'admin' IN roles") {
 
     // WHEN

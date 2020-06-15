@@ -76,6 +76,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(Set(admin, public))
   }
 
+  test("should not accept exists subclause in show commands") {
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ROLES WHERE true AND EXISTS { MATCH (n) }")
+    }
+    exception.getMessage should startWith("The EXISTS clause is not valid on SHOW commands. (line 1, column 27 (offset: 26))")
+  }
+
   test("should create and show roles") {
     // WHEN
     execute("CREATE ROLE foo")
