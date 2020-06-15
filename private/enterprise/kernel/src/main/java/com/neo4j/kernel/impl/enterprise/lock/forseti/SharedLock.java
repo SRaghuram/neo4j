@@ -225,6 +225,25 @@ class SharedLock implements ForsetiLockManager.Lock
     }
 
     @Override
+    public long transactionId()
+    {
+        // TODO can we/ should we do better here?
+        var clientsHoldingThisLock = this.clientsHoldingThisLock[0];
+        if ( clientsHoldingThisLock != null && clientsHoldingThisLock.length() > 0 )
+        {
+            for ( int i = 0; i < clientsHoldingThisLock.length(); i++ )
+            {
+                var client = clientsHoldingThisLock.get( i );
+                if ( client != null )
+                {
+                    return client.transactionId();
+                }
+            }
+        }
+        return -1;
+    }
+
+    @Override
     public String toString()
     {
         // TODO we should only read out the refCount once, and build a deterministic string based on that

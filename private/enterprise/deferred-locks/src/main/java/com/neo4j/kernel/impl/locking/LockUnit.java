@@ -14,9 +14,9 @@ import org.neo4j.lock.ResourceType;
  */
 public class LockUnit extends ActiveLock implements Comparable<LockUnit>
 {
-    public LockUnit( ResourceType resourceType, LockType lockType, long resourceId )
+    public LockUnit( ResourceType resourceType, LockType lockType, long userTransactionId, long resourceId )
     {
-        super( resourceType, lockType, resourceId );
+        super( resourceType, lockType, userTransactionId, resourceId );
     }
 
     public boolean isExclusive()
@@ -42,6 +42,7 @@ public class LockUnit extends ActiveLock implements Comparable<LockUnit>
     @Override
     public String toString()
     {
-        return "Resource [resourceType=" + resourceType() + ", resourceId=" + resourceId() + ", lockType=" + lockType() + "]";
+        return "Resource [resourceType=" + resourceType() + ", resourceId=" + resourceId() + ", lockType=" + lockType() +
+                ", transactionId=" + transactionId() + "]";
     }
 }

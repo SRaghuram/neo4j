@@ -40,13 +40,13 @@ class BuiltInEnterpriseProceduresTest extends SystemBuiltInEnterpriseProceduresT
     }
 
     @Test
-    void checkThatEnterpriseAndCommunityHaveSameResultColumsForListProcedures()
+    void checkThatEnterpriseAndCommunityHaveSameResultColumnsForListProcedures()
     {
         checkClassesHaveSameFinalFields( BuiltInDbmsProcedures.ProcedureResult.class, EnterpriseBuiltInDbmsProcedures.ProcedureResult.class );
     }
 
     @Test
-    void checkThatEnterpriseAndCommunityHaveSameResultColumsForListFunctions()
+    void checkThatEnterpriseAndCommunityHaveSameResultColumnsForListFunctions()
     {
         checkClassesHaveSameFinalFields( BuiltInDbmsProcedures.FunctionResult.class, EnterpriseBuiltInDbmsProcedures.FunctionResult.class );
     }

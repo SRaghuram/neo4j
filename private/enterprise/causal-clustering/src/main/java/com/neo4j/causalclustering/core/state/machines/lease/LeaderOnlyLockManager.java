@@ -82,7 +82,7 @@ public class LeaderOnlyLockManager implements Locks
         }
 
         @Override
-        public void initialize( LeaseClient leaseClient )
+        public void initialize( LeaseClient leaseClient, long userTransactionId )
         {
             this.leaseClient = leaseClient;
         }

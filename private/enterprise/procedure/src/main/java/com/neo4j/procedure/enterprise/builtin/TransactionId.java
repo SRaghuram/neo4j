@@ -15,7 +15,7 @@ import static java.util.Objects.requireNonNull;
 
 class TransactionId
 {
-    public static final String SEPARATOR = "-transaction-";
+    private static final String SEPARATOR = "-transaction-";
     private static final String EXPECTED_FORMAT_MSG = "(expected format: <databasename>" + SEPARATOR + "<id>)";
     private final NormalizedDatabaseName database;
     private final long internalId;

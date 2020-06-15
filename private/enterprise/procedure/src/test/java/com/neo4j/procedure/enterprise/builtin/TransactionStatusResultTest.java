@@ -228,7 +228,7 @@ class TransactionStatusResultTest
         @Override
         public Stream<ActiveLock> activeLocks()
         {
-            return Stream.of( new ActiveLock( ResourceTypes.NODE, SHARED, 3 ) );
+            return Stream.of( new ActiveLock( ResourceTypes.NODE, SHARED, 3, 3 ) );
         }
 
         @Override

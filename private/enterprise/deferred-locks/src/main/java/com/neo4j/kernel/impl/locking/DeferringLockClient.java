@@ -27,9 +27,11 @@ import static org.neo4j.lock.LockType.SHARED;
 
 public class DeferringLockClient implements Locks.Client
 {
+    private static final long INVALID_TRANSACTION_ID = -1;
     private final Locks.Client clientDelegate;
     private final Map<LockUnit,MutableInt> locks = new TreeMap<>();
     private volatile boolean stopped;
+    private volatile long userTransactionId;
 
     public DeferringLockClient( Locks.Client clientDelegate )
     {
@@ -37,9 +39,10 @@ public class DeferringLockClient implements Locks.Client
     }
 
     @Override
-    public void initialize( LeaseClient leaseClient )
+    public void initialize( LeaseClient leaseClient, long userTransactionId )
     {
         // we don't need leases here
+        this.userTransactionId = userTransactionId;
     }
 
     @Override
@@ -49,7 +52,7 @@ public class DeferringLockClient implements Locks.Client
 
         for ( long resourceId : resourceIds )
         {
-            addLock( resourceType, SHARED, resourceId );
+            addLock( resourceType, SHARED, userTransactionId, resourceId );
         }
     }
 
@@ -61,7 +64,7 @@ public class DeferringLockClient implements Locks.Client
 
         for ( long resourceId : resourceIds )
         {
-            addLock( resourceType, EXCLUSIVE, resourceId );
+            addLock( resourceType, EXCLUSIVE, userTransactionId, resourceId );
         }
     }
 
@@ -95,7 +98,7 @@ public class DeferringLockClient implements Locks.Client
         assertNotStopped();
         for ( long resourceId : resourceIds )
         {
-            removeLock( resourceType, SHARED, resourceId );
+            removeLock( resourceType, SHARED, userTransactionId, resourceId );
         }
 
     }
@@ -106,7 +109,7 @@ public class DeferringLockClient implements Locks.Client
         assertNotStopped();
         for ( long resourceId : resourceIds )
         {
-            removeLock( resourceType, EXCLUSIVE, resourceId );
+            removeLock( resourceType, EXCLUSIVE, userTransactionId, resourceId );
         }
     }
 
@@ -176,6 +179,7 @@ public class DeferringLockClient implements Locks.Client
     public void close()
     {
         stopped = true;
+        userTransactionId = INVALID_TRANSACTION_ID;
         clientDelegate.close();
     }
 
@@ -205,22 +209,21 @@ public class DeferringLockClient implements Locks.Client
         }
     }
 
-    private void addLock( ResourceType resourceType, LockType lockType, long resourceId )
+    private void addLock( ResourceType resourceType, LockType lockType, long userTransactionId, long resourceId )
     {
-        LockUnit lockUnit = new LockUnit( resourceType, lockType, resourceId );
+        LockUnit lockUnit = new LockUnit( resourceType, lockType, userTransactionId, resourceId );
         MutableInt lockCount = locks.computeIfAbsent( lockUnit, k -> new MutableInt() );
         lockCount.increment();
     }
 
-    private void removeLock( ResourceType resourceType, LockType lockType, long resourceId )
+    private void removeLock( ResourceType resourceType, LockType lockType, long userTransactionId, long resourceId )
     {
-        LockUnit lockUnit = new LockUnit( resourceType, lockType, resourceId );
+        LockUnit lockUnit = new LockUnit( resourceType, lockType, userTransactionId, resourceId );
         MutableInt lockCount = locks.get( lockUnit );
         if ( lockCount == null )
         {
-            throw new IllegalStateException(
-                    "Cannot release " + lockType + " lock that it " +
-                    "does not hold: " + resourceType + "[" + resourceId + "]." );
+            throw new IllegalStateException( "Cannot release " + lockType +
+                            " lock that it does not hold: " + resourceType + "[" + resourceId + "] for transaction: " + userTransactionId + "." );
         }
 
         lockCount.decrement();

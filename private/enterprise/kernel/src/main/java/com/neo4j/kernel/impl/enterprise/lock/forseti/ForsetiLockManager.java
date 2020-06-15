@@ -133,6 +133,8 @@ public class ForsetiLockManager implements Locks
         void collectOwners( Set<ForsetiClient> owners );
 
         LockType type();
+
+        long transactionId();
     }
 
     /**
@@ -238,7 +240,7 @@ public class ForsetiLockManager implements Locks
                 for ( Map.Entry<Long,Lock> entry : lockMaps[i].entrySet() )
                 {
                     Lock lock = entry.getValue();
-                    out.visit( lock.type(), resourceType, entry.getKey(), lock.describeWaitList(), 0, System.identityHashCode( lock ) );
+                    out.visit( lock.type(), resourceType, lock.transactionId(), entry.getKey(), lock.describeWaitList(), 0, System.identityHashCode( lock ) );
                 }
             }
         }

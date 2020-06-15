@@ -22,11 +22,11 @@ class LockUnitTest
     @Test
     void exclusiveLocksAppearFirst()
     {
-        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1 );
-        LockUnit unit2 = new LockUnit( ResourceTypes.NODE, SHARED, 2 );
-        LockUnit unit3 = new LockUnit( ResourceTypes.RELATIONSHIP, SHARED, 1 );
-        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 2 );
-        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, SHARED, 1 );
+        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1, 1 );
+        LockUnit unit2 = new LockUnit( ResourceTypes.NODE, SHARED, 2, 2 );
+        LockUnit unit3 = new LockUnit( ResourceTypes.RELATIONSHIP, SHARED, 1, 1 );
+        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 2, 2 );
+        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, SHARED, 1, 1 );
 
         List<LockUnit> list = asList( unit1, unit2, unit3, unit4, unit5 );
         Collections.sort( list );
@@ -37,11 +37,11 @@ class LockUnitTest
     @Test
     void exclusiveOrderedByResourceTypes()
     {
-        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1 );
-        LockUnit unit2 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 1 );
-        LockUnit unit3 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 2 );
-        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, EXCLUSIVE, 1 );
-        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 2 );
+        LockUnit unit1 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 1, 1 );
+        LockUnit unit2 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 1, 1 );
+        LockUnit unit3 = new LockUnit( ResourceTypes.NODE, EXCLUSIVE, 2, 2 );
+        LockUnit unit4 = new LockUnit( ResourceTypes.RELATIONSHIP_TYPE, EXCLUSIVE, 1, 1 );
+        LockUnit unit5 = new LockUnit( ResourceTypes.RELATIONSHIP, EXCLUSIVE, 2, 2 );
 
         List<LockUnit> list = asList( unit1, unit2, unit3, unit4, unit5 );
         Collections.sort( list );

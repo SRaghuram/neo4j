@@ -509,7 +509,7 @@ public class EnterpriseBuiltInDbmsProcedures
     @SystemProcedure
     @Description( "List the active lock requests granted for the transaction executing the query with the given query id." )
     @Procedure( name = "dbms.listActiveLocks", mode = DBMS )
-    public Stream<LockResult> listActiveLocks( @Name( "queryId" ) String queryIdText )
+    public Stream<ActiveLockResult> listActiveLocks( @Name( "queryId" ) String queryIdText )
             throws InvalidArgumentsException
     {
         securityContext.assertCredentialsNotExpired();
@@ -530,7 +530,7 @@ public class EnterpriseBuiltInDbmsProcedures
                     {
                         if ( isAdminOrSelf( query.username() ) )
                         {
-                            return tx.activeLocks().map( LockResult::new );
+                            return tx.activeLocks().map( ActiveLockResult::new );
                         }
                         else
                         {
@@ -553,8 +553,8 @@ public class EnterpriseBuiltInDbmsProcedures
 
         var locks = resolver.resolveDependency( Locks.class );
         var currentLocks = new ArrayList<LockResult>();
-        locks.accept( ( lockType, resourceType, resourceId, description, estimatedWaitTime, lockIdentityHashCode ) -> currentLocks.add(
-                new LockResult( lockType.getDescription(), resourceType.name(), resourceId ) ) );
+        locks.accept( ( lockType, resourceType, transactionId, resourceId, description, estimatedWaitTime, lockIdentityHashCode ) -> currentLocks.add(
+                new LockResult( lockType.getDescription(), resourceType.name(), transactionId, resourceId ) ) );
         return currentLocks.stream();
     }
 
@@ -1015,13 +1015,29 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String mode;
         public final String resourceType;
         public final long resourceId;
+        public final long transactionId;
 
-        public LockResult( ActiveLock activeLock )
+        public LockResult( String mode, String resourceType, long transactionId, long resourceId )
+        {
+            this.mode = mode;
+            this.resourceType = resourceType;
+            this.resourceId = resourceId;
+            this.transactionId = transactionId;
+        }
+    }
+
+    public static class ActiveLockResult
+    {
+        public final String mode;
+        public final String resourceType;
+        public final long resourceId;
+
+        public ActiveLockResult( ActiveLock activeLock )
         {
             this( activeLock.lockType().getDescription(), activeLock.resourceType().name(), activeLock.resourceId() );
         }
 
-        public LockResult( String mode, String resourceType, long resourceId )
+        public ActiveLockResult( String mode, String resourceType, long resourceId )
         {
             this.mode = mode;
             this.resourceType = resourceType;

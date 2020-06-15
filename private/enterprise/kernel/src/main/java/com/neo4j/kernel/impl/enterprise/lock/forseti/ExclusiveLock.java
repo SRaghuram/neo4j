@@ -52,6 +52,12 @@ class ExclusiveLock implements ForsetiLockManager.Lock
     }
 
     @Override
+    public long transactionId()
+    {
+        return owner.transactionId();
+    }
+
+    @Override
     public String toString()
     {
         return "ExclusiveLock{" +

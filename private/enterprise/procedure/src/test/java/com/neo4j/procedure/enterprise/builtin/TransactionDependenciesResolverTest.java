@@ -58,11 +58,11 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 0,
-                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, SHARED, ResourceTypes.NODE, 1 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, SHARED, ResourceTypes.NODE, 1, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertFalse( resolver.isBlocked( handle1 ) );
@@ -74,11 +74,11 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 0,
-                singletonList( new ActiveLock( ResourceTypes.NODE, SHARED, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, SHARED, 1, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, EXCLUSIVE, ResourceTypes.NODE, 1 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, EXCLUSIVE, ResourceTypes.NODE, 1, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertFalse( resolver.isBlocked( handle1 ) );
@@ -105,11 +105,11 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 3,
-                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, SHARED, ResourceTypes.NODE, 1 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, SHARED, ResourceTypes.NODE, 1, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertThat( resolver.describeBlockingTransactions( handle1 ) ).isEmpty();
@@ -121,14 +121,14 @@ class TransactionDependenciesResolverTest
     {
         HashMap<KernelTransactionHandle,Optional<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 4,
-                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 1 ) ) );
+                singletonList( new ActiveLock( ResourceTypes.NODE, EXCLUSIVE, 4, 1 ) ) );
         TestKernelTransactionHandle handle2 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(),
-                5, singletonList( new ActiveLock( ResourceTypes.NODE, SHARED, 2 ) ) );
+                5, singletonList( new ActiveLock( ResourceTypes.NODE, SHARED, 5, 2 ) ) );
         TestKernelTransactionHandle handle3 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 6 );
 
         map.put( handle1, Optional.of( createQuerySnapshot( 1 ) ) );
-        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, EXCLUSIVE, ResourceTypes.NODE, 1 ) ) );
-        map.put( handle3, Optional.of( createQuerySnapshotWaitingForLock( 3, EXCLUSIVE, ResourceTypes.NODE, 2 ) ) );
+        map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, EXCLUSIVE, ResourceTypes.NODE, 5, 1 ) ) );
+        map.put( handle3, Optional.of( createQuerySnapshotWaitingForLock( 3, EXCLUSIVE, ResourceTypes.NODE, 6, 2 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
         assertThat( resolver.describeBlockingTransactions( handle1 ) ).isEmpty();
@@ -141,10 +141,10 @@ class TransactionDependenciesResolverTest
         return createExecutingQuery( queryId ).snapshot();
     }
 
-    private static QuerySnapshot createQuerySnapshotWaitingForLock( long queryId, LockType lockType, ResourceType resourceType, long id )
+    private static QuerySnapshot createQuerySnapshotWaitingForLock( long queryId, LockType lockType, ResourceType resourceType, long transacitonId, long id )
     {
         ExecutingQuery executingQuery = createExecutingQuery( queryId );
-        executingQuery.lockTracer().waitForLock( lockType, resourceType, id );
+        executingQuery.lockTracer().waitForLock( lockType, resourceType, transacitonId, id );
         return executingQuery.snapshot();
     }
 

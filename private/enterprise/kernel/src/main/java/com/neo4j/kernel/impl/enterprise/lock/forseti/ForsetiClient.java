@@ -61,6 +61,7 @@ import static org.neo4j.lock.LockType.SHARED;
  */
 public class ForsetiClient implements Locks.Client
 {
+    private static final long INVALID_TRANSACTION_ID = -1;
     /** Id for this client */
     private final int clientId;
 
@@ -129,6 +130,7 @@ public class ForsetiClient implements Locks.Client
      * secondary deadlock verification process, where we traverse the waiter/lock-owner dependency graph.
      */
     private volatile ForsetiLockManager.Lock waitingForLock;
+    private volatile long userTransactionId;
 
     public ForsetiClient( int id, ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps,
                           WaitStrategy[] waitStrategies, Pool<ForsetiClient> clientPool,
@@ -163,9 +165,9 @@ public class ForsetiClient implements Locks.Client
     }
 
     @Override
-    public void initialize( LeaseClient leaseClient )
+    public void initialize( LeaseClient leaseClient, long userTransactionId )
     {
-        // we don't need a lease here
+        this.userTransactionId = userTransactionId;
     }
 
     @Override
@@ -261,7 +263,7 @@ public class ForsetiClient implements Locks.Client
 
                     if ( waitEvent == null )
                     {
-                        waitEvent = tracer.waitForLock( SHARED, resourceType, resourceId );
+                        waitEvent = tracer.waitForLock( SHARED, resourceType, userTransactionId, resourceId );
                     }
                     // And take note of who we are waiting for. This is used for deadlock detection.
                     waitFor( existingLock, resourceType, resourceId, tries++ );
@@ -331,7 +333,7 @@ public class ForsetiClient implements Locks.Client
 
                     if ( waitEvent == null )
                     {
-                        waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, resourceId );
+                        waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, userTransactionId, resourceId );
                     }
                     waitFor( existingLock, resourceType, resourceId, tries++ );
                 }
@@ -714,6 +716,7 @@ public class ForsetiClient implements Locks.Client
         stateHolder.closeClient();
         waitForAllClientsToLeave();
         releaseAllLocks();
+        userTransactionId = INVALID_TRANSACTION_ID;
         clientPool.release( this );
     }
 
@@ -737,8 +740,8 @@ public class ForsetiClient implements Locks.Client
     public Stream<ActiveLock> activeLocks()
     {
         List<ActiveLock> locks = new ArrayList<>();
-        collectActiveLocks( exclusiveLockCounts, locks, EXCLUSIVE );
-        collectActiveLocks( sharedLockCounts, locks, SHARED );
+        collectActiveLocks( exclusiveLockCounts, locks, EXCLUSIVE, userTransactionId );
+        collectActiveLocks( sharedLockCounts, locks, SHARED, userTransactionId );
         return locks.stream();
     }
 
@@ -751,7 +754,8 @@ public class ForsetiClient implements Locks.Client
     private static void collectActiveLocks(
             LongIntMap[] counts,
             List<ActiveLock> locks,
-            LockType lockType )
+            LockType lockType,
+            long userTransactionId )
     {
         for ( int typeId = 0; typeId < counts.length; typeId++ )
         {
@@ -759,7 +763,7 @@ public class ForsetiClient implements Locks.Client
             if ( lockCounts != null )
             {
                 ResourceType resourceType = ResourceTypes.fromId( typeId );
-                lockCounts.forEachKeyValue( ( resourceId, count ) -> locks.add( new ActiveLock( resourceType, lockType, resourceId ) ) );
+                lockCounts.forEachKeyValue( ( resourceId, count ) -> locks.add( new ActiveLock( resourceType, lockType, userTransactionId, resourceId ) ) );
             }
         }
     }
@@ -922,7 +926,7 @@ public class ForsetiClient implements Locks.Client
                     assertValid( waitStartMillis, resourceType, resourceId );
                     if ( waitEvent == null && priorEvent == null )
                     {
-                        waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, resourceId );
+                        waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, userTransactionId, resourceId );
                     }
                     waitFor( sharedLock, resourceType, resourceId, tries++ );
                 }
@@ -1099,6 +1103,11 @@ public class ForsetiClient implements Locks.Client
                 throw new LockAcquisitionTimeoutException( resourceType, resourceId, lockAcquisitionTimeoutMillis );
             }
         }
+    }
+
+    public long transactionId()
+    {
+        return userTransactionId;
     }
 
     // Visitors used for bulk ops on the lock maps (such as releasing all locks)
