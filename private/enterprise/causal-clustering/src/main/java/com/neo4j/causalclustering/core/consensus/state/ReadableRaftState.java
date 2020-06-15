@@ -51,6 +51,8 @@ public interface ReadableRaftState
 
     boolean refusesToBeLeader();
 
+    boolean areTimersStarted();
+
     Set<ServerGroupName> serverGroups();
 
     boolean areTransferringLeadership();

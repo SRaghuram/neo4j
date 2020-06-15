@@ -529,7 +529,7 @@ public class DbmsReconciler
         return transitionsTable.fromCurrent( currentState ).toDesired( desiredState );
     }
 
-    protected final void registerDatabaseStateChangedListener( DatabaseStateChangedListener listener )
+    public final void registerDatabaseStateChangedListener( DatabaseStateChangedListener listener )
     {
         listeners.add( listener );
     }

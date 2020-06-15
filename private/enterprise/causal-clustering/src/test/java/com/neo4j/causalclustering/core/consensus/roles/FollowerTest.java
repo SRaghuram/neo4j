@@ -523,6 +523,26 @@ class FollowerTest
     }
 
     @Test
+    void shouldRespondToPreVoteRequestsIfTimersAreNotYetStarted() throws Exception
+    {
+        // given
+        RaftState raftState = builder()
+                .myself( myself )
+                .supportsPreVoting( true )
+                .setBeforeTimersStarted( true )
+                .votingMembers( asSet( myself, member1, member2 ) )
+                .build();
+
+        // when
+        Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Request( member1, 0, member1, 0, 0 ), raftState, log() );
+
+        // then
+        RaftMessages.RaftMessage raftMessage = messageFor( outcome, member1 );
+        assertThat( raftMessage.type() ).isEqualTo( RaftMessages.Type.PRE_VOTE_RESPONSE );
+        assertThat( ((RaftMessages.PreVote.Response) raftMessage).voteGranted() ).isTrue();
+    }
+
+    @Test
     void shouldRespondNegativelyToPreVoteRequestsIfWouldNotVoteForCandidate() throws Exception
     {
         // given

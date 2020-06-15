@@ -47,6 +47,7 @@ public class RaftStateBuilder
     private RaftLog entryLog = new InMemoryRaftLog();
     private boolean supportPreVoting;
     private boolean refusesToBeLeader;
+    private boolean beforeTimersStarted;
     private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() );
 
     public RaftStateBuilder myself( MemberId myself )
@@ -91,6 +92,12 @@ public class RaftStateBuilder
         return this;
     }
 
+    public RaftStateBuilder setBeforeTimersStarted( boolean beforeTimersStarted )
+    {
+        this.beforeTimersStarted = beforeTimersStarted;
+        return this;
+    }
+
     public RaftState build() throws IOException
     {
         StateStorage<TermState> termStore = new InMemoryStateStorage<>( new TermState() );
@@ -102,6 +109,10 @@ public class RaftStateBuilder
                 Set::of, leadershipTransfers );
 
         state.update( outcome );
+        if ( !beforeTimersStarted )
+        {
+            state.setTimersStarted();
+        }
 
         return state;
     }

@@ -55,6 +55,7 @@ public class RaftState implements ReadableRaftState
     private long lastLogIndexBeforeWeBecameLeader = -1;
     private boolean isPreElection;
     private final boolean refuseToBeLeader;
+    private boolean timersStarted;
     private final Supplier<Set<ServerGroupName>> serverGroupsSupplier;
 
     public RaftState( MemberId myself,
@@ -77,7 +78,6 @@ public class RaftState implements ReadableRaftState
         this.log = logProvider.getLog( getClass() );
 
         // Initial state
-        this.isPreElection = supportPreVoting;
         this.refuseToBeLeader = refuseToBeLeader;
         this.serverGroupsSupplier = serverGroupsSupplier;
         this.leadershipTransfers = leadershipTransfers;
@@ -210,6 +210,12 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
+    public boolean areTimersStarted()
+    {
+        return timersStarted;
+    }
+
+    @Override
     public Set<ServerGroupName> serverGroups()
     {
         return serverGroupsSupplier.get();
@@ -260,6 +266,11 @@ public class RaftState implements ReadableRaftState
             logCommand.applyTo( inFlightCache, log );
         }
         commitIndex = outcome.getCommitIndex();
+    }
+
+    public void setTimersStarted()
+    {
+        this.timersStarted = true;
     }
 
     private void logIfLeaderChanged( MemberId leader )

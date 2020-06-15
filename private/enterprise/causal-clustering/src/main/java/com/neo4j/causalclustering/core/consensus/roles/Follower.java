@@ -402,7 +402,7 @@ class Follower implements RaftMessageHandler
             preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
             if ( ctx.supportPreVoting() )
             {
-                if ( ctx.isPreElection() )
+                if ( ctx.isPreElection() || !ctx.areTimersStarted() )
                 {
                     preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
                 }
@@ -427,8 +427,15 @@ class Follower implements RaftMessageHandler
                 }
                 else
                 {
-                    preVoteRequestHandler = PreVoteRequestDecliningHandler.INSTANCE;
                     preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
+                    if ( ctx.areTimersStarted() )
+                    {
+                        preVoteRequestHandler = PreVoteRequestDecliningHandler.INSTANCE;
+                    }
+                    else
+                    {
+                        preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
+                    }
                 }
             }
             else

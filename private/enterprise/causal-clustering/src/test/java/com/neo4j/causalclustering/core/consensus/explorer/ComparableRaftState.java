@@ -49,6 +49,7 @@ public class ComparableRaftState implements ReadableRaftState
     private long commitIndex = -1;
     private boolean isPreElection;
     private final boolean refusesToBeLeader;
+    private boolean timersStarted;
 
     ComparableRaftState( MemberId myself, Set<MemberId> votingMembers, Set<MemberId> replicationMembers, boolean refusesToBeLeader,
                          RaftLog entryLog, InFlightCache inFlightCache, LogProvider logProvider )
@@ -174,6 +175,12 @@ public class ComparableRaftState implements ReadableRaftState
     public boolean refusesToBeLeader()
     {
         return refusesToBeLeader;
+    }
+
+    @Override
+    public boolean areTimersStarted()
+    {
+        return timersStarted;
     }
 
     @Override

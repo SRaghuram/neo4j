@@ -80,6 +80,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
             leaderAvailabilityTimers.renewElectionTimer( FAILURE_DETECTION );
         }
         leaderAvailabilityTimers.start( this::electionTimeout, this::triggerHeartbeat );
+        state.setTimersStarted();
         inFlightCache.enable();
     }
 
