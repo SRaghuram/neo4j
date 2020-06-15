@@ -52,9 +52,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.conditions.Conditions.TRUE;
-import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @TestInstance( PER_CLASS )
@@ -545,7 +545,8 @@ class AdministrationCommandsOnClusterIT
         } );
 
         // But it works on leader (gives correct error for the command and setup)
-        leaderTx( ( sys, tx ) -> {
+        leaderTx( ( sys, tx ) ->
+        {
             try
             {
                 tx.execute( "ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'" );
@@ -959,8 +960,10 @@ class AdministrationCommandsOnClusterIT
         } );
     }
 
+    // Graph privilege command tests
+
     @Test
-    void grantTraverse() throws Exception
+    void grantTraverseOnNonExistingRole() throws Exception
     {
         followerTx( ( sys, tx ) ->
         {
@@ -991,86 +994,80 @@ class AdministrationCommandsOnClusterIT
     }
 
     @Test
-    void denyRead() throws Exception
+    void grantFineGrainedWriteCommand() throws Exception
     {
         leaderTx( ( sys, tx ) ->
         {
-            tx.execute( "CREATE ROLE " + roleName );
+            tx.execute( "CREATE DATABASE " + dbName );
             tx.commit();
         } );
 
-        followerTx( ( sys, tx ) ->
-        {
-            try
-            {
-                tx.execute( "DENY READ {prop} ON GRAPH * TO " + roleName );
-                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
-            }
-            catch ( QueryExecutionException e )
-            {
-                assertEquals( "Failed to deny read privilege to role '" + roleName + "': " + followerError, e.getMessage() );
-            }
-        } );
+        assertClusterBehaviourOnGrantDeny( "grant", "SET LABEL Label ON GRAPH " + dbName, "set_label" );
+    }
 
-        leaderTx( ( sys, tx ) ->
-        {
-            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "role" );
-            assertFalse( result.hasNext() );
-            tx.commit();
-        } );
-
-        // But it works on leader
-        leaderTx( ( sys, tx ) ->
-        {
-            tx.execute( "DENY READ {prop} ON GRAPH * NODES * TO " + roleName );
-
-            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "role" );
-            assertEquals( roleName, result.next() );
-            assertFalse( result.hasNext() );
-            tx.commit();
-        } );
+    @Test
+    void denyRead() throws Exception
+    {
+        assertClusterBehaviourOnGrantDeny( "deny", "READ {prop} ON GRAPH * NODES *", "read" );
     }
 
     @Test
     void revokeWrite() throws Exception
     {
+        assertClusterBehaviourOnRevoke( "WRITE ON GRAPH *", "write" );
+    }
+
+    // Database privilege command tests
+
+    @Test
+    void grantIndexManagementCommand() throws Exception
+    {
+        assertClusterBehaviourOnGrantDeny( "grant", "INDEX MANAGEMENT ON DATABASE *", "index" );
+    }
+
+    @Test
+    void denyAccessOnDefaultDatabase() throws Exception
+    {
+        assertClusterBehaviourOnGrantDeny( "deny", "ACCESS ON DEFAULT DATABASE", "access" );
+    }
+
+    @Test
+    void revokeTerminateTransactionCommand() throws Exception
+    {
         leaderTx( ( sys, tx ) ->
         {
-            tx.execute( "CREATE ROLE " + roleName );
-            tx.execute( "GRANT WRITE ON GRAPH * TO " + roleName );
+            tx.execute( "CREATE USER " + userName + " SET PASSWORD '123'" );
+            tx.execute( "CREATE DATABASE " + dbName );
             tx.commit();
         } );
 
-        followerTx( ( sys, tx ) ->
-        {
-            try
-            {
-                tx.execute( "REVOKE WRITE ON GRAPH * FROM " + roleName );
-                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
-            }
-            catch ( QueryExecutionException e )
-            {
-                assertEquals( "Failed to revoke write privilege from role '" + roleName + "': " + followerError, e.getMessage() );
-            }
-        } );
+        assertClusterBehaviourOnRevoke( "TERMINATE TRANSACTION ( " + userName + " ) ON DATABASE " + dbName, "terminate_transaction" );
+    }
 
-        leaderTx( ( sys, tx ) ->
-        {
-            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "grant" );
-            assertTrue( result.hasNext() );
-            result.close();
-            tx.commit();
-        } );
+    // Dbms privilege command tests
 
-        // But it works on leader
-        leaderTx( ( sys, tx ) ->
-        {
-            tx.execute( "REVOKE WRITE ON GRAPH * FROM " + roleName );
+    @Test
+    void grantRoleManagementCommand() throws Exception
+    {
+        assertClusterBehaviourOnGrantDeny( "grant", "SHOW ROLE ON DBMS", "show_role" );
+    }
 
-            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "grant" );
-            assertFalse( result.hasNext() );
-            tx.commit();
-        } );
+    @Test
+    void denyUserManagementCommand() throws Exception
+    {
+        assertClusterBehaviourOnGrantDeny( "deny", "DROP USER ON DBMS", "drop_user" );
+    }
+
+    @Test
+    void denyDatabaseManagementCommand() throws Exception
+    {
+        assertClusterBehaviourOnGrantDeny( "deny", "CREATE DATABASE ON DBMS", "create_database" );
+    }
+
+    @Test
+    void revokePrivilegeManagementCommand() throws Exception
+    {
+        assertClusterBehaviourOnRevoke( "PRIVILEGE MANAGEMENT ON DBMS", "privilege_management" );
     }
 
     // Database commands tests
@@ -1418,6 +1415,89 @@ class AdministrationCommandsOnClusterIT
             tx.commit();
         } );
         return statuses.get();
+    }
+
+    private void assertClusterBehaviourOnGrantDeny( String type, String command, String action ) throws Exception
+    {
+        String query = type + " " + command + " TO " + roleName;
+
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE ROLE " + roleName );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( query );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( QueryExecutionException e )
+            {
+                assertEquals( "Failed to " + type + " " + action + " privilege to role '" + roleName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "action" );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( query );
+
+            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "action" );
+            assertEquals( action, result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    private void assertClusterBehaviourOnRevoke( String command, String action ) throws Exception
+    {
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE ROLE " + roleName );
+            tx.execute( "GRANT " + command + " TO " + roleName );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "REVOKE " + command + " FROM " + roleName );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( QueryExecutionException e )
+            {
+                assertEquals( "Failed to revoke " + action + " privilege from role '" + roleName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "grant" );
+            assertTrue( result.hasNext() );
+            result.close();
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "REVOKE " + command + " FROM " + roleName );
+
+            var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "grant" );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
     }
 
     /**
