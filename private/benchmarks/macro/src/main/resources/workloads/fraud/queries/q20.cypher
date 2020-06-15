@@ -1,8 +1,6 @@
-// TODO 3 days takes about 8s, parametrize using these
-// step 1 get a list of all disputed transactions that happened within a period
-WITH date("2019-12-31") AS monthEnd, date("2019-12-29") AS monthStart
+// step 1 get a list of all disputed transactions that happened within a 2-day period
 MATCH (acct:Revolving:CreditAccount)-[:ACCT_DISPUTES]->(dispute:Dispute)-[:DISPUTED_TXN]->(txn:Card:CreditTransaction)
-WHERE monthStart <= txn.transactionDate <= monthEnd
+WHERE $startDate <= txn.transactionDate <= ($startDate + duration({days: 1}))
 
 // step 2 get a list distinct merchants where the card was used for some prior lookback period
 WITH acct, dispute, txn.transactionDate AS endDate, txn.transactionDate-duration({days: 90}) AS startDate

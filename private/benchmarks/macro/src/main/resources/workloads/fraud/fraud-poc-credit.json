@@ -81,7 +81,10 @@
     {
       "name": "Q15",
       "description": "Find employees that have transacted business - e.g. one paid another one, where the one paid off had a role in reviewing or approving a credit application for the employee making the payment, directly or indirectly up to 3 hops",
-      "queryFile": "queries/q15.cypher"
+      "queryFile": "queries/q15.cypher",
+      "parameters": {
+        "file": "parameters/q15.txt"
+      }
     },
     {
       "name": "Q18",
@@ -90,7 +93,10 @@
     },
     {
       "name": "Q20",
-      "queryFile": "queries/q20.cypher"
+      "queryFile": "queries/q20.cypher",
+      "parameters": {
+        "file": "parameters/q20.txt"
+      }
     }
   ]
 }
