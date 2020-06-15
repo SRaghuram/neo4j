@@ -1,4 +1,3 @@
-// e.g., $startDate = date("2019-11-15")
 MATCH (loc:LOC:CreditAccount)-[:LOC_WITHDRAWAL]-(credTxn:CreditTransaction)-[:CREDIT_XFER]->(depTxnIn:Transaction)-[:DEPOSITS]->(depAcct:DepositAccount)
 WHERE $startDate<=credTxn.transactionDate<=($startDate + duration({days: 45}))/*1.5 months*/
 WITH loc,

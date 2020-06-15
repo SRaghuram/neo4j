@@ -50,6 +50,7 @@
     {
       "name": "Q10",
       "description": "Credit Fraud - Accounts that transferred 50% or more of their line of credit within a given date range to a deposit account, and then did wire transfer overseas to a medium or high risk geo",
+      "comment": "parameters hand selected, only a select few resulted in returned rows. original query had a constant of 2019-11-15",
       "queryFile": "queries/q10.cypher",
       "parameters": {
         "file": "parameters/q10.txt"
@@ -58,6 +59,7 @@
     {
       "name": "Q11",
       "description": "Credit fraud - Find customers that have requested a line of credit with a stated income on their financial statements that does not match the total deposits (all forms) that was made into their account for that year",
+      "comment": "date parameter chosen uniformly random from dates in database, between WHERE tx.dateOpened > date({year:2019,month:6,day:1}) AND tx.dateOpened < date({year:2020,month:2,day:1})",
       "queryFile": "queries/q11.cypher",
       "parameters": {
         "file": "parameters/q11.txt"
