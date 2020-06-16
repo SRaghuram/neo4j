@@ -5,6 +5,9 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
+import org.eclipse.collections.api.set.primitive.LongSet;
+import org.eclipse.collections.impl.factory.primitive.LongSets;
+
 import java.util.Set;
 
 import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
@@ -52,9 +55,9 @@ class ExclusiveLock implements ForsetiLockManager.Lock
     }
 
     @Override
-    public long transactionId()
+    public LongSet transactionIds()
     {
-        return owner.transactionId();
+        return LongSets.mutable.of( owner.transactionId() );
     }
 
     @Override

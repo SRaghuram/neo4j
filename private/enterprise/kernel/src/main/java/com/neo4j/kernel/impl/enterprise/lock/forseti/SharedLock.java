@@ -5,6 +5,10 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
+import org.eclipse.collections.api.set.primitive.LongSet;
+import org.eclipse.collections.impl.factory.primitive.LongSets;
+
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -225,22 +229,11 @@ class SharedLock implements ForsetiLockManager.Lock
     }
 
     @Override
-    public long transactionId()
+    public LongSet transactionIds()
     {
-        // TODO can we/ should we do better here?
-        var clientsHoldingThisLock = this.clientsHoldingThisLock[0];
-        if ( clientsHoldingThisLock != null && clientsHoldingThisLock.length() > 0 )
-        {
-            for ( int i = 0; i < clientsHoldingThisLock.length(); i++ )
-            {
-                var client = clientsHoldingThisLock.get( i );
-                if ( client != null )
-                {
-                    return client.transactionId();
-                }
-            }
-        }
-        return -1;
+        Set<ForsetiClient> lockClients = new HashSet<>();
+        collectOwners( lockClients );
+        return LongSets.mutable.ofAll( lockClients.stream().mapToLong( ForsetiClient::transactionId ) );
     }
 
     @Override

@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
+import org.eclipse.collections.api.set.primitive.LongSet;
+
 import java.time.Clock;
 import java.util.Map;
 import java.util.Queue;
@@ -134,7 +136,7 @@ public class ForsetiLockManager implements Locks
 
         LockType type();
 
-        long transactionId();
+        LongSet transactionIds();
     }
 
     /**
@@ -239,8 +241,11 @@ public class ForsetiLockManager implements Locks
                 var resourceType = resourceTypes[i];
                 for ( Map.Entry<Long,Lock> entry : lockMaps[i].entrySet() )
                 {
-                    Lock lock = entry.getValue();
-                    out.visit( lock.type(), resourceType, lock.transactionId(), entry.getKey(), lock.describeWaitList(), 0, System.identityHashCode( lock ) );
+                    var lock = entry.getValue();
+                    var description = lock.describeWaitList();
+                    var transactionIds = lock.transactionIds();
+                    int lockIdentityHashCode = System.identityHashCode( lock );
+                    transactionIds.forEach( txId -> out.visit( lock.type(), resourceType, txId, entry.getKey(), description, 0, lockIdentityHashCode ) );
                 }
             }
         }
