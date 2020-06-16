@@ -114,7 +114,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
           case None =>
             fail(s"Could not find upstream data row with id $upstreamId")
           case Some(upstream) =>
-            upstream.stopTime should be < dataRow.startTime
+            upstream.stopTime should be <= dataRow.startTime
         }
       }
     }
