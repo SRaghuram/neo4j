@@ -10,6 +10,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Condition;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -119,7 +120,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void listLocksEmptyWhenNoLocksAreTaken()
     {
-        String query = "CALL dbms.listLocks()";
+        String query = "CALL db.listLocks()";
         assertEmpty( adminSubject, query );
     }
 
@@ -142,14 +143,23 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         latch.start();
         latch.waitForAllToStart();
 
-        String query = "CALL dbms.listLocks()";
+        String query = "CALL db.listLocks()";
         assertSuccess( adminSubject, query, r ->
         {
             List<Map<String,Object>> locksInfo = collectResults( r );
             Assertions.assertThat( locksInfo ).hasSizeGreaterThanOrEqualTo( 1 );
-            Assertions.assertThat( locksInfo ).containsAnyOf(
-                    Map.of( "mode", "EXCLUSIVE", "resourceId", nodeId.intValue(), "resourceType", "NODE", "transactionId", 14 ),
-                    Map.of( "mode", "EXCLUSIVE", "resourceId", nodeId.longValue(), "resourceType", "NODE", "transactionId", 14L ) );
+            Assertions.assertThat( locksInfo ).haveExactly( 1, new Condition<>( "expectedRowMatcher" )
+            {
+                @Override
+                public boolean matches( Map<String,Object> map )
+                {
+                    var resourceId = ((Number) map.get( "resourceId" )).intValue();
+                    return "EXCLUSIVE".equals( map.get( "mode" ) ) &&
+                            "NODE".equals( map.get( "resourceType" ) ) &&
+                            "neo4j-transaction-14".equals( map.get( "transactionId" ) ) &&
+                            nodeId.intValue() == resourceId;
+                }
+            } );
         } );
 
         latch.finishAndWaitForAllToFinish();
@@ -170,14 +180,23 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         latch.start();
         latch.waitForAllToStart();
 
-        String query = "CALL dbms.listLocks()";
+        String query = "CALL db.listLocks()";
         assertSuccess( adminSubject, query, r ->
         {
             List<Map<String,Object>> locksInfo = collectResults( r );
             Assertions.assertThat( locksInfo ).hasSizeGreaterThanOrEqualTo( 1 );
-            Assertions.assertThat( locksInfo ).containsAnyOf(
-                    Map.of( "mode", "SHARED", "resourceId", (int) labelId, "resourceType", "LABEL", "transactionId", 15 ),
-                    Map.of( "mode", "SHARED", "resourceId", labelId, "resourceType", "LABEL", "transactionId", 15L ) );
+            Assertions.assertThat( locksInfo ).haveExactly( 1, new Condition<>( "expectedRowMatcher" )
+            {
+                @Override
+                public boolean matches( Map<String,Object> map )
+                {
+                    var resourceId = ((Number) map.get( "resourceId" )).intValue();
+                    return "SHARED".equals( map.get( "mode" ) ) &&
+                            "LABEL".equals( map.get( "resourceType" ) ) &&
+                            "neo4j-transaction-15".equals( map.get( "transactionId" ) ) &&
+                            labelId == resourceId;
+                }
+            } );
         } );
 
         latch.finishAndWaitForAllToFinish();
@@ -187,11 +206,11 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void failToListLocksWhenNotAdmin()
     {
-        assertFail( schemaSubject, "CALL dbms.listLocks()", "Permission denied." );
-        assertFail( writeSubject, "CALL dbms.listLocks()", "Permission denied." );
-        assertFail( editorSubject, "CALL dbms.listLocks()", "Permission denied." );
-        assertFail( readSubject, "CALL dbms.listLocks()", "Permission denied." );
-        assertFail( pwdSubject, "CALL dbms.listLocks()", "Permission denied." );
+        assertFail( schemaSubject, "CALL db.listLocks()", "Permission denied." );
+        assertFail( writeSubject, "CALL db.listLocks()", "Permission denied." );
+        assertFail( editorSubject, "CALL db.listLocks()", "Permission denied." );
+        assertFail( readSubject, "CALL db.listLocks()", "Permission denied." );
+        assertFail( pwdSubject, "CALL db.listLocks()", "Permission denied." );
     }
 
     @Test
