@@ -64,13 +64,24 @@ import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
+import org.neo4j.cypher.internal.util.attribution.Attribute
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 
 case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, interpretedPipesPolicy: InterpretedPipesFallbackPolicy) extends PipelineBreakingPolicy {
 
-  override def breakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
+  private class BreakOn extends Attribute[LogicalPlan, Boolean]
 
+  private val cache: BreakOn = new BreakOn
+
+  override def breakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
+    if (!cache.isDefinedAt(lp.id)) {
+      cache.set(lp.id, computeBreakOn(lp, outerApplyPlanId))
+    }
+    cache.get(lp.id)
+  }
+
+  private def computeBreakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
     lp match {
       // leaf operators
       case _: AllNodesScan |

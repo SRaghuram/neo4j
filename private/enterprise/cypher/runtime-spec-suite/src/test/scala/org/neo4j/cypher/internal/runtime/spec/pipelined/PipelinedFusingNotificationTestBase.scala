@@ -11,9 +11,11 @@ import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 
 abstract class PipelinedFusingNotificationTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
-                                                                              runtime: CypherRuntime[CONTEXT]) extends RuntimeTestSuite(edition, runtime) {
+                                                                              runtime: CypherRuntime[CONTEXT]) extends RuntimeTestSuite(edition, runtime)
+                                                                                                               with TimeLimitedCypherTest {
 
   test("should generate notification if fusing fails") {
     given { nodeGraph(1) }
@@ -29,5 +31,19 @@ abstract class PipelinedFusingNotificationTestBase[CONTEXT <: RuntimeContext](ed
     val plan = buildPlan(logicalQuery, runtime)
 
     plan.notifications.map(_.getClass) should contain(classOf[CodeGenerationFailedNotification])
+  }
+
+  test("should run very large query even though fusion fails") {
+    // given
+    val n = 50
+    given { circleGraph(n) }
+
+    val builder = new LogicalQueryBuilder(this).produceResults("n0")
+    for (i <- 0 until n)
+      builder.expand(s"(n${i+1})-->(n$i)")
+    val logicalQuery = builder.allNodeScan(s"n$n").build()
+
+    // when
+    execute(logicalQuery, runtime)
   }
 }
