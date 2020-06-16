@@ -788,8 +788,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           case SlotWithKeyAndAliases(CachedPropertySlotKey(key), _, _) =>
             result.newCachedProperty(key, shouldDuplicate = true)
           case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) =>
-            throw new SlotAllocationFailed(s"Failed to allocate slots for $lp, apply plan slots are not supported.")
-
+            // apply plan slots are already in the argument, and don't have to be added here
         }, skipFirst = argument.argumentSize)
         result
 

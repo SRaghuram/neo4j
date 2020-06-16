@@ -320,4 +320,29 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       "b_field31" -> "bf20", "b_field32" -> "bf21", "b_field33" -> "bf22"
     )))
   }
+
+  test("should handle rollup apply on rhs of value hash join") {
+    // given
+    executeSingle {
+      """CREATE (:Person {age: 30, name: "Some person"})-[:WORKS_AT]->(:Job),
+        |       (:Person {age: 5}),
+        |       (:Person {age: 30, name: "Another person"})-[:WORKS_AT]->(:AnotherJob),
+        |       (:Person {age: 5})
+        |       """.stripMargin
+    }
+
+    // when
+    val query =
+      """MATCH (p:Person), (q:Person)
+        |WHERE p.age = q.age AND
+        |      [(p)-[:WORKS_AT]->(job:Job) | job] AND
+        |      [(q)-[:WORKS_AT]->(job:AnotherJob) | job]
+        |RETURN p.name, q.name""".stripMargin
+
+    // then
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    res.toSet should be(Set(
+      Map("p.name" -> "Some person", "q.name" -> "Another person"),
+    ))
+  }
 }
