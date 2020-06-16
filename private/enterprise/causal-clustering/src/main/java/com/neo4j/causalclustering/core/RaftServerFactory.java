@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 
@@ -49,10 +50,11 @@ public class RaftServerFactory
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
+    private final DatabaseIdRepository databaseIdRepository;
 
     RaftServerFactory( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
             RaftMessageLogger<MemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
-            Collection<ModifierSupportedProtocols> supportedModifierProtocols )
+            Collection<ModifierSupportedProtocols> supportedModifierProtocols, DatabaseIdRepository databaseIdRepository )
     {
         this.globalModule = globalModule;
         this.identityModule = identityModule;
@@ -61,6 +63,7 @@ public class RaftServerFactory
         this.logProvider = globalModule.getLogService().getInternalLogProvider();
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.supportedModifierProtocols = supportedModifierProtocols;
+        this.databaseIdRepository = databaseIdRepository;
     }
 
     Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
@@ -94,7 +97,7 @@ public class RaftServerFactory
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, identityModule.myself() );
+        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, identityModule.myself(), databaseIdRepository );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

@@ -30,8 +30,15 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.procedure.Name;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
@@ -43,6 +50,7 @@ public class RaftTestFixture
     private Members members = new Members();
     // Does not need to be closed
     private StringWriter writer = new StringWriter();
+    private NamedDatabaseId namedDatabaseId = DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
     public RaftTestFixture( DirectNetworking net, int expectedClusterSize, MemberId... ids )
     {
@@ -57,9 +65,22 @@ public class RaftTestFixture
             fixtureMember.member = id;
 
             RaftTestFixtureLogger raftMessageLogger = new RaftTestFixtureLogger( id, new PrintWriter( writer ) );
-            Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound =
-                    new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, fixtureMember.member );
-            Outbound<MemberId,RaftMessages.RaftMessage> outbound = new LoggingOutbound<>( net.new Outbound( id ), fixtureMember.member, raftMessageLogger );
+            DatabaseIdRepository fakeDatabaseIdRepository = new DatabaseIdRepository()
+            {
+                @Override
+                public Optional<NamedDatabaseId> getByName( NormalizedDatabaseName databaseName )
+                {
+                    return Optional.of( namedDatabaseId );
+                }
+
+                @Override
+                public Optional<NamedDatabaseId> getById( DatabaseId databaseId )
+                {
+                    return Optional.of( namedDatabaseId );
+                }
+            };
+            var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, fixtureMember.member, fakeDatabaseIdRepository );
+            var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, fixtureMember.member, raftMessageLogger );
 
             fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize,
                     RaftTestMemberSetBuilder.INSTANCE )

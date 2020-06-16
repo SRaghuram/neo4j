@@ -7,9 +7,11 @@ package com.neo4j.causalclustering.logging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 
+import org.neo4j.kernel.database.NamedDatabaseId;
+
 public interface RaftMessageLogger<MEMBER>
 {
-    void logOutbound( MEMBER me, RaftMessage message, MEMBER remote );
+    void logOutbound( NamedDatabaseId databaseId, MEMBER me, RaftMessage message, MEMBER remote );
 
-    void logInbound( MEMBER remote, RaftMessage message, MEMBER me );
+    void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message, MEMBER me );
 }

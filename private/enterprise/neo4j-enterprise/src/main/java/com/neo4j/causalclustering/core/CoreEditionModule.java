@@ -344,7 +344,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter );
 
         RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
-                supportedRaftProtocols, supportedModifierProtocols );
+                supportedRaftProtocols, supportedModifierProtocols, databaseManager.databaseIdRepository() );
 
         Server raftServer = raftServerFactory.createRaftServer( raftMessageDispatcher, serverInstalledProtocolHandler );
         globalModule.getGlobalDependencies().satisfyDependencies( raftServer ); // resolved in tests

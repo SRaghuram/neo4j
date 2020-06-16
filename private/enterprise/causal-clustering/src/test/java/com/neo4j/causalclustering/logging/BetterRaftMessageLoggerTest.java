@@ -16,6 +16,9 @@ import java.time.Clock;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -28,6 +31,7 @@ import static org.mockito.Mockito.when;
 
 class BetterRaftMessageLoggerTest
 {
+    private final NamedDatabaseId databaseId = DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
     private final MemberId memberId = new MemberId( UUID.randomUUID() );
     private final File logFile = new File( "raft-messages" );
     private final FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
@@ -64,8 +68,8 @@ class BetterRaftMessageLoggerTest
         verify( outputStream ).close();
 
         var message = new RaftMessages.Heartbeat( memberId, 1, 1, 1 );
-        logger.logInbound( memberId, message, memberId );
-        logger.logOutbound( memberId, message, memberId );
+        logger.logInbound( databaseId, memberId, message, memberId );
+        logger.logOutbound( databaseId, memberId, message, memberId );
 
         verifyNoMoreInteractions( outputStream );
     }

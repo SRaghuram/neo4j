@@ -9,24 +9,32 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 
+import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+
 public class LoggingInbound implements Inbound<RaftMessages.InboundRaftMessageContainer<?>>
 {
     private final Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound;
     private final RaftMessageLogger<MemberId> raftMessageLogger;
     private final MemberId me;
+    private final DatabaseIdRepository databaseIdRepository;
 
-    public LoggingInbound( Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound, RaftMessageLogger<MemberId> raftMessageLogger, MemberId me )
+    public LoggingInbound( Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound, RaftMessageLogger<MemberId> raftMessageLogger, MemberId me,
+            DatabaseIdRepository databaseIdRepository )
     {
         this.inbound = inbound;
         this.raftMessageLogger = raftMessageLogger;
         this.me = me;
+        this.databaseIdRepository = databaseIdRepository;
     }
 
     @Override
     public void registerHandler( MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> handler )
     {
         inbound.registerHandler( message -> {
-            raftMessageLogger.logInbound( message.message().from(), message.message(), me );
+            var databaseId = DatabaseIdFactory.from( message.raftId().uuid() );
+            var namedDatabaseId = databaseIdRepository.getById( databaseId ).orElse( null );
+            raftMessageLogger.logInbound( namedDatabaseId, message.message().from(), message.message(), me );
             handler.handle( message );
         } );
     }

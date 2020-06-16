@@ -18,6 +18,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.util.VisibleForTesting;
 
@@ -68,7 +69,7 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
         {
             checkState( printWriter == null, "Already started" );
             printWriter = openPrintWriter();
-            log( me, Direction.INFO, me, "Info", "I am " + me );
+            log( "", me, Direction.INFO, me, "Info", "I am " + me );
         }
         finally
         {
@@ -92,15 +93,22 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     }
 
     @Override
-    public void logOutbound( MEMBER me, RaftMessage message, MEMBER remote )
+    public void logOutbound( NamedDatabaseId databaseId, MEMBER me, RaftMessage message, MEMBER remote )
     {
-        log( me, Direction.OUTBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
+        // timestamp me --> remote for database type message
+        log( convertDatabaseId( databaseId ), me, Direction.OUTBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
     }
 
     @Override
-    public void logInbound( MEMBER me, RaftMessage message, MEMBER remote )
+    public void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message, MEMBER me )
     {
-        log( me, Direction.INBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
+        // timestamp me <-- remote for database type message
+        log( convertDatabaseId( databaseId ), me, Direction.INBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
+    }
+
+    private String convertDatabaseId( NamedDatabaseId databaseId )
+    {
+        return databaseId == null ? "for unknownDB" : format( "for %s", databaseId );
     }
 
     @VisibleForTesting
@@ -110,7 +118,7 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
         return new PrintWriter( fs.openAsOutputStream( logFile, true ) );
     }
 
-    private void log( MEMBER me, Direction direction, MEMBER remote, String type, String message )
+    private void log( String forDatabase, MEMBER first, Direction direction, MEMBER second, String type, String message )
     {
         lifecycleLock.readLock().lock();
         try
@@ -118,7 +126,8 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
             if ( printWriter != null )
             {
                 var timestamp = ZonedDateTime.now( clock ).format( DATE_TIME_FORMATTER );
-                printWriter.println( format( "%s %s %s %s %s \"%s\"", timestamp, me, direction.arrow, remote, type, message ) );
+                var text = format( "%s %s %s %s %s %s \"%s\"", timestamp, first, direction.arrow, second, forDatabase, type, message );
+                printWriter.println( text );
                 printWriter.flush();
             }
         }

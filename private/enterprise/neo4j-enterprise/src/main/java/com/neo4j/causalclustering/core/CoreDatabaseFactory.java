@@ -222,8 +222,8 @@ class CoreDatabaseFactory
         long logThresholdMillis = config.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
 
         LoggingOutbound<MemberId,RaftMessage> raftOutbound = new LoggingOutbound<>(
-                new RaftOutbound( topologyService, raftSender, raftMessageDispatcher, raftBinder, debugLog, logThresholdMillis, myIdentity, clock ), myIdentity,
-                raftLogger );
+                new RaftOutbound( topologyService, raftSender, raftMessageDispatcher, raftBinder, debugLog, logThresholdMillis, myIdentity, clock ),
+                namedDatabaseId, myIdentity, raftLogger );
 
         RaftGroup raftGroup = raftGroupFactory.create( namedDatabaseId, raftOutbound, life, monitors, dependencies, logService );
 
