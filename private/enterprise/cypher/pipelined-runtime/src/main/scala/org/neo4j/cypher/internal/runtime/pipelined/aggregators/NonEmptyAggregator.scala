@@ -23,7 +23,7 @@ case object NonEmptyAggregator extends Aggregator {
 }
 
 /**
- * Aggregator for NonEmpty(...).
+ * Aggregator for IsEmpty(...).
  */
 case object IsEmptyAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CheckEmptyStandardReducer(true)
@@ -40,7 +40,7 @@ class CheckEmptyStandardReducer(shouldBeEmpty: Boolean) extends DirectStandardRe
   // Reducer
   override def newUpdater(): Updater = this
 
-  override def result: AnyValue = if (shouldBeEmpty) Values.booleanValue(isEmpty) else Values.booleanValue(!isEmpty)
+  override def result: AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
 
   // Updater
   override def add(value: AnyValue): Unit =
@@ -52,7 +52,7 @@ class CheckEmptyConcurrentReducer(shouldBeEmpty: Boolean) extends Reducer {
 
   override def newUpdater(): Updater = new Upd()
 
-  override def result: AnyValue = if (shouldBeEmpty) Values.booleanValue(isEmpty) else Values.booleanValue(!isEmpty)
+  override def result: AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
 
   class Upd() extends Updater {
     override def add(value: AnyValue): Unit =
