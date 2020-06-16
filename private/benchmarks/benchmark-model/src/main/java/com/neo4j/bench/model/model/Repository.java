@@ -61,8 +61,8 @@ public enum Repository
     // -----------------------
 
     NEO4J( "neo4j",
-           "neo-technology",
            "neo4j",
+           "neo-technology",
            "^\\d\\.\\d$",
            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     CAPS( "cypher-for-apache-spark",
