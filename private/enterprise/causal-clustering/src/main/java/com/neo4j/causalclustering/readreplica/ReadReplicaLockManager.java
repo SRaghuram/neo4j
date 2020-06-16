@@ -36,7 +36,7 @@ public class ReadReplicaLockManager implements Locks
     private static class Client implements Locks.Client
     {
         @Override
-        public void initialize( LeaseClient leaseClient, long userTransactionId )
+        public void initialize( LeaseClient leaseClient, long transactionId )
         {
         }
 

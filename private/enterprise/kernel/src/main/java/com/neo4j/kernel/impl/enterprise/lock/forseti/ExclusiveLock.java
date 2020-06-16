@@ -57,7 +57,7 @@ class ExclusiveLock implements ForsetiLockManager.Lock
     @Override
     public LongSet transactionIds()
     {
-        return LongSets.mutable.of( owner.transactionId() );
+        return LongSets.immutable.of( owner.transactionId() );
     }
 
     @Override

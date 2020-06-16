@@ -344,9 +344,9 @@ class DeferringLockClientTest
         private long userTransactionId = 1;
 
         @Override
-        public void initialize( LeaseClient leaseClient, long userTransactionId )
+        public void initialize( LeaseClient leaseClient, long transactionId )
         {
-            this.userTransactionId = userTransactionId;
+            this.userTransactionId = transactionId;
         }
 
         @Override

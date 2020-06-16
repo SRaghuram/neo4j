@@ -29,9 +29,9 @@ public class DeferringStatementLocks implements StatementLocks
     }
 
     @Override
-    public void initialize( LeaseClient leaseClient, long userTransactionId )
+    public void initialize( LeaseClient leaseClient, long transactionId )
     {
-        explicit.initialize( leaseClient, userTransactionId );
+        explicit.initialize( leaseClient, transactionId );
     }
 
     @Override

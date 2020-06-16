@@ -233,7 +233,7 @@ class SharedLock implements ForsetiLockManager.Lock
     {
         Set<ForsetiClient> lockClients = new HashSet<>();
         collectOwners( lockClients );
-        return LongSets.mutable.ofAll( lockClients.stream().mapToLong( ForsetiClient::transactionId ) );
+        return LongSets.immutable.ofAll( lockClients.stream().mapToLong( ForsetiClient::transactionId ) );
     }
 
     @Override
