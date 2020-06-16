@@ -547,7 +547,7 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Admin
     @SystemProcedure
-    @Description( "List all locks at this instance." )
+    @Description( "List all locks at this database." )
     @Procedure( name = "db.listLocks", mode = DBMS )
     public Stream<LockResult> listLocks()
     {
