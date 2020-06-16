@@ -57,7 +57,7 @@
       }
     },
     {
-      "name": "Workloads With Operator By Description",
+      "name": "Workloads With Operator By Pattern",
       "queryFile": "queries/workloads_with_operator_by_pattern.cypher",
       "parameters": {
         "file": "parameters/workloads_with_operator.txt"

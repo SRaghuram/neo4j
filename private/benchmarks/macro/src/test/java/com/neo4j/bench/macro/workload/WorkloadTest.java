@@ -23,6 +23,8 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -201,6 +203,28 @@ class WorkloadTest
         try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
             Workload.allWorkloads( resources, Deployment.embedded() ).forEach( workload -> assertFalse( workload.queries().isEmpty() ) );
+        }
+    }
+
+    @Test
+    public void workloadsShouldHaveUniquelyNamedQueries() throws IOException
+    {
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        {
+            for ( Workload workload : Workload.allWorkloads( resources, Deployment.embedded() ) )
+            {
+                List<String> duplicateNames = workload.queries()
+                                                      .stream()
+                                                      .collect( groupingBy( Query::name, counting() ) )
+                                                      .entrySet()
+                                                      .stream()
+                                                      .filter( e -> e.getValue() > 1 )
+                                                      .map( Map.Entry::getKey )
+                                                      .collect( toList() );
+
+                assertTrue( format( "Workload '%s' contains multiple queries with same name: '%s'", workload.name(), duplicateNames ),
+                            duplicateNames.isEmpty() );
+            }
         }
     }
 
