@@ -53,11 +53,6 @@ class TransactionId
         throw new InvalidArgumentsException( "Could not parse id " + EXPECTED_FORMAT_MSG );
     }
 
-    long internalId()
-    {
-        return internalId;
-    }
-
     NormalizedDatabaseName database()
     {
         return database;

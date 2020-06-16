@@ -97,6 +97,8 @@ import static org.neo4j.procedure.Mode.WRITE;
 @SuppressWarnings( {"unused", "WeakerAccess"} )
 public class EnterpriseBuiltInDbmsProcedures
 {
+    private static final String MISSING_TRANSACTION_ID = "Missing Transaction Id.";
+
     @Context
     public Log log;
 
@@ -546,16 +548,16 @@ public class EnterpriseBuiltInDbmsProcedures
     @Admin
     @SystemProcedure
     @Description( "List all locks at this instance." )
-    @Procedure( name = "dbms.listLocks", mode = DBMS )
+    @Procedure( name = "db.listLocks", mode = DBMS )
     public Stream<LockResult> listLocks()
     {
         securityContext.assertCredentialsNotExpired();
 
         var locks = resolver.resolveDependency( Locks.class );
-        var currentLocks = new ArrayList<LockResult>();
-        locks.accept( ( lockType, resourceType, transactionId, resourceId, description, estimatedWaitTime, lockIdentityHashCode ) -> currentLocks.add(
-                new LockResult( lockType.getDescription(), resourceType.name(), transactionId, resourceId ) ) );
-        return currentLocks.stream();
+        var locksList = new ArrayList<LockResult>();
+        locks.accept( ( lockType, resourceType, txId, resourceId, description, estimatedWaitTime, lockIdentityHashCode ) ->
+                locksList.add( new LockResult( lockType.getDescription(), resourceType.name(), resourceId, getTransactionId( txId ) ) ) );
+        return locksList.stream();
     }
 
     @SystemProcedure
@@ -839,6 +841,22 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    private String getTransactionId( long txId )
+    {
+        try
+        {
+            if ( txId > 0 )
+            {
+                return new TransactionId( graph.databaseName(), txId ).toString();
+            }
+        }
+        catch ( InvalidArgumentsException e )
+        {
+            //
+        }
+        return MISSING_TRANSACTION_ID;
+    }
+
     @SuppressWarnings( "unchecked" )
     private DatabaseManager<DatabaseContext> getDatabaseManager()
     {
@@ -1015,9 +1033,9 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String mode;
         public final String resourceType;
         public final long resourceId;
-        public final long transactionId;
+        public final String transactionId;
 
-        public LockResult( String mode, String resourceType, long transactionId, long resourceId )
+        public LockResult( String mode, String resourceType, long resourceId, String transactionId )
         {
             this.mode = mode;
             this.resourceType = resourceType;
