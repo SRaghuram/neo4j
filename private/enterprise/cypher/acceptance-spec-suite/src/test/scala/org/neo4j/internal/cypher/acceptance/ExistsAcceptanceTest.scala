@@ -1326,4 +1326,18 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
     failWithError(Configs.All, query, params = Map("dogNames" -> Seq("Fido", "Bosse")), errorType = Seq("SyntaxException"))
   }
+
+  test("aggregation with exists in horizon of tail should plan") {
+    val query =
+      """
+        |MATCH (p:Person)-[:HAS_DOG]->(d:Dog)
+        |WITH p, collect(d.name) as names
+        |WITH p.name as walker
+        |WHERE EXISTS { MATCH (n) }
+        |RETURN walker
+        |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    result.toList should equal(List(Map("walker" -> "Bosse"), Map("walker" -> "Chris")))
+  }
 }
