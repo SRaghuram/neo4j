@@ -27,7 +27,6 @@ import static org.neo4j.lock.LockType.SHARED;
 
 public class DeferringLockClient implements Locks.Client
 {
-    private static final long INVALID_TRANSACTION_ID = -1;
     private final Locks.Client clientDelegate;
     private final Map<LockUnit,MutableInt> locks = new TreeMap<>();
     private volatile boolean stopped;

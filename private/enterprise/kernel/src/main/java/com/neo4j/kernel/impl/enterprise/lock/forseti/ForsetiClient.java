@@ -61,7 +61,6 @@ import static org.neo4j.lock.LockType.SHARED;
  */
 public class ForsetiClient implements Locks.Client
 {
-    private static final long INVALID_TRANSACTION_ID = -1;
     /** Id for this client */
     private final int clientId;
 
