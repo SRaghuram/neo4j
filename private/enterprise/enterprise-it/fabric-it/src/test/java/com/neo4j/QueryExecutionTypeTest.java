@@ -11,7 +11,6 @@ import com.neo4j.utils.ProxyFunctions;
 import com.neo4j.utils.ShardFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -102,11 +101,6 @@ class QueryExecutionTypeTest
             tx.run( "CREATE DATABASE intB" ).consume();
             tx.commit();
         } );
-    }
-
-    @BeforeEach
-    void beforeEach()
-    {
     }
 
     @AfterAll
