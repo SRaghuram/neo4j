@@ -194,7 +194,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                     var resourceId = ((Number) map.get( "resourceId" )).intValue();
                     return "SHARED".equals( map.get( "mode" ) ) &&
                             "LABEL".equals( map.get( "resourceType" ) ) &&
-                            "neo4j-transaction-15".equals( map.get( "transactionId" ) ) &&
+                            "neo4j-transaction-16".equals( map.get( "transactionId" ) ) &&
                             labelId == resourceId;
                 }
             } );
