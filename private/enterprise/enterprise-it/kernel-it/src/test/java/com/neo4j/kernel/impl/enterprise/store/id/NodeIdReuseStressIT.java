@@ -6,17 +6,18 @@
 package com.neo4j.kernel.impl.enterprise.store.id;
 
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.BitSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -24,6 +25,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
 
+import static java.lang.Math.toIntExact;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
@@ -33,6 +35,7 @@ class NodeIdReuseStressIT
     private static final int CONTESTANTS_COUNT = 12;
     private static final int INITIAL_NODE_COUNT = 10_000;
     private static final int OPERATIONS_COUNT = 10_000;
+    private static final int THRESHOLD = INITIAL_NODE_COUNT / 10;
 
     @Inject
     private GraphDatabaseService db;
@@ -44,49 +47,48 @@ class NodeIdReuseStressIT
         assertThat( CONTESTANTS_COUNT % 2 ).isEqualTo( 0 );
         assertThat( INITIAL_NODE_COUNT ).isGreaterThan( 0 );
         assertThat( OPERATIONS_COUNT ).isGreaterThan( 1_000 );
+        assertThat( THRESHOLD ).isGreaterThan( 0 );
+        assertThat( THRESHOLD ).isLessThan( INITIAL_NODE_COUNT );
     }
 
     @Test
     void nodeIdsReused() throws Throwable
     {
-        createInitialNodes( db );
-        long initialHighestNodeId = highestNodeId( db );
+        // given
+        BitSet initialIds = createInitialNodes( db );
+        AtomicInteger numReusedIds = new AtomicInteger();
 
-        Race race = new Race();
-
+        // when
+        Race race = new Race().withEndCondition( () -> numReusedIds.get() >= THRESHOLD );
         for ( int i = 0; i < CONTESTANTS_COUNT; i++ )
         {
             if ( i % 2 == 0 )
             {
-                race.addContestant( new NodeCreator( db ) );
+                race.addContestant( new NodeCreator( db, initialIds, numReusedIds ), OPERATIONS_COUNT );
             }
             else
             {
-                race.addContestant( new NodeRemover( db ) );
+                race.addContestant( new NodeRemover( db ), OPERATIONS_COUNT );
             }
         }
-
         race.go();
 
-        int writeContestants = CONTESTANTS_COUNT / 2;
-        int createdNodes = writeContestants * OPERATIONS_COUNT;
-        long highestNodeIdWithoutReuse = initialHighestNodeId + createdNodes;
-
-        long currentHighestNodeId = highestNodeId( db );
-
-        assertThat( currentHighestNodeId ).isLessThan( highestNodeIdWithoutReuse );
+        // then
+        assertThat( numReusedIds.get() ).isGreaterThanOrEqualTo( THRESHOLD );
     }
 
-    private static void createInitialNodes( GraphDatabaseService db )
+    private static BitSet createInitialNodes( GraphDatabaseService db )
     {
+        BitSet ids = new BitSet();
         try ( Transaction tx = db.beginTx() )
         {
             for ( int i = 0; i < INITIAL_NODE_COUNT; i++ )
             {
-                tx.createNode();
+                ids.set( toIntExact( tx.createNode().getId() ) );
             }
             tx.commit();
         }
+        return ids;
     }
 
     private static long highestNodeId( GraphDatabaseService db )
@@ -97,25 +99,6 @@ class NodeIdReuseStressIT
         return nodeStore.getHighestPossibleIdInUse( NULL );
     }
 
-    private static void maybeRunIdMaintenance( GraphDatabaseService db, int iteration )
-    {
-        if ( iteration % 100 == 0 && ThreadLocalRandom.current().nextBoolean() )
-        {
-            DependencyResolver resolver = dependencyResolver( db );
-            IdController idController = resolver.resolveDependency( IdController.class );
-            if ( idController != null )
-            {
-                idController.maintenance();
-            }
-            else
-            {
-                System.out.println( "Id controller is null. Dumping resolver content." );
-                System.out.println( "Resolver: " + ReflectionToStringBuilder.toString( resolver ) );
-                throw new IllegalStateException( "Id controller not found" );
-            }
-        }
-    }
-
     private static DependencyResolver dependencyResolver( GraphDatabaseService db )
     {
         return ((GraphDatabaseAPI) db).getDependencyResolver();
@@ -124,24 +107,28 @@ class NodeIdReuseStressIT
     private static class NodeCreator implements Runnable
     {
         final GraphDatabaseService db;
+        private final BitSet initialIds;
+        private final AtomicInteger numReusedIds;
 
-        NodeCreator( GraphDatabaseService db )
+        NodeCreator( GraphDatabaseService db, BitSet initialIds, AtomicInteger numReusedIds )
         {
             this.db = db;
+            this.initialIds = initialIds;
+            this.numReusedIds = numReusedIds;
         }
 
         @Override
         public void run()
         {
-            for ( int i = 0; i < OPERATIONS_COUNT; i++ )
+            Node createdNode;
+            try ( Transaction tx = db.beginTx() )
             {
-                try ( Transaction tx = db.beginTx() )
-                {
-                    tx.createNode();
-                    tx.commit();
-                }
-
-                maybeRunIdMaintenance( db, i );
+                createdNode = tx.createNode();
+                tx.commit();
+            }
+            if ( initialIds.get( toIntExact( createdNode.getId() ) ) )
+            {
+                numReusedIds.incrementAndGet();
             }
         }
     }
@@ -158,25 +145,20 @@ class NodeIdReuseStressIT
         @Override
         public void run()
         {
-            for ( int i = 0; i < OPERATIONS_COUNT; i++ )
+            long highestId = highestNodeId( db );
+            if ( highestId > 0 )
             {
-                long highestId = highestNodeId( db );
-                if ( highestId > 0 )
+                long id = ThreadLocalRandom.current().nextLong( highestId );
+
+                try ( Transaction tx = db.beginTx() )
                 {
-                    long id = ThreadLocalRandom.current().nextLong( highestId );
-
-                    try ( Transaction tx = db.beginTx() )
-                    {
-                        tx.getNodeById( id ).delete();
-                        tx.commit();
-                    }
-                    catch ( NotFoundException ignore )
-                    {
-                        // same node was removed concurrently
-                    }
+                    tx.getNodeById( id ).delete();
+                    tx.commit();
                 }
-
-                maybeRunIdMaintenance( db, i );
+                catch ( NotFoundException ignore )
+                {
+                    // same node was removed concurrently
+                }
             }
         }
     }
