@@ -31,7 +31,7 @@ class RestoreDatabaseCliTest
         assertThat( baos.toString().trim(), equalTo( String.format(
                 "USAGE%n" +
                 "%n" +
-                "restore [--force] [--verbose] [--database=<database>] --from=<path>%n" +
+                "restore [--force] [--move] [--verbose] [--database=<database>] --from=<path>%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
@@ -44,7 +44,9 @@ class RestoreDatabaseCliTest
                 "      --database=<database>%n" +
                 "                      Name of the database to restore.%n" +
                 "                        Default: neo4j%n" +
-                "      --force         If an existing database should be replaced."
+                "      --force         If an existing database should be replaced.%n" +
+                "      --move          Moves the backup files to the destination, rather than%n" +
+                "                        copying."
         ) ) );
     }
 }

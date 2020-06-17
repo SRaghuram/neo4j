@@ -171,7 +171,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         Config restoreCommandConfig = Config.newBuilder().fromConfig( memberConfig ).build();
         var databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
         new RestoreDatabaseCommand( fs, new File( backupLocation, databaseName ), restoreCommandConfig,
-                databaseName, true ).execute();
+                databaseName, true, false ).execute();
     }
 
     private static boolean runBackupSameJvm( File neo4jHome, String host, String databaseName )

@@ -32,12 +32,15 @@ public class RestoreDatabaseCommand
     private final DatabaseLayout targetDatabaseLayout;
     private final File raftGroupDirectory;
     private final boolean forceOverwrite;
+    private final boolean moveFiles;
 
-    public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String databaseName, boolean forceOverwrite )
+    public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String databaseName, boolean forceOverwrite,
+                                   boolean moveFiles )
     {
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
+        this.moveFiles = moveFiles;
         this.targetDatabaseLayout = buildTargetDatabaseLayout( databaseName, config );
         this.raftGroupDirectory = getRaftGroupDirectory( databaseName, config );
     }
@@ -126,9 +129,16 @@ public class RestoreDatabaseCommand
             {
                 if ( file.isDirectory() )
                 {
-                    var destination = new File( databaseDirectory, file.getName() );
-                    fs.mkdirs( destination );
-                    fs.copyRecursively( file, destination );
+                    if ( moveFiles )
+                    {
+                        fs.moveToDirectory( file, databaseDirectory );
+                    }
+                    else
+                    {
+                        var destination = new File( databaseDirectory, file.getName() );
+                        fs.mkdirs( destination );
+                        fs.copyRecursively( file, destination );
+                    }
                 }
                 else
                 {
@@ -136,9 +146,20 @@ public class RestoreDatabaseCommand
                     var targetFile = new File( targetDirectory, file.getName() );
                     if ( !databaseLockFile.equals( targetFile ) )
                     {
-                        fs.copyToDirectory( file, targetDirectory );
+                        if ( moveFiles )
+                        {
+                            fs.moveToDirectory( file, targetDirectory );
+                        }
+                        else
+                        {
+                            fs.copyToDirectory( file, targetDirectory );
+                        }
                     }
                 }
+            }
+            if ( moveFiles )
+            {
+                fs.deleteRecursively( fromDatabasePath );
             }
         }
     }

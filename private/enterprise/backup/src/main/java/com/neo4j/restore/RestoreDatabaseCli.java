@@ -35,6 +35,8 @@ public class RestoreDatabaseCli extends AbstractCommand
     private NormalizedDatabaseName database;
     @Option( names = "--force", arity = "0", description = "If an existing database should be replaced." )
     private boolean force;
+    @Option( names = "--move", arity = "0", description = "Moves the backup files to the destination, rather than copying." )
+    private boolean move;
 
     public RestoreDatabaseCli( ExecutionContext ctx )
     {
@@ -55,7 +57,7 @@ public class RestoreDatabaseCli extends AbstractCommand
     {
         Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
 
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( ctx.fs(), from, config, database.name(), force );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( ctx.fs(), from, config, database.name(), force, move );
         restoreDatabaseCommand.execute();
     }
 }

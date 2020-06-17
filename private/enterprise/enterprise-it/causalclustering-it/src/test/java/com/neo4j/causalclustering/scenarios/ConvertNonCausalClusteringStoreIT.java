@@ -64,7 +64,7 @@ class ConvertNonCausalClusteringStoreIT
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
             var databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, core.config(), databaseName, true ).execute();
+            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, core.config(), databaseName, true, false ).execute();
         }
 
         cluster.start();

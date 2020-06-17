@@ -49,7 +49,7 @@ public class BackupTestUtil
     {
         Config config = Config.newBuilder().fromConfig( clusterMember.config() ).build();
         ConfigUtils.disableAllConnectors( config );
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, config, databaseName, true );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, config, databaseName, true, false );
         restoreDatabaseCommand.execute();
     }
 
