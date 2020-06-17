@@ -115,6 +115,14 @@ enum Workloads
                 {
                     return new CreateManyDatabases( control, resources, config );
                 }
+            },
+    VmPauseDuringBecomingLeader
+            {
+                @Override
+                Workload create( Control control, Resources resources, Config config )
+                {
+                    return new VmPauseDuringBecomingLeader( control, resources, config );
+                }
             };
 
     abstract Workload create( Control control, Resources resources, Config config );

@@ -6,122 +6,139 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.common.ClusterOverviewHelper;
+import com.neo4j.causalclustering.common.RaftMonitors;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.core.consensus.LeaderLocator;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.core.consensus.RaftMessageTimerResetMonitor;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.dbms.DatabaseStateChangedListener;
+import com.neo4j.dbms.DbmsReconciler;
 import com.neo4j.helper.Workload;
-import org.assertj.core.api.Condition;
-import org.assertj.core.api.HamcrestCondition;
-import org.hamcrest.Matchers;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
-import static com.neo4j.causalclustering.common.ClusterOverviewHelper.assertAllEventualOverviews;
-import static com.neo4j.causalclustering.common.ClusterOverviewHelper.containsAllMemberAddresses;
-import static com.neo4j.causalclustering.common.ClusterOverviewHelper.containsRole;
-import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
-import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
-import static com.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
-import static java.util.concurrent.TimeUnit.MINUTES;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.lang3.RandomStringUtils.random;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.helpers.DatabaseNameValidator.MAXIMUM_DATABASE_NAME_LENGTH;
 import static org.neo4j.configuration.helpers.DatabaseNameValidator.validateExternalDatabaseName;
-import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.function.Predicates.await;
 
-public class CreateManyDatabases extends Workload
+public class VmPauseDuringBecomingLeader extends Workload
 {
     private final Cluster cluster;
-    private final Set<String> allDatabases = new HashSet<>();
+    private final List<Long> resultTerms;
     private final int numberOfDatabases;
     private final Log log;
 
-    CreateManyDatabases( Control control, Resources resources, Config config )
+    private CoreClusterMember leaderToBeReTriggered;
+
+    VmPauseDuringBecomingLeader( Control control, Resources resources, Config config )
     {
         super( control );
 
         this.cluster = resources.cluster();
         this.numberOfDatabases = config.numberOfDatabases();
+        this.resultTerms = new ArrayList<>( numberOfDatabases );
         this.log = resources.logProvider().getLog( getClass() );
     }
 
     @Override
-    public void prepare() throws Exception
+    public void prepare()
     {
         assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, cluster );
-        allDatabases.add( SYSTEM_DATABASE_NAME );
 
         assertDatabaseEventuallyStarted( DEFAULT_DATABASE_NAME, cluster );
-        allDatabases.add( DEFAULT_DATABASE_NAME );
+
+        cluster.coreMembers().forEach( core ->
+                core.resolveDependency( SYSTEM_DATABASE_NAME, DbmsReconciler.class ).registerDatabaseStateChangedListener(
+                        new VmPauseInstallerDatabaseStateChangedListener( core ) ) );
     }
 
     @Override
     protected void doWork() throws Exception
     {
-        if ( allDatabases.size() >= numberOfDatabases )
+        if ( resultTerms.size() >= numberOfDatabases )
         {
             control.onFinish();
             return;
         }
+        leaderToBeReTriggered = null;
 
-        long start = System.currentTimeMillis();
-        String databaseName = createDatabaseWithRandomName();
-        assertDatabaseEventuallyStarted( databaseName, cluster );
-        long elapsed = System.currentTimeMillis() - start;
+        var start = System.currentTimeMillis();
+        var databaseName = createDatabaseWithRandomName();
+        var resultTerm = -2L;
 
-        allDatabases.add( databaseName );
+        try
+        {
+            // then wait for vm pause to happen
+            try
+            {
+                await( () -> leaderToBeReTriggered, Objects::nonNull, 10, SECONDS );
+            }
+            catch ( TimeoutException te )
+            {
+                // if the installation of the monitor happens after the leader becomes leader the simulation of the pause is not possible, so the test
+                // cannot be completed
+                log.info( "Database %s gets ignored: simulation of vm pause could not be inserted or was not executed", databaseName );
+                return;
+            }
 
-        log.info( "Started database " + allDatabases.size() + " with name '" + databaseName + "' in " + elapsed + " ms." );
+            var raftMachine = leaderToBeReTriggered.resolveDependency( databaseName, RaftMachine.class );
+            // this blocks until LEADER becomes FOLLOWER if case is successful
+            raftMachine.triggerElection();
 
-        // it is on purpose that we check all databases every time, for extra validation,
-        // even though it would seem more efficient to just check the one we just added
-        checkOverviews( allDatabases );
+            // in a few cases even triggering an election does not make the leader to step down, this means the simulation of the pause was no successful,
+            // so the test cannot continue
+            if ( raftMachine.isLeader() )
+            {
+                log.info( "Database %s gets ignored: simulation of vm pause was not successful - still leader after forced election trigger", databaseName );
+                return;
+            }
+
+            var leader = cluster.awaitLeader( databaseName );
+            var leaderLocator = leader.resolveDependency( databaseName, LeaderLocator.class );
+            resultTerm = leaderLocator.getLeaderInfo().map( LeaderInfo::term ).orElse( -1L );
+            log.info( "Database %s experienced the scenario, result term is %d", databaseName, resultTerm );
+        }
+        finally
+        {
+            // we need to wait this out otherwise the cluster won't shut down
+            assertDatabaseEventuallyStarted( databaseName, cluster );
+            resultTerms.add( resultTerm );
+            log.info( "Started database %s in %d ms.", databaseName, System.currentTimeMillis() - start );
+        }
     }
 
     @Override
-    public void validate() throws Exception
+    public void validate()
     {
-        checkOverviews( allDatabases );
+        var allTestCount = resultTerms.size();
+        var successfulTermCount = resultTerms.stream().filter( term -> term > 0 ).count();
+        log.info( "Count of all/successful scenarios: %d/%d", allTestCount, successfulTermCount );
 
-        // check so that we actually can write ...
-        for ( String databaseName : allDatabases )
-        {
-            cluster.coreTx( databaseName, ( db, tx ) ->
-            {
-                tx.createNode( label( databaseName ) ).setProperty( databaseName, databaseName );
-                tx.commit();
-            } );
-        }
-
-        // ... and read from all the databases
-        for ( String databaseName : allDatabases )
-        {
-            for ( ClusterMember member : cluster.allMembers() )
-            {
-                assertEventually( () ->
-                {
-                    try ( Transaction tx = member.database( databaseName ).beginTx() )
-                    {
-                        return tx.findNode( label( databaseName ), databaseName, databaseName );
-                    }
-                }, new Condition<>( Objects::nonNull, "Should be not null." ), 1, MINUTES );
-            }
-        }
+        // check that for databases which experienced the pause have a leader and its term is not 1
+        resultTerms.stream().filter( term -> term != -2 ).forEach( term -> assertThat( term ).isGreaterThan( 1 ) );
     }
 
     private String createDatabaseWithRandomName() throws Exception
     {
-        NormalizedDatabaseName databaseName = new NormalizedDatabaseName(
+        var databaseName = new NormalizedDatabaseName(
                 random( 1, true, false ) +
                 random( MAXIMUM_DATABASE_NAME_LENGTH - 1, true, true ) );
 
@@ -131,18 +148,67 @@ public class CreateManyDatabases extends Workload
         return databaseName.name();
     }
 
-    private void checkOverviews( Set<String> createdDatabases )
+    private class VmPauseInstallerDatabaseStateChangedListener implements DatabaseStateChangedListener
     {
-        for ( String createdDatabase : createdDatabases )
-        {
-            Condition<List<ClusterOverviewHelper.MemberInfo>> expected = new HamcrestCondition<>( Matchers.allOf(
-                    containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
-                    containsRole( LEADER, createdDatabase, 1 ),
-                    containsRole( FOLLOWER, createdDatabase, cluster.coreMembers().size() - 1 ),
-                    containsRole( READ_REPLICA, createdDatabase, cluster.readReplicas().size() )
-            ) );
+        private CoreClusterMember core;
 
-            assertAllEventualOverviews( cluster, expected );
+        private VmPauseInstallerDatabaseStateChangedListener( CoreClusterMember core )
+        {
+            this.core = core;
+        }
+
+        @Override
+        public void stateChange( DatabaseState previousState, DatabaseState newState )
+        {
+            try
+            {
+                if ( previousState.operatorState() == INITIAL && newState.operatorState() == STARTED && leaderToBeReTriggered == null )
+                {
+                    var databaseName = previousState.databaseId().name();
+                    var monitors = core.resolveDependency( databaseName, RaftMonitors.class );
+                    monitors.addMonitorListener( new VmPauseSimulatorMonitor( core, databaseName ) );
+                    log.debug( "Monitor installed on %s %s", core.id(), databaseName );
+                }
+            }
+            catch ( Exception t )
+            {
+                log.error( "Exception thrown during register pause installer", t );
+            }
+        }
+    }
+
+    private class VmPauseSimulatorMonitor implements RaftMessageTimerResetMonitor
+    {
+        private final CoreClusterMember core;
+        private final String databaseName;
+        private boolean first = true;
+
+        private VmPauseSimulatorMonitor( CoreClusterMember core, String databaseName )
+        {
+            this.core = core;
+            this.databaseName = databaseName;
+        }
+
+        @Override
+        public void timerReset()
+        {
+            try
+            {
+                var raftMachine = core.resolveDependency( databaseName, RaftMachine.class );
+                if ( first && raftMachine.currentRole() == Role.CANDIDATE && leaderToBeReTriggered == null )
+                {
+                    // The first time the raft machine calls RaftMessageTimerResetMonitor when moving from CANDIDATE we pause for a bit, allowing to the main
+                    // thread to trigger an election, if would we wait long enough this would happen eventually too, but this allows to be more certain of it.
+                    leaderToBeReTriggered = core;
+                    log.debug( "Simulating VM Pause on %s %s", core.id(), databaseName );
+                    SECONDS.sleep( 2 );
+                    first = false;
+                }
+            }
+            catch ( Throwable t )
+            {
+                log.error( "Exception thrown during pause", t );
+            }
         }
     }
 }

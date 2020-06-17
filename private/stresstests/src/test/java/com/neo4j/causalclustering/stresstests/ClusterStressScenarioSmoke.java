@@ -103,4 +103,15 @@ class ClusterStressScenarioSmoke
 
         stressTest( config, fileSystem, pageCache );
     }
+
+    @Test
+    public void stressVmPauseDuringBecomingLeader() throws Exception
+    {
+        config.numberOfEdges( 0 );
+        config.numberOfDatabases( 5 );
+        config.workDurationMinutes( 5 );
+        config.workloads( Workloads.VmPauseDuringBecomingLeader );
+
+        stressTest( config, fileSystem, pageCache );
+    }
 }
