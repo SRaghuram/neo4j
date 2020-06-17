@@ -266,16 +266,16 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
   private def includeRollUpApply(rhs: PlanMatcher = includeSomewhere.aPlan) = {
     includeSomewhere.aPlan("RollUpApply").withRHS(rhs) or
-     includeSomewhere.aPlan("ConditionalApply")
+     includeSomewhere.aPlan("Apply")
            .withRHS(aPlan("EagerAggregation").withLHS(rhs))
   }
 
-  test("pattern comprehension built on a null yields null") {
+  test("pattern comprehension built on a null yields empty list") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "optional match (n:MISSING) return [(n)-->(n) | n.x] as coll",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeRollUpApply()))
     result.toList should equal(List(
-      Map("coll" -> null)
+      Map("coll" -> List.empty)
     ))
   }
 

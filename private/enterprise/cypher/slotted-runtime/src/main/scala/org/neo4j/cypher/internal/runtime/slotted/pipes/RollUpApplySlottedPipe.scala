@@ -20,7 +20,6 @@ import org.neo4j.values.virtual.VirtualValues
 case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
                                   collectionRefSlotOffset: Int,
                                   identifierToCollect: (String, Expression),
-                                  nullableIdentifiers: Set[String],
                                   slots: SlotConfiguration)
                                  (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(lhs) {
@@ -30,31 +29,13 @@ case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
     state: QueryState => (ctx: CypherRow) => expression(ctx, state)
   }
 
-  private val hasNullValuePredicates: Seq[CypherRow => Boolean] =
-    nullableIdentifiers.toSeq.map { elem =>
-      val elemSlot = slots.get(elem)
-      elemSlot match {
-        case Some(LongSlot(offset, true, _)) => (ctx: CypherRow) => ctx.getLongAt(offset) == -1
-        case Some(RefSlot(offset, true, _)) => (ctx: CypherRow) => ctx.getRefAt(offset) eq NO_VALUE
-        case _ => (ctx: CypherRow) => false
-      }
-    }
-
-  private def hasNullValue(ctx: CypherRow): Boolean =
-    hasNullValuePredicates.exists(p => p(ctx))
-
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState) = {
     input.map {
       ctx =>
-        if (hasNullValue(ctx)) {
-          ctx.setRefAt(collectionRefSlotOffset, NO_VALUE)
-        }
-        else {
-          val innerState = state.withInitialContext(ctx)
-          val innerResults: Iterator[CypherRow] = rhs.createResults(innerState)
-          val collection = VirtualValues.list(innerResults.map(getValueToCollectFunction(state)).toArray: _*)
-          ctx.setRefAt(collectionRefSlotOffset, collection)
-        }
+        val innerState = state.withInitialContext(ctx)
+        val innerResults: Iterator[CypherRow] = rhs.createResults(innerState)
+        val collection = VirtualValues.list(innerResults.map(getValueToCollectFunction(state)).toArray: _*)
+        ctx.setRefAt(collectionRefSlotOffset, collection)
         ctx
     }
   }

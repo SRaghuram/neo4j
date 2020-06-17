@@ -953,7 +953,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
     // RollUpApply(LHS, RHS, ...)
     val rollUp =
-      RollUpApply(lhsLeaf, rhsProjection, "c", "x", nullableVariables = Set("r", "y"))
+      RollUpApply(lhsLeaf, rhsProjection, "c", "x")
 
     // when
     val allocations = SlotAllocation.allocateSlots(rollUp, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations

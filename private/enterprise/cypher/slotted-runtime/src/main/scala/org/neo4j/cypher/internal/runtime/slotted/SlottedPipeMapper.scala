@@ -501,12 +501,11 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Apply(_, _) =>
         ApplySlottedPipe(lhs, rhs)(id)
 
-      case RollUpApply(_, rhsPlan, collectionName, identifierToCollect, nullables) =>
+      case RollUpApply(_, rhsPlan, collectionName, identifierToCollect) =>
         val rhsSlots = slotConfigs(rhsPlan.id)
         val identifierToCollectExpression = createProjectionForIdentifier(rhsSlots)(identifierToCollect)
         val collectionRefSlotOffset = slots.getReferenceOffsetFor(collectionName)
-        RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset, identifierToCollectExpression,
-          nullables, slots)(id = id)
+        RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset, identifierToCollectExpression, slots)(id = id)
 
       case _: CartesianProduct =>
         val argumentSize = physicalPlan.argumentSizes(plan.id)

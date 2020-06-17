@@ -41,8 +41,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
       }
     })
     val pipe = RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset,
-      identifierToCollect = "y" -> ReferenceFromSlot(0),
-      nullableIdentifiers = Set("a"), slots)()
+      identifierToCollect = "y" -> ReferenceFromSlot(0), slots)()
 
     // when
     pipe.createResults(QueryStateHelper.empty).toList

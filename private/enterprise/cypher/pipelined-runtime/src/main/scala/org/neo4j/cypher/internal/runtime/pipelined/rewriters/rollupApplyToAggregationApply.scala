@@ -46,17 +46,13 @@ case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
                                          providedOrders: ProvidedOrders,
                                          idGen: IdGen) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
-    case o @ RollUpApply(lhs: LogicalPlan, rhs: LogicalPlan, collectionName, variableToCollect, nullableVariables) =>
+    case o @ RollUpApply(lhs: LogicalPlan, rhs: LogicalPlan, collectionName, variableToCollect) =>
       val toCollect = Variable(variableToCollect)(NONE)
       val aggregation = Aggregation(rhs, Map.empty, Map(collectionName -> CollectAll(toCollect)(NONE)))(idGen)
       cardinalities.copy(lhs.id, aggregation.id)
       providedOrders.copy(lhs.id, aggregation.id)
 
-      if (nullableVariables.isEmpty) {
-        Apply(lhs, aggregation)(SameId(o.id))
-      } else {
-        ConditionalApply(lhs, aggregation, nullableVariables.toSeq)(SameId(o.id))
-      }
+      Apply(lhs, aggregation)(SameId(o.id))
   })
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)

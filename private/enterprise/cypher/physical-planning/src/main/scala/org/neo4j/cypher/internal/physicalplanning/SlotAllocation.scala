@@ -792,7 +792,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }, skipFirst = argument.argumentSize)
         result
 
-      case RollUpApply(_, _, collectionName, _, _) =>
+      case RollUpApply(_, _, collectionName, _) =>
         lhs.newReference(collectionName, nullable, CTList(CTAny))
         lhs
 

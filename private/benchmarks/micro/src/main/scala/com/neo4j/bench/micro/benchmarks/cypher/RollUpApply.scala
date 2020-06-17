@@ -88,7 +88,7 @@ class RollUpApply extends AbstractCypherBenchmark {
     val list = "list"
     val lhsNodesScan = plans.NodeByLabelScan(lhs, LabelName("LHS")(InputPosition.NONE), Set.empty, IndexOrderNone)(IdGen)
     val rhsNodesScan = plans.NodeByLabelScan(rhs, LabelName("RHS")(InputPosition.NONE), Set(lhs), IndexOrderNone)(IdGen)
-    val rollUpApply = plans.RollUpApply(lhsNodesScan, rhsNodesScan, list, rhs, Set.empty)(IdGen)
+    val rollUpApply = plans.RollUpApply(lhsNodesScan, rhsNodesScan, list, rhs)(IdGen)
     val resultColumns = List(lhs, list)
     val produceResults = plans.ProduceResult(rollUpApply, columns = resultColumns)(IdGen)
 
