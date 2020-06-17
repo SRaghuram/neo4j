@@ -98,6 +98,7 @@ import static org.neo4j.procedure.Mode.WRITE;
 public class EnterpriseBuiltInDbmsProcedures
 {
     private static final String MISSING_TRANSACTION_ID = "Missing Transaction Id.";
+    public static final String INCORRECT_TRANSACTION_ID_PREFIX = "Incorrect transaction id: ";
 
     @Context
     public Log log;
@@ -852,7 +853,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
         catch ( InvalidArgumentsException e )
         {
-            //
+            return INCORRECT_TRANSACTION_ID_PREFIX + txId;
         }
         return MISSING_TRANSACTION_ID;
     }
