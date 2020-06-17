@@ -68,10 +68,7 @@ class FabricDatabaseManagementTest
         Map<String,String> configProperties = Map.of();
         if ( fabricDatabaseName != null )
         {
-            configProperties = Map.of(
-                    "fabric.database.name", fabricDatabaseName,
-                    "fabric.graph.0.uri", "neo4j://foo.com:1111"
-            );
+            configProperties = Map.of( "fabric.database.name", fabricDatabaseName );
         }
 
         var config = Config.newBuilder().setRaw( configProperties ).build();

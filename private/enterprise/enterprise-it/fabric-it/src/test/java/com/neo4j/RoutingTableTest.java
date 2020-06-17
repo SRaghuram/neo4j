@@ -7,7 +7,8 @@ package com.neo4j;
 
 import com.neo4j.configuration.FabricEnterpriseSettings;
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -19,15 +20,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,27 +31,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RoutingTableTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
+    private static TestFabric testFabric;
     private static DriverUtils driverUtils;
+    private static TestServer testServer;
 
     @BeforeAll
-    static void setUp() throws KernelException
+    static void setUp()
     {
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
+        var additionalProperties = Map.of(
                 "fabric.graph.0.uri", "neo4j://somewhere:1234",
-                "fabric.routing.ttl", "1234s",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
+                "fabric.routing.ttl", "1234s"
         );
 
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalProperties )
                 .build();
-        testServer = new TestServer( config );
 
-        testServer.start();
-
+        testServer = testFabric.getTestServer();
         var hostPort = testServer.getHostnamePort();
         var newRoutingTable = List.of(
                 socket( hostPort.getHost(), hostPort.getPort() ),
@@ -65,16 +58,7 @@ class RoutingTableTest
         );
         testServer.getRuntimeConfig().setDynamic( FabricEnterpriseSettings.fabric_servers_setting, newRoutingTable, "RoutingTableTest" );
 
-        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
-                .registerFunction( ProxyFunctions.class );
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withMaxConnectionPoolSize( 3 )
-                        .withoutEncryption()
-                        .build() );
+        clientDriver = testFabric.routingClientDriver();
 
         driverUtils = new DriverUtils( "mega" );
     }
@@ -87,8 +71,7 @@ class RoutingTableTest
     @AfterAll
     static void tearDown()
     {
-        testServer.stop();
-        clientDriver.close();
+        testFabric.close();
     }
 
     @Test

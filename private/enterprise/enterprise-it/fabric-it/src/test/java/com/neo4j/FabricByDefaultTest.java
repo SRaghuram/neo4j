@@ -8,6 +8,8 @@ package com.neo4j;
 import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,19 +26,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.types.Node;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,43 +46,21 @@ class FabricByDefaultTest
 {
 
     private static Driver driver;
-    private static TestServer testServer;
+    private static TestFabric testFabric;
     private static DriverUtils neo4j = new DriverUtils( "neo4j" );
     private static DriverUtils intA = new DriverUtils( "intA" );
     private static DriverUtils intB = new DriverUtils( "intB" );
     private static DriverUtils system = new DriverUtils( "system" );
 
     @BeforeAll
-    static void beforeAll() throws KernelException
+    static void beforeAll()
     {
-        var configProperties = Map.of(
-                "fabric.database.name", "fabric",
-                "fabric.graph.0.uri", "neo4j://dummy:1234",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "fabric" )
+                .registerFuncOrProc( ProxyFunctions.class )
+                .build();
 
-        var config = Config.newBuilder()
-                           .setRaw( configProperties )
-                           .build();
-        testServer = new TestServer( config );
-
-        testServer.start();
-
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
-        globalProceduresRegistry
-                .registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( ProxyFunctions.class );
-
-        driver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                                       .withoutEncryption()
-                                       .withMaxConnectionPoolSize( 3 )
-                                       .build() );
+        driver = testFabric.routingClientDriver();
 
         doInTx( driver, system, tx ->
         {
@@ -120,10 +95,7 @@ class FabricByDefaultTest
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> driver.close()
-        ).parallelStream().forEach( Runnable::run );
+        testFabric.close();
     }
 
     @Test

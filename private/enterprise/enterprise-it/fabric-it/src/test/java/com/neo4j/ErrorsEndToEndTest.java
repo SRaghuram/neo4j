@@ -6,20 +6,16 @@
 package com.neo4j;
 
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
@@ -38,43 +34,32 @@ class ErrorsEndToEndTest
 {
 
     private static Driver clientDriver;
-    private static TestServer testServer;
-    private static Neo4j remote;
+    private static TestFabric testFabric;
     private static DriverUtils driverUtils;
 
     @BeforeAll
     static void setUp()
     {
-
-        remote = Neo4jBuilders.newInProcessBuilder()
-                .withFixture( "CREATE (:Person:Customer {name: 'Anna', uid: 0, age: 30})" )
-                .withFixture( "CREATE (:Person:Employee {name: 'Bob',  uid: 1, age: 40})" )
-                .withFixture( "CREATE (:Person:Employee {name: 'Carrie', uid: 2, age: 30})" )
-                .withFixture( "CREATE (:Person:Customer {name: 'Dave'  , uid: 3})" )
-                .withFixture( "CREATE (:Person:Customer {name: 'Eve'  , uid: 4, age: 45})" )
-                .withFixture( "MATCH (e {name:'Bob'}), (c {name:'Anna'}) CREATE (e)-[:RESPONSIBLE_FOR {since: date('2019-01-01')}]->(c)" )
-                .withFixture( "MATCH (e {name:'Bob'}), (c {name:'Dave'}) CREATE (e)-[:RESPONSIBLE_FOR {since: date('2019-02-01')}]->(c)" )
-                .withFixture( "MATCH (e {name:'Carrie'}), (c {name:'Eve'}) CREATE (e)-[:RESPONSIBLE_FOR {since: date('2019-03-01'), dummyMarker:true}]->(c)" )
-                .withFixture( "MATCH (c {name:'Carrie'}), (b {name:'Bob'}) CREATE (c)-[:SUPERVISES]->(b)" )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withShards( 1 )
                 .build();
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", remote.boltURI().toString(),
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true" );
-        var config = Config.newBuilder().setRaw( configProperties ).build();
-        testServer = new TestServer( config );
 
-        testServer.start();
+        var shardDriver = testFabric.driverForShard( 0 );
+        try ( var session = shardDriver.session() )
+        {
+            session.run( "CREATE (:Person:Customer {name: 'Anna', uid: 0, age: 30})" );
+            session.run( "CREATE (:Person:Employee {name: 'Bob',  uid: 1, age: 40})" );
+            session.run( "CREATE (:Person:Employee {name: 'Carrie', uid: 2, age: 30})" );
+            session.run( "CREATE (:Person:Customer {name: 'Dave'  , uid: 3})" );
+            session.run( "CREATE (:Person:Customer {name: 'Eve'  , uid: 4, age: 45})" );
+            session.run( "MATCH (e {name:'Bob'}), (c {name:'Anna'}) CREATE (e)-[:RESPONSIBLE_FOR {since: date('2019-01-01')}]->(c)" );
+            session.run( "MATCH (e {name:'Bob'}), (c {name:'Dave'}) CREATE (e)-[:RESPONSIBLE_FOR {since: date('2019-02-01')}]->(c)" );
+            session.run( "MATCH (e {name:'Carrie'}), (c {name:'Eve'}) CREATE (e)-[:RESPONSIBLE_FOR {since: date('2019-03-01'), dummyMarker:true}]->(c)" );
+            session.run( "MATCH (c {name:'Carrie'}), (b {name:'Bob'}) CREATE (c)-[:SUPERVISES]->(b)" );
+        }
 
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withMaxConnectionPoolSize( 3 )
-                        .withoutEncryption()
-                        .build() );
+        clientDriver = testFabric.routingClientDriver();
 
         driverUtils = new DriverUtils( "mega" );
     }
@@ -82,15 +67,14 @@ class ErrorsEndToEndTest
     @AfterAll
     static void tearDown()
     {
-        testServer.stop();
-        clientDriver.close();
-        remote.close();
+        testFabric.close();
     }
 
     @Test
     void testUseErrorInEmbeddedApi()
     {
-        var err = assertThrows( Exception.class, () -> testServer.getDbms()
+        var err = assertThrows( Exception.class, () -> testFabric.getTestServer()
+                                                                 .getDbms()
                                                                  .database( "neo4j" )
                                                                  .executeTransactionally( "USE foo RETURN 1" ) );
         assertThat( err.getMessage() ).contains( "not available in embedded or http sessions" );
@@ -330,7 +314,7 @@ class ErrorsEndToEndTest
 
     private void verifyNoRemoteTransactions()
     {
-        var db = (GraphDatabaseAPI) remote.defaultDatabaseService();
+        var db = (GraphDatabaseAPI) testFabric.getShard( 0 ).defaultDatabaseService();
         var activeTransactions = db.getDependencyResolver().resolveDependency( KernelTransactions.class ).activeTransactions();
         assertEquals( Set.of(), activeTransactions );
     }

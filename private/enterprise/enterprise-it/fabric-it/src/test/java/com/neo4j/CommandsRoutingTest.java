@@ -7,8 +7,8 @@ package com.neo4j;
 
 import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ProxyFunctions;
-import com.neo4j.utils.ShardFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -18,22 +18,14 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.summary.ResultSummary;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -44,55 +36,20 @@ class CommandsRoutingTest
 {
 
     private static Driver clientDriver;
-    private static TestServer testServer;
-    private static Neo4j shard;
-    private static Driver shardDriver;
+    private static TestFabric testFabric;
     private static DriverUtils mega = new DriverUtils( "mega" );
     private static DriverUtils neo4j = new DriverUtils( "neo4j" );
     private static DriverUtils system = new DriverUtils( "system" );
 
     @BeforeAll
-    static void beforeAll() throws KernelException
+    static void beforeAll()
     {
-        shard = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
-
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", shard.boltURI().toString(),
-                "fabric.graph.0.name", "myGraph",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
-
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withShards( "myGraph" )
                 .build();
-        testServer = new TestServer( config );
 
-        testServer.start();
-
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
-        globalProceduresRegistry
-                .registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( ProxyFunctions.class );
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
-
-        shardDriver = GraphDatabase.driver(
-                shard.boltURI(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
+        clientDriver = testFabric.routingClientDriver();
 
         system.doInTx( clientDriver, tx ->
         {
@@ -108,12 +65,7 @@ class CommandsRoutingTest
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> clientDriver.close(),
-                () -> shardDriver.close(),
-                () -> shard.close()
-        ).parallelStream().forEach( Runnable::run );
+        testFabric.close();
     }
 
     // Index and Constraint tests

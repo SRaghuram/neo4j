@@ -68,6 +68,11 @@ public class TestServer implements AutoCloseable
         this.mocks.addAll( Arrays.asList( mocks ) );
     }
 
+    public void addMocks( List<Object> mocks )
+    {
+        this.mocks.addAll( mocks );
+    }
+
     public void setLogService( LogService logService )
     {
         this.logService = logService;

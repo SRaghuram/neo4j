@@ -8,10 +8,14 @@ package com.neo4j;
 import com.neo4j.fabric.auth.ExternalCredentialsProvider;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,48 +47,45 @@ import static org.neo4j.internal.kernel.api.security.AuthenticationResult.SUCCES
 class AuthTokenTest
 {
 
-    private final BoltGraphDatabaseManagementServiceSPI databaseManagementService = mock( BoltGraphDatabaseManagementServiceSPI.class );
-    private final BoltGraphDatabaseServiceSPI boltDatabaseService = mock( BoltGraphDatabaseServiceSPI.class );
-    private final EnterpriseAuthManager commercialAuthManager = mock( EnterpriseAuthManager.class );
-    private final EnterpriseLoginContext commercialLoginContext = mock( EnterpriseLoginContext.class );
-    private final AuthSubject authSubject = mock( AuthSubject.class );
-    private final ExternalCredentialsProvider credentialsProvider = new ExternalCredentialsProvider();
+    private static final BoltGraphDatabaseManagementServiceSPI databaseManagementService = mock( BoltGraphDatabaseManagementServiceSPI.class );
+    private static final BoltGraphDatabaseServiceSPI boltDatabaseService = mock( BoltGraphDatabaseServiceSPI.class );
+    private static final EnterpriseAuthManager commercialAuthManager = mock( EnterpriseAuthManager.class );
+    private static final EnterpriseLoginContext commercialLoginContext = mock( EnterpriseLoginContext.class );
+    private static final AuthSubject authSubject = mock( AuthSubject.class );
+    private static final ExternalCredentialsProvider credentialsProvider = new ExternalCredentialsProvider();
     private Driver driver;
-    private TestServer testServer;
+    private static TestFabric testFabric;
 
-    @BeforeEach
-    void setUp() throws InvalidAuthTokenException, UnavailableException
+    @BeforeAll
+    static void beforeAll() throws InvalidAuthTokenException, UnavailableException
     {
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
-
-        var config = org.neo4j.configuration.Config.newBuilder()
-                .setRaw( configProperties )
-                .build();
-
-        testServer = new TestServer( config );
-
-        testServer.addMocks( databaseManagementService, commercialAuthManager );
-
         when( commercialAuthManager.login( any() ) ).thenReturn( commercialLoginContext );
         when( commercialLoginContext.subject() ).thenReturn( authSubject );
         when( authSubject.getAuthenticationResult() ).thenReturn( SUCCESS );
 
-        testServer.start();
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .addMocks( databaseManagementService, commercialAuthManager )
+                .build();
+
         when( databaseManagementService.database( any() ) ).thenReturn( boltDatabaseService );
     }
 
     @AfterEach
-    void tearDown()
+    void afterEach()
     {
-        testServer.stop();
+        Mockito.clearInvocations( boltDatabaseService );
+
         if ( driver != null )
         {
             driver.close();
         }
+    }
+
+    @AfterAll
+    static void afterAll()
+    {
+        testFabric.close();
     }
 
     @Test
@@ -155,7 +156,7 @@ class AuthTokenTest
 
     private void createDriver( AuthToken authToken )
     {
-        driver = GraphDatabase.driver( testServer.getBoltDirectUri(), authToken, Config.builder()
+        driver = GraphDatabase.driver( testFabric.getBoltDirectUri(), authToken, Config.builder()
                 .withMaxConnectionPoolSize( 1 )
                 .withoutEncryption()
                 .build() );

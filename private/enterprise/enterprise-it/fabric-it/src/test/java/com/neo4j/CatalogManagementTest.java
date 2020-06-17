@@ -7,7 +7,8 @@ package com.neo4j;
 
 import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,17 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
@@ -34,62 +26,25 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 class CatalogManagementTest
 {
     private Driver clientDriver;
-    private TestServer testServer;
-    private Neo4j shard0;
-    private Neo4j shard1;
+    private TestFabric testFabric;
     private DriverUtils driverUtils;
 
     @BeforeEach
-    void beforeEach() throws KernelException
+    void beforeEach()
     {
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withShards( "remote1", "remote2" )
+                .build();
 
-        shard0 = Neo4jBuilders.newInProcessBuilder().build();
-        shard1 = Neo4jBuilders.newInProcessBuilder().build();
-
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", shard0.boltURI().toString(),
-                "fabric.graph.0.name", "remote1",
-                "fabric.graph.1.uri", shard1.boltURI().toString(),
-                "fabric.graph.1.name", "remote2",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
-
-        var config = Config.newBuilder()
-                           .setRaw( configProperties )
-                           .build();
-        testServer = new TestServer( config );
-
-        testServer.start();
-
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
-        globalProceduresRegistry
-                .registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( ProxyFunctions.class );
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                                       .withoutEncryption()
-                                       .withMaxConnectionPoolSize( 3 )
-                                       .build() );
-
+        clientDriver = testFabric.routingClientDriver();
         driverUtils = new DriverUtils( "mega" );
     }
 
     @AfterEach
     void afterEach()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> clientDriver.close(),
-                () -> shard0.close(),
-                () -> shard1.close()
-        ).parallelStream().forEach( Runnable::run );
+        testFabric.close();
     }
 
     @Test

@@ -5,13 +5,14 @@
  */
 package com.neo4j;
 
-import com.neo4j.configuration.FabricEnterpriseSettings;
 import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,9 +21,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -30,14 +31,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Transaction;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.executor.FabricException;
@@ -46,8 +42,8 @@ import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
@@ -81,14 +77,13 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
-@ExtendWith( FabricEverywhereExtension.class )
+@ExtendWith( {FabricEverywhereExtension.class, SuppressOutputExtension.class} )
 class FabricQueryLoggingTest
 {
     @Inject
     TestDirectory testDirectory;
 
-    private Config config;
-    private TestServer testServer;
+    private TestFabric testFabric;
     private Driver clientDriver;
     private final DriverPool driverPool = mock( DriverPool.class );
 
@@ -99,47 +94,38 @@ class FabricQueryLoggingTest
     private final DriverUtils mega = new DriverUtils( "mega" );
     private final DriverUtils neo4j = new DriverUtils( "neo4j" );
 
-    @AfterEach
-    void afterAll()
-    {
-        testServer.stop();
-        clientDriver.closeAsync();
-    }
-
     @BeforeEach
     void beforeEach()
     {
-        config = Config.newBuilder()
-                       .set( GraphDatabaseSettings.neo4j_home, testDirectory.homePath() )
-                       .set( FabricEnterpriseSettings.database_name, "mega" )
-                       .set( FabricEnterpriseSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
-                       .set( FabricEnterpriseSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )
-                       .set( BoltConnector.listen_address, new SocketAddress( "0.0.0.0", 0 ) )
-                       .set( BoltConnector.enabled, true )
-                       .set( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
-                       .build();
-
-        testServer = new TestServer( config, config.get( GraphDatabaseSettings.neo4j_home ) );
-
-        testServer.addMocks( driverPool );
-        testServer.start();
+        var additionalSettings = Map.of(
+                "dbms.directories.neo4j_home", testDirectory.homePath().toString(),
+                "dbms.logs.query.enabled", "VERBOSE",
+                "fabric.graph.0.uri", "bolt://localhost:1111",
+                "fabric.graph.1.uri", "bolt://localhost:2222"
+        );
 
         queryExecutionMonitor = new AssertableQueryExecutionMonitor.Monitor();
-        testServer.getDependencies().resolveDependency( Monitors.class )
-                  .addMonitorListener( queryExecutionMonitor );
 
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltDirectUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                                       .withMaxConnectionPoolSize( 3 )
-                                       .withoutEncryption()
-                                       .build() );
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalSettings )
+                .addMocks( driverPool )
+                .withQueryExecutionMonitor( queryExecutionMonitor )
+                .withHomeDir( testDirectory.homeDir().toPath() )
+                .build();
+
+        clientDriver = testFabric.directClientDriver();
 
         mockResult( graph0Result );
         mockResult( graph1Result );
 
         mockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) );
+    }
+
+    @AfterEach
+    void afterEach()
+    {
+        testFabric.close();
     }
 
     private static void mockResult( StatementResult statementResult )
@@ -394,7 +380,7 @@ class FabricQueryLoggingTest
 
         doInTx( neo4j, AccessMode.READ, tx -> tx.run( query ).consume() );
 
-        Path logFile = config.get( GraphDatabaseSettings.logs_directory ).resolve( "query.log" );
+        Path logFile = getQueryLog();
         assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile.toFile() ), TRUE, 1, MINUTES );
         List<String> logLines = readAllLines( logFile );
 
@@ -415,7 +401,7 @@ class FabricQueryLoggingTest
 
         doInTx( mega, AccessMode.READ, tx -> tx.run( query ).consume() );
 
-        Path logFile = config.get( GraphDatabaseSettings.logs_directory ).resolve( "query.log" );
+        Path logFile = getQueryLog();
         assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile.toFile() ), TRUE, 1, MINUTES );
         List<String> logLines = readAllLines( logFile );
         assertEquals( 6, logLines.size() ); //3 queries logged, start + end of each
@@ -427,6 +413,11 @@ class FabricQueryLoggingTest
                                   .map( m -> m.group( 1 ) )
                                   .collect( Collectors.toSet() );
         assertThat( ids, hasSize( 3 ) ); //has 3 started queries with unique ids
+    }
+
+    private Path getQueryLog()
+    {
+        return testDirectory.homeDir().toPath().resolve( GraphDatabaseSettings.logs_directory.defaultValue() ).resolve( "query.log" );
     }
 
     private Optional<String> dbName( ExecutingQuery query )

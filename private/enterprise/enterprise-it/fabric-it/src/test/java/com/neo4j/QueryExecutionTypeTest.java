@@ -7,30 +7,20 @@ package com.neo4j;
 
 import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ProxyFunctions;
-import com.neo4j.utils.ShardFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.summary.ResultSummary;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.server.security.auth.AuthProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.driver.summary.QueryType.READ_ONLY;
@@ -44,56 +34,22 @@ class QueryExecutionTypeTest
 {
 
     private static Driver mainDriver;
-    private static TestServer testServer;
-    private static Neo4j extA;
-    private static Driver extADriver;
+    private static TestFabric testFabric;
     private static final DriverUtils neo4j = new DriverUtils( "neo4j" );
     private static final DriverUtils fabric = new DriverUtils( "fabric" );
     private static final DriverUtils system = new DriverUtils( "system" );
 
     @BeforeAll
-    static void beforeAll() throws KernelException
+    static void beforeAll()
     {
-        extA = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "fabric" )
+                .withShards( "extA" )
+                // Un-comment to get debug log to console
+                // .withLogService( new SimpleLogService( new StdoutLogProvider()  )
+                .build();
 
-        var configProperties = Map.of(
-                "fabric.database.name", "fabric",
-                "fabric.graph.0.uri", extA.boltURI().toString(),
-                "fabric.graph.0.name", "extA",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true" );
-
-        var config = Config.newBuilder()
-                           .setRaw( configProperties )
-                           .build();
-        testServer = new TestServer( config );
-
-        // Un-comment to get debug log to console
-        // testServer.setLogService( new SimpleLogService( new StdoutLogProvider() ) );
-
-        testServer.start();
-
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
-        globalProceduresRegistry.registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry.registerProcedure( ProxyFunctions.class );
-        globalProceduresRegistry.registerProcedure( AuthProcedures.class );
-
-        mainDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                                       .withoutEncryption()
-                                       .withMaxConnectionPoolSize( 3 )
-                                       .build() );
-
-        extADriver = GraphDatabase.driver(
-                extA.boltURI(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                                       .withoutEncryption()
-                                       .withMaxConnectionPoolSize( 3 )
-                                       .build() );
+        mainDriver = testFabric.routingClientDriver();
 
         doInTx( mainDriver, system, tx ->
         {
@@ -106,12 +62,7 @@ class QueryExecutionTypeTest
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> mainDriver.close(),
-                () -> extADriver.close(),
-                () -> extA.close()
-        ).parallelStream().forEach( Runnable::run );
+        testFabric.close();
     }
 
     @Test

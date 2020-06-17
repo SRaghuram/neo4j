@@ -10,10 +10,13 @@ import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -33,12 +36,9 @@ import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
@@ -61,6 +61,7 @@ import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.time.SystemNanoClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -79,10 +80,11 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith( SuppressOutputExtension.class )
 class TransactionTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
+    private static TestFabric testFabric;
     private static final DriverPool driverPool = mock( DriverPool.class );
     private static final PooledDriver shard1Driver = mock( PooledDriver.class );
     private static final PooledDriver shard2Driver = mock( PooledDriver.class );
@@ -108,19 +110,12 @@ class TransactionTest
         var graph2 = new Location.Remote.External( 2, null, createUri( "bolt://somewhere:1002" ), null );
         var graph3 = new Location.Remote.External( 3, null, createUri( "bolt://somewhere:1003" ), null );
 
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
+        var additionalProperties = Map.of(
                 "fabric.graph.1.uri", "bolt://somewhere:1001",
                 "fabric.graph.2.uri", "bolt://somewhere:1002",
                 "fabric.graph.3.uri", "bolt://somewhere:1003",
-                "dbms.transaction.timeout", "120s",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
+                "dbms.transaction.timeout", "120s"
         );
-        var config = Config.newBuilder().setRaw( configProperties ).build();
-
-        testServer = new TestServer( config );
-        testServer.addMocks( driverPool, jobScheduler, databaseManagementService, fabricDatabaseManager, clock );
 
         JobHandle timeoutHandle = mock( JobHandle.class );
         when( jobScheduler.schedule( any(), any(), anyLong(), any() ) ).thenReturn( timeoutHandle );
@@ -130,14 +125,15 @@ class TransactionTest
         when( clock.nanos() ).thenReturn( System.nanoTime() );
         when( jobScheduler.scheduleRecurring( any(), timeoutCallback.capture(), anyLong(), any() ) ).thenReturn( mock( JobHandle.class ) );
 
-        testServer.start();
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalProperties )
+                .addMocks( driverPool, jobScheduler, databaseManagementService, fabricDatabaseManager, clock )
+                .build();
 
         mockFabricDatabaseManager();
 
-        clientDriver = GraphDatabase.driver( testServer.getBoltDirectUri(), AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withMaxConnectionPoolSize( 3 )
-                        .withoutEncryption().build() );
+        clientDriver = testFabric.directClientDriver();
 
         driverUtils = new DriverUtils( "mega" );
 
@@ -149,8 +145,7 @@ class TransactionTest
     @AfterAll
     static void afterAll()
     {
-        testServer.stop();
-        clientDriver.close();
+        testFabric.close();
         fabricWorkerExecutorService.shutdown();
     }
 

@@ -5,6 +5,8 @@
  */
 package com.neo4j;
 
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -20,10 +22,7 @@ import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.Bookmark;
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
@@ -44,14 +43,13 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
 class MixedBookmarkEndToEndTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
+    private static TestFabric testFabric;
     private static TestBoltServer remote1;
     private static TestBoltServer remote2;
 
     @BeforeAll
     static void beforeAll()
     {
-
         remote1 = new TestBoltServer();
         remote2 = new TestBoltServer();
 
@@ -60,36 +58,24 @@ class MixedBookmarkEndToEndTest
                 () -> remote2.start()
         ).parallelStream().forEach( Runnable::run );
 
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
+        var additionalProperties = Map.of(
                 "fabric.graph.0.uri", remote1.getBoltUri().toString(),
-                "fabric.graph.1.uri", remote2.getBoltUri().toString(),
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
+                "fabric.graph.1.uri", remote2.getBoltUri().toString()
         );
 
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalProperties )
                 .build();
-        testServer = new TestServer( config );
-        testServer.start();
 
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
+        clientDriver = testFabric.routingClientDriver();
     }
 
     @AfterAll
     static void afterAll()
     {
         List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> clientDriver.close(),
+                () -> testFabric.close(),
                 () -> remote1.stop(),
                 () -> remote2.stop()
         ).parallelStream().forEach( Runnable::run );

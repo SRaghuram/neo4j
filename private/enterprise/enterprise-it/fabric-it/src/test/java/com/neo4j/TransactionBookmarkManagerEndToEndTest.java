@@ -6,6 +6,8 @@
 package com.neo4j;
 
 import com.neo4j.test.routing.FabricEverywhereExtension;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,19 +30,16 @@ import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.bolt.v4.runtime.bookmarking.BookmarkWithDatabaseId;
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.fabric.bolt.FabricBookmark;
 import org.neo4j.fabric.bolt.FabricBookmarkParser;
-import org.neo4j.fabric.bookmark.TransactionBookmarkManagerImpl;
 import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManagerImpl;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.QueryExecutionType;
@@ -64,7 +63,7 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
 class TransactionBookmarkManagerEndToEndTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
+    private static TestFabric testFabric;
     private static TestBoltServer remote1;
 
     private static LocalGraphTransactionIdTracker localGraphTransactionIdTracker = mock(LocalGraphTransactionIdTracker.class);
@@ -77,33 +76,22 @@ class TransactionBookmarkManagerEndToEndTest
         remote1 = new TestBoltServer();
         remote1.start();
 
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
+        var additionalProperties = Map.of(
                 "fabric.graph.0.uri", remote1.getBoltUri().toString(),
                 "fabric.graph.0.name", "remote1",
                 "fabric.graph.1.uri", "bolt://somewhere:1234",
-                "fabric.graph.1.name", "remote2",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
+                "fabric.graph.1.name", "remote2"
         );
 
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalProperties )
+                .addMocks( transactionBookmarkManagerFactory )
                 .build();
-        testServer = new TestServer( config );
-        testServer.addMocks( transactionBookmarkManagerFactory );
-        testServer.start();
 
         when( transactionBookmarkManagerFactory.createTransactionBookmarkManager( any() ) ).thenReturn( bookmarkManager );
 
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltDirectUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
+        clientDriver = testFabric.directClientDriver();
 
         createDatabase( "local1" );
         createDatabase( "local2" );
@@ -113,8 +101,7 @@ class TransactionBookmarkManagerEndToEndTest
     static void afterAll()
     {
         List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> clientDriver.close(),
+                () -> testFabric.close(),
                 () -> remote1.stop()
         ).parallelStream().forEach( Runnable::run );
     }
@@ -164,7 +151,7 @@ class TransactionBookmarkManagerEndToEndTest
 
     private UUID getDatabaseUuid( String name )
     {
-        var fabricDatabaseManager = testServer.getDependencies().resolveDependency( FabricDatabaseManager.class );
+        var fabricDatabaseManager = testFabric.getTestServer().getDependencies().resolveDependency( FabricDatabaseManager.class );
         var namedDatabaseId = fabricDatabaseManager.databaseIdRepository().getByName( name ).get();
         return namedDatabaseId.databaseId().uuid();
     }

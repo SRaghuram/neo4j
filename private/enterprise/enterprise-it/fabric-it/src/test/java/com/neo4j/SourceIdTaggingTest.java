@@ -7,31 +7,24 @@ package com.neo4j;
 
 import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ShardFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.fabric.stream.SourceTagging;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
@@ -41,9 +34,7 @@ class SourceIdTaggingTest
 {
 
     private static Driver mainDriver;
-    private static TestServer testServer;
-    private static Neo4j extA;
-    private static Neo4j extB;
+    private static TestFabric testFabric;
     private static Driver extADriver;
     private static Driver extBDriver;
     private static DriverUtils intA = new DriverUtils( "intA" );
@@ -53,34 +44,18 @@ class SourceIdTaggingTest
     private static DriverUtils system = new DriverUtils( "system" );
 
     @BeforeAll
-    static void beforeAll() throws KernelException
+    static void beforeAll()
     {
-        extA = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
-        extB = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "fabric" )
+                .withShards( "extA", "extB" )
+                // Un-comment to get debug log to console
+                // .withLogService( new SimpleLogService( new StdoutLogProvider() ) )
+                .build();
 
-        var configProperties = Map.of(
-                "fabric.database.name", "fabric",
-                "fabric.graph.0.uri", extA.boltURI().toString(),
-                "fabric.graph.0.name", "extA",
-                "fabric.graph.1.uri", extB.boltURI().toString(),
-                "fabric.graph.1.name", "extB",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true" );
-
-        var config = Config.newBuilder()
-                           .setRaw( configProperties )
-                           .build();
-        testServer = new TestServer( config );
-
-        // Un-comment to get debug log to console
-        // testServer.setLogService( new SimpleLogService( new StdoutLogProvider() ) );
-
-        testServer.start();
-
-        mainDriver = driverTo( testServer.getBoltRoutingUri() );
-        extADriver = driverTo( extA.boltURI() );
-        extBDriver = driverTo( extB.boltURI() );
+        mainDriver = testFabric.routingClientDriver();
+        extADriver = testFabric.driverForShard( 0 );
+        extBDriver = testFabric.driverForShard( 1 );
 
         doInTx( mainDriver, system, tx ->
         {
@@ -88,17 +63,6 @@ class SourceIdTaggingTest
             tx.run( "CREATE DATABASE intB" ).consume();
             tx.commit();
         } );
-    }
-
-    private static Driver driverTo( URI boltUri )
-    {
-        return GraphDatabase.driver(
-                boltUri,
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                                       .withoutEncryption()
-                                       .withMaxConnectionPoolSize( 3 )
-                                       .build() );
     }
 
     @BeforeEach
@@ -136,14 +100,7 @@ class SourceIdTaggingTest
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> mainDriver.close(),
-                () -> extADriver.close(),
-                () -> extBDriver.close(),
-                () -> extA.close(),
-                () -> extB.close()
-        ).parallelStream().forEach( Runnable::run );
+       testFabric.close();
     }
 
     @Test

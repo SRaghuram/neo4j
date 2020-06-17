@@ -5,32 +5,29 @@
  */
 package com.neo4j;
 
-import com.neo4j.configuration.FabricEnterpriseSettings;
 import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.utils.DriverUtils;
-import org.junit.jupiter.api.AfterEach;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
@@ -50,10 +47,7 @@ import org.neo4j.graphdb.impl.notification.NotificationCode;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.monitoring.Monitors;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
@@ -74,71 +68,58 @@ import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 class FabricExecutorTest
 {
-    @Inject
-    TestDirectory testDirectory;
 
-    private Config config;
-    private TestServer testServer;
-    private Driver clientDriver;
-    private DriverPool driverPool = mock( DriverPool.class );
+    private static TestFabric testFabric;
+    private static Driver clientDriver;
+    private static DriverPool driverPool = mock( DriverPool.class );
+    private static AssertableLogProvider internalLogProvider;
+    private static DriverUtils driverUtils;
 
     private ArgumentCaptor<org.neo4j.bolt.runtime.AccessMode> accessModeArgument = ArgumentCaptor.forClass( org.neo4j.bolt.runtime.AccessMode.class );
     private final AutoCommitStatementResult graph0Result = mock( AutoCommitStatementResult.class );
     private final AutoCommitStatementResult graph1Result = mock( AutoCommitStatementResult.class );
-    private AssertableLogProvider internalLogProvider;
-    private AssertableQueryExecutionMonitor.Monitor queryExecutionMonitor;
-    private DriverUtils driverUtils;
 
-    @AfterEach
-    void afterAll()
+    @BeforeAll
+    static void beforeAll()
     {
-        testServer.stop();
-        clientDriver.closeAsync();
+        var additionalSettings = Map.of(
+                "dbms.logs.query.enabled", "VERBOSE",
+                "fabric.graph.0.uri", "bolt://localhost:1111",
+                "fabric.graph.1.uri", "bolt://localhost:2222"
+        );
+
+        internalLogProvider = new AssertableLogProvider();
+
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalSettings )
+                .addMocks( driverPool )
+                .withLogService( new SimpleLogService( NullLogProvider.getInstance(), internalLogProvider ) )
+                .build();
+
+        clientDriver = testFabric.directClientDriver();
+
+        driverUtils = new DriverUtils( "mega" );
     }
 
     @BeforeEach
     void beforeEach()
     {
-        config = Config.newBuilder()
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homePath() )
-                .set( FabricEnterpriseSettings.database_name, "mega" )
-                .set( FabricEnterpriseSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
-                .set( FabricEnterpriseSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )
-                .set( BoltConnector.listen_address, new SocketAddress( "0.0.0.0", 0 ) )
-                .set( BoltConnector.enabled, true )
-                .set( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
-                .build();
-
-        testServer = new TestServer( config, config.get( GraphDatabaseSettings.neo4j_home ) );
-
-        testServer.addMocks( driverPool );
-        internalLogProvider = new AssertableLogProvider();
-        testServer.setLogService( new SimpleLogService( NullLogProvider.getInstance(), internalLogProvider ) );
-        testServer.start();
-
-        queryExecutionMonitor = new AssertableQueryExecutionMonitor.Monitor();
-        testServer.getDependencies().resolveDependency( Monitors.class )
-                .addMonitorListener( queryExecutionMonitor );
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltDirectUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withMaxConnectionPoolSize( 3 )
-                        .withoutEncryption()
-                        .build() );
-
-        driverUtils = new DriverUtils( "mega" );
-
         mockResult( graph0Result );
         mockResult( graph1Result );
 
         internalLogProvider.clear();
 
         mockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) );
+    }
+
+    @AfterAll
+    static void afterAll()
+    {
+        testFabric.close();
     }
 
     private static void mockResult( StatementResult statementResult )

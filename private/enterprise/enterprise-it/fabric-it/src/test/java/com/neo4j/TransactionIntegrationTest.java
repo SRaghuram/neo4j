@@ -5,8 +5,8 @@
  */
 package com.neo4j;
 
-import com.neo4j.harness.EnterpriseNeo4jBuilders;
-import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +25,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
@@ -38,14 +36,12 @@ import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxTransaction;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.fabric.transaction.TransactionManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -60,9 +56,7 @@ import static org.neo4j.internal.helpers.Strings.joinAsLines;
 class TransactionIntegrationTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
-    private static Neo4j remote0;
-    private static Neo4j remote1;
+    private static TestFabric testFabric;
     private static Driver shard0Driver;
     private static Driver shard1Driver;
 
@@ -72,43 +66,33 @@ class TransactionIntegrationTest
     private final TransactionEventCountingListener remote1Listener = new TransactionEventCountingListener();
 
     @BeforeAll
-    static void beforeAll() throws KernelException
+    static void beforeAll()
     {
+        var additionalShardSettings = Map.of(
+                "dbms.security.auth_enabled", "true"
+        );
 
-        remote0 = EnterpriseNeo4jBuilders.newInProcessBuilder()
-                                         .withConfig( GraphDatabaseSettings.auth_enabled, true )
-                                         .build();
-        remote1 = EnterpriseNeo4jBuilders.newInProcessBuilder()
-                                         .withConfig( GraphDatabaseSettings.auth_enabled, true )
-                                         .build();
-
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", remote0.boltURI().toString(),
-                "fabric.graph.1.uri", remote1.boltURI().toString(),
+        var additionalSettings = Map.of(
                 "fabric.driver.connection.encrypted", "false",
                 "fabric.stream.buffer.low_watermark", "1",
                 "fabric.stream.batch_size", "1",
                 "fabric.stream.buffer.size", "10",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true",
                 "dbms.security.auth_enabled", "true"
         );
 
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withShards( 2 )
+                .withAdditionalShardSettings( additionalShardSettings )
+                .withAdditionalSettings( additionalSettings )
                 .build();
-        testServer = new TestServer( config );
 
-        testServer.start();
-
-        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
-                .registerFunction( ProxyFunctions.class );
+        var testServer = testFabric.getTestServer();
 
         var localDbms = testServer.getDependencies().resolveDependency( DatabaseManagementService.class );
         createUser( localDbms );
-        createUser( remote0.databaseManagementService() );
-        createUser( remote1.databaseManagementService() );
+        createUser( testFabric.getShard( 0 ).databaseManagementService() );
+        createUser( testFabric.getShard( 1 ).databaseManagementService() );
 
         clientDriver = GraphDatabase.driver(
                 testServer.getBoltRoutingUri(),
@@ -119,14 +103,14 @@ class TransactionIntegrationTest
                         .build() );
 
         shard0Driver = GraphDatabase.driver(
-                remote0.boltURI(),
+                testFabric.getShard( 0 ).boltURI(),
                 AuthTokens.basic( "myUser", "hello" ),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
         shard1Driver = GraphDatabase.driver(
-                remote1.boltURI(),
+                testFabric.getShard( 1 ).boltURI(),
                 AuthTokens.basic( "myUser", "hello" ),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()
@@ -151,8 +135,8 @@ class TransactionIntegrationTest
             tx.commit();
         }
 
-        remote0.databaseManagementService().registerTransactionEventListener( "neo4j", remote0Listener );
-        remote1.databaseManagementService().registerTransactionEventListener( "neo4j", remote1Listener );
+        testFabric.getShard( 0 ).databaseManagementService().registerTransactionEventListener( "neo4j", remote0Listener );
+        testFabric.getShard( 1 ).databaseManagementService().registerTransactionEventListener( "neo4j", remote1Listener );
     }
 
     @AfterAll
@@ -161,12 +145,10 @@ class TransactionIntegrationTest
         executorService.shutdownNow();
 
         List.<Runnable>of(
-                () -> testServer.stop(),
+                () -> testFabric.close(),
                 () -> clientDriver.close(),
                 () -> shard0Driver.close(),
-                () -> shard1Driver.close(),
-                () -> remote0.close(),
-                () -> remote1.close()
+                () -> shard1Driver.close()
         ).parallelStream().forEach( Runnable::run );
     }
 
@@ -448,6 +430,7 @@ class TransactionIntegrationTest
             assertEquals( 2, runningTransactionsByMarker( clientDriver, "tx1" ) );
             assertEquals( 1, runningTransactionsByMarker( shard0Driver, "tx1" ) );
 
+            var testServer = testFabric.getTestServer();
             var transactionManager = testServer.getDependencies().resolveDependency( TransactionManager.class );
             var compositeTransaction = transactionManager.getOpenTransactions().stream()
                                                          .filter( compositeTx -> "tx1"
@@ -499,8 +482,8 @@ class TransactionIntegrationTest
     private void verifyNoOpenTransactions()
     {
         verifyNoFabricTransactions();
-        verifyNoRemoteTransactions( remote0 );
-        verifyNoRemoteTransactions( remote1 );
+        verifyNoRemoteTransactions( testFabric.getShard( 0 ) );
+        verifyNoRemoteTransactions( testFabric.getShard( 1 ) );
     }
 
     private void verifyNoFabricTransactions()
@@ -512,7 +495,7 @@ class TransactionIntegrationTest
 
     private DatabaseManagementService getFabricDbms()
     {
-        return testServer.getDependencies().resolveDependency( DatabaseManagementService.class );
+        return testFabric.getTestServer().getDependencies().resolveDependency( DatabaseManagementService.class );
     }
 
     private void verifyNoRemoteTransactions( Neo4j remote )
@@ -585,7 +568,7 @@ class TransactionIntegrationTest
 
     private static void createDatabase( String name )
     {
-        var localDbms = testServer.getDependencies().resolveDependency( DatabaseManagementService.class );
+        var localDbms = testFabric.getTestServer().getDependencies().resolveDependency( DatabaseManagementService.class );
         var systemDb = localDbms.database( "system" );
         systemDb.executeTransactionally( "CREATE DATABASE " + name );
     }

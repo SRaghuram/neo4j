@@ -6,13 +6,14 @@
 package com.neo4j;
 
 import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -20,10 +21,6 @@ import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,29 +34,21 @@ class PermissionsEndToEndTest
     private static Driver adminDriver;
     private static Driver accessDriver;
     private static Driver noPermissionDriver;
-    private static TestServer testServer;
-    private static Neo4j remote;
+    private static TestFabric testFabric;
 
     @BeforeAll
-    static void setUp() throws KernelException
+    static void setUp()
     {
+        var additionalProperties = Map.of(
+                "dbms.security.auth_enabled", "true"
+        );
 
-        remote = Neo4jBuilders.newInProcessBuilder()
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withShards( 1 )
+                .withAdditionalSettings( additionalProperties )
+                .registerFuncOrProc( ProxyFunctions.class )
                 .build();
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", remote.boltURI().toString(),
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true",
-                "dbms.security.auth_enabled", "true" );
-        var config = Config.newBuilder().setRaw( configProperties ).build();
-        testServer = new TestServer( config );
-
-        testServer.start();
-
-        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
-                .registerFunction( ProxyFunctions.class );
 
         try ( var initDriver = createDriver( "neo4j", "neo4j" ) )
         {
@@ -90,7 +79,7 @@ class PermissionsEndToEndTest
     @AfterAll
     static void tearDown()
     {
-        testServer.stop();
+        testFabric.close();
         if ( adminDriver != null )
         {
             adminDriver.close();
@@ -105,8 +94,6 @@ class PermissionsEndToEndTest
         {
             noPermissionDriver.close();
         }
-
-        remote.close();
     }
 
     @Test
@@ -235,7 +222,7 @@ class PermissionsEndToEndTest
     private static Driver createDriver( String user, String password )
     {
         return GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
+                testFabric.getBoltRoutingUri(),
                 AuthTokens.basic( user, password ),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )

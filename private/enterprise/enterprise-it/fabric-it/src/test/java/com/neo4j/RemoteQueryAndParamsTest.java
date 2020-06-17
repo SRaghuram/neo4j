@@ -5,46 +5,37 @@
  */
 package com.neo4j;
 
-import com.neo4j.configuration.FabricEnterpriseSettings;
 import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.utils.DriverUtils;
-import org.junit.jupiter.api.AfterEach;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import scala.Option;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Transaction;
 import org.neo4j.fabric.eval.Catalog;
 import org.neo4j.fabric.eval.CatalogManager;
 import org.neo4j.fabric.executor.Location;
-import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.string.UTF8;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.MapValue;
@@ -60,53 +51,46 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static scala.collection.JavaConverters.asScalaBuffer;
 
-@TestDirectoryExtension
 class RemoteQueryAndParamsTest
 {
-    @Inject
-    TestDirectory testDirectory;
 
-    private TestServer testServer;
-    private Driver clientDriver;
+    private static TestFabric testFabric;
+    private static Driver clientDriver;
+    private static DriverPool driverPool = mock( DriverPool.class );
+    private static final DriverUtils driverUtils = new DriverUtils( "mega" );
+
     private FabricDriverTransaction remoteTx;
-    private AutoCommitStatementResult remoteResult;
-    private final DriverUtils driverUtils = new DriverUtils( "mega" );
 
-    @AfterEach
-    void afterAll()
+    @BeforeAll
+    static void beforeAll()
     {
-        testServer.stop();
-        clientDriver.closeAsync();
+        var additionalSettings = Map.of(
+                "fabric.graph.0.uri", "bolt://localhost:1111",
+                "fabric.graph.1.uri", "bolt://localhost:2222"
+        );
+
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalSettings )
+                .addMocks( driverPool, new TestCatalogManager() )
+                .build();
+
+        clientDriver = testFabric.directClientDriver();
     }
 
     @BeforeEach
     void beforeEach()
     {
-        Config config = Config.newBuilder()
-                              .set( GraphDatabaseSettings.neo4j_home, testDirectory.homePath() )
-                              .set( FabricEnterpriseSettings.database_name, "mega" )
-                              .set( FabricEnterpriseSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
-                              .set( FabricEnterpriseSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )
-                              .set( BoltConnector.listen_address, new SocketAddress( "0.0.0.0", 0 ) )
-                              .set( BoltConnector.enabled, true )
-                              .set( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
-                              .build();
+        remoteTx = createMockFabricDriverTransaction( mockResult() );
+        PooledDriver driver = mock( PooledDriver.class );
+        when( driver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( Mono.just( remoteTx ) );
+        doReturn( driver ).when( driverPool ).getDriver( any(), any() );
+    }
 
-        testServer = new TestServer( config, config.get( GraphDatabaseSettings.neo4j_home ) );
-
-        remoteResult = mockResult();
-        remoteTx = createMockFabricDriverTransaction( remoteResult );
-        testServer.addMocks( createMockDriverPool( createMockDriver( remoteTx ) ) );
-        testServer.addMocks( new TestCatalogManager() );
-        testServer.start();
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltDirectUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                                       .withMaxConnectionPoolSize( 3 )
-                                       .withoutEncryption()
-                                       .build() );
+    @AfterAll
+    static void afterAll()
+    {
+        testFabric.close();
     }
 
     private static AutoCommitStatementResult mockResult()
@@ -119,23 +103,7 @@ class RemoteQueryAndParamsTest
         return statementResult;
     }
 
-    private DriverPool createMockDriverPool( PooledDriver driver )
-    {
-        DriverPool driverPool = mock( DriverPool.class );
-        doReturn( driver ).when( driverPool ).getDriver( any(), any() );
-
-        return driverPool;
-    }
-
-    private PooledDriver createMockDriver( FabricDriverTransaction tx )
-    {
-        PooledDriver mockDriver = mock( PooledDriver.class );
-
-        when( mockDriver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( Mono.just( tx ) );
-        return mockDriver;
-    }
-
-    private FabricDriverTransaction createMockFabricDriverTransaction( StatementResult mockStatementResult )
+    private static FabricDriverTransaction createMockFabricDriverTransaction( StatementResult mockStatementResult )
     {
         FabricDriverTransaction tx = mock( FabricDriverTransaction.class );
 
@@ -236,16 +204,6 @@ class RemoteQueryAndParamsTest
         final AnyValue[] vals = map.values().stream().map( Values::of ).collect( Collectors.toList() ).toArray( new AnyValue[]{} );
 
         return VirtualValues.map( keys, vals );
-    }
-
-    private Flux<org.neo4j.fabric.stream.Record> recs( org.neo4j.fabric.stream.Record... records )
-    {
-        return Flux.just( records );
-    }
-
-    private org.neo4j.fabric.stream.Record rec( AnyValue... vals )
-    {
-        return Records.of( vals );
     }
 
     private void doInMegaTx( AccessMode mode, Consumer<Transaction> workload )

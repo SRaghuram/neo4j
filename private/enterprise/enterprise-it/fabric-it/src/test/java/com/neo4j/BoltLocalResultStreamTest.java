@@ -5,69 +5,45 @@
  */
 package com.neo4j;
 
-import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Flux;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxTransaction;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class BoltLocalResultStreamTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
+    private static TestFabric testFabric;
 
     @BeforeAll
-    static void setUp() throws KernelException
+    static void setUp()
     {
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", "neo4j://somewhere:6666",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .build();
 
-        Config config = Config.newBuilder().setRaw( configProperties ).build();
-        testServer = new TestServer( config );
-
-        testServer.start();
-
-        testServer.getDependencies().resolveDependency( GlobalProcedures.class )
-                .registerFunction( ProxyFunctions.class );
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withMaxConnectionPoolSize( 3 )
-                        .withoutEncryption()
-                        .build() );
+        clientDriver = testFabric.routingClientDriver();
     }
 
     @AfterAll
     static void tearDown()
     {
-        testServer.stop();
-        clientDriver.closeAsync();
+        testFabric.close();
     }
 
     @Test

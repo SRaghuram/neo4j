@@ -6,7 +6,8 @@
 package com.neo4j;
 
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,17 +24,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.fabric.executor.FabricRemoteExecutor;
 import org.neo4j.fabric.stream.Record;
 import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.fabric.stream.summary.EmptySummary;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.values.storable.Values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +42,7 @@ import static org.neo4j.internal.helpers.Strings.joinAsLines;
 class ExecutorConcurrencyTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
+    private static TestFabric testFabric;
 
     private static FabricRemoteExecutor remoteExecutor = mock( FabricRemoteExecutor.class );
     private static DriverUtils driverUtils;
@@ -55,46 +51,27 @@ class ExecutorConcurrencyTest
     private final FabricRemoteExecutor.RemoteTransactionContext fabricRemoteTransactionContext = mock( FabricRemoteExecutor.RemoteTransactionContext.class );
 
     @BeforeAll
-    static void beforeAll() throws KernelException
+    static void beforeAll()
     {
 
-        Map<String,String> configProperties = new HashMap<>();
-        configProperties.put( "fabric.database.name", "mega" );
-        configProperties.put( "fabric.graph.0.uri", "bolt://mega:1000" );
-        configProperties.put( "fabric.graph.1.uri", "bolt://mega:1001" );
-        configProperties.put( "fabric.graph.2.uri", "bolt://mega:1002" );
-        configProperties.put( "fabric.graph.3.uri", "bolt://mega:1003" );
-        configProperties.put( "fabric.graph.4.uri", "bolt://mega:1004" );
-        configProperties.put( "fabric.driver.connection.encrypted", "false" );
-        configProperties.put( "dbms.connector.bolt.listen_address", "0.0.0.0:0" );
-        configProperties.put( "dbms.connector.bolt.enabled", "true" );
-        configProperties.put( "fabric.stream.concurrency", "3" );
-        configProperties.put( "fabric.stream.batch_size", "6" );
-        configProperties.put( "fabric.stream.buffer.size", "6" );
-        configProperties.put( "fabric.stream.buffer.low_watermark", "0" );
+        Map<String,String> additionalConfigProperties = new HashMap<>();
+        additionalConfigProperties.put( "fabric.graph.0.uri", "bolt://mega:1000" );
+        additionalConfigProperties.put( "fabric.graph.1.uri", "bolt://mega:1001" );
+        additionalConfigProperties.put( "fabric.graph.2.uri", "bolt://mega:1002" );
+        additionalConfigProperties.put( "fabric.graph.3.uri", "bolt://mega:1003" );
+        additionalConfigProperties.put( "fabric.graph.4.uri", "bolt://mega:1004" );
+        additionalConfigProperties.put( "fabric.stream.concurrency", "3" );
+        additionalConfigProperties.put( "fabric.stream.batch_size", "6" );
+        additionalConfigProperties.put( "fabric.stream.buffer.size", "6" );
+        additionalConfigProperties.put( "fabric.stream.buffer.low_watermark", "0" );
 
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withAdditionalSettings( additionalConfigProperties )
+                .addMocks( remoteExecutor )
                 .build();
-        testServer = new TestServer( config );
-        testServer.addMocks( remoteExecutor );
 
-        testServer.start();
-
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
-        globalProceduresRegistry
-                .registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( ProxyFunctions.class );
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
-
+        clientDriver = testFabric.routingClientDriver();
         driverUtils = new DriverUtils( "mega" );
     }
 
@@ -127,10 +104,7 @@ class ExecutorConcurrencyTest
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> clientDriver.close()
-        ).parallelStream().forEach( Runnable::run );
+        testFabric.close();
     }
 
     @Test

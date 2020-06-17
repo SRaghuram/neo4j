@@ -6,11 +6,14 @@
 package com.neo4j;
 
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -20,17 +23,13 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.exceptions.DatabaseException;
@@ -51,6 +50,7 @@ import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
@@ -67,12 +67,13 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith( SuppressOutputExtension.class )
 class BoltAdapterTest
 {
 
     private static FabricExecutor fabricExecutor = mock( FabricExecutor.class );
     private static TransactionManager transactionManager = mock( TransactionManager.class );
-    private static TestServer testServer;
+    private static TestFabric testFabric;
     private static Driver driver;
     private static FabricConfig fabricConfig;
     private static DriverUtils driverUtils;
@@ -85,17 +86,6 @@ class BoltAdapterTest
     @BeforeAll
     static void setUpServer() throws UnavailableException
     {
-        var configProperties = Map.of(
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
-
-        var config = org.neo4j.configuration.Config.newBuilder()
-                .setRaw( configProperties )
-                .build();
-
-        testServer = new TestServer( config );
-
         fabricConfig = mock( FabricConfig.class );
         FabricDatabaseManager databaseManager = mock( FabricDatabaseManager.class );
 
@@ -107,12 +97,12 @@ class BoltAdapterTest
         var transactionIdTracker = mock( LocalGraphTransactionIdTracker.class);
         var databaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, fabricConfig, transactionManager, databaseManager,
                 transactionIdTracker, new TransactionBookmarkManagerFactory( databaseManager ) );
-        testServer.addMocks( databaseManagementService, databaseManager );
-        testServer.start();
-        driver = GraphDatabase.driver( testServer.getBoltDirectUri(), AuthTokens.none(), Config.builder()
-                .withMaxConnectionPoolSize( 3 )
-                .withoutEncryption()
-                .build() );
+
+        testFabric = new TestFabricFactory()
+                .addMocks( databaseManagementService, databaseManager )
+                .build();
+
+        driver = testFabric.directClientDriver();
 
         driverUtils = new DriverUtils( "mega" );
     }
@@ -141,8 +131,7 @@ class BoltAdapterTest
     @AfterAll
     static void tearDownServer()
     {
-        testServer.stop();
-        driver.close();
+        testFabric.close();
     }
 
     @Test

@@ -7,6 +7,8 @@ package com.neo4j;
 
 import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,22 +16,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.summary.Notification;
 import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.summary.ResultSummary;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.api.exceptions.Status;
 
 import static com.neo4j.test.routing.ResultSummaryTestUtils.plan;
@@ -46,8 +41,7 @@ import static org.neo4j.internal.helpers.Strings.joinAsLines;
 class ResultSummaryEndToEndTest
 {
     private static Driver clientDriver;
-    private static TestServer testServer;
-    private static Neo4j shard0;
+    private static TestFabric testFabric;
     private static Driver shard0Driver;
     private static DriverUtils fooDriverUtils;
     private static DriverUtils megaDriverUtils;
@@ -55,39 +49,14 @@ class ResultSummaryEndToEndTest
     @BeforeAll
     static void beforeAll()
     {
-        shard0 = Neo4jBuilders.newInProcessBuilder().build();
-
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", shard0.boltURI().toString(),
-                "fabric.graph.0.name", "remote1",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
-
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withShards( "remote1" )
                 .build();
-        testServer = new TestServer( config );
 
-        testServer.start();
+        clientDriver = testFabric.routingClientDriver();
 
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
-
-        shard0Driver = GraphDatabase.driver(
-                shard0.boltURI(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
+        shard0Driver = testFabric.driverForShard( 0 );
 
         try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "system" ).build() ) )
         {
@@ -121,12 +90,7 @@ class ResultSummaryEndToEndTest
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> clientDriver.close(),
-                () -> shard0Driver.close(),
-                () -> shard0.close()
-        ).parallelStream().forEach( Runnable::run );
+        testFabric.close();
     }
 
     @Test

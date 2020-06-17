@@ -8,6 +8,8 @@ package com.neo4j;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
 import com.neo4j.utils.ShardFunctions;
+import com.neo4j.utils.TestFabric;
+import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,20 +28,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.types.Node;
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,67 +45,26 @@ import static org.neo4j.internal.helpers.collection.Iterables.stream;
 class EndToEndTest
 {
 
+    private static TestFabric testFabric;
+
     private static Driver clientDriver;
-    private static TestServer testServer;
-    private static Neo4j shard0;
-    private static Neo4j shard1;
     private static Driver shard0Driver;
     private static Driver shard1Driver;
     private static DriverUtils driverUtils;
 
     @BeforeAll
-    static void beforeAll() throws KernelException
+    static void beforeAll()
     {
-
-        shard0 = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
-        shard1 = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
-
-        var configProperties = Map.of(
-                "fabric.database.name", "mega",
-                "fabric.graph.0.uri", shard0.boltURI().toString(),
-                "fabric.graph.0.name", "myGraph0",
-                "fabric.graph.1.uri", shard1.boltURI().toString(),
-                "fabric.graph.1.name", "myGraph1",
-                "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
-        );
-
-        var config = Config.newBuilder()
-                .setRaw( configProperties )
+        testFabric = new TestFabricFactory()
+                .withFabricDatabase( "mega" )
+                .withShards( "myGraph0", "myGraph1" )
+                .registerShardFuncOrProc( ShardFunctions.class )
+                .registerFuncOrProc( ProxyFunctions.class )
                 .build();
-        testServer = new TestServer( config );
 
-        testServer.start();
-
-        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
-        globalProceduresRegistry
-                .registerFunction( ProxyFunctions.class );
-        globalProceduresRegistry
-                .registerProcedure( ProxyFunctions.class );
-
-        clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
-
-        shard0Driver = GraphDatabase.driver(
-                shard0.boltURI(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
-        shard1Driver = GraphDatabase.driver(
-                shard1.boltURI(),
-                AuthTokens.none(),
-                org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
+        clientDriver = testFabric.routingClientDriver();
+        shard0Driver = testFabric.driverForShard( 0 );
+        shard1Driver = testFabric.driverForShard( 1 );
 
         driverUtils = new DriverUtils( "mega" );
     }
@@ -137,14 +91,7 @@ class EndToEndTest
     @AfterAll
     static void afterAll()
     {
-        List.<Runnable>of(
-                () -> testServer.stop(),
-                () -> clientDriver.close(),
-                () -> shard0Driver.close(),
-                () -> shard1Driver.close(),
-                () -> shard0.close(),
-                () -> shard1.close()
-        ).parallelStream().forEach( Runnable::run );
+        testFabric.close();
     }
 
     @Test
