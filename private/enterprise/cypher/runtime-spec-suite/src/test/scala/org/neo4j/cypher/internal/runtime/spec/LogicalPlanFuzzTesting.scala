@@ -94,14 +94,14 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
   )
 
   // Start tx with runtimeTestSupport, create data
-  private val (tx, txContext) = {
+  private val (tx, txContext, nodes, rels) = {
     // Create the data (all executors use the same database instance)
     runtimeTestSupport.start()
     runtimeTestSupport.startTx()
-    LogicalPlanFuzzTesting.createData(runtimeTestSupport, graphConfig)
+    val (nodes, rels) = LogicalPlanFuzzTesting.createData(runtimeTestSupport, graphConfig)
     // Commit and get a new TX. Keep it around, it is used when generating plans.
     runtimeTestSupport.restartTx()
-    (runtimeTestSupport.tx, runtimeTestSupport.txContext)
+    (runtimeTestSupport.tx, runtimeTestSupport.txContext, nodes, rels)
   }
   // Also start runtimeTestSupportNoFusion
   runtimeTestSupportNoFusion.start()
@@ -114,7 +114,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     managementService.shutdown()
   }
 
-  private val generator = LogicalQueryGenerator.logicalQuery(txContext, maxCost)
+  private val generator = LogicalQueryGenerator.logicalQuery(txContext, maxCost, nodes, rels)
 
   Range(0, iterationCount).foldLeft(initialSeed) {
     (seed: Seed, iter: Int) =>
@@ -286,26 +286,30 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
 }
 
 object LogicalPlanFuzzTesting {
-  def createData[CONTEXT <: RuntimeContext](graphCreation: RuntimeTestSupport[CONTEXT] with GraphCreation[CONTEXT], graphConfig: String): Unit = {
+  def createData[CONTEXT <: RuntimeContext](graphCreation: RuntimeTestSupport[CONTEXT] with GraphCreation[CONTEXT], graphConfig: String): (Seq[Node], Seq[Relationship]) = {
     createLabelsAndRelationships(graphCreation)
 
     graphConfig.toUpperCase match {
-      case "EMPTY" =>
+      case "EMPTY" => (Seq.empty, Seq.empty)
       case "TWO_NODES" =>
-        graphCreation.nodeGraph(2, "Label")
+        (graphCreation.nodeGraph(2, "Label"), Seq.empty)
       case "TWO_NODES_WITH_RELATIONSHIP" =>
         val nodes = graphCreation.nodeGraph(2, "Label")
-        graphCreation.connect(nodes, Seq((0, 1, "AB")))
+        val rels = graphCreation.connect(nodes, Seq((0, 1, "AB")))
+        (nodes, rels)
       case "DEFAULT" =>
         defaultGraph(graphCreation)
     }
   }
 
-  private def defaultGraph[CONTEXT <: RuntimeContext](graphCreation: GraphCreation[CONTEXT]) = {
-    graphCreation.bidirectionalBipartiteGraph(10, "A", "B", "AB", "BA")
-    graphCreation.nodeGraph(10, "A")
-    graphCreation.nodeGraph(12, "B")
-    graphCreation.nodeGraph(5, "C")
+  private def defaultGraph[CONTEXT <: RuntimeContext](graphCreation: GraphCreation[CONTEXT]): (Seq[Node], Seq[Relationship]) = {
+    val (nodesLeft, nodesRight, relsLeft, relsRight) = graphCreation.bidirectionalBipartiteGraph(10, "A", "B", "AB", "BA")
+    val nodes = nodesLeft ++ nodesRight ++
+      graphCreation.nodeGraph(10, "A") ++
+      graphCreation.nodeGraph(12, "B") ++
+      graphCreation.nodeGraph(5, "C")
+
+    (nodes, relsLeft ++ relsRight)
   }
 
   private def createLabelsAndRelationships[CONTEXT <: RuntimeContext](graphCreation: RuntimeTestSupport[CONTEXT] with GraphCreation[CONTEXT]) = {
