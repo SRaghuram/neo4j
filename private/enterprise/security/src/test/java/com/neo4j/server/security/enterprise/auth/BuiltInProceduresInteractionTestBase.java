@@ -54,6 +54,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.internal.helpers.collection.Iterators;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -169,8 +170,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void listReadLocks() throws Throwable
     {
-        long labelId = 5;
         assertEmpty( adminSubject, "CREATE (n:Marker)" );
+        long labelId = getLabelId( "Marker" );
 
         String modifier = "MATCH (n:Marker) set n.prop=3";
         DoubleLatch latch = new DoubleLatch( 2 );
@@ -2529,6 +2530,14 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 }
             }
             return Optional.empty();
+        }
+    }
+
+    private int getLabelId( String labelName )
+    {
+        try ( InternalTransaction tx = neo.getLocalGraph().beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
+        {
+            return tx.kernelTransaction().tokenRead().nodeLabel( labelName );
         }
     }
 
