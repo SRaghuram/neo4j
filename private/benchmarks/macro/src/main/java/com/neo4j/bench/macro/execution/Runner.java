@@ -132,10 +132,11 @@ public class Runner
     {
         boolean executeInTx = !queryString.isPeriodicCommit();
         measurementControl.reset();
+        Map<String,Object> queryParameters = null;
+        String queryForThisIteration = queryString.value();
         while ( !measurementControl.isComplete() && parameters.hasNext() )
         {
-            String queryForThisIteration = queryString.value();
-            Map<String,Object> queryParameters = parameters.next();
+            queryParameters = parameters.next();
             long startTimeUtc = System.currentTimeMillis();
             long start = System.nanoTime();
 
@@ -149,6 +150,16 @@ public class Runner
         if ( !measurementControl.isComplete() )
         {
             throw new RuntimeException( "Run finished before it was supposed to, probably because it ran out of parameters" );
+        }
+
+        // About our ID generators: running transactions that rolls back instead of committing can't quite mark those IDs as reusable during rollback.
+        // Reason is that rollbacks aren't recorded in the transaction log and therefore will not propagate over a cluster and i.e. would have resulted
+        // in each cluster member ending up with differences in their ID freelists. Instead the next committing transaction will bridge any gap in high ID
+        // from the previously committed transaction. Doing a lot of warmup w/o committing makes this gap very large, so large that bridging it becomes
+        // a big part of the measurement, which is not what we want. Therefore the warmup session ends with one transaction that commits in the end.
+        if ( shouldRollback )
+        {
+            db.execute( queryForThisIteration, queryParameters, executeInTx, false );
         }
     }
 }
