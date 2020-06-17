@@ -781,7 +781,7 @@ public class FullOnWorkLoad implements WorkLoad
                         log.warn( workerName + " at instance " + serverId + " got exception " + t.toString() + "', waiting a while...", t );
                         break;
                     default:
-                        throw new IllegalStateException();
+                        break;
                     }
 
                     AtomicInteger exceptionCount = consecutiveExceptions.get( serverId );
