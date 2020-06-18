@@ -12,14 +12,7 @@ import scala.util.matching.Regex
 
 class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
 
-  // Not TCK material; START, shortestPath
-
-  test("start without node or rel") {
-    test(
-      "start s return s",
-      "Invalid input 'r': expected whitespace, comment or '=' (line 1, column 9)"
-    )
-  }
+  // Not TCK material; shortestPath
 
   test("shortest path can not have minimum depth different from zero or one") {
     test(
@@ -35,38 +28,10 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
-  test("old node syntax gives helpful error") {
+  test("start is not supported since a long time") {
     test(
       "start a=(0) return a",
-      "Invalid input '(': expected whitespace, NODE or RELATIONSHIP (line 1, column 9)"
-    )
-  }
-
-  test("weird spelling") {
-    test(
-      "start a=ndoe(0) return a",
-      "Invalid input 'd': expected 'o/O' (line 1, column 10)"
-    )
-  }
-
-  test("unclosed parenthesis") {
-    test(
-      "start a=node(0 return a",
-      "Invalid input 'r': expected whitespace, comment, ',' or ')' (line 1, column 16)"
-    )
-  }
-
-  test("trailing comma") {
-    test(
-      "start a=node(0,1,) return a",
-      "Invalid input ')': expected whitespace or an unsigned integer (line 1, column 18)"
-    )
-  }
-
-  test("two equal signs") {
-    test(
-      "start a==node(0) return a",
-      "Invalid input '=' (line 1, column 9)"
+      "" // any error message is OK
     )
   }
 
