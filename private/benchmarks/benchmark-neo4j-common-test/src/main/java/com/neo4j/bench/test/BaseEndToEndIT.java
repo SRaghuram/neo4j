@@ -11,6 +11,7 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.neo4j.bench.client.StoreClient;
+import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -24,6 +25,7 @@ import org.apache.commons.io.input.TailerListenerAdapter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.Assert;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,6 +55,10 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -63,6 +70,7 @@ import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.driver.AccessMode.READ;
 
 @TestDirectoryExtension
 public abstract class BaseEndToEndIT
@@ -351,6 +359,39 @@ public abstract class BaseEndToEndIT
         try ( ServerSocket socket = new ServerSocket( 0 ) )
         {
             return socket.getLocalPort();
+        }
+    }
+
+    private static class VerifyProfileNodes implements Query<Void>
+    {
+        private Path recordingsBasePath;
+
+        VerifyProfileNodes( Path recordingsBasePath )
+        {
+            this.recordingsBasePath = recordingsBasePath;
+        }
+
+        @Override
+        public Void execute( Driver driver )
+        {
+            String query = "MATCH (p:Profiles) RETURN p{.*} as profiles";
+            System.out.println( query );
+            try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
+            {
+                List<Record> results = session.run( query ).list();
+                for ( Record record : results )
+                {
+                    Map<String,Object> profiles = record.get( "profiles" ).asMap();
+                    profiles.values().forEach( storePath -> Assert.assertTrue( Files.exists( recordingsBasePath.resolve( storePath.toString() ) ) ) );
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public Optional<String> nonFatalError()
+        {
+            return Optional.empty();
         }
     }
 }
