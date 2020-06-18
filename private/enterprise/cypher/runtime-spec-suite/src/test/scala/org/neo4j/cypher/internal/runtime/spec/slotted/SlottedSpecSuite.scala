@@ -40,6 +40,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.InputWithMaterializedEntitie
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetAntiSemiApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
@@ -190,6 +191,7 @@ class SlottedAntiSemiApplyTest extends AntiSemiApplyTestBase(ENTERPRISE.DEFAULT,
 class SlottedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSelectOrAntiSemiApplyTest extends SelectOrAntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLetSelectOrSemiApplyTest extends LetSelectOrSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedLetSelectOrAntiSemiApplyTest extends LetSelectOrAntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedConditionalApplyTest extends ConditionalApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedAtiConditionalApplyTest extends AntiConditionalApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
