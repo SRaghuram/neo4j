@@ -46,8 +46,6 @@ Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is 
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one expression and a negated subquery"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one negated subquery and a subquery"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one negated subquery, a subquery, and an equality expression"
-Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one negated subquery, two subqueries, and an equality expression 2"
-Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one negated subquery, two subqueries, and an equality expression"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one subquery and a negated subquery"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between two expressions and a subquery"
 Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop side effects"
