@@ -48,6 +48,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetAntiSemiApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
@@ -368,6 +369,10 @@ class PipelinedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(FUSING, P
 class PipelinedSelectOrSemiApplyNoFusingTest extends SelectOrSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 class PipelinedSelectOrAntiSemiApplyTest extends SelectOrAntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedSelectOrAntiSemiApplyNoFusingTest extends SelectOrAntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+// LET SELECT OR SEMI APPLY
+class PipelinedLetSelectOrSemiApplyTest extends LetSelectOrSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedLetSelectOrSemiApplyNoFusingTest extends LetSelectOrSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 //CONDITIONAL APPLY
 class PipelinedConditionalApplyTest extends ConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
