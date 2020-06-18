@@ -291,13 +291,14 @@ public class DbmsReconciler
         {
             return CompletableFuture.completedFuture( initialResult );
         }
-        log.info( "Database %s is requested to transition from %s to %s", databaseName, currentState, desiredState );
-
         if ( currentState.hasFailed() && !request.overridesPreviousFailuresFor( databaseName ) )
         {
+            log.debug( "Request to transition database %s from %s to %s is denied. " +
+                       "A previous transition failed and request did not specify to heal the failure", databaseName, currentState, desiredState );
             var previousError = currentState.failure().orElseThrow( IllegalStateException::new );
             return CompletableFuture.completedFuture( initialResult.withError( DatabaseManagementException.wrap( previousError ) ) );
         }
+        log.info( "Database %s is requested to transition from %s to %s", databaseName, currentState, desiredState );
 
         var backoff = backoffStrategy.newTimeout();
         var steps = getLifecycleTransitionSteps( currentState, desiredState );
@@ -416,8 +417,8 @@ public class DbmsReconciler
             locks.releaseLockOn( databaseName );
             var errorExists = throwable != null || result.error() != null;
             var outcome = errorExists ? "failed" : "succeeded";
-            log.debug( "Released lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
-                    result.desiredState().operatorState().description() );
+            var targetState = result == null ? "unknown" : result.desiredState().operatorState().description();
+            log.debug( "Released lock having %s to reconcile database `%s` to state %s.", outcome, databaseName, targetState );
         }
     }
 
@@ -455,19 +456,13 @@ public class DbmsReconciler
         }
         else if ( result.error() != null )
         {
-            // An exception occurred somewhere in the internal machinery of the database and was caught by the DatabaseManager
-            var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
-                    databaseName, result.state(), result.desiredState().operatorState().description() );
-            log.error( message, result.error() );
-            return Optional.of( result.state().failed( result.error() ) );
+            return handleExpectedException( request, result, databaseName, previousState );
         }
         else
         {
             // No exception occurred during this transition, but the request may still be for a panicked database.
             //   In that case we should mark it as failed anyway
-            var nextState = result.state();
-            var failure =  shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
-            return failure.map( nextState::failed );
+            return handleNoReconciliationErrors( request, result, databaseName, previousState );
         }
     }
 
@@ -490,21 +485,51 @@ public class DbmsReconciler
         return Optional.of( state.failed( throwable ) );
     }
 
-    private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( NamedDatabaseId namedDatabaseId,
-            EnterpriseDatabaseState previousState, ReconcilerRequest request )
+    private Optional<EnterpriseDatabaseState> handleExpectedException( ReconcilerRequest request, ReconcilerStepResult result, String databaseName,
+            EnterpriseDatabaseState previousState )
     {
-        var panicked = request.causeOfPanic( namedDatabaseId );
-        var canHeal = request.overridesPreviousFailuresFor( namedDatabaseId.name() );
+        var currentError = result.error();
+        var panicked = request.causeOfPanic( result.state().databaseId() );
+        if ( panicked.isPresent() )
+        {
+            panicked.get().addSuppressed( currentError );
+            currentError = panicked.get();
+        }
+        if ( isErrorNew( previousState, currentError ) )
+        {
+            // An exception occurred somewhere in the internal machinery of the database and was caught by the DatabaseManager
+            var message = format( "Encountered error when attempting to reconcile database %s to state '%s', database remains in state '%s'",
+                    databaseName, result.desiredState().operatorState().description(), result.state().operatorState().description() );
+            log.error( message, currentError );
+        }
+        return Optional.of( result.state().failed( currentError ) );
+    }
+
+    private static boolean isErrorNew( EnterpriseDatabaseState previousState, Throwable currentError )
+    {
+        return previousState == null || !Objects.equals( currentError, previousState.failure().orElse( null ) );
+    }
+
+    private Optional<EnterpriseDatabaseState> handleNoReconciliationErrors( ReconcilerRequest request, ReconcilerStepResult result, String databaseName,
+            EnterpriseDatabaseState previousState )
+    {
+        var nextState = result.state();
+        var panicked = request.causeOfPanic( nextState.databaseId() );
+        var canHeal = request.overridesPreviousFailuresFor( databaseName );
         var currentlyFailed = previousState != null && previousState.hasFailed();
 
         if ( panicked.isPresent() )
         {
-            return panicked;
+            // Cause of panic is not logged because it was surely done before
+            var message = format( "Panicked database %s was reconciled to state '%s'",
+                    databaseName, result.state().operatorState().description() );
+            log.warn( message );
+            return panicked.map( nextState::failed );
         }
         else if ( currentlyFailed && !canHeal )
         {
             // Preserve the previous failed state because the reconcile request is not a priority or explicit one
-            return previousState.failure();
+            return previousState.failure().map( nextState::failed );
         }
         else
         {

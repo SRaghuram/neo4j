@@ -31,6 +31,8 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssertions;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
@@ -500,6 +502,95 @@ class DbmsReconcilerModuleTest
         assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( barId ) == STOPPED );
         assertTrue( reconcilerModule.databaseStateService().causeOfFailure( barId ).isEmpty() );
         verify( databaseManager.getDatabaseContext( barId ).get().database(), times( 1 ) ).stop();
+    }
+
+    @Test
+    void shouldLogTransitionFailOnlyOnce()
+    {
+        // given
+        var logProvider = new AssertableLogProvider();
+        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+
+        var foo = idRepository.getRaw( "foo" );
+        var failure = new DatabaseManagementException( "Cannot start" );
+        doThrow( failure ).when( databaseManager ).startDatabase( foo );
+
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), logProvider, jobScheduler, transitionsTable );
+
+        var operator = new LocalDbmsOperator( idRepository );
+
+        // when
+        operator.startDatabase( "foo" );
+        reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
+
+        // then
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
+                .containsMessageWithException( "Encountered error when attempting to reconcile database foo " +
+                                               "to state 'online', database remains in state 'offline'", failure );
+
+        // when
+        logProvider.clear();
+        reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
+
+        // then
+        // no error is logged for the failed database
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
+                .doesNotHaveAnyLogs();
+        // but there is a warning that it has failed
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
+                .containsMessageWithArguments( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
+                                               "Run `SHOW DATABASES` for further information.", "[foo]" );
+    }
+
+    @Test
+    void shouldLogPanicOnlyOnce() throws Exception
+    {
+        // given
+        var logProvider = new AssertableLogProvider();
+        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+
+        var foo = idRepository.getRaw( "foo" );
+        var initial = EnterpriseDatabaseState.initial( foo );
+        var failure = new Exception( "Cause for panic" );
+
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), logProvider, jobScheduler, transitionsTable );
+
+        var operator = new StandaloneInternalDbmsOperator( nullLogProvider() );
+        operator.connect( new OperatorConnector( reconciler ) );
+
+        // when
+        operator.stopOnPanic( foo, failure );
+
+        // wait for reconciliation be over
+        assertEventually( "Foo is stopped", () ->
+                reconciler.getReconcilerEntryOrDefault( foo, initial ).operatorState() == STOPPED, TRUE, 10, SECONDS );
+
+        // then
+        // no error is logged for the panicked database
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
+                .doesNotHaveAnyLogs();
+        // but there is a warning that it has failed
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
+                .containsMessagesOnce( "Panicked database foo was reconciled to state 'offline'" );
+
+        // when
+        logProvider.clear();
+        reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() ).awaitAll();
+
+        // then
+        // no error is logged for the panicked database
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
+                .doesNotHaveAnyLogs();
+        // but there is a warning that it has failed
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
+                .containsMessageWithArguments( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
+                                               "Run `SHOW DATABASES` for further information.", "[foo]" );
+        LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
+                .doesNotContainMessage( "Panicked database foo was reconciled to state 'offline'" );
     }
 
     private void dropDatabase( NamedDatabaseId fooId, StandaloneDbmsReconcilerModule reconcilerModule )
