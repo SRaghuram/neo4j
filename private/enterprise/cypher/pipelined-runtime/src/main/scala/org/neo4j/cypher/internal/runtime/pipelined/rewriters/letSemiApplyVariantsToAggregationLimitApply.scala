@@ -55,7 +55,7 @@ case class letSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardinalit
 
       val proj = Projection(lhs, Map(idName -> True()(InputPosition.NONE)))(idGen)
       cardinalities.copy(lhs.id, proj.id)
-      providedOrders.copy(rhs.id, proj.id)
+      providedOrders.copy(lhs.id, proj.id)
 
       SelectOrSemiApply(proj, aggregation, expr)(SameId(o.id))
   })
