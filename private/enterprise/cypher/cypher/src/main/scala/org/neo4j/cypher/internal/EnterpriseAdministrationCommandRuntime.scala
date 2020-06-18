@@ -44,8 +44,9 @@ import org.neo4j.cypher.internal.ast.PropertyResource
 import org.neo4j.cypher.internal.ast.RelationshipAllQualifier
 import org.neo4j.cypher.internal.ast.RelationshipQualifier
 import org.neo4j.cypher.internal.ast.ShowAllPrivileges
-import org.neo4j.cypher.internal.ast.ShowRolePrivileges
+import org.neo4j.cypher.internal.ast.ShowRolesPrivileges
 import org.neo4j.cypher.internal.ast.ShowUserPrivileges
+import org.neo4j.cypher.internal.ast.ShowUsersPrivileges
 import org.neo4j.cypher.internal.ast.UserAllQualifier
 import org.neo4j.cypher.internal.ast.UserQualifier
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
@@ -110,6 +111,7 @@ import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationExcep
 import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.LongValue
+import org.neo4j.values.storable.StringArray
 import org.neo4j.values.storable.TextArray
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Value
@@ -222,12 +224,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // CREATE [OR REPLACE] ROLE foo [IF NOT EXISTS] AS COPY OF bar
     case CreateRole(source, roleName) => (context, parameterMapping) =>
-      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("rolename", roleName)
+      val roleNameFields = getNameFields("rolename", roleName)
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
-        s"""CREATE (new:Role {name: $$`$roleNameKey`})
+        s"""CREATE (new:Role {name: $$`${roleNameFields.nameKey}`})
           |RETURN new.name
         """.stripMargin,
-        VirtualValues.map(Array(roleNameKey), Array(roleNameValue)),
+        VirtualValues.map(Array(roleNameFields.nameKey), Array(roleNameFields.nameValue)),
         QueryHandler
           .handleNoResult(p => Some(new IllegalStateException(s"Failed to create the specified role '${runtimeValue(roleName, p)}'.")))
           .handleError((error, p) => (error, error.getCause) match {
@@ -243,16 +245,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           NameValidator.assertValidRoleName(name)
           NameValidator.assertUnreservedRoleName("create", name)
         },
-        parameterConverter = roleNameConverter
+        parameterConverter = roleNameFields.nameConverter
       )
 
     // Used to split the requirement from the source role before copying privileges
     case RequireRole(source, roleName) => (context, parameterMapping) =>
-      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("rolename", roleName)
+      val roleNameFields = getNameFields("rolename", roleName)
       UpdatingSystemCommandExecutionPlan("RequireRole", normalExecutionEngine,
-        s"""MATCH (role:Role {name: $$`$roleNameKey`})
+        s"""MATCH (role:Role {name: $$`${roleNameFields.nameKey}`})
           |RETURN role.name""".stripMargin,
-        VirtualValues.map(Array(roleNameKey), Array(roleNameValue)),
+        VirtualValues.map(Array(roleNameFields.nameKey), Array(roleNameFields.nameValue)),
         QueryHandler
           .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}': Role does not exist.")))
           .handleError {
@@ -261,21 +263,21 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (error, p) => new IllegalStateException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}'.", error) // should not get here but need a default case
           },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = roleNameConverter
+        parameterConverter = roleNameFields.nameConverter
       )
 
     // COPY PRIVILEGES FROM role1 TO role2
     case CopyRolePrivileges(source, to, from, grantDeny) => (context, parameterMapping) =>
-      val (toNameKey, toNameValue, toNameConverter) = getNameFields("toRole", to)
-      val (fromNameKey, fromNameValue, fromNameConverter) = getNameFields("fromRole", from)
-      val mapValueConverter: (Transaction, MapValue) => MapValue = (tx, p) => toNameConverter(tx, fromNameConverter(tx, p))
+      val toNameFields = getNameFields("toRole", to)
+      val fromNameFields = getNameFields("fromRole", from)
+      val mapValueConverter: (Transaction, MapValue) => MapValue = (tx, p) => toNameFields.nameConverter(tx, fromNameFields.nameConverter(tx, p))
       // This operator expects CreateRole(to) and RequireRole(from) to run as source, so we do not check for those
       UpdatingSystemCommandExecutionPlan("CopyPrivileges", normalExecutionEngine,
-        s"""MATCH (to:Role {name: $$`$toNameKey`})
-           |MATCH (from:Role {name: $$`$fromNameKey`})-[:$grantDeny]->(p:Privilege)
+        s"""MATCH (to:Role {name: $$`${toNameFields.nameKey}`})
+           |MATCH (from:Role {name: $$`${fromNameFields.nameKey}`})-[:$grantDeny]->(p:Privilege)
            |MERGE (to)-[g:$grantDeny]->(p)
            |RETURN from.name, to.name, count(g)""".stripMargin,
-        VirtualValues.map(Array(fromNameKey, toNameKey), Array(fromNameValue, toNameValue)),
+        VirtualValues.map(Array(fromNameFields.nameKey, toNameFields.nameKey), Array(fromNameFields.nameValue, toNameFields.nameValue)),
         QueryHandler.handleError((e, p) => new IllegalStateException(s"Failed to create role '${runtimeValue(to, p)}' as copy of '${runtimeValue(from, p)}': Failed to copy privileges.", e)),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
         parameterConverter = mapValueConverter
@@ -283,11 +285,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // DROP ROLE foo [IF EXISTS]
     case DropRole(source, roleName) => (context, parameterMapping) =>
-      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("rolename", roleName)
+      val roleNameFields = getNameFields("rolename", roleName)
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
-        s"""MATCH (role:Role {name: $$`$roleNameKey`}) DETACH DELETE role
+        s"""MATCH (role:Role {name: $$`${roleNameFields.nameKey}`}) DETACH DELETE role
           |RETURN 1 AS ignore""".stripMargin,
-        VirtualValues.map(Array(roleNameKey), Array(roleNameValue)),
+        VirtualValues.map(Array(roleNameFields.nameKey), Array(roleNameFields.nameValue)),
         QueryHandler
           .handleError {
             case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
@@ -296,20 +298,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
         initFunction = (params, _) => NameValidator.assertUnreservedRoleName("delete", runtimeValue(roleName, params)),
-        parameterConverter = roleNameConverter
+        parameterConverter = roleNameFields.nameConverter
       )
 
     // GRANT ROLE foo TO user
     case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping) =>
-      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
-      val (userNameKey, userNameValue, userNameConverter) = getNameFields("user", userName)
+      val roleNameFields = getNameFields("role", roleName)
+      val userNameFields = getNameFields("user", userName)
       UpdatingSystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
-        s"""MATCH (r:Role {name: $$`$roleNameKey`})
-          |OPTIONAL MATCH (u:User {name: $$`$userNameKey`})
+        s"""MATCH (r:Role {name: $$`${roleNameFields.nameKey}`})
+          |OPTIONAL MATCH (u:User {name: $$`${userNameFields.nameKey}`})
           |WITH r, u
           |MERGE (u)-[a:HAS_ROLE]->(r)
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array(roleNameKey, userNameKey), Array(roleNameValue, userNameValue)),
+        VirtualValues.map(Array(roleNameFields.nameKey, userNameFields.nameKey), Array(roleNameFields.nameValue, userNameFields.nameValue)),
         QueryHandler
           .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': Role does not exist.")))
           .handleError {
@@ -323,28 +325,28 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         initFunction = (p, _) => {
           runtimeValue(roleName, p) != "PUBLIC"
         },
-        parameterConverter = (tx, p) => userNameConverter(tx, roleNameConverter(tx, p))
+        parameterConverter = (tx, p) => userNameFields.nameConverter(tx, roleNameFields.nameConverter(tx, p))
       )
 
     // REVOKE ROLE foo FROM user
     case RevokeRoleFromUser(source, roleName, userName) => (context, parameterMapping) =>
-      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
-      val (userNameKey, userNameValue, userNameConverter) = getNameFields("user", userName)
+      val roleNameFields = getNameFields("role", roleName)
+      val userNameFields = getNameFields("user", userName)
       UpdatingSystemCommandExecutionPlan("RevokeRoleFromUser", normalExecutionEngine,
-        s"""MATCH (r:Role {name: $$`$roleNameKey`})
-          |OPTIONAL MATCH (u:User {name: $$`$userNameKey`})
+        s"""MATCH (r:Role {name: $$`${roleNameFields.nameKey}`})
+          |OPTIONAL MATCH (u:User {name: $$`${userNameFields.nameKey}`})
           |WITH r, u
           |OPTIONAL MATCH (u)-[a:HAS_ROLE]->(r)
           |DELETE a
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array(roleNameKey, userNameKey), Array(roleNameValue, userNameValue)),
+        VirtualValues.map(Array(roleNameFields.nameKey, userNameFields.nameKey), Array(roleNameFields.nameValue, userNameFields.nameValue)),
         QueryHandler.handleError {
           case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '${runtimeValue(roleName, p)}' from user '${runtimeValue(userName, p)}': $followerError", error)
           case (error, p) => new IllegalStateException(s"Failed to revoke role '${runtimeValue(roleName, p)}' from user '${runtimeValue(userName, p)}'.", error)
         },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = (tx, p) => userNameConverter(tx, roleNameConverter(tx, p)),
+        parameterConverter = (tx, p) => userNameFields.nameConverter(tx, roleNameFields.nameConverter(tx, p)),
         initFunction = (params, _) => NameValidator.assertUnreservedRoleName("revoke", runtimeValue(roleName, params))
       )
 
@@ -438,12 +440,22 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val filtering = AdministrationShowCommandUtils.generateWhereClause(where)
       val returnClause = AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user", "role", "graph", "segment", "resource", "action", "access"))
 
-      val (nameKey: String, grantee: Value, converter: ((Transaction, MapValue) => MapValue), query) = scope match {
-        case ShowRolePrivileges(name) =>
-          val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("role", name)
-          (roleNameKey, roleNameValue, roleNameConverter,
+      val (nameKeys: List[String], grantees: List[Value], converter: ((Transaction, MapValue) => MapValue), query) = scope match {
+        case ShowRolesPrivileges(names) =>
+          val nameFields = names.zipWithIndex.map { case (name, index) => getNameFields(s"role$index", name) }
+          val nameKeys = nameFields.map(_.nameKey)
+          val converters: Seq[(Transaction, MapValue) => MapValue] = nameFields.map(_.nameConverter)
+          val nestedConverter: (Transaction, MapValue) => MapValue = (tx, params) => {
+            // example for size 3: converters(2)(tx, converters(1)(tx, converters(0)(tx, params)))
+            converters.foldLeft(None: Option[MapValue]) {
+              case (None, c)         => Some(c(tx, params))
+              case (Some(source), c) => Some(c(tx, source))
+            }.getOrElse(params)
+          }
+
+          (nameKeys, nameFields.map(_.nameValue), nestedConverter,
             s"""
-               |OPTIONAL MATCH (r:Role) WHERE r.name = $$`$roleNameKey` WITH r
+               |OPTIONAL MATCH (r:Role) WHERE r.name IN [$$`${nameKeys.mkString("`, $`")}`] WITH r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r
                |$projection
@@ -452,11 +464,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           """.stripMargin
           )
         case ShowUserPrivileges(Some(name)) => // SHOW USER $user PRIVILEGES
-          val (userNameKey, userNameValue, userNameConverter) = getNameFields("user", name)
+          val userNameFields = getNameFields("user", name)
           val rolesKey = internalKey("rolesKey")
           val rolesMapper: (Transaction, MapValue) => MapValue = (tx, params) => {
-            val paramsWithUsername = userNameConverter(tx, params)
-            val username = paramsWithUsername.get(userNameKey).asInstanceOf[TextValue]
+            val paramsWithUsername = userNameFields.nameConverter(tx, params)
+            val username = paramsWithUsername.get(userNameFields.nameKey).asInstanceOf[TextValue]
             val rolesValue: TextArray = if (username == paramsWithUsername.get(currentUserKey)) {
               paramsWithUsername.get(currentUserRolesKey) match {
                 case x: TextArray => x
@@ -474,18 +486,75 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             }
             paramsWithUsername.updatedWith(rolesKey, rolesValue)
           }
-          (userNameKey, userNameValue, rolesMapper,
+          (List(userNameFields.nameKey), List(userNameFields.nameValue), rolesMapper,
             s"""
                |OPTIONAL MATCH (r:Role) WHERE r.name in $$`$rolesKey` WITH r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
-               |$projection, $$`$userNameKey` AS user
+               |$projection, $$`${userNameFields.nameKey}` AS user
                |$filtering
                |$returnClause
           """.stripMargin
           )
-        case ShowUserPrivileges(None) =>
-          ("grantee", Values.NO_VALUE, IdentityConverter, // will generate correct parameter name later and don't want to risk clash
+        case ShowUsersPrivileges(Some(names)) => // SHOW USER $user1, user2 PRIVILEGES
+          val nameFields = names.zipWithIndex.map { case (name, index) => getNameFields(s"user$index", name) }
+          val nameKeys = nameFields.map(_.nameKey)
+          val rolesKey = internalKey("rolesKey")
+          val converter: (Transaction, MapValue) => MapValue = (tx, params) => {
+            def updateParamsWithRoles(usernameKey: String, paramsWithUsername: MapValue): MapValue = {
+              val username = paramsWithUsername.get(usernameKey).asInstanceOf[TextValue]
+              // need to collect the roles for all specified users, adding new roles to the list of previously found roles
+              val oldRolesValue = paramsWithUsername.get(rolesKey)
+              val oldRoleSet = if (oldRolesValue == Values.NO_VALUE) {
+                Set.empty[String]
+              } else {
+                oldRolesValue.asInstanceOf[StringArray].asObjectCopy().toSet
+              }
+              val rolesValue = if (username == paramsWithUsername.get(currentUserKey)) {
+                paramsWithUsername.get(currentUserRolesKey) match {
+                  case x: StringArray => Values.stringArray((oldRoleSet ++ x.asObjectCopy()).toSeq:_*)
+                }
+              } else {
+                val userNode = tx.findNode(Label.label("User"), "name", username.stringValue())
+                if (userNode == null) {
+                  oldRolesValue
+                } else {
+                  val roles = Iterables.stream(userNode.getRelationships(Direction.OUTGOING, RelationshipType.withName("HAS_ROLE")))
+                    .map[AnyRef](r => r.getEndNode.getProperty("name")).toArray.toSeq
+                  val rolesAsString: Seq[String] = roles.map(_.asInstanceOf[String]) :+ "PUBLIC"
+                  Values.stringArray((oldRoleSet ++ rolesAsString).toSeq: _*)
+                }
+              }
+              paramsWithUsername.updatedWith(rolesKey, rolesValue)
+            }
+
+            /* Example for user1 with role1 and PUBLIC, user2 with role1, role2 and PUBLIC, user3 with PUBLIC:
+             * updateParamsWithRoles(user3, user3converter(updateParamsWithRoles(user2, user2converter(updateParamsWithRoles(user1, user1converter(tx, params))))))
+             *
+             * Which contains the parts:
+             * updateParamsWithRoles(user1, user1converter(tx, params)) gives initial role list 'PUBLIC, role1'
+             * updateParamsWithRoles(user2, user2converter(user1result)) updates role list to 'PUBLIC, role1, role2'
+             * updateParamsWithRoles(user3, user3converter(user2result)) will not add any new roles to the role list
+             * final parameters will include: user1, user2, user3 and the role list containing 'PUBLIC, role1, role2'
+            */
+            nameFields.foldLeft(None: Option[MapValue]) {
+              case (None, NameFields(usernameKey, _, usernameConverter))         => Some(updateParamsWithRoles(usernameKey, usernameConverter(tx, params)))
+              case (Some(source), NameFields(usernameKey, _, usernameConverter)) => Some(updateParamsWithRoles(usernameKey, usernameConverter(tx, source)))
+            }.getOrElse(params)
+          }
+          (nameKeys, nameFields.map(_.nameValue), converter,
+            s"""
+               |OPTIONAL MATCH (r:Role) WHERE r.name in $$`$rolesKey` WITH r
+               |MATCH (u:User) WHERE u.name IN [$$`${nameKeys.mkString("`, $`")}`] AND (r.name = 'PUBLIC' OR (u)-[:HAS_ROLE]->(r)) WITH r, u
+               |$privilegeMatch
+               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, u.name, segment
+               |$projection, u.name AS user
+               |$filtering
+               |$returnClause
+          """.stripMargin
+          )
+        case ShowUserPrivileges(None) | ShowUsersPrivileges(None) =>
+          (List("grantee"), List(Values.NO_VALUE), IdentityConverter, // will generate correct parameter name later and don't want to risk clash
             s"""
                |OPTIONAL MATCH (r:Role) WHERE r.name in $$`$currentUserRolesKey` WITH r
                |$privilegeMatch
@@ -495,7 +564,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |$returnClause
           """.stripMargin
           )
-        case ShowAllPrivileges() => ("grantee", Values.NO_VALUE, IdentityConverter,
+        case ShowAllPrivileges() => (List("grantee"), List(Values.NO_VALUE), IdentityConverter,
           s"""
              |OPTIONAL MATCH (r:Role) WITH r
              |$privilegeMatch
@@ -507,7 +576,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
-      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array(nameKey), Array(grantee)),
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(nameKeys.toArray, grantees.toArray),
         source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)),
         parameterGenerator = (_, securityContext) => VirtualValues.map(
           Array(currentUserKey, currentUserRolesKey),
@@ -521,7 +590,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
 
       // Ensuring we don't exceed the max number of databases is a separate step
-      val (nameKey, nameValue, nameConverter) = getNameFields("databaseName", dbName, valueMapper = s => {
+      val nameFields = getNameFields("databaseName", dbName, valueMapper = s => {
         val normalizedName = new NormalizedDatabaseName(s)
         try {
           DatabaseNameValidator.validateExternalDatabaseName(normalizedName)
@@ -538,9 +607,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         "default",
         "uuid")
       def virtualValues(params: MapValue): Array[AnyValue] = Array(
-        params.get(nameKey),
+        params.get(nameFields.nameKey),
         DatabaseStatus.Online,
-        Values.booleanValue(isDefault(params.get(nameKey).asInstanceOf[TextValue].stringValue())),
+        Values.booleanValue(isDefault(params.get(nameFields.nameKey).asInstanceOf[TextValue].stringValue())),
         Values.utf8Value(UUID.randomUUID().toString))
 
       def asInternalKeys(keys: Array[String]): Array[String] = keys.map(internalKey)
@@ -552,12 +621,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         val randomId = ThreadLocalRandom.current().nextLong()
         val storeVersion = Standard.LATEST_STORE_VERSION
         VirtualValues.map(
-          nameKey +: asInternalKeys(virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion")),
+          nameFields.nameKey +: asInternalKeys(virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion")),
           virtualValues(params) ++ Array(Values.stringArray(initial: _*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion)))
       }
 
       def virtualMapStandaloneConverter(): (Transaction, MapValue) => MapValue = (_, params) => {
-        VirtualValues.map(nameKey +: asInternalKeys(virtualKeys), virtualValues(params))
+        VirtualValues.map(nameFields.nameKey +: asInternalKeys(virtualKeys), virtualValues(params))
       }
 
       val clusterProperties =
@@ -576,7 +645,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
 
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
-        s"""CREATE (d:Database {name: $$`$nameKey`})
+        s"""CREATE (d:Database {name: $$`${nameFields.nameKey}`})
            |SET
            |  d.status = $$`${internalKey("status")}`,
            |  d.default = $$`${internalKey("default")}`,
@@ -584,7 +653,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |  d.uuid = $$`${internalKey("uuid")}`
            |  $queryAdditions
            |RETURN d.name as name, d.status as status, d.uuid as uuid
-        """.stripMargin, VirtualValues.map(Array(nameKey), Array(nameValue)),
+        """.stripMargin, VirtualValues.map(Array(nameFields.nameKey), Array(nameFields.nameValue)),
         QueryHandler
           .handleError((error, params) => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
@@ -594,7 +663,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case _ => new IllegalStateException(s"Failed to create the specified database '${runtimeValue(dbName, params)}'.", error)
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = (tx, m) => virtualMapConverter(tx, nameConverter(tx, m))
+        parameterConverter = (tx, m) => virtualMapConverter(tx, nameFields.nameConverter(tx, m))
       )
 
     // Used to ensure we don't create to many databases,
@@ -623,41 +692,41 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
       val dumpDataKey = internalKey("dumpData")
       val shouldDumpData = additionalAction == DumpData
-      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
+      val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
-        s"""OPTIONAL MATCH (d:Database {name: $$`$key`})
-          |OPTIONAL MATCH (d2:DeletedDatabase {name: $$`$key`})
+        s"""OPTIONAL MATCH (d:Database {name: $$`${nameFields.nameKey}`})
+          |OPTIONAL MATCH (d2:DeletedDatabase {name: $$`${nameFields.nameKey}`})
           |REMOVE d:Database
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
           |SET d.dump_data = $$`$dumpDataKey`
           |SET d2.updated_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array(key, dumpDataKey), Array(value, Values.booleanValue(shouldDumpData))),
+        VirtualValues.map(Array(nameFields.nameKey, dumpDataKey), Array(nameFields.nameValue, Values.booleanValue(shouldDumpData))),
         QueryHandler.handleError {
           case (error: HasStatus, params) if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '${runtimeValue(dbName, params)}': $followerError", error)
           case (error, params) => new IllegalStateException(s"Failed to delete the specified database '${runtimeValue(dbName, params)}'.", error)
         },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = converter
+        parameterConverter = nameFields.nameConverter
       )
 
     // START DATABASE foo
     case StartDatabase(source, dbName) => (context, parameterMapping) =>
       val oldStatusKey = internalKey("oldStatus")
       val statusKey = internalKey("status")
-      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
+      val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
-        s"""OPTIONAL MATCH (d:Database {name: $$`$key`})
-          |OPTIONAL MATCH (d2:Database {name: $$`$key`, status: $$`$oldStatusKey`})
+        s"""OPTIONAL MATCH (d:Database {name: $$`${nameFields.nameKey}`})
+          |OPTIONAL MATCH (d2:Database {name: $$`${nameFields.nameKey}`, status: $$`$oldStatusKey`})
           |SET d.updated_at = datetime()
           |SET d2.status = $$`$statusKey`
           |SET d2.started_at = datetime()
           |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
         VirtualValues.map(
-          Array(key, oldStatusKey, statusKey),
-          Array(value,
+          Array(nameFields.nameKey, oldStatusKey, statusKey),
+          Array(nameFields.nameValue,
             DatabaseStatus.Offline,
             DatabaseStatus.Online
           )
@@ -673,24 +742,24 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (error, params) => new IllegalStateException(s"Failed to start the specified database '${runtimeValue(dbName, params)}'.", error)
           },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = converter
+        parameterConverter = nameFields.nameConverter
       )
 
     // STOP DATABASE foo
     case StopDatabase(source, dbName) => (context, parameterMapping) =>
       val oldStatusKey = internalKey("oldStatus")
       val statusKey = internalKey("status")
-      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
+      val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
-        s"""OPTIONAL MATCH (d:Database {name: $$`$key`})
-          |OPTIONAL MATCH (d2:Database {name: $$`$key`, status: $$`$oldStatusKey`})
+        s"""OPTIONAL MATCH (d:Database {name: $$`${nameFields.nameKey}`})
+          |OPTIONAL MATCH (d2:Database {name: $$`${nameFields.nameKey}`, status: $$`$oldStatusKey`})
           |SET d.updated_at = datetime()
           |SET d2.status = $$`$statusKey`
           |SET d2.stopped_at = datetime()
           |RETURN d2.name as name, d2.status as status""".stripMargin,
         VirtualValues.map(
-          Array(key, oldStatusKey, statusKey),
-          Array(value,
+          Array(nameFields.nameKey, oldStatusKey, statusKey),
+          Array(nameFields.nameValue,
             DatabaseStatus.Online,
             DatabaseStatus.Offline
           )
@@ -701,17 +770,17 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case (error, params) => new IllegalStateException(s"Failed to stop the specified database '${runtimeValue(dbName, params)}'.", error)
         },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = converter
+        parameterConverter = nameFields.nameConverter
       )
 
     // Used to check whether a database is present and not the system database,
     // which means it can be dropped and stopped.
     case EnsureValidNonSystemDatabase(source, dbName, action) => (context, parameterMapping) =>
-      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
+      val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
-        s"""MATCH (db:Database {name: $$`$key`})
+        s"""MATCH (db:Database {name: $$`${nameFields.nameKey}`})
           |RETURN db.name AS name""".stripMargin,
-        VirtualValues.map(Array(key), Array(value)),
+        VirtualValues.map(Array(nameFields.nameKey), Array(nameFields.nameValue)),
         QueryHandler
           .handleNoResult(params => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '${runtimeValue(dbName, params)}': Database does not exist.")))
           .handleResult((_, _, params) =>
@@ -726,7 +795,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (error, params) => new IllegalStateException(s"Failed to $action the specified database '${runtimeValue(dbName, params)}'.", error) // should not get here but need a default case
           },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = converter
+        parameterConverter = nameFields.nameConverter
       )
 
     // Used to log commands
@@ -757,8 +826,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case RelationshipAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
     case UserAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:UserQualifierAll {type: 'user', label: '*'})") // The label is just for later printout of results
     case UserQualifier(name) =>
-      val (key, value, converter) = getNameFields("userQualifier", name)
-      (key, value, converter, matchOrMerge + s" (q:UserQualifier {type: 'user', label: $$`$key`})")
+      val nameFields = getNameFields("userQualifier", name)
+      (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, matchOrMerge + s" (q:UserQualifier {type: 'user', label: $$`${nameFields.nameKey}`})")
   }
 
   private def escapeName(name: Either[String, AnyRef]): String = name match {
@@ -780,14 +849,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val commandName = if (grant.isGrant) "GrantPrivilege" else "DenyPrivilege"
 
     val action = Values.utf8Value(privilegeAction.toString)
-    val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
-    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
+    val nameFields = getNameFields("role", roleName)
+    val roleMap = VirtualValues.map(Array(nameFields.nameKey), Array(Values.utf8Value(escapeName(roleName))))
     val (resourceValue: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage(roleMap), grant.name, "MERGE")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, "MERGE")
     val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge, specialDatabase) = database match {
       case NamedGraphScope(name) =>
-        val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
-        (key, value, converter, s"MATCH (d:Database {name: $$`$key`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
+        val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
+        (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
       case AllGraphsScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL) // The name is just for later printout of results
       case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT) // The name is just for later printout of results
     }
@@ -810,13 +879,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |WITH q, d, p
          |
          |// Connect the role to the action to complete the privilege assignment
-         |OPTIONAL MATCH (r:Role {name: $$`$roleKey`})
+         |OPTIONAL MATCH (r:Role {name: $$`${nameFields.nameKey}`})
          |MERGE (r)-[:${grant.relType}]->(p)
          |
          |// Return the table of results
          |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
-      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("resourceValue"), databaseKey, qualifierKey, roleKey),
-        Array(action, resourceType, resourceValue, databaseValue, qualifierValue, roleValue)),
+      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("resourceValue"), databaseKey, qualifierKey, nameFields.nameKey),
+        Array(action, resourceType, resourceValue, databaseValue, qualifierValue, nameFields.nameValue)),
       QueryHandler
         .handleNoResult(params => {
           val db = params.get(databaseKey).asInstanceOf[TextValue].stringValue()
@@ -834,7 +903,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
         },
       source,
-      parameterConverter = (tx, p) => databaseConverter(tx, qualifierConverter(tx, roleConverter(tx, p))),
+      parameterConverter = (tx, p) => databaseConverter(tx, qualifierConverter(tx, nameFields.nameConverter(tx, p))),
       assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase)
     )
   }
@@ -843,15 +912,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                                       roleName: Either[String, Parameter], revokeType: String, source: Option[ExecutionPlan],
                                       startOfErrorMessage: MapValue => String) = {
     val action = Values.utf8Value(privilegeAction.toString)
-    val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
-    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
+    val nameFields = getNameFields("role", roleName)
+    val roleMap = VirtualValues.map(Array(nameFields.nameKey), Array(Values.utf8Value(escapeName(roleName))))
 
     val (resourceValue: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage(roleMap), "revoke", "MATCH")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, "MATCH")
     val (databaseKey, databaseValue, databaseConverter, scopeMatch, specialDatabase) = database match {
       case NamedGraphScope(name) =>
-        val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
-        (key, value, converter, s"MATCH (d:Database {name: $$`$key`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
+        val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
+        (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
       case AllGraphsScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL)
       case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT)
     }
@@ -868,22 +937,22 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |MATCH (res)<-[:APPLIES_TO]-(p:Privilege {action: $$`${privilegeKeys("action")}`})-[:SCOPE]->(s)
          |
          |// Find the privilege assignment connecting the role to the action
-         |OPTIONAL MATCH (r:Role {name: $$`$roleKey`})
+         |OPTIONAL MATCH (r:Role {name: $$`${nameFields.nameKey}`})
          |WITH p, r, d, q
          |OPTIONAL MATCH (r)-[g:$revokeType]->(p)
          |
          |// Remove the assignment
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
-      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("resourceValue"), databaseKey, qualifierKey, roleKey),
-        Array(action, resourceType, resourceValue, databaseValue, qualifierValue, roleValue)),
+      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("resourceValue"), databaseKey, qualifierKey, nameFields.nameKey),
+        Array(action, resourceType, resourceValue, databaseValue, qualifierValue, nameFields.nameValue)),
       QueryHandler.handleError {
         case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
           new DatabaseAdministrationOnFollowerException(s"${startOfErrorMessage(p)}: $followerError", e)
         case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
       },
       source,
-      parameterConverter = (tx, p) => databaseConverter(tx, qualifierConverter(tx, roleConverter(tx, p))),
+      parameterConverter = (tx, p) => databaseConverter(tx, qualifierConverter(tx, nameFields.nameConverter(tx, p))),
       assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase)
     )
   }

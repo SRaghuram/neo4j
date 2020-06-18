@@ -866,6 +866,18 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Show multiple role privileges") {
+    // When
+    val plan = execute("EXPLAIN SHOW ROLES reader, $role PRIVILEGES", Map("role" -> PUBLIC)).executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(details("ROLES reader, $role")),
+        assertDbmsAdminPlan("SHOW PRIVILEGE")
+      ).toString
+    )
+  }
+
   test("Show user privileges") {
     // When
     val plan = execute("EXPLAIN SHOW USER neo4j PRIVILEGES").executionPlanString()
@@ -886,6 +898,26 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(
       managementPlan("ShowPrivileges", Seq(details("USER $user")),
         assertDbmsAdminOrSelfPlan(details("USER $user"), "SHOW PRIVILEGE", "SHOW USER")
+      ).toString
+    )
+  }
+
+  test("Show current user privileges") {
+    // When
+    val plan = execute("EXPLAIN SHOW USER PRIVILEGES").executionPlanString()
+
+    // Then
+    plan should include(managementPlan("ShowPrivileges", Seq(scopeArg("USER", ""))).toString) // empty username since not logged in
+  }
+
+  test("Show multiple user privileges") {
+    // When
+    val plan = execute("EXPLAIN SHOW USERS $user, foo PRIVILEGES", Map("user" -> "neo4j")).executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(details("USERS $user, foo")),
+        assertDbmsAdminPlan("SHOW PRIVILEGE", "SHOW USER")
       ).toString
     )
   }

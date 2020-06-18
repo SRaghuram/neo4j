@@ -111,7 +111,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("SHOW PRIVILEGES YIELD action, access").toSet should be (expected)
   }
 
-  test("should show privileges with YIELD missing") {
+  test("should not show privileges with YIELD missing") {
 
     val theException = the[SyntaxException] thrownBy {
       // WHEN
@@ -218,6 +218,25 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     result.toSet should be(expected)
   }
 
+  test("should show privileges for multiple roles") {
+    // WHEN
+    val result = execute("SHOW ROLES reader, $role PRIVILEGES", Map("role" -> "editor"))
+
+    // THEN
+    val expected = Set(
+      granted(access).role("reader").map,
+      granted(matchPrivilege).role("reader").node("*").map,
+      granted(matchPrivilege).role("reader").relationship("*").map,
+      granted(access).role("editor").map,
+      granted(matchPrivilege).role("editor").node("*").map,
+      granted(matchPrivilege).role("editor").relationship("*").map,
+      granted(write).role("editor").node("*").map,
+      granted(write).role("editor").relationship("*").map,
+    )
+
+    result.toSet should be(expected)
+  }
+
   test("should not show role privileges as non admin") {
     // GIVEN
     setupUserWithCustomRole()
@@ -267,6 +286,20 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     result.toSet should be(defaultUserPrivileges)
+  }
+
+  test("should show privileges for multiple users") {
+    // GIVEN
+    setupUserWithCustomRole()
+
+    // WHEN
+    val result = execute("SHOW USERS $userParam, joe PRIVILEGES", Map("userParam" -> "neo4j"))
+
+    // THEN
+    result.toSet should be(defaultUserPrivileges ++ Set(
+      granted(access).database(DEFAULT).role("PUBLIC").user("joe").map,
+      granted(access).role("custom").user("joe").map
+    ))
   }
 
   test("should show privileges for specific user WHERE role = 'PUBLIC'") {

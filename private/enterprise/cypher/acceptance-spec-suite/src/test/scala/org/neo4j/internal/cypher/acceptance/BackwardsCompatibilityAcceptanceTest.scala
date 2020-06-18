@@ -294,5 +294,27 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions 4.2
+
+  test("should not be able to specify multiple roles for SHOW ROLE PRIVILEGES in 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 SHOW ROLES reader, editor PRIVILEGES")
+    }
+    exception.getMessage should include("Multiple roles in SHOW ROLE PRIVILEGE command is not supported in this Cypher version.")
+  }
+
+  test("should not be able to specify multiple roles for SHOW USER PRIVILEGES in 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 SHOW USERS $user1, $user2 PRIVILEGES")
+    }
+    exception.getMessage should include("Multiple users in SHOW USER PRIVILEGE command is not supported in this Cypher version.")
+  }
 }
 
