@@ -5,12 +5,11 @@
  */
 package com.neo4j.cypher.internal.javacompat;
 
-import com.neo4j.test.rule.EnterpriseDbmsRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.extension.EnterpriseDbmsExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,16 +17,19 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@EnterpriseDbmsExtension
 public class ParallelRuntimeStressIT
 {
     private static final int N_THREADS = 10;
@@ -38,12 +40,7 @@ public class ParallelRuntimeStressIT
     private static final String MATCH_NODE_QUERY = "CYPHER runtime=parallel MATCH (n:LABEL) RETURN n";
     private static final String SYNTAX_ERROR_QUERY = "CYPHER runtime=parallel MATHC (n) RETURN n";
     private static final String RUNTIME_ERROR_QUERY = "CYPHER runtime=parallel MATCH (n) RETURN size($a)";
-    private static final Map<String,Object> PARAMS = new HashMap<>();
-
-    static
-    {
-        PARAMS.put( "a", 42 );
-    }
+    private static final Map<String,Object> PARAMS = Map.of( "a", 42 );
 
     private static final RelationshipType R = RelationshipType.withName( "R" );
 
@@ -55,45 +52,38 @@ public class ParallelRuntimeStressIT
         throw new Error( "WHERE IS YOUR GOD NOW" );
     };
 
-    private AtomicInteger counter = new AtomicInteger( 0 );
+    private final AtomicInteger counter = new AtomicInteger( 0 );
+    private final ExecutorService service = Executors.newFixedThreadPool( N_THREADS );
+    @Inject
+    private GraphDatabaseService db;
 
-    @Rule
-    public final EnterpriseDbmsRule db = new EnterpriseDbmsRule();
-
-    private ExecutorService service = Executors.newFixedThreadPool( N_THREADS );
-
-    private class Task implements Runnable
+    @BeforeEach
+    void setup()
     {
-        volatile int i;
-
-        @Override
-        public void run()
+        try ( Transaction tx = db.beginTx() )
         {
-            for ( i = 0; i < ITERATIONS; i++ )
+            Node previous = null;
+            for ( int i = 0; i < N_NODES; i++ )
             {
-                try
+                Node node = tx.createNode( LABEL );
+                if ( previous != null )
                 {
-                    db.executeTransactionally( query(), PARAMS, r -> {
-                        r.accept( visitor() );
-                        return null;
-                    } );
+                    previous.createRelationshipTo( node, R );
                 }
-                catch ( Throwable t )
-                {
-                    //ignore
-                }
+                previous = node;
             }
-            counter.incrementAndGet();
-        }
-
-        int iterationCount()
-        {
-            return i;
+            tx.commit();
         }
     }
 
+    @AfterEach
+    void tearDown()
+    {
+        service.shutdownNow();
+    }
+
     @Test
-    public void runTest() throws InterruptedException
+    void runTest() throws InterruptedException
     {
         Task[] tasks = new Task[N_THREADS];
         for ( int i = 0; i < N_THREADS; i++ )
@@ -147,21 +137,34 @@ public class ParallelRuntimeStressIT
         }
     }
 
-    @Before
-    public void setup()
+    private class Task implements Runnable
     {
-        Transaction tx = db.beginTx();
+        volatile int i;
 
-        Node previous = null;
-        for ( int i = 0; i < N_NODES; i++ )
+        @Override
+        public void run()
         {
-            Node node = tx.createNode( LABEL );
-            if ( previous != null )
+            for ( i = 0; i < ITERATIONS; i++ )
             {
-                previous.createRelationshipTo( node, R );
+                try
+                {
+                    db.executeTransactionally( query(), PARAMS, r -> {
+                        r.accept( visitor() );
+                        return null;
+                    } );
+                }
+                catch ( Throwable t )
+                {
+                    //ignore
+                }
             }
-            previous = node;
+            counter.incrementAndGet();
         }
-        tx.commit();
+
+        int iterationCount()
+        {
+            return i;
+        }
     }
+
 }
