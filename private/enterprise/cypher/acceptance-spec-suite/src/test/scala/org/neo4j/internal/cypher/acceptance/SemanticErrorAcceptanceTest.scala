@@ -147,34 +147,34 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("should complain if shortest path has no relationship") {
     executeAndEnsureError(
-      "match p=shortestPath(n) return p",
+      "match p=shortestPath((n)) return p",
       "shortestPath(...) requires a pattern containing a single relationship (line 1, column 9 (offset: 8))"
     )
 
     executeAndEnsureError(
-      "match p=allShortestPaths(n) return p",
+      "match p=allShortestPaths((n)) return p",
       "allShortestPaths(...) requires a pattern containing a single relationship (line 1, column 9 (offset: 8))"
     )
   }
 
   test("should complain if shortest path has multiple relationships") {
     executeAndEnsureError(
-      "match p=shortestPath(a--()--b) where id(a) = 0 and id(b) = 1 return p",
+      "match p=shortestPath((a)--()--(b)) where id(a) = 0 and id(b) = 1 return p",
       "shortestPath(...) requires a pattern containing a single relationship (line 1, column 9 (offset: 8))"
     )
     executeAndEnsureError(
-      "match p=allShortestPaths(a--()--b) where id(a) = 0 and id(b) = 1 return p",
+      "match p=allShortestPaths((a)--()--(b)) where id(a) = 0 and id(b) = 1 return p",
       "allShortestPaths(...) requires a pattern containing a single relationship (line 1, column 9 (offset: 8))"
     )
   }
 
   test("should complain if shortest path has a minimal length different from 0 or 1") {
     executeAndEnsureError(
-      "match p=shortestPath(a-[*2..3]->b) where id(a) = 0 and id(b) = 1 return p",
+      "match p=shortestPath((a)-[*2..3]->(b)) where id(a) = 0 and id(b) = 1 return p",
       "shortestPath(...) does not support a minimal length different from 0 or 1 (line 1, column 9 (offset: 8))"
     )
     executeAndEnsureError(
-      "match p=allShortestPaths(a-[*2..3]->b) where id(a) = 0 and id(b) = 1 return p",
+      "match p=allShortestPaths((a)-[*2..3]->(b)) where id(a) = 0 and id(b) = 1 return p",
       "allShortestPaths(...) does not support a minimal length different from 0 or 1 (line 1, column 9 (offset: 8))"
     )
   }
@@ -232,14 +232,20 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
                             |RETURN reduce(weight=0, r in relationships(topRoute) : weight+r.cost) AS score
                             |ORDER BY score ASC LIMIT 1
                           """.stripMargin,
-      "reduce(...) requires '| expression' (an accumulation expression) (line 3, column 8 (offset: 84))"
+      List(
+        "reduce(...) requires '| expression' (an accumulation expression) (line 3, column 8 (offset: 84))",
+        """Encountered " ")" ")"" at line 3, column 69."""
+      )
     )
   }
 
   test("should fail if old iterable separator") {
     executeAndEnsureError(
       "match (a) where id(a) = 0 return reduce(i = 0, x in a.List : i + x.prop)",
-      "reduce(...) requires '| expression' (an accumulation expression) (line 1, column 34 (offset: 33))"
+      List(
+        "reduce(...) requires '| expression' (an accumulation expression) (line 1, column 34 (offset: 33))",
+        """Encountered " ")" ")"" at line 1, column 72."""
+      )
     )
 
     executeAndEnsureError(
@@ -291,13 +297,19 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   test("should fail if no parens around node") {
+    val expectedErrors =
+      List(
+        "Parentheses are required to identify nodes in patterns, i.e. (n) (line 1, column 7 (offset: 6))",
+        """Encountered " <IDENTIFIER> "n"" at line 1, column 7."""
+      )
+
     executeAndEnsureError(
       "match n:Person return n",
-      "Parentheses are required to identify nodes in patterns, i.e. (n) (line 1, column 7 (offset: 6))"
+      expectedErrors
     )
     executeAndEnsureError(
       "match n {foo: 'bar'} return n",
-      "Parentheses are required to identify nodes in patterns, i.e. (n) (line 1, column 7 (offset: 6))"
+      expectedErrors
     )
   }
 
@@ -318,14 +330,20 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
   test("should reject properties on shortest path relationships") {
     executeAndEnsureError(
       "MATCH (a), (b), shortestPath( (a)-[r* {x: 1}]->(b) ) RETURN *",
-      "shortestPath(...) contains properties MapExpression(List((PropertyKeyName(x),SignedDecimalIntegerLiteral(1)))). This is currently not supported. (line 1, column 17 (offset: 16))"
+      List(
+        "shortestPath(...) contains properties MapExpression(List((PropertyKeyName(x),SignedDecimalIntegerLiteral(1)))). This is currently not supported. (line 1, column 17 (offset: 16))",
+        "shortestPath(...) contains properties MapExpression(WrappedArray((PropertyKeyName(x),SignedDecimalIntegerLiteral(1)))). This is currently not supported. (line 1, column 17 (offset: 16))"
+      )
     )
   }
 
   test("should reject properties on all shortest paths relationships") {
     executeAndEnsureError(
       "MATCH (a), (b), allShortestPaths( (a)-[r* {x: 1}]->(b) ) RETURN *",
-      "allShortestPaths(...) contains properties MapExpression(List((PropertyKeyName(x),SignedDecimalIntegerLiteral(1)))). This is currently not supported. (line 1, column 17 (offset: 16))"
+      List(
+        "allShortestPaths(...) contains properties MapExpression(List((PropertyKeyName(x),SignedDecimalIntegerLiteral(1)))). This is currently not supported. (line 1, column 17 (offset: 16))",
+        "allShortestPaths(...) contains properties MapExpression(WrappedArray((PropertyKeyName(x),SignedDecimalIntegerLiteral(1)))). This is currently not supported. (line 1, column 17 (offset: 16))"
+      )
     )
   }
 

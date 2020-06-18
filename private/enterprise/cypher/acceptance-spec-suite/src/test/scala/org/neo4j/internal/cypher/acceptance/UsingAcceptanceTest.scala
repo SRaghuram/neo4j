@@ -96,21 +96,13 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     result.columnAs[Node]("f").toList should equal(List(node))
   }
 
-  test("fail if using index with start clause") {
-    // GIVEN
-    graph.createIndex("Person", "name")
-
-    // WHEN & THEN
-    failWithError(Configs.All, "start n=node(*) using index n:Person(name) where n:Person and n.name = 'kabam' return n", List("Invalid input"))
-  }
-
   test("fail if using a variable with label not used in match") {
     // GIVEN
     graph.createIndex("Person", "name")
 
     // WHEN
-    failWithError(Configs.All, "match n-->() using index n:Person(name) where n.name = 'kabam' return n",
-      List("Unknown variable `n`.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
+    failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' return n",
+      List("Unknown variable `n`.", "Cannot use index hint in this context. Must use label on node that hint is referring to."))
   }
 
   test("fail if using a variable with label not used in match (named index)") {
@@ -118,8 +110,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     graph.createIndexWithName("my_index", "Person", "name")
 
     // WHEN
-    failWithError(Configs.All, "match n-->() using index n:Person(name) where n.name = 'kabam' return n",
-      List("Unknown variable `n`.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
+    failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' return n",
+      List("Unknown variable `n`.", "Cannot use index hint in this context. Must use label on node that hint is referring to."))
   }
 
   test("fail if using an hint for a non existing index") {
@@ -168,8 +160,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     graph.createIndex("Person", "name")
 
     // WHEN
-    failWithError(Configs.All, "match n-->() using index n:Person(name) where n.name = 'kabam' OR n.name = 'kaboom' return n",
-      List("Parentheses are required to identify nodes in patterns, i.e. (n)"))
+    failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' OR n.name = 'kaboom' return n",
+      List("Cannot use index hint in this context. Must use label on node that hint is referring to."))
   }
 
   test("correct status code when no index") {
@@ -405,7 +397,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     // GIVEN
 
     // WHEN
-    failWithError(Configs.All, "MATCH n-->() USING SCAN n:Person return n",
+    failWithError(Configs.All, "MATCH (n)-->() USING SCAN n:Person return n",
       List("Cannot use label scan hint in this context.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
   }
 
