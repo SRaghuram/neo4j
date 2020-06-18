@@ -5,11 +5,10 @@
  */
 package com.neo4j.procedure.enterprise.builtin;
 
-import com.neo4j.test.rule.EnterpriseDbmsRule;
+import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.assertj.core.api.Condition;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.HashSet;
 import java.util.List;
@@ -17,54 +16,58 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Entity;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.lock.ResourceTypes;
-import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.VerboseTimeout;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.rule.concurrent.ThreadingExtension;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_hints_error;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_allocation;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_cpu_time;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.rule.concurrent.ThreadingRule.waitingWhileIn;
 
+@EnterpriseDbmsExtension( configurationCallback = "configure" )
+@ExtendWith( ThreadingExtension.class )
 public class ListQueriesProcedureTest
 {
-    private final DbmsRule db = new EnterpriseDbmsRule()
-            .withSetting( cypher_hints_error, true )
-            .withSetting( GraphDatabaseSettings.track_query_allocation, true )
-            .withSetting( track_query_cpu_time, true )
-            .startLazily();
-
-    private final ThreadingRule threads = new ThreadingRule();
-
-    @Rule
-    public final RuleChain chain = RuleChain.outerRule( db ).around( threads );
-    @Rule
-    public VerboseTimeout timeout = VerboseTimeout.builder().withTimeout( SECONDS_TIMEOUT - 2, TimeUnit.SECONDS ).build();
+    @Inject
+    private GraphDatabaseService db;
+    @Inject
+    private ThreadingRule threads;
 
     private static final int SECONDS_TIMEOUT = 240;
     private static final Condition<Object> LONG_VALUE = new Condition<>( value -> value instanceof Long, "long value" );
 
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        builder.setConfig( cypher_hints_error, true )
+               .setConfig( GraphDatabaseSettings.track_query_allocation, true )
+               .setConfig( track_query_cpu_time, true );
+    }
+
     @Test
-    public void shouldContainTheQueryItself()
+    void shouldContainTheQueryItself()
     {
         try ( Transaction transaction = db.beginTx() )
         {
@@ -84,7 +87,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldNotIncludeDeprecatedFields()
+    void shouldNotIncludeDeprecatedFields()
     {
         try ( Transaction transaction = db.beginTx() )
         {
@@ -100,10 +103,12 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldProvideElapsedCpuTimePlannerConnectionDetailsPageHitsAndFaults() throws Exception
+    void shouldProvideElapsedCpuTimePlannerConnectionDetailsPageHitsAndFaults() throws Exception
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
+        db.executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'true')" );
+
         try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             // when
@@ -159,10 +164,11 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldProvideAllocatedBytes() throws Exception
+    void shouldProvideAllocatedBytes() throws Exception
     {
         // given
         String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
+        db.executeTransactionally(  "CALL dbms.setConfigValue('" + track_query_allocation.name() + "', 'true')" );
         final Node node;
         Object allocatedBytes;
         try ( Resource<Node> test = test( Transaction::createNode, query ) )
@@ -189,7 +195,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldListActiveLocks() throws Exception
+    void shouldListActiveLocks() throws Exception
     {
         // given
         String query = "MATCH (x:X) SET x.v = 5 WITH count(x) AS num MATCH (y:Y) SET y.c = num";
@@ -231,7 +237,7 @@ public class ListQueriesProcedureTest
                         }
                         else
                         {
-                            assertEquals( "activeLockCount", lockCount, activeLockCount );
+                            assertEquals( lockCount, activeLockCount, "activeLockCount" );
                         }
                         if ( ResourceTypes.LABEL.name().equals( resourceType ) )
                         {
@@ -247,7 +253,7 @@ public class ListQueriesProcedureTest
                         rowCount++;
                     }
                     assertEquals( locked, ids );
-                    assertNotNull( "activeLockCount", lockCount );
+                    assertNotNull( lockCount, "activeLockCount" );
                     assertEquals( lockCount.intValue(), rowCount ); // note: only true because query is blocked
                 }
                 transaction.commit();
@@ -256,7 +262,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldOnlyGetActiveLockCountFromCurrentQuery() throws Exception
+    void shouldOnlyGetActiveLockCountFromCurrentQuery() throws Exception
     {
         // given
         String query1 = "MATCH (x:X) SET x.v = 1";
@@ -280,11 +286,11 @@ public class ListQueriesProcedureTest
                                 "WITH queryText, queryId, activeLockCount, count(resourceId) AS allLocks " + "RETURN *",
                         singletonMap( "queryText", query2 ) ); )
                 {
-                    assertTrue( "should have at least one row", rows.hasNext() );
+                    assertTrue( rows.hasNext(), "should have at least one row" );
                     Map<String,Object> row = rows.next();
                     Object activeLockCount = row.get( "activeLockCount" );
                     Object allLocks = row.get( "allLocks" );
-                    assertFalse( "should have at most one row", rows.hasNext() );
+                    assertFalse( rows.hasNext(), "should have at most one row" );
                     assertThat( activeLockCount ).as( "activeLockCount" ).isInstanceOf( Long.class );
                     assertThat( allLocks ).as( "allLocks" ).isInstanceOf( Long.class );
                     assertThat( (Long) activeLockCount ).isLessThan( (Long) allLocks );
@@ -295,7 +301,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldContainSpecificConnectionDetails()
+    void shouldContainSpecificConnectionDetails()
     {
         // when
         Map<String,Object> data = getQueryListing( "CALL dbms.listQueries" );
@@ -308,7 +314,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldContainPageHitsAndPageFaults() throws Exception
+    void shouldContainPageHitsAndPageFaults() throws Exception
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
@@ -324,7 +330,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldListUsedIndexes() throws Exception
+    void shouldListUsedIndexes() throws Exception
     {
         // given
         String label = "IndexedLabel";
@@ -348,7 +354,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldListUsedUniqueIndexes() throws Exception
+    void shouldListUsedUniqueIndexes() throws Exception
     {
         // given
         String label = "UniqueLabel";
@@ -363,7 +369,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldListIndexesUsedForScans() throws Exception
+    void shouldListIndexesUsedForScans() throws Exception
     {
         // given
         final String QUERY = "MATCH (n:Node) USING INDEX n:Node(value) WHERE 1 < n.value < 10 SET n.value = 2";
@@ -387,7 +393,7 @@ public class ListQueriesProcedureTest
             assertThat( data ).hasEntrySatisfying( "indexes", value -> assertThat( value ).isInstanceOf( List.class ) );
             @SuppressWarnings( "unchecked" )
             List<Map<String,Object>> indexes = (List<Map<String,Object>>) data.get( "indexes" );
-            assertEquals( "number of indexes used", 1, indexes.size() );
+            assertEquals( 1, indexes.size(), "number of indexes used" );
             Map<String,Object> index = indexes.get( 0 );
             assertThat( index ).containsEntry( "identifier", "n" );
             assertThat( index ).containsEntry( "label", "Node" );
@@ -396,11 +402,11 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldDisableCpuTimeTracking() throws Exception
+    void shouldDisableCpuTimeTracking() throws Exception
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
-        db.withSetting( track_query_cpu_time, false );
+        db.executeTransactionally( "CALL dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'false')" );
         Map<String,Object> data;
 
         // when
@@ -414,7 +420,7 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void cpuTimeTrackingShouldBeADynamicSetting() throws Exception
+    void cpuTimeTrackingShouldBeADynamicSetting() throws Exception
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
@@ -448,11 +454,15 @@ public class ListQueriesProcedureTest
     }
 
     @Test
-    public void shouldDisableHeapAllocationTracking() throws Exception
+    void shouldDisableHeapAllocationTracking() throws Exception
     {
         // given
         String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
-        db.withSetting( track_query_allocation, false );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            transaction.execute( "CALL dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
+            transaction.commit();
+        }
         Map<String,Object> data;
 
         // when
@@ -467,7 +477,7 @@ public class ListQueriesProcedureTest
 
     @SuppressWarnings( "unchecked" )
     @Test
-    public void heapAllocationTrackingShouldBeADynamicSetting() throws Exception
+    void heapAllocationTrackingShouldBeADynamicSetting() throws Exception
     {
         // given
         String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
@@ -521,7 +531,7 @@ public class ListQueriesProcedureTest
             assertThat( data ).hasEntrySatisfying( "indexes", value -> assertThat( value ).isInstanceOf( List.class ) );
             @SuppressWarnings( "unchecked" )
             List<Map<String,Object>> indexes = (List<Map<String,Object>>) data.get( "indexes" );
-            assertEquals( "number of indexes used", 1, indexes.size() );
+            assertEquals( 1, indexes.size(), "number of indexes used" );
             Map<String,Object> index = indexes.get( 0 );
             assertThat( index ).containsEntry( "identifier", "n" );
             assertThat( index ).containsEntry( "label", label );
@@ -546,7 +556,7 @@ public class ListQueriesProcedureTest
             assertThat( data ).hasEntrySatisfying( "indexes", value -> assertThat( value ).isInstanceOf( List.class ) );
             @SuppressWarnings( "unchecked" )
             List<Map<String,Object>> indexes = (List<Map<String,Object>>) data.get( "indexes" );
-            assertEquals( "number of indexes used", 2, indexes.size() );
+            assertEquals( 2, indexes.size(), "number of indexes used" );
 
             Map<String,Object> index1 = indexes.get( 0 );
             assertThat( index1 ).containsEntry( "identifier", "n" );

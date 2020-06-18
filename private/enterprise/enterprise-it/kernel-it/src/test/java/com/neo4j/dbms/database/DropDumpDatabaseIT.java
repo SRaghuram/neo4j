@@ -7,6 +7,7 @@ package com.neo4j.dbms.database;
 
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +37,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.database_dumps_root_
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 @EnterpriseDbmsExtension
+@ExtendWith( SuppressOutputExtension.class )
 public class DropDumpDatabaseIT
 {
     @Inject
