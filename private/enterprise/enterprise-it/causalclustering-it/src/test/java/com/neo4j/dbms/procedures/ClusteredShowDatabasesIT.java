@@ -68,8 +68,7 @@ import static org.neo4j.test.conditions.Conditions.sizeCondition;
 
 class ClusteredShowDatabasesIT
 {
-
-    private static final int LOCAL_STATE_CHANGE_TIMEOUT_SECONDS = 120;
+    private static final int LOCAL_STATE_CHANGE_TIMEOUT_SECONDS = 240;
     private static final String ADDITIONAL_DATABASE_NAME = "foo";
     private static final String SECOND_ADDITIONAL_DATABASE_NAME = "bar";
     private final Set<String> defaultDatabases = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
@@ -81,7 +80,7 @@ class ClusteredShowDatabasesIT
     private final int numCores = 3;
     private final int numRRs = 2;
 
-    private final int timeoutSeconds = 60;
+    private final int timeoutSeconds = 120;
 
     @Nested
     @TestDirectoryExtension

@@ -16,11 +16,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.dbms.DatabaseStateService;
-import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
@@ -28,7 +27,6 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 @ClusterExtension
 public class ClusteredDbmsReconcilerIT
 {
-
     @Inject
     ClusterFactory clusterFactory;
 
@@ -51,6 +49,7 @@ public class ClusteredDbmsReconcilerIT
         // given
         CausalClusteringTestHelpers.createDatabase("foo", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
+        cluster.awaitLeader( "foo" );
 
         var follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER );
         var fooDb = follower.database("foo");
@@ -66,8 +65,7 @@ public class ClusteredDbmsReconcilerIT
 
         // then
         assertEventually( "Reconciler should eventually stop",
-                () -> databaseStateService.stateOfDatabase( fooDb.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
+                () -> databaseStateService.stateOfDatabase( fooDb.databaseId() ), equalityCondition( STOPPED ), 1, MINUTES );
         assertEquals( err, databaseStateService.causeOfFailure( fooDb.databaseId() ).orElse( null ) );
     }
-
 }
