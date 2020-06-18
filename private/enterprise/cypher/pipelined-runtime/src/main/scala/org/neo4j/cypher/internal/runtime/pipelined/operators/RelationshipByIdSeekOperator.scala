@@ -242,6 +242,14 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     singletonIndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
+
+      /**
+       * For an undirected seek we write two rows for each time we progress the cursor, (start) -> (end) and (end) -> (start).
+       * When this flag is `true` we will progress the cursor and then write (start) -> (end) and when it is `false` we
+       * will not progress the cursor and just write (end) -> (start)
+       */
+      private var forwardDirection = true
+
       override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
         while (outputRow.onValidRow && (!forwardDirection || ids.hasNext)) {
           if (forwardDirection) {
