@@ -135,6 +135,7 @@ class SetNodeProperty extends AbstractCypherBenchmark {
     threadState.advance(rngState.rng)
     val result = threadState.executablePlan.execute(params = threadState.param(rngState.rng), tx = threadState.transaction(), subscriber = subscriber)
     result.consumeAll()
+    bh.consume(subscriber.count)
   }
 
   def database(): GraphDatabaseService = db()

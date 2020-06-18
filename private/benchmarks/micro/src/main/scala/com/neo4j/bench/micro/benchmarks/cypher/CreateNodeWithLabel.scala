@@ -94,6 +94,7 @@ class CreateNodeWithLabel extends AbstractCypherBenchmark {
     threadState.advance()
     val result = threadState.executablePlan.execute(tx = threadState.transaction(), subscriber = subscriber)
     result.consumeAll()
+    bh.consume(subscriber.count)
   }
 
   def database(): GraphDatabaseService = db()
