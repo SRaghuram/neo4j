@@ -68,21 +68,21 @@ public class EnterpriseDatabaseTest
     }
 
     @Test
-    public void upgradeOfStartedDatabaseMustRestartForUpgrade() throws IOException
+    public void upgradeOfStartedDatabaseMustObeyStartAfterUpgradeTrue() throws IOException
     {
         Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
         database.start();
         assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( Standard.LATEST_STORE_VERSION );
 
         cfg.set( record_format, "high_limit" );
-        database.upgrade();
+        database.upgrade( true );
 
         assertTrue( database.isStarted() );
         assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( HighLimit.STORE_VERSION );
     }
 
     @Test
-    public void upgradeOfStoppedDatabaseMustNotLeaveDatabaseStarted() throws IOException
+    public void upgradeOfStoppedDatabaseMustObeyStartAfterUpgradeTrue() throws IOException
     {
         Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
         database.start();
@@ -90,7 +90,40 @@ public class EnterpriseDatabaseTest
         database.stop();
 
         cfg.set( record_format, "high_limit" );
-        database.upgrade();
+        database.upgrade( true );
+
+        assertTrue( database.isStarted() );
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( HighLimit.STORE_VERSION );
+    }
+
+    @Test
+    public void upgradeOfStartedDatabaseMustObeyStartAfterUpgradeFalse() throws IOException
+    {
+        Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
+        database.start();
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( Standard.LATEST_STORE_VERSION );
+
+        cfg.set( record_format, "high_limit" );
+        database.upgrade( false );
+
+        assertFalse( database.isStarted() );
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( HighLimit.STORE_VERSION );
+
+        database.start();
+        assertTrue( database.isStarted() );
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( HighLimit.STORE_VERSION );
+    }
+
+    @Test
+    public void upgradeOfStoppedDatabaseMustObeyStartAfterUpgradeFalse() throws IOException
+    {
+        Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
+        database.start();
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( Standard.LATEST_STORE_VERSION );
+        database.stop();
+
+        cfg.set( record_format, "high_limit" );
+        database.upgrade( false );
 
         assertFalse( database.isStarted() );
         assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( HighLimit.STORE_VERSION );
