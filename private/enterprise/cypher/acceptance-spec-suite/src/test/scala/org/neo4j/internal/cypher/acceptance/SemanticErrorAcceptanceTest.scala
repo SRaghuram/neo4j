@@ -684,6 +684,11 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     executeAndMatchErrorMessageLines(query, expectedErrorLines)
   }
 
+  test("map projection on an undefined variable") {
+    executeAndEnsureError("MATCH (n) RETURN x{.*}",
+      "Variable `x` not defined (line 1, column 18 (offset: 17))")
+  }
+
   private def executeAndEnsureErrorForAllRuntimes(query: String, expected: String, params: (String,Any)*): Unit = {
     executeAndEnsureErrorForAllRuntimes(query, List(expected), params:_*)
   }

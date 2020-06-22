@@ -111,6 +111,22 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     )
   }
 
+  test("map projection inside list comprehension on a variable from outer scope") {
+    createLabeledNode(Map("id" -> 1), "A")
+    createLabeledNode(Map("id" -> 2), "B")
+    createLabeledNode(Map("id" -> 3), "C")
+
+    val query =
+      """MATCH (n)
+        |RETURN [ x IN [n] | n {l: labels(x)[0], id: x.id} ] AS res """.stripMargin
+
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    res.toSet shouldBe Set(
+      Map("res" -> Seq(Map("l" -> "A", "id" -> 1))),
+      Map("res" -> Seq(Map("l" -> "B", "id" -> 2))),
+      Map("res" -> Seq(Map("l" -> "C", "id" -> 3))),
+    )
+  }
 
   test("returning all properties of a node and adds other selectors") {
     createNode("foo" -> 1, "bar" -> "apa")
