@@ -60,6 +60,58 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.toList should equal(List(Map("map" -> List(Map("foo" -> 1, "bar" -> "apa")))))
   }
 
+  test("map projection on list comprehension variable") {
+    createLabeledNode(Map("id" -> 1), "A")
+    createLabeledNode(Map("id" -> 2), "B")
+    createLabeledNode(Map("id" -> 3), "C")
+
+    val query =
+      """MATCH (n)
+        |RETURN [ x IN [n] | x {.id, l: labels(x)[0] } ] AS res """.stripMargin
+
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    res.toSet shouldBe Set(
+      Map("res" -> Seq(Map("l" -> "A", "id" -> 1))),
+      Map("res" -> Seq(Map("l" -> "B", "id" -> 2))),
+      Map("res" -> Seq(Map("l" -> "C", "id" -> 3))),
+    )
+  }
+
+  test("map projection with all-properties selector on list comprehension variable") {
+    createLabeledNode(Map("id" -> 1), "A")
+    createLabeledNode(Map("id" -> 2), "B")
+    createLabeledNode(Map("id" -> 3), "C")
+
+    val query =
+      """MATCH (n)
+        |RETURN [ x IN [n] | x {.*, l: labels(x)[0] } ] AS res """.stripMargin
+
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    res.toSet shouldBe Set(
+      Map("res" -> Seq(Map("l" -> "A", "id" -> 1))),
+      Map("res" -> Seq(Map("l" -> "B", "id" -> 2))),
+      Map("res" -> Seq(Map("l" -> "C", "id" -> 3))),
+    )
+  }
+
+  test("map projection without selectors on list comprehension variable") {
+    createLabeledNode(Map("id" -> 1), "A")
+    createLabeledNode(Map("id" -> 2), "B")
+    createLabeledNode(Map("id" -> 3), "C")
+
+    val query =
+      """MATCH (n)
+        |RETURN [ x IN [n] | x {} ] AS res """.stripMargin
+
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    res.toSet shouldBe Set(
+      Map("res" -> Seq(Map.empty)),
+      Map("res" -> Seq(Map.empty)),
+      Map("res" -> Seq(Map.empty)),
+    )
+  }
+
+
   test("returning all properties of a node and adds other selectors") {
     createNode("foo" -> 1, "bar" -> "apa")
 
