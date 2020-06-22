@@ -111,9 +111,10 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN & THEN
-    the[UnsupportedOperationException] thrownBy {
-      execute("CREATE DATABASE foo")
-    } should have message "CREATE DATABASE is not supported because it has been manually disabled."
+    val exception = the[UnsupportedOperationException] thrownBy {
+      execute("CREATE DATABASE neo4j")
+    }
+    exception.getMessage should include("CREATE DATABASE is not supported")
   }
 
   test("should fail CREATE OR REPLACE DATABASE when config setting block_create_drop_database is set to true ") {
@@ -124,9 +125,10 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN & THEN
-    the[UnsupportedOperationException] thrownBy {
+    val exception = the[UnsupportedOperationException] thrownBy {
       execute("CREATE OR REPLACE DATABASE neo4j")
-    } should have message "CREATE DATABASE is not supported because it has been manually disabled."
+    }
+    exception.getMessage should include("CREATE DATABASE is not supported")
   }
 
   test("should fail DROP DATABASE when config setting block_create_drop_database is set to true ") {
@@ -137,9 +139,10 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN & THEN
-    the[UnsupportedOperationException] thrownBy {
+    val exception = the[UnsupportedOperationException] thrownBy {
       execute("DROP DATABASE neo4j")
-    } should have message "DROP DATABASE is not supported because it has been manually disabled."
+    }
+    exception.getMessage should include("DROP DATABASE is not supported")
   }
 
   // Tests for showing databases

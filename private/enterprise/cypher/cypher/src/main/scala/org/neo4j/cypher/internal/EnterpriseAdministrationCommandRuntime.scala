@@ -561,7 +561,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
     case CreateDatabase(source, dbName) => (context, parameterMapping) =>
       if (create_drop_database_is_blocked) {
-        throw new UnsupportedOperationException("CREATE DATABASE is not supported because it has been manually disabled.")
+        throw new UnsupportedOperationException("CREATE DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
       }
 
       // Ensuring we don't exceed the max number of databases is a separate step
@@ -663,7 +663,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     // DROP DATABASE foo [IF EXISTS] [DESTROY | DUMP DATA]
     case DropDatabase(source, dbName, additionalAction) => (context, parameterMapping) =>
       if (create_drop_database_is_blocked) {
-        throw new UnsupportedOperationException("DROP DATABASE is not supported because it has been manually disabled.")
+        throw new UnsupportedOperationException("DROP DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
       }
       val dumpDataKey = internalKey("dumpData")
       val shouldDumpData = additionalAction == DumpData
