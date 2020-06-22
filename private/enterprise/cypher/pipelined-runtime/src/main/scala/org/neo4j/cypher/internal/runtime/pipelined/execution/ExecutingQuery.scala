@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
-import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscription
 
@@ -16,10 +15,9 @@ class ExecutingQuery(val executionState: ExecutionState,
                      val queryExecutionTracer: QueryExecutionTracer,
                      val workersQueryProfiler: WorkersQueryProfiler,
                      val workerResourceProvider: WorkerResourceProvider,
-                     executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
-                     stateFactory: StateFactory) extends QuerySubscription {
+                     executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends QuerySubscription {
 
-  val querySchedulingPolicy: QuerySchedulingPolicy = executionGraphSchedulingPolicy.querySchedulingPolicy(this, stateFactory)
+  val querySchedulingPolicy: QuerySchedulingPolicy = executionGraphSchedulingPolicy.querySchedulingPolicy(this)
 
   protected val flowControl: FlowControl = queryState.flowControl
 

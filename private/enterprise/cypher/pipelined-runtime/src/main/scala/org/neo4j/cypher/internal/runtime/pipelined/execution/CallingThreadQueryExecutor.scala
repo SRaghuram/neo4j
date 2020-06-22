@@ -108,8 +108,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                                          workersProfiler,
                                                          worker,
                                                          workerResourceProvider,
-                                                         executionGraphSchedulingPolicy,
-                                                         stateFactory)
+                                                         executionGraphSchedulingPolicy)
     ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }
 }
