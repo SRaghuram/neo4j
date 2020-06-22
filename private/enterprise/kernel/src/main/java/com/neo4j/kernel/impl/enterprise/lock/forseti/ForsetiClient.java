@@ -12,7 +12,6 @@ import org.eclipse.collections.api.map.primitive.LongIntMap;
 import org.eclipse.collections.api.map.primitive.MutableLongIntMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongIntHashMap;
 
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +41,7 @@ import org.neo4j.lock.LockWaitEvent;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
 import org.neo4j.lock.WaitStrategy;
+import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
 import static org.neo4j.lock.LockType.EXCLUSIVE;
@@ -96,8 +96,9 @@ public class ForsetiClient implements Locks.Client
      *
      * @see GraphDatabaseSettings#lock_acquisition_timeout
      */
-    private final long lockAcquisitionTimeoutMillis;
-    private final Clock clock;
+    private final long lockAcquisitionTimeoutNano;
+
+    private final SystemNanoClock clock;
 
     /** List of other clients this client is waiting for. */
     private final SimpleBitSet waitList = new SimpleBitSet( 64 );
@@ -134,7 +135,7 @@ public class ForsetiClient implements Locks.Client
     public ForsetiClient( int id, ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps,
                           WaitStrategy[] waitStrategies, Pool<ForsetiClient> clientPool,
                           DeadlockResolutionStrategy deadlockResolutionStrategy, IntFunction<ForsetiClient> clientById,
-                          long lockAcquisitionTimeoutMillis, Clock clock )
+                          long lockAcquisitionTimeoutNano, SystemNanoClock clock )
     {
         this.clientId = id;
         this.lockMaps = lockMaps;
@@ -144,7 +145,7 @@ public class ForsetiClient implements Locks.Client
         this.clientById = clientById;
         this.sharedLockCounts = new MutableLongIntMap[lockMaps.length];
         this.exclusiveLockCounts = new MutableLongIntMap[lockMaps.length];
-        this.lockAcquisitionTimeoutMillis = lockAcquisitionTimeoutMillis;
+        this.lockAcquisitionTimeoutNano = lockAcquisitionTimeoutNano;
         this.clock = clock;
 
         for ( int i = 0; i < sharedLockCounts.length; i++ )
@@ -210,12 +211,12 @@ public class ForsetiClient implements Locks.Client
                 // We don't hold the lock, so we need to grab it via the global lock map
                 int tries = 0;
                 SharedLock mySharedLock = null;
-                long waitStartMillis = clock.millis();
+                long waitStartNano = clock.nanos();
 
                 // Retry loop
                 while ( true )
                 {
-                    assertValid( waitStartMillis, resourceType, resourceId );
+                    assertValid( waitStartNano, resourceType, resourceId );
 
                     // Check if there is a lock for this entity in the map
                     ForsetiLockManager.Lock existingLock = lockMap.get( resourceId );
@@ -310,10 +311,10 @@ public class ForsetiClient implements Locks.Client
                 // Grab the global lock
                 ForsetiLockManager.Lock existingLock;
                 int tries = 0;
-                long waitStartMillis = clock.millis();
+                long waitStartNano = clock.nanos();
                 while ( (existingLock = lockMap.putIfAbsent( resourceId, myExclusiveLock )) != null )
                 {
-                    assertValid( waitStartMillis, resourceType, resourceId );
+                    assertValid( waitStartNano, resourceType, resourceId );
 
                     // If this is a shared lock:
                     // Given a grace period of tries (to try and not starve readers), grab an update lock and wait
@@ -324,7 +325,7 @@ public class ForsetiClient implements Locks.Client
                         SharedLock sharedLock = (SharedLock) existingLock;
                         if ( tryUpgradeSharedToExclusive( tracer, waitEvent, resourceType, lockMap, resourceId,
                                 sharedLock,
-                                waitStartMillis ) )
+                                waitStartNano ) )
                         {
                             break;
                         }
@@ -432,10 +433,10 @@ public class ForsetiClient implements Locks.Client
                 return true;
             }
 
-            long waitStartMillis = clock.millis();
+            long waitStartNano = clock.nanos();
             while ( true )
             {
-                assertValid( waitStartMillis, resourceType, resourceId );
+                assertValid( waitStartNano, resourceType, resourceId );
 
                 ForsetiLockManager.Lock existingLock = lockMap.get( resourceId );
                 if ( existingLock == null )
@@ -869,7 +870,7 @@ public class ForsetiClient implements Locks.Client
             ConcurrentMap<Long,ForsetiLockManager.Lock> lockMap,
             long resourceId,
             SharedLock sharedLock,
-            long waitStartMillis )
+            long waitStartNano )
             throws AcquireLockTimeoutException
     {
         int tries = 0;
@@ -885,7 +886,7 @@ public class ForsetiClient implements Locks.Client
             try
             {
                 if ( tryUpgradeToExclusiveWithShareLockHeld( tracer, waitEvent, resourceType, resourceId, sharedLock,
-                        tries, waitStartMillis ) )
+                        tries, waitStartNano ) )
                 {
                     return true;
                 }
@@ -905,14 +906,14 @@ public class ForsetiClient implements Locks.Client
         {
             // We do hold the shared lock, so no reason to deal with the complexity in the case above.
             return tryUpgradeToExclusiveWithShareLockHeld( tracer, waitEvent, resourceType, resourceId, sharedLock,
-                    tries, waitStartMillis );
+                    tries, waitStartNano );
         }
     }
 
     /** Attempt to upgrade a share lock that we hold to an exclusive lock. */
     private boolean tryUpgradeToExclusiveWithShareLockHeld(
             LockTracer tracer, LockWaitEvent priorEvent, ResourceType resourceType, long resourceId,
-            SharedLock sharedLock, int tries, long waitStartMillis ) throws AcquireLockTimeoutException
+            SharedLock sharedLock, int tries, long waitStartNano ) throws AcquireLockTimeoutException
     {
         if ( sharedLock.tryAcquireUpdateLock( this ) )
         {
@@ -922,7 +923,7 @@ public class ForsetiClient implements Locks.Client
                 // Now we just wait for all clients to release the the share lock
                 while ( sharedLock.numberOfHolders() > 1 )
                 {
-                    assertValid( waitStartMillis, resourceType, resourceId );
+                    assertValid( waitStartNano, resourceType, resourceId );
                     if ( waitEvent == null && priorEvent == null )
                     {
                         waitEvent = tracer.waitForLock( EXCLUSIVE, resourceType, userTransactionId, resourceId );
@@ -1079,10 +1080,10 @@ public class ForsetiClient implements Locks.Client
         return clientId;
     }
 
-    private void assertValid( long waitStartMillis, ResourceType resourceType, long resourceId )
+    private void assertValid( long waitStartNano, ResourceType resourceType, long resourceId )
     {
         assertNotStopped();
-        assertNotExpired( waitStartMillis, resourceType, resourceId );
+        assertNotExpired( waitStartNano, resourceType, resourceId );
     }
 
     private void assertNotStopped()
@@ -1093,13 +1094,14 @@ public class ForsetiClient implements Locks.Client
         }
     }
 
-    private void assertNotExpired( long waitStartMillis, ResourceType resourceType, long resourceId )
+    private void assertNotExpired( long waitStartNano, ResourceType resourceType, long resourceId )
     {
-        if ( lockAcquisitionTimeoutMillis > 0 )
+        long timeoutNano = this.lockAcquisitionTimeoutNano;
+        if ( timeoutNano > 0 )
         {
-            if ( (lockAcquisitionTimeoutMillis + waitStartMillis) < clock.millis() )
+            if ( (clock.nanos() - waitStartNano) > timeoutNano )
             {
-                throw new LockAcquisitionTimeoutException( resourceType, resourceId, lockAcquisitionTimeoutMillis );
+                throw new LockAcquisitionTimeoutException( resourceType, resourceId, timeoutNano );
             }
         }
     }

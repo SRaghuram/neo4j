@@ -82,7 +82,6 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.function.Function;
@@ -462,7 +461,7 @@ class CoreDatabaseFactory
         } );
     }
 
-    private Locks createLockManager( final Config config, Clock clock, LogService logService )
+    private Locks createLockManager( final Config config, SystemNanoClock clock, LogService logService )
     {
         LocksFactory lockFactory = createLockFactory( config, logService );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );

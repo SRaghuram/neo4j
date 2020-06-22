@@ -10,7 +10,6 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.function.ThrowingConsumer;
 
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -28,6 +27,7 @@ import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.LockWaitStrategies;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.WaitStrategy;
+import org.neo4j.time.Clocks;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 class ForsetiFalseDeadlockTest
@@ -376,7 +376,7 @@ class ForsetiFalseDeadlockTest
                     @Override
                     public Locks create( ResourceType resourceType )
                     {
-                        return new CommunityLockManger( Config.defaults(), Clock.systemDefaultZone() );
+                        return new CommunityLockManger( Config.defaults(), Clocks.nanoClock() );
                     }
                 },
         FORSETI
@@ -384,7 +384,7 @@ class ForsetiFalseDeadlockTest
                     @Override
                     public Locks create( ResourceType resourceType )
                     {
-                        return new ForsetiLockManager( Config.defaults(), Clock.systemDefaultZone(), resourceType );
+                        return new ForsetiLockManager( Config.defaults(), Clocks.nanoClock(), resourceType );
                     }
                 };
 

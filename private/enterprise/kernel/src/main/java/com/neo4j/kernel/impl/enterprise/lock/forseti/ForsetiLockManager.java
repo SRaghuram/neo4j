@@ -7,7 +7,6 @@ package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
 import org.eclipse.collections.api.set.primitive.LongSet;
 
-import java.time.Clock;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -25,6 +24,7 @@ import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
 import org.neo4j.lock.LockType;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.WaitStrategy;
+import org.neo4j.time.SystemNanoClock;
 
 /**
  * <h1>Forseti, the Nordic god of justice</h1>
@@ -189,7 +189,7 @@ public class ForsetiLockManager implements Locks
     private volatile boolean closed;
 
     @SuppressWarnings( "unchecked" )
-    public ForsetiLockManager( Config config, Clock clock, ResourceType... resourceTypes )
+    public ForsetiLockManager( Config config, SystemNanoClock clock, ResourceType... resourceTypes )
     {
         int maxResourceId = findMaxResourceId( resourceTypes );
         this.lockMaps = new ConcurrentMap[maxResourceId];
@@ -276,12 +276,12 @@ public class ForsetiLockManager implements Locks
         private final Queue<Integer> unusedIds = new ConcurrentLinkedQueue<>();
         private final ConcurrentMap<Integer,ForsetiClient> clientsById = new ConcurrentHashMap<>();
         private final Config config;
-        private final Clock clock;
+        private final SystemNanoClock clock;
         private final ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps;
         private final WaitStrategy[] waitStrategies;
         private final DeadlockResolutionStrategy deadlockResolutionStrategy = DeadlockStrategies.DEFAULT;
 
-        ForsetiClientFlyweightPool( Config config, Clock clock, ConcurrentMap<Long,Lock>[] lockMaps,
+        ForsetiClientFlyweightPool( Config config, SystemNanoClock clock, ConcurrentMap<Long,Lock>[] lockMaps,
                 WaitStrategy[] waitStrategies )
         {
             super( 128, null );
@@ -299,9 +299,9 @@ public class ForsetiLockManager implements Locks
             {
                 id = clientIds.getAndIncrement();
             }
-            long lockAcquisitionTimeoutMillis = config.get( GraphDatabaseSettings.lock_acquisition_timeout ).toMillis();
+            long lockAcquisitionTimeoutNano = config.get( GraphDatabaseSettings.lock_acquisition_timeout ).toNanos();
             ForsetiClient client = new ForsetiClient( id, lockMaps, waitStrategies, this,
-                    deadlockResolutionStrategy, clientsById::get, lockAcquisitionTimeoutMillis, clock );
+                    deadlockResolutionStrategy, clientsById::get, lockAcquisitionTimeoutNano, clock );
             clientsById.put( id, client );
             return client;
         }
