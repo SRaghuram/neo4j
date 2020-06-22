@@ -166,5 +166,4 @@ public class ParallelRuntimeStressIT
             return i;
         }
     }
-
 }

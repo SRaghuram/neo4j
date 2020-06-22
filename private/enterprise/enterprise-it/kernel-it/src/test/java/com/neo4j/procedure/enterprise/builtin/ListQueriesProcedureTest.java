@@ -458,11 +458,7 @@ public class ListQueriesProcedureTest
     {
         // given
         String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
-        try ( Transaction transaction = db.beginTx() )
-        {
-            transaction.execute( "CALL dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
-            transaction.commit();
-        }
+        db.executeTransactionally(  "CALL dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
         Map<String,Object> data;
 
         // when
