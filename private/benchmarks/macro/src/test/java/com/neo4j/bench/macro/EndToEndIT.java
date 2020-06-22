@@ -410,7 +410,6 @@ class EndToEndIT extends BaseEndToEndIT
         // create empty store
         Path dbPath = temporaryFolder.directory( "db" ).toPath();
         Workload workload = Workload.fromName( workloadName, resources, deployment );
-        System.out.println( "creating empty db store at " + dbPath );
         Store emptyStoreFor = StoreTestUtil.createEmptyStoreFor( workload,
                                                                  dbPath, // store
                                                                  neo4jConfig );
