@@ -294,6 +294,15 @@ public final class CausalClusteringTestHelpers
         assertThat( checkPointsRemoved, greaterThan( 0 ) );
     }
 
+    public static void createNode( String databaseName, Cluster cluster ) throws Exception
+    {
+        cluster.coreTx( databaseName, ( db, tx ) ->
+        {
+            tx.execute( "CREATE (a)" );
+            tx.commit();
+        } );
+    }
+
     public static Set<String> listDatabases( Cluster cluster ) throws Exception
     {
         var ref = new AtomicReference<Set<String>>();

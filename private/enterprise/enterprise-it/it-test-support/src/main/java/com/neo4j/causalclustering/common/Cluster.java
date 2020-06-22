@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.TestCoreGraphDatabase;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -227,6 +228,11 @@ public class Cluster
         shutdownMembers( coreMembers() );
     }
 
+    public static void shutdownMembers( ClusterMember... clusterMembers )
+    {
+        shutdownMembers( Arrays.asList( clusterMembers ) );
+    }
+
     private static void shutdownMembers( Collection<? extends ClusterMember> clusterMembers )
     {
         try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown members" ) )
@@ -289,7 +295,7 @@ public class Cluster
 
     public void removeCoreMember( CoreClusterMember memberToRemove )
     {
-        memberToRemove.shutdown();
+        shutdownMembers( memberToRemove );
         coreMembers.values().remove( memberToRemove );
     }
 
@@ -428,6 +434,19 @@ public class Cluster
     public CoreClusterMember awaitLeader( long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
         return awaitCoreMemberWithRole( Role.LEADER, timeout, timeUnit );
+    }
+
+    public void awaitAllCoresJoinedAllRaftGroups( Set<String> databases, long timeout, TimeUnit timeUnit ) throws TimeoutException
+    {
+        await( () -> coreMembers.values().stream().allMatch(
+                core -> databases.stream().allMatch(
+                        databaseName -> core.resolveDependency( databaseName, RaftMachine.class )
+                                            .votingMembers()
+                                            .containsAll( coreMembers.values().stream().map( CoreClusterMember::id ).collect( Collectors.toSet() ) ) )
+               ),
+               timeout,
+               timeUnit
+        );
     }
 
     public CoreClusterMember awaitCoreMemberWithRole( Role role ) throws TimeoutException

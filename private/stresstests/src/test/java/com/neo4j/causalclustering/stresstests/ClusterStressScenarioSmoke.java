@@ -61,6 +61,13 @@ public class ClusterStressScenarioSmoke
     }
 
     @Test
+    public void stressStartStopLeader() throws Exception
+    {
+        config.workloads( Workloads.CreateNodesWithProperties, Workloads.StartStopDefaultDatabaseLeader );
+        stressTest( config, fileSystem, pageCache );
+    }
+
+    @Test
     public void simulateFailure() throws Exception
     {
         try

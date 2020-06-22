@@ -7,6 +7,9 @@ package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.helper.Workload;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+
 enum Workloads
 {
     CreateNodesWithProperties
@@ -31,6 +34,22 @@ enum Workloads
                 Workload create( Control control, Resources resources, Config config )
                 {
                     return new StartStopRandomCore( control, resources );
+                }
+            },
+    StartStopDefaultDatabaseLeader
+            {
+                @Override
+                Workload create( Control control, Resources resources, Config config )
+                {
+                    return new StartStopLeader( control, resources, DEFAULT_DATABASE_NAME );
+                }
+            },
+    StartStopSystemDatabaseLeader
+            {
+                @Override
+                Workload create( Control control, Resources resources, Config config )
+                {
+                    return new StartStopLeader( control, resources, SYSTEM_DATABASE_NAME );
                 }
             },
     BackupRandomMember
