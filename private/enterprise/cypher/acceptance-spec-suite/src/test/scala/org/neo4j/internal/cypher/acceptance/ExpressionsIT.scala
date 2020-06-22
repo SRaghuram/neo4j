@@ -3102,6 +3102,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(map, SlotConfiguration.empty), context) should equal(NO_VALUE)
   }
 
+  test("map projection without selectors on node with map context") {
+    val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
+    val node = nodeValue(propertyMap)
+    val context = new MapCypherRow(mutable.Map("n" -> node))
+
+    evaluate(compile(mapProjection("n", includeAllProps = false)),
+      context) should equal(VirtualValues.EMPTY_MAP)
+  }
+
   test("call function by id") {
     // given
     registerUserDefinedFunction("foo") { builder =>

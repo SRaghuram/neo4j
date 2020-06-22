@@ -402,44 +402,49 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val expressionMap = items.map(_.key.name).zip(expressions)
 
         val builderVar = namer.nextVariableName()
-        val buildMapValue = if (expressionMap.nonEmpty) {
+        val buildMapValue = {
+          val builderInstance = if (expressionMap.isEmpty)
+            newInstance(constructor[MapValueBuilder])
+          else
+            newInstance(constructor[MapValueBuilder, Int], constant(expressionMap.size))
+
           Seq(
             declare[MapValueBuilder](builderVar),
-            assign(builderVar, newInstance(constructor[MapValueBuilder, Int], constant(expressionMap.size)))) ++
+            assign(builderVar, builderInstance)) ++
             expressionMap.map {
               case (key, exp) => invokeSideEffect(load(builderVar),
                                                   method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
                                                   constant(key), nullCheckIfRequired(exp))
             }
-        } else Seq.empty
+        }
 
         val (accessName, maybeNullCheck) = accessVariable(name.name)
+
+        val expressionsFields = expressions.flatMap(_.fields)
+        val expressionsVariables = expressions.flatMap(_.variables)
 
         if (!includeAllProps) {
           Some(IntermediateExpression(
             block(buildMapValue :+ invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables), maybeNullCheck.toSet))
+            expressionsFields, expressionsVariables, maybeNullCheck.toSet))
 
-        } else if (buildMapValue.isEmpty) {
+        } else if (expressionMap.isEmpty) {
           Some(IntermediateExpression(
-            block(buildMapValue ++ Seq(
-              invokeStatic(
-                method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor](
-                  "asMapValue"),
-                accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS,
+            invokeStatic(
+              method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
+              accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+            expressionsFields, expressionsVariables ++ vCURSORS,
             maybeNullCheck.toSet))
         } else {
           Some(IntermediateExpression(
             block(buildMapValue ++ Seq(
               invoke(
                 invokeStatic(
-                  method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor](
-                    "asMapValue"),
+                  method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
                   accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
                 method[MapValue, MapValue, MapValue]("updatedWith"),
                 invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS,
+            expressionsFields, expressionsVariables ++ vCURSORS,
             maybeNullCheck.toSet))
         }
       }
