@@ -5,14 +5,13 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-
 import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.neo4j.util.Id;
 
 import static java.lang.String.format;

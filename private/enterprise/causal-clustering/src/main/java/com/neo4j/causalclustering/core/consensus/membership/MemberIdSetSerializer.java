@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.consensus.membership;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -14,6 +13,7 @@ import java.util.Set;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.EndOfStreamException;
 
 /**
  * Format:

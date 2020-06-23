@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
@@ -25,6 +24,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.function.ThrowingAction;
+import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;

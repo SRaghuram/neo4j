@@ -6,10 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,6 +14,9 @@ import java.util.Map;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class DatabaseLeaderInfoMessageMarshal extends SafeChannelMarshal<LeaderInfoDirectoryMessage>

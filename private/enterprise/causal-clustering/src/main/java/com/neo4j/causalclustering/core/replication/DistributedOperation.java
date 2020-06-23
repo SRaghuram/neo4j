@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.replication;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ContentBuilder;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
@@ -19,6 +18,7 @@ import java.util.UUID;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.EndOfStreamException;
 
 /**
  * A uniquely identifiable operation.

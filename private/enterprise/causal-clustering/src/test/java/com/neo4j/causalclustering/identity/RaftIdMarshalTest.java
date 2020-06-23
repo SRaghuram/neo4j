@@ -5,13 +5,14 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+
+import org.neo4j.io.marshal.ChannelMarshal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;

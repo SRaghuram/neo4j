@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,6 +18,7 @@ import java.util.function.Function;
 
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

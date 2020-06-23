@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +12,7 @@ import java.io.File;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
 

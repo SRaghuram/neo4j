@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
@@ -23,6 +21,8 @@ import java.io.PrintStream;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.io.state.SimpleStorage;
+import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;

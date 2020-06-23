@@ -7,10 +7,11 @@ package com.neo4j.causalclustering.core.state.machines.lease;
 
 import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
 import java.io.IOException;
 import java.util.function.Consumer;
+
+import org.neo4j.io.state.StateStorage;
 
 import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
 import static org.neo4j.util.concurrent.Runnables.EMPTY_RUNNABLE;

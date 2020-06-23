@@ -8,9 +8,10 @@ package com.neo4j.causalclustering;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
 import java.io.IOException;
+
+import org.neo4j.io.state.StateStorage;
 
 public class SessionTracker
 {

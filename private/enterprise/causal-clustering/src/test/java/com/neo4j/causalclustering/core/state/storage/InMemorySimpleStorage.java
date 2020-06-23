@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
+import org.neo4j.io.state.SimpleStorage;
+
 public class InMemorySimpleStorage<T> implements SimpleStorage<T>
 {
     private T state;

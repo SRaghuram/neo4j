@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
+import org.neo4j.io.marshal.SafeChannelMarshal;
+
 /**
  * Wrapper class to handle ReadPastEndExceptions in a safe manner transforming it
  * to the checked EndOfStreamException which does not inherit from IOException.

@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 
 import java.io.File;
@@ -19,6 +18,7 @@ import org.neo4j.cursor.IOCursor;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;

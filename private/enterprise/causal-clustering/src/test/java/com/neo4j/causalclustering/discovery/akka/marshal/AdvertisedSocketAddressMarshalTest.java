@@ -5,11 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-
 import java.util.Collection;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.io.marshal.ChannelMarshal;
 
 import static java.util.Collections.singletonList;
 

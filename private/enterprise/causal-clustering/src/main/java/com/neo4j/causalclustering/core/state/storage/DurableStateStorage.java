@@ -10,13 +10,12 @@ import com.neo4j.causalclustering.core.state.StateRecoveryManager;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
-import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.memory.HeapScopedBuffer;
+import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

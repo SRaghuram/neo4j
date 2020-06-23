@@ -15,12 +15,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
+import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -100,7 +102,6 @@ class UnbindFromClusterCommandTest
     void shouldFailToUnbindLiveDatabase() throws Exception
     {
         // given
-        createClusterStateDir();
         var command = new UnbindFromClusterCommand( ctx );
 
         var fileLock = createLockedFakeDbDir();
@@ -120,11 +121,12 @@ class UnbindFromClusterCommandTest
     }
 
     @Test
-    void shouldRemoveClusterStateDirectory() throws Exception
+    void shouldRemoveClusterStateDirectoryAndServerId() throws Exception
     {
         // given
-        var clusterStateDir = createClusterStateDir();
         createUnlockedFakeDbDir();
+        var clusterStateDir = createClusterStateDir();
+        var serverIdStore = createServerIdStore();
         var command = new UnbindFromClusterCommand( ctx );
 
         // when
@@ -133,6 +135,7 @@ class UnbindFromClusterCommandTest
 
         // then
         assertFalse( fs.fileExists( clusterStateDir ) );
+        assertFalse( fs.fileExists( serverIdStore ) );
     }
 
     @Test
@@ -153,6 +156,17 @@ class UnbindFromClusterCommandTest
         var clusterStateDirectory = ClusterStateLayout.of( dataDir.toFile() ).getClusterStateDirectory();
         fs.mkdirs( clusterStateDirectory );
         return clusterStateDirectory;
+    }
+
+    private File createServerIdStore() throws IOException
+    {
+        var dataDir = neo4jLayout.homeDirectory().resolve( DEFAULT_DATA_DIR_NAME );
+        var serverIdFile = new File( dataDir.toFile(), IdentityModule.SERVER_ID_FILENAME );
+        try ( var channel = fs.write( serverIdFile ) )
+        {
+            channel.writeAll( ByteBuffer.wrap( new byte[]{0} ) );
+        }
+        return serverIdFile;
     }
 
     private void createUnlockedFakeDbDir() throws IOException

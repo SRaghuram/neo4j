@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.dbms.EnterpriseOperatorState;
 
 import java.util.Collection;
@@ -18,6 +17,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;

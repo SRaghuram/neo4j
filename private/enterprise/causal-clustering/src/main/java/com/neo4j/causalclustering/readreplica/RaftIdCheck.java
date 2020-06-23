@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Objects;
 
+import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.lang.String.format;

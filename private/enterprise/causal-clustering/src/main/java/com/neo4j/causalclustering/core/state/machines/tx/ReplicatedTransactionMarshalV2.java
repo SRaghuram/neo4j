@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.messaging.ByteBufBacked;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
 import io.netty.buffer.ByteBuf;
 
@@ -16,6 +15,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 

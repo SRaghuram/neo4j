@@ -44,7 +44,7 @@ public class RaftServerFactory
     public static final String RAFT_SERVER_NAME = "raft-server";
 
     private final GlobalModule globalModule;
-    private final IdentityModule identityModule;
+    private final ClusteringIdentityModule clusteringIdentityModule;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
     private final RaftMessageLogger<MemberId> raftMessageLogger;
     private final LogProvider logProvider;
@@ -52,12 +52,12 @@ public class RaftServerFactory
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final DatabaseIdRepository databaseIdRepository;
 
-    RaftServerFactory( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
+    RaftServerFactory( GlobalModule globalModule, ClusteringIdentityModule clusteringIdentityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
             RaftMessageLogger<MemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, DatabaseIdRepository databaseIdRepository )
     {
         this.globalModule = globalModule;
-        this.identityModule = identityModule;
+        this.clusteringIdentityModule = clusteringIdentityModule;
         this.supportedApplicationProtocol = supportedApplicationProtocol;
         this.raftMessageLogger = raftMessageLogger;
         this.logProvider = globalModule.getLogService().getInternalLogProvider();
@@ -97,7 +97,7 @@ public class RaftServerFactory
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, identityModule.myself(), databaseIdRepository );
+        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, clusteringIdentityModule.memberId(), databaseIdRepository );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

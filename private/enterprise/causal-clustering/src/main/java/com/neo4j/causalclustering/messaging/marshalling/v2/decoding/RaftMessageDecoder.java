@@ -11,9 +11,7 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,12 +19,12 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.io.IOException;
 import java.time.Clock;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 
 import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.marshal.EndOfStreamException;
 
 public class RaftMessageDecoder extends ByteToMessageDecoder
 {

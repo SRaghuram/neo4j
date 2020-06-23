@@ -104,6 +104,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.Group;
@@ -120,7 +121,7 @@ import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
  */
 public class CoreEditionModule extends ClusteringEditionModule implements AbstractEnterpriseEditionModule
 {
-    private final IdentityModule identityModule;
+    private final ClusteringIdentityModule clusteringIdentityModule;
     private final SslPolicyLoader sslPolicyLoader;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
@@ -168,11 +169,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
+        final MemoryTracker memoryTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
-        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
-                globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
+        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig, memoryTracker );
 
         // migration needs to happen as early as possible in the lifecycle
         var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
@@ -185,7 +186,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        identityModule = new IdentityModule( globalModule, storageFactory );
+        clusteringIdentityModule = ClusteringIdentityModule.create( logProvider, fileSystem, dataDir, memoryTracker, storageFactory );
+        globalModule.getJobScheduler().setTopLevelGroupName( "Core " + clusteringIdentityModule.myself() );
         this.discoveryServiceFactory = discoveryServiceFactory;
 
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
@@ -299,7 +301,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
         var globalLife = globalModule.getGlobalLife();
         var fileSystem = globalModule.getFileSystem();
-        var myIdentity = identityModule.myself();
+        var myIdentity = clusteringIdentityModule.memberId();
 
         Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
@@ -344,7 +346,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 temporaryDatabaseFactory, myIdentity, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
                 recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter );
 
-        RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
+        RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, clusteringIdentityModule, pipelineBuilders.server(), raftLogger,
                 supportedRaftProtocols, supportedModifierProtocols, databaseManager.databaseIdRepository() );
 
         Server raftServer = raftServerFactory.createRaftServer( raftMessageDispatcher, serverInstalledProtocolHandler );

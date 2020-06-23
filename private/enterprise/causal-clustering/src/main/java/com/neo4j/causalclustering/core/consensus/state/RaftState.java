@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 
@@ -26,6 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

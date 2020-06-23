@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling.storeid;
 
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import io.netty.handler.codec.DecoderException;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 import org.neo4j.storageengine.api.StoreId;
 
 public final class StoreIdMarshal extends SafeChannelMarshal<StoreId>

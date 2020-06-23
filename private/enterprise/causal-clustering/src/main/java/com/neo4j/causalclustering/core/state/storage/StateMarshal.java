@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import org.neo4j.io.marshal.ChannelMarshal;
 
 public interface StateMarshal<STATE> extends ChannelMarshal<STATE>
 {

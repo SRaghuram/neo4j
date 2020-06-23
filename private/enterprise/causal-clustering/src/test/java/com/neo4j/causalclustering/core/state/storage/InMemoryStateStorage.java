@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
+import org.neo4j.io.state.StateStorage;
+
 public class InMemoryStateStorage<STATE> implements StateStorage<STATE>
 {
     private STATE state;

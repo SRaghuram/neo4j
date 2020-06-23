@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import akka.actor.Address;
 import akka.cluster.UniqueAddress;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,6 +16,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.stream.Stream;
+
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;

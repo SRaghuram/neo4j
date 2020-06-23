@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
@@ -27,6 +26,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.configuration.helpers.SocketAddressParser;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 
 import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.http;

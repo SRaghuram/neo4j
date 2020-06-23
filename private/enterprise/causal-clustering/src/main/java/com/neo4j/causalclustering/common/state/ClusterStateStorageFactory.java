@@ -13,9 +13,6 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
-import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -24,6 +21,9 @@ import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.state.SimpleFileStorage;
+import org.neo4j.io.state.SimpleStorage;
+import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
@@ -94,7 +94,7 @@ public class ClusterStateStorageFactory
 
     private <T> SimpleStorage<T> createSimpleStorage( File file, CoreStateFiles<T> type, LogProvider logProvider )
     {
-        return new SimpleFileStorage<>( fs, file, type.marshal(), logProvider, memoryTracker );
+        return new SimpleFileStorage<>( fs, file, type.marshal(), memoryTracker );
     }
 
     private <T> StateStorage<T> createDurableStorage( File directory, CoreStateFiles<T> type, LifeSupport life, LogProvider logProvider )

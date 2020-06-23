@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 
 import java.io.File;
@@ -15,6 +14,7 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

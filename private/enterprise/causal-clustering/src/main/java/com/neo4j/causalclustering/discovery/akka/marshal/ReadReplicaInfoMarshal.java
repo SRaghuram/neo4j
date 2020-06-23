@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.io.IOException;
@@ -17,6 +15,8 @@ import java.util.Set;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaInfoMarshal extends DiscoveryServerInfoMarshal<ReadReplicaInfo>

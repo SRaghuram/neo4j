@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -20,6 +19,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;

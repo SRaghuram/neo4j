@@ -18,13 +18,13 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<ReplicatedContent>
 {

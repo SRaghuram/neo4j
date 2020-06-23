@@ -6,11 +6,12 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+
+import org.neo4j.io.marshal.ChannelMarshal;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;

@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
@@ -22,6 +20,8 @@ import java.io.UncheckedIOException;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.state.SimpleFileStorage;
+import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.Inject;
@@ -62,7 +62,7 @@ class ClusterStateMigratorTest
         clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( "data" ) );
         writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
 
-        clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), logProvider, INSTANCE );
+        clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), INSTANCE );
         migrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
     }
 
@@ -112,7 +112,7 @@ class ClusterStateMigratorTest
         var memberId = new MemberId( UUID.randomUUID() );
         var memberIdFile = clusterStateLayout.memberIdStateFile();
         assertFalse( fs.fileExists( memberIdFile ) );
-        var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), logProvider, INSTANCE );
+        var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), INSTANCE );
         memberIdStorage.writeState( memberId );
         assertTrue( fs.fileExists( memberIdFile ) );
 
@@ -130,7 +130,7 @@ class ClusterStateMigratorTest
     private void writeRandomClusterId( File file ) throws IOException
     {
         assertFalse( fs.fileExists( file ) );
-        var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), logProvider, INSTANCE );
+        var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), INSTANCE );
         clusterIdStorage.writeState( RaftIdFactory.random() );
         assertTrue( fs.fileExists( file ) );
     }

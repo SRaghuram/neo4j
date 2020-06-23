@@ -12,7 +12,6 @@ import akka.actor.ExtendedActorSystem;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
 import akka.testkit.javadsl.TestKit;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
 import org.junit.jupiter.api.AfterAll;
@@ -23,6 +22,8 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+
+import org.neo4j.io.marshal.EndOfStreamException;
 
 class ActorRefMarshalTest
 {

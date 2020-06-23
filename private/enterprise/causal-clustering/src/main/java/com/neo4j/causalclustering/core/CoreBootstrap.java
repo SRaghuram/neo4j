@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -19,6 +18,7 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import java.time.Duration;
 import java.util.Optional;
 
+import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.scheduler.JobHandle;
 

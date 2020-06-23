@@ -9,9 +9,10 @@ import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
+
+import org.neo4j.io.state.SimpleStorage;
 
 class CoreRaftContext
 {

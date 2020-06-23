@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
@@ -23,6 +22,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.FakeClock;
 

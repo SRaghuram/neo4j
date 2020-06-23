@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersionMarshal;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -24,6 +23,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;

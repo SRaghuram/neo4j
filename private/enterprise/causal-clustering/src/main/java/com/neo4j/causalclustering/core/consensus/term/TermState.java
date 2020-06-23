@@ -5,12 +5,11 @@
  */
 package com.neo4j.causalclustering.core.consensus.term;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 public class TermState
 {

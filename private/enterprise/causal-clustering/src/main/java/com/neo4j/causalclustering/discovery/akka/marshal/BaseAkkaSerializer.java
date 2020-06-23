@@ -8,14 +8,15 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import akka.remote.MessageSerializer;
 import akka.serialization.JSerializer;
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.InputStreamReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
 
 /**
  * Include in {@link TypesafeConfigService} to register with Akka

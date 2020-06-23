@@ -7,15 +7,15 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import akka.actor.ActorRef;
 import akka.actor.ExtendedActorSystem;
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class ReadReplicaRemovalMessageMarshal extends SafeChannelMarshal<ReadReplicaRemovalMessage>
 {

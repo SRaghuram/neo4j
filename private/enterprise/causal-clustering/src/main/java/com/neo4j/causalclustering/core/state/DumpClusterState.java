@@ -6,8 +6,6 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +16,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.state.SimpleStorage;
+import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;

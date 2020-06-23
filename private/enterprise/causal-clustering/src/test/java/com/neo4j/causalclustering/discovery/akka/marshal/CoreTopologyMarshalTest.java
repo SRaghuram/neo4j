@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.internal.helpers.collection.Pair;
+import org.neo4j.io.marshal.ChannelMarshal;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 

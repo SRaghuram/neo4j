@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
@@ -21,6 +20,7 @@ import java.util.Objects;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 import org.neo4j.string.UTF8;
 
 public class PrepareStoreCopyResponse

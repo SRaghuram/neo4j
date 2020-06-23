@@ -5,13 +5,12 @@
  */
 package com.neo4j.causalclustering.core.state.version;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.EndOfStreamException;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 public class ClusterStateVersionMarshal extends SafeStateMarshal<ClusterStateVersion>
 {

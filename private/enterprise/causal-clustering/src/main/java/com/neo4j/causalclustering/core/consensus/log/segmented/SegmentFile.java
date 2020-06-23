@@ -9,8 +9,6 @@ import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +19,8 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

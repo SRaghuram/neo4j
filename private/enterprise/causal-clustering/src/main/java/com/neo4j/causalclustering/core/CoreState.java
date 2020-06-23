@@ -10,9 +10,10 @@ import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
 import java.io.IOException;
+
+import org.neo4j.io.state.StateStorage;
 
 import static java.lang.Long.max;
 

@@ -21,7 +21,6 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.Outbound;
@@ -34,6 +33,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.DurationRange;
+import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;

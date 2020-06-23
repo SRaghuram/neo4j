@@ -8,12 +8,12 @@ package com.neo4j.causalclustering.core.consensus.log;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class DummyRaftableContentSerializer extends SafeChannelMarshal<ReplicatedContent>
 {

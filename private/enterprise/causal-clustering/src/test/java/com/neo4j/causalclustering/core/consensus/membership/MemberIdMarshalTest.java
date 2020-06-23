@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.consensus.membership;
 
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -15,6 +14,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
+
+import org.neo4j.io.marshal.EndOfStreamException;
 
 class MemberIdMarshalTest
 {

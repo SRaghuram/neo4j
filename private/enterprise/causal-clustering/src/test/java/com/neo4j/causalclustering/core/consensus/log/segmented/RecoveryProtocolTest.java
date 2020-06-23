@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,7 @@ import java.util.function.Function;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;

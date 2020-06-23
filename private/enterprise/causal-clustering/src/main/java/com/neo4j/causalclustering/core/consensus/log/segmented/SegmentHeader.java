@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -14,6 +12,7 @@ import java.util.Objects;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;

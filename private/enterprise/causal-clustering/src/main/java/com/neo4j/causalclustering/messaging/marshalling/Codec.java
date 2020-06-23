@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 import java.util.List;
+
+import org.neo4j.io.marshal.EndOfStreamException;
 
 public interface Codec<CONTENT>
 {

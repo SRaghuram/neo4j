@@ -6,14 +6,14 @@
 package com.neo4j.causalclustering.core.consensus.log;
 
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
 
 /**
  * A log entry and its log index.

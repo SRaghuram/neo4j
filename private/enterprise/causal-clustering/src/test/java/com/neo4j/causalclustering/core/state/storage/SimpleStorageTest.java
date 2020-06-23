@@ -12,7 +12,8 @@ import java.io.File;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.logging.NullLogProvider;
+import org.neo4j.io.state.SimpleFileStorage;
+import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -32,7 +33,7 @@ class SimpleStorageTest
         // given
         File dir = testDirectory.homeDir();
         FileSystemAbstraction fs = testDirectory.getFileSystem();
-        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), NullLogProvider.getInstance(), INSTANCE );
+        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), INSTANCE );
 
         // when
         MemberId idA = new MemberId( UUID.randomUUID() );

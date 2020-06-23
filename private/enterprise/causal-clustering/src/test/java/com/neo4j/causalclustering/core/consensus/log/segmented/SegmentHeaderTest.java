@@ -5,10 +5,10 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.kernel.impl.transaction.log.InMemoryClosableChannel;
 
 // TODO: Tests for new segment header

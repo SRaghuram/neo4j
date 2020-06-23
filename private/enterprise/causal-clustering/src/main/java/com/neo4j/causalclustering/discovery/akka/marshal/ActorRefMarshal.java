@@ -8,13 +8,13 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import akka.actor.ActorRef;
 import akka.actor.ExtendedActorSystem;
 import akka.serialization.Serialization;
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class ActorRefMarshal extends SafeChannelMarshal<ActorRef>
 {

@@ -7,10 +7,11 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.util.Collection;
 import java.util.UUID;
+
+import org.neo4j.io.marshal.ChannelMarshal;
 
 import static java.util.Collections.singletonList;
 

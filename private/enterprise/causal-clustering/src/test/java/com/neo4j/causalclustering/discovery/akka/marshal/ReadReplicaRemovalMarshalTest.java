@@ -9,11 +9,12 @@ import akka.actor.ActorSystem;
 import akka.actor.ExtendedActorSystem;
 import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.Collection;
+
+import org.neo4j.io.marshal.ChannelMarshal;
 
 import static java.util.Collections.singletonList;
 

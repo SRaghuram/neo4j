@@ -20,13 +20,13 @@ import com.neo4j.causalclustering.core.state.machines.tx.ChunkedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 import java.util.List;
 
+import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReplicatedContentCodec implements Codec<ReplicatedContent>

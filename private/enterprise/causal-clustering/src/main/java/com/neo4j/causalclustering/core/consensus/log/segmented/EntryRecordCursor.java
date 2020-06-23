@@ -8,8 +8,6 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.IOException;
 
@@ -17,6 +15,8 @@ import org.neo4j.cursor.CursorValue;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 
