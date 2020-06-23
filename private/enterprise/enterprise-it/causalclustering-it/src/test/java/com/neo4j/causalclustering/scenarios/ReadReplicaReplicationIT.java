@@ -78,6 +78,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
@@ -211,7 +212,7 @@ class ReadReplicaReplicationIT
 
         createDataInOneTransaction( cluster, 10 );
 
-        cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 30, SECONDS );
+        assertNotNull( cluster.getMemberWithAnyRole( Role.FOLLOWER ) );
 
         // Get a read replica and make sure that it is operational
         var readReplica = cluster.addReadReplicaWithId( 4 );

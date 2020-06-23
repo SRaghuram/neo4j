@@ -65,6 +65,6 @@ class WillNotBecomeLeaderIT
         cluster.removeCoreMemberWithServerId( leaderId );
 
         // Then
-        assertThrows( TimeoutException.class, () -> cluster.awaitLeader( 10, SECONDS ) );
+        assertThrows( TimeoutException.class, cluster::awaitLeader );
     }
 }

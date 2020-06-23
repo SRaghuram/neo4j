@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -342,34 +343,51 @@ public class Cluster
         return firstOrNull( readReplicas.values() );
     }
 
-    private CoreClusterMember getMemberWithRole( Role role )
-    {
-        return getMemberWithAnyRole( role );
-    }
-
     public List<CoreClusterMember> getAllMembersWithRole( Role role )
     {
-        return getAllMembersWithAnyRole( role );
+        return getAllMembersWithRole( DEFAULT_DATABASE_NAME, role );
     }
 
-    private CoreClusterMember getMemberWithRole( String databaseName, Role role )
+    public List<CoreClusterMember> getAllMembersWithRole( String databaseName, Role role )
     {
-        return getMemberWithAnyRole( databaseName, role );
+        return getAllActiveMembersWithAnyRole( databaseName, role );
     }
 
+    /**
+     * Return a randomly selected member that matches any of the provided roles.
+     * N.b. Use {@link #awaitCoreMemberWithRole} to assert that a member is returned and allow time for cluster changes such as elections }
+     * @param roles
+     * @return null if no members are found matching any of the provided roles.
+     */
     public CoreClusterMember getMemberWithAnyRole( Role... roles )
     {
-        return getMemberWithAnyRole( DEFAULT_DATABASE_NAME, roles );
-    }
-
-    private List<CoreClusterMember> getAllMembersWithAnyRole( Role... roles )
-    {
-        return getAllMembersWithAnyRole( DEFAULT_DATABASE_NAME, roles );
+        return getAnyActiveMemberWithAnyRole( DEFAULT_DATABASE_NAME, roles ).orElse( null );
     }
 
     public CoreClusterMember getMemberWithAnyRole( String databaseName, Role... roles )
     {
-        return getAllMembersWithAnyRole( databaseName, roles ).stream().findFirst().orElse( null );
+        return getAnyActiveMemberWithAnyRole( databaseName, roles ).orElse( null );
+    }
+
+    private Optional<CoreClusterMember> getAnyActiveMemberWithAnyRole( String databaseName, Role... roles )
+    {
+        return getAllActiveMembersWithAnyRole( databaseName, roles ).stream().findFirst();
+    }
+
+    private List<CoreClusterMember> getAllActiveMembersWithAnyRole( String databaseName, Role... roles )
+    {
+        return getAllMembersWithAnyRole( databaseName, roles ).stream().filter( member -> {
+            try
+            {
+                var managementService = member.managementService();
+                return managementService != null &&
+                       managementService.database( databaseName ).isAvailable( -1 );
+            }
+            catch ( DatabaseNotFoundException e )
+            {
+                return false;
+            }
+        } ).collect( Collectors.toList() );
     }
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( String databaseName, Role... roles )
@@ -377,9 +395,9 @@ public class Cluster
         var roleSet = Arrays.stream( roles ).collect( toSet() );
 
         var list = new ArrayList<CoreClusterMember>();
-        for ( CoreClusterMember m : coreMembers.values() )
+        for ( CoreClusterMember member : coreMembers.values() )
         {
-            var managementService = m.managementService();
+            var managementService = member.managementService();
             if ( managementService == null )
             {
                 continue;
@@ -390,7 +408,7 @@ public class Cluster
                 var database = (GraphDatabaseFacade) managementService.database( databaseName );
                 if ( roleSet.contains( getCurrentDatabaseRole( database ) ) )
                 {
-                    list.add( m );
+                    list.add( member );
                 }
             }
             catch ( DatabaseNotFoundException e )
@@ -398,6 +416,9 @@ public class Cluster
                 // ignored
             }
         }
+
+        // Shuffle the list to avoid implicit ordering-related problems
+        Collections.shuffle( list );
         return list;
     }
 
@@ -418,12 +439,12 @@ public class Cluster
 
     public CoreClusterMember awaitLeader() throws TimeoutException
     {
-        return awaitCoreMemberWithRole( Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        return awaitLeader( DEFAULT_DATABASE_NAME );
     }
 
     public CoreClusterMember awaitLeader( String databaseName ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( databaseName, Role.LEADER, DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        return awaitLeader( databaseName, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     public CoreClusterMember awaitLeader( String databaseName, long timeout, TimeUnit timeUnit ) throws TimeoutException
@@ -431,9 +452,25 @@ public class Cluster
         return awaitCoreMemberWithRole( databaseName, Role.LEADER, timeout, timeUnit );
     }
 
-    public CoreClusterMember awaitLeader( long timeout, TimeUnit timeUnit ) throws TimeoutException
+    public CoreClusterMember awaitCoreMemberWithRole( Role role ) throws TimeoutException
     {
-        return awaitCoreMemberWithRole( Role.LEADER, timeout, timeUnit );
+        return awaitCoreMemberWithRole( DEFAULT_DATABASE_NAME, role );
+    }
+
+    public CoreClusterMember awaitCoreMemberWithRole( String databaseName, Role role ) throws TimeoutException
+    {
+        return awaitCoreMemberWithRole( databaseName, role, DEFAULT_TIMEOUT_MS, MILLISECONDS );
+    }
+
+    public CoreClusterMember awaitCoreMemberWithRole( String databaseName, Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
+    {
+        return awaitCoreMemberWithAnyRole( databaseName, timeout, timeUnit, role );
+    }
+
+    @SuppressWarnings( "SameParameterValue" )
+    private CoreClusterMember awaitCoreMemberWithAnyRole( String databaseName, long timeout, TimeUnit timeUnit, Role... roles ) throws TimeoutException
+    {
+        return await( () -> getAnyActiveMemberWithAnyRole( databaseName, roles ).orElse( null ), notNull(), timeout, timeUnit );
     }
 
     public void awaitAllCoresJoinedAllRaftGroups( Set<String> databases, long timeout, TimeUnit timeUnit ) throws TimeoutException
@@ -447,22 +484,6 @@ public class Cluster
                timeout,
                timeUnit
         );
-    }
-
-    public CoreClusterMember awaitCoreMemberWithRole( Role role ) throws TimeoutException
-    {
-        return awaitCoreMemberWithRole( role, DEFAULT_TIMEOUT_MS, MILLISECONDS );
-    }
-
-    public CoreClusterMember awaitCoreMemberWithRole( Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
-    {
-        return await( () -> getMemberWithRole( role ), notNull(), timeout, timeUnit );
-    }
-
-    @SuppressWarnings( "SameParameterValue" )
-    private CoreClusterMember awaitCoreMemberWithRole( String databaseName, Role role, long timeout, TimeUnit timeUnit ) throws TimeoutException
-    {
-        return await( () -> getMemberWithRole( databaseName, role ), notNull(), timeout, timeUnit );
     }
 
     public int numberOfCoreMembersReportedByTopology( String databaseName )

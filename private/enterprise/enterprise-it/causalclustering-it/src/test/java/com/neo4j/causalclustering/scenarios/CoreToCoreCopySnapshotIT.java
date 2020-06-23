@@ -65,7 +65,7 @@ class CoreToCoreCopySnapshotIT
         CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
 
         // when
-        CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 5, TimeUnit.SECONDS );
+        CoreClusterMember follower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
 
         // shutdown the follower, remove the store, restart
         follower.shutdown();
@@ -92,7 +92,7 @@ class CoreToCoreCopySnapshotIT
         CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
 
         // when
-        CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 5, TimeUnit.SECONDS );
+        CoreClusterMember follower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
 
         // shutdown the follower, remove the store, restart
         follower.shutdown();

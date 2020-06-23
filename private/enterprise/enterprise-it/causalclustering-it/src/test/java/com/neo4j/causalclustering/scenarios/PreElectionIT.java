@@ -68,16 +68,17 @@ class PreElectionIT
     {
         // given
         Cluster cluster = startCluster( clusterConfig );
-        CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 1, MINUTES );
+        CoreClusterMember follower = cluster.awaitCoreMemberWithRole( DEFAULT_DATABASE_NAME, Role.FOLLOWER );
 
         // when
         follower.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).triggerElection();
 
         // then
         Duration maxFailureDetectionTimeout = follower.config().get( CausalClusteringSettings.leader_failure_detection_window ).getMin();
+        var testTimeout = maxFailureDetectionTimeout.multipliedBy( 2 ).toSeconds();
         assertThrows(
                 TimeoutException.class,
-                () -> cluster.awaitCoreMemberWithRole( Role.CANDIDATE, maxFailureDetectionTimeout.multipliedBy( 2 ).toSeconds(), TimeUnit.SECONDS ) );
+                () -> cluster.awaitCoreMemberWithRole( DEFAULT_DATABASE_NAME, Role.CANDIDATE, testTimeout, TimeUnit.SECONDS ) );
     }
 
     @Test
