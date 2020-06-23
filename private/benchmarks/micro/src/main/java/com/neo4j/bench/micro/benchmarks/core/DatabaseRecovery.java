@@ -6,7 +6,6 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -14,6 +13,7 @@ import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.StringGenerator;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -148,7 +148,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     private static void removeLastCheckpointsRecordFromLastLogFile( DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory ) throws Exception
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory().toFile(), fileSystem ).build();
 
         LogFile logFile = logFiles.getLogFile();
         VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );

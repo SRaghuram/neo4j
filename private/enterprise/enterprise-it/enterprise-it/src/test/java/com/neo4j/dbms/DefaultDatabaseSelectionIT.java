@@ -11,6 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -152,8 +153,8 @@ class DefaultDatabaseSelectionIT
 
     private void copyDatabaseToLegacyDatabase( DatabaseLayout neo4j, DatabaseLayout legacyDbLayout ) throws IOException
     {
-        fileSystem.copyRecursively( neo4j.databaseDirectory(), legacyDbLayout.databaseDirectory() );
-        fileSystem.copyRecursively( neo4j.getTransactionLogsDirectory(), legacyDbLayout.getTransactionLogsDirectory() );
+        fileSystem.copyRecursively( neo4j.databaseDirectory().toFile(), legacyDbLayout.databaseDirectory().toFile() );
+        fileSystem.copyRecursively( neo4j.getTransactionLogsDirectory().toFile(), legacyDbLayout.getTransactionLogsDirectory().toFile() );
     }
 
     private static void checkDatabaseNames( GraphDatabaseService database, String databaseName )
@@ -169,10 +170,10 @@ class DefaultDatabaseSelectionIT
         startDatabase( databaseName );
         managementService.shutdown();
         DatabaseLayout systemLayout = neo4jLayout.databaseLayout( SYSTEM_DATABASE_NAME );
-        assertTrue( systemLayout.metadataStore().exists() );
-        fileSystem.deleteRecursively( systemLayout.getTransactionLogsDirectory() );
-        fileSystem.deleteRecursively( systemLayout.databaseDirectory() );
-        assertFalse( systemLayout.databaseDirectory().exists() );
+        assertTrue( Files.exists( systemLayout.metadataStore() ) );
+        fileSystem.deleteRecursively( systemLayout.getTransactionLogsDirectory().toFile() );
+        fileSystem.deleteRecursively( systemLayout.databaseDirectory().toFile() );
+        assertFalse( Files.exists( systemLayout.databaseDirectory() ) );
     }
 
     private GraphDatabaseService startDatabase()

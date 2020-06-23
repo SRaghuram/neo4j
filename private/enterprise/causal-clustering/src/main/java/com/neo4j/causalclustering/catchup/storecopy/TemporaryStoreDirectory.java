@@ -30,11 +30,11 @@ public class TemporaryStoreDirectory implements AutoCloseable
     TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory )
             throws IOException
     {
-        this.tempHomeDir = databaseLayout.file( TEMP_STORE_COPY_DIRECTORY_NAME );
-        this.tempDatabaseLayout = Neo4jLayout.ofFlat( tempHomeDir ).databaseLayout( databaseLayout.getDatabaseName() );
+        this.tempHomeDir = databaseLayout.file( TEMP_STORE_COPY_DIRECTORY_NAME ).toFile();
+        this.tempDatabaseLayout = Neo4jLayout.ofFlat( tempHomeDir.toPath() ).databaseLayout( databaseLayout.getDatabaseName() );
         this.fs = fs;
         storeFiles = new StoreFiles( fs, pageCache, ( directory, name ) -> true );
-        tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory(), fs )
+        tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory().toFile(), fs )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
         storeFiles.delete( tempDatabaseLayout, tempLogFiles );

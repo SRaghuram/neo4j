@@ -70,7 +70,7 @@ class BackupHelper
      * @throws BackupExecutionException if the backup fails for an unexpected reason during the backup phase.
      * @throws ConsistencyCheckExecutionException if the backup fails during the consistency checking phase.
      */
-    Optional<File> backup( ClusterMember member ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    Optional<Path> backup( ClusterMember member ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         SocketAddress address = member.config().get( transaction_advertised_address );
         Path backupDir = createBackupDir( DB_NAME );
@@ -89,7 +89,7 @@ class BackupHelper
 
             successfulBackups.incrementAndGet();
 
-            return Optional.of( backupDir.resolve( DB_NAME ).toFile() );
+            return Optional.of( backupDir.resolve( DB_NAME ) );
         }
         catch ( BackupExecutionException e )
         {

@@ -34,7 +34,7 @@ class PageCacheWarmerExtension extends LifecycleAdapter
         this.databaseAvailabilityGuard = databaseAvailabilityGuard;
         this.database = database;
         this.config = config;
-        this.pageCacheWarmer = new PageCacheWarmer( fs, pageCache, scheduler, database.getDatabaseLayout().databaseDirectory(), config, log, tracers );
+        this.pageCacheWarmer = new PageCacheWarmer( fs, pageCache, scheduler, database.getDatabaseLayout().databaseDirectory().toFile(), config, log, tracers );
         this.availabilityListener = new WarmupAvailabilityListener( scheduler, pageCacheWarmer, config, log, monitor, database.getNamedDatabaseId() );
     }
 

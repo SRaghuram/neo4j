@@ -44,7 +44,7 @@ class PrepareStoreCopyFilesTest
     {
         var dataSource = mock( Database.class );
         fileListingBuilder = mock( DatabaseFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
-        databaseLayout = DatabaseLayout.ofFlat( testDirectory.directory( "neo4j", "data", "databases" ) );
+        databaseLayout = DatabaseLayout.ofFlat( testDirectory.directoryPath( "neo4j", "data", "databases" ) );
         when( dataSource.getDatabaseLayout() ).thenReturn( databaseLayout );
         var storeFileListing = mock( DatabaseFileListing.class );
         when( storeFileListing.builder() ).thenReturn( fileListingBuilder );
@@ -71,8 +71,8 @@ class PrepareStoreCopyFilesTest
     void shouldReturnExpectedListOfFileNamesForEachType() throws Exception
     {
         // given
-        var expectedFiles = new StoreFileMetadata[]{new StoreFileMetadata( databaseLayout.file( "a" ), 1 ),
-                new StoreFileMetadata( databaseLayout.file( "b" ), 2 )};
+        var expectedFiles = new StoreFileMetadata[]{new StoreFileMetadata( databaseLayout.file( "a" ).toFile(), 1 ),
+                new StoreFileMetadata( databaseLayout.file( "b" ).toFile(), 2 )};
         setExpectedFiles( expectedFiles );
 
         // when
@@ -98,7 +98,7 @@ class PrepareStoreCopyFilesTest
     {
         try
         {
-            return relativePath( databaseLayout.databaseDirectory(), f.file() );
+            return relativePath( databaseLayout.databaseDirectory().toFile(), f.file() );
         }
         catch ( IOException e )
         {

@@ -28,7 +28,7 @@ public class Neo4jStore extends Store
         this.homeDir = homeDir;
         this.databaseName = Objects.requireNonNull( databaseName );
         this.isTemporaryCopy = isTemporaryCopy;
-        this.layout = Neo4jLayout.of( homeDir.toFile() );
+        this.layout = Neo4jLayout.of( homeDir );
     }
 
     public static Neo4jStore createFrom( Path originalTopLevelDir )
@@ -81,7 +81,7 @@ public class Neo4jStore extends Store
     @Override
     public Path graphDbDirectory()
     {
-        return layout.databaseLayout( databaseName.name() ).databaseDirectory().toPath();
+        return layout.databaseLayout( databaseName.name() ).databaseDirectory();
     }
 
     @Override
@@ -94,7 +94,7 @@ public class Neo4jStore extends Store
     public void removeTxLogs()
     {
         DatabaseLayout databaseLayout = layout.databaseLayout( databaseName.name() );
-        Arrays.stream( Objects.requireNonNull( databaseLayout.getTransactionLogsDirectory().listFiles() ) )
+        Arrays.stream( Objects.requireNonNull( databaseLayout.getTransactionLogsDirectory().toFile().listFiles() ) )
               .forEach( File::delete );
     }
 

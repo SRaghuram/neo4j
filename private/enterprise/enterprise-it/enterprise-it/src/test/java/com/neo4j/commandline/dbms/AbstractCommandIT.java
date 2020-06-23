@@ -9,7 +9,6 @@ import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,10 +54,10 @@ abstract class AbstractCommandIT
     @BeforeEach
     void setUp() throws IOException
     {
-        File dataDir = neo4jLayout.databasesDirectory();
+        Path dataDir = neo4jLayout.databasesDirectory();
         neo4jHome = config.get( GraphDatabaseSettings.neo4j_home );
-        configDir = testDirectory.directory( "configDir" ).toPath();
-        appendConfigSetting( databases_root_path, dataDir.toPath() );
+        configDir = testDirectory.directoryPath( "configDir" );
+        appendConfigSetting( databases_root_path, dataDir );
     }
 
     @ExtensionCallback

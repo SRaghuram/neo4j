@@ -28,6 +28,7 @@ import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
@@ -154,10 +156,10 @@ class BackupIT
     @Inject
     private RandomRule random;
 
-    private File serverHomeDir;
-    private File otherServerPath;
-    private File backupDatabasePath;
-    private File backupsDir;
+    private Path serverHomeDir;
+    private Path otherServerPath;
+    private Path backupDatabasePath;
+    private Path backupsDir;
     private List<GraphDatabaseService> databases;
     private DatabaseLayout backupDatabaseLayout;
     private DatabaseLayout serverDatabaseLayout;
@@ -167,16 +169,16 @@ class BackupIT
     void beforeEach()
     {
         databases = new ArrayList<>();
-        var serverLayout = Neo4jLayout.ofFlat( testDirectory.homeDir( "server" ) );
+        var serverLayout = Neo4jLayout.ofFlat( testDirectory.homePath( "server" ) );
         serverHomeDir = serverLayout.homeDirectory();
         serverDatabaseLayout = serverLayout.databaseLayout( DEFAULT_DATABASE_NAME );
 
-        var otherServerLayout = Neo4jLayout.ofFlat( testDirectory.homeDir( "otherServer" ) );
+        var otherServerLayout = Neo4jLayout.ofFlat( testDirectory.homePath( "otherServer" ) );
         otherServerPath = otherServerLayout.databaseLayout( DEFAULT_DATABASE_NAME ).databaseDirectory();
 
-        backupsDir = testDirectory.homeDir( "backups" );
+        backupsDir = testDirectory.homePath( "backups" );
 
-        backupDatabaseLayout = DatabaseLayout.ofFlat( new File( backupsDir, DEFAULT_DATABASE_NAME ) );
+        backupDatabaseLayout = DatabaseLayout.ofFlat( backupsDir.resolve( DEFAULT_DATABASE_NAME ) );
         backupDatabasePath = backupDatabaseLayout.databaseDirectory();
     }
 
@@ -291,11 +293,11 @@ class BackupIT
 
         // First check full
         executeBackup( db );
-        assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
+        assertFalse( checkLogFileExistence( backupDatabasePath ) );
 
         // Then check empty incremental
         executeBackupWithoutFallbackToFull( db );
-        assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
+        assertFalse( checkLogFileExistence( backupDatabasePath ) );
 
         // Then check real incremental
         managementService.shutdown();
@@ -303,7 +305,7 @@ class BackupIT
         db = startDb( serverHomeDir );
 
         executeBackupWithoutFallbackToFull( db );
-        assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
+        assertFalse( checkLogFileExistence( backupDatabasePath ) );
     }
 
     @TestWithRecordFormats
@@ -459,7 +461,7 @@ class BackupIT
         createInitialDataSet( db );
 
         StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
-        LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs )
+        LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath.toFile(), fs )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
 
@@ -508,19 +510,19 @@ class BackupIT
         GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
-        assertTrue( backupDatabaseLayout.databaseDirectory().mkdirs() );
-        File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" );
+        assertTrue( backupDatabaseLayout.databaseDirectory().toFile().mkdirs() );
+        File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" ).toFile();
         fs.write( incorrectFile ).close();
 
         executeBackup( db );
 
         // unexpected file was moved to an error directory
-        File incorrectExistingBackupDir = new File( backupsDir, "neo4j.err.0" );
-        assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
-        assertTrue( fs.fileExists( new File( incorrectExistingBackupDir, incorrectFile.getName() ) ) );
+        Path incorrectExistingBackupDir = backupsDir.resolve( "neo4j.err.0" );
+        assertTrue( fs.isDirectory( incorrectExistingBackupDir.toFile() ) );
+        assertTrue( fs.fileExists( incorrectExistingBackupDir.resolve( incorrectFile.getName() ).toFile() ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
-        assertThat( backupsDir.list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
+        assertThat( backupsDir.toFile().list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
@@ -532,7 +534,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
-        File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" );
+        File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" ).toFile();
         File incorrectFile = new File( incorrectDir, "jibberishfile" );
         fs.mkdirs( incorrectDir );
         fs.write( incorrectFile ).close();
@@ -540,14 +542,14 @@ class BackupIT
         executeBackup( db );
 
         // unexpected directory was moved to an error directory
-        File incorrectExistingBackupDir = new File( backupsDir, "neo4j.err.0" );
+        File incorrectExistingBackupDir = new File( backupsDir.toFile(), "neo4j.err.0" );
         assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
         File movedIncorrectDir = new File( incorrectExistingBackupDir, incorrectDir.getName() );
         assertTrue( fs.isDirectory( movedIncorrectDir ) );
         assertTrue( fs.fileExists( new File( movedIncorrectDir, incorrectFile.getName() ) ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
-        assertThat( backupsDir.list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
+        assertThat( backupsDir.toFile().list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
@@ -563,25 +565,25 @@ class BackupIT
 
         executeBackup( db );
 
-        File[] backupStoreFiles = backupDatabaseLayout.databaseDirectory().listFiles();
+        File[] backupStoreFiles = backupDatabaseLayout.databaseDirectory().toFile().listFiles();
         assertNotNull( backupStoreFiles );
         assertThat( backupStoreFiles ).hasSizeGreaterThan( 0 );
 
-        for ( File storeFile : backupDatabaseLayout.storeFiles() )
+        for ( Path storeFile : backupDatabaseLayout.storeFiles() )
         {
             if ( backupDatabaseLayout.countStore().equals( storeFile ) )
             {
-                assertThat( backupStoreFiles ).contains( backupDatabaseLayout.countStore() );
+                assertThat( backupStoreFiles ).contains( backupDatabaseLayout.countStore().toFile() );
             }
             else
             {
-                if ( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName().equals( storeFile.getName() ) &&
+                if ( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName().equals( storeFile.getFileName().toString() ) &&
                         !Config.defaults().get( enable_relationship_type_scan_store ) )
                 {
                     // Skip relationship type scan store file if feature is not enabled
                     continue;
                 }
-                assertThat( backupStoreFiles ).contains( storeFile );
+                assertThat( backupStoreFiles ).contains( storeFile.toFile() );
             }
         }
 
@@ -828,9 +830,13 @@ class BackupIT
             executeBackup( db );
         }
 
-        File[] dirs = backupsDir.listFiles();
+        Path[] dirs;
+        try ( Stream<Path> list = Files.list( backupsDir ) )
+        {
+            dirs = list.toArray( Path[]::new);
+        }
         assertNotNull( dirs );
-        assertEquals( singletonList( new File( backupsDir, DEFAULT_DATABASE_NAME ) ), Arrays.asList( dirs ) );
+        assertEquals( singletonList( backupsDir.resolve( DEFAULT_DATABASE_NAME ) ), Arrays.asList( dirs ) );
     }
 
     @Test
@@ -994,7 +1000,7 @@ class BackupIT
     {
         Config config = Config.newBuilder()
                 .set( pagecache_memory, "8m" )
-                .set( neo4j_home, layout.getNeo4jLayout().homeDirectory().toPath() )
+                .set( neo4j_home, layout.getNeo4jLayout().homeDirectory() )
                 .build();
 
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
@@ -1052,13 +1058,13 @@ class BackupIT
 
     private void ensureStoresHaveIdFiles( DatabaseLayout databaseLayout )
     {
-        for ( File idFile : databaseLayout.idFiles() )
+        for ( Path idFile : databaseLayout.idFiles() )
         {
-            assertTrue( idFile.exists(), "Missing id file " + idFile );
+            assertTrue( Files.exists( idFile ), "Missing id file " + idFile );
         }
     }
 
-    private void assertStoreIsLocked( File path )
+    private void assertStoreIsLocked( Path path )
     {
         RuntimeException error = assertThrows( RuntimeException.class, () -> startDb( path ),
                 "Could build up database in same process, store not locked" );
@@ -1066,7 +1072,7 @@ class BackupIT
         assertThat( error.getCause().getCause() ).isInstanceOf( FileLockException.class );
     }
 
-    private DbRepresentation addMoreData( File path, String recordFormatName )
+    private DbRepresentation addMoreData( Path path, String recordFormatName )
     {
         GraphDatabaseService db = startDbWithoutOnlineBackup( path, recordFormatName );
         DbRepresentation representation;
@@ -1085,7 +1091,7 @@ class BackupIT
         return representation;
     }
 
-    private DbRepresentation createInitialDataSet( File path, String recordFormatName )
+    private DbRepresentation createInitialDataSet( Path path, String recordFormatName )
     {
         GraphDatabaseService db = startDbWithoutOnlineBackup( path, recordFormatName );
         try
@@ -1099,35 +1105,35 @@ class BackupIT
         }
     }
 
-    private GraphDatabaseService startDb( File path )
+    private GraphDatabaseService startDb( Path path )
     {
         return startDb( path, Maps.mutable.of() );
     }
 
-    private GraphDatabaseService startDb( File path, String recordFormatName )
+    private GraphDatabaseService startDb( Path path, String recordFormatName )
     {
         return startDb( path, Maps.mutable.of( record_format, recordFormatName ) );
     }
 
-    private GraphDatabaseService startDbWithoutOnlineBackup( File path )
+    private GraphDatabaseService startDbWithoutOnlineBackup( Path path )
     {
         Map<Setting<?>,Object> settings = Maps.mutable.of( online_backup_enabled, false,
                 record_format, record_format.defaultValue(),
-                transaction_logs_root_path, path.toPath().toAbsolutePath() );
+                transaction_logs_root_path, path.toAbsolutePath() );
         return startDb( path, settings );
     }
 
-    private GraphDatabaseService startDbWithoutOnlineBackup( File path, String recordFormatName )
+    private GraphDatabaseService startDbWithoutOnlineBackup( Path path, String recordFormatName )
     {
         Map<Setting<?>,Object> settings = Maps.mutable.of( online_backup_enabled, false, record_format, recordFormatName );
         return startDb( path, settings );
     }
 
-    private GraphDatabaseService startDb( File path, Map<Setting<?>,Object> settings )
+    private GraphDatabaseService startDb( Path path, Map<Setting<?>,Object> settings )
     {
         DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( path );
 
-        settings.putIfAbsent( databases_root_path, path.toPath().toAbsolutePath() );
+        settings.putIfAbsent( databases_root_path, path.toAbsolutePath() );
         settings.putIfAbsent( online_backup_enabled, true );
         builder.setConfig( settings );
 
@@ -1141,8 +1147,8 @@ class BackupIT
     {
         Config config = Config.newBuilder()
                 .set( online_backup_enabled, false )
-                .set( transaction_logs_root_path, backupsDir.toPath().toAbsolutePath() )
-                .set( databases_root_path, backupsDir.toPath().toAbsolutePath() )
+                .set( transaction_logs_root_path, backupsDir.toAbsolutePath() )
+                .set( databases_root_path, backupsDir.toAbsolutePath() )
                 .build();
         return DbRepresentation.of( backupDatabaseLayout, config );
     }
@@ -1197,7 +1203,7 @@ class BackupIT
 
     private OnlineBackupContext.Builder defaultBackupContextBuilder( SocketAddress address )
     {
-        Path dir = backupsDir.toPath();
+        Path dir = backupsDir;
 
         return OnlineBackupContext.builder()
                 .withAddress( address )
@@ -1252,20 +1258,20 @@ class BackupIT
         }
     }
 
-    private static boolean checkLogFileExistence( String directory )
+    private static boolean checkLogFileExistence( Path directory )
     {
-        return Config.defaults( logs_directory, Path.of( directory ) ).get( store_internal_log_path ).toFile().exists();
+        return Files.exists( Config.defaults( logs_directory, directory ).get( store_internal_log_path ) );
     }
 
     private static long lastTxChecksumOf( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        File neoStore = databaseLayout.metadataStore();
+        File neoStore = databaseLayout.metadataStore().toFile();
         return MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_TRANSACTION_CHECKSUM, NULL );
     }
 
     private static long getLastCommittedTx( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        File neoStore = databaseLayout.metadataStore();
+        File neoStore = databaseLayout.metadataStore().toFile();
         return MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_TRANSACTION_ID, NULL );
     }
 
@@ -1276,7 +1282,7 @@ class BackupIT
 
     private static void setUpgradeTimeInMetaDataStore( DatabaseLayout databaseLayout, PageCache pageCache, long value ) throws IOException
     {
-        MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(), Position.UPGRADE_TIME, value, NULL );
+        MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore().toFile(), Position.UPGRADE_TIME, value, NULL );
     }
 
     private static List<Label> createIndexes( GraphDatabaseService db, int indexCount )
@@ -1322,16 +1328,22 @@ class BackupIT
     private void checkPreviousCommittedTxIdFromBackupTxLog( long logVersion, long txId ) throws IOException
     {
         // Assert header of specified log version containing correct txId
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs )
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory().toFile(), fs )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
         LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ), INSTANCE );
         assertEquals( txId, logHeader.getLastCommittedTxId() );
     }
 
-    private String[] findBackupInconsistenciesReports()
+    private String[] findBackupInconsistenciesReports() throws IOException
     {
-        return backupsDir.list( ( dir, name ) -> name.contains( "inconsistencies" ) && name.contains( "report" ) );
+        try ( Stream<Path> list = Files.list( backupsDir ) )
+        {
+            return list.map( Path::getFileName )
+                    .map( Path::toString )
+                    .filter( name -> name.contains( "inconsistencies" ) && name.contains( "report" ) )
+                    .toArray( String[]::new );
+        }
     }
 
     private static void rotateAndCheckPoint( GraphDatabaseService db ) throws IOException
@@ -1381,7 +1393,8 @@ class BackupIT
         @Override
         public void finishReceivingStoreFile( String file )
         {
-            if ( file.endsWith( databaseLayout.nodeStore().getName() ) || file.endsWith( databaseLayout.relationshipStore().getName() ) )
+            if ( file.endsWith( databaseLayout.nodeStore().getFileName().toString() ) ||
+                    file.endsWith( databaseLayout.relationshipStore().getFileName().toString() ) )
             {
                 barrier.reached(); // multiple calls to this barrier will not block
             }

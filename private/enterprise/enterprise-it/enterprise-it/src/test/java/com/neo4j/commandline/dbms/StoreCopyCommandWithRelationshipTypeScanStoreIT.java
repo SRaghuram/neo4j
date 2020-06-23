@@ -65,7 +65,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
     {
         // sanity check
         FileSystemAbstraction fs = testDirectory.getFileSystem();
-        assertHasFile( fs, databaseLayout.databaseDirectory(), databaseLayout.relationshipTypeScanStore() );
+        assertHasFile( fs, databaseLayout.databaseDirectory().toFile(), databaseLayout.relationshipTypeScanStore().toFile() );
 
         // given
         appendConfigSetting( enable_relationship_type_scan_store, true );
@@ -79,7 +79,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
 
         // then
         DatabaseLayout copyLayout = neo4jLayout.databaseLayout( copyName );
-        assertHasFile( fs, copyLayout.databaseDirectory(), copyLayout.relationshipTypeScanStore() );
+        assertHasFile( fs, copyLayout.databaseDirectory().toFile(), copyLayout.relationshipTypeScanStore().toFile() );
 
         // and
         managementService.createDatabase( copyName );
@@ -110,7 +110,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
 
         // then
         DatabaseLayout copyLayout = neo4jLayout.databaseLayout( copyName );
-        assertHasFile( fs, copyLayout.databaseDirectory(), copyLayout.countStore() );
+        assertHasFile( fs, copyLayout.databaseDirectory().toFile(), copyLayout.countStore().toFile() );
 
         // and
         managementService.createDatabase( copyName );

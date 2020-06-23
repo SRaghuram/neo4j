@@ -115,7 +115,7 @@ public class DropDumpDatabaseIT
     void setupConfFile( Path configDir ) throws IOException
     {
         var configFile = configDir.resolve( DEFAULT_CONFIG_FILE_NAME );
-        var databasesRootValue = neo4jLayout.databasesDirectory().toPath().toString()
+        var databasesRootValue = neo4jLayout.databasesDirectory().toString()
                                             .replace( '\\', '/' );
         var databasesRootKey = databases_root_path.name();
         var databasesRootSetting = String.format( "%s=%s", databasesRootKey, databasesRootValue );

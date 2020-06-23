@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -21,6 +22,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.nio.file.Files.exists;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
@@ -53,16 +55,16 @@ class CommitStateHelperTest
     @Test
     void shouldNotHaveTxLogsIfDirectoryDoesNotExist() throws IOException
     {
-        File txDir = databaseLayout.getTransactionLogsDirectory();
-        assertFalse( txDir.exists() );
+        Path txDir = databaseLayout.getTransactionLogsDirectory();
+        assertFalse( exists( txDir ) );
         assertFalse( commitStateHelper.hasTxLogs( databaseLayout ) );
     }
 
     @Test
     void shouldNotHaveTxLogsIfDirectoryIsEmpty() throws IOException
     {
-        File txDir = databaseLayout.getTransactionLogsDirectory();
-        fsa.mkdir( txDir );
+        Path txDir = databaseLayout.getTransactionLogsDirectory();
+        fsa.mkdir( txDir.toFile() );
 
         assertFalse( commitStateHelper.hasTxLogs( databaseLayout ) );
     }
@@ -70,7 +72,7 @@ class CommitStateHelperTest
     @Test
     void shouldNotHaveTxLogsIfDirectoryHasFilesWithIncorrectName() throws IOException
     {
-        File txDir = databaseLayout.getTransactionLogsDirectory();
+        File txDir = databaseLayout.getTransactionLogsDirectory().toFile();
         fsa.mkdirs( txDir );
 
         fsa.write( new File( txDir, "foo.bar" ) ).close();
@@ -81,7 +83,7 @@ class CommitStateHelperTest
     @Test
     void shouldHaveTxLogsIfDirectoryHasTxFile() throws IOException
     {
-        File txDir = databaseLayout.getTransactionLogsDirectory();
+        File txDir = databaseLayout.getTransactionLogsDirectory().toFile();
         fsa.mkdirs( txDir );
         fsa.write( new File( txDir, TransactionLogFilesHelper.DEFAULT_NAME + ".0" ) ).close();
 

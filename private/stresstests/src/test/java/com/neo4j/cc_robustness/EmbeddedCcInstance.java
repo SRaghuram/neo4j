@@ -95,7 +95,7 @@ public class EmbeddedCcInstance implements CcInstance
 
     static int getNumberOfBranches( GraphDatabaseAPI db )
     {
-        return getNumberOfBranches( db.databaseLayout().databaseDirectory() );
+        return getNumberOfBranches( db.databaseLayout().databaseDirectory().toFile() );
     }
 
     static int getNumberOfBranches( File storeDir )

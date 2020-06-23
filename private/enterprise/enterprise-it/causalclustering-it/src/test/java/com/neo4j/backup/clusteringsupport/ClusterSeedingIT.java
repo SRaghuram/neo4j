@@ -93,7 +93,7 @@ class ClusterSeedingIT
         if ( backupsOpt.isPresent() )
         {
             var backups = backupsOpt.get();
-            var config = Config.defaults( default_database, backups.defaultDb().getName() );
+            var config = Config.defaults( default_database, backups.defaultDb().getFileName().toString() );
             var expectedDbRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( backups.defaultDb() ), config );
             dataMatchesEventually( expectedDbRepresentation, DEFAULT_DATABASE_NAME, realCluster.coreMembers() );
         }

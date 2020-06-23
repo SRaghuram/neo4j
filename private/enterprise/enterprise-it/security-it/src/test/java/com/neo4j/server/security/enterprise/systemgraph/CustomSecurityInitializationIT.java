@@ -298,7 +298,7 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
             org.apache.commons.io.FileUtils.forceMkdir( home );
             writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole" );
         }
@@ -325,7 +325,7 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
             org.apache.commons.io.FileUtils.forceMkdir( home );
             writeTestAuthFile( getAuthFile( home ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
             writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
@@ -352,7 +352,7 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
             org.apache.commons.io.FileUtils.forceMkdir( home );
             writeTestAuthFile( getAuthFile( home ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
             writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
@@ -362,7 +362,7 @@ class CustomSecurityInitializationIT
 
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
             // change the role name to be migrated to be show that migration happens now
             writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom2" ).withUsers( users ).build() );
             // When fixing the broken init file, things should now work
@@ -390,7 +390,7 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
             org.apache.commons.io.FileUtils.forceMkdir( home );
             writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole" );
         }

@@ -213,7 +213,7 @@ class ReplicatedTokenStateMachineTest
 
     private TransactionCommitProcess labelRegistryUpdatingCommitProcess( TokenRegistry registry ) throws Exception
     {
-        var layout = DatabaseLayout.ofFlat( testDirectory.homeDir( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
+        var layout = DatabaseLayout.ofFlat( testDirectory.homePath( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
         var config = Config.defaults();
         var idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
         var storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL );

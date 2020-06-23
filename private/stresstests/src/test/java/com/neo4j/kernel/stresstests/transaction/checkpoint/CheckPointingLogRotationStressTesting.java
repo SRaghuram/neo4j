@@ -77,7 +77,7 @@ class CheckPointingLogRotationStressTesting
         {
             Config dbConfig = Config.defaults();
             new ParallelBatchImporter(
-                    DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL,
+                    DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ).toPath() ), fileSystem, null, PageCacheTracer.NULL,
                     DEFAULT, NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
                     RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler,
                     Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )

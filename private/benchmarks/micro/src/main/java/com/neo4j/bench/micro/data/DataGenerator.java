@@ -486,7 +486,7 @@ public class DataGenerator
 
     private void deleteIntFileReaderFile( IntFileReader reader ) throws IOException
     {
-        if ( reader.path().toFile().exists() )
+        if ( Files.exists( reader.path() ) )
         {
             FileUtils.deleteRecursively( reader.path().toFile() );
         }

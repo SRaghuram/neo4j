@@ -20,7 +20,6 @@ import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.DataStatistics;
 import org.neo4j.internal.batchimport.ImportLogic;
 import org.neo4j.internal.batchimport.ImportLogic.Monitor;
-import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -36,6 +35,7 @@ import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 
 import static java.util.Arrays.asList;
 import static org.neo4j.internal.batchimport.ImportLogic.instantiateNeoStores;
@@ -104,7 +104,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.additionalInitialIds = additionalInitialIds;
         this.monitor = monitor;
         this.dataStatisticsStorage = new RelationshipTypeDistributionStorage( fileSystem,
-                new File( this.databaseLayout.databaseDirectory(), FILE_NAME_RELATIONSHIP_DISTRIBUTION ), memoryTracker );
+                new File( this.databaseLayout.databaseDirectory().toFile(), FILE_NAME_RELATIONSHIP_DISTRIBUTION ), memoryTracker );
         this.jobScheduler = jobScheduler;
         this.badCollector = badCollector;
         this.logFilesInitializer = logFilesInitializer;
@@ -119,7 +119,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
               ImportLogic logic = new ImportLogic( databaseLayout, store, config, dbConfig, logService,
                       executionMonitor, recordFormats, badCollector, monitor, pageCacheTracer, memoryTracker ) )
         {
-            StateStorage stateStore = new StateStorage( fileSystem, new File( databaseLayout.databaseDirectory(), FILE_NAME_STATE ), memoryTracker );
+            StateStorage stateStore = new StateStorage( fileSystem, new File( databaseLayout.databaseDirectory().toFile(), FILE_NAME_STATE ), memoryTracker );
 
             PrefetchingIterator<State> states = initializeStates( logic, store );
             Pair<String,byte[]> previousState = stateStore.get();

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -159,7 +160,7 @@ class RaftBootstrapperIT
     void shouldBootstrapWhenEmptyDirectoryExists() throws Exception
     {
         // given
-        fileSystem.mkdirs( databaseLayout.databaseDirectory() );
+        fileSystem.mkdirs( databaseLayout.databaseDirectory().toFile() );
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
@@ -197,7 +198,7 @@ class RaftBootstrapperIT
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig );
-        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
+        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
     }
 
     @Test
@@ -224,7 +225,7 @@ class RaftBootstrapperIT
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig );
-        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
+        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
     }
 
     @Test
@@ -270,9 +271,9 @@ class RaftBootstrapperIT
                 .amountOfNodes( nodeCount )
                 .build();
 
-        for ( File idFile : database.layout().idFiles() )
+        for ( Path idFile : database.layout().idFiles() )
         {
-            fileSystem.deleteFileOrThrow( idFile );
+            fileSystem.deleteFileOrThrow( idFile.toFile() );
         }
 
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
@@ -401,7 +402,7 @@ class RaftBootstrapperIT
 
     private LogFiles buildLogFiles( DatabaseLayout databaseLayout ) throws IOException
     {
-        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem )
+        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory().toFile(), fileSystem )
                 .withConfig( defaultConfig )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();

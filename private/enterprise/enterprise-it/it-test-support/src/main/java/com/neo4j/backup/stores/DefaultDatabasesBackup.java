@@ -5,28 +5,28 @@
  */
 package com.neo4j.backup.stores;
 
-import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Simple struct for the pair of databases created by Neo4j by default: system and neo4j
  */
 public class DefaultDatabasesBackup
 {
-    private final File defaultDbBackup;
-    private final File systemDbBackup;
+    private final Path defaultDbBackup;
+    private final Path systemDbBackup;
 
-    DefaultDatabasesBackup( File defaultDbBackup, File systemDbBackup )
+    DefaultDatabasesBackup( Path defaultDbBackup, Path systemDbBackup )
     {
         this.defaultDbBackup = defaultDbBackup;
         this.systemDbBackup = systemDbBackup;
     }
 
-    public File defaultDb()
+    public Path defaultDb()
     {
         return defaultDbBackup;
     }
 
-    public File systemDb()
+    public Path systemDb()
     {
         return systemDbBackup;
     }

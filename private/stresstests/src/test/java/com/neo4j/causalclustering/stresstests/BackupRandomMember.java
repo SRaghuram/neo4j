@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
-import java.io.File;
+import com.neo4j.causalclustering.common.ClusterMember;
+
+import java.nio.file.Path;
 import java.util.Optional;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import com.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.logging.Log;
 
 class BackupRandomMember extends RepeatOnRandomMember
@@ -29,10 +30,10 @@ class BackupRandomMember extends RepeatOnRandomMember
     @Override
     public void doWorkOnMember( ClusterMember member ) throws Exception
     {
-        Optional<File> backupDir = backupHelper.backup( member );
+        Optional<Path> backupDir = backupHelper.backup( member );
         if ( backupDir.isPresent() )
         {
-            fs.deleteRecursively( backupDir.get() );
+            fs.deleteRecursively( backupDir.get().toFile() );
         }
     }
 

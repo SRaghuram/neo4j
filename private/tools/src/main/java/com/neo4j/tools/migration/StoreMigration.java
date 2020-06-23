@@ -109,7 +109,7 @@ public final class StoreMigration
             deps.satisfyDependencies( fs, config, pageCache, logService, monitors,
                     RecoveryCleanupWorkCollector.immediate() );
 
-            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory.toPath() );
             LegacyTransactionLogsLocator legacyLogsLocator = new LegacyTransactionLogsLocator( config, databaseLayout );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();

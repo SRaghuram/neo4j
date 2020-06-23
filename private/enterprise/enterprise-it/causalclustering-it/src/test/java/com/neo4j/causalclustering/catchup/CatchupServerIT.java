@@ -213,7 +213,7 @@ class CatchupServerIT
     {
         // given a file exists on the server
         addData( db );
-        File expectedExistingFile = db.databaseLayout().file( EXISTING_FILE_NAME );
+        File expectedExistingFile = db.databaseLayout().file( EXISTING_FILE_NAME ).toFile();
 
         // and
         SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
@@ -299,14 +299,14 @@ class CatchupServerIT
 
     private File databaseFileToClientFile( File file ) throws IOException
     {
-        String relativePathToDatabaseDir = relativePath( databaseLayout.databaseDirectory(), file );
+        String relativePathToDatabaseDir = relativePath( databaseLayout.databaseDirectory().toFile(), file );
         return new File( temporaryDirectory, relativePathToDatabaseDir );
     }
 
     private File clientFileToDatabaseFile( File file ) throws IOException
     {
         String relativePathToDatabaseDir = relativePath( temporaryDirectory, file );
-        return new File( databaseLayout.databaseDirectory(), relativePathToDatabaseDir );
+        return new File( databaseLayout.databaseDirectory().toFile(), relativePathToDatabaseDir );
     }
 
     private void fileContentEquals( File fileA, File fileB ) throws IOException
@@ -359,7 +359,7 @@ class CatchupServerIT
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
     {
-        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.file() );
+        return storeFileMetadata -> databaseLayout.countStore().toFile().equals( storeFileMetadata.file() );
     }
 
     private static void addData( GraphDatabaseAPI graphDb )

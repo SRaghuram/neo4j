@@ -29,10 +29,10 @@ class ReadReplicaEditionModuleTest
     {
 
         Predicate<String> filter = ReadReplicaEditionModule.fileWatcherFileNameFilter();
-        String metadataStoreName = databaseLayout.metadataStore().getName();
+        String metadataStoreName = databaseLayout.metadataStore().getFileName().toString();
 
         assertFalse( filter.test( metadataStoreName ) );
-        assertFalse( filter.test( databaseLayout.nodeStore().getName() ) );
+        assertFalse( filter.test( databaseLayout.nodeStore().getFileName().toString() ) );
         assertTrue( filter.test( TransactionLogFilesHelper.DEFAULT_NAME + ".1" ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }

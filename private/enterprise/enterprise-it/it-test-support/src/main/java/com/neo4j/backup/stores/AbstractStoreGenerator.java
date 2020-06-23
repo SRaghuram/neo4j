@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,14 +23,14 @@ public abstract class AbstractStoreGenerator implements BackupStore
 {
     abstract CoreClusterMember createData( Cluster cluster ) throws Exception;
 
-    abstract void modify( File backup ) throws Exception;
+    abstract void modify( Path backup ) throws Exception;
 
     @Override
     public Optional<DefaultDatabasesBackup> generate( File baseBackupDir, Cluster backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
-        File defaultBackupFromCore = createBackup( core, backupDir( baseBackupDir, DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
-        File systemBackupFromCore = createBackup( core, backupDir( baseBackupDir, SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
+        Path defaultBackupFromCore = createBackup( core, backupDir( baseBackupDir.toPath(), DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
+        Path systemBackupFromCore = createBackup( core, backupDir( baseBackupDir.toPath(), SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
         DefaultDatabasesBackup backups = new DefaultDatabasesBackup( defaultBackupFromCore, systemBackupFromCore );
         modify( defaultBackupFromCore );
         return Optional.of( backups );
@@ -41,10 +42,10 @@ public abstract class AbstractStoreGenerator implements BackupStore
         return getClass().getSimpleName();
     }
 
-    private static File backupDir( File baseDir, String database ) throws IOException
+    private static Path backupDir( Path baseDir, String database ) throws IOException
     {
-        File dir = new File( baseDir, database + "-backup-" + UUID.randomUUID() );
-        Files.createDirectories( dir.toPath() );
+        Path dir = baseDir.resolve( database + "-backup-" + UUID.randomUUID() );
+        Files.createDirectories( dir );
         return dir;
     }
 }

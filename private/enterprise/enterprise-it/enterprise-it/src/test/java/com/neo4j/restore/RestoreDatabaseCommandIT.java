@@ -11,6 +11,7 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
@@ -65,7 +66,7 @@ class RestoreDatabaseCommandIT
         Neo4jLayout testStore = neo4jLayout;
         Config config = configWith( testStore );
 
-        File fromPath = new File( directory.absolutePath(), "old" );
+        Path fromPath = directory.homePath().resolve( "old" );
 
         DatabaseLayout toLayout = testStore.databaseLayout( databaseName );
         int fromNodeCount = 10;
@@ -93,7 +94,7 @@ class RestoreDatabaseCommandIT
         Neo4jLayout testStore = neo4jLayout;
         Config config = configWith( testStore );
 
-        File fromPath = new File( directory.absolutePath(), "old" );
+        Path fromPath = directory.homePath().resolve( "old" );
         DatabaseLayout toLayout = testStore.databaseLayout( databaseName );
 
         createDbAt( fromPath, 0 );
@@ -112,7 +113,7 @@ class RestoreDatabaseCommandIT
         var databaseName =  "new" ;
         Config config = configWith( neo4jLayout );
 
-        File fromPath = new File( directory.absolutePath(), "old" );
+        Path fromPath = directory.homePath().resolve( "old" );
         DatabaseLayout toLayout = neo4jLayout.databaseLayout( databaseName );
 
         createDbAt( toLayout.databaseDirectory(), 0 );
@@ -124,14 +125,14 @@ class RestoreDatabaseCommandIT
     }
 
     @Test
-    void shouldThrowExceptionIfBackupDirectoryDoesNotHaveStoreFiles()
+    void shouldThrowExceptionIfBackupDirectoryDoesNotHaveStoreFiles() throws IOException
     {
         // given
         var databaseName =  "new" ;
         Config config = configWith( neo4jLayout );
 
-        File fromPath = new File( directory.absolutePath(), "old" );
-        assertTrue( fromPath.mkdirs() );
+        Path fromPath = directory.homePath().resolve( "old" );
+        Files.createDirectories( fromPath );
 
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class,
@@ -140,13 +141,13 @@ class RestoreDatabaseCommandIT
     }
 
     @Test
-    void failOnInvalidDatabaseName()
+    void failOnInvalidDatabaseName() throws IOException
     {
         var databaseName =  "__any_" ;
         Config config = configWith( neo4jLayout );
 
-        File fromPath = new File( directory.absolutePath(), "old" );
-        assertTrue( fromPath.mkdirs() );
+        Path fromPath = directory.homePath().resolve( "old" );
+        Files.createDirectories( fromPath );
         assertThrows( Exception.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false, false ).execute() );
     }
 
@@ -155,7 +156,7 @@ class RestoreDatabaseCommandIT
     {
         // given
         Neo4jLayout toStoreLayout = neo4jLayout;
-        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homeDir( "old" ) );
+        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homePath( "old" ) );
 
         DatabaseLayout fromLayout = fromStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout toLayout = toStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
@@ -188,8 +189,8 @@ class RestoreDatabaseCommandIT
     void moveOptionShouldLeaveNoFilesAtSourceAndAWorkingDatabaseInTarget() throws Exception
     {
         // given
-        Neo4jLayout toStoreLayout = Neo4jLayout.ofFlat( directory.homeDir( "new" ) );
-        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homeDir( "old" ) );
+        Neo4jLayout toStoreLayout = Neo4jLayout.ofFlat( directory.homePath( "new" ) );
+        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homePath( "old" ) );
 
         DatabaseLayout fromLayout = fromStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         Config config = configWith( toStoreLayout );
@@ -201,7 +202,7 @@ class RestoreDatabaseCommandIT
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, false, true ).execute();
 
         // then
-        assertThat( fileSystem.fileExists( fromLayout.databaseDirectory() ) ).isFalse();
+        assertThat( fileSystem.fileExists( fromLayout.databaseDirectory().toFile() ) ).isFalse();
 
         DatabaseManagementService managementService =
                 new TestDatabaseManagementServiceBuilder( toStoreLayout.homeDirectory() )
@@ -221,7 +222,7 @@ class RestoreDatabaseCommandIT
     void restoreTransactionLogsInCustomDirectoryForTargetDatabaseWhenConfigured()
             throws IOException
     {
-        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homeDir( "old" ) );
+        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homePath( "old" ) );
 
         Path newHome = directory.homeDir( "new" ).toPath();
         Config config = Config.newBuilder()
@@ -245,13 +246,13 @@ class RestoreDatabaseCommandIT
         // when
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true, false ).execute();
 
-        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem )
+        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory().toFile(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
-        LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem )
+        LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory().toFile(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
-        LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory(), fileSystem )
+        LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory().toFile(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
         assertThat( toStoreLogFiles.logFiles() ).isEmpty();
@@ -266,7 +267,7 @@ class RestoreDatabaseCommandIT
     {
         String databaseName = "target-database";
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
-        File fromPath = directory.directory( "database-to-restore" );
+        Path fromPath = directory.directoryPath( "database-to-restore" );
 
         Config config = configWith( neo4jLayout );
 
@@ -274,7 +275,7 @@ class RestoreDatabaseCommandIT
 
         new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true, false ).execute();
 
-        verify( fs, never() ).deleteRecursively( neo4jLayout.transactionLogsRootDirectory() );
+        verify( fs, never() ).deleteRecursively( neo4jLayout.transactionLogsRootDirectory().toFile() );
     }
 
     @Test
@@ -282,7 +283,7 @@ class RestoreDatabaseCommandIT
     {
         String databaseName = "target-database";
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
-        File fromPath = directory.directory( "database-to-restore" );
+        Path fromPath = directory.directoryPath( "database-to-restore" );
 
         Config config = configWith( neo4jLayout );
 
@@ -290,7 +291,7 @@ class RestoreDatabaseCommandIT
 
         new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true, false ).execute();
 
-        verify( fs ).deleteRecursively( neo4jLayout.databaseLayout( databaseName ).getTransactionLogsDirectory() );
+        verify( fs ).deleteRecursively( neo4jLayout.databaseLayout( databaseName ).getTransactionLogsDirectory().toFile() );
     }
 
     @Test
@@ -300,7 +301,7 @@ class RestoreDatabaseCommandIT
         Neo4jLayout testStore = neo4jLayout;
         Config config = configWith( testStore );
 
-        File fromPath = new File( directory.absolutePath(), "old" );
+        Path fromPath = directory.homePath().resolve( "old" );
 
         createDbAt( fromPath, 10 );
         createRaftGroupDirectoryFor( config, databaseName );
@@ -318,10 +319,10 @@ class RestoreDatabaseCommandIT
 
     private static Config configWith( Neo4jLayout layout )
     {
-        return Config.defaults( neo4j_home, layout.homeDirectory().toPath() );
+        return Config.defaults( neo4j_home, layout.homeDirectory() );
     }
 
-    private void createDbAt( File fromPath, int nodesToCreate )
+    private void createDbAt( Path fromPath, int nodesToCreate )
     {
         GraphDatabaseService db = createDatabase( DatabaseLayout.ofFlat( fromPath ) );
         createTestData( nodesToCreate, db );
@@ -339,8 +340,8 @@ class RestoreDatabaseCommandIT
     {
         Neo4jLayout neo4jLayout = databaseLayout.getNeo4jLayout();
         managementService = new TestDatabaseManagementServiceBuilder( neo4jLayout.homeDirectory() )
-                .setConfig( databases_root_path, neo4jLayout.databasesDirectory().toPath() )
-                .setConfig( transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory().toPath() )
+                .setConfig( databases_root_path, neo4jLayout.databasesDirectory() )
+                .setConfig( transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory() )
                 .setConfig( online_backup_enabled, false )
                 .setConfig( default_database, databaseLayout.getDatabaseName() )
                 .build();

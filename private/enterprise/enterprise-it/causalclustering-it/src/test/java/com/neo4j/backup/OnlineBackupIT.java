@@ -188,7 +188,7 @@ class OnlineBackupIT
     {
         Path backupDir = backupsDir.resolve( DB_NAME );
         PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
-        File metadataStore = DatabaseLayout.ofFlat( backupDir.toFile() ).metadataStore();
+        File metadataStore = DatabaseLayout.ofFlat( backupDir ).metadataStore().toFile();
 
         // update store creation time and store random number
         MetaDataStore.setRecord( pageCache, metadataStore, TIME, random.nextInt(), NULL );
@@ -215,7 +215,7 @@ class OnlineBackupIT
 
     private DbRepresentation backupDbRepresentation()
     {
-        return DbRepresentation.of( DatabaseLayout.ofFlat( defaultDbBackupDir.toFile() ) );
+        return DbRepresentation.of( DatabaseLayout.ofFlat( defaultDbBackupDir ) );
     }
 
     private void writeRandomData()

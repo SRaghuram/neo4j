@@ -21,7 +21,7 @@ public class TempBootstrapDir
     public TempBootstrapDir( FileSystemAbstraction fs, DatabaseLayout layout )
     {
         this.fs = fs;
-        this.tempBootstrapDir = new File( layout.databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
+        this.tempBootstrapDir = new File( layout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
     }
 
     public File get()

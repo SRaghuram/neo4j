@@ -69,7 +69,7 @@ abstract class BaseEncryptedBackupIT
 
     private FileSystemAbstraction fs;
     private Cluster cluster;
-    private File backupHome;
+    private Path backupHome;
 
     BaseEncryptedBackupIT( boolean serverHasEncryptedTxPort, boolean serverHasEncryptedBackupPort )
     {
@@ -87,7 +87,7 @@ abstract class BaseEncryptedBackupIT
     @BeforeEach
     void beforeEach()
     {
-        backupHome = testDir.directory( "backupNeo4jHome-" + randomUUID().toString() );
+        backupHome = testDir.directoryPath( "backupNeo4jHome-" + randomUUID().toString() );
     }
 
     @Test
@@ -283,18 +283,18 @@ abstract class BaseEncryptedBackupIT
         };
     }
 
-    private void installCryptographicObjectsToBackupHome( File neo4jHome, int keyId ) throws IOException
+    private void installCryptographicObjectsToBackupHome( Path neo4jHome, int keyId ) throws IOException
     {
         createConfigFile( neo4jHome );
-        var certificatesLocation = neo4jHome.toPath().resolve( "certificates" ).resolve( BACKUP_POLICY_NAME ).toFile();
+        var certificatesLocation = neo4jHome.resolve( "certificates" ).resolve( BACKUP_POLICY_NAME ).toFile();
         fs.mkdirs( certificatesLocation );
         installSsl( certificatesLocation, keyId );
     }
 
-    private void createConfigFile( File neo4jHome ) throws IOException
+    private void createConfigFile( Path neo4jHome ) throws IOException
     {
-        var config = neo4jHome.toPath().resolve( "conf" + File.separator + Config.DEFAULT_CONFIG_FILE_NAME ).toFile();
-        var backupPolicyLocation = neo4jHome.toPath().resolve( "certificates" ).resolve( "backup" ).toFile();
+        var config = neo4jHome.resolve( "conf" + File.separator + Config.DEFAULT_CONFIG_FILE_NAME ).toFile();
+        var backupPolicyLocation = neo4jHome.resolve( "certificates" ).resolve( "backup" ).toFile();
         fs.mkdirs( backupPolicyLocation );
         var properties = new Properties();
         var backupSslConfigGroup = SslPolicyConfig.forScope( BACKUP );
@@ -318,7 +318,7 @@ abstract class BaseEncryptedBackupIT
     /**
      * It is necessary to run from the same jvm due to being dependant on ssl which is enterprise edition only
      */
-    private static int runBackupSameJvm( File neo4jHome, String host )
+    private static int runBackupSameJvm( Path neo4jHome, String host )
     {
         return BackupTestUtil.runBackupToolFromSameJvm( neo4jHome,
                 "--from", host,

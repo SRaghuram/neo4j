@@ -69,9 +69,9 @@ class RuntimeDatabaseDumper extends LifecycleAdapter
         try
         {
             var dbLayout = ctx.databaseFacade().databaseLayout();
-            var databaseDirectory = dbLayout.databaseDirectory().toPath();
-            var txDirectory = dbLayout.getTransactionLogsDirectory().toPath();
-            var lockFile = dbLayout.databaseLockFile().toPath();
+            var databaseDirectory = dbLayout.databaseDirectory();
+            var txDirectory = dbLayout.getTransactionLogsDirectory();
+            var lockFile = dbLayout.databaseLockFile();
             var dumper = new Dumper();
             Predicate<Path> isLockFile = path -> Objects.equals( path.getFileName().toString(), lockFile.getFileName().toString() );
             var out = databaseDumpLocation( namedDatabaseId );

@@ -78,12 +78,12 @@ public class PrepareStoreCopyFiles implements AutoCloseable
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
     {
-        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.file() );
+        return storeFileMetadata -> databaseLayout.countStore().toFile().equals( storeFileMetadata.file() );
     }
 
     private StoreResource toStoreResource( StoreFileMetadata storeFileMetadata ) throws IOException
     {
-        File databaseDirectory = database.getDatabaseLayout().databaseDirectory();
+        File databaseDirectory = database.getDatabaseLayout().databaseDirectory().toFile();
         File file = storeFileMetadata.file();
         String relativePath = relativePath( databaseDirectory, file );
         return new StoreResource( file, relativePath, storeFileMetadata.recordSize(), fileSystemAbstraction );

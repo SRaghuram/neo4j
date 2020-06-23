@@ -41,7 +41,7 @@ class LoadCommandIT extends AbstractCommandIT
     void failToLoadWhenDatabaseIsRunning()
     {
         var databaseName = databaseAPI.databaseName();
-        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory().toPath();
+        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory();
         var exception = assertThrows( CommandFailedException.class, () -> load( databaseName, destinationPath ) );
         assertThat( exception.getMessage() ).contains( "The database is in use. Stop database" );
     }
@@ -49,7 +49,7 @@ class LoadCommandIT extends AbstractCommandIT
     @Test
     void failToLoadDatabaseWithInvalidName()
     {
-        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory().toPath();
+        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory();
         var exception = assertThrows( Exception.class, () -> load( "__invalid__", destinationPath ) );
         assertThat( exception ).hasMessageContaining( "Invalid database name '__invalid__'" );
     }
@@ -58,7 +58,7 @@ class LoadCommandIT extends AbstractCommandIT
     void failToLoadExistingShutdownDatabase()
     {
         var databaseName = databaseAPI.databaseName();
-        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory().toPath();
+        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory();
 
         managementService.shutdownDatabase( databaseName );
         var exception = assertThrows( CommandFailedException.class, () -> load( databaseName, destinationPath ) );
@@ -80,7 +80,7 @@ class LoadCommandIT extends AbstractCommandIT
         managementService.shutdownDatabase( databaseName );
 
         var dump = testDirectory.file( "dump1" ).toPath();
-        new Dumper( System.out ).dump( databaseLayout.databaseDirectory().toPath(), databaseLayout.getTransactionLogsDirectory().toPath(), dump, ZSTD,
+        new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                 alwaysFalse() );
 
         load( newDatabase, dump );
@@ -108,7 +108,7 @@ class LoadCommandIT extends AbstractCommandIT
         managementService.shutdownDatabase( databaseName );
 
         var dump = testDirectory.file( "dump2" ).toPath();
-        new Dumper( System.out ).dump( databaseLayout.databaseDirectory().toPath(), databaseLayout.getTransactionLogsDirectory().toPath(), dump, ZSTD,
+        new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                 alwaysFalse() );
 
         managementService.dropDatabase( databaseName );
@@ -131,7 +131,7 @@ class LoadCommandIT extends AbstractCommandIT
         managementService.shutdownDatabase( databaseName );
 
         var dump = testDirectory.file( "dump3" ).toPath();
-        new Dumper( System.out ).dump( databaseLayout.databaseDirectory().toPath(), databaseLayout.getTransactionLogsDirectory().toPath(), dump, ZSTD,
+        new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                 alwaysFalse() );
 
         assertThrows( CommandFailedException.class, () -> load( databaseName, dump ) );

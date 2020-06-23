@@ -84,7 +84,8 @@ class ClusterCommunityToEnterpriseIT
     private void copyStoreToCore( DatabaseLayout databaseLayout, ClusterMember member ) throws IOException
     {
         var coreLayout = member.databaseLayout();
-        testDir.getFileSystem().copyRecursively( databaseLayout.databaseDirectory(), coreLayout.databaseDirectory() );
-        testDir.getFileSystem().copyRecursively( databaseLayout.getTransactionLogsDirectory(), coreLayout.getTransactionLogsDirectory() );
+        testDir.getFileSystem().copyRecursively( databaseLayout.databaseDirectory().toFile(), coreLayout.databaseDirectory().toFile() );
+        testDir.getFileSystem().copyRecursively( databaseLayout.getTransactionLogsDirectory().toFile(),
+                coreLayout.getTransactionLogsDirectory().toFile() );
     }
 }

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -109,16 +110,16 @@ class PrepareStoreCopyFilesIT
         // - Label index
         // - Index statistics store
         // - Counts store
-        assertThat( atomicFiles ).contains( layout.labelScanStore(), layout.indexStatisticsStore(), layout.countStore() );
+        assertThat( atomicFiles ).contains( layout.labelScanStore().toFile(), layout.indexStatisticsStore().toFile(), layout.countStore().toFile() );
 
         // - RelationshipType index
         if ( config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) )
         {
-            assertThat( atomicFiles ).contains( layout.relationshipTypeScanStore() );
+            assertThat( atomicFiles ).contains( layout.relationshipTypeScanStore().toFile() );
         }
 
         // - .id files
-        assertThat( atomicFiles ).contains( layout.idFiles().toArray( File[]::new ) );
+        assertThat( atomicFiles ).contains( layout.idFiles().stream().map( Path::toFile ).toArray( File[]::new ) );
 
         // - Native indexes
         assertThat( atomicFiles ).filteredOn( nativeIndexFileFilter::accept ).isNotEmpty();
@@ -138,7 +139,7 @@ class PrepareStoreCopyFilesIT
 
     private NativeIndexFileFilter getNativeIndexFileFilter()
     {
-        return new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
+        return new NativeIndexFileFilter( db.databaseLayout().databaseDirectory().toFile() );
     }
 
     private static boolean fileContentsLooksLikeAGBPTree( File file, PageCache pageCache )

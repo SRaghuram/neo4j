@@ -69,8 +69,8 @@ class BackupCopyService
 
     void deletePreExistingBrokenBackupIfPossible( Path preExistingBrokenBackupDir, Path newSuccessfulBackupDir ) throws IOException
     {
-        DatabaseLayout preExistingBrokenBackupLayout = DatabaseLayout.ofFlat( preExistingBrokenBackupDir.toFile() );
-        DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.ofFlat( newSuccessfulBackupDir.toFile() );
+        DatabaseLayout preExistingBrokenBackupLayout = DatabaseLayout.ofFlat( preExistingBrokenBackupDir );
+        DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.ofFlat( newSuccessfulBackupDir );
 
         StoreId preExistingBrokenBackupStoreId;
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( BACKUP_CHECKER_TAG ) )
@@ -111,7 +111,7 @@ class BackupCopyService
 
     boolean backupExists( DatabaseLayout databaseLayout )
     {
-        return fs.fileExists( databaseLayout.metadataStore() );
+        return fs.fileExists( databaseLayout.metadataStore().toFile() );
     }
 
     Path findNewBackupLocationForBrokenExisting( Path existingBackup )

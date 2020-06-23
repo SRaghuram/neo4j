@@ -29,6 +29,7 @@ com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setMonitors(org.neo4
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setUserLogProvider(org.neo4j.logging.LogProvider) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder public class extends org.neo4j.dbms.api.DatabaseManagementServiceBuilder
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::EnterpriseDatabaseManagementServiceBuilder(java.io.File) void public
+com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::EnterpriseDatabaseManagementServiceBuilder(java.nio.file.Path) void public
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::databaseDependencies() org.neo4j.graphdb.facade.ExternalDependencies protected
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getDbmsInfo(org.neo4j.configuration.Config) org.neo4j.kernel.impl.factory.DbmsInfo protected
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getEdition() java.lang.String public

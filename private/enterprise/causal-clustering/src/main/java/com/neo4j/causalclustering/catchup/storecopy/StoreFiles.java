@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -46,7 +47,7 @@ public class StoreFiles
 
     public void delete( DatabaseLayout databaseLayout, LogFiles logFiles ) throws IOException
     {
-        File databaseDirectory = databaseLayout.databaseDirectory();
+        File databaseDirectory = databaseLayout.databaseDirectory().toFile();
         File[] files = fs.listFiles( databaseDirectory, filenameFilter );
         if ( files != null )
         {
@@ -80,7 +81,7 @@ public class StoreFiles
         {
             for ( File file : files )
             {
-                File destination = logFiles.isLogFile( file ) ? target.getTransactionLogsDirectory() : target.databaseDirectory();
+                File destination = logFiles.isLogFile( file ) ? target.getTransactionLogsDirectory().toFile() : target.databaseDirectory().toFile();
                 fs.moveToDirectory( file, destination );
             }
         }
@@ -88,14 +89,14 @@ public class StoreFiles
 
     public boolean isEmpty( DatabaseLayout databaseLayout )
     {
-        Set<File> storeFiles = databaseLayout.storeFiles();
+        Set<Path> storeFiles = databaseLayout.storeFiles();
 
-        File[] files = fs.listFiles( databaseLayout.databaseDirectory() );
+        File[] files = fs.listFiles( databaseLayout.databaseDirectory().toFile() );
         if ( files != null )
         {
             for ( File file : files )
             {
-                if ( storeFiles.contains( file ) )
+                if ( storeFiles.contains( file.toPath() ) )
                 {
                     return false;
                 }

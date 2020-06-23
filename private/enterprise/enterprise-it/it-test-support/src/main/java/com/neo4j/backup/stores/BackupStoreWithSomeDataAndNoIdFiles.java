@@ -5,20 +5,20 @@
  */
 package com.neo4j.backup.stores;
 
-import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.neo4j.io.layout.DatabaseLayout;
 
 public class BackupStoreWithSomeDataAndNoIdFiles extends BackupStoreWithSomeData
 {
     @Override
-    void modify( File backup ) throws Exception
+    void modify( Path backup ) throws Exception
     {
         DatabaseLayout layout = DatabaseLayout.ofFlat( backup );
-        for ( File idFile : layout.idFiles() )
+        for ( Path idFile : layout.idFiles() )
         {
-            Files.delete( idFile.toPath() );
+            Files.delete( idFile );
         }
     }
 }

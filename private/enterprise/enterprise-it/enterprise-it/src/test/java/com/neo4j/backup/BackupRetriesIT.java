@@ -133,7 +133,7 @@ class BackupRetriesIT
         executor.executeBackup( context );
 
         // backup produced a correct store
-        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( DB_NAME ).toFile() ) ) );
+        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( DB_NAME ) ) ) );
 
         // all used channels should be closed after backup is done
         assertAll( "All channels should be closed after backup " + channels,

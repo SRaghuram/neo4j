@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.configuration.CausalClusteringInternalSettings;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -23,6 +23,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,21 +44,21 @@ class BootstrapSaverTest
         FLAT
                 {
                     @Override
-                    DatabaseLayout get( File home )
+                    DatabaseLayout get( Path home )
                     {
-                        return DatabaseLayout.ofFlat( new File( home, "neo4j" ) );
+                        return DatabaseLayout.ofFlat( home.resolve( "neo4j" ) );
                     }
                 },
         STANDARD
                 {
                     @Override
-                    DatabaseLayout get( File home )
+                    DatabaseLayout get( Path home )
                     {
                         return Neo4jLayout.of( home ).databaseLayout( "neo4j" );
                     }
                 };
 
-        abstract DatabaseLayout get( File home );
+        abstract DatabaseLayout get( Path home );
     }
 
     @ParameterizedTest
@@ -65,7 +66,7 @@ class BootstrapSaverTest
     void testSaveRestoreClean( Layout layout ) throws IOException
     {
         // given
-        DatabaseLayout databaseLayout = layout.get( dir.homeDir() );
+        DatabaseLayout databaseLayout = layout.get( dir.homePath() );
         BootstrapSaver saver = new BootstrapSaver( fs, nullLogProvider() );
 
         fs.mkdirs( dir.homeDir() );
@@ -78,24 +79,24 @@ class BootstrapSaverTest
 
         // then: should have been moved to temp-save
         store.assertMissing();
-        assertTrue( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertTrue( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertTrue( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
 
         // when: restoring
         saver.restore( databaseLayout );
 
         // then: should be back in standard location
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
 
         // when: cleaning without anything to clean
         saver.clean( databaseLayout );
 
         // then: should have no effect
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
     }
 
     @ParameterizedTest
@@ -103,7 +104,7 @@ class BootstrapSaverTest
     void testSaveCleanRestore( Layout layout ) throws IOException
     {
         // given
-        DatabaseLayout databaseLayout = layout.get( dir.homeDir() );
+        DatabaseLayout databaseLayout = layout.get( dir.homePath() );
         BootstrapSaver saver = new BootstrapSaver( fs, nullLogProvider() );
 
         fs.mkdirs( dir.homeDir() );
@@ -116,8 +117,8 @@ class BootstrapSaverTest
 
         // then: should have been moved
         store.assertMissing();
-        assertTrue( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertTrue( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertTrue( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
 
         // when: simulate a store copy and clean of temp-save
         store.create();
@@ -125,16 +126,16 @@ class BootstrapSaverTest
 
         // then: store should exist but not temp-save
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
 
         // when: restoring - typically after a restart
         saver.restore( databaseLayout );
 
         // then: this should not change anything
         store.assertExists();
-        assertFalse( fs.fileExists( new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
-        assertFalse( fs.fileExists( new File( databaseLayout.getTransactionLogsDirectory(), CausalClusteringInternalSettings.TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
     }
 
     private static class FakeStore
@@ -148,14 +149,14 @@ class BootstrapSaverTest
             this.fs = fs;
             this.layout = layout;
 
-            TransactionLogFilesHelper txHelper = new TransactionLogFilesHelper( null, layout.getTransactionLogsDirectory() );
+            TransactionLogFilesHelper txHelper = new TransactionLogFilesHelper( null, layout.getTransactionLogsDirectory().toFile() );
 
-            File schema = new File( layout.databaseDirectory(), "schema" );
-            File index = new File( layout.databaseDirectory(), "index" );
+            File schema = layout.databaseDirectory().resolve( "schema" ).toFile();
+            File index = layout.databaseDirectory().resolve( "index" ).toFile();
 
             this.fsNodes = List.of(
-                    new FsNode( layout.metadataStore(), false ),
-                    new FsNode( layout.nodeStore(), false ),
+                    new FsNode( layout.metadataStore().toFile(), false ),
+                    new FsNode( layout.nodeStore().toFile(), false ),
 
                     new FsNode( schema, true ),
                     new FsNode( new File( schema,"schema-0" ), false ),
@@ -172,8 +173,8 @@ class BootstrapSaverTest
 
         void create() throws IOException
         {
-            fs.mkdirs( layout.databaseDirectory() );
-            fs.mkdirs( layout.getTransactionLogsDirectory() );
+            fs.mkdirs( layout.databaseDirectory().toFile() );
+            fs.mkdirs( layout.getTransactionLogsDirectory().toFile() );
 
             for ( FsNode fsNode : fsNodes )
             {

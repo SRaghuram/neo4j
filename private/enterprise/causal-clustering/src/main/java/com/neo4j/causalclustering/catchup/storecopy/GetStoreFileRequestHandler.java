@@ -71,7 +71,7 @@ public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetS
             }
             else
             {
-                File databaseDirectory = db.getDatabaseLayout().databaseDirectory();
+                File databaseDirectory = db.getDatabaseLayout().databaseDirectory().toFile();
                 try ( ResourceIterator<StoreFileMetadata> resourceIterator = files( request, db ) )
                 {
                     while ( resourceIterator.hasNext() )

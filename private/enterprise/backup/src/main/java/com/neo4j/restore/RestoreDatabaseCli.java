@@ -8,7 +8,6 @@ package com.neo4j.restore;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -29,7 +28,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 public class RestoreDatabaseCli extends AbstractCommand
 {
     @Option( names = "--from", paramLabel = "<path>", required = true, description = "Path to backup to restore from." )
-    private File from;
+    private Path from;
     @Option( names = "--database", description = "Name of the database to restore.", defaultValue = DEFAULT_DATABASE_NAME,
             converter = DatabaseNameConverter.class )
     private NormalizedDatabaseName database;

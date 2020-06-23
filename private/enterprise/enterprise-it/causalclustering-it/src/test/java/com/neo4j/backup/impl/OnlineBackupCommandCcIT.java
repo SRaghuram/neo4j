@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -83,12 +84,12 @@ class OnlineBackupCommandCcIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private File backupsDir;
+    private Path backupsDir;
 
     @BeforeEach
     void setUp()
     {
-        backupsDir = testDirectory.directory( "backups" );
+        backupsDir = testDirectory.directoryPath( "backups" );
     }
 
     @TestWithRecordFormats
@@ -201,7 +202,7 @@ class OnlineBackupCommandCcIT
         assertThat( output ).contains( "Start receiving store files" );
         assertThat( output ).contains( "Finish receiving store files" );
 
-        String nodeStorePath = backupsDir.toPath().resolve( DEFAULT_DATABASE_NAME ).resolve( DatabaseFile.NODE_STORE.getName() ).toString();
+        String nodeStorePath = backupsDir.resolve( DEFAULT_DATABASE_NAME ).resolve( DatabaseFile.NODE_STORE.getName() ).toString();
         assertThat( output ).contains( "Start receiving store file " + nodeStorePath );
         assertThat( output ).contains( "Finish receiving store file " + nodeStorePath );
 
@@ -217,7 +218,7 @@ class OnlineBackupCommandCcIT
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
-        File backupLocation = new File( backupsDir, DEFAULT_DATABASE_NAME );
+        Path backupLocation = backupsDir.resolve( DEFAULT_DATABASE_NAME );
         DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupLocation );
 
         // when
@@ -236,7 +237,7 @@ class OnlineBackupCommandCcIT
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
-        File backupLocation = new File( backupsDir, DEFAULT_DATABASE_NAME );
+        Path backupLocation = backupsDir.resolve( DEFAULT_DATABASE_NAME );
         DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupLocation );
 
         // when
@@ -263,7 +264,7 @@ class OnlineBackupCommandCcIT
         writeConfigWithLogRotationThreshold( configOverrideFile, "1m" );
 
         // and we have a full backup
-        File backupDir = testDirectory.directory( "backups", "backupName-" + recordFormat );
+        Path backupDir = testDirectory.directoryPath( "backups", "backupName-" + recordFormat );
         String address = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().defaultDatabase() );
         assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
@@ -439,10 +440,10 @@ class OnlineBackupCommandCcIT
         return result.isSuccessful();
     }
 
-    private static DbRepresentation getBackupDbRepresentation( File backupDir, String databaseName )
+    private static DbRepresentation getBackupDbRepresentation( Path backupDir, String databaseName )
     {
         Config config = Config.defaults( OnlineBackupSettings.online_backup_enabled, false );
-        return DbRepresentation.of( DatabaseLayout.ofFlat( new File( backupDir, databaseName ) ), config );
+        return DbRepresentation.of( DatabaseLayout.ofFlat( backupDir.resolve( databaseName ) ), config );
     }
 
     private int runBackupToolAndGetExitCode( String address, String databaseName )
@@ -466,13 +467,13 @@ class OnlineBackupCommandCcIT
 
     private int runBackupToolAndGetExitCode( String... args )
     {
-        File neo4jHome = testDirectory.absolutePath();
+        Path neo4jHome = testDirectory.homePath();
         return BackupTestUtil.runBackupToolFromSameJvm( neo4jHome, args );
     }
 
-    private static LogFiles logFilesFromBackup( File backupDir, String databaseName ) throws IOException
+    private static LogFiles logFilesFromBackup( Path backupDir, String databaseName ) throws IOException
     {
-        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( new File( backupDir, databaseName ) );
+        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupDir.resolve( databaseName ) );
         return BackupTransactionLogFilesHelper.readLogFiles( backupLayout );
     }
 

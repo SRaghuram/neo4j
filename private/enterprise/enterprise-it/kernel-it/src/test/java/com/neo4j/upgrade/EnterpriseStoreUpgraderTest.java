@@ -39,7 +39,7 @@ public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
             File databaseDirectory ) throws IOException
     {
         File resourceDirectory = findFormatStoreDirectoryForVersion( version, databaseDirectory );
-        File directory = databaseLayout.databaseDirectory();
+        File directory = databaseLayout.databaseDirectory().toFile();
         fileSystem.deleteRecursively( directory );
         fileSystem.mkdirs( directory );
         fileSystem.copyRecursively( resourceDirectory, directory );

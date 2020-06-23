@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -59,9 +60,9 @@ class StoreFilesTest
     void beforeEach() throws Exception
     {
         databaseDir = testDirectory.directory( "databasedir" );
-        databaseLayout = DatabaseLayout.ofFlat( databaseDir );
+        databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
         otherDatabaseDir = testDirectory.directory( "otherdatabasedir" );
-        otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir );
+        otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir.toPath() );
         logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fs ).build();
         otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir, fs ).build();
     }
@@ -284,7 +285,7 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        File nonExistingDirectory = new File( "NonExistingDirectory" );
+        Path nonExistingDirectory = Path.of( "Non/ExistingDirectory" );
         DatabaseLayout layout = DatabaseLayout.ofFlat( nonExistingDirectory );
 
         assertTrue( storeFiles.isEmpty( layout ) );
@@ -295,7 +296,7 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        File emptyDirectory = testDirectory.directory( "EmptyDirectory" );
+        Path emptyDirectory = testDirectory.directoryPath( "EmptyDirectory" );
         DatabaseLayout layout = DatabaseLayout.ofFlat( emptyDirectory );
 
         assertTrue( storeFiles.isEmpty( layout ) );
@@ -310,7 +311,7 @@ class StoreFilesTest
         createFile( databaseDir, DatabaseFile.NODE_STORE.getName() );
         createFile( databaseDir, DatabaseFile.RELATIONSHIP_STORE.getName() );
 
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
 
         assertFalse( storeFiles.isEmpty( databaseLayout ) );
     }
@@ -335,7 +336,7 @@ class StoreFilesTest
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime, NULL );
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId, NULL );
 
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
 
         StoreId storeId = storeFiles.readStoreId( databaseLayout, NULL );
 
@@ -347,7 +348,7 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
 
         assertThrows( IOException.class, () -> storeFiles.readStoreId( databaseLayout, NULL ) );
     }

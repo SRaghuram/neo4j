@@ -112,7 +112,7 @@ class TransactionLogCatchUpWriterIT
 
     private void deleteTransactionLogs() throws IOException
     {
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fs ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory().toFile(), fs ).build();
         logFiles.accept( ( file, version ) -> deleteFileOrThrow( file ) );
     }
 
@@ -177,11 +177,12 @@ class TransactionLogCatchUpWriterIT
         writer.close();
         if ( fullStoreCopy )
         {
-            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
+            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 100L ) );
         }
         else
         {
-            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory() ), greaterThanOrEqualTo( logical_log_rotation_threshold.defaultValue() ) );
+            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ),
+                    greaterThanOrEqualTo( logical_log_rotation_threshold.defaultValue() ) );
         }
     }
 
@@ -194,7 +195,7 @@ class TransactionLogCatchUpWriterIT
         TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
                 storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE );
         writer.close();
-        assertThat(sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
+        assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 100L ) );
     }
 
     @ValueSource( booleans = {false, true} )

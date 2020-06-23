@@ -93,7 +93,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
               PageCache pageCache = createPageCache( fs, scheduler, cacheTracer ) )
         {
             final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate() );
-            Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.ofFlat( file.getParentFile() ),
+            Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.ofFlat( file.getParentFile().toPath() ),
                     Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider(), cacheTracer );
 
             for ( String arg : args )

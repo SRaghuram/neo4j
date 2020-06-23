@@ -118,7 +118,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private static LogPosition getLastClosedTransactionPosition( DatabaseLayout databaseLayout, TransactionMetaDataStore metaDataStore,
             FileSystemAbstraction fs, MemoryTracker memoryTracker ) throws IOException
     {
-        var logFilesHelper = new TransactionLogFilesHelper( fs, databaseLayout.getTransactionLogsDirectory() );
+        var logFilesHelper = new TransactionLogFilesHelper( fs, databaseLayout.getTransactionLogsDirectory().toFile() );
         var logFile = logFilesHelper.getLogFileForVersion( metaDataStore.getCurrentLogVersion() );
         return fs.fileExists( logFile ) ? readLogHeader( fs, logFile, memoryTracker ).getStartPosition() :
                new LogPosition( 0, CURRENT_FORMAT_LOG_HEADER_SIZE );

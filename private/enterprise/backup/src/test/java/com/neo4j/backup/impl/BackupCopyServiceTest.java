@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -97,48 +96,49 @@ class BackupCopyServiceTest
     @Test
     void shouldDeletePreExistingBrokenBackupWhenItHasSameStoreIdAsNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.homeDir( "old" );
-        File newDir = testDirectory.homeDir( "new" );
+        Path oldDir = testDirectory.homePath( "old" );
+        Path newDir = testDirectory.homePath( "new" );
 
         startAndStopDb( oldDir );
 
         DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
-        fs.copyRecursively( oldLayout.databaseDirectory(), newLayout.databaseDirectory() );
+        fs.copyRecursively( oldLayout.databaseDirectory().toFile(), newLayout.databaseDirectory().toFile() );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
 
-        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(), newLayout.databaseDirectory().toPath() );
+        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory(), newLayout.databaseDirectory()
+                                                                                                                              );
 
-        assertFalse( fs.fileExists( oldLayout.databaseDirectory() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+        assertFalse( fs.fileExists( oldLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
     }
 
     @Test
     void shouldNotDeletePreExistingBrokenBackupWhenItHasDifferentStoreIdFromNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.directory( "old" );
-        File newDir = testDirectory.directory( "new" );
+        Path oldDir = testDirectory.directoryPath( "old" );
+        Path newDir = testDirectory.directoryPath( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        assertTrue( Files.isDirectory( oldDir ) );
+        assertTrue( Files.isDirectory( newDir ) );
 
-        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() );
+        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir, newDir );
 
-        assertTrue( fs.isDirectory( oldDir ) );
-        assertTrue( fs.isDirectory( newDir ) );
+        assertTrue( Files.isDirectory( oldDir ) );
+        assertTrue( Files.isDirectory( newDir ) );
     }
 
     @Test
     void shouldNotDeletePreExistingBrokenBackupWhenItsStoreIdIsUnreadable() throws Exception
     {
-        File oldDir = testDirectory.homeDir( "old" );
-        File newDir = testDirectory.homeDir( "new" );
+        Path oldDir = testDirectory.homePath( "old" );
+        Path newDir = testDirectory.homePath( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
@@ -146,22 +146,23 @@ class BackupCopyServiceTest
         DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
 
-        fs.deleteFileOrThrow( oldLayout.metadataStore() );
+        fs.deleteFileOrThrow( oldLayout.metadataStore().toFile() );
 
-        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(), newLayout.databaseDirectory().toPath() );
+        backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory(), newLayout.databaseDirectory()
+                                                                                                                              );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
     }
 
     @Test
     void shouldThrowWhenUnableToReadStoreIdFromNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.homeDir( "old" );
-        File newDir = testDirectory.homeDir( "new" );
+        Path oldDir = testDirectory.homePath( "old" );
+        Path newDir = testDirectory.homePath( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
@@ -169,19 +170,19 @@ class BackupCopyServiceTest
         DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
 
-        fs.deleteFileOrThrow( newLayout.metadataStore() );
+        fs.deleteFileOrThrow( newLayout.metadataStore().toFile() );
 
         IOException error = assertThrows( IOException.class,
-                () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory().toPath(),
-                        newLayout.databaseDirectory().toPath() ) );
+                () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory(),
+                        newLayout.databaseDirectory() ) );
 
         assertThat( error.getMessage(), containsString( "Unable to read store ID from the new successful backup" ) );
     }
 
-    private static void startAndStopDb( File databaseDir )
+    private static void startAndStopDb( Path databaseDir )
     {
         DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDir ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );

@@ -201,7 +201,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
         copyDatabase(
                 "--from-path=" + getDatabaseAbsolutePath( databaseName ),
-                "--from-path-tx=" + databaseAPI.databaseLayout().getTransactionLogsDirectory().getAbsolutePath(),
+                "--from-path-tx=" + databaseAPI.databaseLayout().getTransactionLogsDirectory().toAbsolutePath(),
                 "--to-database=" + copyName );
 
         managementService.createDatabase( copyName );
@@ -519,7 +519,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
     private String getDatabaseAbsolutePath( String databaseName )
     {
-        return databaseAPI.databaseLayout().getNeo4jLayout().databaseLayout( databaseName ).databaseDirectory().getAbsolutePath();
+        return databaseAPI.databaseLayout().getNeo4jLayout().databaseLayout( databaseName ).databaseDirectory().toAbsolutePath().toString();
     }
 
     private void assertRecordFormat( String databaseName, FormatFamily formatFamily )

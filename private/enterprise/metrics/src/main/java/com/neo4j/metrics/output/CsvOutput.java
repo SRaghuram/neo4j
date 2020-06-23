@@ -61,7 +61,7 @@ public class CsvOutput implements Lifecycle
         }
         Long rotationThreshold = config.get( MetricsSettings.csv_rotation_threshold );
         Integer maxArchives = config.get( MetricsSettings.csv_max_archives );
-        outputPath = absoluteFileOrRelativeTo( extensionContext.directory(), configuredPath );
+        outputPath = absoluteFileOrRelativeTo( extensionContext.directory().toFile(), configuredPath );
         csvReporter = RotatableCsvReporter.forRegistry( registry )
                 .convertRatesTo( TimeUnit.SECONDS )
                 .convertDurationsTo( TimeUnit.MILLISECONDS )

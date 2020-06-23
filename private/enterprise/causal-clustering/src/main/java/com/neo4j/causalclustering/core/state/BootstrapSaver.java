@@ -48,8 +48,8 @@ public class BootstrapSaver
      */
     public void save( DatabaseLayout databaseLayout ) throws IOException
     {
-        saveFiles( databaseLayout.databaseDirectory() );
-        saveFiles( databaseLayout.getTransactionLogsDirectory() );
+        saveFiles( databaseLayout.databaseDirectory().toFile() );
+        saveFiles( databaseLayout.getTransactionLogsDirectory().toFile() );
     }
 
     /**
@@ -59,8 +59,8 @@ public class BootstrapSaver
      */
     public void restore( DatabaseLayout databaseLayout ) throws IOException
     {
-        restoreFiles( databaseLayout.databaseDirectory() );
-        restoreFiles( databaseLayout.getTransactionLogsDirectory() );
+        restoreFiles( databaseLayout.databaseDirectory().toFile() );
+        restoreFiles( databaseLayout.getTransactionLogsDirectory().toFile() );
     }
 
     /**
@@ -70,8 +70,8 @@ public class BootstrapSaver
      */
     public void clean( DatabaseLayout databaseLayout ) throws IOException
     {
-        clean( databaseLayout.databaseDirectory() );
-        clean( databaseLayout.getTransactionLogsDirectory() );
+        clean( databaseLayout.databaseDirectory().toFile() );
+        clean( databaseLayout.getTransactionLogsDirectory().toFile() );
     }
 
     private void saveFiles( File directory ) throws IOException

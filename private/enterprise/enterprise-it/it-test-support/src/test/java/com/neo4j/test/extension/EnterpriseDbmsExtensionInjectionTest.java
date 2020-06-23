@@ -91,6 +91,6 @@ class EnterpriseDbmsExtensionInjectionTest
         assertTrue( fs instanceof DefaultFileSystemAbstraction );
 
         assertSame( db, dbApi );
-        assertEquals( testDirectory.homeDir(), neo4jLayout.homeDirectory() );
+        assertEquals( testDirectory.homePath(), neo4jLayout.homeDirectory() );
     }
 }

@@ -5,13 +5,14 @@
  */
 package com.neo4j.internal.batchimport;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -71,15 +72,15 @@ class RestartableImportIT
     {
         assertTimeoutPreemptively( ofSeconds( 300 ), () ->
         {
-            Neo4jLayout neo4jLayout = Neo4jLayout.ofFlat( testDirectory.homeDir() );
+            Neo4jLayout neo4jLayout = Neo4jLayout.ofFlat( testDirectory.homePath() );
             DatabaseLayout dbLayout = neo4jLayout.databaseLayout( DEFAULT_DATABASE_NAME );
             long startTime = System.currentTimeMillis();
-            File dbDirectory = dbLayout.databaseDirectory();
+            File dbDirectory = dbLayout.databaseDirectory().toFile();
             int timeMeasuringImportExitCode = startImportInSeparateProcess( dbDirectory ).waitFor();
             long time = System.currentTimeMillis() - startTime;
             assertEquals( 0, timeMeasuringImportExitCode );
-            fs.deleteRecursively( neo4jLayout.homeDirectory() );
-            fs.mkdir( neo4jLayout.homeDirectory() );
+            fs.deleteRecursively( neo4jLayout.homeDirectory().toFile() );
+            fs.mkdir( neo4jLayout.homeDirectory().toFile() );
             Process process;
             int restartCount = 0;
             int exitCode;
@@ -159,10 +160,10 @@ class RestartableImportIT
         {
             File databaseDirectory = new File( args[0] );
             BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
+            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory.toPath() ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(),
                     NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
-                   .doImport( input( Long.parseLong( args[1] ) ) );
+                    .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for real
             new File( databaseDirectory, COMPLETED ).createNewFile();
         }

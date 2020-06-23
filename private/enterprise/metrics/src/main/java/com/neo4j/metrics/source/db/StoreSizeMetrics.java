@@ -85,8 +85,8 @@ public class StoreSizeMetrics extends LifecycleAdapter
 
     private void updateCachedValues()
     {
-        cachedDatabaseSize = getSize( databaseLayout.databaseDirectory() );
-        cachedStoreTotalSize = cachedDatabaseSize + getSize( databaseLayout.getTransactionLogsDirectory() );
+        cachedDatabaseSize = getSize( databaseLayout.databaseDirectory().toFile() );
+        cachedStoreTotalSize = cachedDatabaseSize + getSize( databaseLayout.getTransactionLogsDirectory().toFile() );
     }
 
     //Paths may overlap

@@ -128,8 +128,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         latch.release();
         DbmsRule.RestartAction useBackupDir = ( fs, databaseLayout ) ->
         {
-            fs.deleteRecursively( databaseLayout.databaseDirectory() );
-            fs.copyRecursively( backupDir, databaseLayout.getNeo4jLayout().databasesDirectory() );
+            fs.deleteRecursively( databaseLayout.databaseDirectory().toFile() );
+            fs.copyRecursively( backupDir, databaseLayout.getNeo4jLayout().databasesDirectory().toFile() );
         };
         db.restartDatabase( useBackupDir, Map.of(
                 OnlineBackupSettings.online_backup_enabled, false,
@@ -177,7 +177,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         db.shutdown();
 
-        File databaseDir = db.databaseLayout().databaseDirectory();
+        File databaseDir = db.databaseLayout().databaseDirectory().toFile();
         File databases = new File( data, "databases" );
         File graphdb = new File( databases, "neo4j" );
         FileUtils.copyRecursively( databaseDir, graphdb );

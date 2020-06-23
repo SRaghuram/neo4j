@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Files;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseLimitReachedException;
@@ -255,13 +256,13 @@ class MultiDatabaseManagerIT
         GraphDatabaseFacade database = (GraphDatabaseFacade) managementService.database( databaseToDrop );
 
         DatabaseLayout databaseLayout = database.databaseLayout();
-        assertNotEquals( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
-        assertTrue( databaseLayout.databaseDirectory().exists() );
-        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
+        assertNotEquals( databaseLayout.databaseDirectory().toFile(), databaseLayout.getTransactionLogsDirectory().toFile() );
+        assertTrue( Files.exists( databaseLayout.databaseDirectory() ) );
+        assertTrue( Files.exists( databaseLayout.getTransactionLogsDirectory() ) );
 
         managementService.dropDatabase( databaseToDrop );
-        assertFalse( databaseLayout.databaseDirectory().exists() );
-        assertFalse( databaseLayout.getTransactionLogsDirectory().exists() );
+        assertFalse( Files.exists( databaseLayout.databaseDirectory() ) );
+        assertFalse( Files.exists( databaseLayout.getTransactionLogsDirectory() ) );
     }
 
     @Test
@@ -272,12 +273,12 @@ class MultiDatabaseManagerIT
         GraphDatabaseFacade database = (GraphDatabaseFacade) managementService.database( databaseToStop );
 
         DatabaseLayout databaseLayout = database.databaseLayout();
-        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
-        assertTrue( databaseLayout.databaseDirectory().exists() );
+        assertTrue( Files.exists( databaseLayout.getTransactionLogsDirectory() ) );
+        assertTrue( Files.exists( databaseLayout.databaseDirectory() ) );
 
         managementService.shutdownDatabase( databaseToStop );
-        assertTrue( databaseLayout.databaseDirectory().exists() );
-        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
+        assertTrue( Files.exists( databaseLayout.databaseDirectory() ) );
+        assertTrue( Files.exists( databaseLayout.getTransactionLogsDirectory() ) );
     }
 
     @Test

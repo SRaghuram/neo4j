@@ -37,7 +37,6 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.string.HexString;
@@ -79,13 +78,13 @@ public class RsdrMain
             }
 
             File databaseDirectory = new File( args[0] );
-            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDirectory );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDirectory.toPath() );
 
             Config config = buildConfig();
             JobScheduler jobScheduler = createInitialisedScheduler();
             try ( PageCache pageCache = createPageCache( fileSystem, config, jobScheduler, PageCacheTracer.NULL ) )
             {
-                File neoStore = databaseLayout.metadataStore();
+                File neoStore = databaseLayout.metadataStore().toFile();
                 StoreFactory factory = openStore( fileSystem, neoStore, config, pageCache );
                 NeoStores neoStores = factory.openAllNeoStores();
                 interact( fileSystem, neoStores, databaseLayout );
@@ -105,7 +104,8 @@ public class RsdrMain
     {
         IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
-        return new StoreFactory( DatabaseLayout.ofFlat( storeDir ), config, idGeneratorFactory, pageCache, fileSystem, logProvider, PageCacheTracer.NULL );
+        return new StoreFactory( DatabaseLayout.ofFlat( storeDir.toPath() ), config, idGeneratorFactory, pageCache, fileSystem, logProvider,
+                PageCacheTracer.NULL );
     }
 
     private static void interact( FileSystemAbstraction fileSystem, NeoStores neoStores, DatabaseLayout databaseLayout ) throws IOException
@@ -159,7 +159,7 @@ public class RsdrMain
 
     private static void listFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout )
     {
-        File databaseDirectory = databaseLayout.databaseDirectory();
+        File databaseDirectory = databaseLayout.databaseDirectory().toFile();
         File[] listing = fileSystem.listFiles( databaseDirectory );
         for ( File file : listing )
         {
@@ -277,7 +277,7 @@ public class RsdrMain
     private static IOCursor<LogEntry> getLogCursor( FileSystemAbstraction fileSystem, String fname,
             DatabaseLayout databaseLayout ) throws IOException
     {
-        return TransactionLogUtils.openLogEntryCursor( fileSystem, new File( databaseLayout.databaseDirectory(), fname ),
+        return TransactionLogUtils.openLogEntryCursor( fileSystem, new File( databaseLayout.databaseDirectory().toFile(), fname ),
                 NO_MORE_CHANNELS, ChannelNativeAccessor.EMPTY_ACCESSOR, StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
     }
 

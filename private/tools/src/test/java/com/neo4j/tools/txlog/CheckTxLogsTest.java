@@ -120,7 +120,7 @@ class CheckTxLogsTest
 
     private LogFiles getLogFiles() throws IOException
     {
-        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs )
+        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory().toFile(), fs )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
     }
@@ -836,7 +836,7 @@ class CheckTxLogsTest
 
     private File logFile( long version )
     {
-        return new File( databaseLayout.databaseDirectory(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
+        return new File( databaseLayout.databaseDirectory().toFile(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
     }
 
     private static NodeRecord nodeRecord( long id, boolean inUse, boolean dense, long nextRel, long nextProp, long labels )

@@ -8,7 +8,7 @@ package com.neo4j.backup.stores;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 
-import java.io.File;
+import java.nio.file.Path;
 
 public class EmptyBackupStore extends AbstractStoreGenerator
 {
@@ -19,7 +19,7 @@ public class EmptyBackupStore extends AbstractStoreGenerator
     }
 
     @Override
-    void modify( File backup ) throws Exception
+    void modify( Path backup ) throws Exception
     {
         // do nothing
     }

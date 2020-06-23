@@ -12,7 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -70,7 +70,7 @@ class EnterpriseGraphDatabaseBackupIT
     void shouldDoBackup() throws Exception
     {
         var nodeCount = 999;
-        db = newEnterpriseDb( testDirectory.homeDir(), true );
+        db = newEnterpriseDb( testDirectory.homePath(), true );
         createNodes( db, nodeCount );
 
         var backupDir = performBackup();
@@ -86,7 +86,7 @@ class EnterpriseGraphDatabaseBackupIT
     void shouldFailWithErrorMessageForUnknownDatabase() throws Exception
     {
         var unknownDbName = "unknowndb";
-        db = newEnterpriseDb( testDirectory.homeDir(), true );
+        db = newEnterpriseDb( testDirectory.homePath(), true );
 
         var exitCode = runBackupToolFromSameJvm( databaseLayout.databaseDirectory(),
                 "--from=" + backupAddress( db ),
@@ -98,10 +98,10 @@ class EnterpriseGraphDatabaseBackupIT
         assertThat( suppressOutput.getErrorVoice().lines(), hasItem( containsString( "Database '" + unknownDbName + "' does not exist" ) ) );
     }
 
-    private File performBackup() throws Exception
+    private Path performBackup() throws Exception
     {
         var storeDir = neo4jLayout.databasesDirectory();
-        var backupsDir = testDirectory.directory( "backups" );
+        var backupsDir = testDirectory.directoryPath( "backups" );
 
         var exitCode = runBackupToolFromOtherJvmToGetExitCode( storeDir,
                 "--from=" + backupAddress( db ),
@@ -110,26 +110,26 @@ class EnterpriseGraphDatabaseBackupIT
 
         assertEquals( 0, exitCode );
 
-        return new File( backupsDir, DEFAULT_DATABASE_NAME );
+        return backupsDir.resolve( DEFAULT_DATABASE_NAME );
     }
 
-    private GraphDatabaseAPI newEnterpriseDb( File storeDir, boolean backupEnabled )
+    private GraphDatabaseAPI newEnterpriseDb( Path storeDir, boolean backupEnabled )
     {
         managementService = defaultEnterpriseBuilder( storeDir, backupEnabled ).build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private GraphDatabaseAPI newEnterpriseBackupDb( File databaseDirectory, boolean backupEnabled )
+    private GraphDatabaseAPI newEnterpriseBackupDb( Path databaseDirectory, boolean backupEnabled )
     {
-        var storeDir = databaseDirectory.getParentFile();
+        var storeDir = databaseDirectory.getParent();
         managementService = defaultEnterpriseBuilder( storeDir, backupEnabled )
-                .setConfig( transaction_logs_root_path, storeDir.toPath().toAbsolutePath() )
-                .setConfig( databases_root_path, storeDir.toPath().toAbsolutePath() )
+                .setConfig( transaction_logs_root_path, storeDir.toAbsolutePath() )
+                .setConfig( databases_root_path, storeDir.toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static DatabaseManagementServiceBuilder defaultEnterpriseBuilder( File storeDir, boolean backupEnabled )
+    private static DatabaseManagementServiceBuilder defaultEnterpriseBuilder( Path storeDir, boolean backupEnabled )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, backupEnabled );
     }

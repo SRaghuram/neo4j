@@ -5,12 +5,13 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit;
 
-import java.io.File;
-import java.io.IOException;
-
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
+import java.io.IOException;
+
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -91,7 +92,7 @@ class HighLimitStoreMigrationTest
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler,
                     NULL, batchImporterFactory, INSTANCE );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
-            fileSystem.mkdirs( migrationLayout.databaseDirectory() );
+            fileSystem.mkdirs( migrationLayout.databaseDirectory().toFile() );
 
             prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
 
@@ -99,7 +100,7 @@ class HighLimitStoreMigrationTest
 
             migrator.migrate( databaseLayout, migrationLayout, progressMonitor, HighLimitV3_0_0.STORE_VERSION, HighLimit.STORE_VERSION );
 
-            int newStoreFilesCount = fileSystem.listFiles( migrationLayout.databaseDirectory() ).length;
+            int newStoreFilesCount = fileSystem.listFiles( migrationLayout.databaseDirectory().toFile() ).length;
             assertThat( newStoreFilesCount ).as( "Store should be migrated and new store files should be created." ).isGreaterThanOrEqualTo(
                     StoreType.values().length );
         }
@@ -118,7 +119,7 @@ class HighLimitStoreMigrationTest
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, config, NullLogService.getInstance(), jobScheduler,
                     NULL, batchImporterFactory, INSTANCE );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
-            fileSystem.mkdirs( migrationLayout.databaseDirectory() );
+            fileSystem.mkdirs( migrationLayout.databaseDirectory().toFile() );
 
             prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
 
@@ -139,15 +140,15 @@ class HighLimitStoreMigrationTest
 
     private static File createNeoStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
     {
-        File neoStoreFile = databaseLayout.metadataStore();
+        File neoStoreFile = databaseLayout.metadataStore().toFile();
         fileSystem.write( neoStoreFile ).close();
         return neoStoreFile;
     }
 
     private static void createSchemaStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, PageCache pageCache )
     {
-        File store = databaseLayout.schemaStore();
-        File idFile = databaseLayout.idSchemaStore();
+        File store = databaseLayout.schemaStore().toFile();
+        File idFile = databaseLayout.idSchemaStore().toFile();
         DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         RecordFormats recordFormats = HighLimitV3_0_0.RECORD_FORMATS;

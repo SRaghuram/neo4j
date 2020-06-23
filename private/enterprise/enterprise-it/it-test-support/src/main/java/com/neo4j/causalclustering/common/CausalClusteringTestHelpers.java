@@ -279,7 +279,7 @@ public final class CausalClusteringTestHelpers
 
         var fs = new DefaultFileSystemAbstraction();
         var databaseLayout = member.databaseLayout();
-        var txLogsDirectory = databaseLayout.getTransactionLogsDirectory();
+        var txLogsDirectory = databaseLayout.getTransactionLogsDirectory().toFile();
         var storageEngineFactory = StorageEngineFactory.selectStorageEngine();
         var logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( txLogsDirectory, fs )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )

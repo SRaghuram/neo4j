@@ -8,6 +8,7 @@ package com.neo4j.dbms.api;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Function;
 
 import org.neo4j.annotations.api.PublicApi;
@@ -32,6 +33,11 @@ public class EnterpriseDatabaseManagementServiceBuilder extends DatabaseManageme
     public EnterpriseDatabaseManagementServiceBuilder( File homeDirectory )
     {
         super( homeDirectory );
+    }
+
+    public EnterpriseDatabaseManagementServiceBuilder( Path homeDirectory )
+    {
+        super( homeDirectory.toFile() );
     }
 
     @Override

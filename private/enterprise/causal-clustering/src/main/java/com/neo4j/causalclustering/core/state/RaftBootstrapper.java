@@ -168,12 +168,12 @@ public class RaftBootstrapper
         {
             File tempDefaultDatabaseDir = new File( bootstrapRootDir.get(), SYSTEM_DATABASE_NAME );
 
-            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
-            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory().toFile(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory().toFile(), tempDefaultDatabaseDir );
 
             DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), true );
 
-            bootstrapContext.replaceWith( tempDatabaseLayout.databaseDirectory() );
+            bootstrapContext.replaceWith( tempDatabaseLayout.databaseDirectory().toFile() );
         }
     }
 
@@ -192,11 +192,11 @@ public class RaftBootstrapper
             if ( storeId != null )
             {
                 log.info( "Changing store ID of bootstrapped database to " + storeId );
-                MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP,
+                MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore().toFile(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP,
                         cursorTracer );
             }
             log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );
-            bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory() );
+            bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory().toFile() );
 
             // delete transaction logs so they will be recreated with the new store id, they should be empty so it's fine
             bootstrapContext.removeTransactionLogs();

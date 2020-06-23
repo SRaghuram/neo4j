@@ -62,9 +62,9 @@ class CoreEditionModuleIT
     {
         DatabaseLayout layout = cluster.awaitLeader().databaseLayout();
         Predicate<String> filter = CoreEditionModule.fileWatcherFileNameFilter();
-        String metadataStoreName = layout.metadataStore().getName();
+        String metadataStoreName = layout.metadataStore().getFileName().toString();
         assertFalse( filter.test( metadataStoreName ) );
-        assertFalse( filter.test( layout.nodeStore().getName() ) );
+        assertFalse( filter.test( layout.nodeStore().getFileName().toString() ) );
         assertTrue( filter.test( TransactionLogFilesHelper.DEFAULT_NAME + ".1" ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }

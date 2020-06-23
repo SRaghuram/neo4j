@@ -195,11 +195,11 @@ class ReadReplicaReplicationIT
 
     private static void gatherLabelScanStoreFiles( GraphDatabaseAPI db, Set<Path> labelScanStoreFiles )
     {
-        var databaseDirectory = db.databaseLayout().databaseDirectory().toPath();
+        var databaseDirectory = db.databaseLayout().databaseDirectory();
         var labelScanStore = db.getDependencyResolver().resolveDependency( LabelScanStore.class );
         try ( var files = labelScanStore.snapshotStoreFiles() )
         {
-            var relativePath = databaseDirectory.relativize( files.next().toPath().toAbsolutePath() );
+            var relativePath = databaseDirectory.relativize( files.next().toAbsolutePath() );
             labelScanStoreFiles.add( relativePath );
         }
     }
@@ -397,7 +397,7 @@ class ReadReplicaReplicationIT
 
     private static void changeStoreId( ReadReplica replica ) throws IOException
     {
-        var neoStoreFile = replica.databaseLayout().metadataStore();
+        var neoStoreFile = replica.databaseLayout().metadataStore().toFile();
         var pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis(), NULL );
     }

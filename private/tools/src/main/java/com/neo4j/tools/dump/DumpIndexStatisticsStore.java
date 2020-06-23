@@ -59,7 +59,7 @@ public class DumpIndexStatisticsStore
             NullLogProvider logProvider = NullLogProvider.getInstance();
             if ( fs.isDirectory( path ) )
             {
-                DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path );
+                DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path.toPath() );
                 indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true, cacheTracer );
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
                         pageCache, fs, logProvider, PageCacheTracer.NULL );

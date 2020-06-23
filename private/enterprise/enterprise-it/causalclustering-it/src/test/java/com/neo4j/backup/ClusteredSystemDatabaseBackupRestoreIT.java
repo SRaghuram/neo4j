@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,12 +68,12 @@ class ClusteredSystemDatabaseBackupRestoreIT
     private ClusterFactory clusterFactory;
 
     private Cluster cluster;
-    private File backupLocation;
+    private Path backupLocation;
 
     @BeforeEach
     void setup() throws InterruptedException, ExecutionException
     {
-        backupLocation = testDirectory.directory( "backupLocation" + UUID.randomUUID().toString() );
+        backupLocation = testDirectory.directoryPath( "backupLocation" + UUID.randomUUID().toString() );
         cluster = createCluster( getConfigMap() );
         cluster.start();
     }
@@ -86,10 +86,10 @@ class ClusteredSystemDatabaseBackupRestoreIT
         String leaderAddress = leader.settingValue( online_backup_listen_address ).toString();
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation, databaseName, Config
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation.toFile(), databaseName, Config
                 .newBuilder()
-                .set( GraphDatabaseSettings.transaction_logs_root_path, backupLocation.toPath().toAbsolutePath() )
-                .set( GraphDatabaseInternalSettings.databases_root_path, backupLocation.toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.transaction_logs_root_path, backupLocation.toAbsolutePath() )
+                .set( GraphDatabaseInternalSettings.databases_root_path, backupLocation.toAbsolutePath() )
                 .build() );
         assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 
@@ -166,15 +166,15 @@ class ClusteredSystemDatabaseBackupRestoreIT
         return clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfReadReplicas( 0 ).withSharedCoreParams( configMap ) );
     }
 
-    private static void runRestore( FileSystemAbstraction fs, File backupLocation, Config memberConfig ) throws Exception
+    private static void runRestore( FileSystemAbstraction fs, Path backupLocation, Config memberConfig ) throws Exception
     {
         Config restoreCommandConfig = Config.newBuilder().fromConfig( memberConfig ).build();
         var databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-        new RestoreDatabaseCommand( fs, new File( backupLocation, databaseName ), restoreCommandConfig,
+        new RestoreDatabaseCommand( fs, backupLocation.resolve( databaseName ), restoreCommandConfig,
                 databaseName, true, false ).execute();
     }
 
-    private static boolean runBackupSameJvm( File neo4jHome, String host, String databaseName )
+    private static boolean runBackupSameJvm( Path neo4jHome, String host, String databaseName )
     {
         int exitCode = BackupTestUtil.runBackupToolFromSameJvm( neo4jHome,
                 "--from", host,

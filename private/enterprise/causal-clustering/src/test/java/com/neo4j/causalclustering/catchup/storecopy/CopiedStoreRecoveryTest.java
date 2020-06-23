@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
@@ -31,7 +31,7 @@ class CopiedStoreRecoveryTest
         copiedStoreRecovery.shutdown();
 
         Exception exception = assertThrows( Exception.class,
-                () -> copiedStoreRecovery.recoverCopiedStore( Config.defaults(), DatabaseLayout.ofFlat( new File( "nowhere" ) ) ) );
+                () -> copiedStoreRecovery.recoverCopiedStore( Config.defaults(), DatabaseLayout.ofFlat( Path.of( "no/where" ) ) ) );
         assertEquals( "Abort store-copied store recovery due to database shutdown", exception.getMessage() );
     }
 }

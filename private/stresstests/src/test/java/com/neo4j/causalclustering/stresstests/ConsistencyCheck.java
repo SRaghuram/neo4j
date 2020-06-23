@@ -66,7 +66,7 @@ public class ConsistencyCheck extends Validation
 
     private Set<String> getDatabaseNamesFromFileSystem( Neo4jLayout neo4jLayout )
     {
-        return stream( fs.listFiles( neo4jLayout.databasesDirectory() ) ).filter( File::isDirectory ).map( File::getName ).collect( toSet() );
+        return stream( fs.listFiles( neo4jLayout.databasesDirectory().toFile() ) ).filter( File::isDirectory ).map( File::getName ).collect( toSet() );
     }
 
     @Override

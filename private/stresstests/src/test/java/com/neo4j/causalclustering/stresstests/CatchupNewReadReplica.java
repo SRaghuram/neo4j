@@ -85,7 +85,7 @@ class CatchupNewReadReplica extends Workload
         if ( deleteStore )
         {
             log.info( "Deleting store of " + readReplica );
-            fs.deleteRecursively( readReplica.databaseLayout().databaseDirectory() );
+            fs.deleteRecursively( readReplica.databaseLayout().databaseDirectory().toFile() );
         }
         deleteStore = !deleteStore;
    }

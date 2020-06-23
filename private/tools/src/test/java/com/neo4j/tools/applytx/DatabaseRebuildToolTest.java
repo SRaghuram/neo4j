@@ -65,7 +65,7 @@ class DatabaseRebuildToolTest
     @BeforeEach
     void setup()
     {
-        var neoLayout = Neo4jLayout.ofFlat( testDirectory.homeDir( "flat" ) );
+        var neoLayout = Neo4jLayout.ofFlat( testDirectory.homePath( "flat" ) );
         fromLayout = neoLayout.databaseLayout( "old" );
         toLayout = neoLayout.databaseLayout( "new" );
     }
@@ -82,11 +82,11 @@ class DatabaseRebuildToolTest
 
         var toNeoLayout = toLayout.getNeo4jLayout();
         // WHEN
-        tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(),
-                "--fromTx", fromLayout.getTransactionLogsDirectory().getAbsolutePath(),
-                "--to", toLayout.databaseDirectory().getAbsolutePath(),
-                "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toNeoLayout.transactionLogsRootDirectory().getAbsolutePath(),
-                "-D" + GraphDatabaseInternalSettings.databases_root_path.name(), toNeoLayout.databasesDirectory().getAbsolutePath(),
+        tool.run( "--from", fromLayout.databaseDirectory().toFile().getAbsolutePath(),
+                "--fromTx", fromLayout.getTransactionLogsDirectory().toFile().getAbsolutePath(),
+                "--to", toLayout.databaseDirectory().toFile().getAbsolutePath(),
+                "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toNeoLayout.transactionLogsRootDirectory().toAbsolutePath().toString(),
+                "-D" + GraphDatabaseInternalSettings.databases_root_path.name(), toNeoLayout.databasesDirectory().toAbsolutePath().toString(),
                 "apply last" );
 
         // THEN
@@ -105,9 +105,9 @@ class DatabaseRebuildToolTest
                 NULL_PRINT_STREAM, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(),
-                "--fromTx", fromLayout.getTransactionLogsDirectory().getAbsolutePath(),
-                "--to", toLayout.databaseDirectory().getPath(), "-i" );
+        tool.run( "--from", fromLayout.databaseDirectory().toFile().getAbsolutePath(),
+                "--fromTx", fromLayout.getTransactionLogsDirectory().toFile().getAbsolutePath(),
+                "--to", toLayout.databaseDirectory().toFile().getPath(), "-i" );
 
         // THEN
         assertEquals( TransactionIdStore.BASE_TX_ID + 2, lastAppliedTx( toLayout ) );
@@ -170,7 +170,7 @@ class DatabaseRebuildToolTest
                 out, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(), "--to", toLayout.databaseDirectory().getAbsolutePath(), "-i" );
+        tool.run( "--from", fromLayout.databaseDirectory().toFile().getAbsolutePath(), "--to", toLayout.databaseDirectory().toFile().getAbsolutePath(), "-i" );
 
         // THEN
         out.flush();
@@ -187,8 +187,7 @@ class DatabaseRebuildToolTest
               JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = createPageCache( fileSystem, scheduler, PageCacheTracer.NULL ) )
         {
-            return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(),
-                    MetaDataStore.Position.LAST_TRANSACTION_ID, NULL );
+            return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore().toFile(), MetaDataStore.Position.LAST_TRANSACTION_ID, NULL );
         }
         catch ( Exception e )
         {
@@ -210,8 +209,8 @@ class DatabaseRebuildToolTest
     {
         Neo4jLayout layout = databaseLayout.getNeo4jLayout();
         DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( layout.homeDirectory() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, layout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseInternalSettings.databases_root_path, layout.databasesDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, layout.transactionLogsRootDirectory().toAbsolutePath() )
+                .setConfig( GraphDatabaseInternalSettings.databases_root_path, layout.databasesDirectory().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .build();
         GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );

@@ -66,6 +66,6 @@ class TempBootstrapDirTest
 
     private File tempBootstrapDir()
     {
-        return new File( databaseLayout.databaseDirectory(), CausalClusteringInternalSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME );
+        return new File( databaseLayout.databaseDirectory().toFile(), CausalClusteringInternalSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME );
     }
 }

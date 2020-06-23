@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.layout.DatabaseLayout;
@@ -50,7 +50,7 @@ class BackupReadReplicaIT
     private ClusterFactory clusterFactory;
 
     private Cluster cluster;
-    private File backupsDir;
+    private Path backupsDir;
 
     @BeforeEach
     void setup() throws Exception
@@ -64,7 +64,7 @@ class BackupReadReplicaIT
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 
-        backupsDir = testDirectory.cleanDirectory( "backups" );
+        backupsDir = testDirectory.cleanDirectory( "backups" ).toPath();
     }
 
     @Test
@@ -87,7 +87,7 @@ class BackupReadReplicaIT
         DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
         // Verify that backed up database can be started and compare representation
-        DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( new File( backupsDir, DEFAULT_DATABASE_NAME ) ) );
+        DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( DEFAULT_DATABASE_NAME ) ) );
         assertEquals( beforeChange, backupRepresentation );
         assertNotEquals( backupRepresentation, afterChange );
     }

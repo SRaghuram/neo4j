@@ -5,7 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
@@ -50,7 +50,7 @@ class BackupStrategyCoordinator
      */
     public void performBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        File destination = context.getDatabaseBackupDir().toFile();
+        Path destination = context.getDatabaseBackupDir();
         ConsistencyFlags consistencyFlags = context.getConsistencyFlags();
 
         strategy.doBackup( context );

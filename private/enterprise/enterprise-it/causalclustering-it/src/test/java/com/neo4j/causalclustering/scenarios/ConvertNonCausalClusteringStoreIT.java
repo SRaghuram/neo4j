@@ -18,6 +18,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 import org.neo4j.configuration.Config;
@@ -57,7 +58,7 @@ class ConvertNonCausalClusteringStoreIT
         // given
         File dbDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
         int classicNodeCount = 1024;
-        File classicNeo4jDatabase = createNeoDatabase( dbDir, recordFormat, classicNodeCount ).layout().databaseDirectory();
+        Path classicNeo4jDatabase = createNeoDatabase( dbDir, recordFormat, classicNodeCount ).layout().databaseDirectory();
 
         Cluster cluster = createCluster( recordFormat );
 

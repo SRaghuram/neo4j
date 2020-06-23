@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.assertj.core.api.Condition;
 import org.hamcrest.Matchers;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -22,7 +22,6 @@ import org.neo4j.logging.Log;
 import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -57,7 +56,7 @@ class ReplaceRandomMember extends RepeatOnRandomMember
     {
         boolean replaceFromBackup = ThreadLocalRandom.current().nextBoolean();
 
-        File backup = null;
+        Path backup = null;
         if ( replaceFromBackup )
         {
             backup = createBackupWithRetries( oldMember );
@@ -71,9 +70,9 @@ class ReplaceRandomMember extends RepeatOnRandomMember
 
         if ( replaceFromBackup )
         {
-            log.info( "Restoring backup: " + backup.getName() + " to: " + newMember );
+            log.info( "Restoring backup: " + backup.getFileName().toString() + " to: " + newMember );
             restoreFromBackup( backup, fs, newMember, DEFAULT_DATABASE_NAME );
-            fs.deleteRecursively( backup );
+            fs.deleteRecursively( backup.toFile() );
         }
 
         log.info( "Starting: " + newMember );
@@ -100,13 +99,13 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         }
     }
 
-    private File createBackupWithRetries( ClusterMember member ) throws Exception
+    private Path createBackupWithRetries( ClusterMember member ) throws Exception
     {
         int failureCount = 0;
 
         while ( true )
         {
-            Optional<File> backupOpt = backupHelper.backup( member );
+            Optional<Path> backupOpt = backupHelper.backup( member );
             if ( backupOpt.isPresent() )
             {
                 return backupOpt.get();

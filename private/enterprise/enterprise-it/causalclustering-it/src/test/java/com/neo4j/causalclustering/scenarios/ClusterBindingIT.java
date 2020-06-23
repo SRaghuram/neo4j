@@ -220,7 +220,7 @@ class ClusterBindingIT
 
     private void changeStoreId( DatabaseLayout databaseLayout ) throws Exception
     {
-        var neoStoreFile = databaseLayout.metadataStore();
+        var neoStoreFile = databaseLayout.metadataStore().toFile();
         try ( var jobScheduler = new ThreadPoolJobScheduler();
               var pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler, PageCacheTracer.NULL ) )
         {

@@ -68,7 +68,7 @@ class BatchInsertEnterpriseIT
     @TestWithRecordFormats
     void shouldInsertDifferentTypesOfThings( String recordFormat ) throws Exception
     {
-        DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout layout = Neo4jLayout.of( directory.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
         // GIVEN
         Config config = Config.newBuilder()
                 .set( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
@@ -131,7 +131,7 @@ class BatchInsertEnterpriseIT
             managementService.shutdown();
         }
 
-        DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout layout = Neo4jLayout.of( directory.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
 
         BatchInserter inserter = BatchInserters.inserter( layout, fs, config );
         try
@@ -175,7 +175,7 @@ class BatchInsertEnterpriseIT
             managementService.shutdown();
         }
 
-        DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout layout = Neo4jLayout.of( directory.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
 
         BatchInserter inserter = BatchInserters.inserter( layout, fs, config );
         try

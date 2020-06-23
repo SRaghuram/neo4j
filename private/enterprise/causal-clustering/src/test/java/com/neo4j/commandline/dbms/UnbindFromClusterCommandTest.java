@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.channels.FileLock;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
@@ -55,8 +56,8 @@ class UnbindFromClusterCommandTest
     @BeforeEach
     void setup()
     {
-        neo4jLayout = Neo4jLayout.of( testDir.homeDir() );
-        var homeDir = neo4jLayout.homeDirectory().toPath();
+        neo4jLayout = Neo4jLayout.of( testDir.homePath() );
+        var homeDir = neo4jLayout.homeDirectory();
         var confDir = homeDir.resolve( "conf" );
 
         err = mock( PrintStream.class );
@@ -148,7 +149,7 @@ class UnbindFromClusterCommandTest
 
     private File createClusterStateDir() throws IOException
     {
-        var dataDir = neo4jLayout.homeDirectory().toPath().resolve( DEFAULT_DATA_DIR_NAME );
+        var dataDir = neo4jLayout.homeDirectory().resolve( DEFAULT_DATA_DIR_NAME );
         var clusterStateDirectory = ClusterStateLayout.of( dataDir.toFile() ).getClusterStateDirectory();
         fs.mkdirs( clusterStateDirectory );
         return clusterStateDirectory;
@@ -161,8 +162,8 @@ class UnbindFromClusterCommandTest
 
     private FileLock createLockedFakeDbDir() throws IOException
     {
-        fs.mkdirs( neo4jLayout.databasesDirectory() );
-        channel = fs.write( neo4jLayout.storeLockFile() );
+        Files.createDirectories( neo4jLayout.databasesDirectory() );
+        channel = fs.write( neo4jLayout.storeLockFile().toFile() );
         var fileLock = channel.tryLock();
         assertNotNull( fileLock, "Unable to acquire a store lock" );
         return fileLock;

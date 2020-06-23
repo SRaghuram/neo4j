@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.CannotWriteException;
@@ -28,13 +29,13 @@ import static org.neo4j.commandline.Util.isSameOrChildFile;
 public class RestoreDatabaseCommand
 {
     private final FileSystemAbstraction fs;
-    private final File fromDatabasePath;
+    private final Path fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
     private final File raftGroupDirectory;
     private final boolean forceOverwrite;
     private final boolean moveFiles;
 
-    public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String databaseName, boolean forceOverwrite,
+    public RestoreDatabaseCommand( FileSystemAbstraction fs, Path fromDatabasePath, Config config, String databaseName, boolean forceOverwrite,
                                    boolean moveFiles )
     {
         this.fs = fs;
@@ -47,14 +48,14 @@ public class RestoreDatabaseCommand
 
     public void execute() throws IOException
     {
-        if ( !fs.fileExists( fromDatabasePath ) )
+        if ( !fs.fileExists( fromDatabasePath.toFile() ) )
         {
             throw new IllegalArgumentException( format( "Source directory does not exist [%s]", fromDatabasePath ) );
         }
 
         try
         {
-            Validators.CONTAINS_EXISTING_DATABASE.validate( fromDatabasePath );
+            Validators.CONTAINS_EXISTING_DATABASE.validate( fromDatabasePath.toFile() );
         }
         catch ( IllegalArgumentException e )
         {
@@ -62,10 +63,10 @@ public class RestoreDatabaseCommand
                     format( "Source directory is not a database backup [%s]", fromDatabasePath ), e );
         }
 
-        if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )
+        if ( fs.fileExists( targetDatabaseLayout.databaseDirectory().toFile() ) && !forceOverwrite )
         {
             throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(),
-                    targetDatabaseLayout.databaseDirectory() ) );
+                    targetDatabaseLayout.databaseDirectory().toFile() ) );
         }
 
         if ( fs.fileExists( raftGroupDirectory ) )
@@ -78,7 +79,7 @@ public class RestoreDatabaseCommand
                     targetDatabaseLayout.getDatabaseName(), targetDatabaseLayout.getDatabaseName() ) );
         }
 
-        fs.mkdirs( targetDatabaseLayout.databaseDirectory() );
+        fs.mkdirs( targetDatabaseLayout.databaseDirectory().toFile() );
 
         try ( var ignored = LockChecker.checkDatabaseLock( targetDatabaseLayout ) )
         {
@@ -97,9 +98,9 @@ public class RestoreDatabaseCommand
 
     private void cleanTargetDirectories() throws IOException
     {
-        var databaseDirectory = targetDatabaseLayout.databaseDirectory();
-        var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
-        var databaseLockFile = targetDatabaseLayout.databaseLockFile();
+        var databaseDirectory = targetDatabaseLayout.databaseDirectory().toFile();
+        var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory().toFile();
+        var databaseLockFile = targetDatabaseLayout.databaseLockFile().toFile();
 
         var filesToRemove = fs.listFiles( databaseDirectory, ( dir, name ) -> !name.equals( databaseLockFile.getName() ) );
         if ( filesToRemove != null )
@@ -117,14 +118,14 @@ public class RestoreDatabaseCommand
 
     private void restoreDatabaseFiles() throws IOException
     {
-        var databaseFiles = fs.listFiles( fromDatabasePath );
-        var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
+        var databaseFiles = fs.listFiles( fromDatabasePath.toFile() );
+        var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath.toFile(), fs ).build();
 
         if ( databaseFiles != null )
         {
-            var databaseDirectory = targetDatabaseLayout.databaseDirectory();
-            var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
-            var databaseLockFile = targetDatabaseLayout.databaseLockFile();
+            var databaseDirectory = targetDatabaseLayout.databaseDirectory().toFile();
+            var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory().toFile();
+            var databaseLockFile = targetDatabaseLayout.databaseLockFile().toFile();
             for ( var file : databaseFiles )
             {
                 if ( file.isDirectory() )
@@ -159,7 +160,7 @@ public class RestoreDatabaseCommand
             }
             if ( moveFiles )
             {
-                fs.deleteRecursively( fromDatabasePath );
+                fs.deleteRecursively( fromDatabasePath.toFile() );
             }
         }
     }

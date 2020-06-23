@@ -19,8 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -66,7 +66,7 @@ class BackupDelegatorTest
         // given
         SocketAddress fromAddress = new SocketAddress( "neo4j.com", 5432 );
         StoreId expectedStoreId = new StoreId( 7, 2, 3, 5, 98 );
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "." ) );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( Path.of( "." ) );
 
         // when
         subject.tryCatchingUp( fromAddress, expectedStoreId, namedDatabaseId, databaseLayout );
@@ -119,7 +119,7 @@ class BackupDelegatorTest
     {
         // given
         StoreId storeId = new StoreId( 92, 5, 12, 7, 32 );
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "." ) );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( Path.of( "." ) );
 
         // when
         subject.copy( anyAddress, storeId, namedDatabaseId, databaseLayout );

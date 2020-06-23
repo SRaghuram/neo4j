@@ -70,7 +70,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     void notConfiguredDatabasesRootPath()
     {
         File homeDir = testDirectory.homeDir();
-        File storeDir = neo4jLayout.databasesDirectory();
+        File storeDir = neo4jLayout.databasesDirectory().toFile();
 
         DatabaseManagementService managementService = createDbmsBuilder( homeDir ).build();
         try

@@ -141,13 +141,13 @@ class RebuildFromLogs
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            new RebuildFromLogs( fileSystem ).rebuild( DatabaseLayout.ofFlat( source ), DatabaseLayout.ofFlat( target ), txId );
+            new RebuildFromLogs( fileSystem ).rebuild( DatabaseLayout.ofFlat( source.toPath() ), DatabaseLayout.ofFlat( target.toPath() ), txId );
         }
     }
 
     private static boolean directoryContainsDb( Path path )
     {
-        return Files.exists( DatabaseLayout.ofFlat( path.toFile() ).metadataStore().toPath() );
+        return Files.exists( DatabaseLayout.ofFlat( path ).metadataStore() );
     }
 
     public void rebuild( DatabaseLayout sourceDatabaseLayout, DatabaseLayout targetLayout, long txId ) throws Exception, InconsistentStoreException
@@ -155,7 +155,7 @@ class RebuildFromLogs
         try ( JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler, PageCacheTracer.NULL ) )
         {
-            File transactionLogsDirectory = sourceDatabaseLayout.getTransactionLogsDirectory();
+            File transactionLogsDirectory = sourceDatabaseLayout.getTransactionLogsDirectory().toFile();
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs )
                     .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                     .build();
@@ -173,7 +173,7 @@ class RebuildFromLogs
             }
 
             // set last tx id in neostore otherwise the db is not usable
-            MetaDataStore.setRecord( pageCache, targetLayout.metadataStore(),
+            MetaDataStore.setRecord( pageCache, targetLayout.metadataStore().toFile(),
                     MetaDataStore.Position.LAST_TRANSACTION_ID, lastTxId, PageCursorTracer.NULL );
 
             checkConsistency( targetLayout, pageCache );
@@ -312,8 +312,8 @@ class RebuildFromLogs
                 .setExternalDependencies( dependencies )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
-                .setConfig( GraphDatabaseInternalSettings.databases_root_path, neo4jLayout.databasesDirectory().toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseInternalSettings.databases_root_path, neo4jLayout.databasesDirectory().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.preallocate_logical_logs, false )
                 .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );

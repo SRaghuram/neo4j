@@ -46,8 +46,8 @@ class EnterpriseDatabaseStateServiceIT
 
         managementService.shutdownDatabase( testId.name() );
 
-        fileSystem.deleteFile( testDbLayout.nodeStore() );
-        fileSystem.deleteRecursively( testDbLayout.getTransactionLogsDirectory() );
+        fileSystem.deleteFile( testDbLayout.nodeStore().toFile() );
+        fileSystem.deleteRecursively( testDbLayout.getTransactionLogsDirectory().toFile() );
 
         // when
         managementService.startDatabase( testId.name() );

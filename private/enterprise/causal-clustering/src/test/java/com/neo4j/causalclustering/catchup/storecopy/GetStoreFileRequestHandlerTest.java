@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -66,7 +67,7 @@ class GetStoreFileRequestHandlerTest
         dependencies.satisfyDependency( checkPointer );
         when( database.getStoreId() ).thenReturn( STORE_ID_MATCHING );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
-        when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.ofFlat( new File( "." ) ) );
+        when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.ofFlat( Path.of("." ) ) );
         when( database.getScheduler() ).thenReturn( jobScheduler );
         when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 

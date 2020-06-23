@@ -11,9 +11,9 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.restore.RestoreDatabaseCommand;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,16 +35,20 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.proc.ProcessUtil.getClassPath;
 import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
-public class BackupTestUtil
+public final class BackupTestUtil
 {
-    public static File createBackup( ClusterMember member, File baseBackupDir, String databaseName ) throws Exception
+    private BackupTestUtil()
+    {
+    }
+
+    public static Path createBackup( ClusterMember member, Path baseBackupDir, String databaseName ) throws Exception
     {
         String[] args = backupArguments( backupAddress( member.defaultDatabase() ), baseBackupDir, databaseName );
         assertThat( runBackupToolFromOtherJvmToGetExitCode( baseBackupDir, args ), equalTo( 0 ) );
-        return new File( baseBackupDir, databaseName );
+        return baseBackupDir.resolve( databaseName );
     }
 
-    public static void restoreFromBackup( File fromDatabasePath, FileSystemAbstraction fsa, ClusterMember clusterMember, String databaseName )
+    public static void restoreFromBackup( Path fromDatabasePath, FileSystemAbstraction fsa, ClusterMember clusterMember, String databaseName )
             throws IOException
     {
         Config config = Config.newBuilder().fromConfig( clusterMember.config() ).build();
@@ -63,7 +67,7 @@ public class BackupTestUtil
         } ).defaultDatabase();
     }
 
-    public static String[] backupArguments( String from, File backupsDir, String databaseName )
+    public static String[] backupArguments( String from, Path backupsDir, String databaseName )
     {
         return new String[]{
                 "--from=" + from,
@@ -73,12 +77,12 @@ public class BackupTestUtil
         };
     }
 
-    public static int runBackupToolFromOtherJvmToGetExitCode( File neo4jHome, String... args ) throws Exception
+    public static int runBackupToolFromOtherJvmToGetExitCode( Path neo4jHome, String... args ) throws Exception
     {
         return runBackupToolFromOtherJvmToGetExitCode( neo4jHome, System.out, System.err, false, args );
     }
 
-    public static int runBackupToolFromOtherJvmToGetExitCode( File neo4jHome, PrintStream outPrintStream, PrintStream errPrintStream,
+    public static int runBackupToolFromOtherJvmToGetExitCode( Path neo4jHome, PrintStream outPrintStream, PrintStream errPrintStream,
             boolean debug, String... args ) throws Exception
     {
         List<String> allArgs =
@@ -87,8 +91,8 @@ public class BackupTestUtil
         allArgs.addAll( Arrays.asList( args ) );
 
         ProcessBuilder processBuilder = new ProcessBuilder().command( allArgs.toArray( new String[0] ) );
-        processBuilder.environment().put( "NEO4J_HOME", neo4jHome.getAbsolutePath() );
-        processBuilder.environment().put( "NEO4J_CONF", neo4jHome.getAbsolutePath() );
+        processBuilder.environment().put( "NEO4J_HOME", neo4jHome.toAbsolutePath().toString() );
+        processBuilder.environment().put( "NEO4J_CONF", neo4jHome.toAbsolutePath().toString() );
         if ( debug )
         {
             processBuilder.environment().put( "NEO4J_DEBUG", "anything_works" );
@@ -99,9 +103,9 @@ public class BackupTestUtil
         return processStreamHandler.waitForResult();
     }
 
-    public static int runBackupToolFromSameJvm( File neo4jHome, String... args )
+    public static int runBackupToolFromSameJvm( Path neo4jHome, String... args )
     {
-        final var homeDir = neo4jHome.getAbsoluteFile().toPath();
+        final var homeDir = neo4jHome.toAbsolutePath();
         final var configDir = homeDir.resolve( "conf" );
         final var ctx = new ExecutionContext( homeDir, configDir );
 

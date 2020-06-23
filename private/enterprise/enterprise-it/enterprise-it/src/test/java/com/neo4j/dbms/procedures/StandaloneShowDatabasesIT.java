@@ -77,8 +77,8 @@ class StandaloneShowDatabasesIT
                 () -> statusForDatabase( dbms, DEFAULT_DATABASE_NAME ), equalityCondition( STOPPED.description() ), 5, TimeUnit.SECONDS );
 
         // when
-        fs.deleteFile( defaultDbLayout.nodeStore() );
-        fs.deleteRecursively( defaultDbLayout.getTransactionLogsDirectory() );
+        fs.deleteFile( defaultDbLayout.nodeStore().toFile() );
+        fs.deleteRecursively( defaultDbLayout.getTransactionLogsDirectory().toFile() );
         execute( "START DATABASE " + DEFAULT_DATABASE_NAME, systemDb );
 
         // then

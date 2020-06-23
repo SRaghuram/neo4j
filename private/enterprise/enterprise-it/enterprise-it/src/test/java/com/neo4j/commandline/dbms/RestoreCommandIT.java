@@ -28,7 +28,7 @@ class RestoreCommandIT extends AbstractCommandIT
     {
         String databaseName = databaseAPI.databaseName();
         File testBackup = testDirectory.directory( "testbackup" );
-        FileUtils.copyRecursively( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
+        FileUtils.copyRecursively( databaseAPI.databaseLayout().databaseDirectory().toFile(), testBackup );
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> restoreDatabase( databaseName, testBackup.toPath() ) );
         assertThat( exception.getMessage() ).startsWith( "The database is in use. Stop database" );
     }
@@ -38,7 +38,7 @@ class RestoreCommandIT extends AbstractCommandIT
     {
         String databaseName = databaseAPI.databaseName();
         File testBackup = testDirectory.directory( "testbackup2" );
-        FileUtils.copyRecursively( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
+        FileUtils.copyRecursively( databaseAPI.databaseLayout().databaseDirectory().toFile(), testBackup );
 
         managementService.shutdownDatabase( databaseName );
 

@@ -17,8 +17,8 @@ import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -57,7 +57,7 @@ class RemoteStoreTest
 
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final SocketAddress localhost = new SocketAddress( "127.0.0.1", 1234 );
-    private final DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "destination" ) );
+    private final DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( Path.of( "some/destination" ) );
     private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( localhost );
     private final TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 
 import org.neo4j.configuration.Config;
@@ -48,12 +49,12 @@ class AdminToolCausalClusterBackupIT
     private TestDirectory testDirectory;
 
     private Cluster cluster;
-    private File testDir;
+    private Path testDir;
 
     @BeforeEach
     void setup() throws Exception
     {
-        testDir = testDirectory.absolutePath();
+        testDir = testDirectory.homePath();
 
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
@@ -81,7 +82,8 @@ class AdminToolCausalClusterBackupIT
         assertEquals( 0, exitCode );
 
         DbRepresentation leaderDbRepresentation = DbRepresentation.of( leader.defaultDatabase() );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( new File( backupDir, DEFAULT_DATABASE_NAME ) ), tempDbConfig() );
+        DbRepresentation backupDbRepresentation =
+                DbRepresentation.of( DatabaseLayout.ofFlat( backupDir.toPath().resolve( DEFAULT_DATABASE_NAME ) ), tempDbConfig() );
         assertEquals( leaderDbRepresentation, backupDbRepresentation );
     }
 

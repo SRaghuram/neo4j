@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -208,8 +210,8 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            store.prepareDirectory( layout.databaseDirectory() );
+            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory().toFile() );
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
@@ -228,16 +230,16 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
+            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".b" ).exists() );
         }
 
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabledDynamically() throws Throwable
         {
             assumeStoreNot4_0();
-            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            store.prepareDirectory( layout.databaseDirectory() );
+            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory().toFile() );
 
             DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, false );
@@ -280,15 +282,15 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
+            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".b" ).exists() );
         }
 
         @Test
         public void mustBeAbleToCreateTokensAfterUpgrade() throws Throwable
         {
-            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            store.prepareDirectory( layout.databaseDirectory() );
+            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory().toFile() );
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
@@ -335,8 +337,8 @@ public class StoreUpgradeIT
         @Test
         public void mustBeAbleToCreateSchemaAfterUpgrade() throws Throwable
         {
-            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            store.prepareDirectory( layout.databaseDirectory() );
+            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory().toFile() );
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
@@ -380,9 +382,9 @@ public class StoreUpgradeIT
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
             File rootDir = testDir.homeDir();
-            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDir.directory( DEFAULT_DATABASE_NAME ) );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDir.directory( DEFAULT_DATABASE_NAME ).toPath() );
 
-            store.prepareDirectory( databaseLayout.databaseDirectory() );
+            store.prepareDirectory( databaseLayout.databaseDirectory().toFile() );
 
             File configFile = new File( rootDir, Config.DEFAULT_CONFIG_FILE_NAME );
             Properties props = new Properties();
@@ -424,8 +426,8 @@ public class StoreUpgradeIT
         {
             assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            File databaseDir = databaseLayout.databaseDirectory();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory().toFile();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
 
@@ -455,8 +457,8 @@ public class StoreUpgradeIT
         {
             assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            File databaseDir = databaseLayout.databaseDirectory();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory().toFile();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File customTransactionLogsLocation = testDir.directory( "transactionLogsCustom" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
@@ -484,8 +486,8 @@ public class StoreUpgradeIT
         {
             assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            File databaseDir = databaseLayout.databaseDirectory();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory().toFile();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             store.prepareDirectory( databaseDir );
 
@@ -501,7 +503,7 @@ public class StoreUpgradeIT
                 {
                     try
                     {
-                        File neoStore = databaseLayout.metadataStore();
+                        File neoStore = databaseLayout.metadataStore().toFile();
                         return MetaDataStore.getRecord( pageCache, neoStore, MetaDataStore.Position.LAST_TRANSACTION_ID,
                                 PageCursorTracer.NULL );
                     }
@@ -575,8 +577,8 @@ public class StoreUpgradeIT
         {
             assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            File databaseDir = databaseLayout.databaseDirectory();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory().toFile();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             store.prepareDirectory( databaseDir );
 
@@ -640,8 +642,8 @@ public class StoreUpgradeIT
         {
             assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            File databaseDir = databaseLayout.databaseDirectory();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory().toFile();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             store.prepareDirectory( databaseDir );
 
@@ -743,8 +745,8 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            store.prepareDirectory( layout.databaseDirectory() );
+            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory().toFile() );
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, false );
@@ -763,8 +765,8 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
+            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".b" ).exists() );
         }
     }
 
@@ -796,8 +798,8 @@ public class StoreUpgradeIT
         {
             // migrate the store using a single instance
 
-            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            File databaseDir = databaseLayout.databaseDirectory();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory().toFile();
             testDir.getFileSystem().mkdirs( databaseDir );
             File databaseDirectory = Unzip.unzip( getClass(), dbFileName, databaseDir );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
@@ -838,17 +840,17 @@ public class StoreUpgradeIT
         @Test
         public void shouldBeAbleToUpgradeAStoreWithoutIdFilesAsBackups() throws Throwable
         {
-            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            File databaseDir = databaseLayout.databaseDirectory();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory().toFile();
 
             File databaseDirectory = store.prepareDirectory( databaseDir );
 
             // remove id files
-            for ( File idFile : DatabaseLayout.ofFlat( databaseDirectory ).idFiles() )
+            for ( Path idFile : DatabaseLayout.ofFlat( databaseDirectory.toPath() ).idFiles() )
             {
-                if ( idFile.exists() )
+                if ( Files.exists( idFile ) )
                 {
-                    assertTrue( idFile.delete() );
+                    Files.delete( idFile );
                 }
             }
 

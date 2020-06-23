@@ -12,7 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.WatchKey;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -29,8 +30,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.nio.file.Files.delete;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.io.fs.FileUtils.deleteFile;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
@@ -49,7 +50,7 @@ class MultiDatabaseFileWatchIT
     void setUp() throws DatabaseExistsException
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( logProvider )
                 .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
@@ -69,13 +70,13 @@ class MultiDatabaseFileWatchIT
 
     @Test
     @DisabledOnOs( OS.WINDOWS )
-    void deleteFileInOneDatabaseWarnAboutThatParticularDatabase() throws InterruptedException
+    void deleteFileInOneDatabaseWarnAboutThatParticularDatabase() throws InterruptedException, IOException
     {
-        File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
+        Path firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
         FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
-        DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( firstDbMetadataStore.getName() );
+        DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( firstDbMetadataStore.getFileName().toString() );
         fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
-        deleteFile( firstDbMetadataStore );
+        delete( firstDbMetadataStore );
 
         deletionListener.awaitDeletionNotification();
 
@@ -86,20 +87,21 @@ class MultiDatabaseFileWatchIT
 
     @Test
     @DisabledOnOs( OS.WINDOWS )
-    void differentEventsGoToDifferentDatabaseListeners() throws InterruptedException
+    void differentEventsGoToDifferentDatabaseListeners() throws InterruptedException, IOException
     {
-        File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
-        File secondDbNodeStore = secondContext.databaseLayout().nodeStore();
-        File thirdDbRelStore = thirdContext.databaseLayout().relationshipStore();
+        Path firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
+        Path secondDbNodeStore = secondContext.databaseLayout().nodeStore();
+        Path thirdDbRelStore = thirdContext.databaseLayout().relationshipStore();
 
         FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
-        DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( thirdDbRelStore.getName(), secondDbNodeStore.getName(),
-                firstDbMetadataStore.getName() );
+        DeletionLatchEventListener deletionListener =
+                new DeletionLatchEventListener( thirdDbRelStore.getFileName().toString(), secondDbNodeStore.getFileName().toString(),
+                        firstDbMetadataStore.getFileName().toString() );
         fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
 
-        deleteFile( firstDbMetadataStore );
-        deleteFile( secondDbNodeStore );
-        deleteFile( thirdDbRelStore );
+        delete( firstDbMetadataStore );
+        delete( secondDbNodeStore );
+        delete( thirdDbRelStore );
 
         deletionListener.awaitDeletionNotification();
 

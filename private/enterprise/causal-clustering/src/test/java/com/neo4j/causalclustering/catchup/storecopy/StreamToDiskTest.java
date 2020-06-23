@@ -41,18 +41,18 @@ class StreamToDiskTest
     @Test
     public void shouldLetPageCacheHandleRecordStoresAndNativeLabelScanStoreFiles() throws Exception
     {
-        var layout = DatabaseLayout.ofFlat( directory.file( DEFAULT_DATABASE_NAME ) );
+        var layout = DatabaseLayout.ofFlat( directory.file( DEFAULT_DATABASE_NAME ).toPath() );
         // GIVEN
         var monitors = new Monitors();
-        var writerProvider = new StreamToDiskProvider( layout.databaseDirectory(), fs, monitors );
+        var writerProvider = new StreamToDiskProvider( layout.databaseDirectory().toFile(), fs, monitors );
 
         // WHEN
         for ( var type : StoreType.values() )
         {
-            var file = layout.file( type.getDatabaseFile() );
+            var file = layout.file( type.getDatabaseFile() ).toFile();
             writeAndVerify( writerProvider, file );
         }
-        writeAndVerify( writerProvider, layout.labelScanStore() );
+        writeAndVerify( writerProvider, layout.labelScanStore().toFile() );
     }
 
     private void writeAndVerify( StreamToDiskProvider writerProvider, File file ) throws Exception

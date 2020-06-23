@@ -8,7 +8,6 @@ package com.neo4j.dbms.commandline;
 import com.neo4j.dbms.commandline.storeutil.StoreCopy;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +23,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
+import org.neo4j.io.fs.PathUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -188,7 +188,7 @@ public class StoreCopyCommand extends AbstractCommand
             if ( new TransactionLogFilesHelper( ctx.fs(), source.path.toFile() ).getLogFiles().length > 0 )
             {
                 // Transaction logs are in the same directory
-                return DatabaseLayout.ofFlat( source.path.toFile() );
+                return DatabaseLayout.ofFlat( source.path );
             }
             else
             {
@@ -224,7 +224,7 @@ public class StoreCopyCommand extends AbstractCommand
     {
         try
         {
-            Validators.CONTAINS_EXISTING_DATABASE.validate( fromDatabaseLayout.databaseDirectory() );
+            Validators.CONTAINS_EXISTING_DATABASE.validate( fromDatabaseLayout.databaseDirectory().toFile() );
         }
         catch ( IllegalArgumentException e )
         {
@@ -234,31 +234,37 @@ public class StoreCopyCommand extends AbstractCommand
 
     private static void validateTarget( DatabaseLayout toDatabaseLayout )
     {
-        File targetFile = toDatabaseLayout.databaseDirectory();
-        if ( targetFile.exists() )
+        Path targetFile = toDatabaseLayout.databaseDirectory();
+        if ( Files.exists( targetFile ) )
         {
-            if ( targetFile.isDirectory() )
+            if ( Files.isDirectory( targetFile ) )
             {
-                String[] files = targetFile.list();
-                if ( files == null || files.length > 0 )
+                try
                 {
-                    throw new CommandFailedException( "The directory is not empty: " + targetFile.getAbsolutePath() );
+                    if ( !PathUtils.isEmpty( targetFile ) )
+                    {
+                        throw new CommandFailedException( "The directory is not empty: " + targetFile.toAbsolutePath() );
+                    }
+                }
+                catch ( IOException e )
+                {
+                    throw new CommandFailedException( "Error accessing: " + targetFile.toAbsolutePath(), e );
                 }
             }
             else
             {
-                throw new CommandFailedException( "Specified path is a file: " + targetFile.getAbsolutePath() );
+                throw new CommandFailedException( "Specified path is a file: " + targetFile.toAbsolutePath() );
             }
         }
         else
         {
             try
             {
-                Files.createDirectories( targetFile.toPath() );
+                Files.createDirectories( targetFile );
             }
             catch ( IOException e )
             {
-                throw new CommandFailedException( "Unable to create directory: " + targetFile.getAbsolutePath() );
+                throw new CommandFailedException( "Unable to create directory: " + targetFile.toAbsolutePath() );
             }
         }
     }

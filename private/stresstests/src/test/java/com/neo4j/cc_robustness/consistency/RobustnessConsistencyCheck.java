@@ -42,7 +42,7 @@ public class RobustnessConsistencyCheck
 
     public void verifyConsistencyOffline( File homeDir ) throws Exception
     {
-        DatabaseLayout databaseLayout = Neo4jLayout.of( homeDir ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = Neo4jLayout.of( homeDir.toPath() ).databaseLayout( DEFAULT_DATABASE_NAME );
 
         recoverDatabase( databaseLayout );
 
@@ -80,8 +80,8 @@ public class RobustnessConsistencyCheck
             if ( storeIsLocked( e ) && !SystemUtils.IS_OS_WINDOWS )
             {
                 log.error( "FATAL: Unable to open database for verification, dumping lsof for debugging. " );
-                lsof( databaseLayout.databaseDirectory() );
-                lsof( databaseLayout.getTransactionLogsDirectory() );
+                lsof( databaseLayout.databaseDirectory().toFile() );
+                lsof( databaseLayout.getTransactionLogsDirectory().toFile() );
             }
             throw new IllegalStateException( "Unable to start database for verification!", e );
         }

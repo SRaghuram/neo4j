@@ -16,8 +16,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -62,13 +62,13 @@ class ClusterRestoreIT
     @Inject
     private TestDirectory testDirectory;
 
-    private File backupsDirectory;
+    private Path backupsDirectory;
     private Cluster cluster;
 
     @BeforeEach
     void before() throws IOException
     {
-        backupsDirectory = testDirectory.cleanDirectory( "backups" );
+        backupsDirectory = testDirectory.cleanDirectory( "backups" ).toPath();
     }
 
     @AfterEach
@@ -241,13 +241,13 @@ class ClusterRestoreIT
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            File backupPath = new File( backupsDirectory, SYSTEM_DATABASE_NAME );
+            Path backupPath = backupsDirectory.resolve( SYSTEM_DATABASE_NAME );
             restoreFromBackup( backupPath, fsa, core, SYSTEM_DATABASE_NAME );
         }
 
         for ( String databaseName : databaseNames )
         {
-            File backupPath = new File( backupsDirectory, databaseName );
+            Path backupPath = backupsDirectory.resolve( databaseName );
             for ( ClusterMember member : cluster.allMembers() )
             {
                 restoreFromBackup( backupPath, fsa, member, databaseName );

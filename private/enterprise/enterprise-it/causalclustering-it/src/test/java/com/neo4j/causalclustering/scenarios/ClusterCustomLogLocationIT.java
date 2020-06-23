@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -87,7 +86,7 @@ class ClusterCustomLogLocationIT
     private static void logFileInStoreDirectoryDoesNotExist( DatabaseLayout databaseLayout, DependencyResolver dependencyResolver ) throws IOException
     {
         FileSystemAbstraction fileSystem = dependencyResolver.resolveDependency( FileSystemAbstraction.class );
-        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem )
+        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory().toFile(), fileSystem )
                 .withCommandReaderFactory( dependencyResolver.resolveDependency( StorageEngineFactory.class ).commandReaderFactory() )
                 .build();
         assertFalse( storeLogFiles.versionExists( 0 ) );
