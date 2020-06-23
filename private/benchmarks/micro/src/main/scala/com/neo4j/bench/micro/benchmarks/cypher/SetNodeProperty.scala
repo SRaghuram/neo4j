@@ -100,8 +100,6 @@ class SetNodeProperty extends AbstractCypherBenchmark {
     new DataGeneratorConfigBuilder()
       .withLabels(LABEL)
       .withNodeCount(NODE_COUNT)
-      // TODO could this be controlled better...
-      // add properties to enable granting write privileges on them
       .withNodeProperties(properties: _*)
       .isReusableStore(false)
       .withNeo4jConfig(Neo4jConfigBuilder.empty()
