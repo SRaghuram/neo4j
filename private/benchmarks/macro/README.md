@@ -180,8 +180,16 @@ Basic stats of the 'fraud-poc' dataset:
  * Size: ~24 GB
  * Nodes: ~64,000,000
  * Relationships: ~192,000,000
-The full POC contained two groups of queries named 'credit fraud' and 'data science'. 
+The full POC contained two groups of queries named 'credit fraud' and 'aml'. 
 The workload contains queries from the 'credit fraud' group only. 
+
+---
+#### fraud-poc-aml
+Based on a same customer POC as [fraud-poc-credit](#fraud-poc-credit)
+
+The full POC contained two groups of queries named 'credit fraud' and 'aml'. 
+The workload contains queries from the 'aml' group only. 
+
 ---
 
 #### alacrity

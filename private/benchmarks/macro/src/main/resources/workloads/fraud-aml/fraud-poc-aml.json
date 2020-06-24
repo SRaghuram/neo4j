@@ -1,0 +1,131 @@
+{
+  "name": "fraud-poc-aml",
+  "schema": "../fraud/schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "AML Query for Fraudulent Accounts - show customers that share personal attributes (e.g. SSN, PhoneNumber, Address)",
+      "queryFile": "queries/q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "AML Query for Fraudulent Accounts - show customers that share personal attributes (e.g. SSN, PhoneNumber, Address) that have opened accounts within X days of another account under a different identity",
+      "queryFile": "queries/q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "AML Query for Fraudulent Accounts - Circular payments",
+      "queryFile": "queries/q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "AML Query for Fraudulent Accounts - Payment chain",
+      "queryFile": "queries/q4.cypher",
+      "comment": "parameters selected by: MATCH (ah:AccountHolder:BusinessCustomer) WHERE (ah)-[:MAKES_PAYMENTS_TO|ENTITY_RESOLUTION*1..4]->() RETURN ah.accountName ORDER BY rand() LIMIT 50",
+      "parameters": {
+        "file": "parameters/q4.txt"
+      }
+    },
+    {
+      "name": "Q4b",
+      "description": "AML Query for Fraudulent Accounts - Payment chain",
+      "queryFile": "queries/q4b.cypher",
+      "parameters": {
+        "file": "parameters/q4b.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "AML Query for cash transactions (Deposits) to separate account, transfer of combination of cash transactions to central (Yth) account, followed by wire to bank outside US",
+      "queryFile": "queries/q5.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q6",
+      "description": "AML Query for Fraudulent Accounts - rapid cash deposits",
+      "queryFile": "queries/q6.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q7",
+      "description": "AML Query for Fraudulent Accounts - rapid cash deposits/withdrawals",
+      "queryFile": "queries/q7.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "description": "AML Query for Fraudulent Accounts - passthru payments (A)->(B)->(C), where $ amount >= $X between A and B and within y % in Between B to C",
+      "queryFile": "queries/q9.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "AML Query for local aggregators (a lot of incoming) which sent a few large transaction to one or more targeted nodes (for example HRG ñ High Risk Geolocations and / or HRE ñ High Risk Entities)",
+      "queryFile": "queries/q10.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q11",
+      "description": "Potential Structuring in Cash and Equivalents (by grouping actors relationship). Looks across the Lookback Period for episodes where the aggregate of multiple daily transactions is above a given threshold. ",
+      "comment": "",
+      "queryFile": "queries/q11.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q12",
+      "description": "Rapid Movement of Funds: All Activity. Customer who has received a huge wire and withdrawn most of it as cash via multiple ATM debits within a short period of time? (add relationships to show additional visibility).",
+      "queryFile": "queries/q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "description": "Significant Change from Previous Activity. Find business customers whose cash deposit activity has gone from $50,000 a week to $250,000 a week over the course of a month",
+      "queryFile": "queries/q13.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q14",
+      "description": "AML Integration: Find customers that get a lot of (ACH) deposits from external parties and then make substantial payments on Mortgages or Lines of Credit.",
+      "queryFile": "queries/q14.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q15",
+      "description": "AML Integration:  Find accounts that wired a lot of money overseas either by a high percentage of deposits or via exceeding an aggregated threshold of 100K that also had a large number of deposits exceeding $9500.",
+      "queryFile": "queries/q15.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q16",
+      "description": "The key to concentration is the pattern of a lot of smaller deposits followed by fewer larger withdrawals. For business customers, this can appear naturally as individual customer transactions would appear as small deposits whereas payments to suppliers would appear as fewer/larger withdrawals. The key then for business transactions is to ignore vetted businesses or to only find those that do withdrawals/transfers to high risk entities (unknown entities or entities that are not in the US).",
+      "queryFile": "queries/q16.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    },
+    {
+      "name": "Q16b",
+      "queryFile": "queries/q16b.cypher",
+      "parameters": {
+        "file": "parameters/date.txt"
+      }
+    }
+  ]
+}

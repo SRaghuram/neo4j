@@ -41,6 +41,7 @@ db_and_workloads=(
  "offshore_leaks;offshore_leaks"
  "fraud-poc;fraud-poc-credit"
  "alacrity;alacrity"
+ "fraud-poc-aml;fraud-poc-aml"
  "zero;zero")
 
 for i in "${db_and_workloads[@]}"; do
