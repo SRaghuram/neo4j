@@ -239,8 +239,8 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldUpgradeViaDatabaseManager() throws Exception
         {
-            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
-            store.prepareDirectory( layout.databaseDirectory() );
+            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory().toFile() );
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( fail_on_missing_files, false );
@@ -264,8 +264,8 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
+            assertFalse( new File( layout.countStore() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore() + ".b" ).exists() );
         }
 
         @Test

@@ -57,7 +57,7 @@ public class EnterpriseDatabaseTest
     @Before
     public void setUp()
     {
-        databaseLayout = DatabaseLayout.ofFlat( directory.directory( DEFAULT_DATABASE_NAME ) );
+        databaseLayout = DatabaseLayout.ofFlat( directory.directoryPath( DEFAULT_DATABASE_NAME ) );
         cfg = Config.newBuilder()
                     .set( neo4j_home, directory.homeDir().toPath() )
                     .set( record_format, "standard" )
@@ -135,7 +135,7 @@ public class EnterpriseDatabaseTest
 
     private String getRecordFormat( PageCache pageCache, Database database ) throws IOException
     {
-        File file = database.getDatabaseLayout().metadataStore();
+        File file = database.getDatabaseLayout().metadataStore().toFile();
         long record = MetaDataStore.getRecord( pageCache, file, MetaDataStore.Position.STORE_VERSION, NULL );
         return MetaDataStore.versionLongToString( record );
     }
