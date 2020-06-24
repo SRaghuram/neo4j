@@ -496,7 +496,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |$returnClause
           """.stripMargin
           )
-        case ShowUsersPrivileges(Some(names)) => // SHOW USER $user1, user2 PRIVILEGES
+        case ShowUsersPrivileges(names) => // SHOW USER $user1, user2 PRIVILEGES
           val nameFields = names.zipWithIndex.map { case (name, index) => getNameFields(s"user$index", name) }
           val nameKeys = nameFields.map(_.nameKey)
           val rolesKey = internalKey("rolesKey")
@@ -553,7 +553,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |$returnClause
           """.stripMargin
           )
-        case ShowUserPrivileges(None) | ShowUsersPrivileges(None) =>
+        case ShowUserPrivileges(None) =>
           (List("grantee"), List(Values.NO_VALUE), IdentityConverter, // will generate correct parameter name later and don't want to risk clash
             s"""
                |OPTIONAL MATCH (r:Role) WHERE r.name in $$`$currentUserRolesKey` WITH r
