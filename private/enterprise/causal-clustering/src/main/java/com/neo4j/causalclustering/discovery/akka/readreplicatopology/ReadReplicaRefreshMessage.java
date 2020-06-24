@@ -21,16 +21,16 @@ public class ReadReplicaRefreshMessage
 {
     private final ReadReplicaInfo readReplicaInfo;
     private final MemberId memberId;
-    private final ActorRef clusterClient;
+    private final ActorRef clusterClientManager;
     private final ActorRef topologyClient;
     private final Map<DatabaseId,DiscoveryDatabaseState> databaseStates;
 
-    public ReadReplicaRefreshMessage( ReadReplicaInfo readReplicaInfo, MemberId memberId, ActorRef clusterClient, ActorRef topologyClient,
+    public ReadReplicaRefreshMessage( ReadReplicaInfo readReplicaInfo, MemberId memberId, ActorRef clusterClientManager, ActorRef topologyClient,
             Map<DatabaseId,DiscoveryDatabaseState> databaseStates )
     {
         this.readReplicaInfo = readReplicaInfo;
         this.memberId = memberId;
-        this.clusterClient = clusterClient;
+        this.clusterClientManager = clusterClientManager;
         this.topologyClient = topologyClient;
         this.databaseStates = databaseStates;
     }
@@ -51,11 +51,11 @@ public class ReadReplicaRefreshMessage
     }
 
     /**
-     * @return {@link ActorRef} for {@link ClusterClient}
+     * @return {@link ActorRef} for {@link ClusterClientManager}
      */
-    public ActorRef clusterClient()
+    public ActorRef clusterClientManager()
     {
-        return clusterClient;
+        return clusterClientManager;
     }
 
     /**
@@ -69,8 +69,8 @@ public class ReadReplicaRefreshMessage
     @Override
     public String toString()
     {
-        return "ReadReplicaRefreshMessage{" + "readReplicaInfo=" + readReplicaInfo + ", memberId=" + memberId + ", clusterClient=" + clusterClient +
-                ", topologyClient=" + topologyClient + ", databaseStates=" + databaseStates + '}';
+        return "ReadReplicaRefreshMessage{" + "readReplicaInfo=" + readReplicaInfo + ", memberId=" + memberId + ", clusterClient=" + clusterClientManager +
+               ", topologyClient=" + topologyClient + ", databaseStates=" + databaseStates + '}';
     }
 
     @Override
@@ -86,14 +86,14 @@ public class ReadReplicaRefreshMessage
         }
         ReadReplicaRefreshMessage that = (ReadReplicaRefreshMessage) o;
         return Objects.equals( readReplicaInfo, that.readReplicaInfo ) && Objects.equals( memberId, that.memberId ) &&
-                Objects.equals( clusterClient, that.clusterClient ) && Objects.equals( topologyClient, that.topologyClient ) &&
-                Objects.equals( databaseStates, that.databaseStates );
+               Objects.equals( clusterClientManager, that.clusterClientManager ) && Objects.equals( topologyClient, that.topologyClient ) &&
+               Objects.equals( databaseStates, that.databaseStates );
     }
 
     @Override
     public int hashCode()
     {
 
-        return Objects.hash( readReplicaInfo, memberId, clusterClient, topologyClient, databaseStates );
+        return Objects.hash( readReplicaInfo, memberId, clusterClientManager, topologyClient, databaseStates );
     }
 }

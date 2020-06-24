@@ -5,13 +5,16 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
+import akka.actor.ActorPath;
 import akka.actor.ActorRef;
+import akka.cluster.client.ClusterClient;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -26,24 +29,34 @@ import static java.util.stream.Collectors.toSet;
 
 class ReadReplicaViewMessage
 {
-    private final Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas;
+    private final Map<ActorPath,ReadReplicaViewRecord> clientToReadReplicaRecords;
 
     static final ReadReplicaViewMessage EMPTY = new ReadReplicaViewMessage( Collections.emptyMap() );
 
-    ReadReplicaViewMessage( Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas )
+    ReadReplicaViewMessage( Map<ActorPath,ReadReplicaViewRecord> readReplicaClients )
     {
-        this.clusterClientReadReplicas = Map.copyOf( clusterClientReadReplicas );
+        this.clientToReadReplicaRecords = Map.copyOf( readReplicaClients );
     }
 
-    Stream<ActorRef> topologyClient( ActorRef clusterClient )
+    /**
+     * Given a list of {{@link ClusterClient}}s, find those which correspond to known Read Replicas
+     * and return references for their {{@link ClientTopologyActor}}s.
+     *
+     * Note: ReadReplicaViewRecords are indexed by the actor path of their {{@link ClusterClientManager}}
+     * as their cluster client may be replaced at runtime. We must therefore extract the path of each
+     * client's parent manager before performing any filtering.
+     */
+    Stream<ActorRef> topologyActorsForKnownClients( Collection<ActorRef> clusterClients )
     {
-        return Stream.ofNullable( clusterClientReadReplicas.get( clusterClient ) )
+        return clusterClients.stream()
+                .map( client -> client.path().parent() )
+                .flatMap( client -> Stream.ofNullable( clientToReadReplicaRecords.get( client ) ) )
                 .map( ReadReplicaViewRecord::topologyClientActorRef );
     }
 
     DatabaseReadReplicaTopology toReadReplicaTopology( DatabaseId databaseId )
     {
-        Map<MemberId,ReadReplicaInfo> knownReadReplicas = clusterClientReadReplicas
+        Map<MemberId,ReadReplicaInfo> knownReadReplicas = clientToReadReplicaRecords
                 .values()
                 .stream()
                 .filter( info -> info.readReplicaInfo().startedDatabaseIds().contains( databaseId ) )
@@ -53,11 +66,11 @@ class ReadReplicaViewMessage
         return new DatabaseReadReplicaTopology( databaseId, knownReadReplicas );
     }
 
-    Map<DatabaseId,ReplicatedDatabaseState> allReplicatedDatabaseStates()
+    Map<DatabaseId,ReplicatedDatabaseState> allReadReplicaDatabaseStates()
     {
-        var allMemberStatesPerDbMultiMap = clusterClientReadReplicas.values().stream()
-                .flatMap( this::getAllStatesFromMember )
-                .collect( Collectors.groupingBy( p -> p.other().databaseId(), Collectors.toMap( Pair::first, Pair::other ) ) );
+        var allMemberStatesPerDbMultiMap = clientToReadReplicaRecords.values().stream()
+                                                                     .flatMap( this::getAllStatesFromMember )
+                                                                     .collect( Collectors.groupingBy( p -> p.other().databaseId(), Collectors.toMap( Pair::first, Pair::other ) ) );
 
         return allMemberStatesPerDbMultiMap.entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> ReplicatedDatabaseState.ofReadReplicas( e.getKey(), e.getValue() ) ) );
@@ -70,16 +83,16 @@ class ReadReplicaViewMessage
 
     Set<DatabaseId> databaseIds()
     {
-        return clusterClientReadReplicas.values().stream()
-                .map( ReadReplicaViewRecord::readReplicaInfo )
-                .flatMap( info -> info.startedDatabaseIds().stream() )
-                .collect( toSet() );
+        return clientToReadReplicaRecords.values().stream()
+                                         .map( ReadReplicaViewRecord::readReplicaInfo )
+                                         .flatMap( info -> info.startedDatabaseIds().stream() )
+                                         .collect( toSet() );
     }
 
     @Override
     public String toString()
     {
-        return "ReadReplicaViewMessage{" + "clusterClientReadReplicas=" + clusterClientReadReplicas + '}';
+        return "ReadReplicaViewMessage{" + "clusterClientReadReplicas=" + clientToReadReplicaRecords + '}';
     }
 
     @Override
@@ -94,12 +107,12 @@ class ReadReplicaViewMessage
             return false;
         }
         ReadReplicaViewMessage that = (ReadReplicaViewMessage) o;
-        return Objects.equals( clusterClientReadReplicas, that.clusterClientReadReplicas );
+        return Objects.equals( clientToReadReplicaRecords, that.clientToReadReplicaRecords );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( clusterClientReadReplicas );
+        return Objects.hash( clientToReadReplicaRecords );
     }
 }

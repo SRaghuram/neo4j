@@ -27,7 +27,7 @@ class ClusterClientViewActor extends AbstractLoggingActor
 
     private final ActorRef parent;
     private final ActorRef receptionist;
-    private Set<ActorRef> clusterClients = new HashSet<>();
+    private final Set<ActorRef> clusterClients = new HashSet<>();
 
     private ClusterClientViewActor( ActorRef parent, ActorRef receptionist )
     {

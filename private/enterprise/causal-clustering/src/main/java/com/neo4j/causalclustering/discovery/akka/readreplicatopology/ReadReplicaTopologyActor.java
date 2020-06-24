@@ -44,7 +44,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
 
     private Set<ActorRef> myClusterClients = new HashSet<>();
-    private ReadReplicaViewMessage readReplicaViewMessage = ReadReplicaViewMessage.EMPTY;
+    private ReadReplicaViewMessage readReplicaView = ReadReplicaViewMessage.EMPTY;
 
     public static Props props( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink,
             SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink, ClusterClientReceptionist receptionist, Config config, Clock clock )
@@ -89,8 +89,8 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
 
     private void handleReadReplicaView( ReadReplicaViewMessage msg )
     {
-        readReplicaViewMessage = msg;
-        rrMemberDbStates = msg.allReplicatedDatabaseStates();
+        readReplicaView = msg;
+        rrMemberDbStates = msg.allReadReplicaDatabaseStates();
         rrMemberDbStates.forEach( ( id, state ) -> databaseStateSink.offer( state ) );
         buildTopologies();
     }
@@ -101,11 +101,9 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
         buildTopologies();
     }
 
-    private Stream<ActorRef> myTopologyClients()
+    private Stream<ActorRef> knownTopologyClients()
     {
-        return myClusterClients
-                .stream()
-                .flatMap( readReplicaViewMessage::topologyClient );
+        return readReplicaView.topologyActorsForKnownClients( myClusterClients );
     }
 
     private void sendTopologiesToClients( Tick ignored )
@@ -116,7 +114,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
         log().debug( "Sending cores' database states to clients: {}", coreMemberDbStates );
         log().debug( "Sending read replicas' database states to clients: {}", rrMemberDbStates );
 
-        myTopologyClients().forEach( client -> {
+        knownTopologyClients().forEach( client -> {
             sendReadReplicaTopologiesTo( client );
             sendCoreTopologiesTo( client );
             client.tell( databaseLeaderInfo, getSelf() );
@@ -165,7 +163,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
 
     private void buildTopologies()
     {
-        var receivedDatabaseIds = readReplicaViewMessage.databaseIds();
+        var receivedDatabaseIds = readReplicaView.databaseIds();
 
         var absentDatabaseIds = readReplicaTopologies.keySet()
                 .stream()
@@ -181,8 +179,8 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
 
     private void buildTopology( DatabaseId databaseId )
     {
-        log().debug( "Building read replica topology for database {} with read replicas: {}", databaseId, readReplicaViewMessage );
-        DatabaseReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
+        log().debug( "Building read replica topology for database {} with read replicas: {}", databaseId, readReplicaView );
+        DatabaseReadReplicaTopology readReplicaTopology = readReplicaView.toReadReplicaTopology( databaseId );
         log().debug( "Built read replica topology for database {}: {}", databaseId, readReplicaTopology );
 
         topologySink.offer( readReplicaTopology );

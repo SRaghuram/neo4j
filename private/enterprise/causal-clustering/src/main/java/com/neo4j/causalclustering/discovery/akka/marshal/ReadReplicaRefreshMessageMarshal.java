@@ -60,7 +60,7 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
     {
         readReplicaInfoMarshal.marshal( readReplicaRefreshMessage.readReplicaInfo(), channel );
         memberIdMarshal.marshal( readReplicaRefreshMessage.memberId(), channel );
-        actorRefMarshal.marshal( readReplicaRefreshMessage.clusterClient(), channel );
+        actorRefMarshal.marshal( readReplicaRefreshMessage.clusterClientManager(), channel );
         actorRefMarshal.marshal( readReplicaRefreshMessage.topologyClientActorRef(), channel );
 
         var databaseStates = readReplicaRefreshMessage.databaseStates();

@@ -5,8 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
+import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.testkit.TestProbe;
 import akka.testkit.javadsl.TestKit;
 import co.unruly.matchers.StreamMatchers;
@@ -38,15 +40,15 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 
 class ReadReplicaViewMessageTest extends TestKit
 {
-    private ActorRef clusterClient = TestProbe.apply( getSystem() ).ref();
-    private ActorRef topologyClient = TestProbe.apply( getSystem() ).ref();
-    private ReadReplicaInfo readReplicaInfo = TestTopology.addressesForReadReplica( 0 );
-    private MemberId memberId = new MemberId( UUID.randomUUID() );
-    private Instant now = Instant.now();
+    private final TestProbe clientManager = TestProbe.apply( getSystem() );
+    private final ActorRef clusterClient = clientManager.childActorOf( Props.create( FakeClusterClient.class ) );
+    private final ReadReplicaInfo readReplicaInfo = TestTopology.addressesForReadReplica( 0 );
+    private final MemberId memberId = new MemberId( UUID.randomUUID() );
+    private final Instant now = Instant.now();
 
-    private ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, topologyClient, memberId, now, emptyMap() );
+    private final ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, clientManager.ref(), memberId, now, emptyMap() );
 
-    private ReadReplicaViewMessage readReplicaViewMessage = new ReadReplicaViewMessage( Map.of( clusterClient, record ) );
+    private final ReadReplicaViewMessage readReplicaViewMessage = new ReadReplicaViewMessage( Map.of( clientManager.ref().path(), record ) );
 
     ReadReplicaViewMessageTest()
     {
@@ -62,13 +64,13 @@ class ReadReplicaViewMessageTest extends TestKit
     @Test
     void shouldReturnEmptyTopologyClientIfClusterClientUnknown()
     {
-        assertThat( ReadReplicaViewMessage.EMPTY.topologyClient( clusterClient ), StreamMatchers.empty() );
+        assertThat( ReadReplicaViewMessage.EMPTY.topologyActorsForKnownClients( Set.of( clusterClient ) ), StreamMatchers.empty() );
     }
 
     @Test
     void shouldGetTopologyClientForClusterClient()
     {
-        assertThat( readReplicaViewMessage.topologyClient( clusterClient ), StreamMatchers.contains( topologyClient ) );
+        assertThat( readReplicaViewMessage.topologyActorsForKnownClients( Set.of( clusterClient ) ), StreamMatchers.contains( clientManager.ref() ) );
     }
 
     @Test
@@ -103,11 +105,14 @@ class ReadReplicaViewMessageTest extends TestKit
         var info2 = TestTopology.addressesForReadReplica( 1, Set.of( dbId3, dbId1 ) );
         var info3 = TestTopology.addressesForReadReplica( 2, Set.of( dbId2, dbId3 ) );
 
-        var record1 = new ReadReplicaViewRecord( info1, topologyClient, memberId, now, emptyMap() );
-        var record2 = new ReadReplicaViewRecord( info2, topologyClient, memberId, now, emptyMap() );
-        var record3 = new ReadReplicaViewRecord( info3, topologyClient, memberId, now, emptyMap() );
+        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), memberId, now, emptyMap() );
+        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), memberId, now, emptyMap() );
+        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), memberId, now, emptyMap() );
 
-        var clusterClientReadReplicas = Map.of( clusterClient1, record1, clusterClient2, record2, clusterClient3, record3 );
+        var clusterClientReadReplicas = Map.of(
+                clusterClient1.path(), record1,
+                clusterClient2.path(), record2,
+                clusterClient3.path(), record3 );
         var readReplicaViewMessage = new ReadReplicaViewMessage( clusterClientReadReplicas );
 
         var expectedDatabaseIds =
@@ -145,11 +150,14 @@ class ReadReplicaViewMessageTest extends TestKit
                 dbId2, new DiscoveryDatabaseState( dbId2, STARTED ),
                 dbId3, new DiscoveryDatabaseState( dbId3, STARTED ) );
 
-        var record1 = new ReadReplicaViewRecord( info1, topologyClient, memberId1, now, states1 );
-        var record2 = new ReadReplicaViewRecord( info2, topologyClient, memberId2, now, states2 );
-        var record3 = new ReadReplicaViewRecord( info3, topologyClient, memberId3, now, states3 );
+        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), memberId1, now, states1 );
+        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), memberId2, now, states2 );
+        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), memberId3, now, states3 );
 
-        var clusterClientReadReplicas = Map.of( clusterClient1, record1, clusterClient2, record2, clusterClient3, record3 );
+        var clusterClientReadReplicas = Map.of(
+                clusterClient1.path(), record1,
+                clusterClient2.path(), record2,
+                clusterClient3.path(), record3 );
         var readReplicaViewMessage = new ReadReplicaViewMessage( clusterClientReadReplicas );
 
         var expectedState1 = ReplicatedDatabaseState.ofReadReplicas( dbId1,
@@ -163,7 +171,16 @@ class ReadReplicaViewMessageTest extends TestKit
                         memberId3, new DiscoveryDatabaseState( dbId3, STARTED ) ) );
 
         var allExpectedStates = Map.of( dbId1, expectedState1, dbId2, expectedState2, dbId3, expectedState3 );
-        var allActualStates = readReplicaViewMessage.allReplicatedDatabaseStates();
+        var allActualStates = readReplicaViewMessage.allReadReplicaDatabaseStates();
         assertEquals( allExpectedStates, allActualStates );
+    }
+
+    static class FakeClusterClient extends AbstractActor
+    {
+        @Override
+        public Receive createReceive()
+        {
+            return receiveBuilder().build();
+        }
     }
 }

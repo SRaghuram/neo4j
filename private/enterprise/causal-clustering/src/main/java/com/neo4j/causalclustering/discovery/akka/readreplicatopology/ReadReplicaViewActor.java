@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
+import akka.actor.ActorPath;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
@@ -34,7 +35,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
     private final ClusterClientReceptionist receptionist;
     private final Clock clock;
     private final Duration refresh;
-    private Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas = new HashMap<>();
+    private final Map<ActorPath,ReadReplicaViewRecord> clientToReadReplicaRecords = new HashMap<>();
 
     private ReadReplicaViewActor( ActorRef parent, ClusterClientReceptionist receptionist, Clock clock, Duration refresh )
     {
@@ -48,7 +49,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
     public void preStart()
     {
         receptionist.registerSubscriber( READ_REPLICA_TOPIC, getSelf() );
-        getTimers().startPeriodicTimer( TICK_KEY, Tick.getInstance(), refresh );
+        getTimers().startPeriodicTimer( TICK_KEY, Tick.INSTANCE, refresh );
     }
 
     @Override
@@ -70,15 +71,17 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
 
     private void handleRemovalMessage( ReadReplicaRemovalMessage msg )
     {
-        ReadReplicaViewRecord removed = clusterClientReadReplicas.remove( msg.clusterClient() );
-        log().debug( "Removed shut down read replica {} -> {}", msg.clusterClient(), removed );
+        var clientPath = msg.clusterClientManager().path();
+        ReadReplicaViewRecord removed = clientToReadReplicaRecords.remove( clientPath );
+        log().debug( "Removed shut down read replica {} -> {}", msg.clusterClientManager(), removed );
         sendClusterView();
     }
 
     private void handleRefreshMessage( ReadReplicaRefreshMessage msg )
     {
         log().debug( "Received {}", msg );
-        clusterClientReadReplicas.put( msg.clusterClient(), new ReadReplicaViewRecord( msg, clock ) );
+        var clientPath = msg.clusterClientManager().path();
+        clientToReadReplicaRecords.put( clientPath, new ReadReplicaViewRecord( msg, clock ) );
         sendClusterView();
     }
 
@@ -86,16 +89,16 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
     {
         Instant nTicksAgo = Instant.now( clock ).minus( refresh.multipliedBy( TICKS_BEFORE_REMOVE_READ_REPLICA ) );
 
-        List<ActorRef> remove = clusterClientReadReplicas.entrySet()
-                .stream()
-                .filter( entry -> entry.getValue().timestamp().isBefore( nTicksAgo ) )
-                .peek( entry -> log().debug( "Removing {} after inactivity", entry ) )
-                .map( Map.Entry::getKey )
-                .collect( Collectors.toList() );
+        List<ActorPath> remove = clientToReadReplicaRecords.entrySet()
+                                                           .stream()
+                                                           .filter( entry -> entry.getValue().timestamp().isBefore( nTicksAgo ) )
+                                                           .peek( entry -> log().debug( "Removing {} after inactivity", entry ) )
+                                                           .map( Map.Entry::getKey )
+                                                           .collect( Collectors.toList() );
 
         if ( !remove.isEmpty() )
         {
-            remove.forEach( clusterClientReadReplicas::remove );
+            remove.forEach( clientToReadReplicaRecords::remove );
             sendClusterView();
         }
 
@@ -104,20 +107,15 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
 
     private void sendClusterView()
     {
-        parent.tell( new ReadReplicaViewMessage( clusterClientReadReplicas ), getSelf() );
+        parent.tell( new ReadReplicaViewMessage( clientToReadReplicaRecords ), getSelf() );
     }
 
     static class Tick
     {
-        private static Tick instance = new Tick();
+        public static final Tick INSTANCE = new Tick();
 
         private Tick()
         {
-        }
-
-        public static Tick getInstance()
-        {
-            return instance;
         }
     }
 }

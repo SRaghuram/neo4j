@@ -96,7 +96,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
 
     def newReadReplicaViewMessage(entriesCount: Int, databaseIds: Set[NamedDatabaseId]): ReadReplicaViewMessage = {
       val clusterClientReadReplicas = (1 to entriesCount).map(id => newReadReplicaViewRecord(id, databaseIds))
-        .map(record => (record.topologyClientActorRef(), record))
+        .map(record => (record.topologyClientActorRef().path, record))
         .toMap
 
       new ReadReplicaViewMessage(clusterClientReadReplicas.asJava)

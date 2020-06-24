@@ -24,6 +24,8 @@ import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import scala.Option;
+import scala.concurrent.duration.FiniteDuration;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -46,6 +48,7 @@ public class ActorSystemLifecycle
 {
     static final int SYSTEM_SHUTDOWN_TIMEOUT_S = 60;
     static final int ACTOR_SHUTDOWN_TIMEOUT_S = 15;
+    private static final int CLIENT_RECONNECT_TIMEOUT_S = 10;
 
     private final ActorSystemFactory actorSystemFactory;
     private final RemoteMembersResolver resolver;
@@ -182,7 +185,9 @@ public class ActorSystemLifecycle
     {
         Set<ActorPath> actorPaths = resolver.resolve( this::toActorPath, HashSet::new );
 
-        return ClusterClientSettings.create( actorSystemComponents.actorSystem() ).withInitialContacts( actorPaths );
+        return ClusterClientSettings.create( actorSystemComponents.actorSystem() )
+                                    .withInitialContacts( actorPaths )
+                                    .withReconnectTimeout( Option.apply( FiniteDuration.apply( CLIENT_RECONNECT_TIMEOUT_S, TimeUnit.SECONDS ) ) );
     }
 
     private ActorPath toActorPath( SocketAddress addr )

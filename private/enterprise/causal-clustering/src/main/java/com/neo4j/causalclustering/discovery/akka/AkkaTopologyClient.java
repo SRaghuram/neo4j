@@ -6,9 +6,6 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.cluster.client.ClusterClient;
-import akka.cluster.client.ClusterClientSettings;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
@@ -23,8 +20,8 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClusterClientManager;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -75,8 +72,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 
     private void startTopologyActors()
     {
-        ClusterClientSettings clusterClientSettings = actorSystemLifecycle.clusterClientSettings();
-        ActorRef clusterClient = actorSystemLifecycle.systemActorOf( ClusterClient.props( clusterClientSettings ), "cluster-client" );
+        var clusterClientManager = actorSystemLifecycle.applicationActorOf( ClusterClientManager.props( actorSystemLifecycle::clusterClientSettings ),
+                                                                     ClusterClientManager.NAME );
 
         SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink =
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
@@ -87,15 +84,15 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink =
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
 
-        DiscoveryMember discoveryMember = discoveryMemberFactory.create( myself );
+        var discoveryMember = discoveryMemberFactory.create( myself );
 
-        Props clientTopologyProps = ClientTopologyActor.props(
+        var clientTopologyProps = ClientTopologyActor.props(
                 discoveryMember,
                 coreTopologySink,
                 rrTopologySink,
                 directorySink,
                 databaseStateSink,
-                clusterClient,
+                clusterClientManager,
                 config,
                 logProvider,
                 clock );

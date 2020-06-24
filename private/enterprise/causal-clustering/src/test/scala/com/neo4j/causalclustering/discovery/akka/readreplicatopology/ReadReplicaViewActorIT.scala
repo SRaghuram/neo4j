@@ -38,36 +38,36 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
         publish(rrMessage1)
 
         Then("receive read replica view")
-        fishForParentMessage(new ReadReplicaViewMessage(Map(clusterClient1 -> new ReadReplicaViewRecord(rrMessage1, clock)).asJava))
+        fishForParentMessage(new ReadReplicaViewMessage(Map(clusterClient1.path -> new ReadReplicaViewRecord(rrMessage1, clock)).asJava))
 
         When("incoming read replica message 2")
         publish(rrMessage2)
 
         Then("receive read replica view")
         fishForParentMessage( new ReadReplicaViewMessage(Map(
-          clusterClient1 -> new ReadReplicaViewRecord(rrMessage1, clock),
-          clusterClient2 -> new ReadReplicaViewRecord(rrMessage2, clock)).asJava) )
+          clusterClient1.path -> new ReadReplicaViewRecord(rrMessage1, clock),
+          clusterClient2.path -> new ReadReplicaViewRecord(rrMessage2, clock)).asJava) )
       }
       "send map without removed read replicas to parent" in new Fixture {
         When("incoming read replica message 1")
         publish(rrMessage1)
 
         Then("receive read replica view")
-        fishForParentMessage( new ReadReplicaViewMessage(Map(clusterClient1 -> new ReadReplicaViewRecord(rrMessage1, clock)).asJava) )
+        fishForParentMessage( new ReadReplicaViewMessage(Map(clusterClient1.path -> new ReadReplicaViewRecord(rrMessage1, clock)).asJava) )
 
         When("incoming read replica message 2")
         publish(rrMessage2)
 
         Then("receive read replica view")
         fishForParentMessage( new ReadReplicaViewMessage(Map(
-          clusterClient1 -> new ReadReplicaViewRecord(rrMessage1, clock),
-          clusterClient2 -> new ReadReplicaViewRecord(rrMessage2, clock)).asJava) )
+          clusterClient1.path -> new ReadReplicaViewRecord(rrMessage1, clock),
+          clusterClient2.path -> new ReadReplicaViewRecord(rrMessage2, clock)).asJava) )
 
         When("incoming read replica removal message")
         publish(new ReadReplicaRemovalMessage(clusterClient1))
 
         Then("receive read replica view without removed RR")
-        fishForParentMessage( new ReadReplicaViewMessage(Map(clusterClient2 -> new ReadReplicaViewRecord(rrMessage2, clock)).asJava) )
+        fishForParentMessage( new ReadReplicaViewMessage(Map(clusterClient2.path -> new ReadReplicaViewRecord(rrMessage2, clock)).asJava) )
 
       }
       "remove old entries after a period of time" in new Fixture {
@@ -76,7 +76,7 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
 
         Then("receive read replica view")
         val rrRecord1 = new ReadReplicaViewRecord(rrMessage1, clock)
-        fishForParentMessage( new ReadReplicaViewMessage(Map(clusterClient1 -> rrRecord1).asJava) )
+        fishForParentMessage( new ReadReplicaViewMessage(Map(clusterClient1.path -> rrRecord1).asJava) )
 
         When("time passes")
         clock.forward(refresh)
@@ -87,8 +87,8 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
         Then("receive read replica view")
         val rrRecord2 = new ReadReplicaViewRecord(rrMessage2, clock)
         fishForParentMessage( new ReadReplicaViewMessage(Map(
-          clusterClient1 -> rrRecord1,
-          clusterClient2 -> rrRecord2).asJava) )
+          clusterClient1.path -> rrRecord1,
+          clusterClient2.path -> rrRecord2).asJava) )
 
         When("time passes")
         val enoughTimeForFirstButNotSecondToExpire = refresh
@@ -97,11 +97,11 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
         clock.forward(enoughTimeForFirstButNotSecondToExpire)
 
         Then("receive read replica view without expired RR")
-        fishForParentMessage(new ReadReplicaViewMessage(Map(clusterClient2 -> rrRecord2).asJava), wait = waitWithRefresh )
+        fishForParentMessage(new ReadReplicaViewMessage(Map(clusterClient2.path -> rrRecord2).asJava), wait = waitWithRefresh )
       }
       "send periodic tick to parent" in new Fixture {
         Then("receive tick")
-        parent.expectMsg(waitWithRefresh, Tick.getInstance())
+        parent.expectMsg(waitWithRefresh, Tick.INSTANCE)
       }
     }
   }

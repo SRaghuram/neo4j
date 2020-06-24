@@ -10,6 +10,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.cluster.client.ClusterClient
+import akka.cluster.client.ClusterClientSettings
 import akka.stream.ActorMaterializer
 import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source

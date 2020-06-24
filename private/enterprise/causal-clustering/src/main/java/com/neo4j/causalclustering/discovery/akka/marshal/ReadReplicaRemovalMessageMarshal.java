@@ -35,6 +35,6 @@ public class ReadReplicaRemovalMessageMarshal extends SafeChannelMarshal<ReadRep
     @Override
     public void marshal( ReadReplicaRemovalMessage readReplicaRemovalMessage, WritableChannel channel ) throws IOException
     {
-        actorRefMarshal.marshal( readReplicaRemovalMessage.clusterClient(), channel );
+        actorRefMarshal.marshal( readReplicaRemovalMessage.clusterClientManager(), channel );
     }
 }
