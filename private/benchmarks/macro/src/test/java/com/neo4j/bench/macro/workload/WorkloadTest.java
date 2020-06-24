@@ -10,6 +10,7 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -62,8 +63,8 @@ class WorkloadTest
     }
 
     @Test
-    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
-    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+        // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+        //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
     void shouldAlwaysMarkMutatingQueriesAsMutating()
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
@@ -89,8 +90,8 @@ class WorkloadTest
     }
 
     @Test
-    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
-    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+        // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+        //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
     void shouldNeverHaveMutatingWarmupQueries()
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
@@ -209,7 +210,7 @@ class WorkloadTest
     @Test
     public void workloadsShouldHaveUniquelyNamedQueries() throws IOException
     {
-        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
         {
             for ( Workload workload : Workload.allWorkloads( resources, Deployment.embedded() ) )
             {
@@ -222,8 +223,8 @@ class WorkloadTest
                                                       .map( Map.Entry::getKey )
                                                       .collect( toList() );
 
-                assertTrue( format( "Workload '%s' contains multiple queries with same name: '%s'", workload.name(), duplicateNames ),
-                            duplicateNames.isEmpty() );
+                assertTrue( duplicateNames.isEmpty(),
+                            format( "Workload '%s' contains multiple queries with same name: '%s'", workload.name(), duplicateNames ) );
             }
         }
     }
