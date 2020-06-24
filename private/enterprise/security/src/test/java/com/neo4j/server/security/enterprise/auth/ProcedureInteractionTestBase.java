@@ -35,8 +35,8 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionGuardException;
 import org.neo4j.graphdb.TransactionTerminatedException;
+import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.graphdb.spatial.Point;
@@ -822,11 +822,11 @@ public abstract class ProcedureInteractionTestBase<S>
                     guard.check();
                 }
             }
-            catch ( TransactionTerminatedException | TransactionGuardException e )
+            catch ( TransactionTerminatedException e )
             {
                 if ( e.status().equals( TransactionTimedOut ) )
                 {
-                    throw new TransactionGuardException( TransactionTimedOut, PROCEDURE_TIMEOUT_ERROR, e );
+                    throw new TransientTransactionFailureException( TransactionTimedOut, PROCEDURE_TIMEOUT_ERROR, e );
                 }
                 else
                 {
