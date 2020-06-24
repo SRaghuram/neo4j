@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.BoundedMemoryTracker
+import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
@@ -22,14 +23,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.memory.EmptyMemoryTracker
-import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 
 /**
  * Implementation of [[StateFactory]] which creates not thread-safe implementation of the state management classes.
  */
 class StandardStateFactory extends StateFactory {
-  override def newBuffer[T <: Measurable](operatorId: Id): Buffer[T] = new StandardBuffer[T]
+  override def newBuffer[T <: MemoizingMeasurable](operatorId: Id): Buffer[T] = new StandardBuffer[T]
 
   override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new StandardSingletonBuffer[T]
 
@@ -63,7 +63,7 @@ class StandardStateFactory extends StateFactory {
 class MemoryTrackingStandardStateFactory(transactionMemoryTracker: MemoryTracker) extends StandardStateFactory {
   override val memoryTracker: QueryMemoryTracker = BoundedMemoryTracker(transactionMemoryTracker)
 
-  override def newBuffer[T <: Measurable](operatorId: Id): Buffer[T] = {
+  override def newBuffer[T <: MemoizingMeasurable](operatorId: Id): Buffer[T] = {
     val operatorMemoryTracker = memoryTracker.memoryTrackerForOperator(operatorId.x)
     new MemoryTrackingStandardBuffer[T](operatorMemoryTracker)
   }

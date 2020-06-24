@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
@@ -16,7 +17,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.SingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
-import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 
 /**
@@ -25,7 +25,7 @@ import org.neo4j.memory.MemoryTracker
  * versions, depending on whether the execution is concurrent or not.
  */
 trait StateFactory {
-  def newBuffer[T <: Measurable](operatorId: Id): Buffer[T]
+  def newBuffer[T <: MemoizingMeasurable](operatorId: Id): Buffer[T]
   def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T]
   def newTracker(subscriber: QuerySubscriber,
                  queryContext: QueryContext,

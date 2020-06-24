@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
+import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
@@ -20,14 +21,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.memory.EmptyMemoryTracker
-import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 
 /**
  * Implementation of [[StateFactory]] which constructs concurrent state management classes.
  */
 class ConcurrentStateFactory extends StateFactory {
-  override def newBuffer[T <: Measurable](operatorId: Id): Buffer[T] = new ConcurrentBuffer[T]
+  override def newBuffer[T <: MemoizingMeasurable](operatorId: Id): Buffer[T] = new ConcurrentBuffer[T]
 
   override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new ConcurrentSingletonBuffer[T]
 

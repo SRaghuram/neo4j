@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
+import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 
 import scala.collection.JavaConverters.asJavaIteratorConverter
@@ -51,16 +51,17 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
   override def iterator: util.Iterator[T] = data.iterator.asJava
 }
 
-class MemoryTrackingStandardBuffer[T <: Measurable](memoryTracker: MemoryTracker) extends StandardBuffer[T] {
+class MemoryTrackingStandardBuffer[T <: MemoizingMeasurable](memoryTracker: MemoryTracker) extends StandardBuffer[T] {
   override def put(t: T, resources: QueryResources): Unit = {
-    memoryTracker.allocateHeap(t.estimatedHeapUsage())
+    memoryTracker.allocateHeap(t.estimatedHeapUsageWithCache)
     super.put(t, resources)
   }
 
   override def take(): T = {
     val t = super.take()
     if (t != null) {
-      memoryTracker.releaseHeap(t.estimatedHeapUsage)
+      memoryTracker.releaseHeap(t.estimatedHeapUsageWithCache)
+      t.clearCachedEstimatedHeapUsage()
     }
     t
   }
@@ -68,8 +69,8 @@ class MemoryTrackingStandardBuffer[T <: Measurable](memoryTracker: MemoryTracker
   override def close(): Unit = {
     super.close()
     super.foreach(t => {
-      val heapUsage = t.estimatedHeapUsage
-      memoryTracker.releaseHeap(heapUsage)
+      memoryTracker.releaseHeap(t.estimatedHeapUsageWithCache)
+      t.clearCachedEstimatedHeapUsage()
     })
   }
 }

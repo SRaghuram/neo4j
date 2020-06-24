@@ -10,8 +10,8 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CONFIGURATION
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.symbols.CTNode
@@ -19,7 +19,6 @@ import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
-import org.neo4j.memory.Measurable
 import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
@@ -52,7 +51,7 @@ class Morsel(private[execution] final val longs: Array[Long],
              final val maxNumberOfRows: Int,
              private[execution] var startRow: Int = 0,
              private[execution] var endRow: Int = 0,
-             final val producingWorkUnitEvent: WorkUnitEvent = null) extends Measurable {
+             final val producingWorkUnitEvent: WorkUnitEvent = null) extends MemoizingMeasurable {
 
   morselSelf =>
 
