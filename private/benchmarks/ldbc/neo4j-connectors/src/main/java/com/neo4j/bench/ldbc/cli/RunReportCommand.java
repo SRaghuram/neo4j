@@ -101,7 +101,7 @@ import static java.util.stream.Collectors.toSet;
 @Command(
         name = "run-export",
         description = "Runs workload multiple times, in forked JVMs, by delegating to 'run' command" )
-public class RunExportCommand implements Runnable
+public class RunReportCommand implements Runnable
 {
     // ===================================================
     // ===================== Export ======================

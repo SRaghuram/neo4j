@@ -35,7 +35,7 @@ public class LdbcCli
                 .withCommand( ImportCommand.class )
                 .withCommand( IndexCommand.class )
                 .withCommand( InspectCommand.class )
-                .withCommand( RunExportCommand.class )
+                .withCommand( RunReportCommand.class )
                 .withCommand( RunCommand.class )
                 .withCommand( UpgradeStoreCommand.class )
                 .withCommand( Help.class )
