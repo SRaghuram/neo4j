@@ -92,7 +92,7 @@ class AdditionalQueries
         @Override
         public String get()
         {
-            return String.format( baseString, Integer.toString( counter++ ) );
+            return String.format( baseString, counter++ );
         }
 
         @Override

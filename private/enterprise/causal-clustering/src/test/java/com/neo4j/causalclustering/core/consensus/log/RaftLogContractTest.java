@@ -402,7 +402,7 @@ public abstract class RaftLogContractTest
         StringBuilder builder = new StringBuilder();
         for ( int i = 0; i < numberOfCharacters; i++ )
         {
-            builder.append( String.valueOf( i ) );
+            builder.append( i );
         }
         return ReplicatedString.valueOf( builder.toString() );
     }

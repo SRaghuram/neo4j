@@ -15,9 +15,9 @@ import java.util.Calendar;
 
 import org.neo4j.graphdb.RelationshipType;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TimeStampedRelationshipTypesCacheTest
@@ -133,10 +133,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 25 ) );
 
         minDate = 1982012300L;
@@ -148,10 +148,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
 
         // Month Resolution
@@ -171,10 +171,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 12 ) );
 
         minDate = 198201L;
@@ -186,10 +186,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
     }
 
@@ -236,10 +236,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -253,10 +253,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize high end
         nextVal = 1982012301L;
@@ -270,10 +270,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012301L;
@@ -287,10 +287,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize low end
         nextVal = 1982012223L;
@@ -304,10 +304,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -321,10 +321,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // ===========================
         // ===== Month Resolution =====
@@ -355,10 +355,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -372,10 +372,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize high end
         nextVal = 198202L;
@@ -389,10 +389,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -406,10 +406,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize low end
         nextVal = 198112L;
@@ -423,10 +423,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -440,10 +440,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_HAS_CREATOR.name() + maxDate ) );
     }
 
     @Test
@@ -539,10 +539,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 25 ) );
 
         minDate = 1982012300L;
@@ -554,10 +554,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
 
         // Month Resolution
@@ -577,10 +577,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 12 ) );
 
         minDate = 198201L;
@@ -592,10 +592,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
     }
 
@@ -642,10 +642,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -659,10 +659,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize high end
         nextVal = 1982012301L;
@@ -676,10 +676,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012301L;
@@ -693,10 +693,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize low end
         nextVal = 1982012223L;
@@ -710,10 +710,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -727,10 +727,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // ===========================
         // ===== Month Resolution =====
@@ -761,10 +761,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -778,10 +778,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize high end
         nextVal = 198202L;
@@ -795,10 +795,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -812,10 +812,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize low end
         nextVal = 198112L;
@@ -829,10 +829,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -846,10 +846,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_HAS_CREATOR.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_HAS_CREATOR.name() + maxDate ) );
     }
 
     @Test
@@ -945,10 +945,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 25 ) );
 
         minDate = 1982012300L;
@@ -960,10 +960,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
 
         // Month Resolution
@@ -983,10 +983,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 12 ) );
 
         minDate = 198201L;
@@ -998,10 +998,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
     }
 
@@ -1048,10 +1048,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -1065,10 +1065,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize high end
         nextVal = 1982012301L;
@@ -1082,10 +1082,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012301L;
@@ -1099,10 +1099,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize low end
         nextVal = 1982012223L;
@@ -1116,10 +1116,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -1133,10 +1133,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // ===========================
         // ===== Month Resolution =====
@@ -1167,10 +1167,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -1184,10 +1184,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize high end
         nextVal = 198202L;
@@ -1201,10 +1201,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -1218,10 +1218,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize low end
         nextVal = 198112L;
@@ -1235,10 +1235,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -1252,10 +1252,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.POST_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.POST_IS_LOCATED_IN.name() + maxDate ) );
     }
 
     @Test
@@ -1351,10 +1351,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 25 ) );
 
         minDate = 1982012300L;
@@ -1366,10 +1366,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
 
         // Month Resolution
@@ -1389,10 +1389,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 12 ) );
 
         minDate = 198201L;
@@ -1404,10 +1404,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
     }
 
@@ -1454,10 +1454,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -1471,10 +1471,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize high end
         nextVal = 1982012301L;
@@ -1488,10 +1488,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012301L;
@@ -1505,10 +1505,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize low end
         nextVal = 1982012223L;
@@ -1522,10 +1522,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -1539,10 +1539,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // ===========================
         // ===== Month Resolution =====
@@ -1573,10 +1573,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -1590,10 +1590,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize high end
         nextVal = 198202L;
@@ -1607,10 +1607,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -1624,10 +1624,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize low end
         nextVal = 198112L;
@@ -1641,10 +1641,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -1658,10 +1658,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.COMMENT_IS_LOCATED_IN.name() + maxDate ) );
     }
 
     @Test
@@ -1802,26 +1802,26 @@ public class TimeStampedRelationshipTypesCacheTest
         range = cache.hasMemberForDatesAfter( maxDate );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
 
         range = cache.hasMemberForDatesAfter( 1982012322L );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( 1982012322L ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + 1982012322L ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( Arrays.toString( range ), range.length, equalTo( 3 ) );
 
         minDate = 1982012300L;
         range = cache.hasMemberForDatesAfter( minDate );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 25 ) );
 
         // Month Resolution
@@ -1839,20 +1839,20 @@ public class TimeStampedRelationshipTypesCacheTest
         range = cache.hasMemberForDatesAfter( minDate );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 12 ) );
 
         minDate = 198211L;
         range = cache.hasMemberForDatesAfter( minDate );
         assertThat( Arrays.toString( range ),
                     range[0].name(),
-                    equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                    equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 2 ) );
     }
 
@@ -1883,10 +1883,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 25 ) );
 
         minDate = 1982012300L;
@@ -1898,10 +1898,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
 
         // Month Resolution
@@ -1921,10 +1921,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 12 ) );
 
         minDate = 198201L;
@@ -1936,10 +1936,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 dateUtil );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
         assertThat( range.length, equalTo( 1 ) );
     }
 
@@ -1986,10 +1986,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -2003,10 +2003,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize high end
         nextVal = 1982012301L;
@@ -2020,10 +2020,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012301L;
@@ -2037,10 +2037,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize low end
         nextVal = 1982012223L;
@@ -2054,10 +2054,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 1982012300L;
@@ -2071,10 +2071,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // ===========================
         // ===== Month Resolution =====
@@ -2105,10 +2105,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -2122,10 +2122,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 1 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize high end
         nextVal = 198202L;
@@ -2139,10 +2139,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -2156,10 +2156,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 2 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize low end
         nextVal = 198112L;
@@ -2173,10 +2173,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
 
         // Resize within existing range --> no resize should occur
         nextVal = 198201L;
@@ -2190,10 +2190,10 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( range.length, equalTo( 3 ) );
         assertThat(
                 range[0].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( minDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + minDate ) );
         assertThat(
                 range[range.length - 1].name(),
-                equalTo( Rels.HAS_MEMBER.name() + Long.toString( maxDate ) ) );
+                equalTo( Rels.HAS_MEMBER.name() + maxDate ) );
     }
 
     @Test
