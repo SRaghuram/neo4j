@@ -166,7 +166,7 @@ ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-
   --profiles-dir "${profiler_recording_dir}" \
   --results-store-uri "${results_store_uri}" \
   --results-store-user "${results_store_user}" \
-  --results-store-pass "${results_store_password}" \
+  --results-store-pass "${results_store_pass}" \
   --s3-bucket "benchmarking.neo4j.com/recordings/" \
   --aws-region "eu-north-1" \
   ${aws_endpoint_url:+--aws-endpoint-url $aws_endpoint_url}
