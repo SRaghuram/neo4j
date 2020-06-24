@@ -39,7 +39,7 @@ db_and_workloads=(
  "socialnetwork;socialnetwork"
  "osmnodes;osmnodes"
  "offshore_leaks;offshore_leaks"
- "fraud-poc-credit;fraud-poc"
+ "fraud-poc;fraud-poc-credit"
  "alacrity;alacrity"
  "zero;zero")
 
