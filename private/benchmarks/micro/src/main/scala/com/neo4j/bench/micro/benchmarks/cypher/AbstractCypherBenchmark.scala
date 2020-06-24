@@ -131,7 +131,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
           systemDb().executeTransactionally(s"GRANT SET PROPERTY {${p.key()}} ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
         })
         if (nodeProperties.isEmpty) {
-          systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
+          systemDb().executeTransactionally(s"GRANT READ {*} ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
           systemDb().executeTransactionally(s"GRANT SET PROPERTY {*} ON GRAPH * NODES ${label.name()} TO RoleWithGrants")
         }
       }
@@ -143,7 +143,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
           systemDb().executeTransactionally(s"GRANT SET PROPERTY {${p.key()}} ON GRAPH * NODES * TO RoleWithGrants")
         })
         if (nodeProperties.isEmpty) {
-          systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES * TO RoleWithGrants")
+          systemDb().executeTransactionally(s"GRANT READ {*} ON GRAPH * NODES * TO RoleWithGrants")
           systemDb().executeTransactionally(s"GRANT SET PROPERTY {*} ON GRAPH * NODES * TO RoleWithGrants")
         }
       }
