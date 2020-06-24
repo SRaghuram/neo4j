@@ -51,7 +51,7 @@ public class ComparableRaftState implements ReadableRaftState
     private final boolean refusesToBeLeader;
     private boolean timersStarted;
 
-    ComparableRaftState( MemberId myself, Set<MemberId> votingMembers, Set<MemberId> replicationMembers, boolean refusesToBeLeader,
+    ComparableRaftState( MemberId myself, Set<MemberId> votingMembers, Set<MemberId> replicationMembers, boolean refusesToBeLeader, boolean timersStarted,
                          RaftLog entryLog, InFlightCache inFlightCache, LogProvider logProvider )
     {
         this.myself = myself;
@@ -61,11 +61,12 @@ public class ComparableRaftState implements ReadableRaftState
         this.inFlightCache = inFlightCache;
         this.log = logProvider.getLog( getClass() );
         this.refusesToBeLeader = refusesToBeLeader;
+        this.timersStarted = timersStarted;
     }
 
     ComparableRaftState( ReadableRaftState original ) throws IOException
     {
-        this( original.myself(), original.votingMembers(), original.replicationMembers(), original.refusesToBeLeader(),
+        this( original.myself(), original.votingMembers(), original.replicationMembers(), original.refusesToBeLeader(), original.areTimersStarted(),
                 new ComparableRaftLog( original.entryLog() ), new ConsecutiveInFlightCache(), NullLogProvider.getInstance() );
     }
 

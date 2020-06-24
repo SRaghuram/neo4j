@@ -402,14 +402,8 @@ class Follower implements RaftMessageHandler
             preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
             if ( ctx.supportPreVoting() )
             {
-                if ( ctx.isPreElection() || !ctx.areTimersStarted() )
-                {
-                    preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
-                }
-                else
-                {
-                    preVoteRequestHandler = PreVoteRequestDecliningHandler.INSTANCE;
-                }
+                preVoteRequestHandler = ( ctx.isPreElection() || !ctx.areTimersStarted() ) ?
+                        PreVoteRequestVotingHandler.INSTANCE : PreVoteRequestDecliningHandler.INSTANCE;
             }
             else
             {
@@ -420,23 +414,10 @@ class Follower implements RaftMessageHandler
         {
             if ( ctx.supportPreVoting() )
             {
-                if ( ctx.isPreElection() )
-                {
-                    preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
-                    preVoteResponseHandler = PreVoteResponseSolicitingHandler.INSTANCE;
-                }
-                else
-                {
-                    preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
-                    if ( ctx.areTimersStarted() )
-                    {
-                        preVoteRequestHandler = PreVoteRequestDecliningHandler.INSTANCE;
-                    }
-                    else
-                    {
-                        preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
-                    }
-                }
+                preVoteRequestHandler = (ctx.isPreElection() || !ctx.areTimersStarted()) ?
+                        PreVoteRequestVotingHandler.INSTANCE : PreVoteRequestDecliningHandler.INSTANCE;
+                preVoteResponseHandler = (ctx.isPreElection()) ?
+                        PreVoteResponseSolicitingHandler.INSTANCE : PreVoteResponseNoOpHandler.INSTANCE;
             }
             else
             {
