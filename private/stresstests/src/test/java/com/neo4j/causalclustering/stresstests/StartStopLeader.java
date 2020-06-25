@@ -23,8 +23,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StartStopLeader extends RepeatOnLeader
 {
     private final Log log;
-    private final FileSystemAbstraction fileSystem;
-    private final PageCache pageCache;
     private final Cluster cluster;
     private int succeses;
     private int runs;
@@ -33,8 +31,6 @@ class StartStopLeader extends RepeatOnLeader
     {
         super( control, resources, databaseName );
         this.log = resources.logProvider().getLog( getClass() );
-        this.fileSystem = resources.fileSystem();
-        this.pageCache = resources.pageCache();
         this.cluster = resources.cluster();
     }
 

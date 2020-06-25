@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.assertj.core.api.Condition;
-import org.hamcrest.Matchers;
 
 import java.nio.file.Path;
 import java.util.Optional;
@@ -22,7 +21,7 @@ import org.neo4j.logging.Log;
 import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -128,6 +127,6 @@ class ReplaceRandomMember extends RepeatOnRandomMember
     @Override
     public void validate()
     {
-        assertThat( successfulReplacements, Matchers.greaterThanOrEqualTo( MIN_SUCCESSFUL_REPLACEMENTS ) );
+        assertThat( successfulReplacements ).isGreaterThanOrEqualTo( MIN_SUCCESSFUL_REPLACEMENTS );
     }
 }

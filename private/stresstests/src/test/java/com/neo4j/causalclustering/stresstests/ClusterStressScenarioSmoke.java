@@ -5,70 +5,68 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.test.rule.PageCacheRule;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.pagecache.PageCacheSupportExtension;
 
 import static com.neo4j.causalclustering.stresstests.ClusterStressTesting.stressTest;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Exceptions.findCauseOrSuppressed;
 
-public class ClusterStressScenarioSmoke
+@ExtendWith( {DefaultFileSystemExtension.class, PageCacheSupportExtension.class} )
+class ClusterStressScenarioSmoke
 {
-    private final DefaultFileSystemRule fileSystem = new DefaultFileSystemRule();
-    private final PageCacheRule pageCacheRule = new PageCacheRule();
-
-    @Rule
-    public RuleChain rules = RuleChain.outerRule( fileSystem ).around( pageCacheRule );
-
     private Config config;
+    @Inject
+    private FileSystemAbstraction fileSystem;
+    @Inject
     private PageCache pageCache;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
-        this.pageCache = pageCacheRule.getPageCache( fileSystem );
-
         config = new Config();
         config.workDurationMinutes( 1 );
     }
 
     @Test
-    public void stressBackupRandomMemberAndStartStop() throws Exception
+    void stressBackupRandomMemberAndStartStop() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.BackupRandomMember, Workloads.StartStopRandomMember );
         stressTest( config, fileSystem, pageCache );
     }
 
     @Test
-    public void stressCatchupNewReadReplica() throws Exception
+    void stressCatchupNewReadReplica() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.CatchupNewReadReplica, Workloads.StartStopRandomCore );
         stressTest( config, fileSystem, pageCache );
     }
 
     @Test
-    public void stressReplaceRandomMember() throws Exception
+    void stressReplaceRandomMember() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.ReplaceRandomMember );
         stressTest( config, fileSystem, pageCache );
     }
 
     @Test
-    public void stressStartStopLeader() throws Exception
+    void stressStartStopLeader() throws Exception
     {
         config.workloads( Workloads.CreateNodesWithProperties, Workloads.StartStopDefaultDatabaseLeader );
         stressTest( config, fileSystem, pageCache );
     }
 
     @Test
-    public void simulateFailure() throws Exception
+    void simulateFailure() throws Exception
     {
         try
         {
@@ -83,7 +81,7 @@ public class ClusterStressScenarioSmoke
     }
 
     @Test
-    public void stressIdReuse() throws Exception
+    void stressIdReuse() throws Exception
     {
         config.numberOfEdges( 0 );
         config.reelectIntervalSeconds( 20 );
@@ -98,7 +96,7 @@ public class ClusterStressScenarioSmoke
     }
 
     @Test
-    public void stressCreateManyDatabases() throws Exception
+    void stressCreateManyDatabases() throws Exception
     {
         config.numberOfDatabases( 10 );
         config.workloads( Workloads.CreateManyDatabases );

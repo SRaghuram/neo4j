@@ -6,10 +6,9 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.helper.Workload;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,29 +22,32 @@ import org.neo4j.function.ThrowingAction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.Log;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.pagecache.PageCacheSupportExtension;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-public class ClusterStressTesting
+@ExtendWith( {DefaultFileSystemExtension.class, PageCacheSupportExtension.class} )
+class ClusterStressTesting
 {
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
     private final PageCacheRule pageCacheRule = new PageCacheRule();
 
-    @Rule
-    public RuleChain rules = RuleChain.outerRule( fileSystemRule ).around( pageCacheRule );
-
+    @Inject
     private FileSystemAbstraction fileSystem;
+    @Inject
     private PageCache pageCache;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         fileSystem = fileSystemRule.get();
         pageCache = pageCacheRule.getPageCache( fileSystem );
     }
 
     @Test
-    public void shouldBehaveCorrectlyUnderStress() throws Exception
+    void shouldBehaveCorrectlyUnderStress() throws Exception
     {
         stressTest( new Config(), fileSystem, pageCache );
     }
