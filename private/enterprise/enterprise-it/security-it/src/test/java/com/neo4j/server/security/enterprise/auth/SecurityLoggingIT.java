@@ -10,9 +10,7 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,9 +26,10 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.apache.commons.io.IOUtils.readLines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
@@ -38,7 +37,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
-@ExtendWith( TestDirectorySupportExtension.class )
+@TestDirectoryExtension
 class SecurityLoggingIT
 {
     @Inject
@@ -151,10 +150,9 @@ class SecurityLoggingIT
 
         void load() throws IOException
         {
-            try ( BufferedReader bufferedReader = new BufferedReader(
-                    fileSystem.openAsReader( securityLog, StandardCharsets.UTF_8 ) ) )
+            try ( var reader = fileSystem.openAsReader( securityLog, StandardCharsets.UTF_8 ) )
             {
-                lines = bufferedReader.lines().collect( java.util.stream.Collectors.toList() );
+                lines = readLines( reader );
             }
         }
 

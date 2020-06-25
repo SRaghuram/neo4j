@@ -21,6 +21,7 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.dbms.ShowDatabasesHelpers;
 import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
+import org.apache.commons.io.IOUtils;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.HamcrestCondition;
 
@@ -28,7 +29,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
-import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -160,19 +160,10 @@ public final class CausalClusteringTestHelpers
 
     public static String fileContent( File file, FileSystemAbstraction fsa ) throws IOException
     {
-        int chunkSize = 128;
-        StringBuilder stringBuilder = new StringBuilder();
         try ( Reader reader = fsa.openAsReader( file, UTF_8 ) )
         {
-            CharBuffer charBuffer = CharBuffer.wrap( new char[chunkSize] );
-            while ( reader.read( charBuffer ) != -1 )
-            {
-                charBuffer.flip();
-                stringBuilder.append( charBuffer );
-                charBuffer.clear();
-            }
+            return IOUtils.toString( reader );
         }
-        return stringBuilder.toString();
     }
 
     public static String transactionAddress( GraphDatabaseAPI graphDatabase )

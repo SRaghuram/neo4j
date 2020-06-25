@@ -6,12 +6,12 @@
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.test.rule.EnterpriseDbmsRule;
+import org.apache.commons.io.LineIterator;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -34,6 +34,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.boltUri;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.commons.io.IOUtils.lineIterator;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
@@ -112,11 +113,12 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         File logFile = new File( workingDirectory, "logs/security.log" );
 
         boolean foundError = false;
-        try ( BufferedReader bufferedReader = new BufferedReader( fileSystem.openAsReader( logFile, UTF_8 ) ) )
+        try ( var reader = fileSystem.openAsReader( logFile, UTF_8 ) )
         {
-            String line;
+            var lineReader = lineIterator( reader );
 
-            while ( (line = bufferedReader.readLine()) != null )
+            String line;
+            while ( (line = lineReader.nextLine()) != null )
             {
                 if ( line.contains( message ) )
                 {
@@ -134,11 +136,12 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         File workingDirectory = testDirectory.homeDir();
         File logFile = new File( workingDirectory, "logs/security.log" );
 
-        try ( BufferedReader bufferedReader = new BufferedReader( fileSystem.openAsReader( logFile, UTF_8 ) ) )
+        try ( var reader = fileSystem.openAsReader( logFile, UTF_8 ) )
         {
-            String line;
+            LineIterator lineIterator = lineIterator( reader );
 
-            while ( (line = bufferedReader.readLine()) != null )
+            String line;
+            while ( (line = lineIterator.nextLine()) != null )
             {
                 assertThat( "Security log should not contain message '" + message + "'", !line.contains( message ) );
             }

@@ -12,7 +12,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -20,7 +19,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,7 +34,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
@@ -53,6 +50,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Collections.emptyMap;
+import static org.apache.commons.io.IOUtils.readLines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
@@ -791,7 +789,6 @@ class QueryLoggerIT
 
     private static List<String> readAllLines( FileSystemAbstraction fs, File logFilename ) throws IOException
     {
-        List<String> logLines = new ArrayList<>();
         // this is needed as the EphemeralFSA is broken, and creates a new file when reading a non-existent file from
         // a valid directory
         if ( !fs.fileExists( logFilename ) )
@@ -799,15 +796,10 @@ class QueryLoggerIT
             throw new FileNotFoundException( "File does not exist." );
         }
 
-        try ( BufferedReader reader = new BufferedReader(
-                fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) ) )
+        try ( var reader = fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) )
         {
-            for ( String line; ( line = reader.readLine() ) != null; )
-            {
-                logLines.add( line );
-            }
+            return readLines( reader );
         }
-        return logLines;
     }
 
     private void executeQuery( String query )

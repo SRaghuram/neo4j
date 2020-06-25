@@ -8,11 +8,11 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.kernel.enterprise.api.security.AdminAccessMode;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -437,10 +437,10 @@ class SecurityAdministrationCommandLoggingIT
             throw new FileNotFoundException( "File does not exist." );
         }
 
-        try ( BufferedReader reader = new BufferedReader(
-                fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) ) )
+        try ( var reader = fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) )
         {
-            for ( String line; (line = reader.readLine()) != null; )
+            var lineIterator = IOUtils.lineIterator( reader );
+            for ( String line; (line = lineIterator.nextLine()) != null; )
             {
                 if ( !line.contains( "Assigned admin role to user 'neo4j'" ) && !line.contains( "Setting version for" ) )
                 {
