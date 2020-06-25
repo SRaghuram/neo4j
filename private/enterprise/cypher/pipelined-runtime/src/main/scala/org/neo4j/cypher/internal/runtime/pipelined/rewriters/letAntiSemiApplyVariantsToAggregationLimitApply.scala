@@ -41,6 +41,20 @@ import org.neo4j.cypher.internal.util.bottomUp
  *      Limit(1)
  *      RHS
  *    LHS
+ *
+ * or rewrite
+ *
+ *    LetSelectOrAntiSemiApply
+ *    LHS              RHS
+ *
+ * to
+ *
+ *    SelectOrSemiApply
+ *      Aggregation(isEmpty)
+ *      Limit(1)
+ *      RHS
+ *    Projection
+ *    LHS
  */
 case class letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardinalities,
                                                            providedOrders: ProvidedOrders,
