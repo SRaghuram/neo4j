@@ -15,6 +15,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
+//noinspection RegExpRedundantEscape
 class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
                                            with QueryStatisticsTestSupport with CypherComparisonSupport with AstConstructionTestSupport {
 
@@ -385,21 +386,21 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     val varDesc = ProvidedOrder.desc(var1).desc(var2)
 
     Seq(
-      (Configs.CachedProperty, "n.prop1 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
-      (Configs.CachedProperty, "n.prop1 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty),
-      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
-      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 DESC", expectedAscDesc, true, propAsc, varAsc.fromLeft, ProvidedOrder.asc(var1).desc(var2).fromLeft),
-      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 ASC", expectedDescAsc, true, propDesc, varDesc.fromLeft, ProvidedOrder.desc(var1).asc(var2).fromLeft),
-      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty)
+      ("n.prop1 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
+      ("n.prop1 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty),
+      ("n.prop1 ASC, n.prop2 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
+      ("n.prop1 ASC, n.prop2 DESC", expectedAscDesc, true, propAsc, varAsc.fromLeft, ProvidedOrder.asc(var1).desc(var2).fromLeft),
+      ("n.prop1 DESC, n.prop2 ASC", expectedDescAsc, true, propDesc, varDesc.fromLeft, ProvidedOrder.desc(var1).asc(var2).fromLeft),
+      ("n.prop1 DESC, n.prop2 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty)
     ).foreach {
-      case (config, orderByString, expected, shouldSort, indexOrder, projectionOrder, sortOrder) =>
+      case (orderByString, expected, shouldSort, indexOrder, projectionOrder, sortOrder) =>
         // When
         val query =
           s"""MATCH (n:Label)
              |WHERE n.prop1 >= 42 AND n.prop2 <= 3
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(config, query)
+        val result = executeWith(Configs.CachedProperty, query)
 
         // Then
         result.toList should equal(expected)
@@ -517,72 +518,72 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     Seq(
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 ASC, n.prop4 ASC", propAsc,
-        varAsc.asc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varAsc.asc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft,
         Seq(map_40_5_a_true, map_40_5_b_false, map_40_5_b_true, map_40_5_c_null, map_41_2_b_null, map_41_2_d_null,
           map_41_4_a_true, map_41_4_b_false, map_41_4_c_false, map_41_4_c_true, map_41_4_c_null, map_41_4_d_null)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 ASC, n.prop4 DESC", propAsc,
-        varAsc.asc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varAsc.asc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft,
         Seq(map_40_5_a_true, map_40_5_b_true, map_40_5_b_false, map_40_5_c_null, map_41_2_b_null, map_41_2_d_null,
           map_41_4_a_true, map_41_4_b_false, map_41_4_c_null, map_41_4_c_true, map_41_4_c_false, map_41_4_d_null)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 DESC, n.prop4 ASC", propAsc,
-        varAsc.desc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varAsc.desc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft,
         Seq(map_40_5_c_null, map_40_5_b_false, map_40_5_b_true, map_40_5_a_true, map_41_2_d_null, map_41_2_b_null,
           map_41_4_d_null, map_41_4_c_false, map_41_4_c_true, map_41_4_c_null, map_41_4_b_false, map_41_4_a_true)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 DESC, n.prop4 DESC", propAsc,
-        varAsc.desc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varAsc.desc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft,
         Seq(map_40_5_c_null, map_40_5_b_true, map_40_5_b_false, map_40_5_a_true, map_41_2_d_null, map_41_2_b_null,
           map_41_4_d_null, map_41_4_c_null, map_41_4_c_true, map_41_4_c_false, map_41_4_b_false, map_41_4_a_true)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 ASC, n.prop4 ASC", propDesc,
-        varDesc.asc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varDesc.asc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft,
         Seq(map_41_4_a_true, map_41_4_b_false, map_41_4_c_false, map_41_4_c_true, map_41_4_c_null, map_41_4_d_null,
           map_41_2_b_null, map_41_2_d_null, map_40_5_a_true, map_40_5_b_false, map_40_5_b_true, map_40_5_c_null)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 ASC, n.prop4 DESC", propDesc,
-        varDesc.asc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varDesc.asc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft,
         Seq(map_41_4_a_true, map_41_4_b_false, map_41_4_c_null, map_41_4_c_true, map_41_4_c_false, map_41_4_d_null,
           map_41_2_b_null, map_41_2_d_null, map_40_5_a_true, map_40_5_b_true, map_40_5_b_false, map_40_5_c_null)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 DESC, n.prop4 ASC", propDesc,
-        varDesc.desc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varDesc.desc(varFor("n.prop3")).asc(varFor("n.prop4")).fromLeft,
         Seq(map_41_4_d_null, map_41_4_c_false, map_41_4_c_true, map_41_4_c_null, map_41_4_b_false, map_41_4_a_true,
           map_41_2_d_null, map_41_2_b_null, map_40_5_c_null, map_40_5_b_false, map_40_5_b_true, map_40_5_a_true)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 DESC, n.prop4 DESC", propDesc,
-        varDesc.desc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft, "n.prop3, n.prop4",
+        varDesc.desc(varFor("n.prop3")).desc(varFor("n.prop4")).fromLeft,
         Seq(map_41_4_d_null, map_41_4_c_null, map_41_4_c_true, map_41_4_c_false, map_41_4_b_false, map_41_4_a_true,
           map_41_2_d_null, map_41_2_b_null, map_40_5_c_null, map_40_5_b_true, map_40_5_b_false, map_40_5_a_true)),
 
       ("n.prop1 ASC, n.prop2 ASC, n.prop4 ASC, n.prop3 ASC", propAsc,
-        varAsc.asc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varAsc.asc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft,
         Seq(map_40_5_b_false, map_40_5_a_true, map_40_5_b_true, map_40_5_c_null, map_41_2_b_null, map_41_2_d_null,
           map_41_4_b_false, map_41_4_c_false, map_41_4_a_true, map_41_4_c_true, map_41_4_c_null, map_41_4_d_null)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop4 ASC, n.prop3 DESC", propAsc,
-        varAsc.asc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varAsc.asc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft,
         Seq(map_40_5_b_false, map_40_5_b_true, map_40_5_a_true, map_40_5_c_null, map_41_2_d_null, map_41_2_b_null,
           map_41_4_c_false, map_41_4_b_false, map_41_4_c_true, map_41_4_a_true, map_41_4_d_null, map_41_4_c_null)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop4 DESC, n.prop3 ASC", propAsc,
-        varAsc.desc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varAsc.desc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft,
         Seq(map_40_5_c_null, map_40_5_a_true, map_40_5_b_true, map_40_5_b_false, map_41_2_b_null, map_41_2_d_null,
           map_41_4_c_null, map_41_4_d_null, map_41_4_a_true, map_41_4_c_true, map_41_4_b_false, map_41_4_c_false)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop4 DESC, n.prop3 DESC", propAsc,
-        varAsc.desc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varAsc.desc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft,
         Seq(map_40_5_c_null, map_40_5_b_true, map_40_5_a_true, map_40_5_b_false, map_41_2_d_null, map_41_2_b_null,
           map_41_4_d_null, map_41_4_c_null, map_41_4_c_true, map_41_4_a_true, map_41_4_c_false, map_41_4_b_false)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop4 ASC, n.prop3 ASC", propDesc,
-        varDesc.asc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varDesc.asc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft,
         Seq(map_41_4_b_false, map_41_4_c_false, map_41_4_a_true, map_41_4_c_true, map_41_4_c_null, map_41_4_d_null,
           map_41_2_b_null, map_41_2_d_null, map_40_5_b_false, map_40_5_a_true, map_40_5_b_true, map_40_5_c_null)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop4 ASC, n.prop3 DESC", propDesc,
-        varDesc.asc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varDesc.asc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft,
         Seq(map_41_4_c_false, map_41_4_b_false, map_41_4_c_true, map_41_4_a_true, map_41_4_d_null, map_41_4_c_null,
           map_41_2_d_null, map_41_2_b_null, map_40_5_b_false, map_40_5_b_true, map_40_5_a_true, map_40_5_c_null)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop4 DESC, n.prop3 ASC", propDesc,
-        varDesc.desc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varDesc.desc(varFor("n.prop4")).asc(varFor("n.prop3")).fromLeft,
         Seq(map_41_4_c_null, map_41_4_d_null, map_41_4_a_true, map_41_4_c_true, map_41_4_b_false, map_41_4_c_false,
           map_41_2_b_null, map_41_2_d_null, map_40_5_c_null, map_40_5_a_true, map_40_5_b_true, map_40_5_b_false)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop4 DESC, n.prop3 DESC", propDesc,
-        varDesc.desc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft, "n.prop4, n.prop3",
+        varDesc.desc(varFor("n.prop4")).desc(varFor("n.prop3")).fromLeft,
         Seq(map_41_4_d_null, map_41_4_c_null, map_41_4_c_true, map_41_4_a_true, map_41_4_c_false, map_41_4_b_false,
           map_41_2_d_null, map_41_2_b_null, map_40_5_c_null, map_40_5_b_true, map_40_5_a_true, map_40_5_b_false))
     ).foreach {
-      case (orderByString, orderIndex, sortOrder, sortItem, expected) =>
+      case (orderByString, orderIndex, sortOrder, expected) =>
         // When
         val query =
           s"""MATCH (n:Label)
@@ -647,115 +648,115 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     Seq(
       // Order on index only
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 ASC, n.prop5 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).asc(var3).desc(var5).fromLeft, "n.prop1, n.prop2, n.prop3", "n.prop5",
+        ProvidedOrder.asc(var1).asc(var2).asc(var3).desc(var5).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272, map_41_2_b_null_25, map_41_2_d_null_25,
           map_41_4_c_false_314, map_41_4_c_null_314, map_41_4_c_true_272, map_41_4_d_null_167)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 DESC, n.prop5 ASC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).desc(var3).asc(var5).fromLeft, "n.prop1, n.prop2", "n.prop3, n.prop5",
+        ProvidedOrder.asc(var1).asc(var2).desc(var3).asc(var5).fromLeft,
         Seq(map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314, map_41_2_d_null_25, map_41_2_b_null_25,
           map_41_4_d_null_167, map_41_4_c_true_272, map_41_4_c_false_314, map_41_4_c_null_314)),
       ("n.prop1 ASC, n.prop2 DESC, n.prop3 ASC, n.prop5 ASC", propAsc,
-        ProvidedOrder.asc(var1).desc(var2).asc(var3).asc(var5).fromLeft, "n.prop1", "n.prop2, n.prop3, n.prop5",
+        ProvidedOrder.asc(var1).desc(var2).asc(var3).asc(var5).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272, map_41_4_c_true_272, map_41_4_c_false_314,
           map_41_4_c_null_314, map_41_4_d_null_167, map_41_2_b_null_25, map_41_2_d_null_25)),
       ("n.prop1 DESC, n.prop2 ASC, n.prop3 DESC, n.prop5 DESC", propDesc,
-        ProvidedOrder.desc(var1).asc(var2).desc(var3).desc(var5).fromLeft, "n.prop1", "n.prop2, n.prop3, n.prop5",
+        ProvidedOrder.desc(var1).asc(var2).desc(var3).desc(var5).fromLeft,
         Seq(map_41_2_d_null_25, map_41_2_b_null_25, map_41_4_d_null_167, map_41_4_c_null_314, map_41_4_c_false_314,
           map_41_4_c_true_272, map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 ASC, n.prop5 DESC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).asc(var3).desc(var5).fromLeft, "n.prop1, n.prop2", "n.prop3, n.prop5",
+        ProvidedOrder.desc(var1).desc(var2).asc(var3).desc(var5).fromLeft,
         Seq(map_41_4_c_null_314, map_41_4_c_false_314, map_41_4_c_true_272, map_41_4_d_null_167, map_41_2_b_null_25,
           map_41_2_d_null_25, map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 DESC, n.prop5 ASC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).desc(var3).asc(var5).fromLeft, "n.prop1, n.prop2, n.prop3", "n.prop5",
+        ProvidedOrder.desc(var1).desc(var2).desc(var3).asc(var5).fromLeft,
         Seq(map_41_4_d_null_167, map_41_4_c_true_272, map_41_4_c_null_314, map_41_4_c_false_314, map_41_2_d_null_25,
           map_41_2_b_null_25, map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314)),
 
       ("n.prop1 DESC, n.prop2 DESC, n.prop5 ASC, n.prop3 DESC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).asc(var5).desc(var3).fromLeft, "n.prop1, n.prop2", "n.prop5, n.prop3",
+        ProvidedOrder.desc(var1).desc(var2).asc(var5).desc(var3).fromLeft,
         Seq(map_41_4_d_null_167, map_41_4_c_true_272, map_41_4_c_null_314, map_41_4_c_false_314, map_41_2_d_null_25,
           map_41_2_b_null_25, map_40_5_b_true_167, map_40_5_c_null_272, map_40_5_a_true_314)),
       ("n.prop1 DESC, n.prop5 ASC, n.prop3 DESC, n.prop2 DESC", propDesc,
-        ProvidedOrder.desc(var1).asc(var5).desc(var3).desc(var2).fromLeft, "n.prop1", "n.prop5, n.prop3, n.prop2",
+        ProvidedOrder.desc(var1).asc(var5).desc(var3).desc(var2).fromLeft,
         Seq(map_41_4_d_null_167, map_41_2_d_null_25, map_41_2_b_null_25, map_41_4_c_true_272, map_41_4_c_null_314,
           map_41_4_c_false_314, map_40_5_b_true_167, map_40_5_c_null_272, map_40_5_a_true_314)),
 
       // Order on more than index
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 ASC, n.prop5 ASC, n.prop4 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).asc(var3).asc(var5).desc(var4).fromLeft, "n.prop1, n.prop2, n.prop3, n.prop5", "n.prop4",
+        ProvidedOrder.asc(var1).asc(var2).asc(var3).asc(var5).desc(var4).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272, map_41_2_b_null_25, map_41_2_d_null_25,
           map_41_4_c_true_272, map_41_4_c_null_314, map_41_4_c_false_314, map_41_4_d_null_167)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 ASC, n.prop5 DESC, n.prop4 ASC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).asc(var3).desc(var5).asc(var4).fromLeft, "n.prop1, n.prop2, n.prop3", "n.prop5, n.prop4",
+        ProvidedOrder.asc(var1).asc(var2).asc(var3).desc(var5).asc(var4).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272, map_41_2_b_null_25, map_41_2_d_null_25,
           map_41_4_c_false_314, map_41_4_c_null_314, map_41_4_c_true_272, map_41_4_d_null_167)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 DESC, n.prop5 ASC, n.prop4 ASC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).desc(var3).asc(var5).asc(var4).fromLeft, "n.prop1, n.prop2", "n.prop3, n.prop5, n.prop4",
+        ProvidedOrder.asc(var1).asc(var2).desc(var3).asc(var5).asc(var4).fromLeft,
         Seq(map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314, map_41_2_d_null_25, map_41_2_b_null_25,
           map_41_4_d_null_167, map_41_4_c_true_272, map_41_4_c_false_314, map_41_4_c_null_314)),
       ("n.prop1 ASC, n.prop2 DESC, n.prop3 ASC, n.prop5 ASC, n.prop4 ASC", propAsc,
-        ProvidedOrder.asc(var1).desc(var2).asc(var3).asc(var5).asc(var4).fromLeft, "n.prop1", "n.prop2, n.prop3, n.prop5, n.prop4",
+        ProvidedOrder.asc(var1).desc(var2).asc(var3).asc(var5).asc(var4).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272, map_41_4_c_true_272, map_41_4_c_false_314,
           map_41_4_c_null_314, map_41_4_d_null_167, map_41_2_b_null_25, map_41_2_d_null_25)),
 
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 DESC, n.prop4 DESC, n.prop5 ASC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).desc(var3).desc(var4).asc(var5).fromLeft, "n.prop1, n.prop2, n.prop3", "n.prop4, n.prop5",
+        ProvidedOrder.desc(var1).desc(var2).desc(var3).desc(var4).asc(var5).fromLeft,
         Seq(map_41_4_d_null_167, map_41_4_c_null_314, map_41_4_c_true_272, map_41_4_c_false_314, map_41_2_d_null_25,
           map_41_2_b_null_25, map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 DESC, n.prop4 ASC, n.prop5 ASC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).desc(var3).asc(var4).asc(var5).fromLeft, "n.prop1, n.prop2, n.prop3", "n.prop4, n.prop5",
+        ProvidedOrder.desc(var1).desc(var2).desc(var3).asc(var4).asc(var5).fromLeft,
         Seq(map_41_4_d_null_167, map_41_4_c_false_314, map_41_4_c_true_272, map_41_4_c_null_314, map_41_2_d_null_25,
           map_41_2_b_null_25, map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 ASC, n.prop4 DESC, n.prop5 DESC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).asc(var3).desc(var4).desc(var5).fromLeft, "n.prop1, n.prop2", "n.prop3, n.prop4, n.prop5",
+        ProvidedOrder.desc(var1).desc(var2).asc(var3).desc(var4).desc(var5).fromLeft,
         Seq(map_41_4_c_null_314, map_41_4_c_true_272, map_41_4_c_false_314, map_41_4_d_null_167, map_41_2_b_null_25,
           map_41_2_d_null_25, map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272)),
       ("n.prop1 DESC, n.prop2 ASC, n.prop3 DESC, n.prop4 DESC, n.prop5 DESC", propDesc,
-        ProvidedOrder.desc(var1).asc(var2).desc(var3).desc(var4).desc(var5).fromLeft, "n.prop1", "n.prop2, n.prop3, n.prop4, n.prop5",
+        ProvidedOrder.desc(var1).asc(var2).desc(var3).desc(var4).desc(var5).fromLeft,
         Seq(map_41_2_d_null_25, map_41_2_b_null_25, map_41_4_d_null_167, map_41_4_c_null_314, map_41_4_c_true_272,
           map_41_4_c_false_314, map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314)),
 
       // Order partially on index
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).desc(var3).fromLeft, "n.prop1, n.prop2", "n.prop3",
+        ProvidedOrder.asc(var1).asc(var2).desc(var3).fromLeft,
         Seq(map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314, map_41_2_d_null_25, map_41_2_b_null_25,
           map_41_4_d_null_167, map_41_4_c_true_272, map_41_4_c_false_314, map_41_4_c_null_314)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop5 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).desc(var5).fromLeft, "n.prop1, n.prop2", "n.prop5",
+        ProvidedOrder.asc(var1).asc(var2).desc(var5).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_c_null_272, map_40_5_b_true_167, map_41_2_b_null_25, map_41_2_d_null_25,
           map_41_4_c_false_314, map_41_4_c_null_314, map_41_4_c_true_272, map_41_4_d_null_167)),
       ("n.prop1 ASC, n.prop3 ASC, n.prop5 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var3).desc(var5).fromLeft, "n.prop1", "n.prop3, n.prop5",
+        ProvidedOrder.asc(var1).asc(var3).desc(var5).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272, map_41_2_b_null_25, map_41_4_c_false_314,
           map_41_4_c_null_314, map_41_4_c_true_272, map_41_2_d_null_25, map_41_4_d_null_167)),
 
       ("n.prop1 ASC, n.prop2 ASC, n.prop4 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).desc(var4).fromLeft, "n.prop1, n.prop2", "n.prop4",
+        ProvidedOrder.asc(var1).asc(var2).desc(var4).fromLeft,
         Seq(map_40_5_c_null_272, map_40_5_a_true_314, map_40_5_b_true_167, map_41_2_b_null_25, map_41_2_d_null_25,
           map_41_4_c_null_314, map_41_4_d_null_167, map_41_4_c_true_272, map_41_4_c_false_314)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop3 ASC, n.prop4 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).asc(var3).desc(var4).fromLeft, "n.prop1, n.prop2, n.prop3", "n.prop4",
+        ProvidedOrder.asc(var1).asc(var2).asc(var3).desc(var4).fromLeft,
         Seq(map_40_5_a_true_314, map_40_5_b_true_167, map_40_5_c_null_272, map_41_2_b_null_25, map_41_2_d_null_25,
           map_41_4_c_null_314, map_41_4_c_true_272, map_41_4_c_false_314, map_41_4_d_null_167)),
       ("n.prop1 ASC, n.prop2 ASC, n.prop5 ASC, n.prop4 DESC", propAsc,
-        ProvidedOrder.asc(var1).asc(var2).asc(var5).desc(var4).fromLeft, "n.prop1, n.prop2", "n.prop5, n.prop4",
+        ProvidedOrder.asc(var1).asc(var2).asc(var5).desc(var4).fromLeft,
         Seq(map_40_5_b_true_167, map_40_5_c_null_272, map_40_5_a_true_314, map_41_2_b_null_25, map_41_2_d_null_25,
           map_41_4_d_null_167, map_41_4_c_true_272, map_41_4_c_null_314, map_41_4_c_false_314)),
 
       ("n.prop1 DESC, n.prop2 DESC, n.prop4 ASC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).asc(var4).fromLeft, "n.prop1, n.prop2", "n.prop4",
+        ProvidedOrder.desc(var1).desc(var2).asc(var4).fromLeft,
         Seq(map_41_4_c_false_314, map_41_4_c_true_272, map_41_4_d_null_167, map_41_4_c_null_314, map_41_2_d_null_25,
           map_41_2_b_null_25, map_40_5_b_true_167, map_40_5_a_true_314, map_40_5_c_null_272)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop3 DESC, n.prop4 ASC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).desc(var3).asc(var4).fromLeft, "n.prop1, n.prop2, n.prop3", "n.prop4",
+        ProvidedOrder.desc(var1).desc(var2).desc(var3).asc(var4).fromLeft,
         Seq(map_41_4_d_null_167, map_41_4_c_false_314, map_41_4_c_true_272, map_41_4_c_null_314, map_41_2_d_null_25,
           map_41_2_b_null_25, map_40_5_c_null_272, map_40_5_b_true_167, map_40_5_a_true_314)),
       ("n.prop1 DESC, n.prop2 DESC, n.prop5 DESC, n.prop4 ASC", propDesc,
-        ProvidedOrder.desc(var1).desc(var2).desc(var5).asc(var4).fromLeft, "n.prop1, n.prop2", "n.prop5, n.prop4",
+        ProvidedOrder.desc(var1).desc(var2).desc(var5).asc(var4).fromLeft,
         Seq(map_41_4_c_false_314, map_41_4_c_null_314, map_41_4_c_true_272, map_41_4_d_null_167, map_41_2_d_null_25,
           map_41_2_b_null_25, map_40_5_a_true_314, map_40_5_c_null_272, map_40_5_b_true_167))
     ).foreach {
-      case (orderByString, indexOrder, sortOrder, alreadySorted, toBeSorted, expected) =>
+      case (orderByString, indexOrder, sortOrder, expected) =>
         // When
         val query =
           s"""MATCH (n:Label)
@@ -802,30 +803,30 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
 
     Seq(
-      ("n.prop3", "n.prop3 ASC, n.prop5 DESC", ProvidedOrder.asc(prop3).asc(prop5), ProvidedOrder.asc(var3).desc(prop5).fromLeft, "n.prop3", "n.prop5",
+      ("n.prop3", "n.prop3 ASC, n.prop5 DESC", ProvidedOrder.asc(prop3).asc(prop5), ProvidedOrder.asc(var3).desc(prop5).fromLeft,
         Seq(Map("n.prop3" -> "b"), Map("n.prop3" -> "b"), Map("n.prop3" -> "c"), Map("n.prop3" -> "c"), Map("n.prop3" -> "d"), Map("n.prop3" -> "d"))),
-      ("n.prop5", "n.prop3 DESC, n.prop5 ASC", ProvidedOrder.desc(prop3).desc(prop5), ProvidedOrder.desc(prop3).asc(var5).fromLeft, "n.prop3", "n.prop5",
+      ("n.prop5", "n.prop3 DESC, n.prop5 ASC", ProvidedOrder.desc(prop3).desc(prop5), ProvidedOrder.desc(prop3).asc(var5).fromLeft,
         Seq(Map("n.prop5" -> 1.67), Map("n.prop5" -> 2.5), Map("n.prop5" -> 2.72), Map("n.prop5" -> 2.72), Map("n.prop5" -> 1.67), Map("n.prop5" -> 2.5))),
 
       ("n.prop3, n.prop5", "n.prop3 ASC, n.prop5 ASC, n.prop2 ASC", ProvidedOrder.asc(prop3).asc(prop5),
-        ProvidedOrder.asc(var3).asc(var5).asc(prop("n", "prop2")).fromLeft, "n.prop3, n.prop5", "n.prop2",
+        ProvidedOrder.asc(var3).asc(var5).asc(prop("n", "prop2")).fromLeft,
         Seq(Map("n.prop3" -> "b", "n.prop5" -> 1.67), Map("n.prop3" -> "b", "n.prop5" -> 2.5),
           Map("n.prop3" -> "c", "n.prop5" -> 2.72), Map("n.prop3" -> "c", "n.prop5" -> 2.72),
           Map("n.prop3" -> "d", "n.prop5" -> 1.67), Map("n.prop3" -> "d", "n.prop5" -> 2.5))),
       ("n.prop3, n.prop5, n.prop2", "n.prop3 ASC, n.prop5 ASC, n.prop2 ASC, n.prop1 ASC", ProvidedOrder.asc(prop3).asc(prop5),
         ProvidedOrder.asc(var3).asc(var5).asc(varFor("n.prop2")).asc(prop("n", "prop1")).fromLeft,
-        "n.prop3, n.prop5", "n.prop2, n.prop1", Seq(map_40_5_b_167, map_41_2_b_25, map_41_4_c_272, map_40_5_c_272, map_41_4_d_167, map_41_2_d_25)),
+        Seq(map_40_5_b_167, map_41_2_b_25, map_41_4_c_272, map_40_5_c_272, map_41_4_d_167, map_41_2_d_25)),
       ("n.prop3, n.prop5, n.prop2", "n.prop3 ASC, n.prop5 ASC, n.prop1 ASC, n.prop2 ASC", ProvidedOrder.asc(prop3).asc(prop5),
         ProvidedOrder.asc(var3).asc(var5).asc(prop("n", "prop1")).asc(varFor("n.prop2")).fromLeft,
-        "n.prop3, n.prop5", "n.prop1, n.prop2", Seq(map_40_5_b_167, map_41_2_b_25, map_40_5_c_272, map_41_4_c_272, map_41_4_d_167, map_41_2_d_25)),
+        Seq(map_40_5_b_167, map_41_2_b_25, map_40_5_c_272, map_41_4_c_272, map_41_4_d_167, map_41_2_d_25)),
       ("n.prop3, n.prop5, n.prop2", "n.prop3 DESC, n.prop5 DESC, n.prop2 DESC, n.prop1 DESC", ProvidedOrder.desc(prop3).desc(prop5),
         ProvidedOrder.desc(var3).desc(var5).desc(varFor("n.prop2")).desc(prop("n", "prop1")).fromLeft,
-        "n.prop3, n.prop5", "n.prop2, n.prop1", Seq(map_41_2_d_25, map_41_4_d_167, map_40_5_c_272, map_41_4_c_272, map_41_2_b_25, map_40_5_b_167)),
+        Seq(map_41_2_d_25, map_41_4_d_167, map_40_5_c_272, map_41_4_c_272, map_41_2_b_25, map_40_5_b_167)),
       ("n.prop3, n.prop5, n.prop2", "n.prop3 DESC, n.prop5 DESC, n.prop1 DESC, n.prop2 DESC", ProvidedOrder.desc(prop3).desc(prop5),
         ProvidedOrder.desc(var3).desc(var5).desc(prop("n", "prop1")).desc(varFor("n.prop2")).fromLeft,
-        "n.prop3, n.prop5", "n.prop1, n.prop2", Seq(map_41_2_d_25, map_41_4_d_167, map_41_4_c_272, map_40_5_c_272, map_41_2_b_25, map_40_5_b_167))
+        Seq(map_41_2_d_25, map_41_4_d_167, map_41_4_c_272, map_40_5_c_272, map_41_2_b_25, map_40_5_b_167))
     ).foreach {
-      case (returnString, orderByString, indexOrder, sortOrder, alreadySorted, toBeSorted, expected) =>
+      case (returnString, orderByString, indexOrder, sortOrder, expected) =>
         // When
         val query =
           s"""MATCH (n:Label)
@@ -1281,7 +1282,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     ))
     val names = for (c <- 'a' to 'b'; i <- 0 until 100) yield {
       val name = f"$c$i%03d"
-      val node = createLabeledNode(Map("name" -> name, "age" -> i), "Person")
+      createLabeledNode(Map("name" -> name, "age" -> i), "Person")
       name
     }
 
