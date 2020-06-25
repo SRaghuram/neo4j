@@ -142,7 +142,7 @@ class OnlineBackupCommandTest
         File cfg = dir.file( "neo4j.conf" );
         try ( PrintStream ps = new PrintStream( fs.openAsOutputStream( cfg, false ) ) )
         {
-            ps.println( format( "%s=%s", db_timezone.name(), LogTimeZone.SYSTEM.name() ) );
+            ps.printf( "%s=%s%n", db_timezone.name(), LogTimeZone.SYSTEM.name() );
         }
 
         // when
