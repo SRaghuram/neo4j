@@ -24,8 +24,6 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.test.rule.TestDirectory;
-
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -39,7 +37,7 @@ class EndToEndIT extends BaseEndToEndIT
 
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -70,12 +68,12 @@ class EndToEndIT extends BaseEndToEndIT
                                         ResultStoreCredentials resultStoreCredentials )
     {
         // prepare neo4j config file
-        Path neo4jConfig = temporaryFolder.createFile( "neo4j.config" ).toPath();
+        Path neo4jConfig = temporaryFolder.resolve( "neo4j.config" );
         Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfig );
 
         File benchmarkConfig = createBenchmarkConfig( temporaryFolder );
 
-        File workDir = temporaryFolder.directory( "work_dir" );
+        File workDir = temporaryFolder.resolve( "work_dir" ).toFile();
 
         return asList( "./" + scriptName(),
                        // neo4j_version
@@ -139,9 +137,9 @@ class EndToEndIT extends BaseEndToEndIT
         assertEquals( expectedRecordingsCount, existingRecordingsCount, "number of existing recordings differs from expected number of recordings" );
     }
 
-    private File createBenchmarkConfig( TestDirectory temporaryFolder )
+    private File createBenchmarkConfig( Path temporaryFolder )
     {
-        File benchmarkConfig = temporaryFolder.createFile( "benchmarkConfig" );
+        File benchmarkConfig = temporaryFolder.resolve( "benchmarkConfig" ).toFile();
 
         Validation validation = new Validation();
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( annotationsFixture.getAnnotations(), validation );

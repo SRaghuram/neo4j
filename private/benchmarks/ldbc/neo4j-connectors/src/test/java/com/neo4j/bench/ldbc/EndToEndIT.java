@@ -59,7 +59,9 @@ public class EndToEndIT extends BaseEndToEndIT
     {
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories(resourcesPath);
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -90,21 +92,24 @@ public class EndToEndIT extends BaseEndToEndIT
         String endpointUrl = getAWSEndpointURL();
         // prepare neo4j config file
         Path baseNeo4jConfig = resources.getResourceFile( "/neo4j/neo4j_sf001.conf" );
-        Path benchmarkNeo4jConfig = temporaryFolder.createFile( "neo4j_benchmark.config" ).toPath();
+        Path benchmarkNeo4jConfig = temporaryFolder.resolve( "neo4j_benchmark.config" );
         Neo4jConfigBuilder.withDefaults()
                           .setDense( true )
                           .writeToFile( benchmarkNeo4jConfig );
 
-        Path resultsDir = temporaryFolder.directory( "results_dir" ).toPath();
-        Path workDir = temporaryFolder.directory( "work" ).toPath();
-
-        Path ldbcCsvDir = temporaryFolder.directory( "ldbc_sf001_p006_regular_utc" ).toPath();
+        Path resultsDir = temporaryFolder.resolve( "results_dir" );
+        Path workDir = temporaryFolder.resolve( "work" );
+        Files.createDirectories( resultsDir );
+        Files.createDirectories( workDir );
+        Path ldbcCsvDir = temporaryFolder.resolve( "ldbc_sf001_p006_regular_utc" );
+        Files.createDirectories(ldbcCsvDir);
         Path readParams = Files.createDirectory( ldbcCsvDir.resolve( "substitution_parameters" ) );
         Files.walkFileTree( resources.getResourceFile( "/validation_sets/data/substitution_parameters" ),
                             new CopyVisitor( readParams ) );
         Path writeParams = resources.getResourceFile( "/validation_sets/data/updates" );
 
-        Path ldbcConfigFile = temporaryFolder.createFile( "ldbc_driver.conf" ).toPath();
+        Path ldbcConfigFile = temporaryFolder.resolve( "ldbc_driver.conf" );
+
         BenchmarkUtil.stringToFile( ldbcConfig().toPropertiesString(), ldbcConfigFile );
 
         Path dbPath = createLdbcStore( resources, benchmarkNeo4jConfig );
@@ -225,7 +230,7 @@ public class EndToEndIT extends BaseEndToEndIT
 
     private Path createLdbcStore( Resources resources, Path benchmarkNeo4jConfig ) throws IOException
     {
-        Path dbPath = temporaryFolder.directory( "db" ).toPath();
+        Path dbPath = temporaryFolder.resolve( "db" );
         Path csvData = resources.getResourceFile( "/validation_sets/data/social_network/num_date" );
         boolean createUniqueConstraints = true;
         boolean createMandatoryConstraints = true;

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,23 +51,19 @@ class EndToEndIT extends BaseEndToEndIT
     private static final String WRITE_WORKLOAD = "pokec_write";
     private static final String READ_WORKLOAD = "zero";
 
-    // this is temporary workaround for
-    // https://trello.com/c/VKR4yx64/4282-neo4j-admin-scripts-should-respect-javahome-env-var-and-ideally-print-which-jvm-theyre-running-with
-    // thanks to this we can have benchmark working directory without space in path
-    @TempDir
-    Path workingDir;
-
     @Test
     public void runZeroWorkloadEmbedded() throws Exception
     {
 
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = "zero";
         int recordingDirsCount = 1;
         int forks = 1;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -92,8 +89,9 @@ class EndToEndIT extends BaseEndToEndIT
         String workloadName = "pokec_write";
         int recordingDirsCount = 1;
         int forks = 1;
-
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -118,8 +116,9 @@ class EndToEndIT extends BaseEndToEndIT
         String workloadName = LOAD_CSV_WORKLOAD;
         int recordingDirsCount = 1;
         int forks = 1;
-
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -146,8 +145,9 @@ class EndToEndIT extends BaseEndToEndIT
         String workloadName = READ_WORKLOAD;
         int recordingDirsCount = 1;
         int forks = 1;
-
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -173,7 +173,9 @@ class EndToEndIT extends BaseEndToEndIT
         int recordingDirsCount = 1;
         int forks = 1;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -199,7 +201,9 @@ class EndToEndIT extends BaseEndToEndIT
         int recordingDirsCount = 1;
         int forks = 1;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -227,7 +231,9 @@ class EndToEndIT extends BaseEndToEndIT
         int recordingDirsCount = 0;
         int forks = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -253,7 +259,7 @@ class EndToEndIT extends BaseEndToEndIT
         int forks = 0;
         int recordingDirsCount = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -280,7 +286,7 @@ class EndToEndIT extends BaseEndToEndIT
         int forks = 0;
         int recordingDirsCount = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -297,7 +303,6 @@ class EndToEndIT extends BaseEndToEndIT
     }
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
-
     @Test
     public void executeReadWorkloadInProcessWithServer() throws Exception
     {
@@ -307,8 +312,9 @@ class EndToEndIT extends BaseEndToEndIT
         String workloadName = READ_WORKLOAD;
         int forks = 0;
         int recordingDirsCount = 1;
-
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        Path resourcesPath = temporaryFolder.resolve( "resources" );
+        Files.createDirectories( resourcesPath );
+        try ( Resources resources = new Resources( resourcesPath ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -335,7 +341,7 @@ class EndToEndIT extends BaseEndToEndIT
         int forks = 0;
         int recordingDirsCount = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -362,7 +368,7 @@ class EndToEndIT extends BaseEndToEndIT
         int forks = 0;
         int recordingDirsCount = 0;
 
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),
@@ -397,18 +403,19 @@ class EndToEndIT extends BaseEndToEndIT
                                       List<ProfilerType> profilers,
                                       String workloadName,
                                       Deployment deployment,
-                                      int forks )
+                                      int forks ) throws IOException
     {
 
         Jvm jvm = Jvm.defaultJvmOrFail();
         String awsEndpointUrl = getAWSEndpointURL();
         ResultStoreCredentials resultStoreCredentials = getResultStoreCredentials();
         // prepare neo4j config file
-        Path neo4jConfig = workingDir.resolve( "neo4j.config" );
+        Path neo4jConfig = temporaryFolder.resolve( "neo4j.config" );
         Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfig );
 
         // create empty store
-        Path dbPath = temporaryFolder.directory( "db" ).toPath();
+        Path dbPath = temporaryFolder.resolve( "db" );
+        Files.createDirectories(dbPath);
         Workload workload = Workload.fromName( workloadName, resources, deployment );
         Store emptyStoreFor = StoreTestUtil.createEmptyStoreFor( workload,
                                                                  dbPath, // store
@@ -432,7 +439,7 @@ class EndToEndIT extends BaseEndToEndIT
                        // neo4j_config
                        neo4jConfig.toString(),
                        // work_dir
-                       workingDir.toString(),
+                       temporaryFolder.toString(),
                        // profilers
                        profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
                        // forks

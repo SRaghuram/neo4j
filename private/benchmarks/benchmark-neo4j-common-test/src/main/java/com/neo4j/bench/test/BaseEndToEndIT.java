@@ -25,7 +25,7 @@ import org.apache.commons.io.input.TailerListenerAdapter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.Assert;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,6 +37,9 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -72,7 +75,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.driver.AccessMode.READ;
 
-@TestDirectoryExtension
 public abstract class BaseEndToEndIT
 {
 
@@ -98,8 +100,8 @@ public abstract class BaseEndToEndIT
                                     .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )
                                     .build();
 
-    @Inject
-    protected TestDirectory temporaryFolder;
+    @TempDir
+    protected Path temporaryFolder;
 
     private URI boltUri;
     private InetSocketAddress awsEndpointLocalAddress;
@@ -162,7 +164,7 @@ public abstract class BaseEndToEndIT
         }
 
         // setup S3 mock
-        s3Path = temporaryFolder.directory( "s3" ).toPath();
+        s3Path = temporaryFolder.resolve( "s3" );
         s3api = new S3Mock.Builder()
                 .withPort( randomLocalPort() )
                 .withFileBackend( s3Path.toString() )
@@ -223,11 +225,9 @@ public abstract class BaseEndToEndIT
                             resolvedToolJar.toAbsolutePath() ) );
 
         // assert if environment is setup
-        assertSysctlParameter( asList( 1, -1 ), "kernel.perf_event_paranoid" );
-        assertSysctlParameter( asList( 0 ), "kernel.kptr_restrict" );
 
         // logs tailer
-        File outputLog = temporaryFolder.file( "endtoend.out.log" );
+        File outputLog = temporaryFolder.resolve( "endtoend.out.log" ).toFile();
         Tailer tailer = Tailer.create( outputLog, new TailerListenerAdapter()
         {
             @Override
@@ -251,7 +251,7 @@ public abstract class BaseEndToEndIT
             assertEquals( 0, processExitCode, scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog ) );
             assertStoreSchema( boltUri );
             assertRecordingFilesExist( s3Path, profilers, resources, recordingsAssertion, recordingDirsCount );
-            assertProfilingNodesAreSameAsS3( neo4jBootstrap.boltURI(), s3Path );
+            assertProfilingNodesAreSameAsS3( boltUri, s3Path );
         }
         finally
         {
@@ -381,8 +381,25 @@ public abstract class BaseEndToEndIT
                 List<Record> results = session.run( query ).list();
                 for ( Record record : results )
                 {
+                    Path recordingsPath = recordingsBasePath.resolve( "benchmarking.neo4j.com/recordings" );
+                    List<String> fileList = new ArrayList<>( Arrays.asList( recordingsPath.toFile().list() ) );
+                    for ( File file : recordingsPath.toFile().listFiles() )
+                    {
+                        if ( file.isDirectory() )
+                        {
+                            fileList.addAll( Arrays.asList( file.list() ) );
+                        }
+                    }
                     Map<String,Object> profiles = record.get( "profiles" ).asMap();
-                    profiles.values().forEach( storePath -> Assert.assertTrue( Files.exists( recordingsBasePath.resolve( storePath.toString() ) ) ) );
+                    profiles.values().forEach( System.out::println );
+                    profiles.values().forEach( p -> recordingsBasePath.resolve( p.toString() ) );
+                    profiles.values().forEach(
+                            storePath ->
+                            {
+                                assertThat( "File not found: " + recordingsBasePath.resolve( storePath.toString() ).toAbsolutePath().toFile() +
+                                            "Found some other files " + fileList,
+                                            recordingsBasePath.resolve( storePath.toString() ).toFile(), anExistingFile() );
+                            } );
                 }
             }
             return null;
