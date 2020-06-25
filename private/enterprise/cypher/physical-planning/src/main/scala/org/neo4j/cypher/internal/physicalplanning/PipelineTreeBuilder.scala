@@ -732,7 +732,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
             case RefSlot(offset, _, _) => Not(IsNull(ReferenceFromSlot(offset, i))(InputPosition.NONE))(InputPosition.NONE)
           }
         }
-        val expression = if (vars.size == 1) vars.head else Ors(vars.toSet)(InputPosition.NONE)
+        val expression = if (vars.size == 1) vars.head else Ors(vars)(InputPosition.NONE)
         outputToConditionalSink(expression, lhs, argumentSlotOffset, plan)
 
       case p: plans.AbstractSelectOrSemiApply =>
