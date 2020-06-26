@@ -269,6 +269,18 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 43)))
   }
 
+  test("should plan index seek with GetValue when the property is part of a SET clause") {
+    val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 SET n.anotherProp = n.prop1 RETURN n.anotherProp"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("SetProperty")
+        .containingArgument("n.anotherProp = cache[n.prop1]")
+        .onTopOf(aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
+      )
+    )
+    result.toList should equal(List(Map("n.anotherProp" -> 42), Map("n.anotherProp" -> 42)))
+  }
+
   test("should access the correct cached property after distinct") {
     for (i <- 41 to 100) createLabeledNode(Map("prop1" -> i), "Super")
     graph.createIndex("Super", "prop1")
