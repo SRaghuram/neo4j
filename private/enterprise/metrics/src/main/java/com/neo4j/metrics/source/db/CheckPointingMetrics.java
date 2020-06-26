@@ -22,9 +22,9 @@ public class CheckPointingMetrics extends LifecycleAdapter
 
     @Documented( "The total number of check point events executed so far." )
     private static final String CHECK_POINT_EVENTS_TEMPLATE = name( CHECK_POINT_PREFIX, "events" );
-    @Documented( "The total time spent in check pointing so far." )
+    @Documented( "The total time, in milliseconds, spent in check pointing so far." )
     private static final String CHECK_POINT_TOTAL_TIME_TEMPLATE = name( CHECK_POINT_PREFIX, "total_time" );
-    @Documented( "The duration of the last check point event." )
+    @Documented( "The duration, in milliseconds, of the last check point event." )
     private static final String CHECK_POINT_DURATION_TEMPLATE = name( CHECK_POINT_PREFIX, "duration" );
 
     private final String checkPointEvents;
