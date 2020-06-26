@@ -42,6 +42,7 @@ import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.dbms.database.DefaultDatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -68,6 +69,7 @@ import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.MetaDataStore;
@@ -233,6 +235,38 @@ public class StoreUpgradeIT
             assertConsistentStore( databaseLayout );
             assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".a" ).exists() );
             assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".b" ).exists() );
+        }
+
+        @Test
+        public void embeddedDatabaseShouldUpgradeViaDatabaseManager() throws Exception
+        {
+            var layout = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory().toFile() );
+
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
+            builder.setConfig( fail_on_missing_files, false );
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+
+            DatabaseManagementService managementService = builder.build();
+            GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+            NamedDatabaseId namedDatabaseId = database.databaseId();
+            DefaultDatabaseManager databaseManager = database.getDependencyResolver().resolveDependency( DefaultDatabaseManager.class );
+            databaseManager.upgradeDatabase( namedDatabaseId );
+
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
+            try
+            {
+                checkInstance( store, (GraphDatabaseAPI) db );
+            }
+            finally
+            {
+                managementService.shutdown();
+            }
+
+            assertConsistentStore( databaseLayout );
+            assertFalse( new File( layout.countStore() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore() + ".b" ).exists() );
         }
 
         @Test
