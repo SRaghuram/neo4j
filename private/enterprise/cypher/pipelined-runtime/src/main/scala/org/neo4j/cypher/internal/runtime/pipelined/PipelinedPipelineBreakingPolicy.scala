@@ -136,6 +136,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
       => false
 
       case _: NodeHashJoin |
+           _: RightOuterHashJoin |
            _: ValueHashJoin |
            _: CartesianProduct |
            _: Union |

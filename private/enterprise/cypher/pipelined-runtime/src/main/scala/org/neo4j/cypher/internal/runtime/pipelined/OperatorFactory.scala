@@ -427,6 +427,30 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             rhsSlotMappings)(id)
         }
 
+      case joinPlan: plans.RightOuterHashJoin =>
+
+        val slotConfigs = physicalPlan.slotConfigurations
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val keyVariables = joinPlan.nodes.toArray
+
+        val lhsSlots = slotConfigs(joinPlan.left.id)
+        val rhsSlots = slotConfigs(joinPlan.right.id)
+
+        val lhsKeyOffsets: Array[Int] = keyVariables.map(k => lhsSlots.getLongOffsetFor(k))
+        val rhsKeyOffsets: Array[Int] = keyVariables.map(k => rhsSlots.getLongOffsetFor(k))
+
+        val lhsSlotMappings = computeSlotMappings(lhsSlots, argumentSize, slots)
+
+        val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
+        new NodeRightOuterHashJoinOperator(
+          WorkIdentity.fromPlan(plan),
+          buffer.lhsArgumentStateMapId,
+          buffer.rhsArgumentStateMapId,
+          lhsKeyOffsets,
+          rhsKeyOffsets,
+          lhsSlots,
+          lhsSlotMappings)(id)
+
       case _: ConditionalApply |
            _: AntiConditionalApply |
            _: SelectOrSemiApply |

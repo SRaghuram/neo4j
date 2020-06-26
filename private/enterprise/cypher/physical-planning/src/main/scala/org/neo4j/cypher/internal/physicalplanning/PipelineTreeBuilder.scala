@@ -807,7 +807,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
-      case _: plans.NodeHashJoin | _: plans.ValueHashJoin =>
+      case _: plans.NodeHashJoin | _: plans.ValueHashJoin | _:plans.RightOuterHashJoin =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
           val buffer = outputToLhsAccumulatingRhsStreamingBuffer(Some(lhs), rhs, plan.id, argument, argument.argumentSlotOffset)
           val pipeline = newPipeline(plan, buffer)
