@@ -90,6 +90,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexContainsSc
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexEndsWithScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeRightOuterHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NonFuseableOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperator
@@ -121,7 +122,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescripti
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeSlotsToCopy
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeSlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
@@ -400,11 +401,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val slotConfigs = physicalPlan.slotConfigurations
         val argumentSize = physicalPlan.argumentSizes(id)
         val nodes = joinPlan.nodes.toArray
+
         val lhsOffsets: Array[Int] = nodes.map(k => slots.getLongOffsetFor(k))
         val rhsSlots = slotConfigs(joinPlan.right.id)
         val rhsOffsets: Array[Int] = nodes.map(k => rhsSlots.getLongOffsetFor(k))
 
-        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
+        val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
 
         val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
         if (lhsOffsets.length == 1) {
@@ -414,9 +416,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             buffer.rhsArgumentStateMapId,
             lhsOffsets(0),
             rhsOffsets(0),
-            longsToCopy,
-            refsToCopy,
-            cachedPropertiesToCopy)(id)
+            rhsSlotMappings)(id)
         } else {
           new NodeHashJoinOperator(
             WorkIdentity.fromPlan(plan),
@@ -424,10 +424,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             buffer.rhsArgumentStateMapId,
             lhsOffsets,
             rhsOffsets,
-            slots,
-            longsToCopy,
-            refsToCopy,
-            cachedPropertiesToCopy)(id)
+            rhsSlotMappings)(id)
         }
 
       case _: ConditionalApply |
@@ -446,7 +443,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
         val lhsExpression = converters.toCommandExpression(id, joinPlan.join.lhs)
         val rhsExpression = converters.toCommandExpression(id, joinPlan.join.rhs)
-        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
+        val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
 
         new ValueHashJoinOperator(WorkIdentity.fromPlan(plan),
                                   buffer.lhsArgumentStateMapId,
@@ -454,9 +451,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                   slots,
                                   lhsExpression,
                                   rhsExpression,
-                                  longsToCopy,
-                                  refsToCopy,
-                                  cachedPropertiesToCopy)(id)
+                                  rhsSlotMappings)(id)
 
 
       case _: plans.CartesianProduct =>

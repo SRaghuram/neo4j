@@ -93,6 +93,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
@@ -301,6 +302,10 @@ class PipelinedOrderedAggregationNoFusingTest extends OrderedAggregationTestBase
 // NODE HASH JOIN
 class PipelinedNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// NODE RIGHT OUTER HASH JOIN
+class PipelinedNodeRightOuterHashJoinTest extends RightOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedNodeRightOuterHashJoinNoFusingTest extends RightOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // VALUE HASH JOIN
 class PipelinedValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

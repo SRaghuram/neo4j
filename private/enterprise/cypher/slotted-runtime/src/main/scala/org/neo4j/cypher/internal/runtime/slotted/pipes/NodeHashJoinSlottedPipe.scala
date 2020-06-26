@@ -14,9 +14,10 @@ import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRhs
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
@@ -28,11 +29,13 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
                                    left: Pipe,
                                    right: Pipe,
                                    slots: SlotConfiguration,
-                                   longsToCopy: Array[(Int, Int)],
-                                   refsToCopy: Array[(Int, Int)],
-                                   cachedPropertiesToCopy: Array[(Int, Int)])
+                                   rhsSlotMappings: SlotMappings)
                                   (val id: Id = Id.INVALID_ID) extends AbstractHashJoinPipe[LongArray](left, right) {
   private val width: Int = lhsOffsets.length
+
+  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
+  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
 
   override def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
     val table = ProbeTable.createProbeTable[LongArray, CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
@@ -63,7 +66,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
           newRow.copyAllFrom(lhs)
-          copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, newRow, currentRhsRow)
+          NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
           return Some(newRow)
         }
 
@@ -90,29 +93,30 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
 object NodeHashJoinSlottedPipe {
 
   /**
-   * Copies longs, refs, and cached properties from the given rhs into the given new row.
+   * Copies longs, refs, and cached properties from source row into target row.
    */
-  def copyDataFromRhs(longsToCopy: Array[(Int, Int)],
-                      refsToCopy: Array[(Int, Int)],
-                      cachedPropertiesToCopy: Array[(Int, Int)],
-                      newRow: WritableRow,
-                      rhs: ReadableRow): Unit = {
+  def copyDataFromRow(longMappings: Array[(Int, Int)],
+                      refMappings: Array[(Int, Int)],
+                      cachedPropertyMappings: Array[(Int, Int)],
+                      target: WritableRow,
+                      source: ReadableRow): Unit = {
+
     var i = 0
-    while (i < longsToCopy.length) {
-      val (from, to) = longsToCopy(i)
-      newRow.setLongAt(to, rhs.getLongAt(from))
+    while (i < longMappings.length) {
+      val (from, to) = longMappings(i)
+      target.setLongAt(to, source.getLongAt(from))
       i += 1
     }
     i = 0
-    while (i < refsToCopy.length) {
-      val (from, to) = refsToCopy(i)
-      newRow.setRefAt(to, rhs.getRefAt(from))
+    while (i < refMappings.length) {
+      val (from, to) = refMappings(i)
+      target.setRefAt(to, source.getRefAt(from))
       i += 1
     }
     i = 0
-    while (i < cachedPropertiesToCopy.length) {
-      val (from, to) = cachedPropertiesToCopy(i)
-      newRow.setCachedPropertyAt(to, rhs.getCachedPropertyAt(from))
+    while (i < cachedPropertyMappings.length) {
+      val (from, to) = cachedPropertyMappings(i)
+      target.setCachedPropertyAt(to, source.getCachedPropertyAt(from))
       i += 1
     }
   }

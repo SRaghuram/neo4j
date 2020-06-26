@@ -121,7 +121,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.TopNPipe
 import org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeSlotsToCopy
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeSlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
@@ -527,12 +527,12 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // Verify the assumption that the argument slots are the same on both sides
         checkOnlyWhenAssertionsAreEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
-        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
+        val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
 
         if (leftNodes.length == 1) {
-          NodeHashJoinSlottedSingleNodePipe(leftNodes(0), rightNodes(0), lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
+          NodeHashJoinSlottedSingleNodePipe(leftNodes(0), rightNodes(0), lhs, rhs, slots, rhsSlotMappings)(id)
         } else {
-          NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
+          NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, rhsSlotMappings)(id)
         }
 
       case ValueHashJoin(lhsPlan, rhsPlan, Equals(lhsAstExp, rhsAstExp)) =>
@@ -544,9 +544,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
         // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
         // This assumption enables us to use array copy within ValueHashJoin.
         checkOnlyWhenAssertionsAreEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
-        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
+        val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
 
-        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
+        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, rhsSlotMappings)(id)
 
       case ConditionalApply(left, right, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
@@ -769,28 +769,46 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
 object SlottedPipeMapper {
 
-  def computeSlotsToCopy(rhsSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, slots: SlotConfiguration): (Array[(Int, Int)], Array[(Int, Int)], Array[(Int, Int)]) = {
-    val copyLongsFromRHS: mutable.Builder[(Int, Int), ArrayBuffer[(Int, Int)]] = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-    val copyRefsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-    val copyCachedPropertiesFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+  case class SlotMappings(
+    longMappings: Array[(Int, Int)],
+    refMappings: Array[(Int, Int)],
+    cachedPropertyMappings: Array[(Int, Int)],
+  )
 
-    // When executing, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
-    // part of the join comparison
-    rhsSlots.foreachSlotAndAliasesOrdered({
+  /** Computes slot mappings from one slot configuration to another
+   *
+   * Given the values:
+   *                  0,    1, 2, 3, 4, 5, 6      0, 1,  2,  3,  4
+   *  fromSlots = [arg1, arg2, a, b, c]       [arg3, k, p1,  m, p2]
+   *  toSlots =   [arg1, arg2, a, c, d, e, b] [arg3, k,  m, p1, p2]
+   *  argumentSize.nLongs = 2
+   *  argumentSize.nReferences = 1
+   *
+   * it produces the output:
+   *  longMappings           2->2, 3->6, 4->3
+   *  refMappings            1->1, 3->2
+   *  cachedPropertyMappings 2->3, 4->4
+   * */
+  def computeSlotMappings(fromSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, toSlots: SlotConfiguration): SlotMappings = {
+    val longMappings = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+    val refMappings = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+    val cachedPropertyMappings = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+
+    fromSlots.foreachSlotAndAliasesOrdered({
       case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), _) if offset >= argumentSize.nLongs =>
-        copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
+        longMappings += ((offset, toSlots.getLongOffsetFor(key)))
       case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), _) if offset >= argumentSize.nReferences =>
-        copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-      case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, already added by lhs
-      case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) => // do nothing, already added by lhs
+        refMappings += ((offset, toSlots.getReferenceOffsetFor(key)))
+      case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, part of arguments
+      case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) => // do nothing, part of arguments
       case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), _, _) =>
-        val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
+        val offset = fromSlots.getCachedPropertyOffsetFor(cnp)
         if (offset >= argumentSize.nReferences) {
-          copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
+          cachedPropertyMappings += offset -> toSlots.getCachedPropertyOffsetFor(cnp)
         }
     })
 
-    (copyLongsFromRHS.result().toArray, copyRefsFromRHS.result().toArray, copyCachedPropertiesFromRHS.result().toArray)
+    SlotMappings(longMappings.result().toArray, refMappings.result().toArray, cachedPropertyMappings.result().toArray)
   }
 
   /**

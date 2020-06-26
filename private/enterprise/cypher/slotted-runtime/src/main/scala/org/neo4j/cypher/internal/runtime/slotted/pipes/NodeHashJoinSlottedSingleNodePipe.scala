@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.LongProbeTable
@@ -22,10 +23,13 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
                                              left: Pipe,
                                              right: Pipe,
                                              slots: SlotConfiguration,
-                                             longsToCopy: Array[(Int, Int)],
-                                             refsToCopy: Array[(Int, Int)],
-                                             cachedPropertiesToCopy: Array[(Int, Int)])
+                                             rhsSlotMappings: SlotMappings)
                                             (val id: Id = Id.INVALID_ID) extends PipeWithSource(left) {
+
+  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
+  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
+
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
 
     if (input.isEmpty)
@@ -74,7 +78,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
           newRow.copyAllFrom(lhs)
-          copyDataFromRhs(newRow, currentRhsRow)
+          NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
           return Some(newRow)
         }
 
@@ -96,28 +100,4 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
         None
       }
     }
-
-  private def copyDataFromRhs(newRow: SlottedRow, rhs: CypherRow): Unit = {
-    var i = 0
-    var len = longsToCopy.length
-    while (i < len) {
-      val longs = longsToCopy(i)
-      newRow.setLongAt(longs._2, rhs.getLongAt(longs._1))
-      i += 1
-    }
-    i = 0
-    len = refsToCopy.length
-    while (i < len) {
-      val refs = refsToCopy(i)
-      newRow.setRefAt(refs._2, rhs.getRefAt(refs._1))
-      i += 1
-    }
-    i = 0
-    len = cachedPropertiesToCopy.length
-    while (i < len) {
-      val cached = cachedPropertiesToCopy(i)
-      newRow.setCachedPropertyAt(cached._2, rhs.getCachedPropertyAt(cached._1))
-      i += 1
-    }
-  }
 }

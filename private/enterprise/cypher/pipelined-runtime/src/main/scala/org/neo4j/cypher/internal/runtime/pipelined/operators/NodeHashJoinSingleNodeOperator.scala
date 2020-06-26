@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -38,10 +39,12 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
                                      rhsArgumentStateMapId: ArgumentStateMapId,
                                      lhsOffset: Int,
                                      rhsOffset: Int,
-                                     longsToCopy: Array[(Int, Int)],
-                                     refsToCopy: Array[(Int, Int)],
-                                     cachedPropertiesToCopy: Array[(Int, Int)])
+                                     rhsSlotMappings: SlotMappings)
                                     (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
+
+  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
+  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -81,7 +84,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))
-        NodeHashJoinSlottedPipe.copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, outputRow, inputCursor)
+        NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
         outputRow.next()
       }
     }
