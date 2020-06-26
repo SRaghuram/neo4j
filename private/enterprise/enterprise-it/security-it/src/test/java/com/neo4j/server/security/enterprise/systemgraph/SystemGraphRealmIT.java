@@ -236,7 +236,7 @@ class SystemGraphRealmIT
         // Then
         IllegalStateException wrongUsernameException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String wrongUsernameErrorMessage = "Invalid `auth.ini` file: the user in the file is not named " + INITIAL_USER_NAME;
-        assertThat( wrongUsernameException.getSuppressed() ).anyMatch( e -> e.getMessage().equals( wrongUsernameErrorMessage ));
+        assertThat( wrongUsernameException.getMessage(), containsString( wrongUsernameErrorMessage ) );
         assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessages( wrongUsernameErrorMessage );
 
         // Given
@@ -250,7 +250,7 @@ class SystemGraphRealmIT
         // Then
         IllegalStateException multipleUsersErrorException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String multipleUsersErrorMessage = "Invalid `auth.ini` file: the file contains more than one user";
-        assertThat( multipleUsersErrorException.getSuppressed() ).anyMatch( e -> e.getMessage().contains( multipleUsersErrorMessage ) );
+        assertThat( multipleUsersErrorException.getMessage(), containsString(  multipleUsersErrorMessage) );
         assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessages( multipleUsersErrorMessage );
     }
 
