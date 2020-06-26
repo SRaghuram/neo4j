@@ -691,6 +691,28 @@ public class EnterpriseBuiltInDbmsProcedures
         return Stream.of( new ProfileResult( baos.toString() ) );
     }
 
+    @Admin
+    @SystemProcedure
+    @Description( "List all jobs that are active in the database internal job scheduler." )
+    @Procedure( name = "dbms.scheduler.jobs", mode = DBMS )
+    public Stream<JobStatusResult> schedulerJobs()
+    {
+        JobScheduler jobScheduler = resolver.resolveDependency( JobScheduler.class );
+        ZoneId zoneId = getConfiguredTimeZone();
+        return jobScheduler.getMonitoredJobs().stream().map( job -> new JobStatusResult( job, zoneId ) );
+    }
+
+    @Admin
+    @SystemProcedure
+    @Description( "List failed job runs. There is a limit for amount of historical data" )
+    @Procedure( name = "dbms.scheduler.failedJobRuns", mode = DBMS )
+    public Stream<FailedJobRunResult> schedulerFailedJobRuns()
+    {
+        JobScheduler jobScheduler = resolver.resolveDependency( JobScheduler.class );
+        ZoneId zoneId = getConfiguredTimeZone();
+        return jobScheduler.getFailedJobRuns().stream().map( failedJobRun -> new FailedJobRunResult( failedJobRun, zoneId ) );
+    }
+
     @SystemProcedure
     @Description( "Initiate and wait for a new check point, or wait any already on-going check point to complete. Note that this temporarily disables the " +
             "`dbms.checkpoint.iops.limit` setting in order to make the check point complete faster. This might cause transaction throughput to degrade " +
