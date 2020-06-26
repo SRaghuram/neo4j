@@ -13,7 +13,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.ExecutionEngineHelper
+import org.neo4j.cypher.ExecutionEngineHelper.asJavaMapDeep
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
@@ -29,6 +29,7 @@ import org.neo4j.kernel.impl.query.QueryExecution
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.impl.query.RecordingQuerySubscriber
 import org.neo4j.kernel.impl.query.TransactionalContext
+import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
@@ -394,7 +395,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     val subscriber = new RecordingQuerySubscriber
     val context = transactionalContext(tx, queryText -> params)
     val queryContext = new TransactionBoundQueryContext(TransactionalContextWrapper(context), new ResourceManager())(mock[IndexSearchMonitor])
-    val innerResult = eengineExecute(queryText, ExecutionEngineHelper.asMapValue(params), context, subscriber)
+    val innerResult = eengineExecute(queryText, ValueUtils.asParameterMapValue(asJavaMapDeep(params)), context, subscriber)
     RewindableExecutionResult(innerResult, queryContext, subscriber)
   }
 }

@@ -6,8 +6,11 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.graphdb.RelationshipType
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.kernel.api.security.LoginContext
+import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
@@ -155,7 +158,80 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
       "CALL org.neo4j.internalTypes('Cat', {key: 42})").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 42))))
   }
 
+  test( "should fail to modify entities from closed transaction") {
+    registerTestProcedures()
+
+    val (n, r) = createNodeAndRelationship()
+
+    failWithError(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($node, 'prop', 'glass')", params = Map("node" -> n), message = Seq("NotInTransaction"))
+    failWithError(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($rel, 'prop', 'glass')", params = Map("rel" -> r), message = Seq("NotInTransaction"))
+  }
+
+  test( "should allow to modify entities in other transaction") {
+    registerTestProcedures()
+
+    val tx1 = graph.beginTransaction(KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED)
+    try {
+      val n = tx1.createNode()
+      val r = n.createRelationshipTo(n, RelationshipType.withName("R"))
+
+      executeWith(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($node, 'prop', 'glass')", params = Map("node" -> n))
+      executeWith(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($rel, 'prop', 'glace')", params = Map("rel" -> r))
+
+      n.getProperty("prop") shouldBe "glass"
+      r.getProperty("prop") shouldBe "glace"
+      tx1.rollback()
+    } finally {
+      tx1.close()
+    }
+  }
+
+  test("should fail to modify entities created in nested tx") {
+    registerTestProcedures()
+
+    createNodeAndRelationship()
+
+    failWithError(Configs.ProcedureCallWrite,
+      """CALL org.neo4j.matchNodeAndRelationship() YIELD node AS n
+        |CALL org.neo4j.setProperty(n, 'prop', 'glass') YIELD node
+        |RETURN node.prop
+        |""".stripMargin,
+      Seq("NotInTransactionException"))
+
+    failWithError(Configs.ProcedureCallWrite,
+      """CALL org.neo4j.matchNodeAndRelationship() YIELD relationship AS r
+        |CALL org.neo4j.setProperty(r, 'prop', 'glace') YIELD relationship
+        |RETURN relationship.prop
+        |""".stripMargin,
+      Seq("NotInTransactionException"))
+  }
+
+  test("should fail to modify entities created in nested UDF tx") {
+    registerTestProcedures()
+
+    val (n, _) = createNodeAndRelationship()
+
+    failWithError(Configs.ProcedureCallWrite,
+      """WITH org.neo4j.findByIdInTx($nodeId) AS n
+        |CALL org.neo4j.setProperty(n, 'prop', 'n1') YIELD node
+        |RETURN node.prop
+        |""".stripMargin,
+      params = Map("nodeId" -> n.getId),
+      message = Seq("NotInTransactionException"))
+  }
+
   private def registerTestProcedures(): Unit = {
-    graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerProcedure(classOf[TestProcedure])
+    val procedures = graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures])
+    procedures.registerProcedure(classOf[TestProcedure])
+    procedures.registerFunction(classOf[TestProcedure])
+  }
+
+  // create a node and relationship in their own transaction
+  private def createNodeAndRelationship() = {
+    withTx { tx =>
+      val n = tx.createNode()
+      val r = n.createRelationshipTo(n, RelationshipType.withName("R"))
+      (n, r)
+    }
   }
 }

@@ -10,6 +10,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -35,10 +36,12 @@ import org.neo4j.graphdb.traversal.Evaluator;
 import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Uniqueness;
+import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.procedure.UserFunction;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.MapValue;
 
@@ -66,10 +69,10 @@ public class TestProcedure
 
     @Procedure( "org.neo4j.aNodeWithLabel" )
     @Description( "org.neo4j.aNodeWithLabel" )
-    public Stream<NodeResult> aNodeWithLabel( @Name( value = "label", defaultValue = "Dog" ) String label )
+    public Stream<EntityResult> aNodeWithLabel( @Name( value = "label", defaultValue = "Dog" ) String label )
     {
         Result result = transaction.execute( "MATCH (n:" + label + ") RETURN n LIMIT 1" );
-        return result.stream().map( row -> new NodeResult( (Node)row.get( "n" ) ) );
+        return result.stream().map( row -> new EntityResult( (Node)row.get( "n" ) ) );
     }
 
     @Procedure( "org.neo4j.stream123" )
@@ -81,7 +84,7 @@ public class TestProcedure
 
     @Procedure( "org.neo4j.recurseN" )
     @Description( "org.neo4j.recurseN" )
-    public Stream<NodeResult> recurseN( @Name( "n" ) Long n )
+    public Stream<EntityResult> recurseN( @Name( "n" ) Long n )
     {
         Result result;
         if ( n == 0 )
@@ -93,20 +96,20 @@ public class TestProcedure
             result = transaction.execute(
                     "UNWIND [1] AS i CALL org.neo4j.recurseN(" + (n - 1) + ") YIELD node RETURN node" );
         }
-        return result.stream().map( row -> new NodeResult( (Node)row.get( "node" ) ) );
+        return result.stream().map( row -> new EntityResult( (Node)row.get( "node" ) ) );
     }
 
     @Procedure( "org.neo4j.findNodesWithLabel" )
     @Description( "org.neo4j.findNodesWithLabel" )
-    public Stream<NodeResult> findNodesWithLabel( @Name( "label" ) String label )
+    public Stream<EntityResult> findNodesWithLabel( @Name( "label" ) String label )
     {
         ResourceIterator<Node> nodes = transaction.findNodes( Label.label( label ) );
-        return nodes.stream().map( NodeResult::new );
+        return nodes.stream().map( EntityResult::new );
     }
 
     @Procedure( "org.neo4j.expandNode" )
     @Description( "org.neo4j.expandNode" )
-    public Stream<NodeResult> expandNode( @Name( "nodeId" ) Long nodeId )
+    public Stream<EntityResult> expandNode( @Name( "nodeId" ) Long nodeId )
     {
         Node node = transaction.getNodeById( nodeId );
         List<Node> result = new ArrayList<>();
@@ -115,22 +118,22 @@ public class TestProcedure
             result.add( r.getOtherNode( node ) );
         }
 
-        return result.stream().map( NodeResult::new );
+        return result.stream().map( EntityResult::new );
     }
 
     @Procedure( name = "org.neo4j.createNodeWithLoop", mode = WRITE )
     @Description( "org.neo4j.createNodeWithLoop" )
-    public Stream<NodeResult> createNodeWithLoop(
+    public Stream<EntityResult> createNodeWithLoop(
             @Name( "nodeLabel" ) String label, @Name( "relType" ) String relType )
     {
         Node node = transaction.createNode( Label.label( label ) );
         node.createRelationshipTo( node, RelationshipType.withName( relType ) );
-        return Stream.of( new NodeResult( node ) );
+        return Stream.of( new EntityResult( node ) );
     }
 
     @Procedure( name = "org.neo4j.graphAlgosDijkstra" )
     @Description( "org.neo4j.graphAlgosDijkstra" )
-    public Stream<NodeResult> graphAlgosDijkstra(
+    public Stream<EntityResult> graphAlgosDijkstra(
             @Name( "startNode" ) Node start,
             @Name( "endNode" ) Node end,
             @Name( "relType" ) String relType,
@@ -143,30 +146,101 @@ public class TestProcedure
                         weightProperty );
 
         WeightedPath path = pathFinder.findSinglePath( start, end );
-        return StreamSupport.stream( path.nodes().spliterator(), false ).map( NodeResult::new  );
+        return StreamSupport.stream( path.nodes().spliterator(), false ).map( EntityResult::new  );
     }
 
     @Procedure( name = "org.neo4j.setProperty", mode = WRITE )
-    public Stream<NodeResult> setProperty( @Name( "node" ) Node node, @Name( "propertyKey" ) String propertyKeyName, @Name( "value" ) String value )
+    public Stream<EntityResult> setProperty( @Name( "node" ) Object entity, @Name( "propertyKey" ) String propertyKeyName, @Name( "value" ) String value )
     {
-        if ( value == null )
+        if ( entity instanceof Node )
         {
-            node.removeProperty( propertyKeyName );
+            Node n = (Node) entity;
+            if ( value == null )
+            {
+                n.removeProperty( propertyKeyName );
+            }
+            else
+            {
+                n.setProperty( propertyKeyName, value );
+            }
+            return Stream.of( new EntityResult( n ) );
         }
-        else
+        else if ( entity instanceof Relationship )
         {
-            node.setProperty( propertyKeyName, value );
+            Relationship r = (Relationship) entity;
+            if ( value == null )
+            {
+                r.removeProperty( propertyKeyName );
+            }
+            else
+            {
+                r.setProperty( propertyKeyName, value );
+            }
+            return Stream.of( new EntityResult( r ) );
         }
-        return Stream.of( new NodeResult( node ) );
+        throw new RuntimeException( "Expected entity, but got " + entity );
     }
 
-    public static class NodeResult
+    @SuppressWarnings( "unchecked" )
+    @UserFunction( name = "org.neo4j.toList" )
+    public List<Object> toList( @Name( "value" ) Object value )
+    {
+        return (List<Object>)value;
+    }
+
+    @Procedure( name = "org.neo4j.matchNodeAndRelationship" )
+    public Stream<EntityResult> matchNodeAndRelationship()
+    {
+        List<Map<String,Object>> result;
+        try ( Transaction tx = db.beginTx() )
+        {
+            result = Iterators.asList( tx.execute( "MATCH (n)-[r]->() RETURN n AS node, r AS relationship" ) );
+            tx.commit();
+        }
+        return result.stream().map( EntityResult::new );
+    }
+
+    @UserFunction( name = "org.neo4j.findByIdInTx" )
+    public Node findByIdInTx( @Name( "id" ) Long id )
+    {
+        Node n;
+        try ( Transaction tx = db.beginTx() )
+        {
+            n = tx.getNodeById( id );
+            tx.commit();
+        }
+        return n;
+    }
+
+    public static class EntityResult
     {
         public Node node;
+        public Relationship relationship;
 
-        NodeResult( Node node )
+        EntityResult( Node node )
         {
             this.node = node;
+        }
+
+        EntityResult( Relationship relationship )
+        {
+            this.relationship = relationship;
+        }
+
+        EntityResult( Map<String, Object> map )
+        {
+            this.node = (Node)map.get( "node" );
+            this.relationship = (Relationship)map.get( "relationship" );
+        }
+    }
+
+    public static class RelationshipResult
+    {
+        public Relationship relationship;
+
+        RelationshipResult( Relationship relationship )
+        {
+            this.relationship = relationship;
         }
     }
 
