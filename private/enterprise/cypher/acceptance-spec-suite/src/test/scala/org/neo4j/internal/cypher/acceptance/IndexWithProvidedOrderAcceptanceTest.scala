@@ -856,6 +856,520 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
   }
 
+  // ignore order
+
+  test("should ignore order for property with equality predicate and use order from property with range predicate") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    createNodesForComposite()
+
+    val expected = Seq(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 1), Map("n.prop1" -> 42, "n.prop2" -> 0))
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2"))
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2"))
+
+    Seq(
+      ("n.prop1,      n.prop2 DESC", orderAscDesc, expected),
+      ("n.prop1 ASC,  n.prop2 DESC", orderAscDesc, expected),
+      ("n.prop1 DESC, n.prop2 ASC",  orderDescAsc, expected.reverse),
+      ("n.prop1 DESC, n.prop2",      orderDescAsc, expected.reverse),
+    ).foreach {
+      case (orderByString, order, expected) =>
+        Seq(
+          "n.prop1 = 42    AND n.prop2 <= 3",
+          "n.prop1 IN [42] AND n.prop2 <= $a" // no auto-parametrization to list keeps type, with single value it is the same as =
+        ).foreach { predicates =>
+          val query =
+            s"""MATCH (n:Label)
+               |WHERE $predicates
+               |RETURN n.prop1, n.prop2
+               |ORDER BY $orderByString""".stripMargin
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> 3))
+
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+          result.toComparableResult should equal(expected)
+        }
+    }
+  }
+
+  test("should ignore order for properties with equality predicate") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    createNodesForComposite()
+    createLabeledNode(Map("prop1" -> 42, "prop2" -> 3), "Label")
+
+    val expected = Seq(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 3))
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2"))
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2"))
+
+    Seq(
+      ("n.prop1,      n.prop2 DESC", orderAscDesc, expected),
+      ("n.prop1 ASC,  n.prop2 DESC", orderAscDesc, expected),
+      ("n.prop1 DESC, n.prop2 ASC",  orderDescAsc, expected),
+      ("n.prop1 DESC, n.prop2",      orderDescAsc, expected),
+    ).foreach {
+      case (orderByString, order, expected) =>
+        val query =
+          s"""MATCH (n:Label)
+             |WHERE n.prop1 = 42 AND n.prop2 = 3
+             |RETURN n.prop1, n.prop2
+             |ORDER BY $orderByString""".stripMargin
+
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for properties with equality predicates with multiple properties (equality predicates only)") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2", "prop3")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 2, "prop3" -> 1.67), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 1.67), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 2.72), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 3.14), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 3.14), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 5, "prop3" -> 1.67), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 5, "prop3" -> 9.82), "Label")
+
+    val orderAscAscDesc = ProvidedOrder.asc(varFor("n.prop1")).asc(varFor("n.prop2")).desc(varFor("n.prop3"))
+    val orderAscDescAsc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2")).asc(varFor("n.prop3"))
+    val orderAscDescDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2")).desc(varFor("n.prop3"))
+
+    val orderDescDescAsc = ProvidedOrder.desc(varFor("n.prop1")).desc(varFor("n.prop2")).asc(varFor("n.prop3"))
+    val orderDescAscDesc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2")).desc(varFor("n.prop3"))
+    val orderDescAscAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2")).asc(varFor("n.prop3"))
+
+    Seq(
+      ("n.prop1, n.prop2, n.prop3 DESC", orderAscAscDesc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1, n.prop2 DESC, n.prop3", orderAscDescAsc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1, n.prop2 DESC, n.prop3 DESC", orderAscDescDesc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 ASC, n.prop2 ASC, n.prop3 DESC", orderAscAscDesc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 ASC, n.prop2 DESC, n.prop3 ASC", orderAscDescAsc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 ASC, n.prop2 DESC, n.prop3 DESC", orderAscDescDesc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 DESC, n.prop2 DESC, n.prop3 ASC", orderDescDescAsc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 DESC, n.prop2 ASC, n.prop3 DESC", orderDescAscDesc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 DESC, n.prop2 ASC, n.prop3 ASC", orderDescAscAsc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 DESC, n.prop2 DESC, n.prop3", orderDescDescAsc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 DESC, n.prop2, n.prop3 DESC", orderDescAscDesc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+      ("n.prop1 DESC, n.prop2, n.prop3", orderDescAscAsc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
+    ).foreach {
+      case (orderByString, order, expected) =>
+        val query = s"""MATCH (n:Label)
+                       |WHERE n.prop1 = 41 AND n.prop2 = 2 AND n.prop3 = 1.67
+                       |RETURN n.prop1, n.prop2, n.prop3
+                       |ORDER BY $orderByString""".stripMargin
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for properties with equality predicates with multiple properties") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2", "prop3")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 2, "prop3" -> 1.67), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 1.67), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 2.72), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 3.14), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 4, "prop3" -> 3.14), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 5, "prop3" -> 1.67), "Label")
+    createLabeledNode(Map("prop1" -> 41, "prop2" -> 5, "prop3" -> 9.82), "Label")
+
+    val expectedLessThen3 = Seq(Map("n.prop1" -> 41, "n.prop2" -> 4, "n.prop3" -> 2.72), Map("n.prop1" -> 41, "n.prop2" -> 4, "n.prop3" -> 1.67))
+    val expectedMoreThen3 = Seq(Map("n.prop1" -> 41, "n.prop2" -> 5, "n.prop3" -> 1.67), Map("n.prop1" -> 41, "n.prop2" -> 4, "n.prop3" -> 1.67))
+
+    val orderAscAscDesc = ProvidedOrder.asc(varFor("n.prop1")).asc(varFor("n.prop2")).desc(varFor("n.prop3"))
+    val orderAscDescAsc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2")).asc(varFor("n.prop3"))
+    val orderAscDescDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2")).desc(varFor("n.prop3"))
+
+    val orderDescDescAsc = ProvidedOrder.desc(varFor("n.prop1")).desc(varFor("n.prop2")).asc(varFor("n.prop3"))
+    val orderDescAscDesc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2")).desc(varFor("n.prop3"))
+    val orderDescAscAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2")).asc(varFor("n.prop3"))
+
+    Seq(
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1, n.prop2, n.prop3 DESC", orderAscAscDesc, expectedLessThen3),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1, n.prop2 DESC, n.prop3", orderAscDescAsc, expectedLessThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1, n.prop2 DESC, n.prop3 DESC", orderAscDescDesc, expectedLessThen3),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 ASC, n.prop2 ASC, n.prop3 DESC", orderAscAscDesc, expectedLessThen3),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 ASC, n.prop2 DESC, n.prop3 ASC", orderAscDescAsc, expectedLessThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 ASC, n.prop2 DESC, n.prop3 DESC", orderAscDescDesc, expectedLessThen3),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 DESC, n.prop2 DESC, n.prop3 ASC", orderDescDescAsc, expectedLessThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 DESC, n.prop2 ASC, n.prop3 DESC", orderDescAscDesc, expectedLessThen3),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 DESC, n.prop2 ASC, n.prop3 ASC", orderDescAscAsc, expectedLessThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 DESC, n.prop2 DESC, n.prop3", orderDescDescAsc, expectedLessThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 DESC, n.prop2, n.prop3 DESC", orderDescAscDesc, expectedLessThen3),
+      ("n.prop1 = 41 AND n.prop2 = 4 AND n.prop3 < 3", "n.prop1 DESC, n.prop2, n.prop3", orderDescAscAsc, expectedLessThen3.reverse),
+
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1, n.prop2, n.prop3 DESC", orderAscAscDesc, expectedMoreThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1, n.prop2 DESC, n.prop3", orderAscDescAsc, expectedMoreThen3),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1, n.prop2 DESC, n.prop3 DESC", orderAscDescDesc, expectedMoreThen3),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 ASC, n.prop2 ASC, n.prop3 DESC", orderAscAscDesc, expectedMoreThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 ASC, n.prop2 DESC, n.prop3 ASC", orderAscDescAsc, expectedMoreThen3),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 ASC, n.prop2 DESC, n.prop3 DESC", orderAscDescDesc, expectedMoreThen3),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 DESC, n.prop2 DESC, n.prop3 ASC", orderDescDescAsc, expectedMoreThen3),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 DESC, n.prop2 ASC, n.prop3 DESC", orderDescAscDesc, expectedMoreThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 DESC, n.prop2 ASC, n.prop3 ASC", orderDescAscAsc, expectedMoreThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 DESC, n.prop2 DESC, n.prop3", orderDescDescAsc, expectedMoreThen3),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 DESC, n.prop2, n.prop3 DESC", orderDescAscDesc, expectedMoreThen3.reverse),
+      ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 DESC, n.prop2, n.prop3", orderDescAscAsc, expectedMoreThen3.reverse),
+    ).foreach {
+      case (predicates, orderByString, order, expected) =>
+        val query = s"""MATCH (n:Label)
+                       |WHERE $predicates
+                       |RETURN n.prop1, n.prop2, n.prop3
+                       |ORDER BY $orderByString""".stripMargin
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for property with equality predicate and projections") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    val n0 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 3), "Label")
+    val n1 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 1), "Label")
+    val n2 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 0), "Label")
+
+    val expectedM = Seq(Map("m" -> n0), Map("m" -> n1), Map("m" -> n2))
+    val expectedNoN = Seq(Map("prop1" -> 42, "prop2" -> 3), Map("prop1" -> 42, "prop2" -> 1), Map("prop1" -> 42, "prop2" -> 0))
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2"))
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2"))
+
+    Seq(
+      ("RETURN n AS m                             ORDER BY m.prop1, m.prop2 DESC", orderAscDesc, expectedM),
+      ("RETURN n.prop1 AS prop1, n.prop2 AS prop2 ORDER BY prop1 ASC, prop2 DESC", orderAscDesc, expectedNoN),
+      ("RETURN n AS m                             ORDER BY m.prop1 DESC, m.prop2", orderDescAsc, expectedM.reverse),
+      ("RETURN n.prop1 AS prop1, n.prop2 AS prop2 ORDER BY prop1 DESC, prop2 ASC", orderDescAsc, expectedNoN.reverse),
+    ).foreach {
+      case (returnAndOrderBy, order, expected) =>
+        val query = s"""MATCH (n:Label)
+                       |WHERE n.prop1 = 42 AND n.prop2 <= 3
+                       |$returnAndOrderBy""".stripMargin
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for properties with equality predicates in WITH") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    val n0 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 3), "Label")
+    val n1 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 1), "Label")
+    val n2 = createLabeledNode(Map("prop1" -> 42, "prop2" -> 0), "Label")
+
+    val expectedM = Seq(Map("m" -> n0), Map("m" -> n1), Map("m" -> n2))
+    val expectedN = Seq(Map("n" -> n0, "ignored" -> 1), Map("n" -> n1, "ignored" -> 1), Map("n" -> n2, "ignored" -> 1))
+    val expectedNoN = Seq(Map("prop1" -> 42, "prop2" -> 3), Map("prop1" -> 42, "prop2" -> 1), Map("prop1" -> 42, "prop2" -> 0))
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2"))
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2"))
+
+    Seq(
+      ("WITH n, 1 AS ignored                    ORDER BY n.prop1, n.prop2 DESC", orderAscDesc, expectedN),
+      ("WITH n AS m                             ORDER BY m.prop1, m.prop2 DESC", orderAscDesc, expectedM),
+      ("WITH n.prop1 AS prop1, n.prop2 AS prop2 ORDER BY prop1 ASC, prop2 DESC", orderAscDesc, expectedNoN),
+      ("WITH n, 1 AS ignored                    ORDER BY n.prop1 DESC, n.prop2", orderDescAsc, expectedN.reverse),
+      ("WITH n AS m                             ORDER BY m.prop1 DESC, m.prop2", orderDescAsc, expectedM.reverse),
+      ("WITH n.prop1 AS prop1, n.prop2 AS prop2 ORDER BY prop1 DESC, prop2 ASC", orderDescAsc, expectedNoN.reverse),
+    ).foreach {
+      case (withAndOrderBy, order, expected) =>
+        val query = s"""MATCH (n:Label)
+                       |WHERE n.prop1 = 42 AND n.prop2 <= 3
+                       |$withAndOrderBy
+                       |RETURN *""".stripMargin
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for properties with equality predicates when renamed multiple times") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    createNodesForComposite()
+
+    val expected = Seq(Map("prop1" -> 42, "prop2" -> 0), Map("prop1" -> 42, "prop2" -> 1), Map("prop1" -> 42, "prop2" -> 3))
+    val order = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2"))
+
+    Seq(
+      ("WITH n.prop1 AS prop1, n.prop2 AS prop2, 1 AS ignored RETURN *", expected.map(_ ++ Map("ignored" -> 1))),
+      ("WITH n.prop1 AS prop1, n.prop2 AS prop2, 1 AS ignored RETURN prop1, prop2", expected),
+      ("WITH n.prop1 AS prop1, n.prop2 AS prop2, 1 AS ignored WITH prop1 AS prop1, prop2 AS prop2 RETURN *", expected),
+      ("WITH n.prop1 AS prop1, n.prop2 AS prop2, 1 AS ignored WITH prop1 AS prop1, prop2 AS prop2 RETURN prop1, prop2", expected),
+    ).foreach {
+      case (middle, expected) =>
+        val query = s"""MATCH (n:Label)
+                       |WHERE n.prop1 = 42 AND n.prop2 <= 3
+                       |$middle
+                       |ORDER BY prop1 DESC, prop2 ASC""".stripMargin
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for property with equality predicate when its the second property") {
+    // Given
+    graph.createIndex("Label", "prop2", "prop3")
+    createNodesForComposite()
+    createLabeledNode(Map("prop2" -> 2, "prop3" -> "f"), "Label")
+
+    val expected = Seq(Map("n.prop2" -> 1, "n.prop3" -> "f"), Map("n.prop2" -> 2, "n.prop3" -> "f"))
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop2")).asc(varFor("n.prop3")).fromLeft
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop2")).desc(varFor("n.prop3")).fromLeft
+
+    Seq(
+      ("n.prop2,      n.prop3 DESC", orderAscDesc, expected),
+      ("n.prop2 ASC,  n.prop3 DESC", orderAscDesc, expected),
+      ("n.prop2 DESC, n.prop3 ASC",  orderDescAsc, expected.reverse),
+      ("n.prop2 DESC, n.prop3",      orderDescAsc, expected.reverse),
+    ).foreach {
+      case (orderByString, order, expected) =>
+        val query =
+          s"""MATCH (n:Label)
+             |WHERE n.prop2 < 3 AND n.prop3 = 'f'
+             |RETURN n.prop2, n.prop3
+             |ORDER BY $orderByString""".stripMargin
+
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("can't ignore order for property with in list predicate, index don't return order") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    createNodesForComposite()
+
+    val expectedEquals = Seq(Map("n.prop1" -> 44, "n.prop2" -> 3))
+    val expectedAscDesc = Seq(Map("n.prop1" -> 43, "n.prop2" -> 2), Map("n.prop1" -> 43, "n.prop2" -> 1), Map("n.prop1" -> 44, "n.prop2" -> 3))
+    val expectedDescAsc = Seq(Map("n.prop1" -> 44, "n.prop2" -> 3), Map("n.prop1" -> 43, "n.prop2" -> 1), Map("n.prop1" -> 43, "n.prop2" -> 2))
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2")).fromLeft
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2")).fromLeft
+
+    Seq( // Index can't give order due to auto-parameterized list of type Any
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1, n.prop2 DESC",     orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1, n.prop2 DESC",     orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1, n.prop2 DESC",     orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1, n.prop2 DESC",     orderAscDesc, expectedAscDesc),
+      ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1, n.prop2 DESC",     orderAscDesc, expectedAscDesc),
+
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedAscDesc),
+      ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedAscDesc),
+
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedDescAsc),
+      ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedDescAsc),
+
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1 DESC, n.prop2",     orderDescAsc, expectedDescAsc),
+      ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1 DESC, n.prop2",     orderDescAsc, expectedDescAsc),
+    ).foreach {
+      case (predicate, orderByString, order, expected) =>
+        val query =
+          s"""MATCH (n:Label)
+             |WHERE $predicate
+             |RETURN n.prop1, n.prop2
+             |ORDER BY $orderByString""".stripMargin
+
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(order) and
+          includeSomewhere.aPlan("NodeIndexSeek"))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for property with equality predicate in index even when order by expression, still needs to sort on expression") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop3")
+    createNodesForComposite()
+
+    // Both properties have equality predicates but only the second property matches the ORDER BY
+    // Therefore only the second property can have switched order, not the first (which will always be ASC)
+    val indexOrderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop3"))
+    val indexOrderAscAsc = ProvidedOrder.asc(varFor("n.prop1")).asc(varFor("n.prop3"))
+
+    def orderAscDesc(sort: String) = ProvidedOrder.asc(varFor(sort)).desc(varFor("n.prop3")).fromLeft
+    def orderDescAsc(sort: String) = ProvidedOrder.desc(varFor(sort)).asc(varFor("n.prop3")).fromLeft
+
+    Seq(
+      ("n.prop1, n.prop3",            "n.prop1 * 2, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2,     n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo,         n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+
+      ("n.prop1, n.prop3",            "n.prop1 * 2 ASC, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2 ASC,     n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 ASC, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo ASC,         n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+
+      ("n.prop1, n.prop3",            "n.prop1 * 2 DESC, n.prop3 ASC", indexOrderAscAsc, orderDescAsc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2 DESC,     n.prop3 ASC", indexOrderAscAsc, orderDescAsc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 DESC, n.prop3 ASC", indexOrderAscAsc, orderDescAsc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo DESC,         n.prop3 ASC", indexOrderAscAsc, orderDescAsc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+
+      ("n.prop1, n.prop3",            "n.prop1 * 2 DESC, n.prop3", indexOrderAscAsc, orderDescAsc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2 DESC,     n.prop3", indexOrderAscAsc, orderDescAsc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 DESC, n.prop3", indexOrderAscAsc, orderDescAsc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo DESC,         n.prop3", indexOrderAscAsc, orderDescAsc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+    ).foreach {
+      case (returnString, orderByString, orderIndex, orderSort, expected) =>
+        val query =
+          s"""MATCH (n:Label)
+             |WHERE n.prop1 = 40 AND n.prop3 = 'a'
+             |RETURN $returnString
+             |ORDER BY $orderByString""".stripMargin
+
+        // When
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+        // Then
+        result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(orderSort) and
+          includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
+
+        result.toComparableResult should equal(expected)
+    }
+  }
+
+  test("should ignore order for property with multiple predicates, when rewritten away or using additional filter") {
+    // Given
+    graph.createIndex("Label", "prop2", "prop3")
+    createNodesForComposite()
+
+    val expected = Seq(Map("n.prop2" -> 2, "n.prop3" -> "b"), Map("n.prop2" -> 2, "n.prop3" -> "d"), Map("n.prop2" -> 2, "n.prop3" -> "g"))
+    val expectedAsc = (x: Seq[Map[String, Any]]) => x
+    val expectedDesc = (x: Seq[Map[String, Any]]) => x.reverse
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop2")).asc(varFor("n.prop3")).fromLeft
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop2")).desc(varFor("n.prop3")).fromLeft
+
+    Seq(
+      ("n.prop2,      n.prop3 DESC", orderAscDesc, expectedDesc),
+      ("n.prop2 ASC,  n.prop3 DESC", orderAscDesc, expectedDesc),
+      ("n.prop2 DESC, n.prop3 ASC",  orderDescAsc, expectedAsc),
+      ("n.prop2 DESC, n.prop3",      orderDescAsc, expectedAsc),
+    ).foreach {
+      case (orderByString, orderIndex, expectedOrder) =>
+        Seq(
+          ("(n.prop2 < 3 AND n.prop2 = 2) AND n.prop3 > 'a'", true,  expectedOrder(expected)), // chooses = in index search then filters on <
+          ("(n.prop2 = 2 AND n.prop2 = 2) AND n.prop3 > 'a'", false, expectedOrder(expected)), // rewritten to only one equals
+          ("(n.prop2 = 2 AND n.prop2 = 3) AND n.prop3 > 'a'", true,  Seq.empty),               // chooses one of the = in index search then filters on the other
+          ("(n.prop2 = 2 OR n.prop2 = 2) AND n.prop3 > 'a'",  false, expectedOrder(expected)), // rewritten to only one equals
+        ).foreach {
+          case (predicates, shouldFilter, expected) =>
+            val query =
+              s"""MATCH (n:Label)
+                 |WHERE $predicates
+                 |RETURN n.prop2, n.prop3
+                 |ORDER BY $orderByString""".stripMargin
+
+            // When
+            val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+            // Then
+            result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+              includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
+
+            if (shouldFilter) result.executionPlanDescription() should includeSomewhere.aPlan("Filter")
+            else result.executionPlanDescription() should not(includeSomewhere.aPlan("Filter"))
+
+            result.toComparableResult should equal(expected)
+        }
+    }
+  }
+
+  test("should not ignore order for property with multiple equalities") {
+    // Given
+    graph.createIndex("Label", "prop2", "prop3")
+    createNodesForComposite()
+
+    val expectedDescAsc = Seq(Map("n.prop2" -> 2, "n.prop3" -> "b"), Map("n.prop2" -> 2, "n.prop3" -> "d"), Map("n.prop2" -> 2, "n.prop3" -> "g"), Map("n.prop2" -> 1, "n.prop3" -> "f"))
+    val expectedAscDesc = Seq(Map("n.prop2" -> 1, "n.prop3" -> "f"), Map("n.prop2" -> 2, "n.prop3" -> "g"), Map("n.prop2" -> 2, "n.prop3" -> "d"), Map("n.prop2" -> 2, "n.prop3" -> "b"))
+    val orderDesc = ProvidedOrder.desc(varFor("n.prop2")).desc(varFor("n.prop3"))
+    val orderAsc = ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop3"))
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop2")).asc(varFor("n.prop3")).fromLeft
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop2")).desc(varFor("n.prop3")).fromLeft
+
+    Seq(
+      ("n.prop2,      n.prop3 DESC", orderAsc,  orderAscDesc, expectedAscDesc),
+      ("n.prop2 ASC,  n.prop3 DESC", orderAsc,  orderAscDesc, expectedAscDesc),
+      ("n.prop2 DESC, n.prop3 ASC",  orderDesc, orderDescAsc, expectedDescAsc),
+      ("n.prop2 DESC, n.prop3",      orderDesc, orderDescAsc, expectedDescAsc),
+    ).foreach {
+      case (orderByString, indexOrder, sortOrder, expected) =>
+        Seq(
+          "(n.prop2 = 1 OR n.prop2 = 2) AND n.prop3 > 'a'",
+          "n.prop2 IN [1, 2] AND n.prop3 > $a",
+        ).foreach { predicates =>
+          val query =
+            s"""MATCH (n:Label)
+               |WHERE $predicates
+               |RETURN n.prop2, n.prop3
+               |ORDER BY $orderByString""".stripMargin
+
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> "a"))
+
+          // Then
+          result.executionPlanDescription() should (includeSomewhere.aPlan("PartialSort").withOrder(sortOrder) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(indexOrder))
+
+          result.toComparableResult should equal(expected)
+        }
+    }
+  }
+
   // Min and Max
 
   for ((TestOrder(cypherToken, expectedOrder, providedOrder), functionName) <- List((ASCENDING, "min"), (DESCENDING, "max"))) {
