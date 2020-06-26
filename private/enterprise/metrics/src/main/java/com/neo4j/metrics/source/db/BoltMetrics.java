@@ -24,42 +24,42 @@ public class BoltMetrics extends LifecycleAdapter
     private static final String BOLT_PREFIX = "bolt";
 
     @Documented( "The total number of Bolt sessions started since this instance started. This includes both " +
-            "succeeded and failed sessions (deprecated, use connections_opened instead)." )
+            "succeeded and failed sessions (deprecated, use connections_opened instead). (counter)" )
     private static final String SESSIONS_STARTED_TEMPLATE = name( BOLT_PREFIX, "sessions_started" );
 
     @Documented( "The total number of Bolt connections opened since this instance started. This includes both " +
-            "succeeded and failed connections." )
+            "succeeded and failed connections. (counter)" )
     private static final String CONNECTIONS_OPENED_TEMPLATE = name( BOLT_PREFIX, "connections_opened" );
 
     @Documented( "The total number of Bolt connections closed since this instance started. This includes both " +
-            "properly and abnormally ended connections." )
+            "properly and abnormally ended connections. (counter)" )
     private static final String CONNECTIONS_CLOSED_TEMPLATE = name( BOLT_PREFIX, "connections_closed" );
 
-    @Documented( "The total number of Bolt connections currently being executed." )
+    @Documented( "The total number of Bolt connections currently being executed. (gauge)" )
     private static final String CONNECTIONS_RUNNING_TEMPLATE = name( BOLT_PREFIX, "connections_running" );
 
-    @Documented( "The total number of Bolt connections sitting idle." )
+    @Documented( "The total number of Bolt connections sitting idle. (gauge)" )
     private static final String CONNECTIONS_IDLE_TEMPLATE = name( BOLT_PREFIX, "connections_idle" );
 
-    @Documented( "The total number of messages received via Bolt since this instance started." )
+    @Documented( "The total number of messages received via Bolt since this instance started. (counter)" )
     private static final String MESSAGES_RECEIVED_TEMPLATE = name( BOLT_PREFIX, "messages_received" );
 
     @Documented( "The total number of messages that began processing since this instance started. This is different " +
             "from messages received in that this counter tracks how many of the received messages have" +
-            "been taken on by a worker thread." )
+            "been taken on by a worker thread. (counter)" )
     private static final String MESSAGES_STARTED_TEMPLATE = name( BOLT_PREFIX, "messages_started" );
 
     @Documented( "The total number of messages that completed processing since this instance started. This includes " +
-            "successful, failed and ignored Bolt messages." )
+            "successful, failed and ignored Bolt messages. (counter)" )
     private static final String MESSAGES_DONE_TEMPLATE = name( BOLT_PREFIX, "messages_done" );
 
-    @Documented( "The total number of messages that failed processing since this instance started." )
+    @Documented( "The total number of messages that failed processing since this instance started. (counter)" )
     private static final String MESSAGES_FAILED_TEMPLATE = name( BOLT_PREFIX, "messages_failed" );
 
-    @Documented( "The accumulated time messages have spent waiting for a worker thread." )
+    @Documented( "The accumulated time messages have spent waiting for a worker thread. (counter)" )
     private static final String TOTAL_QUEUE_TIME_TEMPLATE = name( BOLT_PREFIX, "accumulated_queue_time" );
 
-    @Documented( "The accumulated time worker threads have spent processing messages." )
+    @Documented( "The accumulated time worker threads have spent processing messages. (counter)" )
     private static final String TOTAL_PROCESSING_TIME_TEMPLATE = name( BOLT_PREFIX, "accumulated_processing_time" );
 
     private final String sessionsStarted;

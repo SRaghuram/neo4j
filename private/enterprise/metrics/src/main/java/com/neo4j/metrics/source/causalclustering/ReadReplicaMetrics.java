@@ -19,12 +19,12 @@ public class ReadReplicaMetrics extends LifecycleAdapter
 {
     private static final String CAUSAL_CLUSTERING_PREFIX = "causal_clustering.read_replica";
 
-    @Documented( "The total number of pull requests made by this instance." )
+    @Documented( "The total number of pull requests made by this instance. (counter)" )
     private static final String PULL_UPDATES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "pull_updates" );
-    @Documented( "The highest transaction id requested in a pull update by this instance." )
+    @Documented( "The highest transaction id requested in a pull update by this instance. (counter)" )
     private static final String PULL_UPDATE_HIGHEST_TX_ID_REQUESTED_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX,
             "pull_update_highest_tx_id_requested" );
-    @Documented( "The highest transaction id that has been pulled in the last pull updates by this instance." )
+    @Documented( "The highest transaction id that has been pulled in the last pull updates by this instance. (counter)" )
     private static final String PULL_UPDATE_HIGHEST_TX_ID_RECEIVED_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX,
             "pull_update_highest_tx_id_received" );
 

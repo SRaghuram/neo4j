@@ -21,9 +21,9 @@ public class ServerMetrics extends LifecycleAdapter
 {
     private static final String SERVER_PREFIX = "server";
 
-    @Documented( "The total number of idle threads in the jetty pool." )
+    @Documented( "The total number of idle threads in the jetty pool. (gauge)" )
     private static final String THREAD_JETTY_IDLE_TEMPLATE = name( SERVER_PREFIX, "threads.jetty.idle" );
-    @Documented( "The total number of threads (both idle and busy) in the jetty pool." )
+    @Documented( "The total number of threads (both idle and busy) in the jetty pool. (gauge)" )
     private static final String THREAD_JETTY_ALL_TEMPLATE = name( SERVER_PREFIX, "threads.jetty.all" );
 
     private final String threadJettyIdle;

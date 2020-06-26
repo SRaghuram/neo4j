@@ -20,13 +20,13 @@ public class TransactionLogsMetrics extends LifecycleAdapter
 {
     private static final String TX_LOG_PREFIX = "log";
 
-    @Documented( "The total number of transaction log rotations executed so far." )
+    @Documented( "The total number of transaction log rotations executed so far. (counter)" )
     private static final String LOG_ROTATION_EVENTS_TEMPLATE = name( TX_LOG_PREFIX, "rotation_events" );
-    @Documented( "The total time spent in rotating transaction logs so far." )
+    @Documented( "The total time, in milliseconds, spent in rotating transaction logs so far. (counter)" )
     private static final String LOG_ROTATION_TOTAL_TIME_TEMPLATE = name( TX_LOG_PREFIX, "rotation_total_time" );
-    @Documented( "The duration of the last log rotation event." )
+    @Documented( "The duration, in milliseconds, of the last log rotation event. (gauge)" )
     private static final String LOG_ROTATION_DURATION_TEMPLATE = name( TX_LOG_PREFIX, "rotation_duration" );
-    @Documented( "The total number of bytes appended to transaction log." )
+    @Documented( "The total number of bytes appended to transaction log. (counter)" )
     private static final String LOG_APPENDED_BYTES = name( TX_LOG_PREFIX, "appended_bytes" );
 
     private final String logRotationEvents;

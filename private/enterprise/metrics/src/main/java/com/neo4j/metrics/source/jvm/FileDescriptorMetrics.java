@@ -17,9 +17,9 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".JVM file descriptor metrics." )
 public class FileDescriptorMetrics extends JvmMetrics
 {
-    @Documented( "The current number of open file descriptors." )
+    @Documented( "The current number of open file descriptors. (gauge)" )
     private static final String FILE_COUNT_TEMPLATE = name( VM_NAME_PREFIX, "file.descriptors.count" );
-    @Documented( "The maximum number of open file descriptors." )
+    @Documented( "The maximum number of open file descriptors. (gauge)" )
     private static final String FILE_MAXIMUM_TEMPLATE = name( VM_NAME_PREFIX, "file.descriptors.maximum" );
 
     private final String fileCount;

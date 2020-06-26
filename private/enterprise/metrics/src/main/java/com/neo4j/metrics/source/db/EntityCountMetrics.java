@@ -21,13 +21,13 @@ public class EntityCountMetrics extends LifecycleAdapter
 {
     private static final String COUNTS_PREFIX = "ids_in_use";
 
-    @Documented( "The total number of different relationship types stored in the database." )
+    @Documented( "The total number of different relationship types stored in the database. (gauge)" )
     private static final String COUNTS_RELATIONSHIP_TYPE_TEMPLATE = name( COUNTS_PREFIX, "relationship_type" );
-    @Documented( "The total number of different property names used in the database." )
+    @Documented( "The total number of different property names used in the database. (gauge)" )
     private static final String COUNTS_PROPERTY_TEMPLATE = name( COUNTS_PREFIX, "property" );
-    @Documented( "The total number of relationships stored in the database." )
+    @Documented( "The total number of relationships stored in the database. (gauge)" )
     private static final String COUNTS_RELATIONSHIP_TEMPLATE = name( COUNTS_PREFIX, "relationship" );
-    @Documented( "The total number of nodes stored in the database." )
+    @Documented( "The total number of nodes stored in the database. (gauge)" )
     private static final String COUNTS_NODE_TEMPLATE = name( COUNTS_PREFIX, "node" );
 
     private final String countsRelationshipType;

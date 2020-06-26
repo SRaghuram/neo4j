@@ -24,7 +24,7 @@ public class JVMMemoryPoolMetrics extends JvmMetrics
     private final MetricRegistry registry;
 
     private static final String MEMORY_POOL_PREFIX = name( VM_NAME_PREFIX, "memory.pool" );
-    @Documented( "Estimated number of buffers in the pool." )
+    @Documented( "Estimated number of buffers in the pool. (gauge)" )
     private static final String MEMORY_POOL_USAGE_TEMPLATE = name( MEMORY_POOL_PREFIX, "%s" );
 
     public JVMMemoryPoolMetrics( String metricsPrefix, MetricRegistry registry )

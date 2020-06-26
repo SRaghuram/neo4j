@@ -20,9 +20,9 @@ public class CypherMetrics extends LifecycleAdapter
 {
     private static final String CYPHER_PREFIX = "cypher";
 
-    @Documented( "The total number of times Cypher has decided to re-plan a query." )
+    @Documented( "The total number of times Cypher has decided to re-plan a query. (counter)" )
     private static final String REPLAN_EVENTS_TEMPLATE = name( CYPHER_PREFIX, "replan_events" );
-    @Documented( "The total number of seconds waited between query replans." )
+    @Documented( "The total number of seconds waited between query replans. (counter)" )
     private static final String REPLAN_WAIT_TIME_TEMPLATE = name( CYPHER_PREFIX, "replan_wait_time" );
 
     private final String replanEvents;

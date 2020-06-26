@@ -10,16 +10,22 @@ import com.codahale.metrics.MetricRegistry;
 
 import java.util.List;
 
+import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.ScopedMemoryPool;
 
 public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
 {
+    @Documented( "Used or reserved heap memory in bytes. (gauge)" )
     private static final String USED_HEAP = "used_heap";
+    @Documented( "Used or reserved native memory in bytes. (gauge)" )
     private static final String USED_NATIVE = "used_native";
+    @Documented( "Sum total used heap and native memory in bytes. (gauge)" )
     private static final String TOTAL_USED = "total_used";
+    @Documented( "Sum total size of capacity of the heap and/or native memory pool. (gauge)" )
     private static final String TOTAL_SIZE = "total_size";
+    @Documented( "Available unused memory in the pool, in bytes. (gauge)" )
     private static final String FREE = "free";
     private final MetricRegistry registry;
     private final String metricsPoolPrefix;

@@ -32,9 +32,9 @@ public class StoreSizeMetrics extends LifecycleAdapter
 
     private static final String PREFIX = "store.size";
 
-    @Documented( "The total size of the database and transaction logs" )
+    @Documented( "The total size of the database and transaction logs. (gauge)" )
     private static final String TOTAL_STORE_SIZE = name( PREFIX, "total" );
-    @Documented( "The size of the database" )
+    @Documented( "The size of the database. (gauge)" )
     private static final String DATABASE_SIZE = name( PREFIX, "database" );
 
     private final MetricRegistry registry;

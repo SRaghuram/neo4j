@@ -24,45 +24,45 @@ public class RaftCoreMetrics extends LifecycleAdapter
 {
     static final String CAUSAL_CLUSTERING_PREFIX = "causal_clustering.core";
 
-    @Documented( "Append index of the RAFT log." )
+    @Documented( "Append index of the RAFT log. (gauge)" )
     private static final String APPEND_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "append_index" );
-    @Documented( "Commit index of the RAFT log." )
+    @Documented( "Commit index of the RAFT log. (gauge)" )
     private static final String COMMIT_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "commit_index" );
-    @Documented( "Applied index of the RAFT log." )
+    @Documented( "Applied index of the RAFT log. (gauge)" )
     private static final String APPLIED_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "applied_index" );
-    @Documented( "RAFT Term of this server." )
+    @Documented( "RAFT Term of this server. (gauge)" )
     private static final String TERM_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "term" );
-    @Documented( "Transaction retries." )
+    @Documented( "Transaction retries. (counter)" )
     private static final String TX_RETRIES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "tx_retries" );
-    @Documented( "Is this server the leader?" )
+    @Documented( "Is this server the leader? (gauge)" )
     private static final String IS_LEADER_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "is_leader" );
-    @Documented( "In-flight cache total bytes." )
+    @Documented( "In-flight cache total bytes. (gauge)" )
     private static final String TOTAL_BYTES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "total_bytes" );
-    @Documented( "In-flight cache max bytes." )
+    @Documented( "In-flight cache max bytes. (gauge)" )
     private static final String MAX_BYTES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "max_bytes" );
-    @Documented( "In-flight cache element count." )
+    @Documented( "In-flight cache element count. (gauge)" )
     private static final String ELEMENT_COUNT_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "element_count" );
-    @Documented( "In-flight cache maximum elements." )
+    @Documented( "In-flight cache maximum elements. (gauge)" )
     private static final String MAX_ELEMENTS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "max_elements" );
-    @Documented( "In-flight cache hits." )
+    @Documented( "In-flight cache hits. (counter)" )
     private static final String HITS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "hits" );
-    @Documented( "In-flight cache misses." )
+    @Documented( "In-flight cache misses. (counter)" )
     private static final String MISSES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "misses" );
-    @Documented( "Delay between RAFT message receive and process." )
+    @Documented( "Delay between RAFT message receive and process. (gauge)" )
     private static final String DELAY_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_delay" );
-    @Documented( "Timer for RAFT message processing." )
+    @Documented( "Timer for RAFT message processing. (counter, histogram)" )
     private static final String TIMER_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
-    @Documented( "Raft replication new request count." )
+    @Documented( "Raft replication new request count (counter)." )
     private static final String REPLICATION_NEW_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_new" );
-    @Documented( "Raft replication attempt count." )
+    @Documented( "Raft replication attempt count. (counter)" )
     private static final String REPLICATION_ATTEMPT_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_attempt" );
-    @Documented( "Raft Replication fail count." )
+    @Documented( "Raft Replication fail count. (counter)" )
     private static final String REPLICATION_FAIL_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_fail" );
-    @Documented( "Raft Replication maybe count." )
+    @Documented( "Raft Replication maybe count. (counter)" )
     private static final String REPLICATION_MAYBE_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_maybe" );
-    @Documented( "Raft Replication success count." )
+    @Documented( "Raft Replication success count. (counter)" )
     private static final String REPLICATION_SUCCESS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_success" );
-    @Documented( "Time elapsed since last message from leader in milliseconds." )
+    @Documented( "Time elapsed since last message from leader in milliseconds. (gauge)" )
     public static final String LAST_LEADER_MESSAGE_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "last_leader_message" );
 
     private final String appendIndex;

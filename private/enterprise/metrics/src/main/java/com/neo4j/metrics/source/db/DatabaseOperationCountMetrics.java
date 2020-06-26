@@ -19,17 +19,17 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
 {
     private static final String SERVER_PREFIX = "db.operation.count";
 
-    @Documented( "Count of successful database create operations." )
+    @Documented( "Count of successful database create operations. (counter)" )
     public static final String DATABASE_CREATE_COUNT = name( SERVER_PREFIX, "create" );
-    @Documented( "Count of successful database start operations." )
+    @Documented( "Count of successful database start operations. (counter)" )
     public static final String DATABASE_START_COUNT = name( SERVER_PREFIX, "start" );
-    @Documented( "Count of successful database stop operations." )
+    @Documented( "Count of successful database stop operations. (counter)" )
     public static final String DATABASE_STOP_COUNT = name( SERVER_PREFIX, "stop" );
-    @Documented( "Count of successful database drop operations." )
+    @Documented( "Count of successful database drop operations. (counter)" )
     public static final String DATABASE_DROP_COUNT = name( SERVER_PREFIX, "drop" );
-    @Documented( "Count of failed database operations." )
+    @Documented( "Count of failed database operations. (counter)" )
     public static final String DATABASE_FAILED_COUNT = name( SERVER_PREFIX, "failed" );
-    @Documented( "Count of database operations which failed previously but have recovered." )
+    @Documented( "Count of database operations which failed previously but have recovered. (counter)" )
     public static final String DATABASE_RECOVERED_COUNT = name( SERVER_PREFIX, "recovered" );
 
     private final String countCreate;

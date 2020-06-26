@@ -17,7 +17,7 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".CatchUp Metrics" )
 public class CatchUpMetrics extends LifecycleAdapter
 {
-    @Documented( "TX pull requests received from read replicas." )
+    @Documented( "TX pull requests received from read replicas. (counter)" )
     private static final String TX_PULL_REQUESTS_RECEIVED_TEMPLATE = name( "causal_clustering.catchup.tx_pull_requests_received" );
 
     private final String txPullRequestsReceived;

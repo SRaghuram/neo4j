@@ -21,9 +21,9 @@ public class GCMetrics extends JvmMetrics
 {
     private static final String GC_PREFIX = name( VM_NAME_PREFIX, "gc" );
 
-    @Documented( "Accumulated garbage collection time in milliseconds." )
+    @Documented( "Accumulated garbage collection time in milliseconds. (counter)" )
     private static final String GC_TIME_TEMPLATE = name( GC_PREFIX, "time", "%s" );
-    @Documented( "Total number of garbage collections." )
+    @Documented( "Total number of garbage collections. (counter)" )
     private static final String GC_COUNT_TEMPLATE = name( GC_PREFIX, "count", "%s" );
 
     private final String gcPrefix;

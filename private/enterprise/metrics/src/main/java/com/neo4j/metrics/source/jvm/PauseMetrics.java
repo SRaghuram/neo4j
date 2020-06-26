@@ -19,7 +19,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".JVM pause time metrics." )
 public class PauseMetrics extends JvmMetrics
 {
-    @Documented( "Accumulated detected VM pause time." )
+    // TODO accumulated pause time should be a counter, instead of a gauge. Change on next compatibility break.
+    @Documented( "Accumulated detected VM pause time. (gauge)" )
     private static final String PAUSE_TIME = name( VM_NAME_PREFIX, "pause_time" );
 
     private final String pauseTime;

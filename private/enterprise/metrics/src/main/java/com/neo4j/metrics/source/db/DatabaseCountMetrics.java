@@ -24,9 +24,9 @@ public class DatabaseCountMetrics extends LifecycleAdapter
     private static final String COUNT_ALL_RELATIONSHIP_TAG = "countAllRelationshipMetrics";
     private static final String COUNTS_PREFIX = "neo4j.count";
 
-    @Documented( "The total number of relationships in the database" )
+    @Documented( "The total number of relationships in the database. (gauge)" )
     public static final String COUNTS_RELATIONSHIP_TEMPLATE = name( COUNTS_PREFIX, "relationship" );
-    @Documented( "The total number of nodes in the database" )
+    @Documented( "The total number of nodes in the database. (gauge)" )
     public static final String COUNTS_NODE_TEMPLATE = name( COUNTS_PREFIX, "node" );
 
     private final MetricRegistry registry;

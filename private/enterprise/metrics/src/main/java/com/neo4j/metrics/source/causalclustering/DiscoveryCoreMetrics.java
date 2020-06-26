@@ -18,13 +18,13 @@ import static com.neo4j.metrics.source.causalclustering.RaftCoreMetrics.CAUSAL_C
 @Documented( ".Discovery core metrics" )
 public class DiscoveryCoreMetrics extends LifecycleAdapter
 {
-    @Documented( "Size of replicated data structures." )
+    @Documented( "Size of replicated data structures. (gauge)" )
     public static final String REPLICATED_DATA_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "replicated_data" );
-    @Documented( "Discovery cluster member size." )
+    @Documented( "Discovery cluster member size. (gauge)" )
     public static final String CLUSTER_MEMBERS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "members" );
-    @Documented( "Discovery cluster unreachable size." )
+    @Documented( "Discovery cluster unreachable size. (gauge)" )
     public static final String CLUSTER_UNREACHABLE_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "unreachable" );
-    @Documented( "Discovery cluster convergence." )
+    @Documented( "Discovery cluster convergence. (gauge)" )
     public static final String CLUSTER_CONVERGED_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "converged" );
 
     private final ClusterSizeMetric discoveryClusterSizeMetric = new ClusterSizeMetric();

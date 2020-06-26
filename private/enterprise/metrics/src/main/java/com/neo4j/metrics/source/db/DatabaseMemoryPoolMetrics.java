@@ -18,7 +18,7 @@ import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-@Documented( ".Global neo4j pools metrics" )
+@Documented( ".Database neo4j pools metrics" )
 public class DatabaseMemoryPoolMetrics extends AbstractMemoryPoolMetrics
 {
     private static final String NEO_DATABASE_POOL_PREFIX = "pool";

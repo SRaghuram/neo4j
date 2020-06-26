@@ -23,42 +23,42 @@ public class TransactionMetrics extends LifecycleAdapter
 {
     private static final String TRANSACTION_PREFIX = "transaction";
 
-    @Documented( "The total number of started transactions." )
+    @Documented( "The total number of started transactions. (counter)" )
     private static final String TX_STARTED_TEMPLATE = name( TRANSACTION_PREFIX, "started" );
-    @Documented( "The highest peak of concurrent transactions." )
+    @Documented( "The highest peak of concurrent transactions. (counter)" )
     private static final String TX_PEAK_CONCURRENT_TEMPLATE = name( TRANSACTION_PREFIX, "peak_concurrent" );
 
-    @Documented( "The number of currently active transactions." )
+    @Documented( "The number of currently active transactions. (gauge)" )
     private static final String TX_ACTIVE_TEMPLATE = name( TRANSACTION_PREFIX, "active" );
-    @Documented( "The number of currently active read transactions." )
+    @Documented( "The number of currently active read transactions. (gauge)" )
     private static final String READ_TX_ACTIVE_TEMPLATE = name( TRANSACTION_PREFIX, "active_read" );
-    @Documented( "The number of currently active write transactions." )
+    @Documented( "The number of currently active write transactions. (gauge)" )
     private static final String WRITE_TX_ACTIVE_TEMPLATE = name( TRANSACTION_PREFIX, "active_write" );
 
-    @Documented( "The total number of committed transactions." )
+    @Documented( "The total number of committed transactions. (counter)" )
     private static final String TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed" );
-    @Documented( "The total number of committed read transactions." )
+    @Documented( "The total number of committed read transactions. (counter)" )
     private static final String READ_TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed_read" );
     @Documented( "The total number of committed write transactions." )
     private static final String WRITE_TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed_write" );
 
-    @Documented( "The total number of rolled back transactions." )
+    @Documented( "The total number of rolled back transactions. (counter)" )
     private static final String TX_ROLLBACKS_TEMPLATE = name( TRANSACTION_PREFIX, "rollbacks" );
-    @Documented( "The total number of rolled back read transactions." )
+    @Documented( "The total number of rolled back read transactions. (counter)" )
     private static final String READ_TX_ROLLBACKS_TEMPLATE = name( TRANSACTION_PREFIX, "rollbacks_read" );
-    @Documented( "The total number of rolled back write transactions." )
+    @Documented( "The total number of rolled back write transactions. (counter)" )
     private static final String WRITE_TX_ROLLBACKS_TEMPLATE = name( TRANSACTION_PREFIX, "rollbacks_write" );
 
-    @Documented( "The total number of terminated transactions." )
+    @Documented( "The total number of terminated transactions. (counter)" )
     private static final String TX_TERMINATED_TEMPLATE = name( TRANSACTION_PREFIX, "terminated" );
-    @Documented( "The total number of terminated read transactions." )
+    @Documented( "The total number of terminated read transactions. (counter)" )
     private static final String READ_TX_TERMINATED_TEMPLATE = name( TRANSACTION_PREFIX, "terminated_read" );
-    @Documented( "The total number of terminated write transactions." )
+    @Documented( "The total number of terminated write transactions. (counter)" )
     private static final String WRITE_TX_TERMINATED_TEMPLATE = name( TRANSACTION_PREFIX, "terminated_write" );
 
-    @Documented( "The ID of the last committed transaction." )
+    @Documented( "The ID of the last committed transaction. (counter)" )
     private static final String LAST_COMMITTED_TX_ID_TEMPLATE = name( TRANSACTION_PREFIX, "last_committed_tx_id" );
-    @Documented( "The ID of the last closed transaction." )
+    @Documented( "The ID of the last closed transaction. (counter)" )
     private static final String LAST_CLOSED_TX_ID_TEMPLATE = name( TRANSACTION_PREFIX, "last_closed_tx_id" );
 
     private final String txStarted;

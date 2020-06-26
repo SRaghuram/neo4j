@@ -21,11 +21,11 @@ public class JVMMemoryBuffersMetrics extends JvmMetrics
 {
     private static final String MEMORY_BUFFER_PREFIX = name( VM_NAME_PREFIX, "memory.buffer" );
 
-    @Documented( "Estimated number of buffers in the pool." )
+    @Documented( "Estimated number of buffers in the pool. (gauge)" )
     private static final String MEMORY_BUFFER_COUNT_TEMPLATE = name( MEMORY_BUFFER_PREFIX, "%s", "count" );
-    @Documented( "Estimated amount of memory used by the pool." )
+    @Documented( "Estimated amount of memory used by the pool. (gauge)" )
     private static final String MEMORY_BUFFER_USED_TEMPLATE = name( MEMORY_BUFFER_PREFIX, "%s", "used" );
-    @Documented( "Estimated total capacity of buffers in the pool." )
+    @Documented( "Estimated total capacity of buffers in the pool. (gauge)" )
     private static final String MEMORY_BUFFER_CAPACITY_TEMPLATE = name( MEMORY_BUFFER_PREFIX, "%s", "capacity" );
 
     private final MetricRegistry registry;
