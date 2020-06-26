@@ -39,7 +39,6 @@
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
             <scope>compile</scope>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
@@ -147,7 +146,6 @@
                                 </relocation>
                             </relocations>
                             <createSourcesJar>true</createSourcesJar>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
                         </configuration>
                     </execution>
                 </executions>
