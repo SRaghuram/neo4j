@@ -119,7 +119,7 @@ public class HalfAppliedConstraintRecoveryIT
     @Inject
     private EphemeralFileSystemAbstraction fs;
     @Inject
-    private OtherThreadRule<Void> t2;
+    private OtherThreadRule t2;
     private DatabaseManagementService managementService;
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private final Monitors monitors = new Monitors();
@@ -261,7 +261,7 @@ public class HalfAppliedConstraintRecoveryIT
             {
                 // Create two nodes that have duplicate property values
                 createData( db, "v", "v" );
-                t2.execute( state ->
+                t2.execute( () ->
                 {
 
                     int ordinaryTokenCreateTransactionsToRemove = countInitialTokenCreatesToRemove( transactions );

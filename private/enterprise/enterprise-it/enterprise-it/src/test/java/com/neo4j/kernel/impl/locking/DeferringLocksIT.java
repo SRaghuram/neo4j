@@ -11,6 +11,7 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +24,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.test.Barrier;
-import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.OtherThreadRule;
 
@@ -46,9 +46,9 @@ public class DeferringLocksIT
     @Rule
     public final DbmsRule dbRule = new EnterpriseDbmsRule().startLazily();
     @Rule
-    public final OtherThreadRule<Void> t2 = new OtherThreadRule<>();
+    public final OtherThreadRule t2 = new OtherThreadRule();
     @Rule
-    public final OtherThreadRule<Void> t3 = new OtherThreadRule<>();
+    public final OtherThreadRule t3 = new OtherThreadRule();
 
     private GraphDatabaseService db;
 
@@ -72,7 +72,7 @@ public class DeferringLocksIT
         }
 
         // WHEN
-        t2.execute( (WorkerCommand<Void,Void>) state ->
+        t2.execute( () ->
         {
             try ( Transaction tx = db.beginTx() )
             {
@@ -111,7 +111,7 @@ public class DeferringLocksIT
         }
 
         // WHEN
-        Future<Void> future = t2.execute( state ->
+        Future<Void> future = t2.execute( () ->
         {
             try ( Transaction tx = db.beginTx() )
             {
@@ -152,7 +152,7 @@ public class DeferringLocksIT
         }
 
         // WHEN
-        Future<Void> future = t2.execute( state ->
+        Future<Void> future = t2.execute( () ->
         {
             try ( Transaction tx = db.beginTx() )
             {
@@ -197,7 +197,7 @@ public class DeferringLocksIT
     @Test( timeout = TEST_TIMEOUT )
     public void readOwnChangesFromRacingIndexNoBlock() throws Throwable
     {
-        Future<Void> t2Future = t2.execute( state ->
+        Future<Void> t2Future = t2.execute( () ->
         {
             try ( Transaction tx = db.beginTx() )
             {
@@ -209,11 +209,11 @@ public class DeferringLocksIT
             return null;
         } );
 
-        Future<Void> t3Future = t3.execute( state ->
+        Future<Void> t3Future = t3.execute( () ->
         {
             try ( Transaction tx = db.beginTx() )
             {
-                createAndAwaitIndex( LABEL, PROPERTY_KEY );
+                createAndAwaitIndex( LABEL, PROPERTY_KEY ).call();
                 tx.commit();
             }
             return null;
@@ -269,9 +269,9 @@ public class DeferringLocksIT
         return node;
     }
 
-    private WorkerCommand<Void,Void> createAndAwaitIndex( final Label label, final String key )
+    private Callable<Void> createAndAwaitIndex( final Label label, final String key )
     {
-        return state ->
+        return () ->
         {
             try ( Transaction tx = db.beginTx() )
             {
