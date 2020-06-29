@@ -10,6 +10,8 @@ import java.time.ZoneId;
 import org.neo4j.procedure.builtin.ProceduresTimeFormatHelper;
 import org.neo4j.scheduler.FailedJobRun;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
+
 public class FailedJobRunResult
 {
     public final String group;
@@ -25,13 +27,13 @@ public class FailedJobRunResult
     FailedJobRunResult( FailedJobRun failedJobRun, ZoneId zoneId )
     {
         group = failedJobRun.getGroup().groupName();
-        submitter = failedJobRun.getSubmitter() != null ? failedJobRun.getSubmitter() : "";
-        database = failedJobRun.getTargetDatabaseName() != null ? failedJobRun.getTargetDatabaseName() : "";
+        submitter = defaultString( failedJobRun.getSubmitter() );
+        database = defaultString( failedJobRun.getTargetDatabaseName() );
         description = failedJobRun.getDescription();
         type = failedJobRun.getJobType().name();
-        submitted = ProceduresTimeFormatHelper.formatTime( failedJobRun.getSubmitted().toEpochMilli(), zoneId );
-        executionStart = ProceduresTimeFormatHelper.formatTime( failedJobRun.getExecutionStart().toEpochMilli(), zoneId );
-        failureTime = ProceduresTimeFormatHelper.formatTime( failedJobRun.getFailureTime().toEpochMilli(), zoneId );
+        submitted = ProceduresTimeFormatHelper.formatTime( failedJobRun.getSubmitted(), zoneId );
+        executionStart = ProceduresTimeFormatHelper.formatTime( failedJobRun.getExecutionStart(), zoneId );
+        failureTime = ProceduresTimeFormatHelper.formatTime( failedJobRun.getFailureTime(), zoneId );
         failureDescription = failedJobRun.getFailureDescription();
     }
 }

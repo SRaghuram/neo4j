@@ -8,12 +8,11 @@ package com.neo4j.procedure.enterprise.builtin;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -25,6 +24,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,6 +39,8 @@ class SchedulerProceduresTest
 {
     @Inject
     private GraphDatabaseAPI db;
+    @Inject
+    private JobScheduler scheduler;
 
     @Test
     void shouldListActiveGroups()
@@ -69,10 +71,8 @@ class SchedulerProceduresTest
     }
 
     @Test
-    void testListJobs() throws InterruptedException
+    void testListJobs() throws Exception
     {
-        var scheduler = db.getDependencyResolver().resolveDependency( JobScheduler.class );
-
         var jobLatch = new BinaryLatch();
         var jobStartLatch = new CountDownLatch( 2 );
         try
@@ -90,51 +90,28 @@ class SchedulerProceduresTest
                 }
             } );
 
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 1", "db 1", "job 101" ), () ->
-            {
-            } );
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 1", "db 1", "job 101" ), () -> { } );
             scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 102" ), () ->
             {
                 jobStartLatch.countDown();
                 jobLatch.await();
             } );
             scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 2", "db 2", "job 103" ), () -> 1 );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 104" ), () ->
-            {
-            } ).cancel();
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 104" ), () -> { } ).cancel();
 
-            try
-            {
-                scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 105" ), () ->
-                {
-                } ).get();
-            }
-            catch ( Exception e )
-            {
-                fail( e );
-            }
+            scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 105" ), () -> { } ).get();
 
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 3", "db 3", "job 106" ), () ->
-            {
-            }, 1, HOURS );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 107" ), () ->
-            {
-            }, 0, HOURS );
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 3", "db 3", "job 106" ), () -> { }, 1, HOURS );
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 107" ), () -> { }, 0, HOURS );
             scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 108" ), () ->
             {
                 jobStartLatch.countDown();
                 jobLatch.await();
             }, 1, TimeUnit.NANOSECONDS );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 109" ), () ->
-            {
-            }, 1, HOURS ).cancel();
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 109" ), () -> { }, 1, HOURS ).cancel();
 
-            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( null, null, "job 110" ), () ->
-            {
-            }, 1, HOURS );
-            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( null, null, "job 111" ), () ->
-            {
-            }, 1, 1, HOURS );
+            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( null, null, "job 110" ), () -> { }, 1, HOURS );
+            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( null, null, "job 111" ), () -> { }, 1, 1, HOURS );
 
             assertTrue( jobStartLatch.await( 10, TimeUnit.SECONDS ) );
 
@@ -163,10 +140,8 @@ class SchedulerProceduresTest
     }
 
     @Test
-    void testListFailedJobRuns() throws InterruptedException
+    void testListFailedJobRuns()
     {
-        var scheduler = db.getDependencyResolver().resolveDependency( JobScheduler.class );
-
         scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( "user 1", "db 1", "job 201" ), () ->
         {
             throw new TestException( "something went wrong 1" );
@@ -200,55 +175,35 @@ class SchedulerProceduresTest
         }
     }
 
-    private void awaitFailure( JobScheduler jobScheduler, int expected ) throws InterruptedException
+    private void awaitFailure( JobScheduler jobScheduler, int expected )
     {
-        var start = Instant.now();
-
-        while ( true )
+        while ( jobScheduler.getFailedJobRuns().size() != expected )
         {
-            if ( jobScheduler.getFailedJobRuns().size() == expected )
-            {
-                return;
-            }
-
-            if ( Duration.between( start, Instant.now() ).toMinutes() > 1 )
-            {
-                fail();
-            }
-
-            Thread.sleep( 1 );
+            LockSupport.parkNanos( MILLISECONDS.toNanos( 10 ) );
         }
     }
 
-    private Map<String,JobStatusRecord> mapJobStatus( Result result )
+    private Map<String,JobStatusRecord> mapJobStatus( Result result ) throws Exception
     {
         Map<String,JobStatusRecord> jobRecords = new HashMap<>();
 
-        try
+        result.accept( (Result.ResultVisitor<Exception>) row ->
         {
-            result.accept( (Result.ResultVisitor<Exception>) row ->
-            {
-                var group = row.getString( "group" );
-                var database = row.getString( "database" );
-                var submitter = row.getString( "submitter" );
-                var description = row.getString( "description" );
-                var type = row.getString( "type" );
-                var scheduledAt = !row.getString( "scheduledAt" ).isEmpty();
-                var period = !row.getString( "period" ).isEmpty();
-                var status = row.getString( "state" );
+            var group = row.getString( "group" );
+            var database = row.getString( "database" );
+            var submitter = row.getString( "submitter" );
+            var description = row.getString( "description" );
+            var type = row.getString( "type" );
+            var scheduledAt = !row.getString( "scheduledAt" ).isEmpty();
+            var period = !row.getString( "period" ).isEmpty();
+            var status = row.getString( "state" );
 
-                assertFalse( row.getString( "submitted" ).isEmpty() );
+            assertFalse( row.getString( "submitted" ).isEmpty() );
 
-                jobRecords.put( description, new JobStatusRecord( group, submitter, database, description, type, status, scheduledAt, period ) );
+            jobRecords.put( description, new JobStatusRecord( group, submitter, database, description, type, status, scheduledAt, period ) );
 
-                return true;
-            } );
-        }
-        catch ( Exception e )
-        {
-            fail( e );
-        }
-
+            return true;
+        } );
         return jobRecords;
     }
 

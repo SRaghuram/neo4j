@@ -10,6 +10,10 @@ import java.time.ZoneId;
 import org.neo4j.procedure.builtin.ProceduresTimeFormatHelper;
 import org.neo4j.scheduler.MonitoredJobInfo;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.neo4j.procedure.builtin.ProceduresTimeFormatHelper.formatTime;
+
 public class JobStatusResult
 {
     public final String group;
@@ -25,13 +29,13 @@ public class JobStatusResult
     JobStatusResult( MonitoredJobInfo job, ZoneId zoneId )
     {
         group = job.getGroup().groupName();
-        submitted = ProceduresTimeFormatHelper.formatTime( job.getSubmitted().toEpochMilli(), zoneId );
-        submitter = job.getSubmitter() != null ? job.getSubmitter() : "";
-        database = job.getTargetDatabaseName() != null ? job.getTargetDatabaseName() : "";
+        submitted = formatTime( job.getSubmitted(), zoneId );
+        submitter = defaultString( job.getSubmitter() );
+        database = defaultString( job.getTargetDatabaseName() );
         description = job.getDescription();
         type = job.getType().name();
         state = job.getState().name();
-        scheduledAt = job.getNextDeadline() != null ? ProceduresTimeFormatHelper.formatTime( job.getNextDeadline().toEpochMilli(), zoneId ) : "";
-        period = job.getPeriod() != null ? ProceduresTimeFormatHelper.formatInterval( job.getPeriod().toMillis() ) : "";
+        scheduledAt = job.getNextDeadline() != null ? formatTime( job.getNextDeadline(), zoneId ) : EMPTY;
+        period = job.getPeriod() != null ? ProceduresTimeFormatHelper.formatInterval( job.getPeriod().toMillis() ) : EMPTY;
     }
 }

@@ -8,7 +8,7 @@ package com.neo4j.procedure.enterprise.builtin;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 import org.neo4j.scheduler.FailedJobRun;
 import org.neo4j.scheduler.Group;
@@ -30,7 +30,7 @@ class FailedJobRunResultTest
                 Instant.parse( "2020-06-24T18:10:00Z" ),
                 Instant.parse( "2020-06-24T18:20:00Z" ),
                 new IllegalStateException( "Something went terribly wrong" ) );
-        var jobRunResult = new FailedJobRunResult( jobRun, ZoneId.of( "UTC" ) );
+        var jobRunResult = new FailedJobRunResult( jobRun, ZoneOffset.UTC );
 
         assertEquals( "IndexPopulationMain user 1 db 1 a very useful job IMMEDIATE 2020-06-24T18:00:00Z 2020-06-24T18:10:00Z 2020-06-24T18:20:00Z " +
                         "IllegalStateException: Something went terribly wrong", resultToString( jobRunResult ) );
