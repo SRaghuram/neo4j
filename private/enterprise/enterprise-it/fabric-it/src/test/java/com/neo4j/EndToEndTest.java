@@ -907,7 +907,7 @@ class EndToEndTest
             tx.run( query ).consume();
         } ) );
 
-        assertThat( ex.getMessage() ).contains( "Multi-shard writes not allowed" );
+        assertThat( ex.getMessage() ).contains( "Writing to more than one database per transaction is not allowed." );
     }
 
     @Test

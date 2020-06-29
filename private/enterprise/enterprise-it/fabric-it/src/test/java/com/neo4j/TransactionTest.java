@@ -461,6 +461,39 @@ class TransactionTest
         verifyDriverReturned( shard1Driver, shard2Driver );
     }
 
+    @Test
+    void startSecondWriteChildTransaction()
+    {
+        var e = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
+        {
+            writeToShard1( tx );
+            writeToShard2( tx );
+            tx.rollback();
+        } ) );
+
+        assertThat( e.getMessage() )
+                .contains( "Writing to more than one database per transaction is not allowed." )
+                .contains( "Attempted write to External{graphId=2" )
+                .contains( "currently writing to External{graphId=1" );
+    }
+
+    @Test
+    void upgradeSecondWriteChildTransaction()
+    {
+        var e = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
+        {
+            writeToShard1( tx );
+            readFromShard2( tx );
+            writeToShard2( tx );
+            tx.rollback();
+        } ) );
+
+        assertThat( e.getMessage() )
+                .contains( "Writing to more than one database per transaction is not allowed." )
+                .contains( "Attempted write to External{graphId=2" )
+                .contains( "currently writing to External{graphId=1" );
+    }
+
     private void verifyCommitted( FabricDriverTransaction... txs )
     {
         Arrays.stream( txs ).forEach( tx ->
@@ -482,6 +515,11 @@ class TransactionTest
     private void writeToShard1( Transaction tx )
     {
         tx.run( "USE mega.graph(1) CREATE(n) RETURN n" ).consume();
+    }
+
+    private void writeToShard2( Transaction tx )
+    {
+        tx.run( "USE mega.graph(2) CREATE(n) RETURN n" ).consume();
     }
 
     private void readFromShard2( Transaction tx )
