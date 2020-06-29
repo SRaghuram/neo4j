@@ -52,7 +52,7 @@ public class RaftCoreMetrics extends LifecycleAdapter
     private static final String DELAY_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_delay" );
     @Documented( "Timer for RAFT message processing. (counter, histogram)" )
     private static final String TIMER_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
-    @Documented( "Raft replication new request count (counter)." )
+    @Documented( "Raft replication new request count. (counter)" )
     private static final String REPLICATION_NEW_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_new" );
     @Documented( "Raft replication attempt count. (counter)" )
     private static final String REPLICATION_ATTEMPT_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_attempt" );

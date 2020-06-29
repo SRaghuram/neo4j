@@ -39,7 +39,7 @@ public class TransactionMetrics extends LifecycleAdapter
     private static final String TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed" );
     @Documented( "The total number of committed read transactions. (counter)" )
     private static final String READ_TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed_read" );
-    @Documented( "The total number of committed write transactions." )
+    @Documented( "The total number of committed write transactions. (counter)" )
     private static final String WRITE_TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed_write" );
 
     @Documented( "The total number of rolled back transactions. (counter)" )
