@@ -7,6 +7,7 @@ package com.neo4j.dbms.commandline.storeutil;
 
 import java.io.IOException;
 
+import org.neo4j.consistency.RecordType;
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -48,7 +49,7 @@ class LenientRelationshipReader extends LenientStoreInputChunk
                 visitor.type( relName );
                 visitor.startId( record.getFirstNode(), Group.GLOBAL );
                 visitor.endId( record.getSecondNode(), Group.GLOBAL );
-                visitPropertyChainNoThrow( visitor, record );
+                visitPropertyChainNoThrow( visitor, record, RecordType.RELATIONSHIP, new long[] {relType} );
                 visitor.endOfEntity();
             }
             else

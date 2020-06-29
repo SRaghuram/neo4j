@@ -7,6 +7,7 @@ package com.neo4j.dbms.commandline.storeutil;
 
 import java.io.IOException;
 
+import org.neo4j.consistency.RecordType;
 import org.neo4j.internal.batchimport.input.InputChunk;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.io.pagecache.PageCursor;
@@ -97,7 +98,7 @@ public abstract class LenientStoreInputChunk implements InputChunk
     /**
      * Do to the way the visitor work it's important that this method never throws.
      */
-    void visitPropertyChainNoThrow( InputEntityVisitor visitor, PrimitiveRecord record )
+    void visitPropertyChainNoThrow( InputEntityVisitor visitor, PrimitiveRecord record, RecordType owningEntityType, long[] owningEntityTokens )
     {
         try
         {
@@ -113,7 +114,7 @@ public abstract class LenientStoreInputChunk implements InputChunk
                 for ( PropertyBlock propBlock : propertyRecord )
                 {
                     propertyStore.ensureHeavy( propBlock, cursorTracer );
-                    if ( storeCopyFilter.shouldKeepProperty( propBlock.getKeyIndexId() ) )
+                    if ( storeCopyFilter.shouldKeepProperty( propBlock.getKeyIndexId(), owningEntityType, owningEntityTokens ) )
                     {
                         try
                         {

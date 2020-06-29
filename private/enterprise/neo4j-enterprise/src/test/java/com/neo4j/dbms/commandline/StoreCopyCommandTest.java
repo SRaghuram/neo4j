@@ -14,8 +14,9 @@ import java.nio.file.Path;
 
 import org.neo4j.cli.ExecutionContext;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static com.neo4j.dbms.commandline.StoreCopyCommand.quoteAwareSplit;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class StoreCopyCommandTest
 {
@@ -28,7 +29,7 @@ class StoreCopyCommandTest
         {
             CommandLine.usage( command, new PrintStream( out ) );
         }
-        assertThat( baos.toString().trim(), equalTo( String.format(
+        assertThat( baos.toString().trim()).isEqualTo( String.format(
                 "Copy a database and optionally apply filters.%n" +
                 "%n" +
                 "USAGE%n" +
@@ -36,13 +37,22 @@ class StoreCopyCommandTest
                 "copy (--from-database=<database> | --from-path=<path>) [--force] [--verbose]%n" +
                 "     [--from-pagecache=<size>] [--from-path-tx=<path>] --to-database=<database>%n" +
                 "     [--to-format=<format>] [--to-pagecache=<size>]%n" +
-                "     [--delete-nodes-with-labels=<label>[,<label>...]]... [--skip-labels=<label>%n" +
-                "     [,<label>...]]... [--skip-properties=<property>[,<property>...]]...%n" +
-                "     [--skip-relationships=<relationship>[,<relationship>...]]...%n" +
+                "     [--delete-nodes-with-labels=<label>[,<label>...]]...%n" +
+                "     [--keep-only-node-properties=<label.property>[,<label.property>...]]...%n" +
+                "     [--keep-only-nodes-with-labels=<label>[,<label>...]]...%n" +
+                "     [--keep-only-relationship-properties=<relationship.property>[,%n" +
+                "     <relationship.property>...]]... [--skip-labels=<label>[,<label>...]]...%n" +
+                "     [--skip-node-properties=<label.property>[,<label.property>...]]...%n" +
+                "     [--skip-properties=<property>[,<property>...]]...%n" +
+                "     [--skip-relationship-properties=<relationship.property>[,<relationship.%n" +
+                "     property>...]]... [--skip-relationships=<relationship>[,%n" +
+                "     <relationship>...]]...%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
                 "This command will create a copy of a database.%n" +
+                "If your labels, properties or relationships contain dots or commas you can use%n" +
+                "` to escape them, e.g. `My,label`.property%n" +
                 "%n" +
                 "OPTIONS%n" +
                 "%n" +
@@ -65,10 +75,43 @@ class StoreCopyCommandTest
                 "      --delete-nodes-with-labels=<label>[,<label>...]%n" +
                 "                             A comma separated list of labels. All nodes that%n" +
                 "                               have ANY of the specified labels will be deleted.%n" +
+                "                               Can not be combined with%n" +
+                "                               --keep-only-nodes-with-labels.%n" +
+                "      --keep-only-nodes-with-labels=<label>[,<label>...]%n" +
+                "                             A comma separated list of labels. All nodes that%n" +
+                "                               have ANY of the specified labels will be kept.%n" +
+                "                               Can not be combined with%n" +
+                "                               --delete-nodes-with-labels.%n" +
                 "      --skip-labels=<label>[,<label>...]%n" +
                 "                             A comma separated list of labels to ignore.%n" +
                 "      --skip-properties=<property>[,<property>...]%n" +
                 "                             A comma separated list of property keys to ignore.%n" +
+                "                               Can not be combined with --skip-node-properties,%n" +
+                "                               --keep-only-node-properties,%n" +
+                "                               --skip-relationship-properties or%n" +
+                "                               --keep-only-relationship-properties.%n" +
+                "      --skip-node-properties=<label.property>[,<label.property>...]%n" +
+                "                             A comma separated list of property keys to ignore%n" +
+                "                               for nodes with the specified label. Can not be%n" +
+                "                               combined with --skip-properties or%n" +
+                "                               --keep-only-node-properties.%n" +
+                "      --keep-only-node-properties=<label.property>[,<label.property>...]%n" +
+                "                             A comma separated list of property keys to keep%n" +
+                "                               for nodes with the specified label. Can not be%n" +
+                "                               combined with --skip-properties or%n" +
+                "                               --skip-node-properties.%n" +
+                "      --skip-relationship-properties=<relationship.property>[,<relationship.%n" +
+                "        property>...]%n" +
+                "                             A comma separated list of property keys to ignore%n" +
+                "                               for relationships with the specified type. Can%n" +
+                "                               not be combined with --skip-properties or%n" +
+                "                               --keep-only-relationship-properties.%n" +
+                "      --keep-only-relationship-properties=<relationship.property>[,%n" +
+                "        <relationship.property>...]%n" +
+                "                             A comma separated list of property keys to keep%n" +
+                "                               for relationships with the specified type. Can%n" +
+                "                               not be combined with --skip-properties or%n" +
+                "                               --skip-relationship-properties.%n" +
                 "      --skip-relationships=<relationship>[,<relationship>...]%n" +
                 "                             A comma separated list of relationships to ignore.%n" +
                 "      --from-pagecache=<size>%n" +
@@ -76,6 +119,27 @@ class StoreCopyCommandTest
                 "                               Default: 8m%n" +
                 "      --to-pagecache=<size>  The size of the page cache to use for writing.%n" +
                 "                               Default: 8m"
-        ) ) );
+        ) );
+    }
+
+    @Test
+    void quoteAwareSplitTest()
+    {
+        assertThat( quoteAwareSplit( "A,B,C", ',', false ) ).containsExactly( "A", "B", "C" );
+        assertThat( quoteAwareSplit( "`A,a`,B,C", ',', false ) ).containsExactly( "`A,a`", "B", "C" );
+        assertThat( quoteAwareSplit( "`A,a`,`B`.`b`,C", ',', false ) ).containsExactly( "`A,a`", "`B`.`b`", "C" );
+        assertThat( quoteAwareSplit( "`A,a`,`B`.`b`,`C`", ',', false ) ).containsExactly( "`A,a`", "`B`.`b`", "`C`" );
+        assertThat( quoteAwareSplit( "A,B,C", ',', true ) ).containsExactly( "A", "B", "C" );
+        assertThat( quoteAwareSplit( "`A,a`,B,`C`", ',', true ) ).containsExactly( "A,a", "B", "C" );
+
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "A,,C", ',', false ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "`A``,B,C", ',', true ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "`A,B,C", ',', true ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "A,B`B,C", ',', true ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "`A`a,B,C", ',', true ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "A,``,C", ',', true ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "A,B,``", ',', true ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( "A,B,", ',', true ) );
+        assertThrows( CommandLine.TypeConversionException.class, () -> quoteAwareSplit( ",A,B", ',', true ) );
     }
 }

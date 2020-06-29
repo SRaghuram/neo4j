@@ -7,6 +7,7 @@ package com.neo4j.dbms.commandline.storeutil;
 
 import java.io.IOException;
 
+import org.neo4j.consistency.RecordType;
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -49,7 +50,7 @@ class LenientNodeReader extends LenientStoreInputChunk
                 String[] labels = storeCopyFilter.filterLabels( labelIds, tokenLookup );
                 visitor.id( id, Group.GLOBAL ); // call to id(long) will not use the remapper
                 visitor.labels( labels );
-                visitPropertyChainNoThrow( visitor, record );
+                visitPropertyChainNoThrow( visitor, record, RecordType.NODE, labelIds );
                 visitor.endOfEntity();
             }
             else

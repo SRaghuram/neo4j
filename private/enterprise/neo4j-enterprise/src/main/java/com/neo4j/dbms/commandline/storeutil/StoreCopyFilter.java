@@ -5,6 +5,7 @@
  */
 package com.neo4j.dbms.commandline.storeutil;
 
+import org.eclipse.collections.api.map.primitive.ImmutableIntObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 
@@ -13,6 +14,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.consistency.RecordType;
 import org.neo4j.token.api.TokenNotFoundException;
 
 import static java.lang.Math.toIntExact;
@@ -24,29 +26,56 @@ class StoreCopyFilter
 {
     private final StoreCopyStats stats;
     private final ImmutableIntSet deleteNodesWithLabelsIds;
+    private final ImmutableIntSet keepOnlyNodesWithLabelsIds;
     private final Set<Integer> skipLabelsIds;
     private final Set<Integer> skipPropertyIds;
     private final Set<Integer> skipRelationshipIds;
+    private final ImmutableIntObjectMap<ImmutableIntSet> skipNodePropertyIds;
+    private final ImmutableIntObjectMap<ImmutableIntSet> keepOnlyNodePropertyIds;
+    private final ImmutableIntObjectMap<ImmutableIntSet> skipRelationshipPropertyIds;
+    private final ImmutableIntObjectMap<ImmutableIntSet> keepOnlyRelationshipPropertyIds;
 
-    StoreCopyFilter( StoreCopyStats stats, int[] deleteNodesWithLabelsIds, int[] skipLabelsIds, int[] skipPropertyIds, int[] skipRelationshipIds )
+    StoreCopyFilter( StoreCopyStats stats, int[] deleteNodesWithLabelsIds, int[] keepOnlyNodesWithLabelsIds, int[] skipLabelsIds, int[] skipPropertyIds,
+            ImmutableIntObjectMap<ImmutableIntSet> skipNodePropertyIds, ImmutableIntObjectMap<ImmutableIntSet> keepOnlyNodePropertyIds,
+            ImmutableIntObjectMap<ImmutableIntSet> skipRelationshipPropertyIds, ImmutableIntObjectMap<ImmutableIntSet> keepOnlyRelationshipPropertyIds,
+            int[] skipRelationshipIds )
     {
         this.stats = stats;
         this.deleteNodesWithLabelsIds = IntSets.immutable.of( deleteNodesWithLabelsIds );
+        this.keepOnlyNodesWithLabelsIds = IntSets.immutable.of( keepOnlyNodesWithLabelsIds );
         this.skipLabelsIds = ConcurrentHashMap.newKeySet();
         this.skipPropertyIds = ConcurrentHashMap.newKeySet();
         this.skipRelationshipIds = ConcurrentHashMap.newKeySet();
         Arrays.stream( skipLabelsIds ).forEach( this.skipLabelsIds::add );
         Arrays.stream( skipPropertyIds ).forEach( this.skipPropertyIds::add );
         Arrays.stream( skipRelationshipIds ).forEach( this.skipRelationshipIds::add );
+        this.skipNodePropertyIds = skipNodePropertyIds;
+        this.keepOnlyNodePropertyIds = keepOnlyNodePropertyIds;
+        this.skipRelationshipPropertyIds = skipRelationshipPropertyIds;
+        this.keepOnlyRelationshipPropertyIds = keepOnlyRelationshipPropertyIds;
     }
 
     boolean shouldDeleteNode( long[] labelIds )
     {
-        for ( long labelId : labelIds )
+        if ( !keepOnlyNodesWithLabelsIds.isEmpty() )
         {
-            if ( deleteNodesWithLabelsIds.contains( toIntExact( labelId ) ) )
+            for ( long longLabelId : labelIds )
             {
-                return true;
+                if ( keepOnlyNodesWithLabelsIds.contains( toIntExact( longLabelId ) ) )
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        else if ( !deleteNodesWithLabelsIds.isEmpty() )
+        {
+            for ( long longLabelId : labelIds )
+            {
+                if ( deleteNodesWithLabelsIds.contains( toIntExact( longLabelId ) ) )
+                {
+                    return true;
+                }
             }
         }
         return false;
@@ -76,9 +105,88 @@ class StoreCopyFilter
         return labels.toArray( new String[0] );
     }
 
-    boolean shouldKeepProperty( int keyIndexId )
+    boolean shouldKeepProperty( int keyIndexId, RecordType owningEntityType, long[] owningEntityTokens )
     {
-        return !skipPropertyIds.contains( keyIndexId );
+        if ( owningEntityType == RecordType.NODE )
+        {
+            return shouldKeepNodeProperty( keyIndexId, owningEntityTokens );
+        }
+        if ( owningEntityType == RecordType.RELATIONSHIP )
+        {
+            int relationshipType = (int) owningEntityTokens[0];
+            return shouldKeepRelationshipProperty( keyIndexId, relationshipType );
+        }
+        return true;
+    }
+
+    private boolean shouldKeepNodeProperty( int keyIndexId, long[] nodeLabelIds )
+    {
+        if ( !skipPropertyIds.isEmpty() )
+        {
+            return !skipPropertyIds.contains( keyIndexId );
+        }
+        else if ( !skipNodePropertyIds.isEmpty() )
+        {
+            ImmutableIntSet skipPropForLabels = skipNodePropertyIds.get( keyIndexId );
+            if ( skipPropForLabels == null )
+            {
+                return true;
+            }
+            for ( long nodeLabelId : nodeLabelIds )
+            {
+                if ( skipPropForLabels.contains( toIntExact( nodeLabelId ) ) )
+                {
+                    //the node has a label that we should skip this property for.
+                    return false;
+                }
+            }
+            return true;
+        }
+        else if ( !keepOnlyNodePropertyIds.isEmpty() )
+        {
+            ImmutableIntSet keepPropertiesForLabel = keepOnlyNodePropertyIds.get( keyIndexId );
+            if ( keepPropertiesForLabel == null )
+            {
+                return false;
+            }
+            for ( long nodeLabelId : nodeLabelIds )
+            {
+                if ( keepPropertiesForLabel.contains( toIntExact( nodeLabelId ) ) )
+                {
+                    //the node has a label that we should keep this property for.
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private boolean shouldKeepRelationshipProperty( int keyIndexId, int relationshipTypeId )
+    {
+        if ( !skipPropertyIds.isEmpty() )
+        {
+            return !skipPropertyIds.contains( keyIndexId );
+        }
+        else if ( !skipRelationshipPropertyIds.isEmpty() )
+        {
+            ImmutableIntSet skipPropForRelationships = skipRelationshipPropertyIds.get( keyIndexId );
+            if ( skipPropForRelationships == null )
+            {
+                return true;
+            }
+            return !skipPropForRelationships.contains( relationshipTypeId );
+        }
+        else if ( !keepOnlyRelationshipPropertyIds.isEmpty() )
+        {
+            ImmutableIntSet keepPropForRelationships = keepOnlyRelationshipPropertyIds.get( keyIndexId );
+            if ( keepPropForRelationships == null )
+            {
+                return false;
+            }
+            return keepPropForRelationships.contains( relationshipTypeId );
+        }
+        return true;
     }
 
     String filterRelationship( int relTypeId, TokenLookup tokenLookup )

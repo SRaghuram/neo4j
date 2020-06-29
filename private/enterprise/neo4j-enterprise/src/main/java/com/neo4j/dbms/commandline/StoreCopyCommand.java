@@ -6,6 +6,7 @@
 package com.neo4j.dbms.commandline;
 
 import com.neo4j.dbms.commandline.storeutil.StoreCopy;
+import picocli.CommandLine;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
@@ -48,7 +50,9 @@ import static picocli.CommandLine.Option;
 @Command(
         name = "copy",
         header = "Copy a database and optionally apply filters.",
-        description = "This command will create a copy of a database."
+        description = "This command will create a copy of a database.%n" +
+                      "If your labels, properties or relationships contain dots or " +
+                      "commas you can use ` to escape them, e.g. `My,label`.property "
 )
 public class StoreCopyCommand extends AbstractCommand
 {
@@ -88,37 +92,90 @@ public class StoreCopyCommand extends AbstractCommand
 
     @Option(
             names = "--delete-nodes-with-labels",
-            description = "A comma separated list of labels. All nodes that have ANY of the specified labels will be deleted.",
-            split = ",",
-            paramLabel = "<label>",
-            showDefaultValue = NEVER
+            description = "A comma separated list of labels. All nodes that have ANY of the specified labels will be deleted." +
+                "Can not be combined with --keep-only-nodes-with-labels.",
+            paramLabel = "<label>[,<label>...]",
+            showDefaultValue = NEVER,
+            converter = TypeConverter.class
     )
     private List<String> deleteNodesWithLabels = new ArrayList<>();
 
     @Option(
+            names = "--keep-only-nodes-with-labels",
+            description = "A comma separated list of labels. All nodes that have ANY of the specified labels will be kept." +
+                          "Can not be combined with --delete-nodes-with-labels.",
+            paramLabel = "<label>[,<label>...]",
+            showDefaultValue = NEVER,
+            converter = TypeConverter.class
+    )
+    private List<String> keepOnlyNodesWithLabels = new ArrayList<>();
+
+    @Option(
             names = "--skip-labels",
             description = "A comma separated list of labels to ignore.",
-            split = ",",
-            paramLabel = "<label>",
-            showDefaultValue = NEVER
+            paramLabel = "<label>[,<label>...]",
+            showDefaultValue = NEVER,
+            converter = TypeConverter.class
     )
     private List<String> skipLabels = new ArrayList<>();
 
     @Option(
             names = "--skip-properties",
-            description = "A comma separated list of property keys to ignore.",
-            split = ",",
-            paramLabel = "<property>",
-            showDefaultValue = NEVER
+            description = "A comma separated list of property keys to ignore. " +
+                          "Can not be combined with --skip-node-properties, --keep-only-node-properties, " +
+                          "--skip-relationship-properties or --keep-only-relationship-properties.",
+            paramLabel = "<property>[,<property>...]",
+            showDefaultValue = NEVER,
+            converter = TypeConverter.class
     )
     private List<String> skipProperties = new ArrayList<>();
 
     @Option(
+            names = "--skip-node-properties",
+            description = "A comma separated list of property keys to ignore for nodes with the specified label. " +
+                          "Can not be combined with --skip-properties or --keep-only-node-properties.",
+            paramLabel = "<label.property>[,<label.property>...]",
+            showDefaultValue = NEVER,
+            converter = ComboTypeConverter.class
+    )
+    private List<List<String>> skipNodeProperties = new ArrayList<>();
+
+    @Option(
+            names = "--keep-only-node-properties",
+            description = "A comma separated list of property keys to keep for nodes with the specified label. " +
+                          "Can not be combined with --skip-properties or --skip-node-properties.",
+            paramLabel = "<label.property>[,<label.property>...]",
+            showDefaultValue = NEVER,
+            converter = ComboTypeConverter.class
+    )
+    private List<List<String>> keepOnlyNodeProperties = new ArrayList<>();
+
+    @Option(
+            names = "--skip-relationship-properties",
+            description = "A comma separated list of property keys to ignore for relationships with the specified type. " +
+                          "Can not be combined with --skip-properties or --keep-only-relationship-properties.",
+            paramLabel = "<relationship.property>[,<relationship.property>...]",
+            showDefaultValue = NEVER,
+            converter = ComboTypeConverter.class
+    )
+    private List<List<String>> skipRelationshipProperties = new ArrayList<>();
+
+    @Option(
+            names = "--keep-only-relationship-properties",
+            description = "A comma separated list of property keys to keep for relationships with the specified type. " +
+                          "Can not be combined with --skip-properties or --skip-relationship-properties.",
+            paramLabel = "<relationship.property>[,<relationship.property>...]",
+            showDefaultValue = NEVER,
+            converter = ComboTypeConverter.class
+    )
+    private List<List<String>> keepOnlyRelationshipProperties = new ArrayList<>();
+
+    @Option(
             names = "--skip-relationships",
             description = "A comma separated list of relationships to ignore.",
-            split = ",",
-            paramLabel = "<relationship>",
-            showDefaultValue = NEVER
+            paramLabel = "<relationship>[,<relationship>...]",
+            showDefaultValue = NEVER,
+            converter = TypeConverter.class
     )
     private List<String> skipRelationships = new ArrayList<>();
 
@@ -136,6 +193,8 @@ public class StoreCopyCommand extends AbstractCommand
     @Override
     public void execute() throws Exception
     {
+        verifyCommandLineArguments();
+
         Config config = buildConfig();
         DatabaseLayout fromDatabaseLayout = getFromDatabaseLayout( config );
 
@@ -154,8 +213,9 @@ public class StoreCopyCommand extends AbstractCommand
             }
             try ( Closeable ignored2 = LockChecker.checkDatabaseLock( toDatabaseLayout )  )
             {
-                StoreCopy copy = new StoreCopy( fromDatabaseLayout, config, format, deleteNodesWithLabels, skipLabels, skipProperties, skipRelationships,
-                        verbose, ctx.out(), pageCacheTracer );
+                StoreCopy copy = new StoreCopy( fromDatabaseLayout, config, format, deleteNodesWithLabels, keepOnlyNodesWithLabels, skipLabels,
+                        skipProperties, skipNodeProperties, keepOnlyNodeProperties, skipRelationshipProperties, keepOnlyRelationshipProperties,
+                        skipRelationships, verbose, ctx.out(), pageCacheTracer );
                 try
                 {
                     copy.copyTo( toDatabaseLayout, fromPageCacheMemory, toPageCacheMemory );
@@ -173,6 +233,26 @@ public class StoreCopyCommand extends AbstractCommand
         catch ( FileLockException e )
         {
             throw new CommandFailedException( "The database is in use. Stop database '" + fromDatabaseLayout.getDatabaseName() + "' and try again.", e );
+        }
+    }
+
+    private void verifyCommandLineArguments()
+    {
+        if ( !deleteNodesWithLabels.isEmpty() && !keepOnlyNodesWithLabels.isEmpty() )
+        {
+            throw new CommandFailedException( "--delete-nodes-with-labels and --keep-only-nodes-with-labels can not be combined" );
+        }
+
+        if ( (!skipProperties.isEmpty() && (!skipNodeProperties.isEmpty() || !keepOnlyNodeProperties.isEmpty()))
+             || (!skipNodeProperties.isEmpty() && !keepOnlyNodeProperties.isEmpty()) )
+        {
+            throw new CommandFailedException( "--skip-properties, --skip-node-properties and --keep-only-node-properties can not be combined" );
+        }
+
+        if ( (!skipProperties.isEmpty() && (!skipRelationshipProperties.isEmpty() || !keepOnlyRelationshipProperties.isEmpty()))
+             || (!skipRelationshipProperties.isEmpty() && !keepOnlyRelationshipProperties.isEmpty()) )
+        {
+            throw new CommandFailedException( "--skip-properties, --skip-relationship-properties and --keep-only-relationship-properties can not be combined" );
         }
     }
 
@@ -304,5 +384,75 @@ public class StoreCopyCommand extends AbstractCommand
     public void setPageCacheTracer( PageCacheTracer pageCacheTracer )
     {
         this.pageCacheTracer = pageCacheTracer;
+    }
+
+    static List<String> quoteAwareSplit( String value, char splitChar, boolean trim )
+    {
+        List<String> split = new ArrayList<>();
+
+        boolean insideQuote = false;
+        int startOfString = 0;
+        int argLength = value.length();
+        for ( int i = 0; i < argLength; i++ )
+        {
+            char c = value.charAt( i );
+            if ( c == '`' )
+            {
+                insideQuote = !insideQuote;
+            }
+            else if ( c == splitChar && !insideQuote )
+            {
+                split.add( trimQuotesAndCheckString( trim, value.substring( startOfString, i ) ) );
+                startOfString = i + 1;
+            }
+        }
+        if ( insideQuote )
+        {
+            throw new CommandLine.TypeConversionException( "Invalid format: uneven number of back-ticks" );
+        }
+        if ( startOfString <= argLength )
+        {
+            split.add( trimQuotesAndCheckString( trim, value.substring( startOfString, argLength ) ) );
+        }
+        return split;
+    }
+
+    private static String trimQuotesAndCheckString( boolean trim, String string )
+    {
+        if ( trim )
+        {
+            if ( string.contains( "`" ) && string.length() >= 2 )
+            {
+                string = string.substring( 1, string.length() - 1 );
+            }
+            if ( string.contains( "`" ) )
+            {
+                throw new CommandLine.TypeConversionException( "Invalid format: wrong use of back-ticks" );
+            }
+        }
+        if ( string.isEmpty() )
+        {
+            throw new CommandLine.TypeConversionException( "Invalid format: Empty entity" );
+        }
+        return string;
+    }
+
+    static class TypeConverter implements CommandLine.ITypeConverter<List<String>>
+    {
+        @Override
+        public List<String> convert( String value )
+        {
+            return quoteAwareSplit( value, ',', true );
+        }
+    }
+
+    static class ComboTypeConverter implements CommandLine.ITypeConverter<List<List<String>>>
+    {
+        @Override
+        public List<List<String>> convert( String value )
+        {
+            return quoteAwareSplit( value, ',', false ).stream()
+                    .map( s -> quoteAwareSplit( s, '.', true ) ).collect( Collectors.toList() );
+        }
     }
 }

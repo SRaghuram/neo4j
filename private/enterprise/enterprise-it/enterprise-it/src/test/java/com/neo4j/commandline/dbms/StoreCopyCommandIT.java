@@ -14,8 +14,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
@@ -26,6 +28,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -47,6 +50,7 @@ import org.neo4j.token.TokenHolders;
 
 import static java.lang.Math.min;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -254,6 +258,59 @@ class StoreCopyCommandIT extends AbstractCommandIT
     }
 
     @Test
+    void cantCombineKeepOnlyAndDeleteNodesWithLabels()
+    {
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseAPI.databaseName() );
+
+        CommandFailedException commandFailedException = assertThrows( CommandFailedException.class,
+                () -> copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName,
+                        "--delete-nodes-with-labels=Error", "--keep-only-nodes-with-labels=Number" ) );
+        assertThat( commandFailedException.getMessage() ).contains( "--delete-nodes-with-labels and --keep-only-nodes-with-labels can not be combined" );
+    }
+
+    @Test
+    void shouldKeepOnlyNodesWithLabels() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( CHARACTER_LABEL );
+            a.setProperty( "name", "Uno" );
+            Node b = tx.createNode( NUMBER_LABEL );
+            b.setProperty( "name", "Dos" );
+            Node c = tx.createNode( NUMBER_LABEL, ERROR_LABEL );
+            c.setProperty( "name", "Tres" );
+
+            a.createRelationshipTo( b, KNOWS );
+            a.createRelationshipTo( c, KNOWS );
+            b.createRelationshipTo( c, KNOWS );
+            tx.commit();
+        }
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName, "--keep-only-nodes-with-labels=Character,Error" );
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService copyDb = managementService.database( copyName );
+        try ( Transaction tx = copyDb.beginTx() )
+        {
+            Node a = tx.getNodeById( 0 );
+            Node c = tx.getNodeById( 1 );
+            assertEquals( "Uno", a.getProperty( "name" ) );
+            assertEquals( "Tres", c.getProperty( "name" ) );
+            assertEquals( single( a.getRelationships() ).getEndNode(), c );
+            assertEquals( single( c.getRelationships() ).getOtherNode( c ), a );
+            assertThrows( NotFoundException.class, () -> tx.getNodeById( 2 ) );
+            tx.commit();
+        }
+        managementService.dropDatabase( copyName );
+    }
+
+    @Test
     void canFilterOutLabelsAndPropertiesAndRelationships() throws Exception
     {
         // Create some data
@@ -299,6 +356,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( b.getId(), aKnowsB.getEndNodeId() );
             assertEquals( "KNOWS", aKnowsB.getType().name() );
             assertFalse( aRelationships.hasNext() );
+            assertTrue( a.hasLabel( NUMBER_LABEL ) );
+            assertFalse( a.hasLabel( ERROR_LABEL ) );
 
             // Validate b
             assertEquals( "Those",  b.getProperty( "name" ) );
@@ -307,10 +366,378 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( c.getId(), bKnowsC.getEndNodeId() );
             assertEquals( "KNOWS", bKnowsC.getType().name() );
             assertFalse( bRelationships.hasNext() );
+            assertTrue( b.hasLabel( NUMBER_LABEL ) );
 
             // Validate c
             assertEquals( "Trays",  c.getProperty( "name" ) );
             assertFalse( c.getRelationships( Direction.OUTGOING ).iterator().hasNext() );
+            assertTrue( c.hasLabel( NUMBER_LABEL ) );
+            tx.commit();
+        }
+        managementService.dropDatabase( copyName );
+    }
+
+    @Test
+    void cantCombineSkipAndKeepNodeProperties()
+    {
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseAPI.databaseName() );
+
+        CommandFailedException commandFailedException = assertThrows( CommandFailedException.class,
+                () -> copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName,
+                        "--skip-properties=prop", "--skip-node-properties=Number.prop" ) );
+        assertThat( commandFailedException.getMessage() )
+                .contains( "--skip-properties, --skip-node-properties and --keep-only-node-properties can not be combined" );
+
+        commandFailedException = assertThrows( CommandFailedException.class,
+                () -> copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName,
+                        "--skip-properties=prop", "--keep-only-node-properties=Number.prop" ) );
+        assertThat( commandFailedException.getMessage() )
+                .contains( "--skip-properties, --skip-node-properties and --keep-only-node-properties can not be combined" );
+
+        commandFailedException = assertThrows( CommandFailedException.class,
+                () -> copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName,
+                        "--skip-node-properties=Error.prop", "--keep-only-node-properties=Number.prop" ) );
+        assertThat( commandFailedException.getMessage() )
+                .contains( "--skip-properties, --skip-node-properties and --keep-only-node-properties can not be combined" );
+    }
+
+    @Test
+    void canSkipNodeProperties() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL, CHARACTER_LABEL );
+            a.setProperty( "name", "On" );
+            a.setProperty( "secretProperty", "Please delete me!" );
+            Node b = tx.createNode( NUMBER_LABEL );
+            b.setProperty( "name", "Those" );
+            b.setProperty( "secretProperty", "keep me" );
+            Node c = tx.createNode( NUMBER_LABEL );
+            c.setProperty( "name", "Trays" );
+
+            a.createRelationshipTo( b, KNOWS );
+            Relationship rel = b.createRelationshipTo( c, KNOWS );
+            rel.setProperty( "secretProperty", "keep me" );
+            tx.commit();
+        }
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName,
+                "--to-database=" + copyName,
+                "--skip-node-properties=Character.secretProperty");
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService copyDb = managementService.database( copyName );
+        try ( Transaction tx = copyDb.beginTx() )
+        {
+            Node a = tx.getNodeById( 0 );
+            Node b = tx.getNodeById( 1 );
+            Node c = tx.getNodeById( 2 );
+            assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
+
+            // Validate a
+            assertEquals( "On",  a.getProperty( "name" ) );
+            assertThrows( NotFoundException.class, () -> a.getProperty( "secretProperty" ) );
+            Iterator<Relationship> aRelationships = a.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship aKnowsB = aRelationships.next();
+            assertEquals( b.getId(), aKnowsB.getEndNodeId() );
+            assertEquals( "KNOWS", aKnowsB.getType().name() );
+            assertFalse( aRelationships.hasNext() );
+
+            // Validate b
+            assertEquals( "Those",  b.getProperty( "name" ) );
+            Iterator<Relationship> bRelationships = b.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship bKnowsC = bRelationships.next();
+            assertEquals( c.getId(), bKnowsC.getEndNodeId() );
+            assertEquals( "KNOWS", bKnowsC.getType().name() );
+            assertEquals( bKnowsC.getProperty( "secretProperty" ), "keep me" );
+            assertFalse( bRelationships.hasNext() );
+
+            // Validate c
+            assertEquals( "Trays",  c.getProperty( "name" ) );
+            assertFalse( c.getRelationships( Direction.OUTGOING ).iterator().hasNext() );
+            tx.commit();
+        }
+        managementService.dropDatabase( copyName );
+    }
+
+    @Test
+    void canKeepNodeProperties() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( CHARACTER_LABEL );
+            a.setProperty( "name", "On" );
+            a.setProperty( "secretProperty", "Please delete me!" );
+            Node b = tx.createNode( NUMBER_LABEL, CHARACTER_LABEL );
+            b.setProperty( "name", "Those" );
+            b.setProperty( "secretProperty", "keep me" );
+            Node c = tx.createNode( NUMBER_LABEL );
+            c.setProperty( "name", "Trays" );
+
+            a.createRelationshipTo( b, KNOWS );
+            Relationship rel = b.createRelationshipTo( c, KNOWS );
+            rel.setProperty( "secretProperty", "keep me" );
+            tx.commit();
+        }
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName,
+                "--to-database=" + copyName,
+                "--keep-only-node-properties=Number.secretProperty,Character.name,Number.name");
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService copyDb = managementService.database( copyName );
+        try ( Transaction tx = copyDb.beginTx() )
+        {
+            Node a = tx.getNodeById( 0 );
+            Node b = tx.getNodeById( 1 );
+            Node c = tx.getNodeById( 2 );
+            assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
+
+            // Validate a
+            assertEquals( "On",  a.getProperty( "name" ) );
+            assertThrows( NotFoundException.class, () -> a.getProperty( "secretProperty" ) );
+            Iterator<Relationship> aRelationships = a.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship aKnowsB = aRelationships.next();
+            assertEquals( b.getId(), aKnowsB.getEndNodeId() );
+            assertEquals( "KNOWS", aKnowsB.getType().name() );
+            assertFalse( aRelationships.hasNext() );
+
+            // Validate b
+            assertEquals( "Those",  b.getProperty( "name" ) );
+            assertEquals( "keep me",  b.getProperty( "secretProperty" ) );
+            Iterator<Relationship> bRelationships = b.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship bKnowsC = bRelationships.next();
+            assertEquals( c.getId(), bKnowsC.getEndNodeId() );
+            assertEquals( "KNOWS", bKnowsC.getType().name() );
+            assertEquals( bKnowsC.getProperty( "secretProperty" ), "keep me" );
+            assertFalse( bRelationships.hasNext() );
+
+            // Validate c
+            assertEquals( "Trays",  c.getProperty( "name" ) );
+            assertFalse( c.getRelationships( Direction.OUTGOING ).iterator().hasNext() );
+            tx.commit();
+        }
+        managementService.dropDatabase( copyName );
+    }
+
+    @Test
+    void cantCombineSkipAndKeepRelationshipProperties()
+    {
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseAPI.databaseName() );
+
+        CommandFailedException commandFailedException = assertThrows( CommandFailedException.class,
+                () -> copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName,
+                        "--skip-properties=prop", "--skip-relationship-properties=KNOWS.prop" ) );
+        assertThat( commandFailedException.getMessage() )
+                .contains( "--skip-properties, --skip-relationship-properties and --keep-only-relationship-properties can not be combined" );
+
+        commandFailedException = assertThrows( CommandFailedException.class,
+                () -> copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName,
+                        "--skip-properties=prop", "--keep-only-relationship-properties=SECRET.prop" ) );
+        assertThat( commandFailedException.getMessage() )
+                .contains( "--skip-properties, --skip-relationship-properties and --keep-only-relationship-properties can not be combined" );
+
+        commandFailedException = assertThrows( CommandFailedException.class,
+                () -> copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName,
+                        "--skip-relationship-properties=KNOWS.prop", "--keep-only-relationship-properties=SECRET.prop" ) );
+        assertThat( commandFailedException.getMessage() )
+                .contains( "--skip-properties, --skip-relationship-properties and --keep-only-relationship-properties can not be combined" );
+    }
+
+    @Test
+    void canSkipRelationshipProperties() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL, CHARACTER_LABEL );
+            a.setProperty( "name", "On" );
+            Node b = tx.createNode( NUMBER_LABEL );
+            b.setProperty( "name", "Those" );
+            b.setProperty( "secretProperty", "keep me" );
+            Node c = tx.createNode( NUMBER_LABEL );
+            c.setProperty( "name", "Trays" );
+
+            Relationship rel = a.createRelationshipTo( b, KNOWS );
+            rel.setProperty( "otherProperty", "keep me" );
+            rel = b.createRelationshipTo( c, KNOWS );
+            rel.setProperty( "secretProperty", "Please delete me!" );
+            rel = c.createRelationshipTo( a, SECRET );
+            rel.setProperty( "secretProperty", "keep me" );
+            tx.commit();
+        }
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName,
+                "--to-database=" + copyName,
+                "--skip-relationship-properties=KNOWS.secretProperty");
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService copyDb = managementService.database( copyName );
+        try ( Transaction tx = copyDb.beginTx() )
+        {
+            Node a = tx.getNodeById( 0 );
+            Node b = tx.getNodeById( 1 );
+            Node c = tx.getNodeById( 2 );
+            assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
+
+            // Validate a
+            assertEquals( "On",  a.getProperty( "name" ) );
+            Iterator<Relationship> aRelationships = a.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship aKnowsB = aRelationships.next();
+            assertEquals( b.getId(), aKnowsB.getEndNodeId() );
+            assertEquals( "KNOWS", aKnowsB.getType().name() );
+            assertEquals( aKnowsB.getProperty( "otherProperty" ), "keep me" );
+            assertFalse( aRelationships.hasNext() );
+
+            // Validate b
+            assertEquals( "Those",  b.getProperty( "name" ) );
+            assertEquals( "keep me",  b.getProperty( "secretProperty" ) );
+            Iterator<Relationship> bRelationships = b.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship bKnowsC = bRelationships.next();
+            assertEquals( c.getId(), bKnowsC.getEndNodeId() );
+            assertEquals( "KNOWS", bKnowsC.getType().name() );
+            assertThrows( NotFoundException.class, () -> bKnowsC.getProperty( "secretProperty" ) );
+            assertFalse( bRelationships.hasNext() );
+
+            // Validate c
+            assertEquals( "Trays",  c.getProperty( "name" ) );
+            Iterator<Relationship> cRelationships = c.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship cKnowsA = cRelationships.next();
+            assertEquals( a.getId(), cKnowsA.getEndNodeId() );
+            assertEquals( "SECRET", cKnowsA.getType().name() );
+            assertEquals( cKnowsA.getProperty( "secretProperty" ), "keep me" );
+            assertFalse( cRelationships.hasNext() );
+            tx.commit();
+        }
+        managementService.dropDatabase( copyName );
+    }
+
+    @Test
+    void cankeepOnlyRelationshipProperties() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL, CHARACTER_LABEL );
+            a.setProperty( "name", "On" );
+            Node b = tx.createNode( NUMBER_LABEL );
+            b.setProperty( "name", "Those" );
+            b.setProperty( "secretProperty", "keep me" );
+            Node c = tx.createNode( NUMBER_LABEL );
+            c.setProperty( "name", "Trays" );
+
+            Relationship rel = a.createRelationshipTo( b, KNOWS );
+            rel.setProperty( "otherProperty", "keep me" );
+            rel = b.createRelationshipTo( c, KNOWS );
+            rel.setProperty( "secretProperty", "Please delete me!" );
+            rel = c.createRelationshipTo( a, SECRET );
+            rel.setProperty( "secretProperty", "keep me" );
+            tx.commit();
+        }
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName,
+                "--to-database=" + copyName,
+                "--keep-only-relationship-properties=SECRET.secretProperty,KNOWS.otherProperty");
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService copyDb = managementService.database( copyName );
+        try ( Transaction tx = copyDb.beginTx() )
+        {
+            Node a = tx.getNodeById( 0 );
+            Node b = tx.getNodeById( 1 );
+            Node c = tx.getNodeById( 2 );
+            assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
+
+            // Validate a
+            assertEquals( "On",  a.getProperty( "name" ) );
+            Iterator<Relationship> aRelationships = a.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship aKnowsB = aRelationships.next();
+            assertEquals( b.getId(), aKnowsB.getEndNodeId() );
+            assertEquals( "KNOWS", aKnowsB.getType().name() );
+            assertEquals( aKnowsB.getProperty( "otherProperty" ), "keep me" );
+            assertFalse( aRelationships.hasNext() );
+
+            // Validate b
+            assertEquals( "Those",  b.getProperty( "name" ) );
+            assertEquals( "keep me",  b.getProperty( "secretProperty" ) );
+            Iterator<Relationship> bRelationships = b.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship bKnowsC = bRelationships.next();
+            assertEquals( c.getId(), bKnowsC.getEndNodeId() );
+            assertEquals( "KNOWS", bKnowsC.getType().name() );
+            assertThrows( NotFoundException.class, () -> bKnowsC.getProperty( "secretProperty" ) );
+            assertFalse( bRelationships.hasNext() );
+
+            // Validate c
+            assertEquals( "Trays",  c.getProperty( "name" ) );
+            Iterator<Relationship> cRelationships = c.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship cKnowsA = cRelationships.next();
+            assertEquals( a.getId(), cKnowsA.getEndNodeId() );
+            assertEquals( "SECRET", cKnowsA.getType().name() );
+            assertEquals( cKnowsA.getProperty( "secretProperty" ), "keep me" );
+            assertFalse( cRelationships.hasNext() );
+            tx.commit();
+        }
+        managementService.dropDatabase( copyName );
+    }
+
+    @Test
+    void canHandleEscapedStrings() throws Exception
+    {
+        Label labelWithComma = Label.label( "My,comma,label" );
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL, labelWithComma );
+            a.setProperty( "name", "On" );
+            a.setProperty( "property.with.dots", "value" );
+            tx.createNode( NUMBER_LABEL );
+
+            tx.commit();
+        }
+
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName,
+                "--to-database=" + copyName,
+                "--keep-only-nodes-with-labels=`My,comma,label`",
+                "--keep-only-node-properties=Number.`property.with.dots`"
+        );
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService copyDb = managementService.database( copyName );
+
+        try ( Transaction tx = copyDb.beginTx() )
+        {
+            ResourceIterable<Node> allNodes = tx.getAllNodes();
+            List<Node> nodes = allNodes.stream().collect( Collectors.toList() );
+            assertThat( nodes.size() ).isEqualTo( 1 );
+
+            Node a = nodes.get( 0 );
+
+            assertThat( a.getLabels() ).containsExactlyInAnyOrder( labelWithComma, NUMBER_LABEL );
+            assertThat( a.getAllProperties() ).containsOnly( entry( "property.with.dots", "value" ) );
+            assertFalse( a.getRelationships().iterator().hasNext() );
+
             tx.commit();
         }
         managementService.dropDatabase( copyName );

@@ -7,6 +7,12 @@ package com.neo4j.dbms.commandline.storeutil;
 
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.map.MutableMap;
+import org.eclipse.collections.api.map.primitive.ImmutableIntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.set.primitive.ImmutableIntSet;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
+import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
+import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -105,8 +111,13 @@ public class StoreCopy
     private final PageCacheTracer pageCacheTracer;
     private final FormatEnum format;
     private final List<String> deleteNodesWithLabels;
+    private final List<String> keepOnlyNodesWithLabels;
     private final List<String> skipLabels;
     private final List<String> skipProperties;
+    private final List<List<String>> skipNodeProperties;
+    private final List<List<String>> keepOnlyNodeProperties;
+    private final List<List<String>> skipRelationshipProperties;
+    private final List<List<String>> keepOnlyRelationshipProperties;
     private final List<String> skipRelationships;
     private final PrintStream out;
 
@@ -125,15 +136,24 @@ public class StoreCopy
         high_limit
     }
 
-    public StoreCopy( DatabaseLayout from, Config config, FormatEnum format, List<String> deleteNodesWithLabels, List<String> skipLabels,
-            List<String> skipProperties, List<String> skipRelationships, boolean verbose, PrintStream out, PageCacheTracer pageCacheTracer )
+    public StoreCopy( DatabaseLayout from, Config config, FormatEnum format,
+            List<String> deleteNodesWithLabels, List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
+            List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
+            List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,
+            List<String> skipRelationships, boolean verbose, PrintStream out,
+            PageCacheTracer pageCacheTracer )
     {
         this.from = from;
         this.config = config;
         this.format = format;
         this.deleteNodesWithLabels = deleteNodesWithLabels;
+        this.keepOnlyNodesWithLabels = keepOnlyNodesWithLabels;
         this.skipLabels = skipLabels;
         this.skipProperties = skipProperties;
+        this.skipNodeProperties = skipNodeProperties;
+        this.keepOnlyNodeProperties = keepOnlyNodeProperties;
+        this.skipRelationshipProperties = skipRelationshipProperties;
+        this.keepOnlyRelationshipProperties = keepOnlyRelationshipProperties;
         this.skipRelationships = skipRelationships;
         this.out = out;
         this.verbose = verbose;
@@ -164,7 +184,8 @@ public class StoreCopy
                 stats = new StoreCopyStats( log );
                 SchemaStore schemaStore = neoStores.getSchemaStore();
 
-                storeCopyFilter = convertFilter( deleteNodesWithLabels, skipLabels, skipProperties, skipRelationships, tokenHolders, stats );
+                storeCopyFilter = convertFilter( deleteNodesWithLabels, keepOnlyNodesWithLabels, skipLabels, skipProperties, skipNodeProperties,
+                        keepOnlyNodeProperties, skipRelationshipProperties, keepOnlyRelationshipProperties, skipRelationships, tokenHolders, stats );
 
                 RecordFormats recordFormats = setupRecordFormats( neoStores, format );
 
@@ -481,15 +502,26 @@ public class StoreCopy
         }
     }
 
-    private static StoreCopyFilter convertFilter( List<String> deleteNodesWithLabels, List<String> skipLabels, List<String> skipProperties,
-            List<String> skipRelationships, TokenHolders tokenHolders, StoreCopyStats stats )
+    private static StoreCopyFilter convertFilter( List<String> deleteNodesWithLabels,
+            List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
+            List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
+            List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,  List<String> skipRelationships,
+            TokenHolders tokenHolders, StoreCopyStats stats )
     {
         int[] deleteNodesWithLabelsIds = getTokenIds( deleteNodesWithLabels, tokenHolders.labelTokens() );
+        int[] keepOnlyNodesWithLabelsIds = getTokenIds( keepOnlyNodesWithLabels, tokenHolders.labelTokens() );
         int[] skipLabelsIds = getTokenIds( skipLabels, tokenHolders.labelTokens() );
         int[] skipPropertyIds = getTokenIds( skipProperties, tokenHolders.propertyKeyTokens() );
+        var skipNodePropertyIds = getPropertyComboTokenIds( skipNodeProperties, tokenHolders.propertyKeyTokens(), tokenHolders.labelTokens() );
+        var keepOnlyNodePropertyIds = getPropertyComboTokenIds( keepOnlyNodeProperties, tokenHolders.propertyKeyTokens(), tokenHolders.labelTokens() );
+        var skipRelationshipPropertyIds =
+                getPropertyComboTokenIds( skipRelationshipProperties, tokenHolders.propertyKeyTokens(), tokenHolders.relationshipTypeTokens() );
+        var keepOnlyRelationshipPropertyIds =
+                getPropertyComboTokenIds( keepOnlyRelationshipProperties, tokenHolders.propertyKeyTokens(), tokenHolders.relationshipTypeTokens() );
         int[] skipRelationshipIds = getTokenIds( skipRelationships, tokenHolders.relationshipTypeTokens() );
 
-        return new StoreCopyFilter( stats, deleteNodesWithLabelsIds, skipLabelsIds, skipPropertyIds, skipRelationshipIds );
+        return new StoreCopyFilter( stats, deleteNodesWithLabelsIds, keepOnlyNodesWithLabelsIds, skipLabelsIds, skipPropertyIds, skipNodePropertyIds,
+                keepOnlyNodePropertyIds, skipRelationshipPropertyIds, keepOnlyRelationshipPropertyIds, skipRelationshipIds );
     }
 
     private static int[] getTokenIds( List<String> tokenNames, TokenHolder tokenHolder )
@@ -506,6 +538,38 @@ public class StoreCopy
             labelIds[i++] = labelId;
         }
         return labelIds;
+    }
+
+    private static ImmutableIntObjectMap<ImmutableIntSet> getPropertyComboTokenIds( List<List<String>> propertiesWithOwningEntityTokens,
+            TokenHolder propertyKeyTokens, TokenHolder owningEntityTokens )
+    {
+        MutableIntObjectMap<MutableIntSet> propertyComboTokens = new IntObjectHashMap<>();
+
+        for ( List<String> oneOwningEntityTokenAndProperty : propertiesWithOwningEntityTokens )
+        {
+            if ( oneOwningEntityTokenAndProperty.size() != 2 )
+            {
+                throw new RuntimeException(
+                        "Malformed property combo '" + oneOwningEntityTokenAndProperty + "', should be " + owningEntityTokens.getTokenType() + ".property" );
+            }
+
+            int propId = propertyKeyTokens.getIdByName( oneOwningEntityTokenAndProperty.get( 1 ) );
+            if ( propId == TokenConstants.NO_TOKEN )
+            {
+                throw new RuntimeException( "Unable to find token: for " + oneOwningEntityTokenAndProperty.get( 1 ) );
+            }
+            int owningEntityTokenId = owningEntityTokens.getIdByName( oneOwningEntityTokenAndProperty.get( 0 ) );
+            if ( owningEntityTokenId == TokenConstants.NO_TOKEN )
+            {
+                throw new RuntimeException( "Unable to find token: for " + oneOwningEntityTokenAndProperty.get( 0 ) );
+            }
+
+            MutableIntSet owningEntityTokenIds = propertyComboTokens.getIfAbsentPut( propId, IntHashSet::new );
+            owningEntityTokenIds.add( owningEntityTokenId );
+        }
+        MutableIntObjectMap<ImmutableIntSet> immutableSets = new IntObjectHashMap<>();
+        propertyComboTokens.forEachKeyValue( ( i, integers ) -> immutableSets.put( i, integers.toImmutable() ) );
+        return immutableSets.toImmutable();
     }
 
     private Input.Estimates getEstimates()
