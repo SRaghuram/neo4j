@@ -26,6 +26,7 @@ import org.neo4j.configuration.helpers.DatabaseNameValidator
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
 import org.neo4j.cypher.internal.ast.AllDatabasesQualifier
+import org.neo4j.cypher.internal.ast.AllDatabasesScope
 import org.neo4j.cypher.internal.ast.AllGraphsScope
 import org.neo4j.cypher.internal.ast.AllLabelResource
 import org.neo4j.cypher.internal.ast.AllPropertyResource
@@ -33,10 +34,11 @@ import org.neo4j.cypher.internal.ast.AllQualifier
 import org.neo4j.cypher.internal.ast.DatabaseResource
 import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
 import org.neo4j.cypher.internal.ast.DumpData
-import org.neo4j.cypher.internal.ast.GraphScope
+import org.neo4j.cypher.internal.ast.GraphOrDatabaseScope
 import org.neo4j.cypher.internal.ast.LabelAllQualifier
 import org.neo4j.cypher.internal.ast.LabelQualifier
 import org.neo4j.cypher.internal.ast.LabelResource
+import org.neo4j.cypher.internal.ast.NamedDatabaseScope
 import org.neo4j.cypher.internal.ast.NamedGraphScope
 import org.neo4j.cypher.internal.ast.NoResource
 import org.neo4j.cypher.internal.ast.PrivilegeQualifier
@@ -840,7 +842,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val privilegeKeys = Seq("action", "resourceValue", "resource", "label").foldLeft(Map.empty[String, String])((a, k) => a + (k -> internalKey(k)))
   private def makeGrantOrDenyExecutionPlan(privilegeAction: PrivilegeAction,
                                            resource: ActionResource,
-                                           database: GraphScope,
+                                           database: GraphOrDatabaseScope,
                                            qualifier: PrivilegeQualifier,
                                            roleName: Either[String, Parameter],
                                            source: Option[ExecutionPlan],
@@ -858,7 +860,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       case NamedGraphScope(name) =>
         val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
         (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
-      case AllGraphsScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL) // The name is just for later printout of results
+      case NamedDatabaseScope(name) =>
+        val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
+        (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
+      case AllGraphsScope() | AllDatabasesScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL) // The name is just for later printout of results
       case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT) // The name is just for later printout of results
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
@@ -909,7 +914,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     )
   }
 
-  private def makeRevokeExecutionPlan(privilegeAction: PrivilegeAction, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier,
+  private def makeRevokeExecutionPlan(privilegeAction: PrivilegeAction, resource: ActionResource, database: GraphOrDatabaseScope, qualifier: PrivilegeQualifier,
                                       roleName: Either[String, Parameter], revokeType: String, source: Option[ExecutionPlan],
                                       startOfErrorMessage: MapValue => String) = {
     val action = Values.utf8Value(privilegeAction.toString)
@@ -922,7 +927,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       case NamedGraphScope(name) =>
         val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
         (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
-      case AllGraphsScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL)
+      case NamedDatabaseScope(name) =>
+        val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
+        (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
+      case AllGraphsScope() | AllDatabasesScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL)
       case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT)
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
