@@ -117,9 +117,9 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         {
             var lineReader = lineIterator( reader );
 
-            String line;
-            while ( (line = lineReader.nextLine()) != null )
+            while ( lineReader.hasNext() )
             {
+                var line = lineReader.nextLine();
                 if ( line.contains( message ) )
                 {
                     foundError = true;
@@ -140,9 +140,9 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         {
             LineIterator lineIterator = lineIterator( reader );
 
-            String line;
-            while ( (line = lineIterator.nextLine()) != null )
+            while ( lineIterator.hasNext() )
             {
+                var line = lineIterator.nextLine();
                 assertThat( "Security log should not contain message '" + message + "'", !line.contains( message ) );
             }
         }

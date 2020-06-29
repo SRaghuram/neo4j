@@ -440,8 +440,9 @@ class SecurityAdministrationCommandLoggingIT
         try ( var reader = fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) )
         {
             var lineIterator = IOUtils.lineIterator( reader );
-            for ( String line; (line = lineIterator.nextLine()) != null; )
+            while ( lineIterator.hasNext() )
             {
+                var line = lineIterator.nextLine();
                 if ( !line.contains( "Assigned admin role to user 'neo4j'" ) && !line.contains( "Setting version for" ) )
                 {
                     logLines.add( line );
