@@ -38,7 +38,7 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
         execute(s"$grantOrDenyCommand ALL GRAPH PRIVILEGES ON GRAPH foo TO custom")
 
         // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantedOrDenied(allGraphPrivileges).role("custom").database("foo").map))
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantedOrDenied(allGraphPrivileges).role("custom").graph("foo").map))
       }
 
       test(s"should $grantOrDeny all graph privileges for multiple graphs using parameter") {
@@ -52,8 +52,8 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(allGraphPrivileges).role("custom").database("foo").map,
-          grantedOrDenied(allGraphPrivileges).role("custom").database("bar").map
+          grantedOrDenied(allGraphPrivileges).role("custom").graph("foo").map,
+          grantedOrDenied(allGraphPrivileges).role("custom").graph("bar").map
         ))
       }
   }
@@ -77,8 +77,8 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
       granted(matchPrivilege).relationship("*").role("custom").map,
       granted(write).node("*").role("custom").map,
       granted(write).relationship("*").role("custom").map,
-      granted(traverse).node("*").database("foo").role("custom").map,
-      granted(traverse).relationship("*").database("foo").role("custom").map,
+      granted(traverse).node("*").graph("foo").role("custom").map,
+      granted(traverse).relationship("*").graph("foo").role("custom").map,
       granted(read).node("A").property("prop").role("custom").map
     ))
   }

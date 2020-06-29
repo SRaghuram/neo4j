@@ -74,8 +74,8 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              grantedOrDenied(privilege).role("custom").database("foo").node("*").map,
-              grantedOrDenied(privilege).role("custom").database("foo").relationship("*").map
+              grantedOrDenied(privilege).role("custom").graph("foo").node("*").map,
+              grantedOrDenied(privilege).role("custom").graph("foo").relationship("*").map
             ))
           }
 
@@ -90,10 +90,10 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              grantedOrDenied(privilege).role("custom").database("foo").node("*").map,
-              grantedOrDenied(privilege).role("custom").database("foo").relationship("*").map,
-              grantedOrDenied(privilege).role("custom").database("bar").node("*").map,
-              grantedOrDenied(privilege).role("custom").database("bar").relationship("*").map
+              grantedOrDenied(privilege).role("custom").graph("foo").node("*").map,
+              grantedOrDenied(privilege).role("custom").graph("foo").relationship("*").map,
+              grantedOrDenied(privilege).role("custom").graph("bar").node("*").map,
+              grantedOrDenied(privilege).role("custom").graph("bar").relationship("*").map
             ))
           }
 
@@ -106,8 +106,8 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              grantedOrDenied(privilege).database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
-              grantedOrDenied(privilege).database(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
+              grantedOrDenied(privilege).graph(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
+              grantedOrDenied(privilege).graph(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
             ))
           }
 
@@ -123,8 +123,8 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
             // THEN
             val expected: Seq[PrivilegeMapBuilder] = Seq(
-              grantedOrDenied(privilege).database("foo").node("*"),
-              grantedOrDenied(privilege).database("foo").relationship("*")
+              grantedOrDenied(privilege).graph("foo").node("*"),
+              grantedOrDenied(privilege).graph("foo").relationship("*")
             )
 
             execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -149,9 +149,9 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
               grantedOrDenied(privilege).role("custom").node("*").map,
-              grantedOrDenied(privilege).role("custom").node("*").database("bar").map,
+              grantedOrDenied(privilege).role("custom").node("*").graph("bar").map,
               grantedOrDenied(privilege).role("custom").relationship("*").map,
-              grantedOrDenied(privilege).role("custom").relationship("*").database("bar").map
+              grantedOrDenied(privilege).role("custom").relationship("*").graph("bar").map
             ))
 
             // WHEN
@@ -159,8 +159,8 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              grantedOrDenied(privilege).role("custom").node("*").database("bar").map,
-              grantedOrDenied(privilege).role("custom").relationship("*").database("bar").map
+              grantedOrDenied(privilege).role("custom").node("*").graph("bar").map,
+              grantedOrDenied(privilege).role("custom").relationship("*").graph("bar").map
             ))
           }
 

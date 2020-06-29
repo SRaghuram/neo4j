@@ -50,8 +50,8 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(merge).role("custom").database("foo").node("*").map,
-      granted(merge).role("custom").database("foo").relationship("*").map,
+      granted(merge).role("custom").graph("foo").node("*").map,
+      granted(merge).role("custom").graph("foo").relationship("*").map,
     ))
   }
 
@@ -66,9 +66,9 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(merge).role("custom").database("*").node("a").map,
-      granted(merge).role("custom").database("*").node("b").map,
-      granted(merge).role("custom").database("foo").property("prop").relationship("c").map,
+      granted(merge).role("custom").graph("*").node("a").map,
+      granted(merge).role("custom").graph("*").node("b").map,
+      granted(merge).role("custom").graph("foo").property("prop").relationship("c").map,
     ))
   }
 
@@ -83,10 +83,10 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(merge).role("custom").database("foo").property("prop1").node("*").map,
-      granted(merge).role("custom").database("bar").property("prop1").node("*").map,
-      granted(merge).role("custom").database("foo").property("prop2").node("*").map,
-      granted(merge).role("custom").database("bar").property("prop2").node("*").map
+      granted(merge).role("custom").graph("foo").property("prop1").node("*").map,
+      granted(merge).role("custom").graph("bar").property("prop1").node("*").map,
+      granted(merge).role("custom").graph("foo").property("prop2").node("*").map,
+      granted(merge).role("custom").graph("bar").property("prop2").node("*").map
     ))
   }
 
@@ -99,7 +99,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(merge).database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
+      granted(merge).graph(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
     ))
   }
 
@@ -115,7 +115,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // THEN
     val expected: Seq[PrivilegeMapBuilder] = Seq(
-      granted(merge).database("foo").property("prop").relationship("*")
+      granted(merge).graph("foo").property("prop").relationship("*")
     )
 
     execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -140,7 +140,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       granted(merge).role("custom").node("*").map,
-      granted(merge).role("custom").database("bar").node("*").map,
+      granted(merge).role("custom").graph("bar").node("*").map,
     ))
 
     // WHEN
@@ -148,7 +148,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(merge).role("custom").database("bar").node("*").map,
+      granted(merge).role("custom").graph("bar").node("*").map,
     ))
   }
 

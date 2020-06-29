@@ -219,7 +219,15 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
     def relationship(relType: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"RELATIONSHIP($relType)"))
 
+    /**
+     * Currently database() and graph() are equivalent.
+     * But when/if we implement multiple graphs per database, the distinction will become important.
+     * So try to use the correct one already now.
+     */
+
     def database(database: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("graph" -> database))
+
+    def graph(graph: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("graph" -> graph))
 
     def user(user: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("user" -> user))
 

@@ -62,7 +62,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).role("custom").database("foo").label("*").map,
+            grantedOrDenied(action).role("custom").graph("foo").label("*").map,
           ))
         }
 
@@ -77,10 +77,10 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).role("custom").database("foo").label("label1").map,
-            grantedOrDenied(action).role("custom").database("bar").label("label1").map,
-            grantedOrDenied(action).role("custom").database("foo").label("label2").map,
-            grantedOrDenied(action).role("custom").database("bar").label("label2").map
+            grantedOrDenied(action).role("custom").graph("foo").label("label1").map,
+            grantedOrDenied(action).role("custom").graph("bar").label("label1").map,
+            grantedOrDenied(action).role("custom").graph("foo").label("label2").map,
+            grantedOrDenied(action).role("custom").graph("bar").label("label2").map
           ))
         }
 
@@ -93,7 +93,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).database(DEFAULT_DATABASE_NAME).role("custom").label("*").map,
+            grantedOrDenied(action).graph(DEFAULT_DATABASE_NAME).role("custom").label("*").map,
           ))
         }
 
@@ -109,7 +109,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           val expected: Seq[PrivilegeMapBuilder] = Seq(
-            grantedOrDenied(action).database("foo").label("label"),
+            grantedOrDenied(action).graph("foo").label("label"),
           )
 
           execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -134,7 +134,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
             grantedOrDenied(action).role("custom").label("*").map,
-            grantedOrDenied(action).role("custom").database("bar").label("*").map,
+            grantedOrDenied(action).role("custom").graph("bar").label("*").map,
           ))
 
           // WHEN
@@ -142,7 +142,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).role("custom").database("bar").label("*").map,
+            grantedOrDenied(action).role("custom").graph("bar").label("*").map,
           ))
         }
 

@@ -517,8 +517,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo, bar $segmentCommand * (*) TO custom")
 
                 // THEN
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(segmentFunction(startExpected.role("custom").database("foo"), "*").map,
-                  segmentFunction(startExpected.role("custom").database("bar"), "*").map))
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(segmentFunction(startExpected.role("custom").graph("foo"), "*").map,
+                  segmentFunction(startExpected.role("custom").graph("bar"), "*").map))
               }
 
               test(s"should $grantOrDeny $actionName privilege to custom role for all graphs but only a specific $segmentName (that does not need to exist)") {
@@ -542,7 +542,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should
-                  be(Set(segmentFunction(startExpected.role("custom").database("foo"), "A").map))
+                  be(Set(segmentFunction(startExpected.role("custom").graph("foo"), "A").map))
               }
 
               test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and all ${segmentName}s") {
@@ -555,7 +555,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should
-                  be(Set(segmentFunction(startExpected.role("custom").database("foo"), "*").map))
+                  be(Set(segmentFunction(startExpected.role("custom").graph("foo"), "*").map))
               }
 
               test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and multiple ${segmentName}s") {
@@ -569,8 +569,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.role("custom").database("foo"), "A").map,
-                  segmentFunction(startExpected.role("custom").database("foo"), "B").map
+                  segmentFunction(startExpected.role("custom").graph("foo"), "A").map,
+                  segmentFunction(startExpected.role("custom").graph("foo"), "B").map
                 ))
               }
 
@@ -584,8 +584,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.role("custom").database("foo"), "A").map,
-                  segmentFunction(startExpected.role("custom").database("foo"), "B").map
+                  segmentFunction(startExpected.role("custom").graph("foo"), "A").map,
+                  segmentFunction(startExpected.role("custom").graph("foo"), "B").map
                 ))
               }
 
@@ -600,12 +600,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.role("role1").database("foo"), "A").map,
-                  segmentFunction(startExpected.role("role1").database("foo"), "B").map
+                  segmentFunction(startExpected.role("role1").graph("foo"), "A").map,
+                  segmentFunction(startExpected.role("role1").graph("foo"), "B").map
                 ))
                 execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.role("role2").database("foo"), "A").map,
-                  segmentFunction(startExpected.role("role2").database("foo"), "B").map
+                  segmentFunction(startExpected.role("role2").graph("foo"), "A").map,
+                  segmentFunction(startExpected.role("role2").graph("foo"), "B").map
                 ))
               }
 
@@ -649,8 +649,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").node("A").map,
-              startExpected.role("custom").database("foo").relationship("A").map
+              startExpected.role("custom").graph("foo").node("A").map,
+              startExpected.role("custom").graph("foo").relationship("A").map
             ))
           }
 
@@ -664,8 +664,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").node("*").map,
-              startExpected.role("custom").database("foo").relationship("*").map
+              startExpected.role("custom").graph("foo").node("*").map,
+              startExpected.role("custom").graph("foo").relationship("*").map
             ))
           }
 
@@ -678,8 +678,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
-              startExpected.database(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
+              startExpected.graph(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
+              startExpected.graph(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
             ))
           }
 
@@ -694,10 +694,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").node("A").map,
-              startExpected.role("custom").database("foo").relationship("A").map,
-              startExpected.role("custom").database("foo").node("B").map,
-              startExpected.role("custom").database("foo").relationship("B").map
+              startExpected.role("custom").graph("foo").node("A").map,
+              startExpected.role("custom").graph("foo").relationship("A").map,
+              startExpected.role("custom").graph("foo").node("B").map,
+              startExpected.role("custom").graph("foo").relationship("B").map
             ))
           }
 
@@ -711,10 +711,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").node("A").map,
-              startExpected.role("custom").database("foo").relationship("A").map,
-              startExpected.role("custom").database("foo").node("B").map,
-              startExpected.role("custom").database("foo").relationship("B").map
+              startExpected.role("custom").graph("foo").node("A").map,
+              startExpected.role("custom").graph("foo").relationship("A").map,
+              startExpected.role("custom").graph("foo").node("B").map,
+              startExpected.role("custom").graph("foo").relationship("B").map
             ))
           }
 
@@ -729,16 +729,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(
-              startExpected.role("role1").database("foo").node("A").map,
-              startExpected.role("role1").database("foo").relationship("A").map,
-              startExpected.role("role1").database("foo").node("B").map,
-              startExpected.role("role1").database("foo").relationship("B").map
+              startExpected.role("role1").graph("foo").node("A").map,
+              startExpected.role("role1").graph("foo").relationship("A").map,
+              startExpected.role("role1").graph("foo").node("B").map,
+              startExpected.role("role1").graph("foo").relationship("B").map
             ))
             execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(
-              startExpected.role("role2").database("foo").node("A").map,
-              startExpected.role("role2").database("foo").relationship("A").map,
-              startExpected.role("role2").database("foo").node("B").map,
-              startExpected.role("role2").database("foo").relationship("B").map
+              startExpected.role("role2").graph("foo").node("A").map,
+              startExpected.role("role2").graph("foo").relationship("A").map,
+              startExpected.role("role2").graph("foo").node("B").map,
+              startExpected.role("role2").graph("foo").relationship("B").map
             ))
           }
       }
@@ -779,12 +779,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(traverse).role("custom").database("bar").node("A").map,
-      denied(traverse).role("custom").database("bar").relationship("B").map,
-      granted(read).role("custom").database("bar").property("prop").node("A").map,
-      denied(read).role("custom").database("bar").property("prop2").node("B").map,
-      granted(matchPrivilege).role("custom").database("bar").property("prop3").node("C").map,
-      denied(matchPrivilege).role("custom").database("bar").property("prop4").node("D").map
+      granted(traverse).role("custom").graph("bar").node("A").map,
+      denied(traverse).role("custom").graph("bar").relationship("B").map,
+      granted(read).role("custom").graph("bar").property("prop").node("A").map,
+      denied(read).role("custom").graph("bar").property("prop2").node("B").map,
+      granted(matchPrivilege).role("custom").graph("bar").property("prop3").node("C").map,
+      denied(matchPrivilege).role("custom").graph("bar").property("prop4").node("D").map
     ))
 
     // WHEN
@@ -794,9 +794,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     //THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      denied(traverse).role("custom").database("bar").relationship("B").map,
-      granted(read).role("custom").database("bar").property("prop").node("A").map,
-      denied(matchPrivilege).role("custom").database("bar").property("prop4").node("D").map
+      denied(traverse).role("custom").graph("bar").relationship("B").map,
+      granted(read).role("custom").graph("bar").property("prop").node("A").map,
+      denied(matchPrivilege).role("custom").graph("bar").property("prop4").node("D").map
     ))
   }
 
@@ -870,7 +870,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.database("foo").role("custom").property("bar"), "A").map
+                  segmentFunction(startExpected.graph("foo").role("custom").property("bar"), "A").map
                 ))
               }
 
@@ -884,7 +884,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.database("foo").role("custom").property("bar"), "*").map
+                  segmentFunction(startExpected.graph("foo").role("custom").property("bar"), "*").map
                 ))
               }
 
@@ -899,8 +899,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.database("foo").role("custom").property("bar"), "A").map,
-                  segmentFunction(startExpected.database("foo").role("custom").property("bar"), "B").map
+                  segmentFunction(startExpected.graph("foo").role("custom").property("bar"), "A").map,
+                  segmentFunction(startExpected.graph("foo").role("custom").property("bar"), "B").map
                 ))
               }
 
@@ -915,8 +915,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.database("foo").role("custom").property("bar"), "A").map,
-                  segmentFunction(startExpected.database("foo").role("custom").property("baz"), "A").map
+                  segmentFunction(startExpected.graph("foo").role("custom").property("bar"), "A").map,
+                  segmentFunction(startExpected.graph("foo").role("custom").property("baz"), "A").map
                 ))
               }
 
@@ -931,8 +931,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-                  segmentFunction(startExpected.database("foo").role("custom").property("bar"), "A").map,
-                  segmentFunction(startExpected.database("foo").role("custom").property("baz"), "B").map
+                  segmentFunction(startExpected.graph("foo").role("custom").property("bar"), "A").map,
+                  segmentFunction(startExpected.graph("foo").role("custom").property("baz"), "B").map
                 ))
               }
 
@@ -949,7 +949,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 // THEN
                 val expected = (for (l <- Seq("A", "B", "C")) yield {
                   for (p <- Seq("a", "b", "c")) yield {
-                    segmentFunction(startExpected.database("foo").property(p), l)
+                    segmentFunction(startExpected.graph("foo").property(p), l)
                   }
                 }).flatten
 
@@ -998,8 +998,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").property("bar").node("A").map,
-              startExpected.role("custom").database("foo").property("bar").relationship("A").map
+              startExpected.role("custom").graph("foo").property("bar").node("A").map,
+              startExpected.role("custom").graph("foo").property("bar").relationship("A").map
             ))
           }
 
@@ -1013,8 +1013,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").property("bar").node("*").map,
-              startExpected.role("custom").database("foo").property("bar").relationship("*").map
+              startExpected.role("custom").graph("foo").property("bar").node("*").map,
+              startExpected.role("custom").graph("foo").property("bar").relationship("*").map
             ))
           }
 
@@ -1029,10 +1029,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").property("bar").node("A").map,
-              startExpected.role("custom").database("foo").property("bar").relationship("A").map,
-              startExpected.role("custom").database("foo").property("bar").node("B").map,
-              startExpected.role("custom").database("foo").property("bar").relationship("B").map
+              startExpected.role("custom").graph("foo").property("bar").node("A").map,
+              startExpected.role("custom").graph("foo").property("bar").relationship("A").map,
+              startExpected.role("custom").graph("foo").property("bar").node("B").map,
+              startExpected.role("custom").graph("foo").property("bar").relationship("B").map
             ))
           }
 
@@ -1047,10 +1047,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").property("bar").node("A").map,
-              startExpected.role("custom").database("foo").property("bar").relationship("A").map,
-              startExpected.role("custom").database("foo").property("baz").node("A").map,
-              startExpected.role("custom").database("foo").property("baz").relationship("A").map
+              startExpected.role("custom").graph("foo").property("bar").node("A").map,
+              startExpected.role("custom").graph("foo").property("bar").relationship("A").map,
+              startExpected.role("custom").graph("foo").property("baz").node("A").map,
+              startExpected.role("custom").graph("foo").property("baz").relationship("A").map
             ))
           }
 
@@ -1065,10 +1065,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-              startExpected.role("custom").database("foo").property("bar").node("A").map,
-              startExpected.role("custom").database("foo").property("bar").relationship("A").map,
-              startExpected.role("custom").database("foo").property("baz").node("B").map,
-              startExpected.role("custom").database("foo").property("baz").relationship("B").map
+              startExpected.role("custom").graph("foo").property("bar").node("A").map,
+              startExpected.role("custom").graph("foo").property("bar").relationship("A").map,
+              startExpected.role("custom").graph("foo").property("baz").node("B").map,
+              startExpected.role("custom").graph("foo").property("baz").relationship("B").map
             ))
           }
 
@@ -1085,8 +1085,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             // THEN
             val expected = (for (l <- Seq("A", "B", "C")) yield {
               (for (p <- Seq("a", "b", "c")) yield {
-                Seq(startExpected.database("foo").property(p).node(l),
-                  startExpected.database("foo").property(p).relationship(l))
+                Seq(startExpected.graph("foo").property(p).node(l),
+                  startExpected.graph("foo").property(p).relationship(l))
               }).flatten
             }).flatten
 

@@ -32,11 +32,11 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("A").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("B").map
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("A").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("B").map
         ))
 
         // WHEN
@@ -44,10 +44,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("A").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("B").map
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("A").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("B").map
         ))
       }
 
@@ -67,11 +67,11 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("A").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("B").map
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("A").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("B").map
         ))
 
         // WHEN
@@ -79,10 +79,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("A").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("B").map
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("A").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("B").map
         ))
       }
 
@@ -99,12 +99,12 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("C").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("*").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("C").map
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("C").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("C").map
         ))
 
         // WHEN
@@ -112,10 +112,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").node("C").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("B").map,
-          grantedOrDenied(read).database("foo").role("custom").property("bar").relationship("C").map
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").node("C").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("B").map,
+          grantedOrDenied(read).graph("foo").role("custom").property("bar").relationship("C").map
         ))
 
         // WHEN
@@ -138,11 +138,11 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(read).database("foo").role("custom").node("*").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("a").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("b").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").map
+          grantedOrDenied(read).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(read).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("a").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("b").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").map
         ))
 
         // WHEN
@@ -150,10 +150,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(read).database("foo").role("custom").node("*").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("a").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("b").map
+          grantedOrDenied(read).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(read).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("a").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("b").map
         ))
 
         // WHEN
@@ -161,8 +161,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).database("foo").role("custom").node("*").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("a").map
+          grantedOrDenied(read).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("a").map
         ))
       }
 
@@ -181,9 +181,9 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(read).role("custom").node("*").map,
-          grantedOrDenied(read).role("custom").node("*").database("bar").map,
+          grantedOrDenied(read).role("custom").node("*").graph("bar").map,
           grantedOrDenied(read).role("custom").relationship("*").map,
-          grantedOrDenied(read).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(read).role("custom").relationship("*").graph("bar").map
         ))
 
         // WHEN
@@ -191,8 +191,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).role("custom").node("*").database("bar").map,
-          grantedOrDenied(read).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(read).role("custom").node("*").graph("bar").map,
+          grantedOrDenied(read).role("custom").relationship("*").graph("bar").map
         ))
       }
 
@@ -223,8 +223,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(read).role("custom").node("*").database("bar").map,
-          grantedOrDenied(read).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(read).role("custom").node("*").graph("bar").map,
+          grantedOrDenied(read).role("custom").relationship("*").graph("bar").map
         ))
 
         // WHEN
@@ -243,10 +243,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo NODES B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).database("foo").role("custom").node("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").node("A").map,
-          grantedOrDenied(traverse).database("foo").role("custom").node("B").map
+          grantedOrDenied(traverse).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").node("A").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").node("B").map
         ))
 
         // WHEN
@@ -254,9 +254,9 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).database("foo").role("custom").node("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").node("B").map
+          grantedOrDenied(traverse).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").node("B").map
         ))
 
         // WHEN
@@ -264,8 +264,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").node("B").map
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").node("B").map
         ))
       }
 
@@ -285,7 +285,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(traverse).role("custom").node("*").map,
           grantedOrDenied(traverse).role("custom").relationship("*").map,
-          grantedOrDenied(traverse).role("custom").node("*").database("bar").map
+          grantedOrDenied(traverse).role("custom").node("*").graph("bar").map
         ))
 
         // WHEN
@@ -294,7 +294,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(traverse).role("custom").relationship("*").map,
-          grantedOrDenied(traverse).role("custom").node("*").database("bar").map
+          grantedOrDenied(traverse).role("custom").node("*").graph("bar").map
         ))
       }
 
@@ -311,9 +311,9 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).database("foo").role("custom").node("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("B").map
+          grantedOrDenied(traverse).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("B").map
         ))
 
         // WHEN
@@ -321,8 +321,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).database("foo").role("custom").node("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("B").map
+          grantedOrDenied(traverse).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("B").map
         ))
       }
 
@@ -342,7 +342,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(traverse).role("custom").node("*").map,
           grantedOrDenied(traverse).role("custom").relationship("*").map,
-          grantedOrDenied(traverse).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(traverse).role("custom").relationship("*").graph("bar").map
         ))
 
         // WHEN
@@ -351,7 +351,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(traverse).role("custom").node("*").map,
-          grantedOrDenied(traverse).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(traverse).role("custom").relationship("*").graph("bar").map
         ))
       }
 
@@ -367,12 +367,12 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).database("foo").role("custom").node("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").node("B").map,
-          grantedOrDenied(traverse).database("foo").role("custom").node("C").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("B").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("C").map
+          grantedOrDenied(traverse).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").node("B").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").node("C").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("B").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("C").map
         ))
 
         // WHEN
@@ -380,10 +380,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).database("foo").role("custom").node("B").map,
-          grantedOrDenied(traverse).database("foo").role("custom").node("C").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("B").map,
-          grantedOrDenied(traverse).database("foo").role("custom").relationship("C").map
+          grantedOrDenied(traverse).graph("foo").role("custom").node("B").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").node("C").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("B").map,
+          grantedOrDenied(traverse).graph("foo").role("custom").relationship("C").map
         ))
 
         // WHEN
@@ -404,11 +404,11 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(traverse).role("custom").node("*").map,
-          grantedOrDenied(traverse).role("custom").node("*").database("foo").map,
-          grantedOrDenied(traverse).role("custom").node("*").database("bar").map,
+          grantedOrDenied(traverse).role("custom").node("*").graph("foo").map,
+          grantedOrDenied(traverse).role("custom").node("*").graph("bar").map,
           grantedOrDenied(traverse).role("custom").relationship("*").map,
-          grantedOrDenied(traverse).role("custom").relationship("*").database("foo").map,
-          grantedOrDenied(traverse).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(traverse).role("custom").relationship("*").graph("foo").map,
+          grantedOrDenied(traverse).role("custom").relationship("*").graph("bar").map
         ))
 
         // WHEN
@@ -417,9 +417,9 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(traverse).role("custom").node("*").map,
-          grantedOrDenied(traverse).role("custom").node("*").database("bar").map,
+          grantedOrDenied(traverse).role("custom").node("*").graph("bar").map,
           grantedOrDenied(traverse).role("custom").relationship("*").map,
-          grantedOrDenied(traverse).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(traverse).role("custom").relationship("*").graph("bar").map
         ))
 
         // WHEN
@@ -427,8 +427,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(traverse).role("custom").node("*").database("bar").map,
-          grantedOrDenied(traverse).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(traverse).role("custom").node("*").graph("bar").map,
+          grantedOrDenied(traverse).role("custom").relationship("*").graph("bar").map
         ))
       }
 
@@ -445,9 +445,9 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("B").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("B").map
         ))
 
         // WHEN
@@ -455,8 +455,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("B").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("B").map
         ))
       }
 
@@ -473,9 +473,9 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("B").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("B").map
         ))
 
         // WHEN
@@ -483,8 +483,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("B").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("B").map
         ))
       }
 
@@ -496,12 +496,12 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo ELEMENTS A, B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("A").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("A").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("B").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("A").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("A").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("B").map
         ))
 
         // WHEN
@@ -509,10 +509,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("B").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("B").map
         ))
 
         // WHEN
@@ -520,8 +520,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("B").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("B").map
         ))
 
         // WHEN
@@ -529,10 +529,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("B").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").node("C").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("B").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("bar").relationship("C").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("B").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").node("C").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("B").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("bar").relationship("C").map
         ))
 
         // WHEN
@@ -555,10 +555,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").property("b").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").property("b").map
         ))
 
         // WHEN
@@ -566,8 +566,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").property("b").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").property("b").map
         ))
 
         // WHEN
@@ -592,9 +592,9 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(matchPrivilege).role("custom").node("*").map,
-          grantedOrDenied(matchPrivilege).role("custom").node("*").database("bar").map,
+          grantedOrDenied(matchPrivilege).role("custom").node("*").graph("bar").map,
           grantedOrDenied(matchPrivilege).role("custom").relationship("*").map,
-          grantedOrDenied(matchPrivilege).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(matchPrivilege).role("custom").relationship("*").graph("bar").map
         ))
 
         // WHEN
@@ -602,8 +602,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).role("custom").node("*").database("bar").map,
-          grantedOrDenied(matchPrivilege).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(matchPrivilege).role("custom").node("*").graph("bar").map,
+          grantedOrDenied(matchPrivilege).role("custom").relationship("*").graph("bar").map
         ))
       }
 
@@ -615,14 +615,14 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute(s"$grantOrDenyCommand MATCH {foo,bar} ON GRAPH foo RELATIONSHIPS A,B (*) TO custom")
 
         val expected = Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("A").property("foo").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("B").property("foo").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("A").property("foo").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("B").property("foo").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("A").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("B").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("A").property("bar").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("B").property("bar").map
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("A").property("foo").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("B").property("foo").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("A").property("foo").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("B").property("foo").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("A").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("B").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("A").property("bar").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("B").property("bar").map
         )
 
         // WHEN
@@ -686,17 +686,17 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("a").map,
-          grantedOrDenied(read).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").property("a").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("a").map,
+          grantedOrDenied(read).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").property("a").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("b").map,
 
-          grantedOrDenied(traverse).role("custom").database("foo").node("A").map,
-          grantedOrDenied(traverse).role("custom").database("foo").relationship("A").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("a").node("A").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("a").relationship("A").map
+          grantedOrDenied(traverse).role("custom").graph("foo").node("A").map,
+          grantedOrDenied(traverse).role("custom").graph("foo").relationship("A").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("a").node("A").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("a").relationship("A").map
         ))
 
         // WHEN
@@ -704,16 +704,16 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("a").map,
-          grantedOrDenied(read).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("a").map,
+          grantedOrDenied(read).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("b").map,
 
-          grantedOrDenied(traverse).role("custom").database("foo").node("A").map,
-          grantedOrDenied(traverse).role("custom").database("foo").relationship("A").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("a").node("A").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("a").relationship("A").map
+          grantedOrDenied(traverse).role("custom").graph("foo").node("A").map,
+          grantedOrDenied(traverse).role("custom").graph("foo").relationship("A").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("a").node("A").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("a").relationship("A").map
         ))
 
         // WHEN
@@ -721,15 +721,15 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("a").map,
-          grantedOrDenied(read).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("a").map,
+          grantedOrDenied(read).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("b").map,
 
-          grantedOrDenied(traverse).role("custom").database("foo").node("A").map,
-          grantedOrDenied(traverse).role("custom").database("foo").relationship("A").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").property("a").relationship("A").map
+          grantedOrDenied(traverse).role("custom").graph("foo").node("A").map,
+          grantedOrDenied(traverse).role("custom").graph("foo").relationship("A").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").property("a").relationship("A").map
         ))
 
         // WHEN
@@ -737,14 +737,14 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").node("*").property("a").map,
-          grantedOrDenied(read).database("foo").role("custom").node("*").property("b").map,
-          grantedOrDenied(matchPrivilege).database("foo").role("custom").relationship("*").map,
-          grantedOrDenied(read).database("foo").role("custom").relationship("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").node("*").property("a").map,
+          grantedOrDenied(read).graph("foo").role("custom").node("*").property("b").map,
+          grantedOrDenied(matchPrivilege).graph("foo").role("custom").relationship("*").map,
+          grantedOrDenied(read).graph("foo").role("custom").relationship("*").property("b").map,
 
-          grantedOrDenied(traverse).role("custom").database("foo").node("A").map,
-          grantedOrDenied(traverse).role("custom").database("foo").relationship("A").map
+          grantedOrDenied(traverse).role("custom").graph("foo").node("A").map,
+          grantedOrDenied(traverse).role("custom").graph("foo").relationship("A").map
         ))
       }
 

@@ -55,8 +55,8 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(setProperty).role("custom").database("foo").node("*").map,
-          grantedOrDenied(setProperty).role("custom").database("foo").relationship("*").map,
+          grantedOrDenied(setProperty).role("custom").graph("foo").node("*").map,
+          grantedOrDenied(setProperty).role("custom").graph("foo").relationship("*").map,
         ))
       }
 
@@ -71,9 +71,9 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(setProperty).role("custom").database("*").node("a").map,
-          grantedOrDenied(setProperty).role("custom").database("*").node("b").map,
-          grantedOrDenied(setProperty).role("custom").database("foo").property("prop").relationship("c").map,
+          grantedOrDenied(setProperty).role("custom").graph("*").node("a").map,
+          grantedOrDenied(setProperty).role("custom").graph("*").node("b").map,
+          grantedOrDenied(setProperty).role("custom").graph("foo").property("prop").relationship("c").map,
         ))
       }
 
@@ -88,10 +88,10 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(setProperty).role("custom").database("foo").property("prop1").node("*").map,
-          grantedOrDenied(setProperty).role("custom").database("bar").property("prop1").node("*").map,
-          grantedOrDenied(setProperty).role("custom").database("foo").property("prop2").node("*").map,
-          grantedOrDenied(setProperty).role("custom").database("bar").property("prop2").node("*").map
+          grantedOrDenied(setProperty).role("custom").graph("foo").property("prop1").node("*").map,
+          grantedOrDenied(setProperty).role("custom").graph("bar").property("prop1").node("*").map,
+          grantedOrDenied(setProperty).role("custom").graph("foo").property("prop2").node("*").map,
+          grantedOrDenied(setProperty).role("custom").graph("bar").property("prop2").node("*").map
         ))
       }
 
@@ -104,7 +104,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(setProperty).database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
+          grantedOrDenied(setProperty).graph(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
         ))
       }
 
@@ -120,7 +120,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
         // THEN
         val expected: Seq[PrivilegeMapBuilder] = Seq(
-          grantedOrDenied(setProperty).database("foo").property("prop").relationship("*"),
+          grantedOrDenied(setProperty).graph("foo").property("prop").relationship("*"),
         )
 
         execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -145,7 +145,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(setProperty).role("custom").node("*").map,
-          grantedOrDenied(setProperty).role("custom").database("bar").node("*").map,
+          grantedOrDenied(setProperty).role("custom").graph("bar").node("*").map,
         ))
 
         // WHEN
@@ -153,7 +153,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(setProperty).role("custom").database("bar").node("*").map,
+          grantedOrDenied(setProperty).role("custom").graph("bar").node("*").map,
         ))
       }
 

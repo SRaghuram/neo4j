@@ -333,8 +333,8 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
       Set(
-        granted(traverse).node("B").role("otherRole").database("*").map,
-        denied(traverse).node("C").role("otherRole").database("*").map
+        granted(traverse).node("B").role("otherRole").graph("*").map,
+        denied(traverse).node("C").role("otherRole").graph("*").map
       )
     )
 
@@ -362,7 +362,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
     } should have message "Permission denied."
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
-      Set(granted(traverse).node("A").role("otherRole").database("*").map)
+      Set(granted(traverse).node("A").role("otherRole").graph("*").map)
     )
   }
 
@@ -397,7 +397,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
     } should have message "Permission denied."
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
-      Set(granted(traverse).node("A").role("otherRole").database("*").map)
+      Set(granted(traverse).node("A").role("otherRole").graph("*").map)
     )
   }
 }

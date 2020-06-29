@@ -221,7 +221,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Should be able to do privilege management
     executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
-    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").database("*").map))
+    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
 
     // Should be able to execute @admin procedure
     executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')") should be(1)
@@ -254,7 +254,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
     } should have message "Permission denied."
-    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").database("*").map))
+    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
 
     // Should not be able to execute @admin procedure
     the[QueryExecutionException] thrownBy {

@@ -62,8 +62,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(write).role("custom").database("foo").node("*").map,
-          grantedOrDenied(write).role("custom").database("foo").relationship("*").map
+          grantedOrDenied(write).role("custom").graph("foo").node("*").map,
+          grantedOrDenied(write).role("custom").graph("foo").relationship("*").map
         ))
       }
 
@@ -78,10 +78,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(write).role("custom").database("foo").node("*").map,
-          grantedOrDenied(write).role("custom").database("foo").relationship("*").map,
-          grantedOrDenied(write).role("custom").database("bar").node("*").map,
-          grantedOrDenied(write).role("custom").database("bar").relationship("*").map
+          grantedOrDenied(write).role("custom").graph("foo").node("*").map,
+          grantedOrDenied(write).role("custom").graph("foo").relationship("*").map,
+          grantedOrDenied(write).role("custom").graph("bar").node("*").map,
+          grantedOrDenied(write).role("custom").graph("bar").relationship("*").map
         ))
       }
 
@@ -97,8 +97,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         val expected: Seq[PrivilegeMapBuilder] = Seq(
-          grantedOrDenied(write).database("foo").node("*"),
-          grantedOrDenied(write).database("foo").relationship("*")
+          grantedOrDenied(write).graph("foo").node("*"),
+          grantedOrDenied(write).graph("foo").relationship("*")
         )
 
         execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -123,9 +123,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(write).role("custom").node("*").map,
-          grantedOrDenied(write).role("custom").node("*").database("bar").map,
+          grantedOrDenied(write).role("custom").node("*").graph("bar").map,
           grantedOrDenied(write).role("custom").relationship("*").map,
-          grantedOrDenied(write).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(write).role("custom").relationship("*").graph("bar").map
         ))
 
         // WHEN
@@ -133,8 +133,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          grantedOrDenied(write).role("custom").node("*").database("bar").map,
-          grantedOrDenied(write).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(write).role("custom").node("*").graph("bar").map,
+          grantedOrDenied(write).role("custom").relationship("*").graph("bar").map
         ))
       }
 
@@ -221,11 +221,11 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       granted(write).role("custom").node("*").map,
-      granted(write).role("custom").node("*").database("bar").map,
+      granted(write).role("custom").node("*").graph("bar").map,
       denied(write).role("custom").node("*").map,
 
       granted(write).role("custom").relationship("*").map,
-      granted(write).role("custom").relationship("*").database("bar").map,
+      granted(write).role("custom").relationship("*").graph("bar").map,
       denied(write).role("custom").relationship("*").map,
     ))
 
@@ -234,8 +234,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(write).role("custom").node("*").database("bar").map,
-      granted(write).role("custom").relationship("*").database("bar").map,
+      granted(write).role("custom").node("*").graph("bar").map,
+      granted(write).role("custom").relationship("*").graph("bar").map,
     ))
 
     // WHEN
@@ -363,8 +363,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      denied(write).role("custom").database("foo").node("*").map,
-      denied(write).role("custom").database("foo").relationship("*").map
+      denied(write).role("custom").graph("foo").node("*").map,
+      denied(write).role("custom").graph("foo").relationship("*").map
     ))
 
     // WHEN
@@ -385,10 +385,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(write).role("custom").database("bar").node("*").map,
-      granted(write).role("custom").database("bar").relationship("*").map,
-      denied(write).role("custom").database("bar").node("*").map,
-      denied(write).role("custom").database("bar").relationship("*").map
+      granted(write).role("custom").graph("bar").node("*").map,
+      granted(write).role("custom").graph("bar").relationship("*").map,
+      denied(write).role("custom").graph("bar").node("*").map,
+      denied(write).role("custom").graph("bar").relationship("*").map
     ))
 
     // WHEN
