@@ -272,7 +272,7 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     )
   }
 
-  test("Deny match prop with parameter and multiple databases") {
+  test("Deny match prop with parameter and multiple graphs") {
     // When
     val plan = execute("EXPLAIN DENY MATCH {prop} ON GRAPH $db1, $db2 TO $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 

@@ -31,7 +31,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       // Tests for granting and denying set property privileges
 
-      test(s"should $grantOrDeny set property privilege to custom role for all databases and a specific property") {
+      test(s"should $grantOrDeny set property privilege to custom role for all graphs and a specific property") {
         // GIVEN
         execute("CREATE ROLE custom")
 
@@ -45,7 +45,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
         ))
       }
 
-      test(s"should $grantOrDeny set property privilege to custom role for a specific database and all properties") {
+      test(s"should $grantOrDeny set property privilege to custom role for a specific graph and all properties") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -77,7 +77,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
         ))
       }
 
-      test(s"should $grantOrDeny set property to custom role for multiple databases and multiple properties") {
+      test(s"should $grantOrDeny set property to custom role for multiple graphs and multiple properties") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -95,12 +95,12 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
         ))
       }
 
-      test(s"should $grantOrDeny set property privilege to custom role for specific database and all labels using parameter") {
+      test(s"should $grantOrDeny set property privilege to custom role for specific graph and all labels using parameter") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grantOrDenyCommand SET PROPERTY {*} ON GRAPH $$db NODES * TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
+        execute(s"$grantOrDenyCommand SET PROPERTY {*} ON GRAPH $$graph NODES * TO custom", Map("graph" -> DEFAULT_DATABASE_NAME))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -130,7 +130,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       // Tests for revoke grant and revoke deny set property privilege
 
-      test(s"should revoke correct $grantOrDeny set property privilege different databases") {
+      test(s"should revoke correct $grantOrDeny set property privilege different graphs") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")

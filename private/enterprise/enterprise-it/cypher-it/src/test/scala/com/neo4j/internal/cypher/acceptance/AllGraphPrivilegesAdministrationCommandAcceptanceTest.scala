@@ -48,7 +48,7 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
         execute("CREATE DATABASE bar")
 
         // WHEN
-        execute(s"$grantOrDenyCommand ALL GRAPH PRIVILEGES ON GRAPH foo, $$db TO custom", Map("db" -> "bar"))
+        execute(s"$grantOrDenyCommand ALL GRAPH PRIVILEGES ON GRAPH foo, $$graph TO custom", Map("graph" -> "bar"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(

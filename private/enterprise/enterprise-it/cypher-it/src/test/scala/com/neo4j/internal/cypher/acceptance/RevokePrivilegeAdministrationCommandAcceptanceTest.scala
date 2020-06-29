@@ -28,7 +28,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo RELATIONSHIPS B (*) TO custom")
 
         // WHEN
-        execute(s"REVOKE $revokeType READ {bar} ON GRAPH $$db NODES A (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH $$graph NODES A (*) FROM $$role", Map("graph" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -40,7 +40,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ {bar} ON GRAPH $$db NODES * (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH $$graph NODES * (*) FROM $$role", Map("graph" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -166,7 +166,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny read privilege different databases with REVOKE $revokeType") {
+      test(s"should revoke correct $grantOrDeny read privilege different graphs with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -196,7 +196,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
       }
 
-      test(s"should revoke together $grantOrDeny read privilege on multiple databases with REVOKE $revokeType") {
+      test(s"should revoke together $grantOrDeny read privilege on multiple graphs with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -211,7 +211,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should revoke individually $grantOrDeny read privilege on multiple databases with REVOKE $revokeType") {
+      test(s"should revoke individually $grantOrDeny read privilege on multiple graphs with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -269,7 +269,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse node privilege different databases with REVOKE $revokeType") {
+      test(s"should revoke correct $grantOrDeny traverse node privilege different graphs with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -307,7 +307,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) TO custom")
 
         // WHEN
-        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH $$db RELATIONSHIPS A (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH $$graph RELATIONSHIPS A (*) FROM $$role", Map("graph" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -317,7 +317,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH $$db RELATIONSHIPS * (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH $$graph RELATIONSHIPS * (*) FROM $$role", Map("graph" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -326,7 +326,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse relationship privilege different databases with REVOKE $revokeType") {
+      test(s"should revoke correct $grantOrDeny traverse relationship privilege different graphs with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -393,7 +393,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should revoke correct $grantOrDeny traverse element privilege different databases with REVOKE $revokeType") {
+      test(s"should revoke correct $grantOrDeny traverse element privilege different graphs with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -505,7 +505,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$db ELEMENTS A (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$graph ELEMENTS A (*) FROM $$role", Map("graph" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -516,7 +516,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$db ELEMENTS * (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$graph ELEMENTS * (*) FROM $$role", Map("graph" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -536,7 +536,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$db ELEMENTS B, C (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$graph ELEMENTS B, C (*) FROM $$role", Map("graph" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -577,7 +577,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different databases with REVOKE $revokeType") {
+      test(s"should revoke correct $grantOrDeny MATCH privilege different graphs with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")

@@ -26,7 +26,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
   // Tests for granting merge privileges
 
-  test("should grant merge privilege to custom role for all databases and a specific property") {
+  test("should grant merge privilege to custom role for all graphs and a specific property") {
     // GIVEN
     execute("CREATE ROLE custom")
 
@@ -40,7 +40,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     ))
   }
 
-  test("should grant merge privilege to custom role for a specific database and all properties") {
+  test("should grant merge privilege to custom role for a specific graph and all properties") {
     // GIVEN
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
@@ -72,7 +72,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     ))
   }
 
-  test("should grant merge to custom role for multiple databases and multiple properties") {
+  test("should grant merge to custom role for multiple graphs and multiple properties") {
     // GIVEN
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
@@ -90,12 +90,12 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     ))
   }
 
-  test("should grant merge privilege to custom role for specific database and all labels using parameter") {
+  test("should grant merge privilege to custom role for specific graph and all labels using parameter") {
     // GIVEN
     execute("CREATE ROLE custom")
 
     // WHEN
-    execute("GRANT MERGE {*} ON GRAPH $db NODES * TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
+    execute("GRANT MERGE {*} ON GRAPH $graph NODES * TO custom", Map("graph" -> DEFAULT_DATABASE_NAME))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -125,7 +125,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
   // Tests for revoke grant and revoke deny write privileges
 
-  test("should revoke correct grant merge privilege different databases") {
+  test("should revoke correct grant merge privilege different graphs") {
     // GIVEN
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")

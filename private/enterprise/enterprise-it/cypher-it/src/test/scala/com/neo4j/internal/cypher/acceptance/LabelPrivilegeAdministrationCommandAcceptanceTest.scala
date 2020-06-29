@@ -39,7 +39,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // Tests for granting and denying label privileges
 
-        test(s"should $grantOrDeny $verb label privilege to custom role for all databases and specific label") {
+        test(s"should $grantOrDeny $verb label privilege to custom role for all graphs and specific label") {
           // GIVEN
           execute("CREATE ROLE custom")
 
@@ -52,7 +52,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           ))
         }
 
-        test(s"should $grantOrDeny $verb privilege to custom role for a specific database and all labels") {
+        test(s"should $grantOrDeny $verb privilege to custom role for a specific graph and all labels") {
           // GIVEN
           execute("CREATE ROLE custom")
           execute("CREATE DATABASE foo")
@@ -66,7 +66,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           ))
         }
 
-        test(s"should $grantOrDeny $verb label to custom role for multiple databases and multiple labels") {
+        test(s"should $grantOrDeny $verb label to custom role for multiple graphs and multiple labels") {
           // GIVEN
           execute("CREATE ROLE custom")
           execute("CREATE DATABASE foo")
@@ -84,12 +84,12 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           ))
         }
 
-        test(s"should $grantOrDeny $verb label privilege to custom role for specific database and all labels using parameter") {
+        test(s"should $grantOrDeny $verb label privilege to custom role for specific graph and all labels using parameter") {
           // GIVEN
           execute("CREATE ROLE custom")
 
           // WHEN
-          execute(s"$grantOrDenyCommand $verb LABEL * ON GRAPH $$db TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
+          execute(s"$grantOrDenyCommand $verb LABEL * ON GRAPH $$graph TO custom", Map("graph" -> DEFAULT_DATABASE_NAME))
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -119,7 +119,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // Tests for revoke grant and revoke deny label privileges
 
-        test(s"should revoke correct $grantOrDeny $verb label privilege different databases") {
+        test(s"should revoke correct $grantOrDeny $verb label privilege different graphs") {
           // GIVEN
           execute("CREATE ROLE custom")
           execute("CREATE DATABASE foo")
@@ -173,7 +173,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           execute(s"$grantOrDenyCommand $verb LABEL * ON GRAPH foo TO custom")
 
           // WHEN
-          execute(s"REVOKE $grantOrDenyCommand $verb LABEL * ON GRAPH $$db FROM custom", Map("db" -> "foo"))
+          execute(s"REVOKE $grantOrDenyCommand $verb LABEL * ON GRAPH $$graph FROM custom", Map("graph" -> "foo"))
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)

@@ -18,7 +18,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
   override protected def onNewGraphDatabase(): Unit =  clearPublicRole()
 
-  test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
+  test("should match nodes when granted traversal privilege to custom role for all graphs and all labels") {
     // GIVEN
     setupUserWithCustomRole(access = false)
 
@@ -41,7 +41,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     }) should be(1)
   }
 
-  test("should read properties when granted read privilege to custom role for all databases and all labels") {
+  test("should read properties when granted read privilege to custom role for all graphs and all labels") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
@@ -61,7 +61,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     }) should be(1)
   }
 
-  test("should read properties when granted MATCH privilege to custom role for all databases and all labels") {
+  test("should read properties when granted MATCH privilege to custom role for all graphs and all labels") {
     // GIVEN
     setupUserWithCustomRole(access = false)
 
@@ -98,7 +98,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
-  test("should read properties when granted MATCH privilege to custom role for a specific database") {
+  test("should read properties when granted MATCH privilege to custom role for a specific graph") {
     // GIVEN
     execute("CREATE DATABASE foo")
     selectDatabase("foo")

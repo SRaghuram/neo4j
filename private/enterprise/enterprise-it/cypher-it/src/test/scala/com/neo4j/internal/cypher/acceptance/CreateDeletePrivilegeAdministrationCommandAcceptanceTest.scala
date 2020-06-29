@@ -50,7 +50,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
         case (createOrDelete, privilege) =>
           // Tests for granting and denying create privileges
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for all databases and all elements") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for all graphs and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
 
@@ -64,7 +64,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a specific database and all elements") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a specific graph and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -79,7 +79,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for multiple databases and all elements") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for multiple graphs and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -97,12 +97,12 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
-          test(s"should $grantOrDeny $createOrDelete privilege to custom role for specific database and all elements using parameter") {
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for specific graph and all elements using parameter") {
             // GIVEN
             execute("CREATE ROLE custom")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $createOrDelete ON GRAPH $$db ELEMENTS * TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
+            execute(s"$grantOrDenyCommand $createOrDelete ON GRAPH $$graph ELEMENTS * TO custom", Map("graph" -> DEFAULT_DATABASE_NAME))
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -134,7 +134,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
           // Tests for revoke grant and revoke deny privilege privileges
 
-          test(s"should revoke correct $grantOrDeny $createOrDelete privilege different databases") {
+          test(s"should revoke correct $grantOrDeny $createOrDelete privilege different graphs") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -191,7 +191,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             execute(s"$grantOrDenyCommand $createOrDelete ON GRAPH foo TO custom")
 
             // WHEN
-            execute(s"REVOKE $grantOrDenyCommand $createOrDelete ON GRAPH $$db FROM custom", Map("db" -> "foo"))
+            execute(s"REVOKE $grantOrDenyCommand $createOrDelete ON GRAPH $$graph FROM custom", Map("graph" -> "foo"))
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)

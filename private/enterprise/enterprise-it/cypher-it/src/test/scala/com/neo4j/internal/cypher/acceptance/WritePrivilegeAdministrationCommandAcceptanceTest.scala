@@ -74,7 +74,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("CREATE DATABASE bar")
 
         // WHEN
-        execute(s"$grantOrDenyCommand WRITE ON GRAPH foo, $$db TO custom", Map("db" -> "bar"))
+        execute(s"$grantOrDenyCommand WRITE ON GRAPH foo, $$graph TO custom", Map("graph" -> "bar"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -108,7 +108,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // Tests for revoke grant and revoke deny write privileges
 
-      test(s"should revoke correct $grantOrDeny write privilege different databases") {
+      test(s"should revoke correct $grantOrDeny write privilege different graphs") {
         // GIVEN
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -166,7 +166,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute(s"$grantOrDenyCommand WRITE ON GRAPH foo TO custom")
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH $$db FROM custom", Map("db" -> "foo"))
+        execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH $$graph FROM custom", Map("graph" -> "foo"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -203,7 +203,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   // Tests for revoke write privileges
 
-  test("should revoke correct write privilege different databases") {
+  test("should revoke correct write privilege different graphs") {
     // GIVEN
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
@@ -1381,7 +1381,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
   }
 
-  test("should create nodes when granted WRITE privilege to custom role for a specific database") {
+  test("should create nodes when granted WRITE privilege to custom role for a specific graph") {
     // GIVEN
     execute("CREATE DATABASE foo")
     setupTokens("foo")
@@ -1407,7 +1407,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n) RETURN n.name").toSet should have size 0
   }
 
-  test("should not be able to create nodes when denied WRITE privilege to custom role for a specific database") {
+  test("should not be able to create nodes when denied WRITE privilege to custom role for a specific graph") {
     // GIVEN
     execute("CREATE DATABASE foo")
     setupTokens("foo")

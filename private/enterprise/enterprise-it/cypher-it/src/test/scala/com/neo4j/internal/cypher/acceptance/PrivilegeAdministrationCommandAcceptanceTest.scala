@@ -468,7 +468,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       ).foreach {
         case (actionName, actionCommand, startExpected) =>
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for all databases and all element types") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for all graphs and all element types") {
             // GIVEN
             execute("CREATE ROLE custom")
 
@@ -485,7 +485,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           test(s"should fail when ${grantOrDeny}ing $actionName privilege using * as parameter") {
             execute("CREATE ROLE custom")
             val error = the[InvalidArgumentsException] thrownBy {
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> "*"))
+              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$graph TO custom", Map("graph" -> "*"))
             }
             error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Parameterized database and graph names do not support wildcards.")
           }
@@ -496,7 +496,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           ).foreach {
             case (segmentName, segmentCommand, segmentFunction: builderType) =>
 
-              test(s"should $grantOrDeny $actionName privilege to custom role for all databases and all ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege to custom role for all graphs and all ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
 
@@ -507,7 +507,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(segmentFunction(startExpected.role("custom"), "*").map))
               }
 
-              test(s"should $grantOrDeny $actionName privilege to custom role for multiple databases and all ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege to custom role for multiple graphs and all ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -521,7 +521,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                   segmentFunction(startExpected.role("custom").database("bar"), "*").map))
               }
 
-              test(s"should $grantOrDeny $actionName privilege to custom role for all databases but only a specific $segmentName (that does not need to exist)") {
+              test(s"should $grantOrDeny $actionName privilege to custom role for all graphs but only a specific $segmentName (that does not need to exist)") {
                 // GIVEN
                 execute("CREATE ROLE custom")
 
@@ -532,7 +532,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(segmentFunction(startExpected.role("custom"), "A").map))
               }
 
-              test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and a specific $segmentName") {
+              test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and a specific $segmentName") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -545,7 +545,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                   be(Set(segmentFunction(startExpected.role("custom").database("foo"), "A").map))
               }
 
-              test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and all ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and all ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -558,7 +558,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                   be(Set(segmentFunction(startExpected.role("custom").database("foo"), "*").map))
               }
 
-              test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and multiple ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -574,7 +574,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple ${segmentName}s in one grant") {
+              test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and multiple ${segmentName}s in one grant") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -589,7 +589,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege to multiple roles for a specific database and multiple ${segmentName}s in one grant") {
+              test(s"should $grantOrDeny $actionName privilege to multiple roles for a specific graph and multiple ${segmentName}s in one grant") {
                 // GIVEN
                 execute("CREATE ROLE role1")
                 execute("CREATE ROLE role2")
@@ -611,7 +611,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           }
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for all databases and all elements") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for all graphs and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
 
@@ -625,7 +625,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for all databases but only a specific element (that does not need to exist)") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for all graphs but only a specific element (that does not need to exist)") {
             // GIVEN
             execute("CREATE ROLE custom")
 
@@ -639,7 +639,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and a specific element") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and a specific element") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -654,7 +654,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and all elements") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -669,12 +669,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for specific database and all element types using parameters") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for specific graph and all element types using parameters") {
             // GIVEN
             execute("CREATE ROLE custom")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$graph TO custom", Map("graph" -> DEFAULT_DATABASE_NAME))
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -683,7 +683,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple elements") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and multiple elements") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -701,7 +701,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple elements in one grant") {
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific graph and multiple elements in one grant") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -718,7 +718,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege to multiple roles for a specific database and multiple elements in one grant") {
+          test(s"should $grantOrDeny $actionName privilege to multiple roles for a specific graph and multiple elements in one grant") {
             // GIVEN
             execute("CREATE ROLE role1")
             execute("CREATE ROLE role2")
@@ -814,7 +814,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       ).foreach {
         case (actionName, actionCommand, startExpected) =>
 
-          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all element types") {
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all graphs and all element types") {
             // GIVEN
             execute("CREATE ROLE custom")
 
@@ -834,7 +834,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           ).foreach {
             case (segmentName, segmentCommand, segmentFunction: builderType) =>
 
-              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all graphs and all ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
 
@@ -847,7 +847,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases but only a specific $segmentName") {
+              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all graphs but only a specific $segmentName") {
                 // GIVEN
                 execute("CREATE ROLE custom")
 
@@ -860,7 +860,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and a specific $segmentName") {
+              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific graphs and a specific $segmentName") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -874,7 +874,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and all ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific graph and all ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -888,7 +888,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and multiple ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific graph and multiple ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -904,7 +904,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and specific $segmentName") {
+              test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific graph and specific $segmentName") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -920,7 +920,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and multiple ${segmentName}s") {
+              test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific graph and multiple ${segmentName}s") {
                 // GIVEN
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
@@ -936,7 +936,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 ))
               }
 
-              test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific database and multiple ${segmentName}s in a single grant") {
+              test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific graph and multiple ${segmentName}s in a single grant") {
                 // GIVEN
                 execute("CREATE ROLE role1")
                 execute("CREATE ROLE role2")
@@ -960,7 +960,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           }
 
-          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all elements") {
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all graphs and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
 
@@ -974,7 +974,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases but only a specific element") {
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all graphs but only a specific element") {
             // GIVEN
             execute("CREATE ROLE custom")
 
@@ -988,7 +988,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and a specific element") {
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific graph and a specific element") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -1003,7 +1003,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and all elements") {
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific graph and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -1018,7 +1018,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and multiple elements") {
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific graph and multiple elements") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -1036,7 +1036,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and specific element") {
+          test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific graph and specific element") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -1054,7 +1054,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and multiple elements") {
+          test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific graph and multiple elements") {
             // GIVEN
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
@@ -1072,7 +1072,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific database and multiple elements in a single grant") {
+          test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific graph and multiple elements in a single grant") {
             // GIVEN
             execute("CREATE ROLE role1")
             execute("CREATE ROLE role2")

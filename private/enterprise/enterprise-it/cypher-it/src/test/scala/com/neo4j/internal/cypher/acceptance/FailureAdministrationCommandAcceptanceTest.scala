@@ -116,7 +116,7 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     result2.toList should be(List.empty)
   }
 
-  test("should fail to grant privilege on non-existing database") {
+  test("should fail to grant privilege on non-existing graph") {
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH foo TO reader")
@@ -132,9 +132,9 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     } should have message "Failed to deny stop_database privilege to role 'reader': Database 'foo' does not exist."
   }
 
-  test("REVOKE on non-existing database should do nothing") {
+  test("REVOKE on non-existing graph should do nothing") {
     // WHEN
-    execute("REVOKE WRITE ON GRAPH $db FROM editor", Map("db" -> "foo"))
+    execute("REVOKE WRITE ON GRAPH $graph FROM editor", Map("graph" -> "foo"))
 
     // THEN
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
