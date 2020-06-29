@@ -152,7 +152,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
           case e: Exception if e.getClass.isAssignableFrom(expectToFailWith.get) =>
             if(verbose) println("Got expected exception: " + e)
           case x =>
-            fail(s"Expected to get exception ${expectToFailWith.get}, but instead got: " + x)
+            fail(s"Expected to get exception ${expectToFailWith.get}, but instead got: " + x.getMessage, x)
         }
       } else {
         testFun

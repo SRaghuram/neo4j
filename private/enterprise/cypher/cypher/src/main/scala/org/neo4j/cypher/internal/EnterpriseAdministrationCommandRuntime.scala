@@ -25,6 +25,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.helpers.DatabaseNameValidator
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
+import org.neo4j.cypher.internal.ast.AllDatabasesQualifier
 import org.neo4j.cypher.internal.ast.AllGraphsScope
 import org.neo4j.cypher.internal.ast.AllLabelResource
 import org.neo4j.cypher.internal.ast.AllPropertyResource
@@ -747,8 +748,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
   }
 
-  private def getQualifierPart(qualifier: PrivilegeQualifier, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (String, Value, (Transaction, MapValue) =>  MapValue, String) = qualifier match {
+  private def getQualifierPart(qualifier: PrivilegeQualifier, matchOrMerge: String): (String, Value, (Transaction, MapValue) =>  MapValue, String) = qualifier match {
     case AllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
+    case AllDatabasesQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
     case LabelQualifier(name) => (privilegeKeys("label"), Values.utf8Value(name), IdentityConverter, matchOrMerge + s" (q:LabelQualifier {type: 'node', label: $$`${privilegeKeys("label")}`})")
     case LabelAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
     case RelationshipQualifier(name) => (privilegeKeys("label"), Values.utf8Value(name), IdentityConverter, matchOrMerge + s" (q:RelationshipQualifier {type: 'relationship', label: $$`${privilegeKeys("label")}`})")
@@ -757,7 +759,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case UserQualifier(name) =>
       val (key, value, converter) = getNameFields("userQualifier", name)
       (key, value, converter, matchOrMerge + s" (q:UserQualifier {type: 'user', label: $$`$key`})")
-    case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName qualifier $qualifier")
   }
 
   private def escapeName(name: Either[String, AnyRef]): String = name match {
@@ -782,7 +783,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
     val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
     val (resourceValue: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage(roleMap), grant.name, "MERGE")
-    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), grant.name, "MERGE")
+    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, "MERGE")
     val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge, specialDatabase) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
@@ -846,7 +847,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
 
     val (resourceValue: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage(roleMap), "revoke", "MATCH")
-    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), "revoke", "MATCH")
+    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, "MATCH")
     val (databaseKey, databaseValue, databaseConverter, scopeMatch, specialDatabase) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
