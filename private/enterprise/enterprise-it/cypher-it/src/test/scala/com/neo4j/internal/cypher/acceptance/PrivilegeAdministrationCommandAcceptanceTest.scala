@@ -22,6 +22,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // GIVEN
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     Seq("a", "b", "c").foreach(role => execute(s"CREATE ROLE $role"))
 
     // Notice: They are executed in succession so they have to make sense in that order
@@ -58,7 +59,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       "GRANT MATCH {*} ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE MATCH {*} ON GRAPH * NODES * FROM custom" -> 2,
 
-      "GRANT READ {a,b,c} ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36,  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
+      "GRANT READ {a,b,c} ON GRAPH foo, bar ELEMENTS p, q TO a, b, c" -> 72,  // 2 graphs * 3 props * 3 roles * 2 labels/types * 2 elements(nodes,rels)
 
       "GRANT ALL GRAPH PRIVILEGES ON GRAPH foo TO custom" -> 1
     ))

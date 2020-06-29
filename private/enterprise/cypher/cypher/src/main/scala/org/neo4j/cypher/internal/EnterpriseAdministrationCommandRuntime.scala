@@ -58,9 +58,6 @@ import org.neo4j.cypher.internal.logical.plans.CreateUser
 import org.neo4j.cypher.internal.logical.plans.DenyDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.DenyDbmsAction
 import org.neo4j.cypher.internal.logical.plans.DenyGraphAction
-import org.neo4j.cypher.internal.logical.plans.DenyMatch
-import org.neo4j.cypher.internal.logical.plans.DenyRead
-import org.neo4j.cypher.internal.logical.plans.DenyTraverse
 import org.neo4j.cypher.internal.logical.plans.DropDatabase
 import org.neo4j.cypher.internal.logical.plans.DropRole
 import org.neo4j.cypher.internal.logical.plans.EnsureValidNonSystemDatabase
@@ -68,10 +65,7 @@ import org.neo4j.cypher.internal.logical.plans.EnsureValidNumberOfDatabases
 import org.neo4j.cypher.internal.logical.plans.GrantDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.GrantDbmsAction
 import org.neo4j.cypher.internal.logical.plans.GrantGraphAction
-import org.neo4j.cypher.internal.logical.plans.GrantMatch
-import org.neo4j.cypher.internal.logical.plans.GrantRead
 import org.neo4j.cypher.internal.logical.plans.GrantRoleToUser
-import org.neo4j.cypher.internal.logical.plans.GrantTraverse
 import org.neo4j.cypher.internal.logical.plans.LogSystemCommand
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NameValidator
@@ -79,10 +73,7 @@ import org.neo4j.cypher.internal.logical.plans.RequireRole
 import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
 import org.neo4j.cypher.internal.logical.plans.RevokeGraphAction
-import org.neo4j.cypher.internal.logical.plans.RevokeMatch
-import org.neo4j.cypher.internal.logical.plans.RevokeRead
 import org.neo4j.cypher.internal.logical.plans.RevokeRoleFromUser
-import org.neo4j.cypher.internal.logical.plans.RevokeTraverse
 import org.neo4j.cypher.internal.logical.plans.ShowPrivileges
 import org.neo4j.cypher.internal.logical.plans.ShowRoles
 import org.neo4j.cypher.internal.logical.plans.ShowUsers
@@ -388,60 +379,24 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $databaseAction privilege from role '${runtimeValue(roleName, params)}'")
 
-    // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
+    // GRANT/DENY/REVOKE _ ON GRAPH foo TO role
     case GrantGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       val graphAction = ActionMapper.asKernelAction(action)
+      val actionName = if (graphAction == PrivilegeAction.TRAVERSE) "traversal" else graphAction.toString
       makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $graphAction privilege to role '${runtimeValue(roleName, params)}'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $actionName privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       val graphAction = ActionMapper.asKernelAction(action)
+      val actionName = if (graphAction == PrivilegeAction.TRAVERSE) "traversal" else graphAction.toString
       makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $graphAction privilege to role '${runtimeValue(roleName, params)}'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $actionName privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeGraphAction(source, action, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       val graphAction = ActionMapper.asKernelAction(action)
+      val actionName = if (graphAction == PrivilegeAction.TRAVERSE) "traversal" else graphAction.toString
       makeRevokeExecutionPlan(graphAction, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $graphAction privilege from role '${runtimeValue(roleName, params)}'")
-
-    // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
-    case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant traversal privilege to role '${runtimeValue(roleName, params)}'")
-
-    case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny traversal privilege to role '${runtimeValue(roleName, params)}'")
-
-    case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.TRAVERSE, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke traversal privilege from role '${runtimeValue(roleName, params)}'")
-
-    // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
-    case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant read privilege to role '${runtimeValue(roleName, params)}'")
-
-    case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny read privilege to role '${runtimeValue(roleName, params)}'")
-
-    case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.READ, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke read privilege from role '${runtimeValue(roleName, params)}'")
-
-    // GRANT/DENY/REVOKE MATCH {prop} ON GRAPH foo NODES A (*) TO role
-    case GrantMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant match privilege to role '${runtimeValue(roleName, params)}'")
-
-    case DenyMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny match privilege to role '${runtimeValue(roleName, params)}'")
-
-    case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.MATCH, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke match privilege from role '${runtimeValue(roleName, params)}'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $actionName privilege from role '${runtimeValue(roleName, params)}'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(source, scope, symbols, yields, where, returns) => (context, parameterMapping) =>
