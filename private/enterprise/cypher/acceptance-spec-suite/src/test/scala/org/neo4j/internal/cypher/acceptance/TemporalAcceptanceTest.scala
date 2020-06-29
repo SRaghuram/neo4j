@@ -7,6 +7,8 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -17,6 +19,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.values.storable.DateValue
 import org.neo4j.values.storable.DurationValue
+
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
@@ -954,7 +957,14 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     }
   }
 
-  // Time with named timezone
+  // Time and datetime with named timezone
+
+  test("parse time with un-named time zone should be supported") {
+    val result1 = executeWith(Configs.UDF, "RETURN time('07:54:02.129790999+00:00') as validTime")
+    val result2 = executeWith(Configs.UDF, "RETURN time('07:54:02.129790999Z') as validTime")
+
+    result1.toList should equal(result2.toList)
+  }
 
   test("parse time with named time zone should not be supported") {
     val query =
@@ -963,7 +973,33 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN t
       """.stripMargin
 
-    failWithError(Configs.UDF, query, Seq("Text cannot be parsed to a Time"))
+    failWithError(Configs.UDF, query, Seq("Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00."))
+  }
+
+  test("parse time with matching named and un-named time zone should not be supported") {
+    val query = "RETURN time('07:54:02.129790999+00:00[UTC]') as invalidTime"
+
+    failWithError(Configs.UDF, query, Seq("Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00."))
+  }
+
+  test("parse time with non-matching named and un-named time zone should not be supported") {
+    val query = "RETURN time('07:54:02.129790999+01:00[UTC]') as invalidTime"
+
+    failWithError(Configs.UDF, query, Seq("Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00."))
+  }
+
+  test("parse datetime with matching named and un-named time zone should be supported") {
+    val query = "RETURN datetime('2019-10-30T07:54:02+00:00[UTC]') as validTime"
+    val dateValue = ZonedDateTime.of(2019, 10, 30, 7, 54, 2, 0, ZoneId.of("UTC"))
+
+    val result = executeWith(Configs.UDF, query)
+    result.toList should equal(List(Map("validTime" -> dateValue)))
+  }
+
+  test("parse datetime with non-matching named and un-named time zone should not be supported") {
+    val query = "RETURN datetime('2019-10-30T07:54:02.129790999+01:00[UTC]') as invalidTime"
+
+    failWithError(Configs.UDF, query, Seq("Timezone and offset do not match: 2019-10-30T07:54:02.129790999+01:00[UTC]"))
   }
 
   test("create time with named time zone should be supported") {
