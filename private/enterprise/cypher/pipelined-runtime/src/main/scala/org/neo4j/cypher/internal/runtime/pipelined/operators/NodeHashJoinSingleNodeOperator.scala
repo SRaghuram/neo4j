@@ -27,8 +27,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBu
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SingleKeyOffset
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.LongProbeTable
 import org.neo4j.memory.MemoryTracker
@@ -37,14 +39,17 @@ import org.neo4j.memory.MemoryTracker
 class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
                                      lhsArgumentStateMapId: ArgumentStateMapId,
                                      rhsArgumentStateMapId: ArgumentStateMapId,
-                                     lhsOffset: Int,
-                                     rhsOffset: Int,
+                                     lhsKeyOffset: SingleKeyOffset,
+                                     rhsKeyOffset: SingleKeyOffset,
                                      rhsSlotMappings: SlotMappings)
                                     (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
 
   private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
   private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
+
+  private val rhsOffset: Int = rhsKeyOffset.offset
+  private val rhsIsReference: Boolean = rhsKeyOffset.isReference
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -53,7 +58,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsOffset, memoryTracker, id))
+      new HashTableFactory(lhsKeyOffset, memoryTracker, id))
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
       new ArgumentStateBuffer.Factory(stateFactory, id))
@@ -75,7 +80,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
     private var lhsRows: java.util.Iterator[Morsel] = _
 
     override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
-      val key = inputCursor.getLongAt(rhsOffset)
+      val key = SlottedRow.getNodeId(inputCursor, rhsOffset, rhsIsReference)
       lhsRows = accumulator.lhsRows(key)
       true
     }
@@ -96,11 +101,11 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
 
 object NodeHashJoinSingleNodeOperator {
 
-  class HashTableFactory(lhsOffset: Int, memoryTracker: MemoryTracker, operatorId: Id) extends ArgumentStateFactory[HashTable] {
+  class HashTableFactory(lhsKeyOffset: SingleKeyOffset, memoryTracker: MemoryTracker, operatorId: Id) extends ArgumentStateFactory[HashTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
-      new StandardHashTable(argumentRowId, lhsOffset, argumentRowIdsForReducers, memoryTracker)
+      new StandardHashTable(argumentRowId, lhsKeyOffset, argumentRowIdsForReducers, memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
-      new ConcurrentHashTable(argumentRowId, lhsOffset, argumentRowIdsForReducers)
+      new ConcurrentHashTable(argumentRowId, lhsKeyOffset, argumentRowIdsForReducers)
   }
 
   /**
@@ -112,16 +117,19 @@ object NodeHashJoinSingleNodeOperator {
   }
 
   class StandardHashTable(override val argumentRowId: Long,
-                          lhsOffset: Int,
+                          lhsKeyOffset: SingleKeyOffset,
                           override val argumentRowIdsForReducers: Array[Long],
                           memoryTracker: MemoryTracker) extends HashTable {
     private val table = LongProbeTable.createLongProbeTable[Morsel](memoryTracker)
+
+    private val lhsOffset: Int = lhsKeyOffset.offset
+    private val lhsIsReference: Boolean = lhsKeyOffset.isReference
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val cursor = morsel.readCursor()
       while (cursor.next()) {
-        val key = cursor.getLongAt(lhsOffset)
+        val key = SlottedRow.getNodeId(cursor, lhsOffset, lhsIsReference)
         if (!NullChecker.entityIsNull(key)) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last
@@ -147,15 +155,18 @@ object NodeHashJoinSingleNodeOperator {
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,
-                            lhsOffset: Int,
+                            lhsKeyOffset: SingleKeyOffset,
                             override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
     private val table = new ConcurrentHashMap[Long, ConcurrentLinkedQueue[Morsel]]()
+
+    private val lhsOffset: Int = lhsKeyOffset.offset
+    private val lhsIsReference: Boolean = lhsKeyOffset.isReference
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val cursor = morsel.readCursor()
       while (cursor.next()) {
-        val key = cursor.getLongAt(lhsOffset)
+        val key = SlottedRow.getNodeId(cursor, lhsOffset, lhsIsReference)
         if (!NullChecker.entityIsNull(key)) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last

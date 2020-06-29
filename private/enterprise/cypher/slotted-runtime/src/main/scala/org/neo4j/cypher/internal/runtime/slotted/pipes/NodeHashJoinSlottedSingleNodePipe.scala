@@ -15,11 +15,13 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SingleKeyOffset
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.LongProbeTable
 
-case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
-                                             rhsOffset: Int,
+case class NodeHashJoinSlottedSingleNodePipe(lhsKeyOffset: SingleKeyOffset,
+                                             rhsKeyOffset: SingleKeyOffset,
                                              left: Pipe,
                                              right: Pipe,
                                              slots: SlotConfiguration,
@@ -29,6 +31,10 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
   private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
   private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
+  private val lhsOffset: Int = lhsKeyOffset.offset
+  private val lhsIsReference: Boolean = lhsKeyOffset.isReference
+  private val rhsOffset: Int = rhsKeyOffset.offset
+  private val rhsIsReference: Boolean = rhsKeyOffset.isReference
 
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
 
@@ -56,8 +62,8 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
     val table = LongProbeTable.createLongProbeTable[CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
 
     for (current <- lhsInput) {
-      val nodeId = current.getLongAt(lhsOffset)
-      if(nodeId != -1) {
+      val nodeId = SlottedRow.getNodeId(current, lhsOffset, lhsIsReference)
+      if (nodeId != -1) {
         table.put(nodeId, current)
       }
     }
@@ -78,13 +84,13 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
           newRow.copyAllFrom(lhs)
-          NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
+          copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
           return Some(newRow)
         }
 
         while (rhsInput.hasNext) {
           currentRhsRow = rhsInput.next()
-          val nodeId = currentRhsRow.getLongAt(rhsOffset)
+          val nodeId = SlottedRow.getNodeId(currentRhsRow, rhsOffset, rhsIsReference)
           if(nodeId != -1) {
             val innerMatches = probeTable.get(nodeId)
             if (innerMatches.hasNext) {

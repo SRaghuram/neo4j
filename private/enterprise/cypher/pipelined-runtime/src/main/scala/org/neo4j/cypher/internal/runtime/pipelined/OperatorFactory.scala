@@ -128,6 +128,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctP
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
@@ -402,20 +403,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentSize = physicalPlan.argumentSizes(id)
         val nodes = joinPlan.nodes.toArray
 
-        val lhsOffsets: Array[Int] = nodes.map(k => slots.getLongOffsetFor(k))
+        val lhsOffsets = KeyOffsets.create(slots, nodes)
         val rhsSlots = slotConfigs(joinPlan.right.id)
-        val rhsOffsets: Array[Int] = nodes.map(k => rhsSlots.getLongOffsetFor(k))
+        val rhsOffsets = KeyOffsets.create(rhsSlots, nodes)
 
         val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
 
         val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
-        if (lhsOffsets.length == 1) {
+        if (lhsOffsets.isSingle) {
           new NodeHashJoinSingleNodeOperator(
             WorkIdentity.fromPlan(plan),
             buffer.lhsArgumentStateMapId,
             buffer.rhsArgumentStateMapId,
-            lhsOffsets(0),
-            rhsOffsets(0),
+            lhsOffsets.asSingle,
+            rhsOffsets.asSingle,
             rhsSlotMappings)(id)
         } else {
           new NodeHashJoinOperator(
@@ -436,8 +437,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val lhsSlots = slotConfigs(joinPlan.left.id)
         val rhsSlots = slotConfigs(joinPlan.right.id)
 
-        val lhsKeyOffsets: Array[Int] = keyVariables.map(k => lhsSlots.getLongOffsetFor(k))
-        val rhsKeyOffsets: Array[Int] = keyVariables.map(k => rhsSlots.getLongOffsetFor(k))
+        val lhsKeyOffsets = KeyOffsets.create(lhsSlots, keyVariables)
+        val rhsKeyOffsets = KeyOffsets.create(rhsSlots, keyVariables)
 
         val lhsSlotMappings = computeSlotMappings(lhsSlots, argumentSize, slots)
 

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util
 
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocationFailed
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
@@ -17,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -24,13 +26,19 @@ import org.neo4j.kernel.impl.util.collection.ProbeTable
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
 
-case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
-                                   rhsOffsets: Array[Int],
+case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
+                                   rhsKeyOffsets: KeyOffsets,
                                    left: Pipe,
                                    right: Pipe,
                                    slots: SlotConfiguration,
                                    rhsSlotMappings: SlotMappings)
                                   (val id: Id = Id.INVALID_ID) extends AbstractHashJoinPipe[LongArray](left, right) {
+
+  private val lhsOffsets: Array[Int] = lhsKeyOffsets.offsets
+  private val lhsIsReference: Array[Boolean] = lhsKeyOffsets.isReference
+  private val rhsOffsets: Array[Int] = rhsKeyOffsets.offsets
+  private val rhsIsReference: Array[Boolean] = rhsKeyOffsets.isReference
+
   private val width: Int = lhsOffsets.length
 
   private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
@@ -42,7 +50,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
 
     for (current <- lhsInput) {
       val key = new Array[Long](width)
-      fillKeyArray(current, key, lhsOffsets)
+      fillKeyArray(current, key, lhsOffsets, lhsIsReference)
 
       if (key(0) != -1) {
         table.put(Values.longArray(key), current)
@@ -66,13 +74,13 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
           newRow.copyAllFrom(lhs)
-          NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
+          copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
           return Some(newRow)
         }
 
         while (rhsInput.hasNext) {
           currentRhsRow = rhsInput.next()
-          fillKeyArray(currentRhsRow, key, rhsOffsets)
+          fillKeyArray(currentRhsRow, key, rhsOffsets, rhsIsReference)
           if (key(0) != -1 /*If we have nulls in the key, no match will be found*/ ) {
             matches = probeTable.get(Values.longArray(key))
             if (matches.hasNext) {
@@ -130,11 +138,12 @@ object NodeHashJoinSlottedPipe {
    */
   def fillKeyArray(current: ReadableRow,
                    key: Array[Long],
-                   offsets: Array[Int]): Unit = {
+                   offsets: Array[Int],
+                   isReference: Array[Boolean]): Unit = {
     // We use a while loop like this to be able to break out early
     var i = 0
     while (i < offsets.length) {
-      val thisId = current.getLongAt(offsets(i))
+      val thisId = SlottedRow.getNodeId(current, offsets(i), isReference(i))
       key(i) = thisId
       if (NullChecker.entityIsNull(thisId)) {
         key(0) = NullChecker.NULL_ENTITY // We flag the null in this cryptic way to avoid creating objects
@@ -143,4 +152,31 @@ object NodeHashJoinSlottedPipe {
       i += 1
     }
   }
+
+  case class KeyOffsets private (
+    offsets: Array[Int],
+    isReference: Array[Boolean],
+  ) {
+    def isSingle: Boolean = offsets.length == 1
+    def asSingle: SingleKeyOffset = SingleKeyOffset(offsets(0), isReference(0))
+  }
+
+  object KeyOffsets {
+    def create(slots: SlotConfiguration, keyVariables: Array[String]): KeyOffsets = {
+      val (offsets, isReference) =
+        keyVariables.map(k => slots.get(k)
+                                   .getOrElse(throw new SlotAllocationFailed(s"No slot for variable $k")))
+                    .map(slot => (slot.offset, !slot.isLongSlot))
+                    .unzip
+
+      KeyOffsets(offsets, isReference)
+    }
+
+    def longs(offsets: Int*): KeyOffsets = KeyOffsets(offsets.toArray, Array.fill(offsets.size)(false))
+  }
+
+  case class SingleKeyOffset(
+    offset: Int,
+    isReference: Boolean,
+  )
 }

@@ -22,8 +22,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBu
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
-import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.helpers.collection.Iterators
@@ -33,8 +34,8 @@ import org.neo4j.values.storable.Values
 class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
                                      lhsArgumentStateMapId: ArgumentStateMapId,
                                      rhsArgumentStateMapId: ArgumentStateMapId,
-                                     lhsOffsets: Array[Int],
-                                     rhsOffsets: Array[Int],
+                                     lhsKeyOffsets: KeyOffsets,
+                                     rhsKeyOffsets: KeyOffsets,
                                      lhsSlots: SlotConfiguration,
                                      lhsSlotMappings: SlotMappings)
                           (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
@@ -42,6 +43,8 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
   private val lhsLongMappings: Array[(Int, Int)] = lhsSlotMappings.longMappings
   private val lhsRefMappings: Array[(Int, Int)] = lhsSlotMappings.refMappings
   private val lhsCachedPropertyMappings: Array[(Int, Int)] = lhsSlotMappings.cachedPropertyMappings
+  private val rhsOffsets: Array[Int] = rhsKeyOffsets.offsets
+  private val rhsIsReference: Array[Boolean] = rhsKeyOffsets.isReference
 
   private val emptyLhsRowMorsel = {
     val morsel = MorselFactory.allocate(lhsSlots, 1)
@@ -63,7 +66,7 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsOffsets, memoryTracker))
+      new HashTableFactory(lhsKeyOffsets, memoryTracker))
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
       new ArgumentStateBuffer.Factory(stateFactory, id))
@@ -86,7 +89,7 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
     private val key = new Array[Long](rhsOffsets.length)
 
     override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
-      fillKeyArray(inputCursor, key, rhsOffsets)
+      fillKeyArray(inputCursor, key, rhsOffsets, rhsIsReference)
       lhsRows = accumulator.lhsRows(Values.longArray(key))
       if (!lhsRows.hasNext) {
         // No matches on LHS, so return empty row
@@ -98,7 +101,7 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
       while (outputRow.onValidRow && lhsRows.hasNext) {
         val lhsRow = lhsRows.next().readCursor(onFirstRow = true)
-        NodeHashJoinSlottedPipe.copyDataFromRow(lhsLongMappings, lhsRefMappings, lhsCachedPropertyMappings, outputRow, lhsRow)
+        copyDataFromRow(lhsLongMappings, lhsRefMappings, lhsCachedPropertyMappings, outputRow, lhsRow)
         outputRow.copyFrom(inputCursor)
         outputRow.next()
       }

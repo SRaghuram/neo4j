@@ -154,6 +154,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.ForeachSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.MergeCreateNodeSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.MergeCreateRelationshipSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedSingleNodePipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexScanSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexSeekSlottedPipe
@@ -521,16 +522,16 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case joinPlan: NodeHashJoin =>
         val argumentSize = physicalPlan.argumentSizes(plan.id)
         val nodes = joinPlan.nodes.toArray // Make sure that leftNodes and rightNodes have the same order
-        val leftNodes: Array[Int] = nodes.map(k => slots.getLongOffsetFor(k))
+        val leftNodes = KeyOffsets.create(slots, nodes)
         val rhsSlots = slotConfigs(joinPlan.right.id)
-        val rightNodes: Array[Int] = nodes.map(k => rhsSlots.getLongOffsetFor(k))
+        val rightNodes = KeyOffsets.create(rhsSlots, nodes)
 
         // Verify the assumption that the argument slots are the same on both sides
         checkOnlyWhenAssertionsAreEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
         val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
 
-        if (leftNodes.length == 1) {
-          NodeHashJoinSlottedSingleNodePipe(leftNodes(0), rightNodes(0), lhs, rhs, slots, rhsSlotMappings)(id)
+        if (leftNodes.isSingle) {
+          NodeHashJoinSlottedSingleNodePipe(leftNodes.asSingle, rightNodes.asSingle, lhs, rhs, slots, rhsSlotMappings)(id)
         } else {
           NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, rhsSlotMappings)(id)
         }

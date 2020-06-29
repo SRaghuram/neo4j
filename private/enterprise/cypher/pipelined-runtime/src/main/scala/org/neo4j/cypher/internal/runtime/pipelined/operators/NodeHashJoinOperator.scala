@@ -30,6 +30,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
@@ -40,14 +42,16 @@ import org.neo4j.values.storable.Values
 class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            lhsArgumentStateMapId: ArgumentStateMapId,
                            rhsArgumentStateMapId: ArgumentStateMapId,
-                           lhsOffsets: Array[Int],
-                           rhsOffsets: Array[Int],
+                           lhsKeyOffsets: KeyOffsets,
+                           rhsKeyOffsets: KeyOffsets,
                            rhsSlotMappings: SlotMappings)
                           (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
 
   private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
   private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
+  private val rhsOffsets: Array[Int] = rhsKeyOffsets.offsets
+  private val rhsIsReference: Array[Boolean] = rhsKeyOffsets.isReference
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -56,7 +60,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsOffsets, memoryTracker))
+      new HashTableFactory(lhsKeyOffsets, memoryTracker))
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
       new ArgumentStateBuffer.Factory(stateFactory, id))
@@ -79,7 +83,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     private val key = new Array[Long](rhsOffsets.length)
 
     override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
-      fillKeyArray(inputCursor, key, rhsOffsets)
+      fillKeyArray(inputCursor, key, rhsOffsets, rhsIsReference)
       lhsRows = accumulator.lhsRows(Values.longArray(key))
       true
     }
@@ -88,7 +92,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))
-        NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
+        copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
         outputRow.next()
       }
     }
@@ -100,7 +104,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
 object NodeHashJoinOperator {
 
-  class HashTableFactory(lhsOffsets: Array[Int], memoryTracker: MemoryTracker) extends ArgumentStateFactory[HashTable] {
+  class HashTableFactory(lhsOffsets: KeyOffsets, memoryTracker: MemoryTracker) extends ArgumentStateFactory[HashTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
       new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
@@ -116,17 +120,20 @@ object NodeHashJoinOperator {
   }
 
   class StandardHashTable(override val argumentRowId: Long,
-                          lhsOffsets: Array[Int],
+                          lhsKeyOffsets: KeyOffsets,
                           override val argumentRowIdsForReducers: Array[Long],
                           memoryTracker: MemoryTracker) extends HashTable {
     private val table = ProbeTable.createProbeTable[LongArray, Morsel]( memoryTracker )
+
+    private val lhsOffsets: Array[Int] = lhsKeyOffsets.offsets
+    private val lhsIsReference: Array[Boolean] = lhsKeyOffsets.isReference
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val cursor = morsel.readCursor()
       while (cursor.next()) {
         val key = new Array[Long](lhsOffsets.length)
-        fillKeyArray(cursor, key, lhsOffsets)
+        fillKeyArray(cursor, key, lhsOffsets, lhsIsReference)
         if (!NullChecker.entityIsNull(key(0))) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last
@@ -152,16 +159,19 @@ object NodeHashJoinOperator {
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,
-                            lhsOffsets: Array[Int],
+                            lhsKeyOffsets: KeyOffsets,
                             override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
     private val table = new ConcurrentHashMap[LongArray, ConcurrentLinkedQueue[Morsel]]()
+
+    private val lhsOffsets: Array[Int] = lhsKeyOffsets.offsets
+    private val lhsIsReference: Array[Boolean] = lhsKeyOffsets.isReference
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val cursor = morsel.readCursor()
       while (cursor.next()) {
         val key = new Array[Long](lhsOffsets.length)
-        fillKeyArray(cursor, key, lhsOffsets)
+        fillKeyArray(cursor, key, lhsOffsets, lhsIsReference)
         if (!NullChecker.entityIsNull(key(0))) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last

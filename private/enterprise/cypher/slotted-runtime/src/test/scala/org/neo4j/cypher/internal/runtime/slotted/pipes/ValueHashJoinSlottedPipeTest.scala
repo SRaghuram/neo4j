@@ -12,6 +12,7 @@ import org.mockito.Mockito.verifyNoMoreInteractions
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.Longs
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.Refs
@@ -38,7 +39,10 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
 
 
     val right = mock[Pipe]
-    val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo, Array((0,0)), Array((1,1)), Array.empty)()
+    val pipe = ValueHashJoinSlottedPipe(
+      ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo,
+      SlotMappings(Array((0,0)), Array((1,1)), Array.empty)
+    )()
 
     // when
     val result = pipe.createResults(queryState)
@@ -58,7 +62,10 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
     val left = mockPipeFor(slotInfo, RowR(NO_VALUE))
     val right = mockPipeFor(slotInfo, RowR(intValue(42)))
 
-    val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo, Array((0,0)), Array((1,1)), Array.empty)()
+    val pipe = ValueHashJoinSlottedPipe(
+      ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo,
+      SlotMappings(Array((0,0)), Array((1,1)), Array.empty)
+    )()
 
     // when
     val result = pipe.createResults(queryState)
@@ -94,7 +101,10 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
       RowRL(Longs(42), Refs(intValue(666), NO_VALUE))
     )
 
-    val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(1), ReferenceFromSlot(1), left, right, slotInfoForJoin, Array((0,0)), Array((0,0), (1,1), (1, 2)), Array.empty)()
+    val pipe = ValueHashJoinSlottedPipe(
+      ReferenceFromSlot(1), ReferenceFromSlot(1), left, right, slotInfoForJoin,
+      SlotMappings(Array((0,0)), Array((0,0), (1,1), (1, 2)), Array.empty)
+    )()
 
     // when
     val result = pipe.createResults(queryState)

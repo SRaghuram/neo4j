@@ -12,8 +12,10 @@ import org.mockito.Mockito.verifyNoMoreInteractions
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.RowL
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.mockPipeFor
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
@@ -34,8 +36,11 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
     val right = mock[Pipe]
 
     // when
-    val result = NodeHashJoinSlottedPipe(Array(0, 1), Array(0, 1), left, right, slots, Array(), Array(), Array())().
-      createResults(queryState)
+    val result = NodeHashJoinSlottedPipe(
+      KeyOffsets.longs(0, 1), KeyOffsets.longs(0, 1),
+      left, right, slots,
+      SlotMappings(Array(), Array(), Array())
+    )().createResults(queryState)
 
     // then
     result should be(empty)
@@ -53,8 +58,11 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
     val right = mockPipeFor(slots, RowL(node0))
 
     // when
-    val result = NodeHashJoinSlottedPipe(Array(0, 1), Array(0, 1), left, right, slots, Array(), Array(), Array())().
-      createResults(queryState)
+    val result = NodeHashJoinSlottedPipe(
+      KeyOffsets.longs(0, 1), KeyOffsets.longs(0, 1),
+      left, right, slots,
+      SlotMappings(Array(), Array(), Array())
+    )().createResults(queryState)
 
     // then
     result should be(empty)
@@ -91,15 +99,17 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
 
     // when
     val result = NodeHashJoinSlottedPipe(
-      lhsOffsets = Array(0, 1),
-      rhsOffsets = Array(0, 1),
+      lhsKeyOffsets = KeyOffsets.longs(0, 1),
+      rhsKeyOffsets = KeyOffsets.longs(0, 1),
       left = lhsPipe,
       right = rhsPipe,
       slots = output,
-      longsToCopy = Array((1, 2)),
-      refsToCopy = Array(),
-      cachedPropertiesToCopy = Array())().
-      createResults(QueryStateHelper.empty)
+      rhsSlotMappings = SlotMappings(
+        longMappings = Array((1, 2)),
+        refMappings = Array(),
+        cachedPropertyMappings = Array()
+      )
+    )().createResults(QueryStateHelper.empty)
 
     // If we got here it means we did not throw a stack overflow exception. ooo-eeh!
     result should be(empty)

@@ -17,12 +17,13 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
+import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
 import org.neo4j.values.AnyValue
@@ -36,6 +37,17 @@ object SlottedRow {
 
   def empty = new SlottedRow(SlotConfiguration.empty)
   val DEBUG = false
+
+  def getNodeId(row: ReadableRow, offset: Int, isReference: Boolean): Long =
+    if (isReference) {
+      row.getRefAt(offset) match {
+        case node: VirtualNodeValue => node.id()
+        case Values.NO_VALUE        => StatementConstants.NO_SUCH_NODE
+        case other                  => throw new CypherTypeException(s"Expected a node, but got ${other.getTypeName} ")
+      }
+    } else {
+      row.getLongAt(offset)
+    }
 }
 
 trait SlottedCompatible {
