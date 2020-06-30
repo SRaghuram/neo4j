@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.nio.file.Paths
+import java.util.concurrent.Executors
 
 import com.neo4j.bench.common.profiling.ParameterizedProfiler
 import com.neo4j.bench.common.util.ErrorReporter
@@ -24,6 +25,7 @@ import org.neo4j.cypher.internal.PlanStalenessCaller
 import org.neo4j.cypher.internal.QueryCache
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
 import org.neo4j.cypher.internal.Staleness
+import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
 import org.neo4j.cypher.internal.util.InternalNotification
 import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.kernel.impl.query.TransactionalContext
@@ -64,6 +66,7 @@ class QueryCacheHitThreadState {
   def setUp(benchmarkState: QueryCacheHit): Unit = {
     queryCache =
       new QueryCache(
+        new ExecutorBasedCaffeineCacheFactory(Executors.newWorkStealingPool()),
         QueryCacheHitThreadState.dataPoints.length,
         NeverStale,
         QueryCacheHitThreadState.NO_TRACER

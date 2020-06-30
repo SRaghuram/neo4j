@@ -15,6 +15,7 @@ import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.cache.TestExecutorCaffeineCacheFactory
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.CaseExpression
 import org.neo4j.cypher.internal.expressions.DesugaredMapProjection
@@ -82,8 +83,10 @@ import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
 import org.neo4j.cypher.internal.runtime.compiled.expressions.StandaloneExpressionCompiler
@@ -4393,17 +4396,19 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 class CompiledExpressionsIT extends ExpressionsIT {
 
   private val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
+  private val compiledExpressionsContext = CompiledExpressionContext( new CachingExpressionCompilerCache(TestExecutorCaffeineCacheFactory),
+    CachingExpressionCompilerTracer.NONE)
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, CachingExpressionCompilerTracer.NONE)
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
       .compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, CachingExpressionCompilerTracer.NONE)
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
       .compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, CachingExpressionCompilerTracer.NONE)
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
       .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }

@@ -64,7 +64,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         if (context.materializedEntitiesMode) {
           MaterializedEntitiesExpressionConverter(context.tokenContext) +: baseConverters
         } else if (context.compileExpressions) {
-          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode, context.cachingExpressionCompilerTracer) +: baseConverters
+          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode, context.compiledExpressionsContext) +: baseConverters
         } else {
           baseConverters
         }

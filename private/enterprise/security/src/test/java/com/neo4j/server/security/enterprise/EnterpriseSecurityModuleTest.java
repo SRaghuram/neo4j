@@ -26,6 +26,8 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
+import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -58,6 +60,7 @@ class EnterpriseSecurityModuleTest
     private GlobalTransactionEventListeners mockEventListeners;
     private Dependencies mockDependencies;
     private EnterpriseSecurityGraphComponent mockSecurityComponent;
+    private CaffeineCacheFactory caffeineCacheFactory;
 
     @BeforeEach
     void setup()
@@ -72,6 +75,7 @@ class EnterpriseSecurityModuleTest
         mockEventListeners = mock( GlobalTransactionEventListeners.class );
         mockDependencies = new Dependencies();
         mockDependencies.satisfyDependency( mockProcedures );
+        caffeineCacheFactory = new ExecutorBasedCaffeineCacheFactory( Runnable::run );
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecurityInternalSettings.property_level_authorization_enabled ) ).thenReturn( false );
@@ -315,6 +319,7 @@ class EnterpriseSecurityModuleTest
 
     private EnterpriseSecurityModule createModule( LogProvider logProvider, Config config )
     {
-        return new EnterpriseSecurityModule( logProvider, mockSecurityLog, config, mockDependencies, mockEventListeners, mockSecurityComponent );
+        return new EnterpriseSecurityModule( logProvider, mockSecurityLog, config, mockDependencies, mockEventListeners, mockSecurityComponent,
+                                             caffeineCacheFactory );
     }
 }

@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal
 
+import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CallingThreadQueryExecutor
@@ -40,11 +42,16 @@ object RuntimeEnvironment {
       createPipelinedQueryExecutor(cursors),
       createParallelQueryExecutor(cursors, lifeSupport, workerManager, memoryTracker),
       createTracer(config, jobScheduler, lifeSupport),
-      cursors)
+      cursors,
+      createCache(jobScheduler))
   }
 
   private def createPipelinedQueryExecutor(cursors: CursorFactory) = {
     new CallingThreadQueryExecutor(cursors)
+  }
+
+  private def createCache(jobScheduler: JobScheduler) = {
+    new CachingExpressionCompilerCache(new ExecutorBasedCaffeineCacheFactory(jobScheduler.executor(Group.CYPHER_CACHE)))
   }
 
   private def createParallelQueryExecutor(cursors: CursorFactory,
@@ -85,10 +92,14 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
                          pipelinedQueryExecutor: QueryExecutor,
                          parallelQueryExecutor: QueryExecutor,
                          val tracer: SchedulerTracer,
-                         val cursors: CursorFactory) {
+                         val cursors: CursorFactory,
+                         expressionCache: CachingExpressionCompilerCache) {
 
   def getQueryExecutor(parallelExecution: Boolean): QueryExecutor =
     if (parallelExecution) parallelQueryExecutor else pipelinedQueryExecutor
+
+
+  def getCompiledExpressionCache: CachingExpressionCompilerCache = expressionCache
 
 }
 

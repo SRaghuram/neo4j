@@ -53,13 +53,14 @@ object StandaloneExpressionCompiler {
   def default(slots: SlotConfiguration,
               readOnly: Boolean,
               codeGenerationMode: CodeGeneration.CodeGenerationMode,
-              cachingExpressionCompilerTracer: CachingExpressionCompilerTracer
+              compiledExpressionsContext: CompiledExpressionContext
              ): StandaloneExpressionCompiler = {
     val front = new DefaultExpressionCompilerFront(slots, readOnly, new VariableNamer)
     val back = {
       val defaultBack = new DefaultExpressionCompilerBack(codeGenerationMode)
       if (codeGenerationMode.saver.options.isEmpty)
-        new CachingExpressionCompilerBack(defaultBack, cachingExpressionCompilerTracer)
+        new CachingExpressionCompilerBack(defaultBack, compiledExpressionsContext.cachingExpressionCompilerTracer,
+          compiledExpressionsContext.cachingExpressionCompilerCache)
       else
         defaultBack
     }

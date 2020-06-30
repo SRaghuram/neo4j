@@ -16,7 +16,9 @@ import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.SchemaRead
@@ -51,7 +53,11 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
                              materializedEntitiesMode,
                              operatorEngine,
                              interpretedPipesFallback,
-                             new TestCachingExpressionCompilerTracer())
+                             createCompiledExpressionContext)
+  }
+
+  private def createCompiledExpressionContext: CompiledExpressionContext = {
+    CompiledExpressionContext(runtimeEnvironment.getCompiledExpressionCache, new TestCachingExpressionCompilerTracer())
   }
 
   override def assertAllReleased(): Unit = {

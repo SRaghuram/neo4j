@@ -6,18 +6,18 @@
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import org.neo4j.codegen.api.StaticField
-import org.neo4j.cypher.internal.cache.LFUCache
 
 /**
   * Compiles [[IntermediateExpression]] into compiled byte code.
   */
 class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
-                                    tracer: CachingExpressionCompilerTracer
+                                    tracer: CachingExpressionCompilerTracer,
+                                    cache: CachingExpressionCompilerCache
                                    ) extends ExpressionCompilerBack {
 
   override def compileExpression(e: IntermediateExpression): CompiledExpression = {
     if (onlyStaticFields(e)) {
-      CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, innerCompileExpression(e))
+      cache.expressionsCache.computeIfAbsent(e, innerCompileExpression(e))
     } else {
       innerCompileExpression(e)
     }
@@ -30,7 +30,7 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
 
   override def compileProjection(projection: IntermediateExpression): CompiledProjection = {
     if (onlyStaticFields(projection)) {
-      CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, innerCompilerProjection(projection))
+      cache.projectionsCache.computeIfAbsent(projection, innerCompilerProjection(projection))
     } else {
       innerCompilerProjection(projection)
     }
@@ -45,7 +45,7 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
     if (onlyStaticFields(grouping.computeKey) &&
         onlyStaticFields(grouping.getKey) &&
         onlyStaticFields(grouping.projectKey)) {
-      CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, innerCompileGrouping(grouping))
+      cache.groupingsCache.computeIfAbsent(grouping, innerCompileGrouping(grouping))
     } else {
       innerCompileGrouping(grouping)
     }
@@ -61,11 +61,6 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
   }
 }
 
-object CachingExpressionCompilerBack {
-  val SIZE = 1000
-  val EXPRESSIONS = new LFUCache[IntermediateExpression, CompiledExpression](SIZE)
-  val PROJECTIONS = new LFUCache[IntermediateExpression, CompiledProjection](SIZE)
-  val GROUPINGS = new LFUCache[IntermediateGroupingExpression, CompiledGroupingExpression](SIZE)
-}
+
 
 

@@ -16,6 +16,8 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
+import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory;
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManager;
 import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -75,6 +77,7 @@ public interface AbstractEnterpriseEditionModule
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
         CallableExecutor executor = globalModule.getJobScheduler().executor( Group.LOG_ROTATION );
         SecurityLog securityLog = new SecurityLog( config, globalModule.getFileSystem(), executor, userLogProvider );
+        CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( globalModule.getJobScheduler().executor( Group.AUTH_CACHE ) );
         globalModule.getGlobalLife().add( securityLog );
         SecurityProvider securityProvider;
         EnterpriseSecurityGraphComponent securityComponent = setupSecurityGraphInitializer( globalModule, securityLog );
@@ -85,7 +88,8 @@ public interface AbstractEnterpriseEditionModule
                     securityLog, config,
                     globalModule.getGlobalDependencies(),
                     globalModule.getTransactionEventListeners(),
-                    securityComponent
+                    securityComponent,
+                    cacheFactory
             );
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule.authManager() );

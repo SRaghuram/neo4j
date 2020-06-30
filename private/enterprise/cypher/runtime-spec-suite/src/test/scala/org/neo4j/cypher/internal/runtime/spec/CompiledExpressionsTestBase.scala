@@ -92,7 +92,7 @@ abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](
 
   private def numberOfCompilationEvents(query: LogicalQuery): Int = {
     val (_, context) = buildPlanAndContext(query, runtime)
-    context.cachingExpressionCompilerTracer.asInstanceOf[TestCachingExpressionCompilerTracer].numberOfCompilationEvents
+    context.compiledExpressionsContext.cachingExpressionCompilerTracer.asInstanceOf[TestCachingExpressionCompilerTracer].numberOfCompilationEvents
   }
 
   test("should never cache expression/projection/grouping which has late properties") {

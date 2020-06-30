@@ -13,6 +13,7 @@ import org.neo4j.cypher.CypherPlannerOption
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.CypherUpdateStrategy
 import org.neo4j.cypher.CypherVersion
+import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.phases.Compatibility3_5
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_1
@@ -21,7 +22,9 @@ import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.exceptions.SyntaxException
@@ -30,6 +33,7 @@ import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.database.DatabaseMemoryTrackers
 import org.neo4j.kernel.impl.query.QueryEngineProvider.SPI
 import org.neo4j.logging.Log
+import org.neo4j.scheduler.Group
 
 class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
                                 spi: SPI,
@@ -70,6 +74,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
         MasterCompiler.CLOCK,
         spi.monitors(),
         log,
+        new ExecutorBasedCaffeineCacheFactory(spi.jobScheduler.executor(Group.CYPHER_CACHE)),
         cypherPlanner,
         cypherUpdateStrategy,
         LastCommittedTxIdProvider(graph),
@@ -108,7 +113,7 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     materializedEntitiesMode: Boolean,
                                     operatorEngine: CypherOperatorEngineOption,
                                     interpretedPipesFallback: CypherInterpretedPipesFallbackOption,
-                                    cachingExpressionCompilerTracer: CachingExpressionCompilerTracer) extends RuntimeContext
+                                    compiledExpressionsContext: CompiledExpressionContext) extends RuntimeContext
 
 /**
  * Manager of EnterpriseRuntimeContexts.
@@ -139,7 +144,7 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
       materializedEntitiesMode,
       operatorEngine,
       interpretedPipesFallback,
-      CachingExpressionCompilerTracer.NONE)
+      CompiledExpressionContext(runtimeEnvironment.getCompiledExpressionCache, CachingExpressionCompilerTracer.NONE))
 
   override def assertAllReleased(): Unit = {
     // This is for test assertions only, and should run on the parallel executor.

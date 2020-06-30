@@ -6,9 +6,11 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.google.common.testing.FakeTicker;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
+import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,19 +22,20 @@ class ShiroCaffeineCacheTest
     private ShiroCaffeineCache<Integer,String> cache;
     private FakeTicker fakeTicker;
     private final long TTL = 100;
+    private CaffeineCacheFactory caffeineCacheFactory = new ExecutorBasedCaffeineCacheFactory( Runnable::run );
 
     @BeforeEach
     void setUp()
     {
         fakeTicker = new FakeTicker();
-        cache = new ShiroCaffeineCache<>( fakeTicker::read, Runnable::run, TTL, 5, true );
+        cache = new ShiroCaffeineCache<>( fakeTicker::read, caffeineCacheFactory, TTL, 5, true );
     }
 
     @Test
     void shouldFailToCreateAuthCacheForTTLZeroIfUsingTLL()
     {
-        new ShiroCaffeineCache<>( fakeTicker::read, Runnable::run, 0, 5, false );
-        var e = assertThrows( IllegalArgumentException.class, () -> new ShiroCaffeineCache<>( fakeTicker::read, Runnable::run, 0, 5, true ) );
+        new ShiroCaffeineCache<>( fakeTicker::read, caffeineCacheFactory, 0, 5, false );
+        var e = assertThrows( IllegalArgumentException.class, () -> new ShiroCaffeineCache<>( fakeTicker::read, caffeineCacheFactory, 0, 5, true ) );
         assertThat( e.getMessage() ).contains( "TTL must be larger than zero." );
     }
 

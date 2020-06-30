@@ -125,6 +125,7 @@ class TransactionTest
         JobHandle timeoutHandle = mock( JobHandle.class );
         when( jobScheduler.schedule( any(), any(), anyLong(), any() ) ).thenReturn( timeoutHandle );
         when( jobScheduler.executor( Group.FABRIC_WORKER ) ).thenReturn( callableFabricWorkerExecutorService );
+        when( jobScheduler.executor( Group.CYPHER_CACHE ) ).thenReturn( callableFabricWorkerExecutorService );
 
         when( clock.nanos() ).thenReturn( System.nanoTime() );
         when( jobScheduler.scheduleRecurring( any(), timeoutCallback.capture(), anyLong(), any() ) ).thenReturn( mock( JobHandle.class ) );

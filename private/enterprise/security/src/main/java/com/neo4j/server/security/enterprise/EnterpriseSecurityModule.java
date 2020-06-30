@@ -43,6 +43,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -74,6 +75,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     private final Config config;
     private final Log log;
     private final EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent;
+    private CaffeineCacheFactory cacheFactory;
     private final Dependencies dependencies;
     private final GlobalTransactionEventListeners transactionEventListeners;
     private EnterpriseAuthManager authManager;
@@ -87,7 +89,8 @@ public class EnterpriseSecurityModule extends SecurityModule
                                      Config config,
                                      Dependencies dependencies,
                                      GlobalTransactionEventListeners transactionEventListeners,
-                                     EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent )
+                                     EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent,
+                                     CaffeineCacheFactory cacheFactory )
     {
         this.securityLog = securityLog;
         this.config = config;
@@ -95,6 +98,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         this.transactionEventListeners = transactionEventListeners;
         this.log = logProvider.getLog( getClass() );
         this.enterpriseSecurityGraphComponent = enterpriseSecurityGraphComponent;
+        this.cacheFactory = cacheFactory;
     }
 
     @Override
@@ -203,7 +207,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         inClusterAuthManager = new InClusterAuthManager( internalRealm, securityLog, logAuthSuccess, defaultDatabase );
 
-        return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config ),
+        return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config, cacheFactory ),
                 securityLog, config.get( SecuritySettings.security_log_successful_authentication ), config.get( GraphDatabaseSettings.default_database ) );
     }
 
@@ -251,12 +255,12 @@ public class EnterpriseSecurityModule extends SecurityModule
         );
     }
 
-    private static CacheManager createCacheManager( Config config )
+    private static CacheManager createCacheManager( Config config, CaffeineCacheFactory cacheFactory )
     {
         long ttl = config.get( SecuritySettings.auth_cache_ttl ).toMillis();
         boolean useTTL = config.get( SecuritySettings.auth_cache_use_ttl );
         int maxCapacity = config.get( SecuritySettings.auth_cache_max_capacity );
-        return new ShiroCaffeineCache.Manager( Ticker.systemTicker(), ttl, maxCapacity, useTTL );
+        return new ShiroCaffeineCache.Manager( Ticker.systemTicker(), ttl, cacheFactory, maxCapacity, useTTL );
     }
 
     private static List<PluginRealm> createPluginRealms(
