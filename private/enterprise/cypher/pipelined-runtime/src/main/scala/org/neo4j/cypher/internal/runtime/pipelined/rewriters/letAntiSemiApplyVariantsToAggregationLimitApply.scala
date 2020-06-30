@@ -31,7 +31,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  *
  * Rewrite
  *
- *    LetSemiApply
+ *    LetAntiSemiApply
  *    LHS     RHS
  *
  * to
