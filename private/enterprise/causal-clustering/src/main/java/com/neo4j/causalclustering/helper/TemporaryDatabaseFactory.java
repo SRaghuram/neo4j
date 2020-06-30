@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.helper;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 
 public interface TemporaryDatabaseFactory
 {
-    TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig, boolean isSystem );
+    TemporaryDatabase startTemporaryDatabase( Path rootDirectory, Config originalConfig, boolean isSystem );
 }

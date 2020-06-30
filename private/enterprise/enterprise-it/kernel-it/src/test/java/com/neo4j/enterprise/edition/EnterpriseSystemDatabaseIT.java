@@ -10,8 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
@@ -64,7 +64,7 @@ class EnterpriseSystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
@@ -192,7 +192,7 @@ class EnterpriseSystemDatabaseIT
         DatabaseManagementService managementService = null;
         try
         {
-            File disabledSystemDbDirectory = testDirectory.homeDir( "withSystemDd" );
+            Path disabledSystemDbDirectory = testDirectory.homePath( "withSystemDd" );
             managementService = new TestEnterpriseDatabaseManagementServiceBuilder( disabledSystemDbDirectory ).build();
             databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );

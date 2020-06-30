@@ -102,8 +102,8 @@ class RaftBootstrapperIT
 
     private TemporaryDatabaseFactory temporaryDatabaseFactory;
 
-    private File neo4jHome;
-    private File dataDirectory;
+    private Path neo4jHome;
+    private Path dataDirectory;
     private Config defaultConfig;
     private StorageEngineFactory storageEngineFactory;
     private final BootstrapSaver bootstrapSaver = new BootstrapSaver( fileSystem, nullLogProvider() );
@@ -113,9 +113,9 @@ class RaftBootstrapperIT
     void setup()
     {
         this.temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( pageCache, fileSystem );
-        this.neo4jHome = testDirectory.homeDir();
-        this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() );
-        this.dataDirectory = defaultConfig.get( GraphDatabaseSettings.data_directory ).toFile();
+        this.neo4jHome = testDirectory.homePath();
+        this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome );
+        this.dataDirectory = defaultConfig.get( GraphDatabaseSettings.data_directory );
         this.storageEngineFactory = StorageEngineFactory.selectStorageEngine();
     }
 
@@ -233,7 +233,7 @@ class RaftBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        File customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
+        Path customTransactionLogsRootDirectory = testDirectory.directoryPath( "custom-tx-logs-location" );
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
                 .databaseId( DATABASE_ID )
@@ -242,8 +242,8 @@ class RaftBootstrapperIT
                 .build();
 
         Config config = Config.newBuilder()
-                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() )
-                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, neo4jHome )
+                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.toAbsolutePath() )
                 .build();
 
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
@@ -324,7 +324,7 @@ class RaftBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        File customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
+        Path customTransactionLogsRootDirectory = testDirectory.directoryPath( "custom-tx-logs-location" );
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
                 .databaseId( DATABASE_ID )
@@ -338,8 +338,8 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         Config config = Config.newBuilder()
-                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() )
-                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, neo4jHome )
+                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.toAbsolutePath() )
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();

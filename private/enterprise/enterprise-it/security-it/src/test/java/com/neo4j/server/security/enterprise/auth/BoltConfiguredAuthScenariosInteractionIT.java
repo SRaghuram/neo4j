@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import org.junit.jupiter.api.TestInfo;
+
 import java.util.Map;
 
 import org.neo4j.graphdb.config.Setting;
@@ -19,9 +21,9 @@ public class BoltConfiguredAuthScenariosInteractionIT extends ConfiguredAuthScen
     }
 
     @Override
-    public NeoInteractionLevel<BoltInteraction.BoltSubject> setUpNeoServer( Map<Setting<?>, String> config )
+    public NeoInteractionLevel<BoltInteraction.BoltSubject> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo )
     {
-        return new BoltInteraction( config );
+        return new BoltInteraction( config, testInfo );
     }
 
     @Override

@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,15 +34,15 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
 {
 
     @Override
-    public void setUp()
+    public void setUp( TestInfo testInfo )
     {
         // tests are required to setup database with specific configs
     }
 
     @Test
-    void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyOnTimeout() throws Throwable
+    void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyOnTimeout( TestInfo testInfo ) throws Throwable
     {
-        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester" ), testInfo );
 
         createRoleWithAccess( "tester", "noneSubject" );
 
@@ -49,9 +50,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldSetAllMatchingWildcardRoleConfigs() throws Throwable
+    void shouldSetAllMatchingWildcardRoleConfigs( TestInfo testInfo ) throws Throwable
     {
-        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other" ), testInfo );
 
         createRoleWithAccess( "tester", "noneSubject" );
         createRoleWithAccess( "other", "readSubject" );
@@ -63,10 +64,10 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldSetAllMatchingWildcardRoleConfigsWithDefaultForUDFs() throws Throwable
+    void shouldSetAllMatchingWildcardRoleConfigsWithDefaultForUDFs( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other",
-                GraphDatabaseSettings.default_allowed, "default" ) );
+                GraphDatabaseSettings.default_allowed, "default" ), testInfo );
 
         createRoleWithAccess( "tester", "noneSubject" );
         createRoleWithAccess( "default", "noneSubject" );
@@ -78,9 +79,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldHandleWriteAfterAllowedReadProcedureWithAuthDisabled() throws Throwable
+    void shouldHandleWriteAfterAllowedReadProcedureWithAuthDisabled( TestInfo testInfo ) throws Throwable
     {
-        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ), testInfo );
 
         neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class )
                 .registerProcedure( ClassWithProcedures.class );
@@ -90,10 +91,10 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldHandleMultipleRolesSpecifiedForMapping() throws Throwable
+    void shouldHandleMultipleRolesSpecifiedForMapping( TestInfo testInfo ) throws Throwable
     {
         // Given
-        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester, other" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester, other" ), testInfo );
 
         // When
         createRoleWithAccess( "tester", "noneSubject" );
@@ -105,9 +106,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldListCorrectRolesForDBMSProcedures() throws Throwable
+    void shouldListCorrectRolesForDBMSProcedures( TestInfo testInfo ) throws Throwable
     {
-        configuredSetup( defaultConfiguration() );
+        configuredSetup( defaultConfiguration(), testInfo );
 
         Map<String,Set<String>> expected = genericMap(
                 "dbms.functions", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
@@ -140,11 +141,11 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldShowAllowedRolesWhenListingProcedures() throws Throwable
+    void shouldShowAllowedRolesWhenListingProcedures( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of(
                 GraphDatabaseSettings.procedure_roles, "test.numNodes:counter,user",
-                GraphDatabaseSettings.default_allowed, "default" ) );
+                GraphDatabaseSettings.default_allowed, "default" ), testInfo );
 
         Map<String,Set<String>> expected = genericMap(
                 "test.staticReadProcedure", newSet( "default", READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
@@ -167,11 +168,11 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldShowAllowedRolesWhenListingFunctions() throws Throwable
+    void shouldShowAllowedRolesWhenListingFunctions( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of(
                 GraphDatabaseSettings.procedure_roles, "test.allowedFunc:counter,user",
-                GraphDatabaseSettings.default_allowed, "default" ) );
+                GraphDatabaseSettings.default_allowed, "default" ), testInfo );
 
         Map<String,Set<String>> expected = genericMap(
                 "test.annotatedFunction", newSet( "annotated", READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
@@ -186,9 +187,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldGiveNiceMessageAtFailWhenTryingToKill() throws Throwable
+    void shouldGiveNiceMessageAtFailWhenTryingToKill( TestInfo testInfo ) throws Throwable
     {
-        configuredSetup( defaultConfiguration() );
+        configuredSetup( defaultConfiguration(), testInfo );
         String query = "CALL dbms.killQuery('query-9999999999')";
         Map<String,Object> expected = new HashMap<>();
         expected.put( "queryId", valueOf( "query-9999999999" ) );
@@ -198,10 +199,10 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldGiveNiceMessageAtFailWhenTryingToKillMoreThenOne() throws Throwable
+    void shouldGiveNiceMessageAtFailWhenTryingToKillMoreThenOne( TestInfo testInfo ) throws Throwable
     {
         //Given
-        configuredSetup( defaultConfiguration() );
+        configuredSetup( defaultConfiguration(), testInfo );
         String query = "CALL dbms.killQueries(['query-9999999999', 'query-9999999989'])";
 
         //Expect

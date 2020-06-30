@@ -30,14 +30,18 @@ import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies
 @PublicApi
 public class EnterpriseDatabaseManagementServiceBuilder extends DatabaseManagementServiceBuilder
 {
+    /**
+     * @deprecated Use {@link #EnterpriseDatabaseManagementServiceBuilder(Path)}.
+     */
+    @Deprecated( forRemoval = true )
     public EnterpriseDatabaseManagementServiceBuilder( File homeDirectory )
     {
-        super( homeDirectory );
+        this( homeDirectory.toPath() );
     }
 
     public EnterpriseDatabaseManagementServiceBuilder( Path homeDirectory )
     {
-        super( homeDirectory.toFile() );
+        super( homeDirectory );
     }
 
     @Override

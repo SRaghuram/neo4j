@@ -5,7 +5,7 @@
  */
 package com.neo4j.cypher
 
-import java.io.File
+import java.nio.file.Path
 
 import com.neo4j.configuration.MetricsSettings.metrics_enabled
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
@@ -23,7 +23,7 @@ trait EnterpriseGraphDatabaseTestSupport extends GraphDatabaseTestSupport {
 
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(metrics_enabled -> java.lang.Boolean.FALSE)
 
-  override protected def createDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = {
+  override protected def createDatabaseFactory(databaseRootDir: Path): TestDatabaseManagementServiceBuilder = {
     new TestEnterpriseDatabaseManagementServiceBuilder(databaseRootDir)
   }
 }

@@ -20,9 +20,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.file.Path;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -64,7 +64,7 @@ class GraphiteOutputIT
     {
         eventLoopGroup = new NioEventLoopGroup( 2 );
         serverChannel = startFakeGraphiteServer( eventLoopGroup, receivedMetrics );
-        managementService = startDatabaseWithGraphiteMetrics( testDirectory.homeDir(), serverChannel.localAddress() );
+        managementService = startDatabaseWithGraphiteMetrics( testDirectory.homePath(), serverChannel.localAddress() );
     }
 
     @AfterEach
@@ -88,7 +88,7 @@ class GraphiteOutputIT
         }
     }
 
-    private static DatabaseManagementService startDatabaseWithGraphiteMetrics( File homeDir, SocketAddress graphiteServerAddress )
+    private static DatabaseManagementService startDatabaseWithGraphiteMetrics( Path homeDir, SocketAddress graphiteServerAddress )
     {
         var address = (InetSocketAddress) graphiteServerAddress;
 

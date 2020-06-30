@@ -7,7 +7,10 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.junit.jupiter.api.TestInfo;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,7 +74,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     private final FileSystemAbstraction fileSystem;
     private final EnterpriseAuthManager authManager;
 
-    BoltInteraction( Map<Setting<?>,String> config )
+    BoltInteraction( Map<Setting<?>,String> config, TestInfo testInfo )
     {
         TestEnterpriseDatabaseManagementServiceBuilder factory = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent();
         fileSystem = new EphemeralFileSystemAbstraction();
@@ -82,9 +85,14 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
                     settings.put( GraphDatabaseSettings.auth_enabled, true );
                     config.forEach( ( setting, value ) -> settings.put( setting, ((SettingImpl<Object>) setting).parse( value ) ) );
                 } );
-        server.ensureDatabase( r ->
+        try
         {
-        } );
+            server.init( testInfo );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
         GraphDatabaseFacade db = (GraphDatabaseFacade) server.graphDatabaseService();
         authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
     }

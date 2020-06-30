@@ -145,7 +145,7 @@ class BackupRetriesIT
 
     private GraphDatabaseAPI startDb()
     {
-        File databaseDirectory = testDirectory.homeDir();
+        Path databaseDirectory = testDirectory.homePath();
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( databaseDirectory )
                 .setUserLogProvider( logProvider )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, true )

@@ -136,7 +136,7 @@ class BoltThreadSchedulingIT
     private GraphDatabaseService startDbWithBolt( int threadPoolMinSize, int threadPoolMaxSize,
             int threadPoolQueueSize )
     {
-        DatabaseManagementServiceBuilder dbFactory = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
+        DatabaseManagementServiceBuilder dbFactory = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() );
         managementService = dbFactory
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )

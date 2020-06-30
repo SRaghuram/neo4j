@@ -39,7 +39,7 @@ class CausalClusterInProcessRunnerIT
     @Test
     void shouldBootAndShutdownCluster()
     {
-        var clusterPath = testDirectory.homeDir().toPath();
+        var clusterPath = testDirectory.homePath();
         var portPickingStrategy = new PortAuthorityPortPickingStrategy();
 
         cluster = CausalClusterInProcessBuilder.init()
@@ -58,7 +58,7 @@ class CausalClusterInProcessRunnerIT
     @Test
     void shouldBootAndShutdownSecureCluster()
     {
-        var clusterPath = testDirectory.homeDir().toPath();
+        var clusterPath = testDirectory.homePath();
         var portPickingStrategy = new PortAuthorityPortPickingStrategy();
 
         cluster = CausalClusterInProcessBuilder.init()

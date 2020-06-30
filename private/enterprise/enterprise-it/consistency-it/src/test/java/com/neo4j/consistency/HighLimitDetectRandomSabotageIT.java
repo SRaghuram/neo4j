@@ -10,7 +10,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.BeforeEach;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.newchecker.DetectRandomSabotageIT;
@@ -31,7 +31,7 @@ class HighLimitDetectRandomSabotageIT extends DetectRandomSabotageIT
     }
 
     @Override
-    protected TestDatabaseManagementServiceBuilder createBuilder( File home )
+    protected TestDatabaseManagementServiceBuilder createBuilder( Path home )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( home );
     }

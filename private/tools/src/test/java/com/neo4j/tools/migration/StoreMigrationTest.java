@@ -50,7 +50,7 @@ class StoreMigrationTest
         StoreMigration.main( new String[]{migrationDir.getAbsolutePath()} );
 
         // after migration we can open store and do something
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.directory( "testdb" ) )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.directoryPath( "testdb" ) )
                 .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, migrationDir.toPath().toAbsolutePath() )
                 .build();

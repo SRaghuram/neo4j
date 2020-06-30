@@ -20,6 +20,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -650,11 +651,11 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void listTransactionInitialisationTraceWhenAvailable() throws Throwable
+    void listTransactionInitialisationTraceWhenAvailable( TestInfo testInfo ) throws Throwable
     {
         neo.tearDown();
         neo = setUpNeoServer( Map.of( GraphDatabaseSettings.transaction_tracing_level, GraphDatabaseSettings.TransactionTracingLevel.ALL.name(),
-                                                 GraphDatabaseSettings.auth_enabled, FALSE ) );
+                                                 GraphDatabaseSettings.auth_enabled, FALSE ), testInfo );
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
         {
@@ -708,10 +709,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void shouldListAllTransactionsWithAuthDisabled() throws Throwable
+    void shouldListAllTransactionsWithAuthDisabled( TestInfo testInfo ) throws Throwable
     {
         neo.tearDown();
-        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ), testInfo );
 
         DoubleLatch latch = new DoubleLatch( 2, true );
         OffsetDateTime startTime = getStartTime();
@@ -860,10 +861,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void killAnyTransactionWithAuthDisabled() throws Throwable
+    void killAnyTransactionWithAuthDisabled( TestInfo testInfo ) throws Throwable
     {
         neo.tearDown();
-        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ), testInfo );
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
         {
@@ -1505,10 +1506,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void shouldListAllQueriesWithAuthDisabled() throws Throwable
+    void shouldListAllQueriesWithAuthDisabled( TestInfo testInfo ) throws Throwable
     {
         neo.tearDown();
-        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ), testInfo );
 
         DoubleLatch latch = new DoubleLatch( 2, true );
         OffsetDateTime startTime = getStartTime();

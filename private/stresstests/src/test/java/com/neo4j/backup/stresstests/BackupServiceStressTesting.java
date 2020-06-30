@@ -12,6 +12,7 @@ import com.neo4j.helper.Workload;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -64,7 +65,7 @@ class BackupServiceStressTesting
 
         String databaseName = "testDatabase";
 
-        File storeDir = testDirectory.homeDir( databaseName );
+        Path storeDir = testDirectory.homePath( databaseName );
         File backupsDir = testDirectory.directory( "backups" );
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =

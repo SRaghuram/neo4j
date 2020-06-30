@@ -7,7 +7,6 @@ package com.neo4j.ssl;
 
 import org.bouncycastle.operator.OperatorCreationException;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,22 +31,22 @@ public class HostnameVerificationHelper
     {
         SslPolicyConfig policy = SslPolicyConfig.forScope( scope );
         String random = UUID.randomUUID().toString();
-        File baseDirectory = testDirectory.directory( "base_directory_" + random );
-        File validCertificatePath = new File( baseDirectory, "certificate.crt" );
-        File validPrivateKeyPath = new File( baseDirectory, "private.pem" );
-        File revoked = new File( baseDirectory, "revoked" );
-        File trusted = new File( baseDirectory, "trusted" );
-        trusted.mkdirs();
-        revoked.mkdirs();
+        Path baseDirectory = testDirectory.directoryPath( "base_directory_" + random );
+        Path validCertificatePath = baseDirectory.resolve( "certificate.crt" );
+        Path validPrivateKeyPath = baseDirectory.resolve( "private.pem" );
+        Path revoked = baseDirectory.resolve( "revoked" );
+        Path trusted = baseDirectory.resolve( "trusted" );
+        Files.createDirectories( trusted );
+        Files.createDirectories( revoked );
         certFactory.createSelfSignedCertificate( validCertificatePath, validPrivateKeyPath, hostname ); // Sets Subject Alternative Name(s) to hostname
         return Config.newBuilder()
 
                 .set( policy.enabled, Boolean.TRUE )
-                .set( policy.base_directory, baseDirectory.toPath() )
-                .set( policy.trusted_dir, trusted.toPath() )
-                .set( policy.revoked_dir, revoked.toPath() )
-                .set( policy.private_key, validPrivateKeyPath.toPath() )
-                .set( policy.public_certificate, validCertificatePath.toPath() )
+                .set( policy.base_directory, baseDirectory )
+                .set( policy.trusted_dir, trusted )
+                .set( policy.revoked_dir, revoked )
+                .set( policy.private_key, validPrivateKeyPath )
+                .set( policy.public_certificate, validCertificatePath )
 
                 .set( policy.tls_versions, List.of( "TLSv1.2" ) )
                 .set( policy.ciphers, List.of( "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA" ) )
@@ -64,8 +63,8 @@ public class HostnameVerificationHelper
     {
         SslPolicyConfig sslPolicyConfig = SslPolicyConfig.forScope( scope );
         Path trustedDirectory = target.get( sslPolicyConfig.trusted_dir );
-        File certificate = subject.get( sslPolicyConfig.public_certificate ).toFile();
-        Path trustedCertFilePath = trustedDirectory.resolve( certificate.getName() );
-        Files.copy( certificate.toPath(), trustedCertFilePath );
+        Path certificate = subject.get( sslPolicyConfig.public_certificate );
+        Path trustedCertFilePath = trustedDirectory.resolve( certificate.getFileName().toString() );
+        Files.copy( certificate, trustedCertFilePath );
     }
 }

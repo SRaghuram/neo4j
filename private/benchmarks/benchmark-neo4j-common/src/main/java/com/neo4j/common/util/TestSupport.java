@@ -19,7 +19,7 @@ public class TestSupport
     public static Store createEmptyStore( Path homeDir, Path neo4jConfigFile )
     {
         DatabaseManagementService managementService =
-                new EnterpriseDatabaseManagementServiceBuilder( homeDir.toFile() )
+                new EnterpriseDatabaseManagementServiceBuilder( homeDir )
                         .loadPropertiesFromFile( neo4jConfigFile.toFile().getAbsolutePath() )
                         .build();
         managementService.shutdown();
@@ -29,7 +29,7 @@ public class TestSupport
     public static Store createEmptyStore( Path homeDir, Neo4jConfig neo4jConfig )
     {
         DatabaseManagementService managementService =
-                new EnterpriseDatabaseManagementServiceBuilder( homeDir.toFile() )
+                new EnterpriseDatabaseManagementServiceBuilder( homeDir )
                         .setConfigRaw( neo4jConfig.toMap() )
                         .build();
         managementService.shutdown();
@@ -39,7 +39,7 @@ public class TestSupport
     public static Store createTemporaryEmptyStore( Path homeDir, Path neo4jConfigFile )
     {
         DatabaseManagementService managementService =
-                new EnterpriseDatabaseManagementServiceBuilder( homeDir.toFile() )
+                new EnterpriseDatabaseManagementServiceBuilder( homeDir )
                         .loadPropertiesFromFile( neo4jConfigFile.toFile().getAbsolutePath() )
                         .build();
         managementService.shutdown();

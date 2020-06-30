@@ -8,7 +8,7 @@ package com.neo4j.cc_robustness;
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
@@ -18,7 +18,7 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 
 public class CcRobustnessGraphDatabaseFactory extends DatabaseManagementServiceBuilder
 {
-    CcRobustnessGraphDatabaseFactory( File homeDirectory )
+    CcRobustnessGraphDatabaseFactory( Path homeDirectory )
     {
         super( homeDirectory );
     }

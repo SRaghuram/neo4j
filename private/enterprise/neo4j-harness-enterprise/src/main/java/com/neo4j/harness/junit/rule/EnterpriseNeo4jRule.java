@@ -8,6 +8,7 @@ package com.neo4j.harness.junit.rule;
 import com.neo4j.harness.EnterpriseNeo4jBuilders;
 
 import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.harness.junit.rule.Neo4jRule;
@@ -29,7 +30,16 @@ public class EnterpriseNeo4jRule extends Neo4jRule
         super( EnterpriseNeo4jBuilders.newInProcessBuilder() );
     }
 
+    /**
+     * @deprecated Use {@link #EnterpriseNeo4jRule(Path)}.
+     */
+    @Deprecated( forRemoval = true )
     public EnterpriseNeo4jRule( File workingDirectory )
+    {
+        this( workingDirectory.toPath() );
+    }
+
+    public EnterpriseNeo4jRule( Path workingDirectory )
     {
         super( EnterpriseNeo4jBuilders.newInProcessBuilder( workingDirectory ) );
     }

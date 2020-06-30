@@ -17,6 +17,7 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -394,7 +395,7 @@ class TransactionGuardIT
     {
         if ( databaseWithTimeout == null )
         {
-            databaseWithTimeout = startCustomDatabase( testDirectory.directory( "dbWithTimeout" ), getSettingsWithTimeoutAndBolt() );
+            databaseWithTimeout = startCustomDatabase( testDirectory.directoryPath( "dbWithTimeout" ), getSettingsWithTimeoutAndBolt() );
             boltPortDatabaseWithTimeout = getBoltConnectorPort( databaseWithTimeout );
         }
         return databaseWithTimeout;
@@ -411,7 +412,7 @@ class TransactionGuardIT
     {
         if ( databaseWithoutTimeout == null )
         {
-            databaseWithoutTimeout = startCustomDatabase( testDirectory.directory( "dbWithoutTimeout" ), getSettingsWithoutTransactionTimeout() );
+            databaseWithoutTimeout = startCustomDatabase( testDirectory.directoryPath( "dbWithoutTimeout" ), getSettingsWithoutTransactionTimeout() );
         }
         return databaseWithoutTimeout;
     }
@@ -477,7 +478,7 @@ class TransactionGuardIT
         }
     }
 
-    private GraphDatabaseAPI startCustomDatabase( File storeDir, Map<Setting<?>,Object> configMap )
+    private GraphDatabaseAPI startCustomDatabase( Path storeDir, Map<Setting<?>,Object> configMap )
     {
         // Inject IdContextFactory
         Dependencies dependencies = new Dependencies();

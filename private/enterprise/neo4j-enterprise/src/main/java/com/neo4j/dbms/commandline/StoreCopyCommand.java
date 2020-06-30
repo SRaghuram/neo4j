@@ -25,7 +25,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
-import org.neo4j.io.fs.PathUtils;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -321,7 +321,7 @@ public class StoreCopyCommand extends AbstractCommand
             {
                 try
                 {
-                    if ( !PathUtils.isEmpty( targetFile ) )
+                    if ( !FileUtils.isDirectoryEmpty( targetFile ) )
                     {
                         throw new CommandFailedException( "The directory is not empty: " + targetFile.toAbsolutePath() );
                     }

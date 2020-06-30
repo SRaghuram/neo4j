@@ -90,13 +90,13 @@ class MultiDatabaseHttpIT
         Config custom = Config.newBuilder()
                 .setDefaults( GraphDatabaseSettings.SERVER_DEFAULTS )
                 .set( mode, GraphDatabaseSettings.Mode.SINGLE )
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homePath().toAbsolutePath() )
                 .set( GraphDatabaseSettings.auth_enabled, false )
                 .set( OnlineBackupSettings.online_backup_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .build();
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( custom )
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).setConfig( custom )
                 .setUserLogProvider( NullLogProvider.getInstance() ).build();
     }
 }

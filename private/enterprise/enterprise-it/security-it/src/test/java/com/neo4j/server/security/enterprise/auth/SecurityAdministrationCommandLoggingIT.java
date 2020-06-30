@@ -61,7 +61,7 @@ class SecurityAdministrationCommandLoggingIT
         File logsDirectory = new File( testDirectory.homeDir(), "logs" );
         logFilename = new File( logsDirectory, "security.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( inMemoryLog )
                 .setFileSystem( testDirectory.getFileSystem() )
                 .impermanent()

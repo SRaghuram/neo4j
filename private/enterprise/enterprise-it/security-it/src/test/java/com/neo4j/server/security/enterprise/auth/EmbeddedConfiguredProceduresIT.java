@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.Map;
 
@@ -15,7 +16,7 @@ public class EmbeddedConfiguredProceduresIT extends ConfiguredProceduresTestBase
 {
 
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>, String> config )
+    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo )
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

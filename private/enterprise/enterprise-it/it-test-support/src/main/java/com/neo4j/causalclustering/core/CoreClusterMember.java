@@ -18,6 +18,7 @@ import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -62,7 +63,7 @@ public class CoreClusterMember implements ClusterMember
                 DiscoveryServiceFactory discoveryServiceFactory );
     }
 
-    private final File neo4jHome;
+    private final Path neo4jHome;
     private final Neo4jLayout neo4jLayout;
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final DatabaseLayout defaultDatabaseLayout;
@@ -94,7 +95,7 @@ public class CoreClusterMember implements ClusterMember
                               List<SocketAddress> addresses,
                               DiscoveryServiceFactory discoveryServiceFactory,
                               String recordFormat,
-                              File parentDir,
+                              Path parentDir,
                               Map<String, String> extraParams,
                               Map<String, IntFunction<String>> instanceExtraParams,
                               String listenAddress,
@@ -137,7 +138,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
-        config.set( GraphDatabaseInternalSettings.auth_store, parentDir.toPath().resolve( "auth" ).toAbsolutePath() );
+        config.set( GraphDatabaseInternalSettings.auth_store, parentDir.resolve( "auth" ).toAbsolutePath() );
         config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
         config.setRaw( extraParams );
 
@@ -145,9 +146,9 @@ public class CoreClusterMember implements ClusterMember
         instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( serverId ) ) );
         config.setRaw( instanceExtras );
 
-        this.neo4jHome = new File( parentDir, "server-core-" + serverId );
-        config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath().toAbsolutePath() );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.toPath().resolve( "core-tx-logs-" + serverId ).toAbsolutePath() );
+        this.neo4jHome = parentDir.resolve( "server-core-" + serverId );
+        config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "core-tx-logs-" + serverId ).toAbsolutePath() );
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
@@ -256,7 +257,7 @@ public class CoreClusterMember implements ClusterMember
     }
 
     @Override
-    public File homeDir()
+    public Path homePath()
     {
         return neo4jHome;
     }

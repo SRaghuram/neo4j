@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.common.ClusterMember;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ConnectException;
@@ -52,7 +51,7 @@ class BackupHelper
     AtomicLong successfulBackups = new AtomicLong();
 
     private final FileSystemAbstraction fs;
-    private final File baseBackupDir;
+    private final Path baseBackupDir;
     private final Log log;
 
     BackupHelper( Resources resources )
@@ -140,9 +139,9 @@ class BackupHelper
         try
         {
             String backupSubDirName = databaseName + "-backup-" + backupNumber.getAndIncrement();
-            File backupDir = new File( baseBackupDir, backupSubDirName );
-            fs.mkdirs( backupDir );
-            return backupDir.toPath();
+            Path backupDir = baseBackupDir.resolve( backupSubDirName );
+            fs.mkdirs( backupDir.toFile() );
+            return backupDir;
         }
         catch ( IOException e )
         {

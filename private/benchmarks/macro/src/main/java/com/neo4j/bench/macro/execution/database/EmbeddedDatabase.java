@@ -163,9 +163,9 @@ public class EmbeddedDatabase implements Database
         switch ( edition )
         {
         case COMMUNITY:
-            return new DatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
+            return new DatabaseManagementServiceBuilder( store.topLevelDirectory() );
         case ENTERPRISE:
-            return new EnterpriseDatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
+            return new EnterpriseDatabaseManagementServiceBuilder( store.topLevelDirectory() );
         default:
             throw new RuntimeException( "Unrecognized edition: " + edition );
         }

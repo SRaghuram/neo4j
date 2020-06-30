@@ -7,7 +7,7 @@ package com.neo4j.kernel.impl.newapi;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.kernel.impl.newapi.WriteTestSupport;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -15,7 +15,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 public class EnterpriseWriteTestSupport extends WriteTestSupport
 {
     @Override
-    protected TestDatabaseManagementServiceBuilder newManagementServiceBuilder( File storeDir )
+    protected TestDatabaseManagementServiceBuilder newManagementServiceBuilder( Path storeDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( storeDir ).impermanent();
     }

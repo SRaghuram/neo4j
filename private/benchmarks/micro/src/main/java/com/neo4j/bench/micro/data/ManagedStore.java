@@ -52,7 +52,7 @@ public class ManagedStore
 
     public static GraphDatabaseService newDb( Store store, Path config )
     {
-        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
+        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( store.topLevelDirectory() );
         if ( null != config )
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );

@@ -43,7 +43,7 @@ public class SecurityProcedureQueryTypeTest
     @BeforeAll
     static void beforeAll()
     {
-        databaseManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        databaseManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
         DependencyResolver dependencyResolver = ((GraphDatabaseFacade) databaseManagementService.database( "system" )).getDependencyResolver();
         planner = dependencyResolver.resolveDependency( FabricPlanner.class );

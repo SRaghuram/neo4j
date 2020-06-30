@@ -8,7 +8,7 @@ package com.neo4j.kernel.impl.index.schema;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.schema.IndexPrototype;
@@ -22,7 +22,7 @@ class IndexCreateEnterpriseIT extends IndexCreateIT
                     IndexPrototype.uniqueForSchema( schema, schemaWrite.indexProviderByName( provider ) ).withName( name ) );
 
     @Override
-    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( File databaseRootDir )
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( Path databaseRootDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( databaseRootDir );
     }

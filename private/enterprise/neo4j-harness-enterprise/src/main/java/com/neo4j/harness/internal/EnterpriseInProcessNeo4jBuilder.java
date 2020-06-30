@@ -9,7 +9,7 @@ import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.server.enterprise.EnterpriseManagementServiceFactory;
 import org.apache.commons.lang3.SystemUtils;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -21,16 +21,16 @@ public class EnterpriseInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuild
 {
     public EnterpriseInProcessNeo4jBuilder()
     {
-        this( SystemUtils.getJavaIoTmpDir() );
+        this( SystemUtils.getJavaIoTmpDir().toPath() );
     }
 
-    public EnterpriseInProcessNeo4jBuilder( File workingDir )
+    public EnterpriseInProcessNeo4jBuilder( Path workingDir )
     {
         withWorkingDir( workingDir );
         withConfig( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "localhost", 0 ) );
     }
 
-    public EnterpriseInProcessNeo4jBuilder( File workingDir, String dataSubDir )
+    public EnterpriseInProcessNeo4jBuilder( Path workingDir, String dataSubDir )
     {
         super( workingDir, dataSubDir );
     }

@@ -13,7 +13,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
@@ -66,7 +66,7 @@ abstract class SecurityGraphCompatibilityTestBase
         FileUtils.deleteRecursively( directory.homeDir() );
 
         TestEnterpriseDatabaseManagementServiceBuilder builder =
-                new TestDBMSBuilder( directory.homeDir() ).impermanent()
+                new TestDBMSBuilder( directory.homePath() ).impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, TRUE )
                         .setConfig( GraphDatabaseSettings.allow_single_automatic_upgrade, FALSE );
         dbms = builder.build();
@@ -103,7 +103,7 @@ abstract class SecurityGraphCompatibilityTestBase
 
     private class TestDBMSBuilder extends TestEnterpriseDatabaseManagementServiceBuilder
     {
-        TestDBMSBuilder( File homeDirectory )
+        TestDBMSBuilder( Path homeDirectory )
         {
             super( homeDirectory );
         }
@@ -116,7 +116,7 @@ abstract class SecurityGraphCompatibilityTestBase
         @Override
         public DatabaseManagementService build()
         {
-            Config cfg = config.set( GraphDatabaseSettings.neo4j_home, homeDirectory.toPath().toAbsolutePath() ).build();
+            Config cfg = config.set( GraphDatabaseSettings.neo4j_home, homeDirectory.toAbsolutePath() ).build();
 
             UserRepository userRepository = new InMemoryUserRepository();
             RoleRepository roleRepository = new InMemoryRoleRepository();

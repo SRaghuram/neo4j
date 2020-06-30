@@ -18,10 +18,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -127,7 +127,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         for ( var core : cluster.coreMembers() )
         {
             var keyId = core.serverId();
-            var homeDir = cluster.getCoreMemberById( core.serverId() ).homeDir();
+            var homeDir = cluster.getCoreMemberById( core.serverId() ).homePath();
             installKeyToInstance( homeDir, keyId );
         }
 
@@ -135,7 +135,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         for ( var replica : cluster.readReplicas() )
         {
             var keyId = replica.serverId() + cluster.coreMembers().size();
-            var homeDir = cluster.getReadReplicaById( replica.serverId() ).homeDir();
+            var homeDir = cluster.getReadReplicaById( replica.serverId() ).homePath();
             installKeyToInstance( homeDir, keyId );
         }
 
@@ -348,12 +348,12 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         }
     }
 
-    private static void installKeyToInstance( File homeDir, int keyId ) throws IOException
+    private static void installKeyToInstance( Path homeDir, int keyId ) throws IOException
     {
-        var baseDir = new File( homeDir, CERTIFICATES_DIR );
-        fs.mkdirs( new File( baseDir, "trusted" ) );
-        fs.mkdirs( new File( baseDir, "revoked" ) );
+        var baseDir = homeDir.resolve( CERTIFICATES_DIR );
+        fs.mkdirs( baseDir.resolve( "trusted" ).toFile() );
+        fs.mkdirs( baseDir.resolve( "revoked" ).toFile() );
 
-        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
+        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir.toFile() );
     }
 }

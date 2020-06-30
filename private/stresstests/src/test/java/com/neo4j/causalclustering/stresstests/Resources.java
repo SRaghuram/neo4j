@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,8 +29,8 @@ import static java.util.Collections.emptyMap;
 class Resources
 {
     private final Cluster cluster;
-    private final File clusterDir;
-    private final File backupDir;
+    private final Path clusterDir;
+    private final Path backupDir;
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
     private final LogProvider logProvider;
@@ -50,8 +50,8 @@ class Resources
         int numberOfEdges = config.numberOfEdges();
         String workingDirectory = config.workingDir();
 
-        this.clusterDir = ensureExistsAndEmpty( new File( workingDirectory, "cluster" ) );
-        this.backupDir = ensureExistsAndEmpty( new File( workingDirectory, "backups" ) );
+        this.clusterDir = ensureExistsAndEmpty( Path.of( workingDirectory, "cluster" ) );
+        this.backupDir = ensureExistsAndEmpty( Path.of( workingDirectory, "backups" ) );
 
         Map<String,String> coreParams = new HashMap<>();
         Map<String,String> readReplicaParams = new HashMap<>();
@@ -79,7 +79,7 @@ class Resources
         return logProvider;
     }
 
-    public File backupDir()
+    public Path backupDir()
     {
         return backupDir;
     }
@@ -101,8 +101,8 @@ class Resources
 
     public void cleanup() throws IOException
     {
-        FileUtils.deleteRecursively( clusterDir );
-        FileUtils.deleteRecursively( backupDir );
+        FileUtils.deletePathRecursively( clusterDir );
+        FileUtils.deletePathRecursively( backupDir );
     }
 
     public Clock clock()

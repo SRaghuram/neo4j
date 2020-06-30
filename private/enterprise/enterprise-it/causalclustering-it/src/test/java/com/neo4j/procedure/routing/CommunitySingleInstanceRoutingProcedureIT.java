@@ -9,8 +9,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -108,7 +108,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, db );
     }
 
-    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( File homeDir )
+    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( Path homeDir )
     {
         return new TestDatabaseManagementServiceBuilder( homeDir );
     }
@@ -133,7 +133,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
 
     DatabaseManagementService startDbms( SocketAddress advertisedBoltAddress )
     {
-        DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.homeDir() );
+        DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.homePath() );
         builder.setConfig( auth_enabled, false );
         builder.setConfig( BoltConnector.enabled, true );
         builder.setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );

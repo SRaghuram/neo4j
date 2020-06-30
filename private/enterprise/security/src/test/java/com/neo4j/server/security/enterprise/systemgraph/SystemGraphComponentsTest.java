@@ -91,7 +91,7 @@ class SystemGraphComponentsTest
     @BeforeAll
     static void setup()
     {
-        dbms = new TestDatabaseManagementServiceBuilder( directory.homeDir() ).impermanent().noOpSystemGraphInitializer().build();
+        dbms = new TestDatabaseManagementServiceBuilder( directory.homePath() ).impermanent().noOpSystemGraphInitializer().build();
         system = (GraphDatabaseFacade) dbms.database( SYSTEM_DATABASE_NAME );
         systemGraphComponents = system.getDependencyResolver().resolveDependency( SystemGraphComponents.class );
 

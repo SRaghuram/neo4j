@@ -51,7 +51,7 @@ class StandaloneShowDatabasesIT
     @BeforeEach
     void setup()
     {
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).build();
         systemDb = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
     }
 

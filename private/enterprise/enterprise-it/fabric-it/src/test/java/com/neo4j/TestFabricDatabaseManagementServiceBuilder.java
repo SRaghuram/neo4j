@@ -10,7 +10,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.mockito.MockingDetails;
 import org.mockito.Mockito;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
@@ -32,7 +32,7 @@ public class TestFabricDatabaseManagementServiceBuilder extends TestEnterpriseDa
     private Dependencies dependencies;
     private final List<Object> mocks;
 
-    public TestFabricDatabaseManagementServiceBuilder( File databaseRootDir, List<Object> mocks )
+    public TestFabricDatabaseManagementServiceBuilder( Path databaseRootDir, List<Object> mocks )
     {
         super( databaseRootDir );
         this.mocks = mocks;

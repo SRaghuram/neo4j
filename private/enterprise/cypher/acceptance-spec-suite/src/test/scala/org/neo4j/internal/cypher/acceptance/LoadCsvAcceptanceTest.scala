@@ -13,6 +13,7 @@ import java.net.URLConnection
 import java.net.URLStreamHandler
 import java.net.URLStreamHandlerFactory
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Collections.emptyMap
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
@@ -888,6 +889,6 @@ class LoadCsvAcceptanceTest
   }
 
   private def acceptanceDbFolder = {
-    new File("target/test-data/acceptance-db")
+    Path.of("target/test-data/acceptance-db")
   }
 }

@@ -103,7 +103,7 @@ class CustomSecurityInitializationIT
     void shouldDoCustomInitializationStandalone( String authEnabled ) throws IOException
     {
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
@@ -128,7 +128,7 @@ class CustomSecurityInitializationIT
         writeTestAuthFile( getAuthFile( directory.homeDir() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
         writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j");
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 //.impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
@@ -153,7 +153,7 @@ class CustomSecurityInitializationIT
         writeTestAuthFile( getAuthFile( directory.homeDir() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
         writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
-        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE );
@@ -180,7 +180,7 @@ class CustomSecurityInitializationIT
     void shouldLogInitializationStandalone( String authEnabled ) throws IOException
     {
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
@@ -189,7 +189,7 @@ class CustomSecurityInitializationIT
         dbms.database( SYSTEM_DATABASE_NAME );
         dbms.shutdown();
 
-        Path logsDir = directory.homeDir().toPath().resolve( "logs" );
+        Path logsDir = directory.homePath().resolve( "logs" );
         var neo4jLog = logsDir.resolve( "security.log" );
         try ( var stringStream = Files.lines( neo4jLog ) )
         {
@@ -202,7 +202,7 @@ class CustomSecurityInitializationIT
     void shouldNotDoCustomInitializationWithoutSettingStandalone() throws IOException
     {
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
                 .build();
@@ -219,14 +219,14 @@ class CustomSecurityInitializationIT
     @ValueSource( strings = {"true", "false"} )
     void shouldNotDoCustomInitializationOnSecondStartupStandalone( String authEnabled ) throws IOException
     {
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
                 .build();
         dbms.database( SYSTEM_DATABASE_NAME );
         dbms.shutdown();
 
         writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
@@ -244,7 +244,7 @@ class CustomSecurityInitializationIT
     void shouldFailOnMissingCustomInitializationStandalone( String authEnabled )
     {
         TestEnterpriseDatabaseManagementServiceBuilder builder =
-                new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+                new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                         .impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                         .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) );
@@ -259,7 +259,7 @@ class CustomSecurityInitializationIT
     {
         writeComplexInitialization( getInitFile( directory.homeDir() ), "(name, email)", "User, Person" );
         TestEnterpriseDatabaseManagementServiceBuilder builder =
-                new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+                new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                         .impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                         .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) );
@@ -272,7 +272,7 @@ class CustomSecurityInitializationIT
     void shouldDoMoreComplexCustomInitializationStandalone( String authEnabled ) throws IOException
     {
         writeComplexInitialization( getInitFile( directory.homeDir() ), "{name, email}", "User, Person" );
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
@@ -396,7 +396,7 @@ class CustomSecurityInitializationIT
         }
         cluster.start();
         var leader = cluster.awaitLeader( SYSTEM_DATABASE_NAME );
-        var logsDir = leader.homeDir().toPath().resolve( "logs" );
+        var logsDir = leader.homePath().resolve( "logs" );
         cluster.shutdown();
 
         var neo4jLog = logsDir.resolve( "security.log" );

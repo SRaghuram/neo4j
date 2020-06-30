@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
@@ -40,9 +41,9 @@ public class RobustnessConsistencyCheck
         this.log = log;
     }
 
-    public void verifyConsistencyOffline( File homeDir ) throws Exception
+    public void verifyConsistencyOffline( Path homeDir ) throws Exception
     {
-        DatabaseLayout databaseLayout = Neo4jLayout.of( homeDir.toPath() ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = Neo4jLayout.of( homeDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
         recoverDatabase( databaseLayout );
 

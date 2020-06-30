@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
@@ -149,14 +150,14 @@ public abstract class ProcedureInteractionTestBase<S>
     }
 
     @BeforeEach
-    public void setUp() throws Throwable
+    public void setUp( TestInfo testInfo ) throws Throwable
     {
-        configuredSetup( defaultConfiguration() );
+        configuredSetup( defaultConfiguration(), testInfo );
     }
 
-    void configuredSetup( Map<Setting<?>,String> config ) throws Throwable
+    void configuredSetup( Map<Setting<?>,String> config, TestInfo testInfo ) throws Throwable
     {
-        neo = setUpNeoServer( config );
+        neo = setUpNeoServer( config, testInfo );
         GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
         for ( var procClass : defaultProcedures() )
         {
@@ -232,7 +233,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertEmpty( writeSubject, "UNWIND range(0,2) AS number CREATE (:Node {number:number, name:'node'+number})" );
     }
 
-    protected abstract NeoInteractionLevel<S> setUpNeoServer( Map<Setting<?>,String> config ) throws Throwable;
+    protected abstract NeoInteractionLevel<S> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo ) throws Throwable;
 
     @AfterEach
     public void tearDown() throws Throwable

@@ -45,7 +45,7 @@ public class ClassicNeo4jDatabase
     /**
      * @param baseDir generally corresponds to $NEO4J_HOME/data/ in tests.
      */
-    public static Neo4jDatabaseBuilder builder( File baseDir, FileSystemAbstraction fileSystem )
+    public static Neo4jDatabaseBuilder builder( Path baseDir, FileSystemAbstraction fileSystem )
     {
         return new Neo4jDatabaseBuilder( baseDir, fileSystem );
     }
@@ -57,7 +57,7 @@ public class ClassicNeo4jDatabase
 
     public static class Neo4jDatabaseBuilder
     {
-        private final File baseDirectoryAbsolute;
+        private final Path baseDirectoryAbsolute;
         private final FileSystemAbstraction fileSystem;
 
         private NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
@@ -65,21 +65,21 @@ public class ClassicNeo4jDatabase
         private boolean transactionLogsInDatabaseFolder;
         private int nrOfNodes = 10;
         private String recordFormat = Standard.LATEST_NAME;
-        private File transactionLogsRootDirectoryAbsolute;
-        private File databasesRootDirectoryAbsolute;
+        private Path transactionLogsRootDirectoryAbsolute;
+        private Path databasesRootDirectoryAbsolute;
         private DatabaseManagementService managementService;
 
-        Neo4jDatabaseBuilder( File baseDirectoryAbsolute, FileSystemAbstraction fileSystem )
+        Neo4jDatabaseBuilder( Path baseDirectoryAbsolute, FileSystemAbstraction fileSystem )
         {
             assertAbsolute( baseDirectoryAbsolute );
 
             this.baseDirectoryAbsolute = baseDirectoryAbsolute;
-            this.transactionLogsRootDirectoryAbsolute = new File( baseDirectoryAbsolute, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
-            this.databasesRootDirectoryAbsolute = new File( baseDirectoryAbsolute, DEFAULT_DATABASES_ROOT_DIR_NAME );
+            this.transactionLogsRootDirectoryAbsolute = baseDirectoryAbsolute.resolve( DEFAULT_TX_LOGS_ROOT_DIR_NAME );
+            this.databasesRootDirectoryAbsolute = baseDirectoryAbsolute.resolve( DEFAULT_DATABASES_ROOT_DIR_NAME );
             this.fileSystem = fileSystem;
         }
 
-        private void assertAbsolute( File directory )
+        private void assertAbsolute( Path directory )
         {
             if ( !directory.isAbsolute() )
             {
@@ -117,7 +117,7 @@ public class ClassicNeo4jDatabase
             return this;
         }
 
-        public Neo4jDatabaseBuilder transactionLogsRootDirectory( File transactionLogsRootDirectoryAbsolute )
+        public Neo4jDatabaseBuilder transactionLogsRootDirectory( Path transactionLogsRootDirectoryAbsolute )
         {
             assertAbsolute( transactionLogsRootDirectoryAbsolute );
             this.transactionLogsRootDirectoryAbsolute = transactionLogsRootDirectoryAbsolute;
@@ -131,7 +131,7 @@ public class ClassicNeo4jDatabase
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
-                    .setConfig( GraphDatabaseInternalSettings.databases_root_path, databasesRootDirectoryAbsolute.toPath() )
+                    .setConfig( GraphDatabaseInternalSettings.databases_root_path, databasesRootDirectoryAbsolute )
                     .build();
             GraphDatabaseService db = managementService.database( namedDatabaseId.name() );
 
@@ -160,8 +160,8 @@ public class ClassicNeo4jDatabase
 
         private Path getTransactionLogsRoot()
         {
-            File directory = transactionLogsInDatabaseFolder ? databasesRootDirectoryAbsolute : transactionLogsRootDirectoryAbsolute;
-            return directory.toPath().toAbsolutePath();
+            Path directory = transactionLogsInDatabaseFolder ? databasesRootDirectoryAbsolute : transactionLogsRootDirectoryAbsolute;
+            return directory.toAbsolutePath();
         }
 
         /**
@@ -176,11 +176,11 @@ public class ClassicNeo4jDatabase
             File logFilesDirectory = logFiles.logFilesDirectory();
 
             /* Copy live transaction logs to temporary directory. */
-            File temporaryDirectory = new File( baseDirectoryAbsolute, "temp" );
-            fileSystem.mkdirs( temporaryDirectory );
+            Path temporaryDirectory = baseDirectoryAbsolute.resolve( "temp" );
+            fileSystem.mkdirs( temporaryDirectory.toFile() );
             for ( File file : logFiles.logFiles() )
             {
-                fileSystem.copyFile( file, new File( temporaryDirectory, file.getName() ) );
+                fileSystem.copyFile( file, temporaryDirectory.resolve( file.getName() ).toFile() );
             }
             StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
 
@@ -193,7 +193,7 @@ public class ClassicNeo4jDatabase
             }
 
             /* Restore the previously copied transaction logs. */
-            LogFiles copyLogFiles = logFilesBasedOnlyBuilder( temporaryDirectory, fileSystem )
+            LogFiles copyLogFiles = logFilesBasedOnlyBuilder( temporaryDirectory.toFile(), fileSystem )
                     .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                     .build();
             for ( File file : copyLogFiles.logFiles() )

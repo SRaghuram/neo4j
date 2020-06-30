@@ -385,16 +385,16 @@ abstract class BaseEncryptedBackupIT
 
     private void prepareCoreToHaveKeys( ClusterMember member, int keyId, String policyName ) throws IOException
     {
-        var homeDir = member.homeDir();
+        var homeDir = member.homePath();
         var policyDir = createPolicyDirectories( homeDir, policyName );
-        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( policyDir );
+        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( policyDir.toFile() );
     }
 
-    private File createPolicyDirectories( File homeDir, String policyName ) throws IOException
+    private Path createPolicyDirectories( Path homeDir, String policyName ) throws IOException
     {
-        var policyDir = new File( homeDir, "certificates/" + policyName );
-        fs.mkdirs( new File( policyDir, "trusted" ) );
-        fs.mkdirs( new File( policyDir, "revoked" ) );
+        var policyDir = homeDir.resolve( "certificates/" + policyName );
+        fs.mkdirs( policyDir.resolve( "revoked" ).toFile() );
+        fs.mkdirs( policyDir.resolve( "trusted" ).toFile() );
         return policyDir;
     }
 }

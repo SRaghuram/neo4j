@@ -54,7 +54,7 @@ class SecurityLoggingIT
         Path homeDir = testDirectory.directory( "logs" ).toPath();
         securityLog = new File( homeDir.toFile(), "security.log" );
 
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true )
                 .setConfig( GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath() ).build();
 

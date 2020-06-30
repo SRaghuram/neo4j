@@ -10,6 +10,7 @@ import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -46,7 +47,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void configuredDatabasesRootPath()
     {
-        File homeDir = testDirectory.homeDir();
+        Path homeDir = testDirectory.homePath();
         File databasesDir = testDirectory.directory( "my_databases" );
 
         DatabaseManagementService managementService = createDbmsBuilder( homeDir )
@@ -54,8 +55,8 @@ class EnterpriseDatabaseManagementServiceBuilderIT
                 .build();
         try
         {
-            assertTrue( isEmptyOrNonExistingDirectory( fs, new File( homeDir, DEFAULT_DATABASE_NAME ) ) );
-            assertTrue( isEmptyOrNonExistingDirectory( fs, new File( homeDir, SYSTEM_DATABASE_NAME ) ) );
+            assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( DEFAULT_DATABASE_NAME ).toFile() ) );
+            assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( SYSTEM_DATABASE_NAME ).toFile() ) );
 
             assertFalse( isEmptyOrNonExistingDirectory( fs, new File( databasesDir, DEFAULT_DATABASE_NAME ) ) );
             assertFalse( isEmptyOrNonExistingDirectory( fs, new File( databasesDir, SYSTEM_DATABASE_NAME ) ) );
@@ -69,14 +70,14 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void notConfiguredDatabasesRootPath()
     {
-        File homeDir = testDirectory.homeDir();
-        File storeDir = neo4jLayout.databasesDirectory().toFile();
+        Path homeDir = testDirectory.homePath();
+        Path storeDir = neo4jLayout.databasesDirectory();
 
         DatabaseManagementService managementService = createDbmsBuilder( homeDir ).build();
         try
         {
-            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( storeDir, DEFAULT_DATABASE_NAME ) ) );
-            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( storeDir, SYSTEM_DATABASE_NAME ) ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, storeDir.resolve( DEFAULT_DATABASE_NAME ).toFile() ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, storeDir.resolve( SYSTEM_DATABASE_NAME ).toFile() ) );
         }
         finally
         {
@@ -87,7 +88,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void shouldFailForCore()
     {
-        File homeDir = testDirectory.homeDir();
+        Path homeDir = testDirectory.homePath();
 
         DatabaseManagementServiceBuilder builder = createDbmsBuilder( homeDir )
                 .setConfig( GraphDatabaseSettings.mode, CORE );
@@ -98,7 +99,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void shouldFailForReadReplica()
     {
-        File homeDir = testDirectory.homeDir();
+        Path homeDir = testDirectory.homePath();
 
         DatabaseManagementServiceBuilder builder = createDbmsBuilder( homeDir )
                 .setConfig( GraphDatabaseSettings.mode, READ_REPLICA );
@@ -106,7 +107,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
         assertThrows( IllegalArgumentException.class, builder::build, "Unsupported mode: READ_REPLICA" );
     }
 
-    private static DatabaseManagementServiceBuilder createDbmsBuilder( File homeDirectory )
+    private static DatabaseManagementServiceBuilder createDbmsBuilder( Path homeDirectory )
     {
         //TestEnterpriseDatabaseManagementServiceBuilder is not available in this module
         return new EnterpriseDatabaseManagementServiceBuilder( homeDirectory )

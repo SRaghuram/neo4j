@@ -153,7 +153,7 @@ public class DatabaseRebuildTool
 
     private static DatabaseManagementServiceBuilder newDbBuilder( File storeDir, String databaseName, Args args )
     {
-        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir )
+        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir.toPath() )
                 .setConfig( GraphDatabaseInternalSettings.databases_root_path, storeDir.toPath() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.toPath() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseName );

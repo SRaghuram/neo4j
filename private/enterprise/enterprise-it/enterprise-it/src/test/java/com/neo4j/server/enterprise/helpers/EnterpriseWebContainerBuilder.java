@@ -9,7 +9,7 @@ import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Map;
 
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -61,12 +61,12 @@ public class EnterpriseWebContainerBuilder extends CommunityWebContainerBuilder
     }
 
     @Override
-    public Map<String, String> createConfiguration( File temporaryFolder )
+    public Map<String, String> createConfiguration( Path temporaryFolder )
     {
         Map<String, String> configuration = super.createConfiguration( temporaryFolder );
 
         configuration.put( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
-        configuration.putIfAbsent( MetricsSettings.csv_path.name(), new File( temporaryFolder, "metrics" ).getAbsolutePath() );
+        configuration.putIfAbsent( MetricsSettings.csv_path.name(), temporaryFolder.resolve( "metrics" ).toAbsolutePath().toString() );
         configuration.put( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
 
         return configuration;

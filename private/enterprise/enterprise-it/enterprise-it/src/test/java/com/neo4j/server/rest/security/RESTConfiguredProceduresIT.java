@@ -7,6 +7,7 @@ package com.neo4j.server.rest.security;
 
 import com.neo4j.server.security.enterprise.auth.ConfiguredProceduresTestBase;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
@@ -32,7 +33,7 @@ public class RESTConfiguredProceduresIT extends ConfiguredProceduresTestBase<RES
     }
 
     @Override
-    public NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
+    public NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo ) throws Throwable
     {
         return new RESTInteraction( config, testDirectory.homeDir() );
     }

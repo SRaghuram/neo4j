@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -127,7 +128,7 @@ class GlobalMetricsExtensionFactoryIT
     void mustBeAbleToStartWithNullTracer()
     {
         // Start the database
-        File disabledTracerDb = directory.homeDir( "disabledTracerDb" );
+        Path disabledTracerDb = directory.homePath( "disabledTracerDb" );
 
         DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( disabledTracerDb )
                 .setConfig( MetricsSettings.metrics_enabled, true )

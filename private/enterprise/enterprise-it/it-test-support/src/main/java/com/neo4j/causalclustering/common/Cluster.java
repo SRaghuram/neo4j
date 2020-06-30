@@ -22,7 +22,7 @@ import com.neo4j.causalclustering.read_replica.TestReadReplicaGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,7 +83,7 @@ public class Cluster
 
     public static final Duration TOPOLOGY_REFRESH_INTERVAL = Duration.ofSeconds( 1 );
 
-    private final File parentDir;
+    private final Path parentDir;
     private final Map<String,String> coreParams;
     private final Map<String,IntFunction<String>> instanceCoreParams;
     private final Map<String,String> readReplicaParams;
@@ -98,7 +98,7 @@ public class Cluster
     private int highestCoreServerId;
     private int highestReplicaServerId;
 
-    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
+    public Cluster( Path parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
             Map<String,String> coreParams,
             Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,

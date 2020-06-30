@@ -43,7 +43,7 @@ class MultiDatabaseIdGeneratorIT
     @BeforeEach
     void setUp() throws DatabaseExistsException
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).build();
         firstDatabase = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         var secondDb = "second";
         managementService.createDatabase( secondDb );

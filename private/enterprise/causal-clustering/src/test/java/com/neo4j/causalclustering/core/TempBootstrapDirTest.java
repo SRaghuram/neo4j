@@ -39,7 +39,7 @@ class TempBootstrapDirTest
         {
             assertFalse( fileSystem.fileExists( tempBootstrapDir() ) );
 
-            assertEquals( tempBootstrapDir(), dir.get() );
+            assertEquals( tempBootstrapDir(), dir.get().toFile() );
             createTempBootstrapDir();
             assertTrue( fileSystem.fileExists( tempBootstrapDir() ) );
         }

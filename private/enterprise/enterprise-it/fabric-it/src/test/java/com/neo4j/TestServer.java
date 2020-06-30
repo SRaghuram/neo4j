@@ -85,7 +85,7 @@ public class TestServer implements AutoCloseable
         {
             this.directory = createDirectory();
         }
-        var dbmsBuilder = new TestFabricDatabaseManagementServiceBuilder( directory.toFile(), mocks );
+        var dbmsBuilder = new TestFabricDatabaseManagementServiceBuilder( directory, mocks );
 
         if ( logService != null && logService.getInternalLogProvider() != null )
         {

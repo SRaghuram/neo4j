@@ -325,7 +325,7 @@ class BookmarkIT
                 .set( BoltConnector.enabled, true )
                 .set( OnlineBackupSettings.online_backup_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
-                .set( GraphDatabaseSettings.neo4j_home, directory.homeDir().toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, directory.homePath().toAbsolutePath() )
                 .set( GraphDatabaseSettings.preallocate_logical_logs, false )
                 .build();
     }

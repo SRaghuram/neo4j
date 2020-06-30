@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -66,8 +66,8 @@ class SystemGraphRealmUpgradeIT
     @SuppressWarnings( "unused" )
     @Inject
     private FileSystemAbstraction fileSystem;
-    private File confDir;
-    private File homeDir;
+    private Path confDir;
+    private Path homeDir;
     private PrintStream out;
     private PrintStream err;
     private DatabaseManagementService enterpriseDbms;
@@ -75,9 +75,9 @@ class SystemGraphRealmUpgradeIT
     @BeforeEach
     void setup()
     {
-        File graphDir = new File( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        confDir = new File( graphDir, "conf" );
-        homeDir = new File( graphDir, "home" );
+        Path graphDir = Path.of( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        confDir = graphDir.resolve( "conf" );
+        homeDir = graphDir.resolve( "home" );
         out = mock( PrintStream.class );
         err = mock( PrintStream.class );
     }
@@ -380,7 +380,7 @@ class SystemGraphRealmUpgradeIT
 
     private void setDefaultAdmin( String username )
     {
-        final var ctx = new ExecutionContext( homeDir.toPath(), confDir.toPath(), out, err, fileSystem );
+        final var ctx = new ExecutionContext( homeDir, confDir, out, err, fileSystem );
         final var command = new SetDefaultAdminCommand( ctx );
         CommandLine.populateCommand( command, username );
         command.execute();
@@ -388,7 +388,7 @@ class SystemGraphRealmUpgradeIT
 
     private void setInitialPassword( String password )
     {
-        final var ctx = new ExecutionContext( homeDir.toPath(), confDir.toPath(), out, err, fileSystem );
+        final var ctx = new ExecutionContext( homeDir, confDir, out, err, fileSystem );
         final var command = new SetInitialPasswordCommand( ctx );
         CommandLine.populateCommand( command, password );
         command.execute();

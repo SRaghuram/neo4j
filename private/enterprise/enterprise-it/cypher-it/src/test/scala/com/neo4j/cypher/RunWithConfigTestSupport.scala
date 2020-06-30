@@ -5,7 +5,7 @@
  */
 package com.neo4j.cypher
 
-import java.io.File
+import java.nio.file.Path
 import java.util
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
@@ -18,7 +18,7 @@ import scala.collection.JavaConverters.mapAsJavaMapConverter
 trait RunWithConfigTestSupport {
   def runWithConfig(m: (Setting[_], Object)*)(run: GraphDatabaseCypherService => Unit) = {
     val config: util.Map[Setting[_], Object] = m.toMap.asJava
-    val storeDir = new File("target/test-data/neo4j")
+    val storeDir = Path.of("target/test-data/neo4j")
     val managementService = new TestEnterpriseDatabaseManagementServiceBuilder(storeDir)
       .impermanent()
       .setConfig(config)

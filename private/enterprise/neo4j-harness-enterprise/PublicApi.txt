@@ -4,3 +4,4 @@ com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension::builder() org.neo4j.
 com.neo4j.harness.junit.rule.EnterpriseNeo4jRule public class extends org.neo4j.harness.junit.rule.Neo4jRule
 com.neo4j.harness.junit.rule.EnterpriseNeo4jRule::EnterpriseNeo4jRule() void public
 com.neo4j.harness.junit.rule.EnterpriseNeo4jRule::EnterpriseNeo4jRule(java.io.File) void public
+com.neo4j.harness.junit.rule.EnterpriseNeo4jRule::EnterpriseNeo4jRule(java.nio.file.Path) void public

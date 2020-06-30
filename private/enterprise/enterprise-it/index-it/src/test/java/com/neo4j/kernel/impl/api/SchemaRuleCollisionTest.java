@@ -66,7 +66,7 @@ class SchemaRuleCollisionTest
     @BeforeAll
     void setupDb()
     {
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setFileSystem( testDirectory.getFileSystem() )
                 .impermanent()
                 .build();

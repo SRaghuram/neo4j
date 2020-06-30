@@ -43,7 +43,7 @@ class PrometheusOutputIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( prometheus_enabled, true )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).setConfig( prometheus_enabled, true )
                 .setConfig( prometheus_endpoint, new SocketAddress( "localhost", 0 ) ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }

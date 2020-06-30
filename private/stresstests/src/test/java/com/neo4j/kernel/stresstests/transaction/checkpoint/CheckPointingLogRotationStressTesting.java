@@ -10,6 +10,7 @@ import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
@@ -66,7 +67,7 @@ class CheckPointingLogRotationStressTesting
     {
         long durationInMinutes =
                 parseLong( fromEnv( "CHECK_POINT_LOG_ROTATION_STRESS_DURATION", DEFAULT_DURATION_IN_MINUTES ) );
-        File storeDir = new File( fromEnv( "CHECK_POINT_LOG_ROTATION_STORE_DIRECTORY", DEFAULT_STORE_DIR ) );
+        Path storeDir = Path.of( fromEnv( "CHECK_POINT_LOG_ROTATION_STORE_DIRECTORY", DEFAULT_STORE_DIR ) ).toAbsolutePath();
         long nodeCount = parseLong( fromEnv( "CHECK_POINT_LOG_ROTATION_NODE_COUNT", DEFAULT_NODE_COUNT ) );
         int threads = parseInt( fromEnv( "CHECK_POINT_LOG_ROTATION_WORKER_THREADS", DEFAULT_WORKER_THREADS ) );
         String pageCacheMemory = fromEnv( "CHECK_POINT_LOG_ROTATION_PAGE_CACHE_MEMORY", DEFAULT_PAGE_CACHE_MEMORY );
@@ -77,7 +78,7 @@ class CheckPointingLogRotationStressTesting
         {
             Config dbConfig = Config.defaults();
             new ParallelBatchImporter(
-                    DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ).toPath() ), fileSystem, null, PageCacheTracer.NULL,
+                    DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL,
                     DEFAULT, NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
                     RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler,
                     Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
@@ -123,6 +124,6 @@ class CheckPointingLogRotationStressTesting
         }
 
         // let's cleanup disk space when everything went well
-        FileUtils.deleteRecursively( storeDir );
+        FileUtils.deletePathRecursively( storeDir );
     }
 }

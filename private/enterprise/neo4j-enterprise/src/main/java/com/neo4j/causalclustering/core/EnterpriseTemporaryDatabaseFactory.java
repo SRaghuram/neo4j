@@ -12,7 +12,7 @@ import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -37,7 +37,7 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
     }
 
     @Override
-    public TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig, boolean isSystem )
+    public TemporaryDatabase startTemporaryDatabase( Path rootDirectory, Config originalConfig, boolean isSystem )
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
@@ -50,14 +50,14 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
         return new TemporaryDatabase( managementServiceBuilder.build(), isSystem );
     }
 
-    private static void augmentConfig( DatabaseManagementServiceBuilder managementServiceBuilder, Config originalConfig, File rootDirectory )
+    private static void augmentConfig( DatabaseManagementServiceBuilder managementServiceBuilder, Config originalConfig, Path rootDirectory )
     {
         // use the same record format as specified by the original config
         managementServiceBuilder.setConfig( GraphDatabaseSettings.record_format, originalConfig.get( GraphDatabaseSettings.record_format ) );
 
         // make all database and transaction log directories live in the specified root directory
-        managementServiceBuilder.setConfig( GraphDatabaseInternalSettings.databases_root_path, rootDirectory.toPath().toAbsolutePath() );
-        managementServiceBuilder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, rootDirectory.toPath().toAbsolutePath() );
+        managementServiceBuilder.setConfig( GraphDatabaseInternalSettings.databases_root_path, rootDirectory.toAbsolutePath() );
+        managementServiceBuilder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, rootDirectory.toAbsolutePath() );
 
         /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
         managementServiceBuilder.setConfig( GraphDatabaseSettings.pagecache_warmup_enabled, false );

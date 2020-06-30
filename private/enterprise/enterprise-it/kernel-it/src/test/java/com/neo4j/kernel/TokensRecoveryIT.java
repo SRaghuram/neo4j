@@ -95,7 +95,7 @@ class TokensRecoveryIT
 
     private GraphDatabaseService startDatabase( EphemeralFileSystemAbstraction fs )
     {
-        DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setFileSystem( fs );
+        DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).setFileSystem( fs );
         builder.setConfig( online_backup_enabled, false );
         builder.setConfig( GraphDatabaseSettings.check_point_policy, GraphDatabaseSettings.CheckpointPolicy.PERIODIC );
         managementService = builder.build();

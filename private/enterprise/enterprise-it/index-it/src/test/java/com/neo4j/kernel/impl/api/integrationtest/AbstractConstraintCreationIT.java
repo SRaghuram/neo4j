@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -91,7 +91,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
     }
 
     @Override
-    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( File databaseRootDir )
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( Path databaseRootDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( databaseRootDir );
     }

@@ -139,7 +139,7 @@ class SystemDatabaseDatabaseManagementIT
 
     private DatabaseManagementService createManagementService()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).build();
     }
 
 }

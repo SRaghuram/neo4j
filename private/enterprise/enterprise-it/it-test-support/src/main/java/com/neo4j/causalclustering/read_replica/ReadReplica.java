@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -51,7 +51,7 @@ public class ReadReplica implements ClusterMember
     }
 
     private final DiscoveryServiceFactory discoveryServiceFactory;
-    private final File neo4jHome;
+    private final Path neo4jHome;
     private final Neo4jLayout neo4jLayout;
     private final DatabaseLayout defaultDatabaseLayout;
     private final int serverId;
@@ -65,7 +65,7 @@ public class ReadReplica implements ClusterMember
 
     private ReadReplicaGraphDatabase readReplicaGraphDatabase;
 
-    public ReadReplica( File parentDir, int serverId, int boltPort, int intraClusterBoltPort, int httpPort,
+    public ReadReplica( Path parentDir, int serverId, int boltPort, int intraClusterBoltPort, int httpPort,
             int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
             List<SocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
@@ -85,7 +85,7 @@ public class ReadReplica implements ClusterMember
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
-        config.set( GraphDatabaseInternalSettings.auth_store, parentDir.toPath().resolve( "auth" ).toAbsolutePath() );
+        config.set( GraphDatabaseInternalSettings.auth_store, parentDir.resolve( "auth" ).toAbsolutePath() );
         config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
         config.setRaw( extraParams );
 
@@ -103,14 +103,14 @@ public class ReadReplica implements ClusterMember
         config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
         config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
 
-        this.neo4jHome = new File( parentDir, "read-replica-" + serverId );
-        config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath().toAbsolutePath() );
+        this.neo4jHome = parentDir.resolve( "read-replica-" + serverId );
+        config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toAbsolutePath() );
 
         config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenAddress, txPort ) );
         config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.toPath().resolve( "replica-tx-logs-" + serverId ).toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "replica-tx-logs-" + serverId ).toAbsolutePath() );
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
@@ -220,7 +220,7 @@ public class ReadReplica implements ClusterMember
     }
 
     @Override
-    public File homeDir()
+    public Path homePath()
     {
         return neo4jHome;
     }

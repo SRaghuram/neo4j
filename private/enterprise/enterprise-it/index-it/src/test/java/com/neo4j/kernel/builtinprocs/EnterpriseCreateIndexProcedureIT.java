@@ -10,7 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -382,7 +382,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     }
 
     @Override
-    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( File databaseRootDir )
+    protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( Path databaseRootDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( databaseRootDir );
     }

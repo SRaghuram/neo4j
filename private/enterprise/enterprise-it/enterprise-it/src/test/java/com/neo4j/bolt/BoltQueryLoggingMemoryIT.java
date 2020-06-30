@@ -39,7 +39,7 @@ public class BoltQueryLoggingMemoryIT
 
     public BoltQueryLoggingMemoryIT() throws IOException
     {
-        tmpDir = WebContainerTestUtils.createTempDir().toPath().toAbsolutePath();
+        tmpDir = WebContainerTestUtils.createTempDir().toAbsolutePath();
         this.neo4j = new EnterpriseNeo4jRule()
                 .withConfig( GraphDatabaseSettings.auth_enabled, false )
                 .withConfig( GraphDatabaseSettings.track_query_allocation, true )

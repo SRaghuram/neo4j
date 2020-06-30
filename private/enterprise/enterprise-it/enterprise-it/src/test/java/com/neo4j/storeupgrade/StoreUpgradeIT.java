@@ -14,9 +14,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -381,18 +382,18 @@ public class StoreUpgradeIT
         @Test
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            File rootDir = testDir.homeDir();
-            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDir.directory( DEFAULT_DATABASE_NAME ).toPath() );
+            Path rootDir = testDir.homePath();
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDir.directoryPath( DEFAULT_DATABASE_NAME ) );
 
             store.prepareDirectory( databaseLayout.databaseDirectory().toFile() );
 
-            File configFile = new File( rootDir, Config.DEFAULT_CONFIG_FILE_NAME );
+            Path configFile = rootDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME );
             Properties props = new Properties();
             props.putAll( getDefaultRelativeProperties( rootDir ) );
-            props.setProperty( data_directory.name(), rootDir.getAbsolutePath() );
-            props.setProperty( logs_directory.name(), rootDir.getAbsolutePath() );
-            props.setProperty( databases_root_path.name(), rootDir.getAbsolutePath() );
-            props.setProperty( transaction_logs_root_path.name(), rootDir.getAbsolutePath() );
+            props.setProperty( data_directory.name(), rootDir.toAbsolutePath().toString() );
+            props.setProperty( logs_directory.name(), rootDir.toAbsolutePath().toString() );
+            props.setProperty( databases_root_path.name(), rootDir.toAbsolutePath().toString() );
+            props.setProperty( transaction_logs_root_path.name(), rootDir.toAbsolutePath().toString() );
             props.setProperty( allow_upgrade.name(), TRUE );
             props.setProperty( fail_on_missing_files.name(), FALSE );
             props.setProperty( pagecache_memory.name(), "8m" );
@@ -401,7 +402,7 @@ public class StoreUpgradeIT
             props.setProperty( HttpsConnector.enabled.name(), FALSE );
             props.setProperty( BoltConnector.enabled.name(), FALSE );
             props.setProperty( GraphDatabaseSettings.preallocate_logical_logs.name(), FALSE );
-            try ( FileWriter writer = new FileWriter( configFile ) )
+            try ( Writer writer = Files.newBufferedWriter( configFile, StandardCharsets.UTF_8 ) )
             {
                 props.store( writer, "" );
             }
@@ -409,7 +410,7 @@ public class StoreUpgradeIT
             NeoBootstrapper bootstrapper = new CommunityBootstrapper();
             try
             {
-                bootstrapper.start( rootDir.getAbsoluteFile(), configFile, Collections.emptyMap() );
+                bootstrapper.start( rootDir.toAbsolutePath().toFile(), configFile.toFile(), Collections.emptyMap() );
                 assertTrue( bootstrapper.isRunning() );
                 checkInstance( store, (GraphDatabaseAPI) bootstrapper.getDatabaseManagementService().database( DEFAULT_DATABASE_NAME ) );
             }
@@ -466,7 +467,7 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
-            TestDatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
+            TestDatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homePath() );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
             builder.setConfig( GraphDatabaseInternalSettings.logical_logs_location, customTransactionLogsLocation.toPath().toAbsolutePath() );
@@ -545,7 +546,7 @@ public class StoreUpgradeIT
             managementService.shutdown();
 
             Config config = Config.defaults( Map.of(
-                    neo4j_home, testDir.homeDir().toPath(),
+                    neo4j_home, testDir.homePath(),
                     transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() ) );
             DatabaseLayout layout  = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
             try ( LogFilesSpan span = getAccessibleLogFiles( layout ) )
@@ -610,7 +611,7 @@ public class StoreUpgradeIT
             }
 
             Config config = Config.defaults( Map.of(
-                    neo4j_home, testDir.homeDir().toPath(),
+                    neo4j_home, testDir.homePath(),
                     transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() ) );
             DatabaseLayout layout  = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
             try ( LogFilesSpan span = getAccessibleLogFiles( layout ) )

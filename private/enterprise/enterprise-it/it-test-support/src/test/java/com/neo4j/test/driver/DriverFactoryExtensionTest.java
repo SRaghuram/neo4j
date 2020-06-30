@@ -41,7 +41,7 @@ class DriverFactoryExtensionTest
 
         try
         {
-            managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+            managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                     .setFileSystem( fsa )
                     .setConfig( BoltConnector.enabled, true )
                     .setConfig( BoltConnector.listen_address, boltAddress )

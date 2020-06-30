@@ -50,7 +50,7 @@ class ClusterCommunityToEnterpriseIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        builder.setDatabaseRootDirectory( testDir.directory( "standalone" ) );
+        builder.setDatabaseRootDirectory( testDir.directoryPath( "standalone" ) );
         builder.setConfig( allow_upgrade, true )
                 .setConfig( record_format, HighLimit.NAME )
                 .setConfig( online_backup_enabled, false );

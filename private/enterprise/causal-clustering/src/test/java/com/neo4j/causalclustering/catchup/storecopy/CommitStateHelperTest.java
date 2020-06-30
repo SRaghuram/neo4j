@@ -45,7 +45,7 @@ class CommitStateHelperTest
     {
         File txLogLocation = new File( testDirectory.homeDir(), "txLogLocation" );
         var config = Config.newBuilder()
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath() )
+                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homePath() )
                 .set( GraphDatabaseSettings.transaction_logs_root_path, txLogLocation.toPath().toAbsolutePath() )
                 .build();
         databaseLayout = DatabaseLayout.of( config );

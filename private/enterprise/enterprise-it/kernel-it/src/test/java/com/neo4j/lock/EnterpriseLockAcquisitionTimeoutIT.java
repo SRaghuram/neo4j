@@ -23,7 +23,7 @@ public class EnterpriseLockAcquisitionTimeoutIT extends CommunityLockAcquisition
     @Override
     protected TestDatabaseManagementServiceBuilder getDbmsb( TestDirectory directory )
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() );
+        return new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() );
     }
 
     @Override

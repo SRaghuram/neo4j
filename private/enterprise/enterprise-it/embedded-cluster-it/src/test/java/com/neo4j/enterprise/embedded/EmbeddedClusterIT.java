@@ -13,7 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -66,7 +66,7 @@ class EmbeddedClusterIT
     @BeforeEach
     void before() throws Exception
     {
-        cluster = new Cluster( testDirectory.homeDir() );
+        cluster = new Cluster( testDirectory.homePath() );
         cluster.start();
 
         assertCanReplicate();
@@ -220,12 +220,12 @@ class EmbeddedClusterIT
         private static final int N_CORES = 3;
         private static final int N_REPLICAS = 3;
 
-        private final File baseDir;
+        private final Path baseDir;
 
         private List<ClusterDatabaseManagementService> cores;
         private List<ClusterDatabaseManagementService> readReplicas;
 
-        private Cluster( File baseDir )
+        private Cluster( Path baseDir )
         {
             this.baseDir = baseDir;
         }
@@ -287,7 +287,7 @@ class EmbeddedClusterIT
 
         ClusterDatabaseManagementService startCore( int serverId, List<SocketAddress> coreDiscoveryAddresses )
         {
-            var homeDir = new File( baseDir, "core-" + serverId );
+            var homeDir = baseDir.resolve( "core-" + serverId );
 
             var raftAddress = new SocketAddress( "localhost", allocatePort() );
             var txAddress = new SocketAddress( "localhost", allocatePort() );
@@ -309,7 +309,7 @@ class EmbeddedClusterIT
 
         ClusterDatabaseManagementService startReadReplica( int serverId, List<SocketAddress> coreDiscoveryAddresses )
         {
-            var homeDir = new File( baseDir, "read-replica-" + serverId );
+            var homeDir = baseDir.resolve( "read-replica-" + serverId );
 
             var discoveryAddress = new SocketAddress( "localhost", allocatePort() );
             var txAddress = new SocketAddress( "localhost", allocatePort() );

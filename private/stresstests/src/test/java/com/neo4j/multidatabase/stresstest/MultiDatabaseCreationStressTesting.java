@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -25,7 +26,7 @@ import static com.neo4j.helper.StressTestingHelper.fromEnv;
 import static java.lang.Integer.parseInt;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.neo4j.io.fs.FileUtils.deleteRecursively;
+import static org.neo4j.io.fs.FileUtils.deletePathRecursively;
 
 class MultiDatabaseCreationStressTesting
 {
@@ -39,9 +40,9 @@ class MultiDatabaseCreationStressTesting
         String workingDirectory = fromEnv( "MULTIDATABASE_STRESS_WORKING_DIRECTORY", DEFAULT_WORKING_DIR );
         int durationInMinutes = parseInt( fromEnv( "MULTIDATABASE_STRESS_DURATION", DEFAULT_DURATION_IN_MINUTES ) );
         int threads = parseInt( fromEnv( "MULTIDATABASE_STRESS_NUM_THREADS", DEFAULT_NUM_THREADS ) );
-        File storeDirectory = new File( workingDirectory, "default" );
+        Path storeDirectory = Path.of( workingDirectory, "default" );
 
-        deleteRecursively( storeDirectory );
+        deletePathRecursively( storeDirectory );
         ensureExistsAndEmpty( storeDirectory );
 
         DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( storeDirectory )

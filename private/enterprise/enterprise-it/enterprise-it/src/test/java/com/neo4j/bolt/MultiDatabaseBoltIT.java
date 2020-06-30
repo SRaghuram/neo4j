@@ -166,7 +166,7 @@ class MultiDatabaseBoltIT
 
     private DatabaseManagementService createManagementService()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .build();

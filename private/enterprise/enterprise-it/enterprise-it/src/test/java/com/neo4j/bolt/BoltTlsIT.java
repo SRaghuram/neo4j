@@ -115,7 +115,7 @@ public class BoltTlsIT
 
     private void createAndStartDb()
     {
-        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() ).impermanent()
+        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homePath() ).impermanent()
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) )

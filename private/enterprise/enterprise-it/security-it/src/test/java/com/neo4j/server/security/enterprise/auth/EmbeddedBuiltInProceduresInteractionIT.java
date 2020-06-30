@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.Collections;
 import java.util.Map;
@@ -47,7 +48,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     }
 
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>, String> config )
+    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo )
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

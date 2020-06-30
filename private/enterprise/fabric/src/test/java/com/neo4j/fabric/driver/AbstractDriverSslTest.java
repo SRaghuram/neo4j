@@ -242,7 +242,7 @@ abstract class AbstractDriverSslTest
         var certFile = directory.resolve( "public.crt" );
         var keyFile = directory.resolve( "private.key" );
         var trustedDir = directory.resolve( "trusted" );
-        certFactory.createSelfSignedCertificate( certFile.toFile(), keyFile.toFile(), "localhost" );
+        certFactory.createSelfSignedCertificate( certFile, keyFile, "localhost" );
 
         return new SslDir( keyFile, certFile, trustedDir, directory.resolve( "revoked" ) );
     }
@@ -262,7 +262,7 @@ abstract class AbstractDriverSslTest
 
             var certFile = directory.resolve( "public.crt" );
             var keyFile = directory.resolve( "private.key" );
-            certFactory.createSelfSignedCertificate( certFile.toFile(), keyFile.toFile(), "localhost" );
+            certFactory.createSelfSignedCertificate( certFile, keyFile, "localhost" );
         }
 
         return new SslDir( directory.resolve( "private.key" ), directory.resolve( "public.crt" ), trustedDir, directory.resolve( "revoked" ) );

@@ -418,7 +418,7 @@ public class Neo4jDb extends Db
 
     private static DatabaseManagementServiceBuilder newDbBuilder( File homeDir, File configFile )
     {
-        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( homeDir );
+        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( homeDir.toPath() );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );

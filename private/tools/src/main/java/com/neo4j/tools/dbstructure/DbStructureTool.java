@@ -10,6 +10,7 @@ import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -83,7 +84,7 @@ public class DbStructureTool
 
     private static DatabaseManagementService instantiateGraphDatabase( String dbDir )
     {
-        return new EnterpriseDatabaseManagementServiceBuilder( new File( dbDir ) ).build();
+        return new EnterpriseDatabaseManagementServiceBuilder( Path.of( dbDir ) ).build();
     }
 
     private static void traceDb( String generator, String generatedClazzPackage, String generatedClazzName, GraphDatabaseService graph, Appendable output )

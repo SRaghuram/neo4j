@@ -16,7 +16,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -56,7 +55,7 @@ class ConvertNonCausalClusteringStoreIT
     void shouldReplicateTransactionToCoreMembers( String recordFormat ) throws Throwable
     {
         // given
-        File dbDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
+        Path dbDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat ).toPath();
         int classicNodeCount = 1024;
         Path classicNeo4jDatabase = createNeoDatabase( dbDir, recordFormat, classicNodeCount ).layout().databaseDirectory();
 
@@ -111,7 +110,7 @@ class ConvertNonCausalClusteringStoreIT
         return clusterFactory.createCluster( clusterConfig );
     }
 
-    private ClassicNeo4jDatabase createNeoDatabase( File dbDir, String recordFormat, int classicNodeCount ) throws IOException
+    private ClassicNeo4jDatabase createNeoDatabase( Path dbDir, String recordFormat, int classicNodeCount ) throws IOException
     {
         return ClassicNeo4jDatabase.builder( dbDir, testDirectory.getFileSystem() )
                 .transactionLogsInDatabaseFolder()

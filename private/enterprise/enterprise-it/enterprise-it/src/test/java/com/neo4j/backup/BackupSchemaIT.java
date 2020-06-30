@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -135,20 +134,20 @@ class BackupSchemaIT
 
     private void testBackup( SchemaElement schemaElement ) throws Exception
     {
-        db = startDb( testDirectory.homeDir(), true );
+        db = startDb( testDirectory.homePath(), true );
 
         schemaElement.create( db );
         awaitIndexesOnline();
         schemaElement.populate( db );
 
-        File backupDir = executeBackup();
+        Path backupDir = executeBackup();
         managementService.shutdown();
 
         db = startDb( backupDir, false );
         schemaElement.verify( db );
     }
 
-    private File executeBackup() throws Exception
+    private Path executeBackup() throws Exception
     {
         Path backupsDir = testDirectory.directory( "backups" ).toPath();
 
@@ -165,7 +164,7 @@ class BackupSchemaIT
 
         executor.executeBackup( context );
 
-        return backupsDir.toFile();
+        return backupsDir;
     }
 
     private void awaitIndexesOnline()
@@ -176,12 +175,12 @@ class BackupSchemaIT
         }
     }
 
-    private static GraphDatabaseAPI startDb( File dir, boolean backupEnabled )
+    private static GraphDatabaseAPI startDb( Path dir, boolean backupEnabled )
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir )
                 .setConfig( online_backup_enabled, backupEnabled )
-                .setConfig( transaction_logs_root_path, dir.toPath().toAbsolutePath() )
-                .setConfig( databases_root_path, dir.toPath().toAbsolutePath() )
+                .setConfig( transaction_logs_root_path, dir.toAbsolutePath() )
+                .setConfig( databases_root_path, dir.toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) managementService.database( DB_NAME );
     }

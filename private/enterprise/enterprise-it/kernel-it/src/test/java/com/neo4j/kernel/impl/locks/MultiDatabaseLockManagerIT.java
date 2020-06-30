@@ -44,7 +44,7 @@ class MultiDatabaseLockManagerIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

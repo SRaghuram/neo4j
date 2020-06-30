@@ -15,6 +15,7 @@ com.neo4j.dbms.api.ClusterDatabaseManagementService::unregisterTransactionEventL
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public class extends com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::<T extends java.lang.Object>setConfig(org.neo4j.graphdb.config.Setting<T>, #T) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::ClusterDatabaseManagementServiceBuilder(java.io.File) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::ClusterDatabaseManagementServiceBuilder(java.nio.file.Path) void public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::addDatabaseListener(org.neo4j.graphdb.event.DatabaseEventListener) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::addURLAccessRule(java.lang.String, org.neo4j.graphdb.security.URLAccessRule) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::build() com.neo4j.dbms.api.ClusterDatabaseManagementService public

@@ -10,7 +10,6 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.configuration.ServerGroupName;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -36,8 +35,11 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 
-public class CausalClusterInProcessBuilder
+public final class CausalClusterInProcessBuilder
 {
+    private CausalClusterInProcessBuilder()
+    {
+    }
 
     public static WithServerBuilder init()
     {
@@ -51,7 +53,7 @@ public class CausalClusterInProcessBuilder
     public static class Builder implements WithServerBuilder, WithCores, WithReplicas, WithLogger, WithPath, WithOptionalPorts
     {
 
-        private BiFunction<File,String,EnterpriseInProcessNeo4jBuilder> serverBuilder;
+        private BiFunction<Path,String,EnterpriseInProcessNeo4jBuilder> serverBuilder;
         private int numCoreHosts;
         private int numReadReplicas;
         private Log log;
@@ -60,7 +62,7 @@ public class CausalClusterInProcessBuilder
         private final Map<Setting<Object>, Object> config = new HashMap<>();
 
         @Override
-        public WithCores withBuilder( BiFunction<File,String,EnterpriseInProcessNeo4jBuilder> serverBuilder )
+        public WithCores withBuilder( BiFunction<Path,String,EnterpriseInProcessNeo4jBuilder> serverBuilder )
         {
             this.serverBuilder = serverBuilder;
             return this;
@@ -118,7 +120,7 @@ public class CausalClusterInProcessBuilder
      */
     public interface WithServerBuilder
     {
-        WithCores withBuilder( BiFunction<File,String,EnterpriseInProcessNeo4jBuilder> serverBuilder );
+        WithCores withBuilder( BiFunction<Path,String,EnterpriseInProcessNeo4jBuilder> serverBuilder );
     }
 
     public interface WithCores
@@ -225,7 +227,7 @@ public class CausalClusterInProcessBuilder
         private final Log log;
         private final PortPickingFactory portFactory;
         private final Map<Setting<Object>, Object> config;
-        private final BiFunction<File,String,EnterpriseInProcessNeo4jBuilder> serverBuilder;
+        private final BiFunction<Path,String,EnterpriseInProcessNeo4jBuilder> serverBuilder;
 
         private final InProcessNeo4j[] cores;
         private final InProcessNeo4j[] readReplicas;
@@ -264,7 +266,7 @@ public class CausalClusterInProcessBuilder
 
                 String homeDir = "core-" + coreId;
 
-                EnterpriseInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
+                EnterpriseInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath, homeDir );
 
                 Path homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home, homePath );
@@ -309,7 +311,7 @@ public class CausalClusterInProcessBuilder
                 int httpPort = portFactory.httpReadReplicaPort( replicaId );
 
                 String homeDir = "replica-" + replicaId;
-                EnterpriseInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
+                EnterpriseInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath, homeDir );
 
                 Path homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home, homePath );

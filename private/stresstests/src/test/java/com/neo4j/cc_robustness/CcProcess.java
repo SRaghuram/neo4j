@@ -14,7 +14,7 @@ import com.neo4j.cc_robustness.workload.SchemaOperation;
 import com.neo4j.cc_robustness.workload.ShutdownType;
 import com.neo4j.cc_robustness.workload.Work;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.Map;
 
@@ -48,7 +48,7 @@ public class CcProcess extends SubProcess<CcInstance,Map<String,String>> impleme
     private Log log;
     private Restoration currentBlock;
     private SlowLogging slowLogging;
-    private File homeDir;
+    private Path homeDir;
     private DatabaseManagementService managementService;
 
     @Override
@@ -56,7 +56,7 @@ public class CcProcess extends SubProcess<CcInstance,Map<String,String>> impleme
     {
         try
         {
-            homeDir = new File( parameters.get( "dbdir" ) );
+            homeDir = Path.of( parameters.get( "dbdir" ) );
 
             ccStartupTimeoutMonitor = new CcStartupTimeoutMonitor();
             log = FormattedLogProvider.toOutputStream( System.out ).getLog( getClass() );

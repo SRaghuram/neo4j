@@ -336,7 +336,7 @@ class DatabaseMetricsExtensionIT
         };
 
         //When
-        DatabaseManagementService dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir( "life" ) )
+        DatabaseManagementService dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath( "life" ) )
                 .removeExtensions( ef -> ef instanceof GlobalMetricsExtensionFactory || ef instanceof DatabaseMetricsExtensionFactory )
                 .addExtension( gmeSpy )
                 .addExtension( dmeSpy )

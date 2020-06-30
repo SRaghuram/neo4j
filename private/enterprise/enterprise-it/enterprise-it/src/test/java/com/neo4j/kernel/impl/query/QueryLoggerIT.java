@@ -99,7 +99,7 @@ class QueryLoggerIT
         logsDirectory = new File( testDirectory.homeDir(), "logs" );
         logFilename = new File( logsDirectory, "query.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
-        databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
                 .setInternalLogProvider( inMemoryLog )
                 .impermanent();

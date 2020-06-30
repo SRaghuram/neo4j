@@ -103,7 +103,7 @@ class FabricExecutorTest
     void beforeEach()
     {
         config = Config.newBuilder()
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath() )
+                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homePath() )
                 .set( FabricEnterpriseSettings.database_name, "mega" )
                 .set( FabricEnterpriseSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
                 .set( FabricEnterpriseSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )

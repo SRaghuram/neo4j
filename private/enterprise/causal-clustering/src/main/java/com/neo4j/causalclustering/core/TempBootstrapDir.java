@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -16,22 +16,22 @@ import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_BOOT
 public class TempBootstrapDir
 {
     protected final FileSystemAbstraction fs;
-    protected final File tempBootstrapDir;
+    protected final Path tempBootstrapDir;
 
     public TempBootstrapDir( FileSystemAbstraction fs, DatabaseLayout layout )
     {
         this.fs = fs;
-        this.tempBootstrapDir = new File( layout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
+        this.tempBootstrapDir = layout.databaseDirectory().resolve( TEMP_BOOTSTRAP_DIRECTORY_NAME );
     }
 
-    public File get()
+    public Path get()
     {
         return tempBootstrapDir;
     }
 
     public void delete() throws IOException
     {
-        fs.deleteRecursively( tempBootstrapDir );
+        fs.deleteRecursively( tempBootstrapDir.toFile() );
     }
 
     public static Resource cleanBeforeAndAfter( FileSystemAbstraction fs, DatabaseLayout layout ) throws IOException
@@ -44,13 +44,13 @@ public class TempBootstrapDir
         private Resource( FileSystemAbstraction fs, DatabaseLayout layout ) throws IOException
         {
             super( fs, layout );
-            fs.deleteRecursively( get() );
+            fs.deleteRecursively( get().toFile() );
         }
 
         @Override
         public void close() throws IOException
         {
-            fs.deleteRecursively( get() );
+            fs.deleteRecursively( get().toFile() );
         }
     }
 }

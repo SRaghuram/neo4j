@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -70,7 +70,7 @@ public interface ClusterMember
 
     DatabaseLayout databaseLayout();
 
-    File homeDir();
+    Path homePath();
 
     Neo4jLayout neo4jLayout();
 

@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
@@ -25,7 +26,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<EnterpriseLoginContext>
 {
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
+    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo )
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

@@ -116,8 +116,8 @@ class ConnectionTrackingIT
     @BeforeAll
     void beforeAll()
     {
-        neo4j = (InProcessNeo4j) new EnterpriseInProcessNeo4jBuilder( dir.homeDir() )
-                .withConfig( neo4j_home, dir.homeDir().toPath().toAbsolutePath() )
+        neo4j = (InProcessNeo4j) new EnterpriseInProcessNeo4jBuilder( dir.homePath() )
+                .withConfig( neo4j_home, dir.homePath().toAbsolutePath() )
                 .withConfig( auth_enabled, true )
                 .withConfig( HttpConnector.enabled, true )
                 .withConfig( HttpsConnector.enabled, true )
@@ -160,7 +160,7 @@ class ConnectionTrackingIT
     }
 
     @Test
-    void shouldListNoConnectionsWhenIdle() throws Exception
+    void shouldListNoConnectionsWhenIdle()
     {
         verifyConnectionCount( HTTP, null, 0 );
         verifyConnectionCount( HTTPS, null, 0 );

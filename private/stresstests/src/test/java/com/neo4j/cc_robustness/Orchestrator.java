@@ -21,11 +21,14 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import org.apache.lucene.util.NamedThreadFactory;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.rmi.RemoteException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -175,7 +178,7 @@ public class Orchestrator
         return db.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole() == Role.LEADER;
     }
 
-    static DatabaseManagementService instantiateDbServer( File homeDir, int serverId, Map<String,String> additionalConfig,
+    static DatabaseManagementService instantiateDbServer( Path homeDir, int serverId, Map<String,String> additionalConfig,
             CcStartupTimeoutMonitor ccStartupTimeoutMonitor )
     {
         Throwable startupFailure = null;
@@ -189,8 +192,8 @@ public class Orchestrator
                 return new CcRobustnessGraphDatabaseFactory( homeDir )
                         .setConfigRaw( additionalConfig )
                         .setMonitors( monitors )
-                        .setConfig( GraphDatabaseSettings.neo4j_home, homeDir.toPath().toAbsolutePath() )
-                        .setConfig( GraphDatabaseInternalSettings.databases_root_path, Path.of( homeDir.getAbsolutePath(), "data/databases" ) )
+                        .setConfig( GraphDatabaseSettings.neo4j_home, homeDir.toAbsolutePath() )
+                        .setConfig( GraphDatabaseInternalSettings.databases_root_path, homeDir.resolve( "data/databases" ) )
                         .setConfig( GraphDatabaseSettings.check_point_interval_time, Duration.ofMinutes( 2 ) )
                         .setConfig( CausalClusteringSettings.raft_listen_address, new SocketAddress( "127.0.0.1", LOW_RAFT_SERVER_PORT + serverId ) )
                         .setConfig( CausalClusteringSettings.raft_advertised_address, new SocketAddress( LOW_RAFT_SERVER_PORT + serverId ) )
@@ -280,18 +283,17 @@ public class Orchestrator
         return time().replace( ':', '_' ).replace( '.', '_' ) + "-locks-dump.txt";
     }
 
-    static void dumpAllLocks( GraphDatabaseAPI db, File dir, Log log )
+    static void dumpAllLocks( GraphDatabaseAPI db, Path dir, Log log )
     {
-        File outputFile = new File( dir, timeStampedLocksDumpFileName() ).getAbsoluteFile();
+        Path outputFile = dir.resolve( timeStampedLocksDumpFileName() ).toAbsolutePath();
 
         log.info( "Dumping locks to: " + outputFile );
         DependencyResolver resolver = db.getDependencyResolver();
-        try
+
+        try ( BufferedWriter writer = Files.newBufferedWriter( outputFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND ) )
         {
-            FileWriter writer = new FileWriter( outputFile, true );
             FormattedLogProvider logProvider = FormattedLogProvider.toWriter( writer );
             resolver.resolveDependency( Locks.class ).accept( new DumpLocksVisitor( logProvider.getLog( Locks.class ) ) );
-            writer.close();
         }
         catch ( IOException e )
         {
@@ -650,7 +652,7 @@ public class Orchestrator
             File homeDir = instanceFiles.directoryFor( i );
             try
             {
-                consistencyVerifier.verifyConsistencyOffline( homeDir );
+                consistencyVerifier.verifyConsistencyOffline( homeDir.toPath() );
                 log.info( "VERIFIED " + homeDir );
             }
             catch ( Exception e )

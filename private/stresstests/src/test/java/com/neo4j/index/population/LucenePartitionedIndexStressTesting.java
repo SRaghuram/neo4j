@@ -9,7 +9,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -65,7 +64,7 @@ class LucenePartitionedIndexStressTesting
 
     private ExecutorService populators;
     private GraphDatabaseService db;
-    private File storeDir;
+    private Path storeDir;
     private DatabaseManagementService managementService;
 
     @BeforeEach
@@ -84,7 +83,7 @@ class LucenePartitionedIndexStressTesting
     {
         managementService.shutdown();
         populators.shutdown();
-        FileUtils.deleteRecursively( storeDir );
+        FileUtils.deletePathRecursively( storeDir );
     }
 
     @Test
@@ -167,12 +166,10 @@ class LucenePartitionedIndexStressTesting
         }
     }
 
-    private static File prepareStoreDir() throws IOException
+    private static Path prepareStoreDir() throws IOException
     {
-        Path storeDirPath = Paths.get( WORK_DIRECTORY ).resolve( Paths.get( "storeDir" ) );
-        File storeDirectory = storeDirPath.toFile();
-        FileUtils.deleteRecursively( storeDirectory );
-        storeDirectory.deleteOnExit();
+        Path storeDirectory = Paths.get( WORK_DIRECTORY ).resolve( Paths.get( "storeDir" ) );
+        FileUtils.deletePathRecursively( storeDirectory );
         return storeDirectory;
     }
 

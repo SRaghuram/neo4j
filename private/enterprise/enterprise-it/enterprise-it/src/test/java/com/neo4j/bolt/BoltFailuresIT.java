@@ -10,7 +10,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
@@ -69,7 +69,7 @@ class BoltFailuresIT
         sessionMonitor.throwInConnectionOpened();
         Monitors monitors = newMonitorsSpy( sessionMonitor );
 
-        db = startDbWithBolt( new TestDatabaseManagementServiceBuilder( directory.homeDir() ).setMonitors( monitors ) );
+        db = startDbWithBolt( new TestDatabaseManagementServiceBuilder( directory.homePath() ).setMonitors( monitors ) );
         assertThrows( ServiceUnavailableException.class, () -> driver = createDriver( getBoltPort( db ) ) );
     }
 
@@ -172,7 +172,7 @@ class BoltFailuresIT
 
     private GraphDatabaseService startTestDb( Monitors monitors )
     {
-        return startDbWithBolt( newDbFactory( directory.homeDir() ).setMonitors( monitors ) );
+        return startDbWithBolt( newDbFactory( directory.homePath() ).setMonitors( monitors ) );
     }
 
     private GraphDatabaseService startDbWithBolt( DatabaseManagementServiceBuilder dbFactory )
@@ -185,7 +185,7 @@ class BoltFailuresIT
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static TestEnterpriseDatabaseManagementServiceBuilder newDbFactory( File databaseRootDir )
+    private static TestEnterpriseDatabaseManagementServiceBuilder newDbFactory( Path databaseRootDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( databaseRootDir );
     }

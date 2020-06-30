@@ -8,7 +8,6 @@ package com.neo4j.test;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Function;
@@ -37,11 +36,6 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     public TestEnterpriseDatabaseManagementServiceBuilder()
     {
         super();
-    }
-
-    public TestEnterpriseDatabaseManagementServiceBuilder( File databaseRootDir )
-    {
-        super( databaseRootDir );
     }
 
     public TestEnterpriseDatabaseManagementServiceBuilder( Path databaseRootDir )
@@ -107,7 +101,7 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
-    public TestEnterpriseDatabaseManagementServiceBuilder setDatabaseRootDirectory( File storeDir )
+    public TestEnterpriseDatabaseManagementServiceBuilder setDatabaseRootDirectory( Path storeDir )
     {
         return (TestEnterpriseDatabaseManagementServiceBuilder) super.setDatabaseRootDirectory( storeDir );
     }

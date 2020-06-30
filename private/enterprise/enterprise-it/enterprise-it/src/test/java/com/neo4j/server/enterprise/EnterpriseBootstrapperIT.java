@@ -12,6 +12,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -58,7 +59,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     }
 
     @Override
-    protected DatabaseManagementService newEmbeddedDbms( File homeDir )
+    protected DatabaseManagementService newEmbeddedDbms( Path homeDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( homeDir ).build();
     }
@@ -70,7 +71,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         int resultCode = NeoBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
                 "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( GraphDatabaseSettings.mode, "SINGLE" ),
-                "-c", configOption( data_directory, getRelativePath( folder.homeDir(), data_directory ).toString() ),
+                "-c", configOption( data_directory, getRelativePath( folder.homePath(), data_directory ).toString() ),
                 "-c", configOption( logs_directory, testDirectory.homeDir().getAbsolutePath() ),
                 "-c", "dbms.connector.bolt.listen_address=:0" ) );
 
@@ -86,7 +87,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap();
-        properties.putAll( getDefaultRelativeProperties( testDirectory.homeDir() ) );
+        properties.putAll( getDefaultRelativeProperties( testDirectory.homePath() ) );
         properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 
@@ -110,7 +111,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap( store_internal_log_level.name(), "DEBUG");
-        properties.putAll( getDefaultRelativeProperties( testDirectory.homeDir() ) );
+        properties.putAll( getDefaultRelativeProperties( testDirectory.homePath() ) );
         properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 

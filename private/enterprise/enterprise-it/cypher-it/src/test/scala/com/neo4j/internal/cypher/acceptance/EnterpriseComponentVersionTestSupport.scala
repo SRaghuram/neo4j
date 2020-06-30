@@ -5,7 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.io.File
+import java.nio.file.Path
 import java.util
 
 import com.neo4j.dbms.EnterpriseSystemGraphComponent
@@ -100,7 +100,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     case (acc, x) => acc + x
   }
 
-  override protected def createDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = {
+  override protected def createDatabaseFactory(databaseRootDir: Path): TestDatabaseManagementServiceBuilder = {
     val builder = new TestDBMSBuilder(databaseRootDir)
     _configSupplier = ()  => builder.getConfig
     builder
@@ -116,8 +116,8 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     }
   }
 
-  private class TestDBMSBuilder(rootDir: File) extends TestEnterpriseDatabaseManagementServiceBuilder(rootDir) {
-    lazy val getConfig: Config = config.fromConfig(fromConfig).set(GraphDatabaseSettings.neo4j_home, homeDirectory.toPath.toAbsolutePath).build
+  private class TestDBMSBuilder(rootDir: Path) extends TestEnterpriseDatabaseManagementServiceBuilder(rootDir) {
+    lazy val getConfig: Config = config.fromConfig(fromConfig).set(GraphDatabaseSettings.neo4j_home, homeDirectory.toAbsolutePath).build
 
     override def build: DatabaseManagementService = {
       val cfg = getConfig

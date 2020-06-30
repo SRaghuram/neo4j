@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.File
+import java.nio.file.Path
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -65,7 +65,7 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("Test that cache clearing procedure writes to log") {
     val logProvider = new AssertableLogProvider()
-    val managementService = graphDatabaseFactory(new File("test")).setUserLogProvider(logProvider).impermanent().build()
+    val managementService = graphDatabaseFactory(Path.of("test")).setUserLogProvider(logProvider).impermanent().build()
     val graphDatabaseService = managementService.database(DEFAULT_DATABASE_NAME)
 
     try {

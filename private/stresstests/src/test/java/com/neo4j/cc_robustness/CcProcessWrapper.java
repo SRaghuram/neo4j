@@ -15,6 +15,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.lucene.util.NamedThreadFactory;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -42,14 +43,14 @@ public class CcProcessWrapper implements CcInstance
     private final RobustnessConsistencyCheck consistencyCheck;
     private final CcInstance process;
     private final CcInstanceFiles instanceFiles;
-    private final File homeDir;
+    private final Path homeDir;
 
     CcProcessWrapper( CcInstanceFiles instanceFiles, RobustnessConsistencyCheck consistencyCheck, CcInstance process, Map<String,String> parameters )
     {
         this.instanceFiles = instanceFiles;
         this.consistencyCheck = consistencyCheck;
         this.process = process;
-        this.homeDir = new File( parameters.get( "dbdir" ) );
+        this.homeDir = Path.of( parameters.get( "dbdir" ) );
     }
 
     @Override

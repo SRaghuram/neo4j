@@ -17,8 +17,8 @@ import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Set;
 
@@ -166,10 +166,10 @@ public class RaftBootstrapper
     {
         try ( var bootstrapRootDir = TempBootstrapDir.cleanBeforeAndAfter( fs, bootstrapContext.databaseLayout() ) )
         {
-            File tempDefaultDatabaseDir = new File( bootstrapRootDir.get(), SYSTEM_DATABASE_NAME );
+            Path tempDefaultDatabaseDir = bootstrapRootDir.get().resolve( SYSTEM_DATABASE_NAME );
 
-            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory().toFile(), tempDefaultDatabaseDir );
-            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory().toFile(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory().toFile(), tempDefaultDatabaseDir.toFile() );
+            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory().toFile(), tempDefaultDatabaseDir.toFile() );
 
             DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), true );
 
@@ -203,7 +203,7 @@ public class RaftBootstrapper
         }
     }
 
-    private DatabaseLayout initializeStoreUsingTempDatabase( File bootstrapRootDir, boolean isSystem )
+    private DatabaseLayout initializeStoreUsingTempDatabase( Path bootstrapRootDir, boolean isSystem )
     {
         DatabaseLayout databaseLayout;
         try ( TemporaryDatabase tempDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapRootDir, config, isSystem ) )

@@ -22,7 +22,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -100,7 +99,7 @@ class InternalClusterAuthenticationTest
 
         dir = Files.createTempDirectory( InternalClusterAuthenticationTest.class.getSimpleName() );
 
-        var dbmsBuilder = new TestDbmsBuilder( dir.toFile() );
+        var dbmsBuilder = new TestDbmsBuilder( dir );
         dbms = dbmsBuilder
                 .setConfig( config )
                 .build();
@@ -299,7 +298,7 @@ class InternalClusterAuthenticationTest
     {
         Dependencies dependencies;
 
-        TestDbmsBuilder( File databaseRootDir )
+        TestDbmsBuilder( Path databaseRootDir )
         {
             super( databaseRootDir );
         }

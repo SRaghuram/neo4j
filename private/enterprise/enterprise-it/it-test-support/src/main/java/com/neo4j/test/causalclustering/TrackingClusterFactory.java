@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import org.junit.jupiter.api.TestInstance;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -20,7 +20,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 public class TrackingClusterFactory implements ClusterFactory
 {
-    private TestDirectory testDirectory;
+    private final TestDirectory testDirectory;
     private final TestInstance.Lifecycle lifecycle;
     private final Collection<Cluster> clusters = new CopyOnWriteArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger();
@@ -40,7 +40,7 @@ public class TrackingClusterFactory implements ClusterFactory
     @Override
     public Cluster createCluster( ClusterConfig clusterConfig )
     {
-        File directory = testDirectory.directory( generateId() );
+        Path directory = testDirectory.directoryPath( generateId() );
         Cluster cluster = ClusterConfig.createCluster( directory, clusterConfig );
         clusters.add( cluster );
         return cluster;

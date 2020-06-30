@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -33,7 +34,16 @@ import static java.lang.Boolean.FALSE;
 @PublicApi
 public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseManagementServiceBuilder
 {
+    /**
+     * @deprecated Use {@link #ClusterDatabaseManagementServiceBuilder(Path)}.
+     */
+    @Deprecated( forRemoval = true )
     public ClusterDatabaseManagementServiceBuilder( File homeDirectory )
+    {
+        this( homeDirectory.toPath() );
+    }
+
+    public ClusterDatabaseManagementServiceBuilder( Path homeDirectory )
     {
         super( homeDirectory );
     }

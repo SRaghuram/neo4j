@@ -16,7 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -79,7 +78,7 @@ class FulltextIndexBackupIT
     @BeforeEach
     void setUp()
     {
-        dbManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir.homeDir() )
+        dbManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir.homePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, true )
                 .build();
         db = (GraphDatabaseAPI) dbManagementService.database( DEFAULT_DATABASE_NAME );
@@ -106,7 +105,7 @@ class FulltextIndexBackupIT
         Path backupDir = executeBackup();
         dbManagementService.shutdown();
 
-        backupDb = startBackupDatabase( backupDir.toFile() );
+        backupDb = startBackupDatabase( backupDir );
         verifyData( backupDb );
     }
 
@@ -138,7 +137,7 @@ class FulltextIndexBackupIT
 
         dbManagementService.shutdown();
 
-        backupDb = startBackupDatabase( backupDir.toFile() );
+        backupDb = startBackupDatabase( backupDir );
         verifyData( backupDb );
 
         try ( Transaction tx = backupDb.beginTx() )
@@ -194,11 +193,11 @@ class FulltextIndexBackupIT
         }
     }
 
-    private static GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
+    private static GraphDatabaseAPI startBackupDatabase( Path backupDatabaseDir )
     {
         backupManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( backupDatabaseDir )
-                .setConfig( transaction_logs_root_path, backupDatabaseDir.toPath().toAbsolutePath() )
-                .setConfig( databases_root_path, backupDatabaseDir.toPath().toAbsolutePath() )
+                .setConfig( transaction_logs_root_path, backupDatabaseDir.toAbsolutePath() )
+                .setConfig( databases_root_path, backupDatabaseDir.toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) backupManagementService.database( DEFAULT_DATABASE_NAME );
     }

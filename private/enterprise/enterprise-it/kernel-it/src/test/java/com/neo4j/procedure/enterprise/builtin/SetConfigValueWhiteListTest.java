@@ -50,7 +50,7 @@ class SetConfigValueWhiteListTest
 
     private void prepareDatabase( List<String> settingWhitelist )
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                                     .setConfig( dynamic_setting_whitelist, settingWhitelist )
                                     .impermanent().build();
         databaseAPI = (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );

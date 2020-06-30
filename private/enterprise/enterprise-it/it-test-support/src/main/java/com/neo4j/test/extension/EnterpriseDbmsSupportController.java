@@ -8,8 +8,8 @@ package com.neo4j.test.extension;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.io.File;
 import java.lang.annotation.Annotation;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -45,7 +45,7 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
     }
 
     @Override
-    public TestDatabaseManagementServiceBuilder createBuilder( File homeDirectory, FileSystemAbstraction fileSystem )
+    public TestDatabaseManagementServiceBuilder createBuilder( Path homeDirectory, FileSystemAbstraction fileSystem )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( homeDirectory ).setFileSystem( fileSystem );
     }

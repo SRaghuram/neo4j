@@ -108,12 +108,12 @@ class CausalClusterDatabaseOperationCountMetricIT
 
     private static void assertMetricsEqual( ClusterMember member, String metricsName, long count ) throws InterruptedException
     {
-        var metricsDir = new File( member.homeDir(), MetricsSettings.csv_path.defaultValue().toString() );
-        File file = metricsCsv( metricsDir, metricsName );
+        var metricsDir = member.homePath().resolve( MetricsSettings.csv_path.defaultValue().toString() );
+        File file = metricsCsv( metricsDir.toFile(), metricsName );
         assertEventually( () -> readValue( file ), t ->  t == count, TIMEOUT, SECONDS );
     }
 
-    private static Long readValue( File file ) throws InterruptedException
+    private static Long readValue( File file )
     {
         try
         {

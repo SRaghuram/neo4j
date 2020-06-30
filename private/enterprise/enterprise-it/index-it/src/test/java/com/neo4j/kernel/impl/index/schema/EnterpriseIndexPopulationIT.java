@@ -165,6 +165,6 @@ class EnterpriseIndexPopulationIT
 
     private TestEnterpriseDatabaseManagementServiceBuilder newDbmsBuilder()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() );
+        return new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() );
     }
 }

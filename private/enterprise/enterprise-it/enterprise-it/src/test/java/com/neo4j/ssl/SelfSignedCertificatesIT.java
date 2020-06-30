@@ -34,7 +34,7 @@ public class SelfSignedCertificatesIT
     void createSelfSignedCertificateWithCorrectPermissions() throws Exception
     {
         var certificates = new SelfSignedCertificateFactory();
-        certificates.createSelfSignedCertificate( testDirectory.file( "certificate" ), testDirectory.file( "privateKey" ), "localhost" );
+        certificates.createSelfSignedCertificate( testDirectory.filePath( "certificate" ), testDirectory.filePath( "privateKey" ), "localhost" );
 
         PosixFileAttributes certificateAttributes =
                 Files.getFileAttributeView( testDirectory.file( "certificate" ).toPath(), PosixFileAttributeView.class )

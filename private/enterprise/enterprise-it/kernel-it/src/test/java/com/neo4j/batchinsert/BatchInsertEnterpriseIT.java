@@ -8,8 +8,8 @@ package com.neo4j.batchinsert;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.TestWithRecordFormats;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -94,7 +94,7 @@ class BatchInsertEnterpriseIT
         }
 
         // THEN
-        GraphDatabaseService db = newDb( directory.homeDir(), config );
+        GraphDatabaseService db = newDb( directory.homePath(), config );
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -116,7 +116,7 @@ class BatchInsertEnterpriseIT
     @TestWithRecordFormats
     void insertIntoExistingDatabase( String recordFormat ) throws IOException
     {
-        File storeDir = directory.homeDir();
+        Path storeDir = directory.homePath();
         Config config = Config.defaults();
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store, true );
@@ -160,7 +160,7 @@ class BatchInsertEnterpriseIT
     @TestWithRecordFormats
     void shouldCorrectlyUpdateCountsAndScanStores( String recordFormat ) throws IOException
     {
-        File storeDir = directory.homeDir();
+        Path storeDir = directory.homePath();
         Config config = Config.defaults();
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store, true );
@@ -288,7 +288,7 @@ class BatchInsertEnterpriseIT
         return map( "key", "value" + id, "number", 10 + id );
     }
 
-    private GraphDatabaseService newDb( File storeDir, Config config )
+    private GraphDatabaseService newDb( Path storeDir, Config config )
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( storeDir )
                 .setConfig( config )

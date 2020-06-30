@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.File
+import java.nio.file.Path
 import java.time.ZoneOffset
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
@@ -29,20 +29,20 @@ import scala.collection.Map
 class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
 
   private val testDir = TestDirectory.testDirectory(getClass)
-  private var dbDir: File = _
+  private var dbDir: Path = _
 
   override val cypherComparisonSupport = false
 
   override protected def initTest() {
-    dbDir = testDir.prepareDirectoryForTest(System.currentTimeMillis().toString)
+    dbDir = testDir.prepareDirectoryForTest(System.currentTimeMillis().toString).toPath
     startGraphDatabase(dbDir)
   }
 
-  override protected def startGraphDatabase(storeDir: File): Unit = {
+  override protected def startGraphDatabase(storeDir: Path): Unit = {
     startGraphDatabaseWithConfig(storeDir, databaseConfig())
   }
 
-  private def startGraphDatabaseWithConfig(storeDir: File, config: Map[Setting[_], Object]): Unit = {
+  private def startGraphDatabaseWithConfig(storeDir: Path, config: Map[Setting[_], Object]): Unit = {
     val builder = graphDatabaseFactory(storeDir)
     config.foreach {
       case (setting, settingValue) => builder.setConfig(setting.asInstanceOf[Setting[Object]], settingValue)
@@ -63,7 +63,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     }
     finally {
       if (graph != null) managementService.shutdown()
-      FileUtils.deleteRecursively(dbDir)
+      FileUtils.deletePathRecursively(dbDir)
     }
   }
 

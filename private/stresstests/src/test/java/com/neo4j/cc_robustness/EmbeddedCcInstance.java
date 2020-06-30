@@ -17,6 +17,7 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.Map;
 
@@ -36,7 +37,7 @@ public class EmbeddedCcInstance implements CcInstance
 {
     private final RobustnessConsistencyCheck consistencyCheck;
     private final int serverId;
-    private final File homeDir;
+    private final Path homeDir;
     private final CcInstanceFiles instanceFiles;
     private final CcStartupTimeoutMonitor ccStartupTimeoutMonitor = new CcStartupTimeoutMonitor();
     private final Log log;
@@ -51,7 +52,7 @@ public class EmbeddedCcInstance implements CcInstance
     {
         this.instanceFiles = instanceFiles;
         this.serverId = serverId;
-        this.homeDir = instanceFiles.directoryFor( serverId );
+        this.homeDir = instanceFiles.directoryFor( serverId ).toPath();
         this.consistencyCheck = consistencyCheck;
         this.slowLogging = new SlowLogging( additionalDbConfig );
         this.log = logProvider.getLog( getClass() );
@@ -142,7 +143,7 @@ public class EmbeddedCcInstance implements CcInstance
         instanceFiles.packDb( serverId, true );
         if ( type == ShutdownType.wipe )
         {
-            FileUtils.deleteQuietly( homeDir );
+            FileUtils.deleteQuietly( homeDir.toFile() );
         }
     }
 
@@ -173,7 +174,7 @@ public class EmbeddedCcInstance implements CcInstance
     @Override
     public void dumpLocks()
     {
-        Orchestrator.dumpAllLocks( db, instanceFiles.directoryFor( serverId ), log );
+        Orchestrator.dumpAllLocks( db, instanceFiles.directoryFor( serverId ).toPath(), log );
     }
 
     @Override

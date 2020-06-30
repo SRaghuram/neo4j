@@ -10,8 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseLimitReachedException;
@@ -53,7 +53,7 @@ class MultiDatabaseManagerIT
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( logProvider )
                 .setConfig( default_database, CUSTOM_DATABASE_NAME )
                 .setConfig( max_number_of_databases, 5L )
@@ -85,7 +85,7 @@ class MultiDatabaseManagerIT
     {
         IllegalArgumentException exception = assertThrows( IllegalArgumentException.class, () ->
         {
-            new TestEnterpriseDatabaseManagementServiceBuilder( new File( "testFileForMaxDbTest" ) )
+            new TestEnterpriseDatabaseManagementServiceBuilder( Path.of( "testFileForMaxDbTest" ) )
                     .setInternalLogProvider( logProvider )
                     .setConfig( default_database, CUSTOM_DATABASE_NAME )
                     .setConfig( max_number_of_databases, 1L )

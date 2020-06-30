@@ -18,8 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
-
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -128,7 +126,7 @@ class ClusterStateMigrationIT
 
     private static ClusterStateLayout clusterStateLayout( ClusterMember member )
     {
-        var dataDir = new File( member.homeDir(), "data" );
-        return ClusterStateLayout.of( dataDir );
+        var dataDir = member.homePath().resolve(  "data" );
+        return ClusterStateLayout.of( dataDir.toFile() );
     }
 }

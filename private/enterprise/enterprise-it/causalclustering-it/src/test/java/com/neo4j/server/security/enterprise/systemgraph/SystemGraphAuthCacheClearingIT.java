@@ -81,7 +81,7 @@ class SystemGraphAuthCacheClearingIT
     void systemDbUpdatesShouldClearAuthCacheInStandalone()
     {
         // Given a standalone db
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfigRaw( getConfig() )
                 .build();
@@ -114,7 +114,7 @@ class SystemGraphAuthCacheClearingIT
     void systemDbUpdatesShouldClearPrivilegeCacheInStandalone()
     {
         // Given a standalone db
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfigRaw( getConfig() )
                 .build();

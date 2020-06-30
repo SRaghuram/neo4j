@@ -208,9 +208,9 @@ class CausalClusterMetricIT
 
     private static File metricsFile( ClusterMember member, String databaseName, String metricName )
     {
-        var metricsDir = new File( member.homeDir(), MetricsSettings.csv_path.defaultValue().toString() );
+        var metricsDir = member.homePath().resolve( MetricsSettings.csv_path.defaultValue().toString() );
         var metric = MetricRegistry.name( "neo4j", databaseName, "causal_clustering", metricName );
-        return metricsCsv( metricsDir, metric );
+        return metricsCsv( metricsDir.toFile(), metric );
     }
 
     private static void assertAllNodesVisible( GraphDatabaseAPI db )

@@ -466,8 +466,11 @@ class SystemGraphRealmIT
         @Override
         protected DatabaseManagementService createManagementService( TestDirectory testDir )
         {
-            return new TestEnterpriseDatabaseManagementServiceBuilder( testDir.homeDir() ).impermanent().noOpSystemGraphInitializer()
-                                                                                .setConfig( GraphDatabaseSettings.auth_enabled, false ).build();
+            return new TestEnterpriseDatabaseManagementServiceBuilder( testDir.homePath() )
+                    .impermanent()
+                    .noOpSystemGraphInitializer()
+                    .setConfig( GraphDatabaseSettings.auth_enabled, false )
+                    .build();
         }
 
         boolean userHasRole( String user, String role )

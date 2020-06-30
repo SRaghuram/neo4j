@@ -150,7 +150,7 @@ class OnlineBackupCommandTest
                 PrintStream ps = new PrintStream( os );
                 PrintWriter writer = new PrintWriter( ps ) )
         {
-            ExecutionContext ctx = new ExecutionContext( dir.homeDir().toPath(), cfg.getParentFile().toPath(), ps, ps, fs );
+            ExecutionContext ctx = new ExecutionContext( dir.homePath(), cfg.getParentFile().toPath(), ps, ps, fs );
 
             String[] args = { "--verbose",
                               "--database", databaseName,

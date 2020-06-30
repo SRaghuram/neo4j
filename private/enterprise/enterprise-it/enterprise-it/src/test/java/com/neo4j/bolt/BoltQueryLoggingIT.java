@@ -29,7 +29,7 @@ public class BoltQueryLoggingIT
 
     public BoltQueryLoggingIT() throws IOException
     {
-        Path tmpDir = WebContainerTestUtils.createTempDir().toPath().toAbsolutePath();
+        Path tmpDir = WebContainerTestUtils.createTempDir().toAbsolutePath();
         this.neo4j = new Neo4jRule()
                 .withConfig( GraphDatabaseSettings.auth_enabled, false )
                 .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )

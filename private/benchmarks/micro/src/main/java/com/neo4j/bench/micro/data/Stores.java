@@ -162,7 +162,7 @@ public class Stores
         System.out.println( config );
 
         // will create an empty database directory under top level
-        new EnterpriseDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() )
+        new EnterpriseDatabaseManagementServiceBuilder( topLevelStoreDir )
                 .setConfigRaw( config.neo4jConfig().toMap() )
                 .build()
                 .shutdown();

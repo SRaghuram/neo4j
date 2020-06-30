@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.Iterator;
 import java.util.List;
@@ -32,7 +33,7 @@ import static org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.dep
 public class EmbeddedUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<EnterpriseLoginContext>
 {
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>, String> config )
+    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo )
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

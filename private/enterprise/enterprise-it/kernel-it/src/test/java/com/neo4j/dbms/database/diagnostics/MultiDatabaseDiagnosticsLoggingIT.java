@@ -33,7 +33,7 @@ class MultiDatabaseDiagnosticsLoggingIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( provider )
                 .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );

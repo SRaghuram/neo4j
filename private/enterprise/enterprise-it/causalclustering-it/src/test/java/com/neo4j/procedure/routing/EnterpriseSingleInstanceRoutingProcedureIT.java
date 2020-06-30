@@ -8,11 +8,10 @@ package com.neo4j.procedure.routing;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -20,7 +19,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 class EnterpriseSingleInstanceRoutingProcedureIT extends CommunitySingleInstanceRoutingProcedureIT
 {
     @Override
-    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( File databaseRootDir )
+    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( Path databaseRootDir )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( databaseRootDir );
     }

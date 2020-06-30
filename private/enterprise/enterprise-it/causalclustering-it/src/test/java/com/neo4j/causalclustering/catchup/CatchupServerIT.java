@@ -98,7 +98,7 @@ class CatchupServerIT
     void startDb()
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
+        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() );
         configure( builder );
         managementService = builder.build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );

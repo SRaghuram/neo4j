@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.IntFunction;
@@ -41,7 +41,7 @@ public class ClusterConfig
     {
     }
 
-    static Cluster createCluster( File directory, ClusterConfig clusterConfig )
+    static Cluster createCluster( Path directory, ClusterConfig clusterConfig )
     {
         return new Cluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.factory(),
                 clusterConfig.coreParams, clusterConfig.instanceCoreParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,

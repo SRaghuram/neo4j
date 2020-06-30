@@ -58,7 +58,7 @@ class StartOnExistingDbWithIndexIT
 
     private GraphDatabaseService getDatabase( LogProvider logProvider )
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( logProvider )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .build();
