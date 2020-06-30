@@ -14,7 +14,9 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Arrays;
@@ -74,7 +76,7 @@ class AdministrationCommandsOnClusterIT
     private final String userName = "foo";
     private final String roleName = "bar";
     private final String roleName2 = "foo";
-    private final String dbName = "foo";
+    private String dbName;
 
     @BeforeAll
     static void setUp() throws ExecutionException, InterruptedException
@@ -83,6 +85,12 @@ class AdministrationCommandsOnClusterIT
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
+    }
+
+    @BeforeEach
+    void uniqueDbName( TestInfo testInfo )
+    {
+        dbName = dbName( testInfo );
     }
 
     @AfterEach
@@ -109,6 +117,13 @@ class AdministrationCommandsOnClusterIT
             CausalClusteringTestHelpers.assertRoleDoesNotExist( roleName2, cluster );
             CausalClusteringTestHelpers.assertUserDoesNotExist( userName, cluster );
         }
+    }
+
+    private static String dbName( TestInfo testInfo )
+    {
+        String testName = testInfo.getDisplayName();
+        int i = testName.indexOf( "(" );
+        return testName.substring( 0, i ) + "Db";
     }
 
     // User commands tests
