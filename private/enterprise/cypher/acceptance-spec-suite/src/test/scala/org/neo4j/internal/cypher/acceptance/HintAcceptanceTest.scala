@@ -53,7 +53,7 @@ class HintAcceptanceTest
                   |USING JOIN ON a
                   |RETURN a.name, b.name""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = ComparePlansWithAssertion( p => {
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy = ComparePlansWithAssertion( p => {
       p should includeSomewhere.aPlan("NodeRightOuterHashJoin")
       p should not(includeSomewhere.aPlan("NodeHashJoin"))
     }))
@@ -68,7 +68,7 @@ class HintAcceptanceTest
         |USING JOIN ON pB
         |RETURN *""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted, query,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion( p => {
         p should includeSomewhere.aPlan("NodeRightOuterHashJoin")
       }))

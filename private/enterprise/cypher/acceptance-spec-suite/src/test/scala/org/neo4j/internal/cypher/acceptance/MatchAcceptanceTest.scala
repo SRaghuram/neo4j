@@ -629,7 +629,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN host""".stripMargin
 
     //WHEN
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     //THEN
     result.toList should equal(List(Map("host" -> host), Map("host" -> null)))
   }
