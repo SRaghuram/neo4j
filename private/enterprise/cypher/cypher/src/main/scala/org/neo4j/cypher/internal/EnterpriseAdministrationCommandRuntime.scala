@@ -501,6 +501,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           val nameKeys = nameFields.map(_.nameKey)
           val rolesKey = internalKey("rolesKey")
           val converter: (Transaction, MapValue) => MapValue = (tx, params) => {
+            /* Example for user1 with role1 and PUBLIC, user2 with role1, role2 and PUBLIC, user3 with PUBLIC:
+             * updateParamsWithRoles(user3, user3converter(updateParamsWithRoles(user2, user2converter(updateParamsWithRoles(user1, user1converter(tx, params))))))
+             *
+             * Which contains the parts:
+             * updateParamsWithRoles(user1, user1converter(tx, params)) gives initial role list 'PUBLIC, role1'
+             * updateParamsWithRoles(user2, user2converter(user1result)) updates role list to 'PUBLIC, role1, role2'
+             * updateParamsWithRoles(user3, user3converter(user2result)) will not add any new roles to the role list
+             * final parameters will include: user1, user2, user3 and the role list containing 'PUBLIC, role1, role2'
+            */
+
             def updateParamsWithRoles(usernameKey: String, paramsWithUsername: MapValue): MapValue = {
               val username = paramsWithUsername.get(usernameKey).asInstanceOf[TextValue]
               // need to collect the roles for all specified users, adding new roles to the list of previously found roles
@@ -528,15 +538,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               paramsWithUsername.updatedWith(rolesKey, rolesValue)
             }
 
-            /* Example for user1 with role1 and PUBLIC, user2 with role1, role2 and PUBLIC, user3 with PUBLIC:
-             * updateParamsWithRoles(user3, user3converter(updateParamsWithRoles(user2, user2converter(updateParamsWithRoles(user1, user1converter(tx, params))))))
-             *
-             * Which contains the parts:
-             * updateParamsWithRoles(user1, user1converter(tx, params)) gives initial role list 'PUBLIC, role1'
-             * updateParamsWithRoles(user2, user2converter(user1result)) updates role list to 'PUBLIC, role1, role2'
-             * updateParamsWithRoles(user3, user3converter(user2result)) will not add any new roles to the role list
-             * final parameters will include: user1, user2, user3 and the role list containing 'PUBLIC, role1, role2'
-            */
             nameFields.foldLeft(None: Option[MapValue]) {
               case (None, NameFields(usernameKey, _, usernameConverter))         => Some(updateParamsWithRoles(usernameKey, usernameConverter(tx, params)))
               case (Some(source), NameFields(usernameKey, _, usernameConverter)) => Some(updateParamsWithRoles(usernameKey, usernameConverter(tx, source)))

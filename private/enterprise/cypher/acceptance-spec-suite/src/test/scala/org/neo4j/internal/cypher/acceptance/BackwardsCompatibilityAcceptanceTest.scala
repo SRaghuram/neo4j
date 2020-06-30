@@ -306,7 +306,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("Multiple roles in SHOW ROLE PRIVILEGE command is not supported in this Cypher version.")
   }
 
-  test("should not be able to specify multiple roles for SHOW USER PRIVILEGES in 4.1") {
+  test("should not be able to specify multiple users for SHOW USER PRIVILEGES in 4.1") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
