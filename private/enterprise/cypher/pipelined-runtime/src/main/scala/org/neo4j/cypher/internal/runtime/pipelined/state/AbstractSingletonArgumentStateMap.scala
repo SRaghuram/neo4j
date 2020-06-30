@@ -109,7 +109,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def peek(argumentId: Long): STATE = {
-    if (argumentId == TopLevelArgument.VALUE) {
+    if (hasController && argumentId == TopLevelArgument.VALUE) {
       controller.state
     } else {
       null.asInstanceOf[STATE]
