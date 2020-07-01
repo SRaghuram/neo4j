@@ -46,7 +46,7 @@ public class BenchmarkingTool<P>
     {
         try
         {
-            return (BenchmarkingToolRunner<P>) toolRunnerClass.getConstructor().newInstance();
+            return toolRunnerClass.getConstructor().newInstance();
         }
         catch ( Exception e )
         {

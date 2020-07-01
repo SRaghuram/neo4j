@@ -86,7 +86,7 @@ abstract class AbstractCommandIT
         String valueString = value.toString();
         if ( value instanceof Path )
         {
-            valueString = ((Path) value).toString().replace( '\\', '/' );
+            valueString = value.toString().replace( '\\', '/' );
         }
         return format( "%s=%s", setting.name(), valueString );
     }

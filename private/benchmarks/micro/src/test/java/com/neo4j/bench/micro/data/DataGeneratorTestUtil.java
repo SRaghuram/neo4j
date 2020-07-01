@@ -213,12 +213,12 @@ public class DataGeneratorTestUtil
                                 inDegreeHistogram.getSnapshot().getMean() - degreeError,
                                 inDegreeHistogram.getSnapshot().getMean() + degreeError ),
                         inDegreeHistogram.getSnapshot().getMean(),
-                        closeTo( (double) outRelationshipsPerNode, degreeError ) );
+                        closeTo( outRelationshipsPerNode, degreeError ) );
             assertThat( format( "Expect mean out-degree in range [%s, %s]",
                                 outDegreeHistogram.getSnapshot().getMean() - degreeError,
                                 outDegreeHistogram.getSnapshot().getMean() + degreeError ),
                         outDegreeHistogram.getSnapshot().getMean(),
-                        closeTo( (double) outRelationshipsPerNode, degreeError ) );
+                        closeTo( outRelationshipsPerNode, degreeError ) );
             assertThat( format( "Expect mean degree in range [%s, %s]",
                                 degreeHistogram.getSnapshot().getMean() - degreeError,
                                 degreeHistogram.getSnapshot().getMean() + degreeError ),
