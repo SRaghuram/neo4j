@@ -19,8 +19,6 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.concurrent.BinaryLatch;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-
 public class PageCacheWarmupTestSupport
 {
     public static void createTestData( Transaction tx )
@@ -71,11 +69,8 @@ public class PageCacheWarmupTestSupport
         @Override
         public void profileCompleted( NamedDatabaseId namedDatabaseId, long pagesInMemory )
         {
-            if ( DEFAULT_DATABASE_NAME.equals( namedDatabaseId.name() ) )
-            {
-                pageCount.set( pagesInMemory );
-                profileLatch.release();
-            }
+            pageCount.set( pagesInMemory );
+            profileLatch.release();
         }
     }
 
