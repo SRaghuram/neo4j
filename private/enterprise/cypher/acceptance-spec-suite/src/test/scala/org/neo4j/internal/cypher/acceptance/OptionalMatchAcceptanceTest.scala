@@ -8,9 +8,47 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.graphdb.Label
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
+
+  test("should provide good plan even if graph has no relationships") {
+
+    withTx { tx =>
+      (0 until 90).foreach(_ => tx.createNode())
+      (0 until 10).foreach(_ => tx.createNode(Label.label("Role")))
+    }
+
+    val query =
+      """
+        |MATCH (n)-[:REL]->(m)
+        |WHERE id(m) = 1
+        |OPTIONAL MATCH (n)-->(middle)-->(role:Role)
+        |RETURN n
+        |""".stripMargin
+
+    val result =
+      executeWith(
+        Configs.InterpretedAndSlottedAndPipelined,
+        query,
+        planComparisonStrategy = ComparePlansWithAssertion( plan => {
+          //THEN
+          plan should includeSomewhere.aPlan("Apply")
+            .withLHS(aPlan("Expand(All)")
+              .onTopOf(aPlan("NodeByIdSeek")))
+            .withRHS(aPlan("Optional")
+              .onTopOf(aPlan("Filter")
+                .onTopOf(aPlan("Expand(All)")
+                  .onTopOf(aPlan("Expand(All)")
+                    .onTopOf(aPlan("Argument"))))))
+        }))
+
+    result.size shouldBe 0
+  }
+
   test("Movies query should plan without data") {
 
     // GIVEN
@@ -35,7 +73,7 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
                                  |   count(c) as countC
                                  |RETURN DISTINCT movie { .title }, countA, countB, countC""".stripMargin)
 
-    result.toSet should be(Set.empty)
+    result.size shouldBe 0
   }
 
   test("Movies query should plan with data") {
@@ -63,7 +101,7 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
                                  |   count(c) as countC
                                  |RETURN DISTINCT movie { .title }, countA, countB, countC""".stripMargin)
 
-    result.toSet should have(size(38));
+    result.size shouldBe 38;
   }
 
   private def insertMoviesDataset: RewindableExecutionResult = {

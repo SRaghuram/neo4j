@@ -827,7 +827,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     res.toList should equal(List(Map("c" -> 2)))
   }
 
-  test("should handle unwind followed by expand into on a list of nodes in both runtimes") {
+  test("should handle unwind followed by expand into on a list of nodes") {
     // Given
     val node1 = createNode("prop" -> 1)
     val node2 = createLabeledNode(Map("prop" -> 2), "Ping")
