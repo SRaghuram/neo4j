@@ -5,24 +5,26 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
+import org.neo4j.cypher.internal.RuntimeResourceLeakException
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
-import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource.removeArgumentStatesIfRhsBufferIsEmpty
 
 /**
  * This buffer receives data from two sides. It will accumulate the data from the LHS using an [[ArgumentStateMap]].
@@ -75,13 +77,20 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
                                          override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                          val rhsArgumentStateMapId: ArgumentStateMapId,
-                                         stateFactory: StateFactory
                                        ) extends ArgumentCountUpdater
                                             with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
                                             with DataHolder {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
+
+  checkOnlyWhenAssertionsAreEnabled {
+    tracker.addCompletionAssertion { () =>
+      if (lhsArgumentStateMap.exists(_ => true) || rhsArgumentStateMap.exists(_ => true)) {
+        throw new RuntimeResourceLeakException("Argument state maps should be empty.")
+      }
+    }
+  }
 
   // TODO optimization: if RHS has completed with no rows, cancel building of the accumulator and vice versa
 
@@ -141,18 +150,15 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
     }
+
     val argumentRowIdsForReducers = accumulator.argumentRowIdsForReducers
+    val argumentRowId = accumulator.argumentRowId
 
     // Check if the argument count is zero -- in the case of the RHS, that means that no more data will ever arrive
-    if (rhsArgumentStateMap.hasCompleted(accumulator.argumentRowId)) {
-      val rhsAcc = rhsArgumentStateMap.peek(accumulator.argumentRowId)
+    if (rhsArgumentStateMap.hasCompleted(argumentRowId)) {
+      val rhsAcc = rhsArgumentStateMap.peek(argumentRowId)
       // All data from the RHS has arrived
-      // If all data is processed and we are the first thread to remove the RHS accumulator (there can be a race here)
-      if (rhsAcc != null && !rhsAcc.hasData && rhsArgumentStateMap.remove(accumulator.argumentRowId)) {
-        // Clean up the LHS as well
-        lhsArgumentStateMap.remove(accumulator.argumentRowId)
-        accumulator.close()
-      }
+      removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, rhsArgumentStateMap, rhsAcc, argumentRowId)
     }
     // Decrement for a morsel in the RHS buffer
     forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
@@ -212,10 +218,12 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
                        downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                        override val argumentStateMaps: ArgumentStateMaps,
-                       tracker: QueryCompletionTracker) extends ArgumentCountUpdater
-                                               with Sink[IndexedSeq[PerArgument[Morsel]]]
-                                               with AccumulatingBuffer {
+                       tracker: QueryCompletionTracker,
+                       lhsArgumentStateMapId: ArgumentStateMapId) extends ArgumentCountUpdater
+                                                                  with Sink[IndexedSeq[PerArgument[Morsel]]]
+                                                                  with AccumulatingBuffer {
   private val argumentStateMap = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
+  private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId)
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
@@ -258,10 +266,31 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
   override def decrement(argumentRowId: Long): Unit = {
     val maybeBuffer = argumentStateMap.decrement(argumentRowId)
     if (maybeBuffer != null) {
+      // If there is no data in the buffer, no more tasks would be created for this argumentRowId and
+      // it won't be removed by LHSAccumulatingRHSStreamingSource, so we have to remove the current buffer
+      // and its corresponding LHS accumulator here to not leave any dangling state.
+      removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, argumentStateMap, maybeBuffer, argumentRowId)
+
       // Decrement for an ArgumentID in RHS's accumulator
       val argumentRowIdsForReducers = maybeBuffer.argumentRowIdsForReducers
       forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
       tracker.decrement()
+    }
+  }
+}
+
+object LHSAccumulatingRHSStreamingSource {
+
+  def removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap: ArgumentStateMap[_ <: ArgumentState],
+                                             rhsArgumentStateMap: ArgumentStateMap[ArgumentStateBuffer],
+                                             rhsBuffer: ArgumentStateBuffer,
+                                             argumentRowId: Long): Unit = {
+    // If all data is processed and we are the first thread to remove the RHS accumulator (there can be a race here)
+    if (rhsBuffer != null && !rhsBuffer.hasData && rhsArgumentStateMap.remove(argumentRowId) != null) {
+      // Clean up the LHS as well
+      val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
+      if (lhsAccumulator != null)
+        lhsAccumulator.close()
     }
   }
 }

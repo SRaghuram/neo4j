@@ -124,13 +124,13 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     argument == TopLevelArgument.VALUE && controller != null && controller.isZero
   }
 
-  override def remove(argument: Long): Boolean = {
+  override def remove(argument: Long): STATE = {
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
     if (argument == TopLevelArgument.VALUE) {
       hasController = false
-      true
+      controller.state
     } else {
-      false
+      null.asInstanceOf[STATE]
     }
   }
 

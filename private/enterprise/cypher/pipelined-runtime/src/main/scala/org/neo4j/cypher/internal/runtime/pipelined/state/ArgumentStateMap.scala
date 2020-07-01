@@ -12,10 +12,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -72,9 +71,9 @@ trait ArgumentStateMap[S <: ArgumentState] {
 
   /**
    * Removes the state of this argument.
-   * @return `true` if the argument was removed, `false` if it had been removed earlier.
+   * @return the state if the argument was removed, `null` if it had been removed earlier.
    **/
-  def remove(argument: Long): Boolean
+  def remove(argument: Long): S
 
   /**
    * Initiate state and counting for a new argument

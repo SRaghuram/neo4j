@@ -168,7 +168,8 @@ class Buffers(numBuffers: Int,
           new RHSStreamingSink(x.argumentStateMapId,
                                reducers,
                                argumentStateMaps,
-                               tracker)
+                               tracker,
+                               x.lhsArgumentStateMapId)
         case x: LHSAccumulatingRHSStreamingBufferVariant =>
           /*
           Explicit construction of sinks is necessary due to the combination of:
@@ -181,8 +182,7 @@ class Buffers(numBuffers: Int,
                                                 reducers,
                                                 argumentStateMaps,
                                                 x.lhsArgumentStateMapId,
-                                                x.rhsArgumentStateMapId,
-            stateFactory)
+                                                x.rhsArgumentStateMapId)
 
         case ArgumentStreamBufferVariant(argumentStateMapId, ArgumentStreamType) =>
           new ArgumentStreamMorselBuffer(bufferDefinition.id,

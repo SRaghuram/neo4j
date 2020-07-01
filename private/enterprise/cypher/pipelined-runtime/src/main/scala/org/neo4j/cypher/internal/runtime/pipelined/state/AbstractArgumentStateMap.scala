@@ -163,9 +163,13 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     false
   }
 
-  override def remove(argument: Long): Boolean = {
+  override def remove(argument: Long): STATE = {
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
-    controllers.remove(argument) != null
+    val controller = controllers.remove(argument)
+    if (controller != null)
+      controller.state
+    else
+      null.asInstanceOf[STATE]
   }
 
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {

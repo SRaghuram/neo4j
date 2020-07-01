@@ -138,7 +138,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
         .applyBuffer(0)
         .delegateToMorselBuffer(2, 2)
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
-        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, rhsAsmId = 1, planId = 1)
+        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, lhsAsmId = 0, rhsAsmId = 1, planId = 1)
         .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true)
         .end
 
@@ -278,7 +278,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
       start(graph)
         .morselBuffer(4)
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
-        .rightOfJoinBuffer(lhsId = 5, rhsId = 6, sourceId = 7, argumentSlotOffset = 0, rhsAsmId = 1, planId = 1)
+        .rightOfJoinBuffer(lhsId = 5, rhsId = 6, sourceId = 7, argumentSlotOffset = 0, lhsAsmId = 0, rhsAsmId = 1, planId = 1)
         .pipeline(2, Seq(classOf[CartesianProduct], classOf[ProduceResult]), serial = true)
         .end
 

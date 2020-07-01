@@ -370,7 +370,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       new LhsJoinBufferSequence(lhsSink)
     }
 
-    def rightOfJoinBuffer(lhsId: Int, rhsId: Int, sourceId: Int, argumentSlotOffset: Int, rhsAsmId: Int, planId: Int): JoinBufferSequence = {
+    def rightOfJoinBuffer(lhsId: Int, rhsId: Int, sourceId: Int, argumentSlotOffset: Int, lhsAsmId: Int, rhsAsmId: Int, planId: Int): JoinBufferSequence = {
       val out = MorselArgumentStateBufferOutput(BufferId(rhsId), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       val lhsSink: BufferDefinition = buffers.getOrElse(lhsId, throw new IllegalStateException(s"LHS Sink '$lhsId' should have already been created"))
@@ -380,7 +380,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
-          variant = RHSStreamingBufferVariant(ArgumentStateMapId(rhsAsmId)),
+          variant = RHSStreamingBufferVariant(ArgumentStateMapId(rhsAsmId), ArgumentStateMapId(lhsAsmId)),
         )(SlotConfiguration.empty))
       val bd: BufferDefinition = buffers.getOrElseUpdate(sourceId,
                                        BufferDefinition(
