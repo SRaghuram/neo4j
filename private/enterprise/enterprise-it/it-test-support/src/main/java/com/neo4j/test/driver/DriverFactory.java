@@ -59,17 +59,17 @@ public class DriverFactory implements Closeable
 
     public Driver graphDatabaseDriver( URI uri ) throws IOException
     {
-        return GraphDatabase.driver( uri, createDefaultConfigBuilder().build() );
+        return addCloseable( GraphDatabase.driver( uri, createDefaultConfigBuilder().build() ) );
     }
 
     public Driver graphDatabaseDriver( String uri ) throws IOException
     {
-        return GraphDatabase.driver( uri, createDefaultConfigBuilder().build() );
+        return addCloseable( GraphDatabase.driver( uri, createDefaultConfigBuilder().build() ) );
     }
 
     public Driver graphDatabaseDriver( ServerAddressResolver resolver ) throws IOException
     {
-        return GraphDatabase.driver( "neo4j://ignore.com", createDefaultConfigBuilder().withResolver( resolver ).build() );
+        return addCloseable( GraphDatabase.driver( "neo4j://ignore.com", createDefaultConfigBuilder().withResolver( resolver ).build() ) );
     }
 
     @Override
@@ -79,8 +79,15 @@ public class DriverFactory implements Closeable
         closeableCollection.clear();
     }
 
+    private Driver addCloseable( Driver driver )
+    {
+        closeableCollection.add( driver );
+        return driver;
+    }
+
     private static final class TranslatedLogger implements Logger
     {
+
         private final Log log;
 
         private TranslatedLogger( Log log )
