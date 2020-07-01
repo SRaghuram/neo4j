@@ -126,6 +126,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProject
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.symbolsToSlots
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedNonGroupingAggTable
@@ -306,8 +307,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
           argumentSize = argumentSize)(id)
 
       case Optional(inner, symbols) =>
-        val nullableKeys = inner.availableSymbols -- symbols
-        val nullableSlots: Array[Slot] = nullableKeys.map(k => slots.get(k).get).toArray
+        val nullableSlots = symbolsToSlots(inner.availableSymbols -- symbols, slots)
         val argumentSize = physicalPlan.argumentSizes(plan.id)
         OptionalSlottedPipe(source, nullableSlots, slots, argumentSize)(id)
 
@@ -548,7 +548,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
 
-      case ConditionalApply(_, _, items) =>
+      case ConditionalApply(left, right, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
           case Some(_: LongSlot) => true
           case Some(_: RefSlot) => false
@@ -556,9 +556,10 @@ class SlottedPipeMapper(fallback: PipeMapper,
         })
         val longOffsets = longIds.map(e => slots.getLongOffsetFor(e))
         val refOffsets = refIds.map(e => slots.getReferenceOffsetFor(e))
-        ConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, negated = false, slots)(id)
+        val nullableSlots = symbolsToSlots(right.availableSymbols -- left.availableSymbols, slots)
+        ConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, negated = false, slots, nullableSlots)(id)
 
-      case AntiConditionalApply(_, _, items) =>
+      case AntiConditionalApply(left, right, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
           case Some(_: LongSlot) => true
           case Some(_: RefSlot) => false
@@ -566,7 +567,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
         })
         val longOffsets = longIds.map(e => slots.getLongOffsetFor(e))
         val refOffsets = refIds.map(e => slots.getReferenceOffsetFor(e))
-        ConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, negated = true, slots)(id)
+        val nullableSlots = symbolsToSlots(right.availableSymbols -- left.availableSymbols, slots)
+        ConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, negated = true, slots, nullableSlots)(id)
 
       case ForeachApply(_, _, variable, expression) =>
         val innerVariableSlot = slots.get(variable).getOrElse(throw new InternalException(s"Foreach variable '$variable' has no slot"))
@@ -969,4 +971,7 @@ object SlottedPipeMapper {
     val unorderedGroupingColumns = expressionConverters.toGroupingExpression(id, unorderedGroupingExpressions, orderToLeverage)
     (orderedGroupingColumns, unorderedGroupingColumns)
   }
+
+  def symbolsToSlots(symbols: Set[String], slotConfiguration: SlotConfiguration): Array[Slot] =
+    symbols.map(k => slotConfiguration.get(k).get).toArray
 }

@@ -5,12 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import java.util
-
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
@@ -25,9 +23,31 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
                                        longOffsets: Seq[Int],
                                        refOffsets: Seq[Int],
                                        negated: Boolean,
-                                       slots: SlotConfiguration)
+                                       slots: SlotConfiguration,
+                                       nullableSlots: Seq[Slot])
                                       (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(lhs) with Pipe {
+
+  //===========================================================================
+  // Compile-time initializations
+  //===========================================================================
+  private val setNullableSlotToNullFunctions =
+  nullableSlots.map ({
+    case LongSlot(offset, _, _) =>
+      (context: CypherRow) => context.setLongAt(offset, -1L)
+    case RefSlot(offset, _, _) =>
+      (context: CypherRow) => context.setRefAt(offset, Values.NO_VALUE)
+  })
+
+  //===========================================================================
+  // Runtime code
+  //===========================================================================
+  private def setNullableSlotsToNull(context: CypherRow): Unit = {
+    val functions = setNullableSlotToNullFunctions.iterator
+    while (functions.hasNext) {
+      functions.next()(context)
+    }
+  }
 
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] =
     input.flatMap {
@@ -39,15 +59,7 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
         }
         else {
           val output = SlottedRow(slots)
-          util.Arrays.fill(output.longs, -1L)
-
-          //NOTE: we should not include cached properties here since that will break cached property lookup
-          output.slots.foreachSlotAndAliasesOrdered {
-            case SlotWithKeyAndAliases(VariableSlotKey(_), RefSlot(offset, _, _), _) =>
-              output.setRefAt(offset, Values.NO_VALUE)
-            case _ => //Do nothing
-          }
-
+          setNullableSlotsToNull(output)
           output.copyAllFrom(lhsContext)
           Iterator.single(output)
         }
