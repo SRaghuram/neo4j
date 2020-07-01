@@ -195,7 +195,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
     }
   }
 
-  override def canPut: Boolean = true
+  override def canPut: Boolean = !lhsArgumentStateMap.hasCompleted
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
