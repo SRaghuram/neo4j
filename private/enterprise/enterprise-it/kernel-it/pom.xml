@@ -17,6 +17,7 @@
 
     <properties>
         <moduleName>com.neo4j.enterprise.kernel.it</moduleName>
+        <default.jupiter.test.mode>concurrent</default.jupiter.test.mode>
     </properties>
 
     <scm>
