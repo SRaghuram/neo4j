@@ -12,7 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.ReportCommand;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.tool.micro.RunExportParams;
+import com.neo4j.bench.common.tool.micro.RunReportParams;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
@@ -24,37 +24,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_BENCHMARK_CONFIG;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_BRANCH_OWNER;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_ERROR_POLICY;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_JMH_ARGS;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_JSON_PATH;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_JVM_ARGS;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_JVM_PATH;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_NEO4J_BRANCH;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_NEO4J_COMMIT;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_NEO4J_CONFIG;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_NEO4J_EDITION;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_NEO4J_VERSION;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_PARENT_TEAMCITY_BUILD;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_PROFILERS;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_PROFILES_DIR;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_STORES_DIR;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_TEAMCITY_BUILD;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_TOOL_BRANCH;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_TOOL_COMMIT;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_TOOL_OWNER;
-import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_TRIGGERED_BY;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_BENCHMARK_CONFIG;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_BRANCH_OWNER;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_ERROR_POLICY;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_JMH_ARGS;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_JVM_ARGS;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_JVM_PATH;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_BRANCH;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_COMMIT;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_CONFIG;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_EDITION;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_VERSION;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PARENT_TEAMCITY_BUILD;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PROFILERS;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PROFILES_DIR;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_STORES_DIR;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TEAMCITY_BUILD;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_BRANCH;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_COMMIT;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_OWNER;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TRIGGERED_BY;
 
-public abstract class BaseRunExportCommand implements Runnable
+public abstract class BaseRunReportCommand implements Runnable
 {
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_JSON_PATH},
-             description = "Path to where the JSON is to be generated",
-             title = "JSON Path" )
-    @Required
-    private File jsonPath;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_NEO4J_COMMIT},
@@ -190,7 +182,6 @@ public abstract class BaseRunExportCommand implements Runnable
     private String triggeredBy;
 
     public static List<String> argsFor(
-            Path jsonPath,
             String neo4jCommit,
             String neo4jVersion,
             Edition neo4jEdition,
@@ -218,8 +209,6 @@ public abstract class BaseRunExportCommand implements Runnable
     {
         ArrayList<String> commandArgs = Lists.newArrayList(
                 "run-export",
-                CMD_JSON_PATH,
-                jsonPath.toAbsolutePath().toString(),
                 CMD_NEO4J_COMMIT,
                 neo4jCommit,
                 CMD_NEO4J_VERSION,
@@ -262,7 +251,7 @@ public abstract class BaseRunExportCommand implements Runnable
                 resultStorePass,
                 ReportCommand.CMD_RESULTS_STORE_USER,
                 resultStoreUser,
-                RunExportCommand.CMD_S3_BUCKET,
+                RunReportCommand.CMD_S3_BUCKET,
                 s3Bucket,
                 ReportCommand.CMD_RESULTS_STORE_URI,
                 resultStoreUri
@@ -278,9 +267,8 @@ public abstract class BaseRunExportCommand implements Runnable
     @Override
     public void run()
     {
-        RunExportParams runExportParams =
-                new RunExportParams( jsonPath,
-                                     neo4jCommit,
+        RunReportParams runReportParams =
+                new RunReportParams( neo4jCommit,
                                      neo4jVersion,
                                      neo4jEdition,
                                      neo4jBranch,
@@ -301,8 +289,8 @@ public abstract class BaseRunExportCommand implements Runnable
                                      jvmFile,
                                      triggeredBy );
 
-        doRun( runExportParams );
+        doRun( runReportParams );
     }
 
-    protected abstract void doRun( RunExportParams runExportParams );
+    protected abstract void doRun( RunReportParams runReportParams );
 }

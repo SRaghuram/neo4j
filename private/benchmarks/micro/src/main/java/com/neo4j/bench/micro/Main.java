@@ -34,7 +34,7 @@ public class Main
                 .withDefaultCommand( Help.class )
                 .withCommands(
                         ListCommand.class,
-                        RunExportCommand.class,
+                        RunReportCommand.class,
                         ScheduleMicroCommand.class,
                         Help.class );
 

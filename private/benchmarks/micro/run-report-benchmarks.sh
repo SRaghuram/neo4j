@@ -37,7 +37,6 @@ profilers="${18}"
 triggered_by="${19}"
 work_dir="${20}"
 micro_benchmarks_dir=$(pwd)
-json_path=${micro_benchmarks_dir}/results.json
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
@@ -73,7 +72,6 @@ echo "JVM args: ${jvm_args}"
 echo "JMH args: ${jmh_args}"
 echo "FlameGraph dir: ${FLAMEGRAPH_DIR}"
 echo "JFR FlameGraph Dir: ${JFR_FLAMEGRAPH}"
-echo "JSON Path : ${json_path}"
 echo "Profiler Recordings dir: ${profiler_recording_output_dir}"
 echo "Profilers: ${profilers}"
 echo "Build triggered by : ${triggered_by}"
@@ -86,7 +84,6 @@ ${jvm_path} -jar "${jar_path}" run-export  \
         --jvm_args "${jvm_args}" \
         --jmh "${jmh_args}" \
         --neo4j_config "${neo4j_config_path}" \
-        --json_path "${json_path}" \
         --neo4j_commit "${neo4j_commit}" \
         --neo4j_version "${neo4j_version}" \
         --neo4j_branch "${neo4j_branch}" \

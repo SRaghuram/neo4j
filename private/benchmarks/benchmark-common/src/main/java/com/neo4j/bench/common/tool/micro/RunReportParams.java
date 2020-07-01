@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.common.tool.micro;
 
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.model.options.Edition;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -15,10 +15,8 @@ import java.nio.file.Paths;
 
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 
-public class RunExportParams
+public class RunReportParams
 {
-    public static final String CMD_JSON_PATH = "--json_path";
-    private File jsonPath;
 
     public static final String CMD_NEO4J_COMMIT = "--neo4j_commit";
     private String neo4jCommit;
@@ -80,8 +78,7 @@ public class RunExportParams
     public static final String CMD_TRIGGERED_BY = "--triggered-by";
     private String triggeredBy;
 
-    public RunExportParams( File jsonPath,
-                            String neo4jCommit,
+    public RunReportParams( String neo4jCommit,
                             String neo4jVersion,
                             Edition neo4jEdition,
                             String neo4jBranch,
@@ -102,7 +99,6 @@ public class RunExportParams
                             File jvmFile,
                             String triggeredBy )
     {
-        this.jsonPath = jsonPath;
         this.neo4jCommit = neo4jCommit;
         this.neo4jVersion = neo4jVersion;
         this.neo4jEdition = neo4jEdition;
@@ -123,11 +119,6 @@ public class RunExportParams
         this.errorPolicy = errorPolicy;
         this.jvmFile = jvmFile;
         this.triggeredBy = triggeredBy;
-    }
-
-    public File jsonPath()
-    {
-        return jsonPath;
     }
 
     public String neo4jCommit()

@@ -19,9 +19,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 import org.neo4j.test.extension.Inject;
@@ -35,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
-class RunExportCommandIT
+class RunReportCommandIT
 {
     @Inject
     private TestDirectory temporaryFolder;
@@ -62,34 +59,31 @@ class RunExportCommandIT
             Path profileOutputDirectory = temporaryFolder.directory( "output" ).toPath();
             Path storesDir = temporaryFolder.directory( "benchmark_stores" ).toPath();
 
-        List<String> commandArgs = RunExportCommand.argsFor(
-                jsonFile,
-                "abc123",
-                "2.2.10",
-                ENTERPRISE,
-                "master",
-                "Trinity",
-                neo4jConfigFile,
-                "2",
-                "Trinity",
-                "master",
-                1,
-                1,
-                "-Xms2g -Xmx2g",
-                benchmarkConfig.toPath(),
-                "-i 1 -wi 1 -r 1 -w 1 -f 1",
-                profileOutputDirectory,
-                storesDir,
-                ErrorReporter.ErrorPolicy.FAIL,
-                Jvm.defaultJvm(),
-                "Trinity",
-                Lists.newArrayList( ProfilerType.GC ),
-                "neo4j://localhost", "user", "pass",
-                "s3://benchmarking.neo.hq"
-        );
-
-        BenchmarkConfigurationException exception = assertThrows( BenchmarkConfigurationException.class, () ->
-                Main.main( commandArgs.toArray( new String[0] ) ) );
+            List<String> commandArgs = RunReportCommand.argsFor(
+                    "abc123",
+                    "2.2.10",
+                    ENTERPRISE,
+                    "master",
+                    "Trinity",
+                    neo4jConfigFile.toPath(),
+                    "2",
+                    "Trinity",
+                    "master",
+                    1,
+                    1,
+                    "-Xms2g -Xmx2g",
+                    benchmarkConfig.toPath(),
+                    "-i 1 -wi 1 -r 1 -w 1 -f 1",
+                    profileOutputDirectory,
+                    storesDir,
+                    ErrorReporter.ErrorPolicy.FAIL,
+                    Jvm.defaultJvm(),
+                    "Trinity",
+                    Lists.newArrayList( ProfilerType.GC ),
+                    "neo4j://localhost", "user", "pass",
+                    "s3://benchmarking.neo.hq"
+            );
+        } );
         assertEquals( "Validation Failed\n" +
                       "\tNo benchmarks were configured!", exception.getMessage() );
     }

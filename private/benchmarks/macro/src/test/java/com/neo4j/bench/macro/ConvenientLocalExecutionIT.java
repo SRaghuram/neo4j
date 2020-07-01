@@ -91,7 +91,6 @@ class ConvenientLocalExecutionIT
 
         Path profilerRecordingsDir = RESULT_DIR.resolve( "profiler_recordings-" + WORKLOAD_NAME );
         Files.createDirectories( profilerRecordingsDir );
-        Path resultsJson = RESULT_DIR.resolve( "results-summary.json" );
         Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
 
         RunMacroWorkloadParams workloadParams = new RunMacroWorkloadParams(

@@ -414,8 +414,6 @@ class EndToEndIT extends BaseEndToEndIT
                                                                  dbPath, // store
                                                                  neo4jConfig );
 
-        Path resultsPath = temporaryFolder.createFile( "results.json" ).toPath();
-
         Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( deployment );
 
         return asList( "./" + scriptName(),
@@ -439,8 +437,6 @@ class EndToEndIT extends BaseEndToEndIT
                        profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
                        // forks
                        Integer.toString( forks ),
-                       // results_path
-                       resultsPath.toString(),
                        // time_unit
                        MILLISECONDS.name(),
                        resultStoreCredentials.boltUri(),

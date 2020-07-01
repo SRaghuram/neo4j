@@ -104,7 +104,7 @@ class EndToEndIT extends BaseEndToEndIT
                        // jvm_args
                        "",
                        // jmh_args
-                       "",
+                       "-f 1 -wi 1 -i 1",
                        // neo4j_config_path
                        neo4jConfig.toString(),
                        // jvm_path

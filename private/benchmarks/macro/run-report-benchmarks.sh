@@ -12,9 +12,9 @@ if [[ -z "$JAVA_HOME" ]]; then
   exit 1
 fi
 
-if [ $# -lt 32 ]; then
+if [ $# -lt 31 ]; then
   echo "Expected at least 31 arguments, but got $#"
-  echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks results time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment queries"
+  echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment queries"
   exit 1
 fi
 
@@ -28,33 +28,32 @@ neo4j_config="${7}"
 work_dir="${8}"
 profilers="${9}"
 forks="${10}"
-results_path="${11}"
-time_unit="${12}"
-results_store_uri="${13}"
-results_store_user="${14}"
-results_store_password="${15}"
-neo4j_commit="${16}"
-neo4j_version="${17}"
-neo4j_branch="${18}"
-neo4j_branch_owner="${19}"
-tool_commit="${20}"
-tool_branch_owner="${21}"
-tool_branch="${22}"
-teamcity_build="${23}"
-parent_teamcity_build="${24}"
-execution_mode="${25}"
-jvm_args="${26}"
-recreate_schema="${27}"
-planner="${28}"
-runtime="${29}"
-triggered_by="${30}"
-error_policy="${31}"
-deployment="${32}"
-queries="${33}"
+time_unit="${11}"
+results_store_uri="${12}"
+results_store_user="${13}"
+results_store_password="${14}"
+neo4j_commit="${15}"
+neo4j_version="${16}"
+neo4j_branch="${17}"
+neo4j_branch_owner="${18}"
+tool_commit="${19}"
+tool_branch_owner="${20}"
+tool_branch="${21}"
+teamcity_build="${22}"
+parent_teamcity_build="${23}"
+execution_mode="${24}"
+jvm_args="${25}"
+recreate_schema="${26}"
+planner="${27}"
+runtime="${28}"
+triggered_by="${29}"
+error_policy="${30}"
+deployment="${31}"
+queries="${32}"
 
 # parse optional arguments
 all_args=("$@")
-optional_args=("${all_args[@]:33}")
+optional_args=("${all_args[@]:32}")
 aws_endpoint_url=
 batch_job_id=
 
@@ -103,7 +102,6 @@ echo "Comma separated list of profilers to run with                  : ${profile
 echo "Warmup execution count                                         : ${warmup_count}"
 echo "Measurement execution count                                    : ${measurement_count}"
 echo "Fork count                                                     : ${forks}"
-echo "Path to where the results file will be written                 : ${results_path}"
 echo "Time unit to report results in                                 : ${time_unit}"
 echo "Benchmark dir                                                  : ${macro_benchmark_dir}"
 echo "Results store uri                                              : ${results_store_uri}"
@@ -148,7 +146,6 @@ ${jvm} -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --outpu
   --work-dir "${work_dir}" \
   --profilers "${profilers}" \
   --forks "${forks}" \
-  --results "${results_path}" \
   --time-unit "${time_unit}" \
   --neo4j-commit "${neo4j_commit}" \
   --neo4j-version "${neo4j_version}" \

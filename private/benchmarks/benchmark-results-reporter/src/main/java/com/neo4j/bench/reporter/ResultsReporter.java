@@ -38,7 +38,6 @@ public class ResultsReporter
     private final URI resultsStoreUri;
     private final ErrorReportingPolicy errorReportingPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
     private final File workDir;
-    private final File resultsJson;
     private final String awsRegion = "eu-north-1";
     private final String awsEndpointURL;
 
@@ -50,7 +49,6 @@ public class ResultsReporter
                             String resultsStorePassword,
                             URI resultsStoreUri,
                             File workDir,
-                            File resultsJson,
                             String awsEndpointURL )
     {
         this.profilesDir = profilesDir;
@@ -61,7 +59,6 @@ public class ResultsReporter
         this.resultsStorePassword = resultsStorePassword;
         this.resultsStoreUri = resultsStoreUri;
         this.workDir = workDir;
-        this.resultsJson = resultsJson;
         this.awsEndpointURL = awsEndpointURL;
     }
 
@@ -69,8 +66,9 @@ public class ResultsReporter
     {
         try
         {
-            System.out.println( "Exporting results as JSON to: " + resultsJson.getAbsolutePath() );
-            JsonUtil.serializeJson( resultsJson.toPath().toAbsolutePath(), testRunReport );
+            Path testRunReportFile = workDir.toPath().resolve( "test-result.json" );
+            System.out.println( "Exporting results as JSON to: " + testRunReportFile.toAbsolutePath() );
+            JsonUtil.serializeJson( testRunReportFile, testRunReport );
 
             String testRunId = testRunReport.testRun().id();
             System.out.println( format( "reporting test run with id %s", testRunId ) );
@@ -83,16 +81,16 @@ public class ResultsReporter
                                         "testRunReportFile=%s\n" +
                                         "s3Bucket=%s\n" +
                                         "s3ArchivePath=%s\n" +
-                                        "ignoreUnrecognizedFiles=%s", testRunId, resultsJson, s3Bucket, s3ArchivePath, ignoreUnrecognizedFiles ) );
+                                        "ignoreUnrecognizedFiles=%s", testRunId, testRunReportFile, s3Bucket, s3ArchivePath, ignoreUnrecognizedFiles ) );
 
             List<String> args = AddProfilesCommand.argsFor( profilesDir.toPath(),
-                                                            resultsJson.toPath(),
+                                                            testRunReportFile,
                                                             s3Bucket,
                                                             s3ArchivePath,
                                                             ignoreUnrecognizedFiles );
             Main.main( args.toArray( new String[args.size()] ) );
 
-            TestRunReport testRunReportWithProfiles = JsonUtil.deserializeJson( resultsJson.toPath().toAbsolutePath(), TestRunReport.class );
+            TestRunReport testRunReportWithProfiles = JsonUtil.deserializeJson( testRunReportFile, TestRunReport.class );
 
             System.out.println( format( "creating .tar.gz archive '%s' of profiles directory '%s'", testRunArchive, profilesDir ) );
             TarGzArchive.compress( testRunArchive, profilesDir.toPath() );

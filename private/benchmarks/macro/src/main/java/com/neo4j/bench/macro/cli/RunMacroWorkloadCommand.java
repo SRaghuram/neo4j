@@ -62,7 +62,6 @@ import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PA
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_CONFIG;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_PROFILER_RECORDINGS_DIR;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_RESULTS_JSON;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WORK_DIR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -92,13 +91,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              title = "Work directory" )
     @Required
     protected File workDir;
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_JSON},
-             description = "Name of file where results will be written. Result file will be written into top level of the working directory",
-             title = "Results filename" )
-    @Required
-    private File resultsJson;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_PROFILER_RECORDINGS_DIR},
@@ -182,7 +174,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                                resultsStorePassword,
                                                                resultsStoreUri,
                                                                workDir,
-                                                               resultsJson,
                                                                awsEndpointURL );
 
         resultsReporter.report();

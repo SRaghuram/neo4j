@@ -17,6 +17,8 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import io.findify.s3mock.S3Mock;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
 import org.junit.jupiter.api.AfterEach;
@@ -238,7 +240,7 @@ public abstract class BaseEndToEndIT
             // start watching outputlog
             tailerExecutor.submit( tailer );
             int processExitCode = process.waitFor();
-            assertEquals( 0, processExitCode, scriptName + " finished with non-zero code\n" + Files.readString( outputLog.toPath() ) );
+            assertEquals( 0, processExitCode, scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog ) );
             assertStoreSchema( boltUri );
             assertRecordingFilesExist( s3Path, profilers, resources, recordingsAssertion, recordingDirsCount );
         }

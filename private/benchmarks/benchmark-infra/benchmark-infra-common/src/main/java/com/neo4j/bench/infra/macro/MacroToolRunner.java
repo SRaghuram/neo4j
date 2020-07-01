@@ -10,6 +10,7 @@ import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
@@ -17,7 +18,6 @@ import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Extractor;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +68,6 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
         Files.createDirectories( workDir );
 
         Path storeDir = macroDir.resolve( runToolMacroWorkloadParams.storeName() );
-        Path resultsJson = workDir.resolve( "results.json" );
 
         // Unzip the neo4jJar
         if ( SERVER.equals( runMacroWorkloadParams.deployment().deploymentModes() ) )
@@ -97,7 +96,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
         List<String> runReportCommands = new ArrayList<>();
         runReportCommands.add( "./run-report-benchmarks.sh" );
         runReportCommands.addAll(
-                createRunReportArgs( runMacroWorkloadParams, infraParams, workDir, storeDir, neo4jConfigFile, resultsJson, batchJobId, resultsStorePassword ) );
+                createRunReportArgs( runMacroWorkloadParams, infraParams, workDir, storeDir, neo4jConfigFile, batchJobId, resultsStorePassword ) );
 
         LOG.info( "starting run report benchmark process, {}", join( " ", runReportCommands ) );
         Process process = new ProcessBuilder( runReportCommands )
@@ -122,7 +121,6 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                                      Path workDir,
                                                      Path storeDir,
                                                      Path neo4jConfigFile,
-                                                     Path resultsJson,
                                                      String batchJobId,
                                                      String resultsStorePassword )
     {
@@ -136,7 +134,6 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                    workDir.toAbsolutePath().toString(),
                                    ParameterizedProfiler.serialize( runMacroWorkloadParams.profilers() ),
                                    Integer.toString( runMacroWorkloadParams.measurementForkCount() ),
-                                   resultsJson.toAbsolutePath().toString(),
                                    runMacroWorkloadParams.unit().name(),
                                    infraParams.resultsStoreUri().toString(),
                                    infraParams.resultsStoreUsername(),
