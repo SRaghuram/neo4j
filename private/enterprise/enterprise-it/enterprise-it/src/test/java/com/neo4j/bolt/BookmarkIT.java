@@ -16,6 +16,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -195,7 +196,8 @@ class BookmarkIT
             createDatabase( "baz" + i );
         }
 
-        assertEventually( future::isDone, equalityCondition( true ), 1, MINUTES );
+        // Check that "CREATE DATABASE foo" has executed successfully
+        assertEventually( future::get, equalityCondition( true ), 1, MINUTES );
 
         var databaseNames = managementService.listDatabases();
         assertThat( databaseNames ).contains( "foo" );
@@ -279,7 +281,7 @@ class BookmarkIT
         createDatabase( databaseName, null );
     }
 
-    private void createDatabase( String databaseName, Bookmark systemDatabaseBookmark )
+    private boolean createDatabase( String databaseName, Bookmark systemDatabaseBookmark )
     {
         var sessionConfig = SessionConfig.builder()
                 .withDatabase( SYSTEM_DATABASE_NAME )
@@ -290,6 +292,7 @@ class BookmarkIT
         {
             session.run( "CREATE DATABASE " + databaseName ).consume();
         }
+        return true;
     }
 
     private Bookmark showDatabases( Bookmark systemDatabaseBookmark )
@@ -326,6 +329,7 @@ class BookmarkIT
                 .set( OnlineBackupSettings.online_backup_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( GraphDatabaseSettings.neo4j_home, directory.homePath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.bookmark_ready_timeout, Duration.ofMinutes( 5 ) )
                 .set( GraphDatabaseSettings.preallocate_logical_logs, false )
                 .build();
     }
