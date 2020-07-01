@@ -163,7 +163,8 @@ class Buffers(numBuffers: Int,
         case x: LHSAccumulatingBufferVariant =>
           new LHSAccumulatingSink(x.argumentStateMapId,
                                   reducers,
-                                  argumentStateMaps)
+                                  argumentStateMaps,
+                                  x.rhsArgumentStateMapId)
         case x: RHSStreamingBufferVariant =>
           new RHSStreamingSink(x.argumentStateMapId,
                                reducers,

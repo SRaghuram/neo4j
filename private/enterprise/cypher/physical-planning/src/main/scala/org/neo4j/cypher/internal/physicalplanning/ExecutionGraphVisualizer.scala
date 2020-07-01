@@ -81,7 +81,7 @@ object ExecutionGraphVisualizer {
         case ApplyBufferVariant(argumentSlotOffset, _, _, _) =>
           val labels = if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) Seq("Start", "Buffer") else Seq("Buffer")
           bufs(id) = new VirtualNodeHack(Map("name" -> s"ApplyBuffer[$id]", "id" -> (id: Integer), "argumentSlotOffset" -> (argumentSlotOffset: Integer)), labels: _*)
-        case LHSAccumulatingBufferVariant(_) =>
+        case _: LHSAccumulatingBufferVariant =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"LHSAccBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
         case _: RHSStreamingBufferVariant =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"RHSStrBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
@@ -127,8 +127,8 @@ object ExecutionGraphVisualizer {
         case LHSAccumulatingRHSStreamingBufferVariant(lhsSink, rhsSink, _, _) =>
           rels += new VirtualRelationshipHack(bufs(lhsSink.id.x), bufs(id), Map.empty, "DELEGATES_TO")
           rels += new VirtualRelationshipHack(bufs(rhsSink.id.x), bufs(id), Map.empty, "DELEGATES_TO")
-        case LHSAccumulatingBufferVariant(ArgumentStateMapId(asmId)) =>
-          rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
+        case buf: LHSAccumulatingBufferVariant =>
+          rels += new VirtualRelationshipHack(bufs(id), asms(buf.argumentStateMapId.x), Map.empty, "USES_ASM")
         case buf: RHSStreamingBufferVariant =>
           rels += new VirtualRelationshipHack(bufs(id), asms(buf.argumentStateMapId.x), Map.empty, "USES_ASM")
         case ArgumentStateBufferVariant(ArgumentStateMapId(asmId)) =>

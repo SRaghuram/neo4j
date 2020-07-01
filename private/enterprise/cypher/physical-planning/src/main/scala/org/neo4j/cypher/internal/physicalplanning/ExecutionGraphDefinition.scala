@@ -138,7 +138,7 @@ case class ArgumentStateBufferVariant(argumentStateMapId: ArgumentStateMapId) ex
 /**
  * This buffer maps to a LHSAccumulatingSink. It sits after a hash join build.
  */
-case class LHSAccumulatingBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
+case class LHSAccumulatingBufferVariant(argumentStateMapId: ArgumentStateMapId, rhsArgumentStateMapId: ArgumentStateMapId) extends BufferVariant
 /**
  * This buffer maps to a RHSStreamingSink. It sits after a hash join 'pre-probe' (buffering data for later probe).
  */

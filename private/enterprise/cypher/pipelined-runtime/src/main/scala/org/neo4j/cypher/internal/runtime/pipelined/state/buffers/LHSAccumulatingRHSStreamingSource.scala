@@ -171,12 +171,14 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
 // will ever be produced from the LHS
 class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](val argumentStateMapId: ArgumentStateMapId,
                                                                               downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
-                                                                              override val argumentStateMaps: ArgumentStateMaps)
+                                                                              override val argumentStateMaps: ArgumentStateMaps,
+                                                                              rhsArgumentStateMapId: ArgumentStateMapId)
   extends ArgumentCountUpdater
   with Sink[IndexedSeq[PerArgument[DATA]]]
   with AccumulatingBuffer {
 
   private val argumentStateMap = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
+  private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
@@ -208,7 +210,14 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
   }
 
   override def decrement(argumentRowId: Long): Unit = {
-    argumentStateMap.decrement(argumentRowId)
+    if (argumentStateMap.decrement(argumentRowId) != null && rhsArgumentStateMap.hasCompleted(argumentRowId)) {
+      val rhsBuf = rhsArgumentStateMap.peek(argumentRowId)
+
+      // If there is no data in RHS buffer, no more tasks would be created for this argumentRowId and
+      // it won't be removed by LHSAccumulatingRHSStreamingSource, so we have to remove the RHS buffer
+      // and its corresponding LHS accumulator here to not leave any dangling state.
+      removeArgumentStatesIfRhsBufferIsEmpty(argumentStateMap, rhsArgumentStateMap, rhsBuf, argumentRowId)
+    }
   }
 }
 
@@ -266,10 +275,12 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
   override def decrement(argumentRowId: Long): Unit = {
     val maybeBuffer = argumentStateMap.decrement(argumentRowId)
     if (maybeBuffer != null) {
-      // If there is no data in the buffer, no more tasks would be created for this argumentRowId and
-      // it won't be removed by LHSAccumulatingRHSStreamingSource, so we have to remove the current buffer
-      // and its corresponding LHS accumulator here to not leave any dangling state.
-      removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, argumentStateMap, maybeBuffer, argumentRowId)
+      if (lhsArgumentStateMap.hasCompleted(argumentRowId)) {
+        // If there is no data in the buffer, no more tasks would be created for this argumentRowId and
+        // it won't be removed by LHSAccumulatingRHSStreamingSource, so we have to remove the current buffer
+        // and its corresponding LHS accumulator here to not leave any dangling state.
+        removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, argumentStateMap, maybeBuffer, argumentRowId)
+      }
 
       // Decrement for an ArgumentID in RHS's accumulator
       val argumentRowIdsForReducers = maybeBuffer.argumentRowIdsForReducers

@@ -197,7 +197,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
     private val variant = bufferDefinition.variant.asInstanceOf[AttachBufferVariant]
 
-    def lhsJoinSinkForAttach(lhsSinkId: Int, lhsAsmId: Int, planId: Int): AttachBufferSequence = {
+    def lhsJoinSinkForAttach(lhsSinkId: Int, lhsAsmId: Int, planId: Int, rhsAsmId: Int): AttachBufferSequence = {
       /*
       Create LHS sink of join buffer, but do not set as output.
       Attach buffer only needs the ASM of LHS Sink.
@@ -208,7 +208,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
-          variant = LHSAccumulatingBufferVariant(ArgumentStateMapId(lhsAsmId)),
+          variant = LHSAccumulatingBufferVariant(ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId)),
         )(SlotConfiguration.empty))
       this
     }
@@ -356,7 +356,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       apply
     }
 
-    def leftOfJoinBuffer(id: Int, argumentSlotOffset: Int, asmId: Int, planId: Int): LhsJoinBufferSequence = {
+    def leftOfJoinBuffer(id: Int, argumentSlotOffset: Int, asmId: Int, planId: Int, rhsAsmId: Int): LhsJoinBufferSequence = {
       val out = MorselArgumentStateBufferOutput(BufferId(id), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       val lhsSink: BufferDefinition = buffers.getOrElseUpdate(id,
@@ -365,7 +365,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
-          variant = LHSAccumulatingBufferVariant(ArgumentStateMapId(asmId)),
+          variant = LHSAccumulatingBufferVariant(ArgumentStateMapId(asmId), ArgumentStateMapId(rhsAsmId)),
         )(SlotConfiguration.empty))
       new LhsJoinBufferSequence(lhsSink)
     }

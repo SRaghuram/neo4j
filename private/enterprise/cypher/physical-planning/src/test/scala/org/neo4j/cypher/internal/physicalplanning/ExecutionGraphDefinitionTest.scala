@@ -132,7 +132,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
         .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
         .delegateToMorselBuffer(1, 3)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .leftOfJoinBuffer(id = 3, TopLevelArgument.SLOT_OFFSET, asmId = 0, planId = 1)
+        .leftOfJoinBuffer(id = 3, TopLevelArgument.SLOT_OFFSET, asmId = 0, planId = 1, rhsAsmId = 1)
 
       start(graph)
         .applyBuffer(0)
@@ -271,7 +271,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
         .delegateToMorselBuffer(1, 3)
         .pipeline(0, Seq(classOf[AllNodesScan]))
         .attachBuffer(2, planId = 1, slots = SlotConfiguration.empty.newArgument(Id(1)).newLong("m", nullable = false, CTNode))
-        .lhsJoinSinkForAttach(lhsSinkId = 5, lhsAsmId = 0, planId = 1) // returns attach buffer
+        .lhsJoinSinkForAttach(lhsSinkId = 5, lhsAsmId = 0, planId = 1, rhsAsmId = 1) // returns attach buffer
         .delegateToApplyBuffer(3, 0, 1)
         .delegateToMorselBuffer(4, 2)
 
