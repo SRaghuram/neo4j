@@ -8,17 +8,35 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.PathImpl
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Path
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.internal.helpers.collection.Iterators.single
 
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
+
+  test("should not allow adding node and number") {
+    createNode()
+    failWithError(Configs.All,
+      "PROFILE MATCH (n) RETURN n + $x as res",
+      Seq("Type mismatch for parameter 'x': expected List<T> but was Integer"),
+      Seq("SyntaxException"),
+      Map("x" -> 5)
+    )
+  }
+
+  test("should handle pattern matching with parameters") {
+    val x = createNode()
+
+    val result = executeWith(Configs.All, "MATCH (x) WHERE x = $startNode RETURN x", params = Map("startNode" -> x))
+
+    result.toList should equal(List(Map("x" -> x)))
+  }
 
   test("Optional Match over or-union-index query should retain incoming arguments") {
     graph.createIndex("Person", "name")
@@ -432,7 +450,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should not fail if asking for a non existent node id with WHERE") {
-    executeWith(Configs.All - Configs.Compiled, "match (n) where id(n) in [0,1] return n")
+    executeWith(Configs.All, "match (n) where id(n) in [0,1] return n")
       .toList
     // should not throw an exception
   }
@@ -735,7 +753,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     1.to(1000).foreach(_ => createNode())
 
     // when
-    val result = executeWith(Configs.NodeById - Configs.Compiled, s"profile WITH [$a,$b,$d] AS arr MATCH (n) WHERE id(n) IN arr return count(*)")
+    val result = executeWith(Configs.NodeById, s"profile WITH [$a,$b,$d] AS arr MATCH (n) WHERE id(n) IN arr return count(*)")
 
     // then
     result.toList should equal(List(Map("count(*)" -> 3)))
@@ -1046,8 +1064,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |WHERE realm.id = permission.realmId
         |RETURN realm""".stripMargin
 
-    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined +
-      TestConfiguration("runtime=legacy_compiled debug=generate_java_source"), q)
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, q)
     res.toList should equal(List(Map("realm" -> realm)))
   }
 

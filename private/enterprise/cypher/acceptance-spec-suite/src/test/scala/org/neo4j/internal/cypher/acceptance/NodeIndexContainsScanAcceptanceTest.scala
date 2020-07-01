@@ -135,7 +135,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS $param RETURN l"
 
-    failWithError(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled,
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
       query, message = List("Type mismatch for parameter 'param': expected String but was Integer",
         "Expected a string value, but got 42", "Expected a string value, but got Int(42)", "Expected two strings, but got London and 42"),
       params = Map("param" -> 42))

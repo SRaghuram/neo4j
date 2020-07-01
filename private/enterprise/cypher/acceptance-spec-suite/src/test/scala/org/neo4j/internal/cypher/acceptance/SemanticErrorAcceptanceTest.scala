@@ -8,8 +8,8 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.CompiledRuntimeName
 import org.neo4j.cypher.internal.InterpretedRuntimeName
+import org.neo4j.cypher.internal.PipelinedRuntimeName
 import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
@@ -712,7 +712,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   private def executeAndEnsureErrorForAllRuntimes(query: String, expected: Seq[String], params: (String,Any)*): Unit = {
-    val runtimes = List(CompiledRuntimeName.name, SlottedRuntimeName.name, InterpretedRuntimeName.name) // Non-experimental runtimes that support arithmetics
+    val runtimes = List(PipelinedRuntimeName.name, SlottedRuntimeName.name, InterpretedRuntimeName.name) // Non-experimental runtimes that support arithmetics
     runtimes.foreach( r => executeAndEnsureError(s"CYPHER runtime=$r $query", expected, params: _*) )
   }
 

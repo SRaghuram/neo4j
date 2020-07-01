@@ -10,16 +10,12 @@ case class Runtimes(runtimes: Runtime*)
 object Runtimes {
   implicit def runtimeToRuntimes(runtime: Runtime): Runtimes = Runtimes(runtime)
 
-  val all = Runtimes(CompiledBytecode, CompiledSource, SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions, Interpreted, Parallel, PipelinedFused, PipelinedNonFused)
+  val all: Runtimes = Runtimes(SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions, Interpreted, Parallel, PipelinedFused, PipelinedNonFused)
 
   def definedBy(preParserArgs: Array[String]): Runtimes = {
     val runtimes = all.runtimes.filter(_.isDefinedBy(preParserArgs))
     if (runtimes.nonEmpty) Runtimes(runtimes: _*) else all
   }
-
-  object CompiledSource extends Runtime(Set("LEGACY_COMPILED", "SCHEMA"), "runtime=legacy_compiled debug=generate_java_source")
-
-  object CompiledBytecode extends Runtime(Set("LEGACY_COMPILED", "SCHEMA"), "runtime=legacy_compiled")
 
   object SlottedWithInterpretedExpressions extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted expressionEngine=interpreted")
 

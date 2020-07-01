@@ -44,12 +44,6 @@ public class EnterpriseSanityCheckTest
     }
 
     @Test
-    public void shouldUseCompiled() throws Exception
-    {
-        shouldUseRuntime( Optional.of( "legacy_compiled" ), "legacy_compiled" );
-    }
-
-    @Test
     public void shouldUsePipelined() throws Exception
     {
         shouldUseRuntime( Optional.of( "pipelined" ), "pipelined" );

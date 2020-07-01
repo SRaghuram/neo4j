@@ -49,7 +49,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     given()
 
     // When
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")

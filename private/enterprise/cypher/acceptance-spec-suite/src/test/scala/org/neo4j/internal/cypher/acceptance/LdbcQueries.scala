@@ -980,7 +980,7 @@ object LdbcQueries {
       Map("personId" -> 3, "commentContent" -> "C01", "commentId" -> 10, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"),
       Map("personId" -> 3, "commentContent" -> "C11", "commentId" -> 11, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 

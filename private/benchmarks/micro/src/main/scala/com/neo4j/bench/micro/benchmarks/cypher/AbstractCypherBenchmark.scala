@@ -39,13 +39,12 @@ import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Solveds
 import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.NormalMode
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.ResourceManager
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.Cardinality
 import org.neo4j.cypher.internal.util.LabelId
 import org.neo4j.cypher.internal.util.RelTypeId
@@ -200,9 +199,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       cypherRuntime match {
         case Interpreted => CypherRuntimeOption.interpreted
         case Slotted => CypherRuntimeOption.slotted
-        case CompiledByteCode => CypherRuntimeOption.compiled
-        case CompiledSourceCode => CypherRuntimeOption.compiled
-        //TODO rename Morsel here as well, but not now since that could disrupt release
         case Pipelined => CypherRuntimeOption.pipelined
         case Parallel => CypherRuntimeOption.parallel
         case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntime")
@@ -239,7 +235,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          workerManager           : WorkerManagement,
                          materializedEntitiesMode: Boolean = false): EnterpriseRuntimeContext =
     ContextHelper.create(
-      codeStructure = GeneratedQueryStructure,
       planContext = planContext,
       debugOptions = cypherRuntime.debugOptions,
       useCompiledExpressions = useCompiledExpressions,

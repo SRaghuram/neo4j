@@ -62,8 +62,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.
         aPlan("Projection")
         .containingArgumentForProjection(Map("`m.prop`" -> "cache[m.prop]", "`x.prop`" -> "cache[x.prop]"))
-        .withDBHits(0),
-        expectPlansToFail = Configs.Compiled // compiled does not cache properties and will therefore have DB hits
+        .withDBHits(0)
       )
     )
 

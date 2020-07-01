@@ -65,7 +65,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -88,7 +88,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     createLabeledNode("Place")
     executeSingle("MATCH (p:Place) SET p.location = [point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})] RETURN p.location as point")
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -114,7 +114,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         | point({y: 56.7, x: 13.78, crs: 'WGS-84'})]
         |RETURN p.location as point""".stripMargin)
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -146,7 +146,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         | point({y: 56.7, x: 13.78, crs: 'WGS-84'})]
         |RETURN p.location as point""".stripMargin)
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -646,7 +646,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.CartesianProduct - Configs.Compiled,
+        Configs.CartesianProduct,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s"p:$LABEL($PROPERTY) WHERE $PROPERTY > min AND $PROPERTY < max"))

@@ -170,7 +170,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     }
 
     Seq(
-      (Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled, "MATCH (z:TestNode) RETURN DISTINCT {Id:z.Id, note:z.note} AS x"),
+      (Configs.InterpretedAndSlottedAndPipelined, "MATCH (z:TestNode) RETURN DISTINCT {Id:z.Id, note:z.note} AS x"),
       (Configs.InterpretedAndSlottedAndPipelined, "MATCH (z:TestNode) RETURN DISTINCT z{.Id, .note} AS x")).foreach {
       case (configs: TestConfiguration, query: String) =>
         val result = executeWith(configs, query)

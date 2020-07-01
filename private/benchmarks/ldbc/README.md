@@ -48,7 +48,7 @@ Run Example (SF100 / read-only / Core API)
                         [--planner <Cypher Planner>] [--read-threads <Read thread count>]
                         [--reads <Read Parameters>] [--results <Results directory>]
                         [--run-count <Run operation count>]
-                        [--runtime <Cypher Runtime: DEFAULT, INTERPRETED, LEGACY_COMPILED>]
+                        [--runtime <Cypher Runtime: DEFAULT, INTERPRETED, SLOTTED>]
                         [--wait-for-file <Wait on file>]
                         [--warmup-count <Warmup operation count>] [--writes <Write Parameters>]
         
@@ -85,7 +85,7 @@ Run Example (SF100 / read-only / Core API)
                 --run-count <Run operation count>
                     Number of operations to run during measurement phase
         
-                --runtime <Cypher Runtime: DEFAULT, INTERPRETED, LEGACY_COMPILED>
+                --runtime <Cypher Runtime: DEFAULT, INTERPRETED, SLOTTED>
                     Cypher Runtime
         
                 --wait-for-file <Wait on file>

@@ -38,75 +38,103 @@ class ExecutionResultTest
     private GraphDatabaseService db;
 
     @Test
-    void shouldBePossibleToConsumeCompiledExecutionResultsWithIterator()
+    void shouldBePossibleToConsumeExecutionResultsWithIterator()
     {
         // Given
         createNode();
         createNode();
 
-        try ( Transaction transaction = db.beginTx() )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED" ) )
         {
-            // When
-            List<Map<String,Object>> listResult;
-            try ( Result result = transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ) )
+            try ( Transaction transaction = db.beginTx() )
             {
-                listResult = Iterators.asList( result );
-            }
-
-            // Then
-            assertThat( listResult, hasSize( 2 ) );
-            transaction.commit();
-        }
-    }
-
-    @Test
-    void shouldBePossibleToCloseNotFullyConsumedCompiledExecutionResults()
-    {
-        // Given
-        createNode();
-        createNode();
-
-        try ( Transaction transaction = db.beginTx() )
-        {
-            // When
-            Map<String,Object> firstRow = null;
-            try ( Result result = transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ) )
-            {
-                if ( result.hasNext() )
+                // When
+                List<Map<String,Object>> listResult;
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
                 {
-                    firstRow = result.next();
+                    listResult = Iterators.asList( result );
                 }
-            }
 
-            // Then
-            assertThat( firstRow, notNullValue() );
-            transaction.commit();
+                // Then
+                assertThat( listResult, hasSize( 2 ) );
+                transaction.commit();
+            }
         }
     }
 
     @Test
-    void shouldBePossibleToConsumeCompiledExecutionResultsWithVisitor()
+    void shouldBePossibleToCloseNotFullyConsumedExecutionResults()
+    {
+        // Given
+        createNode();
+        createNode();
+
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED" ) )
+        {
+            try ( Transaction transaction = db.beginTx() )
+            {
+                // When
+                Map<String,Object> firstRow = null;
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
+                {
+                    if ( result.hasNext() )
+                    {
+                        firstRow = result.next();
+                    }
+                }
+
+                // Then
+                assertThat( firstRow, notNullValue() );
+                transaction.commit();
+            }
+        }
+    }
+
+    @Test
+    void shouldBePossibleToConsumeExecutionResultsWithVisitor()
     {
         // Given
         createNode();
         createNode();
 
         // When
-        try ( Transaction transaction = db.beginTx() )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED" ) )
         {
-            final List<Result.ResultRow> listResult = new ArrayList<>();
-            try ( Result result = transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ) )
+            try ( Transaction transaction = db.beginTx() )
             {
-                result.accept( row ->
+                // When
+                final List<Result.ResultRow> listResult = new ArrayList<>();
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
                 {
-                    listResult.add( row );
-                    return true;
-                } );
-            }
+                    result.accept( row ->
+                                   {
+                                       listResult.add( row );
+                                       return true;
+                                   } );
+                }
 
-            // Then
-            assertThat( listResult, hasSize( 2 ) );
-            transaction.commit();
+                // Then
+                assertThat( listResult, hasSize( 2 ) );
+                transaction.commit();
+            }
+        }
+    }
+
+    @Test
+    void shouldBePossibleToCloseNotConsumedExecutionResult()
+    {
+        // Given
+        createNode();
+
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED" ) )
+        {
+            try ( Transaction transaction = db.beginTx() )
+            {
+                // When
+                transaction.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ).close();
+                // just close result without consuming it
+                transaction.commit();
+            }
         }
     }
 
@@ -118,7 +146,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED" ) )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -180,7 +208,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED" ) )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -206,7 +234,7 @@ class ExecutionResultTest
     void shouldNotBePossibleToGetProfileOfNonExhaustedResult()
     {
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED", "PARALLEL" ) )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED", "PARALLEL" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -228,7 +256,7 @@ class ExecutionResultTest
     void shouldNotBePossibleToGetProfileOfCancelledResult()
     {
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED", "PARALLEL" ) )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED", "PARALLEL" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -244,21 +272,6 @@ class ExecutionResultTest
                     assertThat( e.getMessage(), equalTo( "This result has not been materialised yet. Iterate over it to get profiler stats." ) );
                 }
             }
-        }
-    }
-
-    @Test
-    void shouldBePossibleToCloseNotConsumedCompiledExecutionResult()
-    {
-        // Given
-        createNode();
-
-        try ( Transaction transaction = db.beginTx() )
-        {
-            // Then
-            // just close result without consuming it
-            transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ).close();
-            transaction.commit();
         }
     }
 
@@ -327,27 +340,6 @@ class ExecutionResultTest
             assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
             assertThat( arguments.get( "runtime" ), notNullValue() );
             assertThat( arguments.get( "runtime-impl" ), notNullValue() );
-            transaction.commit();
-        }
-    }
-
-    @Test
-    void shouldShowCompiledRuntimeInExecutionPlan()
-    {
-        try ( Transaction transaction = db.beginTx() )
-        {
-            // Given
-            Result result = transaction.execute( "EXPLAIN CYPHER runtime=legacy_compiled MATCH (n) RETURN n.prop" );
-
-            // When
-            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
-
-            // Then
-            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-            assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
-            assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "LEGACY_COMPILED" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "LEGACY_COMPILED" ) );
             transaction.commit();
         }
     }

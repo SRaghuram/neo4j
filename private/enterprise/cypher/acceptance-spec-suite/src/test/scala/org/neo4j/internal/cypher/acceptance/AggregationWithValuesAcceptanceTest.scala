@@ -72,7 +72,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // Combination of aggregation and grouping expression does not implicitly give exist
     test(s"$i-$func: cannot use index provided values with grouping expression without exists") {
       val config =
-        if (supportsCompiled && supportsPipelined) Configs.CachedProperty + Configs.Compiled
+        if (supportsCompiled && supportsPipelined) Configs.CachedProperty
         else if (supportsCompiled) Configs.All - Configs.Pipelined
         else if (supportsPipelined) Configs.CachedProperty
         else Configs.InterpretedAndSlotted
@@ -292,7 +292,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop2")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN count(m.prop2) AS count"
-    val result = executeWith(Configs.CartesianProduct - Configs.Compiled, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.CartesianProduct, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -310,7 +310,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     createLabeledNode(Map("prop1" -> 2), "Label")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN min(n.prop1) AS min, count(m.prop1) AS count"
-    val result = executeWith(Configs.CartesianProduct - Configs.Compiled, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.CartesianProduct, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -329,7 +329,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop1")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN min(n.prop1) AS min, count(m.prop1) AS count"
-    val result = executeWith(Configs.CartesianProduct - Configs.Compiled, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.CartesianProduct, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")

@@ -47,9 +47,6 @@ public class AnnotatedQuery
         case INTERPRETED:
             cypherTypePrefix += "runtime=interpreted ";
             break;
-        case LEGACY_COMPILED:
-            cypherTypePrefix += "runtime=legacy_compiled ";
-            break;
         case SLOTTED:
             cypherTypePrefix += "runtime=slotted ";
             break;

@@ -68,7 +68,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should use partial sort after full sort") {
     val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialSort")
       .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")).fromLeft)
@@ -104,7 +104,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should use partial top after full sort") {
     val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC LIMIT 3"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialTop")
       .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")).fromLeft)
@@ -119,7 +119,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should use partial top1 after full sort") {
     val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC LIMIT 1"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialTop")
       .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")).fromLeft)
@@ -147,7 +147,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY previously unprojected column in WITH and return that column") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "MATCH (a:A) WITH a ORDER BY a.age RETURN a.name, a.age")
+    val result = executeWith(Configs.CachedProperty, "MATCH (a:A) WITH a ORDER BY a.age RETURN a.name, a.age")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
@@ -288,7 +288,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY renamed column expression with new name in WITH and project and return that column") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       """
       MATCH (a:A)
       WITH a AS b, a.age AS age

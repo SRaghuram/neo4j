@@ -250,19 +250,6 @@ class TransactionBookmarkManagerEndToEndTest
                             }
 
                             @Override
-                            public boolean isVisitable()
-                            {
-                                return false;
-                            }
-
-                            @Override
-                            public <VisitationException extends Exception> QueryStatistics accept( Result.ResultVisitor<VisitationException> visitor )
-                                    throws VisitationException
-                            {
-                                return null;
-                            }
-
-                            @Override
                             public void request( long numberOfRecords )
                             {
 

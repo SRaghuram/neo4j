@@ -45,7 +45,7 @@ import scala.collection.mutable
 @BenchmarkEnabled(true)
 class TopWithHighLimit extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
     base = Array(Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _

@@ -5,9 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Boolean.FALSE
-import java.lang.Boolean.TRUE
-
 import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -17,7 +14,6 @@ import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_42
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.kernel.api.exceptions.Status
 
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
@@ -80,13 +76,6 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
     }
   }
 
-  test("should handle profile in compiled runtime") {
-    runWithConfig() {
-      db =>
-        assertProfiled(db, "CYPHER runtime=legacy_compiled PROFILE MATCH (n) RETURN n")
-    }
-  }
-
   test("should handle profile in interpreted runtime") {
     runWithConfig() {
       db =>
@@ -109,53 +98,10 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
     runWithConfig() {
       db =>
         assertVersionAndRuntime(db, "3.5", "slotted")
-        assertVersionAndRuntime(db, "3.5", "legacy_compiled")
         assertVersionAndRuntime(db, "4.1", "slotted")
-        assertVersionAndRuntime(db, "4.1", "legacy_compiled")
+        assertVersionAndRuntime(db, "4.1", "pipelined")
         assertVersionAndRuntime(db, "4.2", "slotted")
-        assertVersionAndRuntime(db, "4.2", "legacy_compiled")
-    }
-  }
-
-  test("should not fail if asked to execute query with runtime=legacy_compiled on simple query") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
-      db =>
-        db.withTx(tx => {
-          tx.execute("MATCH (n:Movie) RETURN n").close()
-          tx.execute("CYPHER runtime=legacy_compiled MATCH (n:Movie) RETURN n").close()
-          shouldHaveNoWarnings(tx.execute("EXPLAIN CYPHER runtime=legacy_compiled MATCH (n:Movie) RETURN n"))
-        })
-    }
-  }
-
-  test("should fail if asked to execute query with runtime=legacy_compiled instead of falling back to interpreted if hint errors turned on") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
-      db =>
-        db.withTx(tx => {
-          intercept[QueryExecutionException](
-            tx.execute(s"EXPLAIN CYPHER runtime=legacy_compiled $QUERY_NOT_COMPILED")
-          ).getStatusCode should equal("Neo.ClientError.Statement.RuntimeUnsupportedError")
-        })
-    }
-  }
-
-  test("should not fail if asked to execute query with runtime=legacy_compiled and instead fallback to interpreted and return a warning if hint errors turned off") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> FALSE) {
-      db =>
-        db.withTx(tx => {
-          val result = tx.execute(s"EXPLAIN CYPHER runtime=legacy_compiled $QUERY_NOT_COMPILED")
-          shouldHaveWarning(result, Status.Statement.RuntimeUnsupportedWarning)
-        })
-    }
-  }
-
-  test("should not fail if asked to execute query with runtime=legacy_compiled and instead fallback to interpreted and return a warning by default") {
-    runWithConfig() {
-      db =>
-        db.withTx(tx => {
-          val result = tx.execute(s"EXPLAIN CYPHER runtime=legacy_compiled $QUERY_NOT_COMPILED")
-          shouldHaveWarning(result, Status.Statement.RuntimeUnsupportedWarning)
-        })
+        assertVersionAndRuntime(db, "4.2", "pipelined")
     }
   }
 

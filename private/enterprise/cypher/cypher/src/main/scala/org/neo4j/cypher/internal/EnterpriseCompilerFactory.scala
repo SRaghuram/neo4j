@@ -18,15 +18,11 @@ import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.phases.Compatibility3_5
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_1
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_2
-import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.planning.CypherPlanner
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
@@ -92,7 +88,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
     CypherCurrentCompiler(
       planner,
       runtime,
-      EnterpriseRuntimeContextManager(GeneratedQueryStructure, log, runtimeConfig, runtimeEnvironment),
+      EnterpriseRuntimeContextManager(log, runtimeConfig, runtimeEnvironment),
       spi.monitors())
   }
 }
@@ -103,7 +99,6 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
  */
 case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     schemaRead: SchemaRead,
-                                    codeStructure: CodeStructure[GeneratedQuery],
                                     log: Log,
                                     clock: Clock,
                                     debugOptions: Set[String],
@@ -118,8 +113,7 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
 /**
  * Manager of EnterpriseRuntimeContexts.
  */
-case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[GeneratedQuery],
-                                           log: Log,
+case class EnterpriseRuntimeContextManager(log: Log,
                                            config: CypherRuntimeConfiguration,
                                            runtimeEnvironment: RuntimeEnvironment)
   extends RuntimeContextManager[EnterpriseRuntimeContext] {
@@ -134,7 +128,6 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                       interpretedPipesFallback: CypherInterpretedPipesFallbackOption): EnterpriseRuntimeContext =
     EnterpriseRuntimeContext(tokenContext,
       schemaRead,
-      codeStructure,
       log,
       clock,
       debugOptions,

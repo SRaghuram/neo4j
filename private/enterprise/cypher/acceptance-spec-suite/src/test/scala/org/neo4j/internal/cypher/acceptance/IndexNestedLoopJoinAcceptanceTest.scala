@@ -102,7 +102,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | MATCH (f:Foo) WHERE f.id = b.id
         | RETURN f
       """.stripMargin
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query,
+    val result = executeWith(Configs.CachedProperty, query,
       planComparisonStrategy = ComparePlansWithAssertion( _ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))))
     result.columnAs[Node]("f").toList should equal(List(nodes(123)))
   }
@@ -120,7 +120,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | MATCH (f:Foo) WHERE f.id = b.id
         | RETURN f
       """.stripMargin
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query,
+    val result = executeWith(Configs.CachedProperty, query,
       planComparisonStrategy = ComparePlansWithAssertion( _ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))))
     result.columnAs[Node]("f").toSet should equal(Set(nodes(122), nodes(123)))
   }

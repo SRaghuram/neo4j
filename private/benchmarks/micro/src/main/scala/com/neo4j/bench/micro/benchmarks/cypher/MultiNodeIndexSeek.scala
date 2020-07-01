@@ -47,7 +47,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(false)
 class MultiNodeIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME),
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME),
     base = Array(Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _

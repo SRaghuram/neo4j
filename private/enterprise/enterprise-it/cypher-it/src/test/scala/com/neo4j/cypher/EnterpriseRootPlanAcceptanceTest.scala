@@ -7,7 +7,6 @@ package com.neo4j.cypher
 
 import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.CompiledRuntimeName
 import org.neo4j.cypher.internal.InterpretedRuntimeName
 import org.neo4j.cypher.internal.PipelinedRuntimeName
 import org.neo4j.cypher.internal.RuntimeName
@@ -46,16 +45,6 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
       .shouldHavePlanner(CostBasedPlannerName.default)
   }
 
-  test("DbHits should contain proper values in compiled runtime") {
-    val description = given("match (n) return n")
-      .withRuntime(CompiledRuntimeName)
-      .planDescription
-    val children = description.getChildren
-    children should have size 1
-    description.getArguments.get("DbHits") should equal(0) // ProduceResults has no hits
-    children.get(0).getArguments.get("DbHits") should equal(1) // AllNodesScan has 1 hit
-  }
-
   test("Rows should be properly formatted in pipelined runtime") {
     given("match (n) return n")
       .withRuntime(PipelinedRuntimeName)
@@ -72,16 +61,6 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
         .shouldHaveCypherVersion(CypherVersion.default)
         .shouldHavePlanner(planner)
         .shouldHaveRuntime(runtime)
-    }
-  }
-
-  test("should show_java_source for compiled runtime") {
-    graph.withTx { tx =>
-      val res = executeOfficial( tx,
-        """CYPHER runtime=legacy_compiled debug=generate_java_source debug=show_java_source
-          |MATCH (n) RETURN n""".stripMargin)
-      res.resultAsString()
-      shouldContainSourceCode(res.getExecutionPlanDescription)
     }
   }
 
@@ -115,17 +94,6 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     }
   }
 
-
-  test("should show_bytecode for compiled runtime") {
-    graph.withTx { tx =>
-      val res = executeOfficial( tx,
-        """CYPHER runtime=legacy_compiled debug=show_bytecode
-          |MATCH (n) RETURN n""".stripMargin)
-      res.resultAsString()
-      shouldContainByteCode(res.getExecutionPlanDescription)
-    }
-  }
-
   test("should show_bytecode for pipelined fused operators") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
@@ -152,19 +120,6 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
         """CYPHER runtime=slotted expressionEngine=compiled debug=show_bytecode
           |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
       res.resultAsString()
-      shouldContainByteCode(res.getExecutionPlanDescription)
-    }
-  }
-
-  test("should show_java_source and show_bytecode for compiled runtime") {
-    graph.withTx { tx =>
-      val res = {
-        executeOfficial(tx,
-          """CYPHER runtime=legacy_compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
-            |MATCH (n) RETURN n""".stripMargin)
-      }
-      res.resultAsString()
-      shouldContainSourceCode(res.getExecutionPlanDescription)
       shouldContainByteCode(res.getExecutionPlanDescription)
     }
   }

@@ -199,7 +199,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNodes("A", "B")
     relate("A" -> "KNOWS" -> "B")
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match p = (n)-->(x) where id(n) = 0 return length(p)")
+    val result = executeWith(Configs.NodeById, "match p = (n)-->(x) where id(n) = 0 return length(p)")
 
     result.columnAs[Int]("length(p)").toList should equal(List(1))
   }
@@ -237,7 +237,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |return pA, pB, pC, pD, pE
       """.stripMargin
 
-    val result = executeWith(Configs.CartesianProduct - Configs.Compiled, query, params = Map(
+    val result = executeWith(Configs.CartesianProduct, query, params = Map(
       "a" -> Seq[Long](a),
       "b" -> b.toInt,
       "c" -> Seq(c).asJava,
@@ -252,7 +252,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode()
     val query = "match (pA) where id(pA) = $a return pA"
 
-    executeWith(Configs.NodeById - Configs.Compiled, query, params = Map("a" -> "Andres")) should be (empty)
+    executeWith(Configs.NodeById, query, params = Map("a" -> "Andres")) should be (empty)
   }
 
   test("shouldBeAbleToTakeParamsFromParsedStuff") {
@@ -285,13 +285,13 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("shouldComplainWhenMissingParams") {
     createNode()
-    failWithError(Configs.NodeById - Configs.Compiled, "match (pA) where id(pA) = $a return pA", List("Expected a parameter named a", "Expected parameter(s): a"))
+    failWithError(Configs.NodeById, "match (pA) where id(pA) = $a return pA", List("Expected a parameter named a", "Expected parameter(s): a"))
   }
 
   test("shouldSupportMultipleRegexes") {
     val a = createNode(Map("name" -> "Andreas"))
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled,  """
+    val result = executeWith(Configs.NodeById,  """
 match (a)
 where id(a) = 0 AND a.name =~ 'And.*' AND a.name =~ 'And.*'
 return a""")
@@ -319,7 +319,7 @@ return a""")
   test("shouldHandleCheckingThatANodeDoesNotHaveAProp") {
     val a = createNode()
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (a) where id(a) = 0 and not exists(a.propertyDoesntExist) return a")
+    val result = executeWith(Configs.NodeById, "match (a) where id(a) = 0 and not exists(a.propertyDoesntExist) return a")
     result.toList should equal(List(Map("a" -> a)))
   }
 
@@ -342,7 +342,7 @@ order by a.COL1""".format(a, b))
   test("shouldAllowAllPredicateOnArrayProperty") {
     val a = createNode("array" -> Array(1, 2, 3, 4))
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (a) where id(a) = 0 and any(x in a.array where x = 2) return a")
+    val result = executeWith(Configs.NodeById, "match (a) where id(a) = 0 and any(x in a.array where x = 2) return a")
 
     result.toList should equal(List(Map("a" -> a)))
   }
@@ -350,7 +350,7 @@ order by a.COL1""".format(a, b))
   test("shouldAllowStringComparisonsInArray") {
     val a = createNode("array" -> Array("Cypher duck", "Gremlin orange", "I like the snow"))
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (a) where id(a) = 0 and single(x in a.array where x =~ '.*the.*') return a")
+    val result = executeWith(Configs.NodeById, "match (a) where id(a) = 0 and single(x in a.array where x =~ '.*the.*') return a")
 
     result.toList should equal(List(Map("a" -> a)))
   }
@@ -403,7 +403,7 @@ order by a.COL1""".format(a, b))
   test("shouldHandleComparisonsWithDifferentTypes") {
     createNode("belt" -> 13)
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 and (n.belt = 'white' OR n.belt = false) return n")
+    val result = executeWith(Configs.NodeById, "match (n) where id(n) = 0 and (n.belt = 'white' OR n.belt = false) return n")
     result.toList shouldBe empty
   }
 
@@ -411,7 +411,7 @@ order by a.COL1""".format(a, b))
     val a = createNode()
     val b = createNode()
     val r = relate(a, b)
-    val result = executeWith(Configs.CartesianProduct - Configs.Compiled, "match (a), ()-[r]->() where id(a) = 0 and id(r) = 0 return a,r")
+    val result = executeWith(Configs.CartesianProduct, "match (a), ()-[r]->() where id(a) = 0 and id(r) = 0 return a,r")
 
     result.toList should equal(List(Map("a" -> a, "r" -> r)))
   }
@@ -429,7 +429,7 @@ order by a.COL1""".format(a, b))
   test("second piped query woot") {
     createNode()
     val q = "match (x) where id(x) = 0 with count(*) as apa WHERE apa = 1 RETURN apa"
-    val result = executeWith(Configs.NodeById - Configs.Compiled, q)
+    val result = executeWith(Configs.NodeById, q)
 
     result.toList should equal(List(Map("apa" -> 1)))
   }
@@ -468,7 +468,7 @@ order by a.COL1""".format(a, b))
 
     val q = "match (n)-[f]->() where id(n)= 0 with n, max(f.age) as age match (n)-[f]->(m) where f.age = age return m"
 
-    executeWith(Configs.NodeById - Configs.Compiled, q).toList should equal(List(Map("m" -> c)))
+    executeWith(Configs.NodeById, q).toList should equal(List(Map("m" -> c)))
   }
 
   test("issue 432") {
@@ -512,14 +512,14 @@ order by a.COL1""".format(a, b))
   test("shouldSupportArrayOfArrayOfPrimitivesAsParameterForInKeyword") {
     val node = createNode("lotteryNumbers" -> Array(42, 87))
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 and n.lotteryNumbers in [[42, 87], [13], [42]] return n")
+    val result = executeWith(Configs.NodeById, "match (n) where id(n) = 0 and n.lotteryNumbers in [[42, 87], [13], [42]] return n")
 
     result.toList should equal(List(Map("n" -> node)))
   }
 
   test("params should survive with") {
     val n = createNode()
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 WITH collect(n) as coll where size(coll)= $id RETURN coll", params = Map("id"->1))
+    val result = executeWith(Configs.NodeById, "match (n) where id(n) = 0 WITH collect(n) as coll where size(coll)= $id RETURN coll", params = Map("id"->1))
 
     result.toList should equal(List(Map("coll" -> List(n))))
   }
@@ -546,7 +546,7 @@ order by a.COL1""".format(a, b))
 
   test("can alias and aggregate") {
     val a = createNode()
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 return sum(ID(n)), n as m")
+    val result = executeWith(Configs.NodeById, "match (n) where id(n) = 0 return sum(ID(n)), n as m")
 
     result.toList should equal(List(Map("sum(ID(n))"->0, "m"->a)))
   }
@@ -554,7 +554,7 @@ order by a.COL1""".format(a, b))
   test("extract string from node collection") {
     createNode("name"->"a")
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, """match (n) where id(n) = 0 with collect(n) as nodes return head([x in nodes | x.name]) + "test" as test """)
+    val result = executeWith(Configs.NodeById, """match (n) where id(n) = 0 with collect(n) as nodes return head([x in nodes | x.name]) + "test" as test """)
 
     result.toList should equal(List(Map("test" -> "atest")))
   }
@@ -562,7 +562,7 @@ order by a.COL1""".format(a, b))
   test("filtering in match should not fail") {
     val n = createNode()
     relate(n, createNode("name" -> "Neo"))
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "MATCH (n)-->(me) WHERE id(n) = 0 AND me.name IN ['Neo'] RETURN me.name")
+    val result = executeWith(Configs.NodeById, "MATCH (n)-->(me) WHERE id(n) = 0 AND me.name IN ['Neo'] RETURN me.name")
 
     result.toList should equal(List(Map("me.name"->"Neo")))
   }
@@ -729,7 +729,7 @@ order by a.COL1""".format(a, b))
     relate(p4, red, "ap_has_value")
 
     //WHEN
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, """
+    val result = executeWith(Configs.CachedProperty, """
        MATCH (advertiser:Advertiser) -[:adv_has_product] ->(out) -[:ap_has_value] ->(red)<-[:aa_has_value]- (thing:Thing)
        WHERE red.name = 'red' AND out.name = 'product1'
        RETURN out.name""")

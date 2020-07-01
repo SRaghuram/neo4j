@@ -448,9 +448,9 @@ public class SerializationTest
                 "cost",
                 "cost",
                 "cost",
-                "legacy_compiled",
-                "legacy_compiled",
-                "legacy_compiled",
+                "slotted",
+                "slotted",
+                "slotted",
                 "3.2",
                 new PlanTree( "plan description", root )
         );

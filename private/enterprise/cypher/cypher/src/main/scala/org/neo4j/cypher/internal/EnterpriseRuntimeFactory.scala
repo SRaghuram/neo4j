@@ -11,8 +11,6 @@ object EnterpriseRuntimeFactory {
 
   val interpreted = new FallbackRuntime[EnterpriseRuntimeContext](List(SchemaCommandRuntime, InterpretedRuntime), CypherRuntimeOption.interpreted)
   val slotted = new FallbackRuntime[EnterpriseRuntimeContext](List(SchemaCommandRuntime, SlottedRuntime), CypherRuntimeOption.slotted)
-  val compiledWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(SchemaCommandRuntime, CompiledRuntime), CypherRuntimeOption.compiled)
-  val compiled = new FallbackRuntime[EnterpriseRuntimeContext](List(SchemaCommandRuntime, CompiledRuntime, SlottedRuntime), CypherRuntimeOption.compiled)
   val pipelinedWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(SchemaCommandRuntime, PipelinedRuntime.PIPELINED), CypherRuntimeOption.pipelined)
   val pipelined = new FallbackRuntime[EnterpriseRuntimeContext](List(SchemaCommandRuntime, PipelinedRuntime.PIPELINED, SlottedRuntime), CypherRuntimeOption.pipelined)
   val parallelWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(PipelinedRuntime.PARALLEL), CypherRuntimeOption.parallel)
@@ -23,10 +21,6 @@ object EnterpriseRuntimeFactory {
       case CypherRuntimeOption.interpreted => interpreted
 
       case CypherRuntimeOption.slotted => slotted
-
-      case CypherRuntimeOption.compiled if disallowFallback => compiledWithoutFallback
-
-      case CypherRuntimeOption.compiled => compiled
 
       case CypherRuntimeOption.`pipelined` if disallowFallback => pipelinedWithoutFallback
 

@@ -140,7 +140,7 @@ public class RunCommand implements Runnable
     @Option( type = OptionType.COMMAND,
              name = {CMD_CYPHER_RUNTIME},
              description = "Cypher Runtime",
-             title = "Cypher Runtime: DEFAULT, INTERPRETED, LEGACY_COMPILED, SLOTTED" )
+             title = "Cypher Runtime: DEFAULT, INTERPRETED, SLOTTED" )
     private Runtime runtime = Runtime.DEFAULT;
 
     public static final String CMD_WAIT_FOR_FILE = "--wait-for-file";

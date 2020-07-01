@@ -83,7 +83,7 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
     execute(query2).executionPlanDescription() shouldNot haveRuntime("PIPELINED")
   }
 
-  for (runtime <- Seq("interpreted", "slotted", "pipelined", "legacy_compiled", "parallel")) {
+  for (runtime <- Seq("interpreted", "slotted", "pipelined", "parallel")) {
     test(s"runtime=$runtime is selectable") {
       val query = s"CYPHER runtime=$runtime RETURN 1"
 

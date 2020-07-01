@@ -16,7 +16,6 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.impl.notification.NotificationCode
 import org.neo4j.graphdb.impl.notification.NotificationCode.CARTESIAN_PRODUCT
 import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_BINDING_VAR_LENGTH_RELATIONSHIP
-import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_COMPILED_RUNTIME
 import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE
 import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE_RETURN_FIELD
 import org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_HINT_UNFULFILLABLE
@@ -111,27 +110,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(19, 1, 20), cartesianProduct(Set("c", "d").asJava))))
   }
 
-  test("Warn for cartesian product with runtime=legacy_compiled") {
-    val result = executeSingle("explain cypher runtime=legacy_compiled match (a)-->(b), (c)-->(d) return count(*)", Map.empty)
-
-    result.notifications.toList should equal(List(
-      DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
-      CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(39, 1, 40), cartesianProduct(Set("c", "d").asJava)),
-      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty, NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported"))))
-  }
-
-  test("Warn unsupported runtime with explain and runtime=legacy_compiled") {
-    val result = executeSingle(
-      """explain cypher runtime=legacy_compiled
-         RETURN reduce(y=0, x IN [0] | x) AS z""", Map.empty)
-
-    result.notifications.toList should equal(List(
-      DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
-      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
-        NotificationDetail.Factory.message("Runtime unsupported",
-          "Expression of ReduceExpression(ReduceScope(Variable(y),Variable(x),Variable(x)),AutoExtractedParameter(  AUTOINT0,Integer,SignedDecimalIntegerLiteral(0)),AutoExtractedParameter(  AUTOLIST1,List<Any>,ListOfLiteralWriter(List(SignedDecimalIntegerLiteral(0))))) not yet supported"))))
-  }
-
   test("Warn for cartesian product with runtime=interpreted") {
     val result = executeSingle("explain cypher runtime=interpreted match (a)-->(b), (c)-->(d) return *", Map.empty)
 
@@ -145,10 +123,14 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications shouldBe empty
   }
 
-  test("warn when requesting runtime=legacy_compiled on an unsupported query") {
-    val result = executeSingle("EXPLAIN CYPHER runtime=legacy_compiled MATCH (a)-->(b), (c)-->(d) RETURN count(*)", Map.empty)
-    result.notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
-      NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported")))
+  test("Warn unsupported runtime with explain and runtime=pipelined") {
+    val result = executeSingle(
+      "EXPLAIN CYPHER runtime=pipelined RETURN percentileDisc(1, 1)", Map.empty)
+
+    result.notifications.toList should equal(List(
+      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
+        NotificationDetail.Factory.message("Runtime unsupported",
+          "Pipelined does not yet support the Aggregating function `percentileDisc`, use another runtime."))))
   }
 
   test("warn once when a single index hint cannot be fulfilled") {

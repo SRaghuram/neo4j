@@ -177,11 +177,11 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("floating point parameters should be coerced to int for functions") {
     // In Javascript every number is a floating point value unless specifically cast otherwise. Thus we need to coerce.
     // Yes, even floats that are not ints like 0.5
-    executeWith(Configs.All - Configs.Compiled, "UNWIND range(1, $param) AS n RETURN n", params = Map("param" -> 3.0f))
-    executeWith(Configs.All - Configs.Compiled, "UNWIND range(1, $param) AS n RETURN n", params = Map("param" -> 3.5f))
-    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 1.0f, "param2" -> 3.0f))
-    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.5f, "param2" -> 3.5f))
-    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.0f, "param2" -> 5))
-    executeWith(Configs.All - Configs.Compiled, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.5f, "param2" -> 5))
+    executeWith(Configs.All, "UNWIND range(1, $param) AS n RETURN n", params = Map("param" -> 3.0f))
+    executeWith(Configs.All, "UNWIND range(1, $param) AS n RETURN n", params = Map("param" -> 3.5f))
+    executeWith(Configs.All, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 1.0f, "param2" -> 3.0f))
+    executeWith(Configs.All, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.5f, "param2" -> 3.5f))
+    executeWith(Configs.All, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.0f, "param2" -> 5))
+    executeWith(Configs.All, "UNWIND range($param1, $param2) AS n RETURN n", params = Map("param1" -> 3.5f, "param2" -> 5))
   }
 }

@@ -64,7 +64,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createNode(Map("prop" -> dateValue))
 
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> dateValue))
+    val result = executeWith(Configs.CachedProperty, query, params = Map("param" -> dateValue))
 
     result.toList should equal(List(Map("prop" -> dateValue)))
   }
@@ -78,7 +78,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createNode(Map("prop" -> javaDateArray))
 
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> javaDateArray))
+    val result = executeWith(Configs.CachedProperty, query, params = Map("param" -> javaDateArray))
 
     val dateList = result.columnAs("prop").toList.head.asInstanceOf[Iterable[LocalDate]].toList
     dateList should equal(javaDateArray.toList)
@@ -94,7 +94,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createNode(Map("prop" -> javaDateList.toArray(dateArray)))
 
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> javaDateList))
+    val result = executeWith(Configs.CachedProperty, query, params = Map("param" -> javaDateList))
 
     val dateList = result.columnAs("prop").toList.head.asInstanceOf[Iterable[LocalDate]].toList
     dateList should equal(javaDateList.asScala)
@@ -109,7 +109,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     graph.withTx( tx => tx.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava))
 
     val query = "MATCH (n) WHERE n.a = $param.a RETURN n.a as a, n.b as b"
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> dateMap))
+    val result = executeWith(Configs.CachedProperty, query, params = Map("param" -> dateMap))
 
     result.toList should equal(List(Map("a" -> dateMap.get("a"), "b" -> dateMap.get("b"))))
   }
@@ -136,7 +136,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -159,7 +159,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -183,7 +183,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -208,7 +208,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -239,7 +239,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createLabeledNode(Map("date1" -> dateValue1, "date2" -> dateValue2), "Date")
 
     val query = "MATCH (n:Date) WITH [n.date1, n.date2] as dateList MATCH (m:Occasion) WHERE m.timeSpan = dateList RETURN m.timeSpan as timeSpan"
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query)
+    val result = executeWith(Configs.CachedProperty, query)
 
     // Then
     val dateList = result.columnAs("timeSpan").toList.head.asInstanceOf[Iterable[LocalDate]].toList
@@ -254,7 +254,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val duration = DurationValue.duration(11, 12, 13, 14).asObject()
     createNode(Map("prop" -> duration))
 
-    val config = Configs.CachedProperty + Configs.Compiled
+    val config = Configs.CachedProperty
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
     val result = executeWith(config, query, params = Map("param" -> duration))
 

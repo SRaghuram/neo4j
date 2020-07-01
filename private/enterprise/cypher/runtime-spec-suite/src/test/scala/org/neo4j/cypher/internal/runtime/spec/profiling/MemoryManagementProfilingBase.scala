@@ -30,7 +30,6 @@ import org.neo4j.cypher.internal.runtime.CUSTOM_MEMORY_TRACKING_CONTROLLER
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerDecorator
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
-import org.neo4j.cypher.internal.runtime.spec.COMMUNITY
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -43,7 +42,6 @@ import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilin
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.OVERWRITE_EXISTING_HEAP_DUMPS
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.doHeapDump
 import org.neo4j.cypher.internal.runtime.spec.tests.InputStreams
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.RelationshipType
@@ -129,7 +127,6 @@ object MemoryManagementProfilingBase {
       val runtimeEnvironment = RuntimeEnvironment.of(augmentedRuntimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE)
 
       EnterpriseRuntimeContextManager(
-        GeneratedQueryStructure,
         logProvider.getLog("test"),
         augmentedRuntimeConfig,
         runtimeEnvironment

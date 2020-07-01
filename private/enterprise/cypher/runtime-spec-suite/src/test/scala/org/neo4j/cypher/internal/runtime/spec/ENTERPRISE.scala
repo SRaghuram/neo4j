@@ -15,7 +15,6 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
@@ -37,7 +36,6 @@ object ENTERPRISE {
       val runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE)
 
       TracingRuntimeContextManager(
-        GeneratedQueryStructure,
         logProvider.getLog("test"),
         runtimeConfig,
         runtimeEnvironment,

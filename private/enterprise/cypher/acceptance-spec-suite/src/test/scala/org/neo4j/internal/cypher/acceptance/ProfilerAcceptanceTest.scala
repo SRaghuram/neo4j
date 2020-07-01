@@ -135,8 +135,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should
           haveAsRoot.aPlan.withGlobalMemory()
-            .onTopOf(aPlan("Distinct").withMemory()),
-        expectPlansToFail = Configs.Compiled)
+            .onTopOf(aPlan("Distinct").withMemory()))
     )
   }
 
@@ -254,7 +253,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
     (1 to 100).foreach(_ => createNode())
 
-    profile(Configs.NodeById + Configs.Compiled,
+    profile(Configs.NodeById,
       "MATCH (n) WHERE id(n) = 0 RETURN n",
       _ should includeSomewhere.aPlan("NodeByIdSeek").withRows(1))
   }
@@ -264,7 +263,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
     (1 to 100).foreach(_ => createNode("foo" -> "bar"))
 
-    profile(Configs.NodeById + Configs.Compiled,
+    profile(Configs.NodeById,
       "MATCH (n) WHERE id(n) = 0 RETURN n.foo",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
@@ -478,7 +477,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
 
-    profile(Configs.CartesianProduct + Configs.Compiled,
+    profile(Configs.CartesianProduct,
       "MATCH (n), (m) RETURN n, m",
       _ should includeSomewhere.aPlan("CartesianProduct").withRows(16))
   }
@@ -615,19 +614,6 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     profile(Configs.CountDistinct,
       "PROFILE MATCH (b:Start)-[*3]->(d) RETURN count(distinct d)",
       _ should includeSomewhere.aPlan("VarLengthExpand(Pruning)").withRows(2).withDBHits(7))
-  }
-
-  test("profiling with compiled runtime") {
-    //given
-    createLabeledNode("L")
-    createLabeledNode("L")
-    createLabeledNode("L")
-
-    //when
-    val result = executeSingle("PROFILE CYPHER runtime=legacy_compiled MATCH (n:L) RETURN count(n.prop)", Map.empty)
-
-    //then
-    result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation").withRows(1)
   }
 
   def profileSingle(query: String, params: (String, Any)*): RewindableExecutionResult = {

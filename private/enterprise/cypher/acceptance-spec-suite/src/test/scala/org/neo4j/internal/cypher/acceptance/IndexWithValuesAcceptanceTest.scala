@@ -60,7 +60,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.CachedProperty, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection").withDBHits()) and
           includeSomewhere.aPlan("NodeIndexSeek")
@@ -75,7 +75,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     graph.withTx(tx => createMoreNodes(tx))
     graph.createIndexWithName("my_index", "Label", "prop")
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Label) WHERE n.prop = 42 RETURN n.prop", executeBefore = createMoreNodes,
+    val result = executeWith(Configs.CachedProperty, "PROFILE MATCH (n:Label) WHERE n.prop = 42 RETURN n.prop", executeBefore = createMoreNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection").withDBHits()) and
           includeSomewhere.aPlan("NodeIndexSeek")
@@ -87,7 +87,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan projection and index seek with GetValue when two properties are projected") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.CachedProperty, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere.aPlan("Projection")
             .containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]", "`n.prop2`" -> "n.prop2"))
@@ -102,7 +102,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected and renamed in a RETURN") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.CachedProperty, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
       .containingArgumentForProjection(Map("foo" -> "cache[n.prop1]"))
@@ -112,21 +112,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("foo" -> 42), Map("foo" -> 42)))
   }
 
-  test("compiled creates an extra dbhit because it can't get values from indexes") {
-    val result = executeSingle("CYPHER runtime=legacy_compiled PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo")
-
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
-      .containingArgumentForProjection(Map("foo" -> "cache[n.prop1]"))
-      .withDBHits(1)
-      .onTopOf(aPlan("NodeIndexSeek")
-        .withDBHits(3)
-        .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
-
-    result.toList should equal(List(Map("foo" -> 42)))
-  }
-
   test("should plan index seek with GetValue when the property is projected before the property access") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n MATCH (m)-[r]-(n) RETURN n.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.CachedProperty, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n MATCH (m)-[r]-(n) RETURN n.prop1", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
@@ -137,14 +124,13 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan projection and index seek with GetValue when the property is projected inside of a expression") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.CachedProperty, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere.aPlan("Projection")
           .containingArgumentForProjection(Map("`n.prop1 * 2`" -> "cache[n.prop1] * $autoint_1"))
           .withDBHits(0)
           .onTopOf(aPlan("NodeIndexSeek")
-            .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")),
-        expectPlansToFail = Configs.Compiled
+            .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
       )
     )
 
@@ -334,8 +320,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(config, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection").withDBHits()) and
-          includeSomewhere.aPlan("NodeIndexSeek").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")),
-        expectPlansToFail = Configs.Compiled))
+          includeSomewhere.aPlan("NodeIndexSeek").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))))
 
     result.toList should equal(List(Map("m.prop1" -> 40), Map("m.prop1" -> 40)))
   }
@@ -368,8 +353,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection")
           .withDBHits(0)
-          .containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]", "`m.prop1`" -> "cache[m.prop1]")),
-        expectPlansToFail = Configs.Compiled))
+          .containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]", "`m.prop1`" -> "cache[m.prop1]"))))
 
     result.toList should equal(
       List(
@@ -493,7 +477,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected after a renaming projection") {
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n as m MATCH (m)-[r]-(o) RETURN m.prop1", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.CachedProperty, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n as m MATCH (m)-[r]-(o) RETURN m.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere
           .aPlan("Projection")
@@ -501,8 +485,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
           .withDBHits(0)
           .withLHS(includeSomewhere
             .aPlan("NodeIndexSeek")
-            .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")),
-        expectPlansToFail = Configs.Compiled
+            .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
       ))
 
     result.toList should equal(List(Map("m.prop1" -> 42), Map("m.prop1" -> 42)))
@@ -566,7 +549,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |WITH n.prop1 AS projected, 'Whoops!' AS `n.prop1`, n
         |RETURN n.prop1, projected""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query)
+    val result = executeWith(Configs.CachedProperty, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> 42, "projected" -> 42)))
   }
@@ -578,7 +561,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |MATCH (n:Awesome) WHERE n.prop1 = 42
         |RETURN n.prop1, `n.prop1` AS trap""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query)
+    val result = executeWith(Configs.CachedProperty, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> 42, "trap" -> "Whoops!")))
   }
@@ -592,7 +575,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |MATCH (n:Label) WHERE n.prop = 42
         |RETURN n.prop, `n.prop` AS trap""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query)
+    val result = executeWith(Configs.CachedProperty, query)
     assertIndexSeekWithValues(result, "n.prop")
     result.toList should equal(List(Map("n.prop" -> 42, "trap" -> "Whoops!")))
   }

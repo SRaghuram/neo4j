@@ -13,10 +13,7 @@ import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.RuntimeContextManager
 import org.neo4j.cypher.internal.RuntimeEnvironment
-import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
@@ -24,8 +21,7 @@ import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.logging.Log
 
-case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQuery],
-                                        log: Log,
+case class TracingRuntimeContextManager(log: Log,
                                         config: CypherRuntimeConfiguration,
                                         runtimeEnvironment: RuntimeEnvironment,
                                         cursors: CursorFactory,
@@ -43,7 +39,6 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
 
     EnterpriseRuntimeContext(tokenContext,
                              schemaRead,
-                             codeStructure,
                              log,
                              clock,
                              debugOptions,

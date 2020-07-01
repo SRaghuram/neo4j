@@ -432,8 +432,8 @@ public class BoltV4TransportEnterpriseIT
         assertThat( connection ).satisfies( util.eventuallyReceives( msgSuccess() ) );
     }
 
-    private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "legacy_compiled" };
-    private static final String[] READ_RUNTIMES = new String[]{ "interpreted", "slotted", "legacy_compiled", "pipelined" };
+    private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted" };
+    private static final String[] READ_RUNTIMES = new String[]{ "interpreted", "slotted", "pipelined" };
 
     private static MapValue paramWithRange( int from, int to )
     {

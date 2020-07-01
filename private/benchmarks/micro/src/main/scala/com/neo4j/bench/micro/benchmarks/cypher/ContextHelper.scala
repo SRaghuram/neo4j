@@ -18,9 +18,7 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.NoSchedulerTracing
 import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
-import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
@@ -54,7 +52,6 @@ object ContextHelper extends MockitoSugar {
   def create(planContext: PlanContext,
              debugOptions: Set[String] = Set.empty,
              clock: Clock = Clock.systemUTC(),
-             codeStructure: CodeStructure[GeneratedQuery] = mock[CodeStructure[GeneratedQuery]],
              useCompiledExpressions: Boolean = false,
              jobScheduler: JobScheduler,
              schemaRead: SchemaRead,
@@ -65,7 +62,6 @@ object ContextHelper extends MockitoSugar {
     EnterpriseRuntimeContext(
       planContext,
       schemaRead,
-      codeStructure,
       NullLog.getInstance(),
       clock,
       debugOptions,

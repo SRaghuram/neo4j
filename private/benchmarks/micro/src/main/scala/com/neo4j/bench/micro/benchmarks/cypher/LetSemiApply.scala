@@ -45,7 +45,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class LetSemiApply extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME),
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME),
     base = Array(Slotted.NAME))
   @Param(Array[String]())
   var runtime: String = _

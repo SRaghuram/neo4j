@@ -14,8 +14,6 @@ import org.neo4j.cypher.GraphIcing
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.ExecutionPlanDescription
-import org.neo4j.graphdb.Result.ResultRow
-import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs.FieldSignature
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
@@ -52,30 +50,6 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
       r.next()
       tx.rollback() // This should close all cursors
     } finally {
-      managementService.shutdown()
-    }
-  }
-
-  test("should be possible to close compiled result after it is consumed") {
-    val managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent().build()
-    // given
-    val db = managementService.database(DEFAULT_DATABASE_NAME)
-    try {
-
-      // when
-      val transaction = db.beginTx()
-      val result = transaction.execute("CYPHER runtime=legacy_compiled MATCH (n) RETURN n")
-      result.accept(new ResultVisitor[RuntimeException] {
-        def visit(row: ResultRow) = true
-      })
-
-      result.close()
-      transaction.close()
-
-      // then
-      // call to close actually worked
-    }
-    finally {
       managementService.shutdown()
     }
   }

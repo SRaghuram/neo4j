@@ -119,7 +119,6 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
       List(
         "CYPHER runtime=interpreted",
         "CYPHER runtime=slotted",
-        "CYPHER runtime=legacy_compiled",
         "CYPHER runtime=pipelined",
         "CYPHER runtime=parallel",
         ""

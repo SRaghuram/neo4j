@@ -71,14 +71,11 @@ class MemoryPerformanceAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
                   |ORDER BY x ASC LIMIT 2147483647
                   |RETURN x""".stripMargin
 
-    //we cannot use executeWith here since this query will OOM in older releases and break the test
-    for (runtime <- List("legacy_compiled", "interpreted", "slotted")) {
-      executeSingle(s"CYPHER runtime=$runtime $query").toList should equal(List(
-        Map("x" -> 1),
-        Map("x" -> 2),
-        Map("x" -> 3),
-        Map("x" -> 4)
-      ))
-    }
+    executeWith(Configs.All, query).toList should equal(List(
+      Map("x" -> 1),
+      Map("x" -> 2),
+      Map("x" -> 3),
+      Map("x" -> 4)
+    ))
   }
 }

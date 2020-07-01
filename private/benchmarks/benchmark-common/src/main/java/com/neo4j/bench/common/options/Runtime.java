@@ -10,7 +10,6 @@ public enum Runtime
     DEFAULT,
     INTERPRETED,
     SLOTTED,
-    LEGACY_COMPILED,
     PIPELINED,
     PARALLEL;
 

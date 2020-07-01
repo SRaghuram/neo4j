@@ -17,14 +17,14 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("should unwind scalar integer") {
     val query = "UNWIND 7 AS x RETURN x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("x" -> 7)))
   }
 
   test("should unwind scalar string") {
     val query = "UNWIND 'this string' AS x RETURN x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("x" -> "this string")))
   }

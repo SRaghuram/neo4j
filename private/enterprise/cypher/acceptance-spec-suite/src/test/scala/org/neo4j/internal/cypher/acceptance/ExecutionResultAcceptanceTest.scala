@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.CompiledRuntimeOption
 import org.neo4j.cypher.internal.InterpretedRuntimeOption
 import org.neo4j.cypher.internal.SlottedRuntimeOption
 import org.neo4j.graphdb.Result
@@ -31,15 +30,6 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
         result.cancel()
       }
     })
-  }
-
-  test("without PROFILE it shouldn't be needed to iterate over the results before calling getExecutionPlanDescription in compiled runtime") {
-    val query = "MATCH (n) WHERE n.prop = 1 RETURN n"
-    val runtime = CompiledRuntimeOption.name
-
-    val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = false)
-    val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = true)
-    description1 should equal(description2)
   }
 
   test("without PROFILE it shouldn't be needed to iterate over the results before calling getExecutionPlanDescription in interpreted runtime") {

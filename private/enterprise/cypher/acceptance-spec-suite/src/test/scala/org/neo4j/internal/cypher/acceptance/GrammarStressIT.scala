@@ -69,11 +69,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
     }
   }
 
-  //TODO: this test currently exposes a failure for queries like
-  //MATCH (n3 :L3) OPTIONAL MATCH (n2 :L2)<-[]-(n3) RETURN id(n3), id(n2)
-  //the compiled runtime returns -1 instead of null
-  //Fix the bug and unignore the test
-  ignore("optional match pattern") {
+  test("optional match pattern") {
     forAll(patterns, patterns) { (matchPattern, optionalPattern) =>
       val query = s"MATCH $matchPattern OPTIONAL MATCH $optionalPattern ${returnClause(matchPattern, optionalPattern)}"
       withClue(s"Failed on query: $query") {
@@ -90,11 +86,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
     }
   }
 
-  //TODO: this test currently exposes a failure for queries like
-  //MATCH (n3 :L3) OPTIONAL MATCH (n2 :L2)<-[]-(n3) RETURN id(n3), id(n2)
-  //the compiled runtime returns -1 instead of null
-  //Fix the bug and unignore the test
-  ignore("optional match with predicate") {
+  test("optional match with predicate") {
     forAll(optionalMatchWhere) { query =>
       withClue(s"Failed on query: $query") {
         assertQuery(query)
@@ -296,24 +288,24 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
     if (id.isSingleEntity) s"id(${id.name})"
     else s"size(${id.name})"
 
-  //Check that interpreted and compiled gives the same results, it might be the case
+  //Check that interpreted and pipelined gives the same results, it might be the case
   //that the compiled runtime fallbacks to the interpreted but that is ok here just as
   //long as we fallback gracefully.
   private def assertQuery(query: String) = {
     runWithTimeout(TIMEOUT_MS) {
       //this is an optimization just so that we only compare results when we have to
       val runtimeUsed = graph.withTx { tx =>
-        tx.execute(s"EXPLAIN CYPHER runtime=legacy_compiled $query")
+        tx.execute(s"EXPLAIN CYPHER $query")
           .getExecutionPlanDescription.getArguments.get("runtime").asInstanceOf[String]
       }
-      if (runtimeUsed == "LEGACY_COMPILED") {
+      if (runtimeUsed.toUpperCase == "PIPELINED") {
         // We resort to using internals of CypherComparisonSupport,
         // since with randomized patterns we cannot know at compile time, for which
         // of those we expect plans to be equal or not.
         val resultInterpreted = executeSingle(s"CYPHER runtime=interpreted $query", Map.empty)
-        val resultCompiled = executeSingle(s"CYPHER runtime=legacy_compiled $query", Map.empty)
+        val resultCompiled = executeSingle(s"CYPHER $query", Map.empty)
         assertResultsSameDeprecated(resultCompiled, resultInterpreted, query,
-          "Diverging results between interpreted and compiled runtime")
+          "Diverging results between interpreted and pipelined runtime")
         resultCompiled
       } else None
     }

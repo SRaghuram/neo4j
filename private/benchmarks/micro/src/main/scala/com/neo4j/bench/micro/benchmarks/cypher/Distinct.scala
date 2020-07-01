@@ -54,7 +54,7 @@ class Distinct extends AbstractCypherBenchmark {
   private val EXPECTED_ROW_COUNT_MAX = Math.round(EXPECTED_ROW_COUNT + EXPECTED_ROW_COUNT * TOLERATED_ROW_COUNT_ERROR).toInt
 
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
     base = Array(Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
