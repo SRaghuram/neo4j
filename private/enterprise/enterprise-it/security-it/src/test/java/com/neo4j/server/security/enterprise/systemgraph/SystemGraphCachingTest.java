@@ -59,9 +59,13 @@ class SystemGraphCachingTest
     @BeforeEach
     void setUp() throws Throwable
     {
-        final DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() );
-        builder.setConfig( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) );
-        builder.setConfig( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) );
+        Config config = Config.newBuilder()
+                .set( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) )
+                .set( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) )
+                .build();
+
+        final DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
+                .setConfig( config );
         managementService = builder.build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
@@ -69,7 +73,6 @@ class SystemGraphCachingTest
         SystemGraphComponents systemGraphComponents = dependencyResolver.resolveDependency( SystemGraphComponents.class );
         SecurityLog securityLog = new SecurityLog( new AssertableLogProvider().getLog( getClass() ) );
 
-        Config config = Config.defaults();
         UserSecurityGraphComponent userSecurityGraphComponent =
                 new UserSecurityGraphComponent( securityLog, new InMemoryUserRepository(), new InMemoryUserRepository(), config );
         EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent =

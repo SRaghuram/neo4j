@@ -13,7 +13,6 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -21,7 +20,6 @@ import java.util.Set;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DefaultSystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponent;
@@ -34,15 +32,17 @@ import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.allow_single_automatic_upgrade;
+import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 
-@TestDirectoryExtension
+@EphemeralTestDirectoryExtension
 abstract class SecurityGraphCompatibilityTestBase
 {
     @SuppressWarnings( "unused" )
@@ -58,10 +58,26 @@ abstract class SecurityGraphCompatibilityTestBase
     @BeforeEach
     void setup() throws Exception
     {
-        TestEnterpriseDatabaseManagementServiceBuilder builder =
-                new TestDBMSBuilder( directory.homePath() ).impermanent()
-                        .setConfig( GraphDatabaseSettings.auth_enabled, TRUE )
-                        .setConfig( GraphDatabaseSettings.allow_single_automatic_upgrade, FALSE );
+        Config cfg = Config.newBuilder()
+                .set( auth_enabled, TRUE )
+                .set( allow_single_automatic_upgrade, FALSE )
+                .build();
+
+        UserRepository userRepository = new InMemoryUserRepository();
+        RoleRepository roleRepository = new InMemoryRoleRepository();
+        Log securityLog = mock( Log.class );
+        var communityComponent = new UserSecurityGraphComponent( securityLog, userRepository, userRepository, cfg );
+        enterpriseComponent = new EnterpriseSecurityGraphComponent( securityLog, roleRepository, userRepository, cfg );
+        var testSystemGraphComponents = new TestSystemGraphComponents( new DefaultSystemGraphComponent( cfg ), communityComponent );
+        // We explicitly do not add enterpriseComponents to the component initializer, so we can initialize per test class
+
+        Dependencies deps = new Dependencies();
+        deps.satisfyDependencies( testSystemGraphComponents );
+
+        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
+                .impermanent()
+                .setConfig( cfg )
+                .setExternalDependencies( deps );
         dbms = builder.build();
         system = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
         DependencyResolver platformDependencies = system.getDependencyResolver();
@@ -91,34 +107,6 @@ abstract class SecurityGraphCompatibilityTestBase
         {
             builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( PredefinedRoles.ADMIN, Set.of( "neo4j" ) ) );
             tx.commit();
-        }
-    }
-
-    private class TestDBMSBuilder extends TestEnterpriseDatabaseManagementServiceBuilder
-    {
-        TestDBMSBuilder( Path homeDirectory )
-        {
-            super( homeDirectory );
-        }
-
-        @Override
-        public DatabaseManagementService build()
-        {
-            Config cfg = config.set( GraphDatabaseSettings.neo4j_home, homeDirectory.toAbsolutePath() ).build();
-
-            UserRepository userRepository = new InMemoryUserRepository();
-            RoleRepository roleRepository = new InMemoryRoleRepository();
-            Log securityLog = mock( Log.class );
-            var communityComponent = new UserSecurityGraphComponent( securityLog, userRepository, userRepository, cfg );
-            enterpriseComponent = new EnterpriseSecurityGraphComponent( securityLog, roleRepository, userRepository, cfg );
-            var testSystemGraphComponents = new TestSystemGraphComponents( new DefaultSystemGraphComponent( cfg ), communityComponent );
-            // We explicitly do not add enterpriseComponents to the component initializer, so we can initialize per test class
-
-            Dependencies deps = new Dependencies( dependencies );
-            deps.satisfyDependencies( testSystemGraphComponents );
-            dependencies = deps;
-
-            return newDatabaseManagementService( cfg, databaseDependencies() );
         }
     }
 

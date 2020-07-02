@@ -162,5 +162,11 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     {
         return (TestEnterpriseDatabaseManagementServiceBuilder) super.setConfig( config );
     }
+
+    @Override
+    public TestEnterpriseDatabaseManagementServiceBuilder setConfig( Config fromConfig )
+    {
+        return (TestEnterpriseDatabaseManagementServiceBuilder) super.setConfig( fromConfig );
+    }
 }
 
