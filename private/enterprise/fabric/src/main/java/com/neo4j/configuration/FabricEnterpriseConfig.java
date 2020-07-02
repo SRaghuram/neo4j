@@ -155,7 +155,7 @@ public class FabricEnterpriseConfig extends FabricConfig
         var concurrency = config.get( FabricEnterpriseSettings.concurrency );
         if ( concurrency == null )
         {
-            concurrency = database.map( db -> db.graphs.size() ).orElse( 1 );
+            concurrency = database.map( db -> Math.max( db.graphs.size(), 1 ) ).orElse( 1 );
         }
 
         var dataStream = new DataStream( bufferLowWatermark, bufferSize, syncBatchSize, concurrency );
