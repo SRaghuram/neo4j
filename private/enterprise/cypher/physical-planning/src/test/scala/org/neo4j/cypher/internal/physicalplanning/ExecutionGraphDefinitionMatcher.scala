@@ -380,7 +380,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
-          variant = RHSStreamingBufferVariant(ArgumentStateMapId(rhsAsmId), ArgumentStateMapId(lhsAsmId)),
+          variant = RHSStreamingBufferVariant(ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId)),
         )(SlotConfiguration.empty))
       val bd: BufferDefinition = buffers.getOrElseUpdate(sourceId,
                                        BufferDefinition(
@@ -391,8 +391,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
                                          LHSAccumulatingRHSStreamingBufferVariant(
                                            lhsSink,
                                            rhsSink,
-            lhsSink.variant.asInstanceOf[LHSAccumulatingBufferVariant].argumentStateMapId,
-            rhsSink.variant.asInstanceOf[RHSStreamingBufferVariant].argumentStateMapId)
+            lhsSink.variant.asInstanceOf[LHSAccumulatingBufferVariant].lhsArgumentStateMapId,
+            rhsSink.variant.asInstanceOf[RHSStreamingBufferVariant].rhsArgumentStateMapId)
                                        )(SlotConfiguration.empty))
       new JoinBufferSequence(bd)
     }

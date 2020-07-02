@@ -169,20 +169,20 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
 
 // The LHS does not need any reference counting, because no tasks
 // will ever be produced from the LHS
-class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](val argumentStateMapId: ArgumentStateMapId,
+class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](val lhsArgumentStateMapId: ArgumentStateMapId,
+                                                                              rhsArgumentStateMapId: ArgumentStateMapId,
                                                                               downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
-                                                                              override val argumentStateMaps: ArgumentStateMaps,
-                                                                              rhsArgumentStateMapId: ArgumentStateMapId)
+                                                                              override val argumentStateMaps: ArgumentStateMaps)
   extends ArgumentCountUpdater
   with Sink[IndexedSeq[PerArgument[DATA]]]
   with AccumulatingBuffer {
 
-  private val argumentStateMap = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
+  private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
 
-  override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
+  override val argumentSlotOffset: Int = lhsArgumentStateMap.argumentSlotOffset
 
-  override def toString: String = s"${getClass.getSimpleName}(planId:${argumentStateMapId.x}, $argumentStateMap)"
+  override def toString: String = s"${getClass.getSimpleName}(planId:${lhsArgumentStateMapId.x}, $lhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -190,7 +190,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
     }
     var i = 0
     while (i < data.length) {
-      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value, resources))
+      lhsArgumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value, resources))
       i += 1
     }
   }
@@ -202,21 +202,21 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, (_, _) => Unit)
-    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
+    lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
   }
 
   override def increment(argumentRowId: Long): Unit = {
-    argumentStateMap.increment(argumentRowId)
+    lhsArgumentStateMap.increment(argumentRowId)
   }
 
   override def decrement(argumentRowId: Long): Unit = {
-    if (argumentStateMap.decrement(argumentRowId) != null && rhsArgumentStateMap.hasCompleted(argumentRowId)) {
+    if (lhsArgumentStateMap.decrement(argumentRowId) != null && rhsArgumentStateMap.hasCompleted(argumentRowId)) {
       val rhsBuf = rhsArgumentStateMap.peek(argumentRowId)
 
       // If there is no data in RHS buffer, no more tasks would be created for this argumentRowId and
       // it won't be removed by LHSAccumulatingRHSStreamingSource, so we have to remove the RHS buffer
       // and its corresponding LHS accumulator here to not leave any dangling state.
-      removeArgumentStatesIfRhsBufferIsEmpty(argumentStateMap, rhsArgumentStateMap, rhsBuf, argumentRowId)
+      removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, rhsArgumentStateMap, rhsBuf, argumentRowId)
     }
   }
 }
@@ -224,19 +224,19 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 // We need to reference count both tasks and argument IDs on the RHS.
 // Tasks need to be tracked since the RHS accumulator's Buffer is used multiple times
 // to spawn tasks, unlike in the MorselArgumentStateBuffer where you only take the accumulator once.
-class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
+class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
+                       val rhsArgumentStateMapId: ArgumentStateMapId,
                        downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                        override val argumentStateMaps: ArgumentStateMaps,
-                       tracker: QueryCompletionTracker,
-                       lhsArgumentStateMapId: ArgumentStateMapId) extends ArgumentCountUpdater
-                                                                  with Sink[IndexedSeq[PerArgument[Morsel]]]
-                                                                  with AccumulatingBuffer {
-  private val argumentStateMap = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
+                       tracker: QueryCompletionTracker) extends ArgumentCountUpdater
+                                                        with Sink[IndexedSeq[PerArgument[Morsel]]]
+                                                        with AccumulatingBuffer {
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId)
+  private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
 
-  override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
+  override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
-  override def toString: String = s"${getClass.getSimpleName}(planId:${argumentStateMapId.x}, $argumentStateMap)"
+  override def toString: String = s"${getClass.getSimpleName}(planId:${rhsArgumentStateMapId.x}, $rhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -246,7 +246,7 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
     var i = 0
     while (i < data.length) {
       val argumentValue = data(i)
-      argumentStateMap.update(argumentValue.argumentRowId, acc => {
+      rhsArgumentStateMap.update(argumentValue.argumentRowId, acc => {
         acc.put(argumentValue.value, resources)
         // Increment for a morsel in the RHS buffer
         forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
@@ -264,22 +264,22 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
     }
     // Increment for an ArgumentID in RHS's accumulator
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
-    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
+    rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
     tracker.increment()
   }
 
   override def increment(argumentRowId: Long): Unit = {
-    argumentStateMap.increment(argumentRowId)
+    rhsArgumentStateMap.increment(argumentRowId)
   }
 
   override def decrement(argumentRowId: Long): Unit = {
-    val maybeBuffer = argumentStateMap.decrement(argumentRowId)
+    val maybeBuffer = rhsArgumentStateMap.decrement(argumentRowId)
     if (maybeBuffer != null) {
       if (lhsArgumentStateMap.hasCompleted(argumentRowId)) {
         // If there is no data in the buffer, no more tasks would be created for this argumentRowId and
         // it won't be removed by LHSAccumulatingRHSStreamingSource, so we have to remove the current buffer
         // and its corresponding LHS accumulator here to not leave any dangling state.
-        removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, argumentStateMap, maybeBuffer, argumentRowId)
+        removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, rhsArgumentStateMap, maybeBuffer, argumentRowId)
       }
 
       // Decrement for an ArgumentID in RHS's accumulator

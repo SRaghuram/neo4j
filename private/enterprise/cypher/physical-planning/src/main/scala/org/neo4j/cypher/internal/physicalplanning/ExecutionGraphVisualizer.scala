@@ -128,9 +128,9 @@ object ExecutionGraphVisualizer {
           rels += new VirtualRelationshipHack(bufs(lhsSink.id.x), bufs(id), Map.empty, "DELEGATES_TO")
           rels += new VirtualRelationshipHack(bufs(rhsSink.id.x), bufs(id), Map.empty, "DELEGATES_TO")
         case buf: LHSAccumulatingBufferVariant =>
-          rels += new VirtualRelationshipHack(bufs(id), asms(buf.argumentStateMapId.x), Map.empty, "USES_ASM")
+          rels += new VirtualRelationshipHack(bufs(id), asms(buf.lhsArgumentStateMapId.x), Map.empty, "USES_ASM")
         case buf: RHSStreamingBufferVariant =>
-          rels += new VirtualRelationshipHack(bufs(id), asms(buf.argumentStateMapId.x), Map.empty, "USES_ASM")
+          rels += new VirtualRelationshipHack(bufs(id), asms(buf.rhsArgumentStateMapId.x), Map.empty, "USES_ASM")
         case ArgumentStateBufferVariant(ArgumentStateMapId(asmId)) =>
           rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
         case ArgumentStreamBufferVariant(ArgumentStateMapId(asmId), _) =>

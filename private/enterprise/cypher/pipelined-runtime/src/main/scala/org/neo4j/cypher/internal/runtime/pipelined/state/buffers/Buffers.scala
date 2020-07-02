@@ -94,9 +94,9 @@ class Buffers(numBuffers: Int,
     var j = initialIndex + 1
     while (j < buffers.length) {
       buffers(j) match {
-        case x: LHSAccumulatingSink[_, _] if x.argumentStateMapId == argumentStateMapId =>
+        case x: LHSAccumulatingSink[_, _] if x.lhsArgumentStateMapId == argumentStateMapId =>
           return x
-        case x: RHSStreamingSink if x.argumentStateMapId == argumentStateMapId =>
+        case x: RHSStreamingSink if x.rhsArgumentStateMapId == argumentStateMapId =>
           return x
         case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
           return x
@@ -161,16 +161,16 @@ class Buffers(numBuffers: Int,
             x.argumentStateMapId)
 
         case x: LHSAccumulatingBufferVariant =>
-          new LHSAccumulatingSink(x.argumentStateMapId,
+          new LHSAccumulatingSink(x.lhsArgumentStateMapId,
+                                  x.rhsArgumentStateMapId,
                                   reducers,
-                                  argumentStateMaps,
-                                  x.rhsArgumentStateMapId)
+                                  argumentStateMaps)
         case x: RHSStreamingBufferVariant =>
-          new RHSStreamingSink(x.argumentStateMapId,
+          new RHSStreamingSink(x.lhsArgumentStateMapId,
+                               x.rhsArgumentStateMapId,
                                reducers,
                                argumentStateMaps,
-                               tracker,
-                               x.lhsArgumentStateMapId)
+                               tracker)
         case x: LHSAccumulatingRHSStreamingBufferVariant =>
           /*
           Explicit construction of sinks is necessary due to the combination of:

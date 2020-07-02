@@ -260,23 +260,22 @@ object PipelineTreeBuilder {
     override protected def variant: BufferVariant = ArgumentStateBufferVariant(argumentStateMapId)
   }
 
-
   class LHSAccumulatingBufferDefiner(id: BufferId,
                                      memoryTrackingOperatorId: Id,
-                                     val argumentStateMapId: ArgumentStateMapId,
+                                     val lhsArgumentStateMapId: ArgumentStateMapId,
+                                     rhsArgumentStateMapId: ArgumentStateMapId,
                                      val producingPipelineId: PipelineId,
-                                     bufferSlotConfiguration: SlotConfiguration,
-                                     rhsArgumentStateMapId: ArgumentStateMapId) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
-    override protected def variant: BufferVariant = LHSAccumulatingBufferVariant(argumentStateMapId, rhsArgumentStateMapId)
+                                     bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant = LHSAccumulatingBufferVariant(lhsArgumentStateMapId, rhsArgumentStateMapId)
   }
 
   class RHSStreamingBufferDefiner(id: BufferId,
                                   memoryTrackingOperatorId: Id,
-                                  val argumentStateMapId: ArgumentStateMapId,
+                                  lhsArgumentStateMapId: ArgumentStateMapId,
+                                  val rhsArgumentStateMapId: ArgumentStateMapId,
                                   val producingPipelineId: PipelineId,
-                                  bufferSlotConfiguration: SlotConfiguration,
-                                  lhsArgumentStateMapId: ArgumentStateMapId) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
-    override protected def variant: BufferVariant = RHSStreamingBufferVariant(argumentStateMapId, lhsArgumentStateMapId)
+                                  bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant = RHSStreamingBufferVariant(lhsArgumentStateMapId, rhsArgumentStateMapId)
   }
 
   class LHSAccumulatingRHSStreamingBufferDefiner(id: BufferId,
@@ -408,18 +407,18 @@ object PipelineTreeBuilder {
       val lhsAcc = new LHSAccumulatingBufferDefiner(lhsAccId,
                                                     memoryTrackingOperatorId,
                                                     lhsArgumentStateMapId,
+                                                    rhsArgumentStateMapId,
                                                     lhsProducingPipelineId,
-                                                    bufferSlotConfiguration = null, // left null because buffer is never used as source
-                                                    rhsArgumentStateMapId)
+                                                    bufferSlotConfiguration = null) // left null because buffer is never used as source
       buffers += lhsAcc
 
       val rhsAccId = BufferId(buffers.size)
       val rhsAcc = new RHSStreamingBufferDefiner(rhsAccId,
                                                  memoryTrackingOperatorId,
+                                                 lhsArgumentStateMapId,
                                                  rhsArgumentStateMapId,
                                                  rhsProducingPipelineId,
-                                                 bufferSlotConfiguration = null,  // left null because buffer is never used as source
-                                                 lhsArgumentStateMapId)
+                                                 bufferSlotConfiguration = null) // left null because buffer is never used as source
       buffers += rhsAcc
 
       val x = buffers.size
