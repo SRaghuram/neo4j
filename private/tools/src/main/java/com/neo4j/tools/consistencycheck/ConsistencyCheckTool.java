@@ -11,7 +11,7 @@ import picocli.CommandLine.Spec;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.nio.file.Files;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -87,7 +87,7 @@ public class ConsistencyCheckTool implements Callable<Object>
         {
             System.err.println( "See inconsistencies report file in " + result.reportFile() );
             System.err.println( "Here is a sample of the first " + sampleSize + " lines:" );
-            try ( BufferedReader reader = new BufferedReader( new FileReader( result.reportFile() ) ) )
+            try ( BufferedReader reader = Files.newBufferedReader( result.reportFile() ) )
             {
                 int lines = 0;
                 String line;

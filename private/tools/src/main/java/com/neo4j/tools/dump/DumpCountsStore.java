@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
@@ -55,7 +55,7 @@ public class DumpCountsStore
               PageCache pageCache = new ConfiguringPageCacheFactory( fs, config, tracer, log, versions, scheduler, clock, new MemoryPools() )
                       .getOrCreatePageCache() )
         {
-            GBPTreeCountsStore.dump( pageCache, new File( args[0] ), out, NULL );
+            GBPTreeCountsStore.dump( pageCache, Path.of( args[0] ), out, NULL );
         }
     }
 }

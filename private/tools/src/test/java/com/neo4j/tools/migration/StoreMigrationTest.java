@@ -11,8 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -35,24 +35,24 @@ class StoreMigrationTest
 {
     @Inject
     private TestDirectory directory;
-    private File migrationDir;
+    private Path migrationDir;
 
     @BeforeEach
     void setUp() throws IOException
     {
-        migrationDir = directory.directory( "migration" );
+        migrationDir = directory.directoryPath( "migration" );
         Unzip.unzip( getClass(), "3.4-store.zip", migrationDir );
     }
 
     @Test
     void storeMigrationToolShouldBeAbleToMigrateOldStore() throws Exception
     {
-        StoreMigration.main( new String[]{migrationDir.getAbsolutePath()} );
+        StoreMigration.main( new String[]{migrationDir.toAbsolutePath().toString()} );
 
         // after migration we can open store and do something
         DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.directoryPath( "testdb" ) )
                 .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, migrationDir.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, migrationDir.toAbsolutePath() )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )

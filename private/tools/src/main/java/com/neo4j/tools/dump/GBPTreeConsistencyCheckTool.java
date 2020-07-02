@@ -5,7 +5,7 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -41,14 +41,14 @@ public class GBPTreeConsistencyCheckTool
         {
             return;
         }
-        File file = new File( arguments.orphans().get( 0 ) );
+        Path file = Path.of( arguments.orphans().get( 0 ) );
         final Boolean reportDirty = arguments.getBoolean( REPORT_DIRTY, true );
         new GBPTreeConsistencyCheckTool().run( file, reportDirty );
     }
 
-    private void run( File file, boolean reportDirty ) throws Exception
+    private void run( Path file, boolean reportDirty ) throws Exception
     {
-        System.out.println( "Check consistency on " + file.getAbsolutePath() );
+        System.out.println( "Check consistency on " + file.toAbsolutePath() );
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               JobScheduler jobScheduler = createInitialisedScheduler();
               GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( fs, jobScheduler, new SchemaLayouts(), true, NULL ) )

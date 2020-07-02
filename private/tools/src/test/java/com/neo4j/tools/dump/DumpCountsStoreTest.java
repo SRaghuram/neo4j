@@ -11,8 +11,8 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
@@ -49,7 +49,7 @@ class DumpCountsStoreTest
     void shouldDumpCountsStore() throws Exception
     {
         // given
-        File file = directory.file( "file" );
+        Path file = directory.filePath( "file" );
         try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, directory.getFileSystem(), immediate(), EMPTY, false, PageCacheTracer.NULL,
                 NO_MONITOR ) )
         {
@@ -67,7 +67,7 @@ class DumpCountsStoreTest
         // when
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PrintStream outStream = new PrintStream( out );
-        DumpCountsStore.main( new String[]{file.getAbsolutePath()}, outStream );
+        DumpCountsStore.main( new String[]{file.toAbsolutePath().toString()}, outStream );
         outStream.close();
 
         // then

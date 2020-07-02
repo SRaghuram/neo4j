@@ -8,8 +8,8 @@ package com.neo4j.tools.dump;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
@@ -36,7 +36,7 @@ class GBPTreeDumpToolTest
     void shouldPrintSomething() throws Exception
     {
         // Given a tree
-        File file = dir.file( "index" );
+        Path file = dir.filePath( "index" );
         try ( GBPTree<?,?> tree = new GBPTreeBuilder<>( pageCache, file, new TokenScanLayout() ).build() )
         {
             tree.checkpoint( IOLimiter.UNLIMITED, NULL );
@@ -51,7 +51,7 @@ class GBPTreeDumpToolTest
         String output = new String( baos.toByteArray(), UTF_8 );
 
         // Then should print stuff to print stream
-        assertThat( output ).contains( "Dump tree " + file.getAbsolutePath() );
+        assertThat( output ).contains( "Dump tree " + file.toAbsolutePath() );
         assertThat( output ).contains( "Level 0" );
     }
 }

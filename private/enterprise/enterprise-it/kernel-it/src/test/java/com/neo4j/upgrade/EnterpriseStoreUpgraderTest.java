@@ -9,8 +9,8 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -36,16 +36,16 @@ public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
 
     @Override
     protected void prepareSampleDatabase( String version, FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout,
-            File databaseDirectory ) throws IOException
+            Path databaseDirectory ) throws IOException
     {
-        File resourceDirectory = findFormatStoreDirectoryForVersion( version, databaseDirectory );
-        File directory = databaseLayout.databaseDirectory().toFile();
-        fileSystem.deleteRecursively( directory );
-        fileSystem.mkdirs( directory );
-        fileSystem.copyRecursively( resourceDirectory, directory );
+        Path resourceDirectory = findFormatStoreDirectoryForVersion( version, databaseDirectory );
+        Path directory = databaseLayout.databaseDirectory();
+        fileSystem.deleteRecursively( directory.toFile() );
+        fileSystem.mkdirs( directory.toFile() );
+        fileSystem.copyRecursively( resourceDirectory.toFile(), directory.toFile() );
     }
 
-    private static File findFormatStoreDirectoryForVersion( String version, File databaseDirectory ) throws IOException
+    private static Path findFormatStoreDirectoryForVersion( String version, Path databaseDirectory ) throws IOException
     {
         if ( version.equals( HighLimitV3_4_0.STORE_VERSION ) )
         {
@@ -61,12 +61,12 @@ public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
         }
     }
 
-    private static File highLimit3_0Store( File databaseDirectory ) throws IOException
+    private static Path highLimit3_0Store( Path databaseDirectory ) throws IOException
     {
         return Unzip.unzip( EnterpriseStoreUpgraderTest.class, "upgradeTest30HighLimitDb.zip", databaseDirectory );
     }
 
-    private static File highLimit3_4Store( File databaseDirectory ) throws IOException
+    private static Path highLimit3_4Store( Path databaseDirectory ) throws IOException
     {
         return Unzip.unzip( EnterpriseStoreUpgraderTest.class, "upgradeTest34HighLimitDb.zip", databaseDirectory );
     }

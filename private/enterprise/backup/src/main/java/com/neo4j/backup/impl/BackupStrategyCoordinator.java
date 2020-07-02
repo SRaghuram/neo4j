@@ -75,7 +75,7 @@ class BackupStrategyCoordinator
                     logProvider,
                     fs,
                     false,
-                    context.getReportDir().toFile(),
+                    context.getReportDir(),
                     consistencyFlags );
         }
         catch ( Exception e )

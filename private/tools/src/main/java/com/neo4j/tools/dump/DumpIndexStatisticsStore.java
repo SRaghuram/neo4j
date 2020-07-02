@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
@@ -43,11 +43,11 @@ public class DumpIndexStatisticsStore
         }
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            dumpIndexStatisticsStore( fileSystem, new File( args[0] ), System.out );
+            dumpIndexStatisticsStore( fileSystem, Path.of( args[0] ), System.out );
         }
     }
 
-    private static void dumpIndexStatisticsStore( FileSystemAbstraction fs, File path, PrintStream out ) throws Exception
+    private static void dumpIndexStatisticsStore( FileSystemAbstraction fs, Path path, PrintStream out ) throws Exception
     {
         IndexStatisticsStore indexStatisticsStore;
         SimpleSchemaRuleCache schema = null;
@@ -57,9 +57,9 @@ public class DumpIndexStatisticsStore
               Lifespan life = new Lifespan() )
         {
             NullLogProvider logProvider = NullLogProvider.getInstance();
-            if ( fs.isDirectory( path ) )
+            if ( fs.isDirectory( path.toFile() ) )
             {
-                DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path.toPath() );
+                DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path );
                 indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true, cacheTracer );
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
                         pageCache, fs, logProvider, PageCacheTracer.NULL );

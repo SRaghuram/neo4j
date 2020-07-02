@@ -10,9 +10,9 @@ import com.neo4j.tools.input.ConsoleInput;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
@@ -31,7 +31,7 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class GBPTreePlayground
 {
-    private final File indexFile;
+    private final Path indexFile;
     private GBPTree<MutableLong,MutableLong> tree;
 
     private final int pageSize = 256;
@@ -39,7 +39,7 @@ public class GBPTreePlayground
     private final SimpleLongLayout layout;
     private final MutableBoolean autoPrint = new MutableBoolean( true );
 
-    private GBPTreePlayground( FileSystemAbstraction fs, File indexFile )
+    private GBPTreePlayground( FileSystemAbstraction fs, Path indexFile )
     {
         this.indexFile = indexFile;
         this.layout = SimpleLongLayout.longLayout().build();
@@ -53,7 +53,7 @@ public class GBPTreePlayground
 
     private void run() throws InterruptedException
     {
-        System.out.println( "Working on: " + indexFile.getAbsolutePath() );
+        System.out.println( "Working on: " + indexFile.toAbsolutePath() );
         setupIndex();
 
         LifeSupport life = new LifeSupport();
@@ -259,14 +259,14 @@ public class GBPTreePlayground
 
     public static void main( String[] args ) throws InterruptedException
     {
-        File indexFile;
+        Path indexFile;
         if ( args.length > 0 )
         {
-            indexFile = new File( args[0] );
+            indexFile = Path.of( args[0] );
         }
         else
         {
-            indexFile = new File( "index" );
+            indexFile = Path.of( "index" );
         }
 
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();

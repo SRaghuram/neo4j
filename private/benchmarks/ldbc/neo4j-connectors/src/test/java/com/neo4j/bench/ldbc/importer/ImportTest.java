@@ -637,7 +637,7 @@ class ImportTest
             try
             {
                 System.err.println( "Store " + storeDir + " not consistent:" );
-                Files.lines( result.reportFile().toPath() ).forEach( System.err::println );
+                Files.lines( result.reportFile() ).forEach( System.err::println );
             }
             catch ( IOException e )
             {

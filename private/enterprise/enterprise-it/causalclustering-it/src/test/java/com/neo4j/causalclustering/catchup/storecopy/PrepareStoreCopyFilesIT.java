@@ -121,7 +121,7 @@ class PrepareStoreCopyFilesIT
         assertThat( atomicFiles ).contains( layout.idFiles().toArray( new Path[0] ) );
 
         // - Native indexes
-        assertThat( atomicFiles ).filteredOn( file -> nativeIndexFileFilter.accept( file.toFile() ) ).isNotEmpty();
+        assertThat( atomicFiles ).filteredOn( nativeIndexFileFilter ).isNotEmpty();
     }
 
     private void assertContainsNoGBPTreeFiles( Set<Path> files )
@@ -138,7 +138,7 @@ class PrepareStoreCopyFilesIT
 
     private NativeIndexFileFilter getNativeIndexFileFilter()
     {
-        return new NativeIndexFileFilter( db.databaseLayout().databaseDirectory().toFile() );
+        return new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
     }
 
     private static boolean fileContentsLooksLikeAGBPTree( Path file, PageCache pageCache )
@@ -146,7 +146,7 @@ class PrepareStoreCopyFilesIT
         try
         {
             MutableBoolean headerRead = new MutableBoolean();
-            GBPTree.readHeader( pageCache, file.toFile(), buffer -> headerRead.setTrue(), NULL );
+            GBPTree.readHeader( pageCache, file, buffer -> headerRead.setTrue(), NULL );
             return headerRead.booleanValue();
         }
         catch ( Exception e )
@@ -165,7 +165,7 @@ class PrepareStoreCopyFilesIT
                 name.equals( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName() ) ||
                 name.equals( DatabaseFile.COUNTS_STORE.getName() ) ||
                 name.equals( DatabaseFile.INDEX_STATISTICS_STORE.getName() ) ||
-                nativeIndexFileFilter.accept( file.toFile() ) ||
+                nativeIndexFileFilter.test( file ) ||
                 databaseLayout.idFiles().contains( file );
     }
 

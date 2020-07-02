@@ -10,8 +10,8 @@ import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Random;
 
 import org.neo4j.configuration.Config;
@@ -46,7 +46,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
     private static final long SEED = 42L;
 
     private PageCache pageCache;
-    private File indexFile;
+    private Path indexFile;
     GBPTree<AdaptableKey,AdaptableValue> gbpTree;
     AdaptableLayout layout;
 
@@ -76,7 +76,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
     {
         try
         {
-            indexFile = managedStore.store().graphDbDirectory().resolve( INDEX_FILE ).toFile();
+            indexFile = managedStore.store().graphDbDirectory().resolve( INDEX_FILE );
             layout = layout().create( keySize(), valueSize() );
             pageCache = createPageCache( indexFile );
             gbpTree = createGBPTree( pageCache, indexFile, layout );
@@ -97,7 +97,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
             @Override
             public void augment( int threads, StoreAndConfig storeAndConfig )
             {
-                indexFile = storeAndConfig.store().graphDbDirectory().resolve( INDEX_FILE ).toFile();
+                indexFile = storeAndConfig.store().graphDbDirectory().resolve( INDEX_FILE );
                 layout = layout().create( keySize(), valueSize() );
                 try ( PageCache pageCache = createPageCache( indexFile );
                       GBPTree<AdaptableKey,AdaptableValue> gbpTree = createGBPTree(
@@ -158,10 +158,10 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
         return random;
     }
 
-    private static PageCache createPageCache( File indexFile ) throws IOException
+    private static PageCache createPageCache( Path indexFile ) throws IOException
     {
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        fs.mkdirs( indexFile.getParentFile() );
+        fs.mkdirs( indexFile.getParent().toFile() );
         Config config = Config.defaults();
         PageCacheTracer tracer = new DefaultPageCacheTracer();
         Log log = NullLog.getInstance();
@@ -178,7 +178,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
 
     private static GBPTree<AdaptableKey,AdaptableValue> createGBPTree(
             PageCache pageCache,
-            File indexFile,
+            Path indexFile,
             AdaptableLayout layout )
     {
         return new GBPTree<>(

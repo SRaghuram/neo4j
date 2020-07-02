@@ -76,7 +76,7 @@ class HalfCreatedConstraintIT
         Config config = Config.defaults( logs_directory, logs );
         ConsistencyCheckService.Result checkResult =
                 service.runFullConsistencyCheck( databaseLayout, config, NONE, NullLogProvider.getInstance(), false );
-        assertTrue( checkResult.isSuccessful(), Files.readString( checkResult.reportFile().toPath() ) );
+        assertTrue( checkResult.isSuccessful(), Files.readString( checkResult.reportFile() ) );
     }
 
     private static void waitForIndexPopulationFailure( GraphDatabaseService database )

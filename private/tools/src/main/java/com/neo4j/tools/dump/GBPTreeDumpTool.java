@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -35,13 +35,13 @@ public class GBPTreeDumpTool
         {
             return;
         }
-        File file = new File( arguments.orphans().get( 0 ) );
+        Path file = Path.of( arguments.orphans().get( 0 ) );
         new GBPTreeDumpTool().run( file, System.out );
     }
 
-    void run( File file, PrintStream out ) throws Exception
+    void run( Path file, PrintStream out ) throws Exception
     {
-        out.println( "Dump tree " + file.getAbsolutePath() );
+        out.println( "Dump tree " + file.toAbsolutePath() );
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               JobScheduler jobScheduler = createInitialisedScheduler();
               GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( fs, jobScheduler, new SchemaLayouts(), true, PageCacheTracer.NULL ) )
