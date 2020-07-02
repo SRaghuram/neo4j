@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.pagecache.ConfigurableIOBufferFactory;
 import org.neo4j.internal.batchimport.AdditionalInitialIds;
 import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
@@ -172,8 +173,8 @@ public class StoreCopy
             try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_COPY_TAG );
                   FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
                   JobScheduler scheduler = createInitialisedScheduler();
-                  PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler, clock );
-                  PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler, clock );
+                  PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler, clock, config );
+                  PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler, clock, config );
                   NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, fs,
                                                           NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
             {
@@ -418,13 +419,15 @@ public class StoreCopy
         };
     }
 
-    private static PageCache createPageCache( FileSystemAbstraction fileSystem, String memory, JobScheduler jobScheduler, SystemNanoClock clock )
+    private static PageCache createPageCache( FileSystemAbstraction fileSystem, String memory, JobScheduler jobScheduler, SystemNanoClock clock,
+            Config config )
     {
         VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
         var memoryTracker = EmptyMemoryTracker.INSTANCE;
         MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), memoryTracker );
-        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, clock, memoryTracker );
+        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, clock, memoryTracker,
+                new ConfigurableIOBufferFactory( config, memoryTracker ) );
     }
 
     private LogProvider getLog( OutputStream out )
