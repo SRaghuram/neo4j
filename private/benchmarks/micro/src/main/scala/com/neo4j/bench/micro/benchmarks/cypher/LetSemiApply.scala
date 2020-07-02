@@ -71,6 +71,7 @@ class LetSemiApply extends AbstractCypherBenchmark {
   private val KEY = "key"
   private val PROPERTY_TYPE = LNG
   private lazy val SELECTIVITY = rhsRows/lhsRows
+  private val TOLERATED_ROW_COUNT_ERROR = 0.05
 
   private lazy val buckets: Array[Bucket] = discreteBucketsFor(PROPERTY_TYPE, SELECTIVITY, 1 - SELECTIVITY)
 
@@ -88,7 +89,7 @@ class LetSemiApply extends AbstractCypherBenchmark {
     val tx = db().beginTx()
     val result = tx.execute(s"MATCH (n:$LABEL) WHERE n.$KEY=${buckets(0).value()} RETURN count(*) AS count")
     val value = result.next().get("count").asInstanceOf[Number].intValue()
-    assert(value == rhsRows)
+    assert(value >= rhsRows-TOLERATED_ROW_COUNT_ERROR*lhsRows && value <= rhsRows+TOLERATED_ROW_COUNT_ERROR*lhsRows)
     tx.close()
   }
 
