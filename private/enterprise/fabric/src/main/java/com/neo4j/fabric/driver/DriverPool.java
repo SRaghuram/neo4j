@@ -117,7 +117,7 @@ public class DriverPool extends LifecycleAdapter
     {
         long checkInterval = fabricConfig.getGlobalDriverConfig().getDriverIdleCheckInterval().toSeconds();
         Duration idleTimeout = fabricConfig.getGlobalDriverConfig().getIdleTimeout();
-        jobScheduler.schedule( FABRIC_IDLE_DRIVER_MONITOR, systemJob( "Clean up of idle drivers" ), () ->
+        jobScheduler.scheduleRecurring( FABRIC_IDLE_DRIVER_MONITOR, systemJob( "Clean up of idle drivers" ), () ->
         {
             List<Key> timeoutCandidates = idleDrivers.entrySet().stream()
                     .filter( entry -> Duration.between( entry.getValue().getLastUsedTimestamp(), clock.instant() ).compareTo( idleTimeout ) > 0 )
