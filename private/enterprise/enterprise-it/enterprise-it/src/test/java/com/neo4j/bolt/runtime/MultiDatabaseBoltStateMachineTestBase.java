@@ -8,6 +8,7 @@ package com.neo4j.bolt.runtime;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.parallel.Execution;
 
 import org.neo4j.bolt.BoltChannel;
 import org.neo4j.bolt.runtime.SessionExtension;
@@ -24,11 +25,13 @@ import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 import static org.neo4j.bolt.runtime.statemachine.StatementProcessor.EMPTY;
 import static org.neo4j.bolt.testing.BoltConditions.containsRecord;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.SyntaxError;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
 
+@Execution( SAME_THREAD )
 abstract class MultiDatabaseBoltStateMachineTestBase
 {
     protected static final MapValue EMPTY_PARAMS = VirtualValues.EMPTY_MAP;

@@ -7,6 +7,8 @@ package com.neo4j.commandline.dbms;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -20,6 +22,7 @@ import org.neo4j.test.rule.SuppressOutput;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class AbstractCommandVerboseOutputIT
 {
     @Inject
