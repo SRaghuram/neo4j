@@ -27,6 +27,7 @@ import java.util.function.Predicate;
 import org.neo4j.function.Predicates;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
@@ -106,10 +107,11 @@ class BackupLoad extends Workload
         FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( outputStream );
 
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
-                .withProgressMonitorFactory( ProgressMonitorFactory.textual( outputStream ) )
-                .withUserLogProvider( logProvider )
-                .withInternalLogProvider( logProvider )
-                .build();
+                                                            .withProgressMonitorFactory( ProgressMonitorFactory.textual( outputStream ) )
+                                                            .withUserLogProvider( logProvider )
+                                                            .withInternalLogProvider( logProvider )
+                                                            .withClock( Clocks.nanoClock() )
+                                                            .build();
 
         executor.executeBackup( context );
     }

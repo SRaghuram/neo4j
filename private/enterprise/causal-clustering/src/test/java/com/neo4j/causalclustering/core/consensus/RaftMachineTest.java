@@ -60,7 +60,7 @@ class RaftMachineTest
     void shouldAlwaysStartAsFollower()
     {
         // when
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, Clocks.fakeClock() )
                 .build();
 
         // then
@@ -75,14 +75,13 @@ class RaftMachineTest
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
         OutboundMessageCollector messages = new OutboundMessageCollector();
 
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .timerService( timerService )
                 .electionTimeout( electionTimeout )
-                .clock( fakeClock )
                 .outbound( messages )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         // When
@@ -104,10 +103,11 @@ class RaftMachineTest
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -126,11 +126,12 @@ class RaftMachineTest
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
         raft.installCoreState( new RaftCoreState(
-                new MembershipEntry( 0, asSet( myself, member1, member2, member3, member4 )  ) ) );
+                new MembershipEntry( 0, asSet( myself, member1, member2, member3, member4 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -151,11 +152,12 @@ class RaftMachineTest
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
         raft.installCoreState( new RaftCoreState(
-                new MembershipEntry( 0, asSet( myself, member1, member2, member3, member4 )  ) ) );
+                new MembershipEntry( 0, asSet( myself, member1, member2, member3, member4 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -174,10 +176,11 @@ class RaftMachineTest
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -195,10 +198,11 @@ class RaftMachineTest
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -217,10 +221,11 @@ class RaftMachineTest
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -240,18 +245,17 @@ class RaftMachineTest
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
         OutboundMessageCollector messages = new OutboundMessageCollector();
 
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .timerService( timerService )
-                .clock( fakeClock )
                 .outbound( messages )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         // When
         raft.handle( voteRequest().from( member1 ).term( -1 ).candidate( member1 )
-                .lastLogIndex( 0 ).lastLogTerm( -1 ).build() );
+                                  .lastLogIndex( 0 ).lastLogTerm( -1 ).build() );
 
         // Then
         assertThat( messages.sentTo( member1 ).size(), equalTo( 1 ) );
@@ -264,10 +268,11 @@ class RaftMachineTest
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -289,14 +294,13 @@ class RaftMachineTest
         OutboundMessageCollector messages = new OutboundMessageCollector();
 
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .timerService( timerService )
-                .clock( fakeClock )
                 .outbound( messages )
                 .raftLog( raftLog )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         // When
@@ -315,13 +319,12 @@ class RaftMachineTest
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
         OutboundMessageCollector messages = new OutboundMessageCollector();
 
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .timerService( timerService )
                 .outbound( messages )
-                .clock( fakeClock )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timerService.invoke( ELECTION );
@@ -342,10 +345,11 @@ class RaftMachineTest
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
 
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
-                .timerService( timerService ).clock( fakeClock ).build();
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                .timerService( timerService )
+                .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         // When
@@ -360,9 +364,8 @@ class RaftMachineTest
         // given
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .timerService( timerService )
-                .clock( fakeClock )
                 .raftLog( raftLog )
                 .build();
 
@@ -370,7 +373,7 @@ class RaftMachineTest
 
         // when
         raft.handle( appendEntriesRequest().from( member1 ).prevLogIndex( 0 ).prevLogTerm( 0 ).leaderTerm( 0 )
-                .logEntry( new RaftLogEntry( 0, data1 ) ).build());
+                                           .logEntry( new RaftLogEntry( 0, data1 ) ).build() );
         // then
         Assertions.assertEquals( 1, raftLog.appendIndex() );
         Assertions.assertEquals( data1, RaftLogHelper.readLogEntry( raftLog, 1 ).content() );
@@ -388,13 +391,12 @@ class RaftMachineTest
 
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .timerService( timerService )
                 .outbound( messages )
-                .clock( fakeClock )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         // We make ourselves the leader
@@ -419,11 +421,11 @@ class RaftMachineTest
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
 
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .timerService( timerService )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
 
         // When
         // There is no leader
@@ -439,14 +441,17 @@ class RaftMachineTest
         InFlightCache inFlightCache = new ConsecutiveInFlightCache( 10, 10000, InFlightCacheMonitor.VOID, false );
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );
         RaftMachine raft =
-                new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE ).timerService( timerService )
-                        .clock( fakeClock ).raftLog( raftLog ).inFlightCache( inFlightCache ).build();
+                new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
+                        .timerService( timerService )
+                        .raftLog( raftLog )
+                        .inFlightCache( inFlightCache )
+                        .build();
 
         raftLog.append( new RaftLogEntry( 0, new MemberIdSet( asSet( myself, member1, member2 ) ) ) );
 
         // when
         raft.handle( appendEntriesRequest().from( member1 ).prevLogIndex( 0 ).prevLogTerm( 0 ).leaderTerm( 0 )
-                .logEntry( new RaftLogEntry( 0, data1 ) ).build() );
+                                           .logEntry( new RaftLogEntry( 0, data1 ) ).build() );
 
         // then
         Assertions.assertEquals( data1, RaftLogHelper.readLogEntry( raftLog, 1 ).content() );
@@ -455,7 +460,7 @@ class RaftMachineTest
         // when
         raft.postRecoveryActions();
         raft.handle( appendEntriesRequest().from( member1 ).prevLogIndex( 1 ).prevLogTerm( 0 ).leaderTerm( 0 )
-                .logEntry( new RaftLogEntry( 0, data2 ) ).build() );
+                                           .logEntry( new RaftLogEntry( 0, data2 ) ).build() );
 
         // then
         Assertions.assertEquals( data2, RaftLogHelper.readLogEntry( raftLog, 2 ).content() );

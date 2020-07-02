@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -37,9 +38,11 @@ public abstract class TransferLeader
     protected final Set<ServerGroupName> myGroups;
     protected final Supplier<List<NamedDatabaseId>> leadershipsResolver;
     protected final Config config;
+    private final Clock clock;
 
     public TransferLeader( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself,
-                           DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Supplier<List<NamedDatabaseId>> leadershipsResolver )
+                           DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Supplier<List<NamedDatabaseId>> leadershipsResolver,
+                           Clock clock )
     {
         this.messageHandler = messageHandler;
         this.myself = myself;
@@ -49,6 +52,7 @@ public abstract class TransferLeader
 
         this.myGroups = myGroups( config );
         this.config = config;
+        this.clock = clock;
     }
 
     protected LeaderTransferTarget createTarget( Collection<NamedDatabaseId> databaseIds, SelectionStrategy selectionStrategy )
@@ -87,7 +91,7 @@ public abstract class TransferLeader
     {
         var raftId = RaftId.from( transferTarget.databaseId().databaseId() );
         var proposal = new RaftMessages.LeadershipTransfer.Proposal( myself, transferTarget.to(), prioritisedGroups );
-        var message = RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, proposal );
+        var message = RaftMessages.InboundRaftMessageContainer.of( clock.instant(), raftId, proposal );
         messageHandler.handle( message );
     }
 

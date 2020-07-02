@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -27,9 +28,9 @@ class TransferLeaderOnShutdown extends TransferLeader
 
     TransferLeaderOnShutdown( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself,
                               DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver,
-                              Supplier<List<NamedDatabaseId>> leadershipsResolver, LogProvider logProvider )
+                              Supplier<List<NamedDatabaseId>> leadershipsResolver, LogProvider logProvider, Clock clock )
     {
-        super( config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver );
+        super( config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver, clock );
         this.log = logProvider.getLog( this.getClass() );
     }
 

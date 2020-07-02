@@ -66,6 +66,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static com.neo4j.configuration.CausalClusteringSettings.catch_up_client_inactivity_timeout;
@@ -246,12 +247,13 @@ class BackupRetriesIT
                 storageEngineFactory, channels );
 
         return OnlineBackupExecutor.builder()
-                .withUserLogProvider( logProvider )
-                .withInternalLogProvider( logProvider )
-                .withProgressMonitorFactory( ProgressMonitorFactory.textual( System.out ) )
-                .withMonitors( monitors )
-                .withSupportingClassesFactory( backupSupportingClassesFactory )
-                .build();
+                                   .withUserLogProvider( logProvider )
+                                   .withInternalLogProvider( logProvider )
+                                   .withProgressMonitorFactory( ProgressMonitorFactory.textual( System.out ) )
+                                   .withMonitors( monitors )
+                                   .withClock( Clocks.nanoClock() )
+                                   .withSupportingClassesFactory( backupSupportingClassesFactory )
+                                   .build();
     }
 
     private OnlineBackupContext buildBackupContext()

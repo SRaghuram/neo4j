@@ -84,7 +84,7 @@ import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.procedure.builtin.SchemaStatementProcedure;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.time.Clocks;
+import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.NamedToken;
 import org.neo4j.token.api.NonUniqueTokenException;
@@ -120,9 +120,10 @@ public class StoreCopy
     private final List<List<String>> keepOnlyRelationshipProperties;
     private final List<String> skipRelationships;
     private final PrintStream out;
+    private final SystemNanoClock clock;
 
     private StoreCopyFilter storeCopyFilter;
-    private MutableMap<String, List<NamedToken>> recreatedTokens;
+    private MutableMap<String,List<NamedToken>> recreatedTokens;
     private TokenHolders tokenHolders;
     private NodeStore nodeStore;
     private PropertyStore propertyStore;
@@ -137,11 +138,11 @@ public class StoreCopy
     }
 
     public StoreCopy( DatabaseLayout from, Config config, FormatEnum format,
-            List<String> deleteNodesWithLabels, List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
-            List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
-            List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,
-            List<String> skipRelationships, boolean verbose, PrintStream out,
-            PageCacheTracer pageCacheTracer )
+                      List<String> deleteNodesWithLabels, List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
+                      List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
+                      List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,
+                      List<String> skipRelationships, boolean verbose, PrintStream out,
+                      PageCacheTracer pageCacheTracer, SystemNanoClock clock )
     {
         this.from = from;
         this.config = config;
@@ -158,6 +159,7 @@ public class StoreCopy
         this.out = out;
         this.verbose = verbose;
         this.pageCacheTracer = pageCacheTracer;
+        this.clock = clock;
     }
 
     public void copyTo( DatabaseLayout toDatabaseLayout, String fromPageCacheMemory, String toPageCacheMemory ) throws Exception
@@ -170,10 +172,10 @@ public class StoreCopy
             try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_COPY_TAG );
                   FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
                   JobScheduler scheduler = createInitialisedScheduler();
-                  PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler );
-                  PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler );
+                  PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler, clock );
+                  PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler, clock );
                   NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, fs,
-                          NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
+                                                          NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
             {
                 out.println( "Starting to copy store, output will be saved to: " + logFilePath.toAbsolutePath() );
                 nodeStore = neoStores.getNodeStore();
@@ -185,12 +187,14 @@ public class StoreCopy
                 SchemaStore schemaStore = neoStores.getSchemaStore();
 
                 storeCopyFilter = convertFilter( deleteNodesWithLabels, keepOnlyNodesWithLabels, skipLabels, skipProperties, skipNodeProperties,
-                        keepOnlyNodeProperties, skipRelationshipProperties, keepOnlyRelationshipProperties, skipRelationships, tokenHolders, stats );
+                                                 keepOnlyNodeProperties, skipRelationshipProperties, keepOnlyRelationshipProperties, skipRelationships,
+                                                 tokenHolders, stats );
 
                 RecordFormats recordFormats = setupRecordFormats( neoStores, format );
 
                 ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, out,
-                        SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
+                                                                                            SpectrumExecutionMonitor.DEFAULT_WIDTH )
+                                                            : ExecutionMonitors.defaultVisible();
 
                 log.info( "### Copy Data ###" );
                 log.info( "Source: %s (page cache %s)", from.databaseDirectory(), fromPageCacheMemory );
@@ -203,7 +207,7 @@ public class StoreCopy
                         Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), EmptyMemoryTracker.INSTANCE );
 
                 batchImporter.doImport( Input.input( () -> nodeIterator( pageCacheTracer ), () -> relationshipIterator( pageCacheTracer ), IdType.INTEGER,
-                        getEstimates(), new Groups() ) );
+                                                     getEstimates(), new Groups() ) );
 
                 stats.printSummary();
 
@@ -222,19 +226,19 @@ public class StoreCopy
                     String newLine = System.lineSeparator();
                     log.info( newLine + newLine + String.join( ";" + newLine, schemaStatements.values() ) );
                     log.info( "You have to manually apply the above commands to the database when it is stared to recreate the indexes and constraints. " +
-                            "The commands are saved to " + logFilePath.toAbsolutePath() + " as well for reference." );
+                              "The commands are saved to " + logFilePath.toAbsolutePath() + " as well for reference." );
                 }
 
                 if ( recreatedTokens.notEmpty() )
                 {
                     log.info( "The following tokens were recreated (with new names) in order to not leave data behind:" );
                     recreatedTokens.forEach( ( type, tokens ) ->
-                    {
-                        for ( NamedToken token : tokens )
-                        {
-                            log.info( "   `%s` (with id %s(%s)).", token.name(), type, token.id() );
-                        }
-                    } );
+                                             {
+                                                 for ( NamedToken token : tokens )
+                                                 {
+                                                     log.info( "   `%s` (with id %s(%s)).", token.name(), type, token.id() );
+                                                 }
+                                             } );
                 }
             }
         }
@@ -414,13 +418,13 @@ public class StoreCopy
         };
     }
 
-    private static PageCache createPageCache( FileSystemAbstraction fileSystem, String memory, JobScheduler jobScheduler )
+    private static PageCache createPageCache( FileSystemAbstraction fileSystem, String memory, JobScheduler jobScheduler, SystemNanoClock clock )
     {
         VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
         var memoryTracker = EmptyMemoryTracker.INSTANCE;
         MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), memoryTracker );
-        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, Clocks.nanoClock(), memoryTracker );
+        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, clock, memoryTracker );
     }
 
     private LogProvider getLog( OutputStream out )
@@ -437,14 +441,14 @@ public class StoreCopy
     }
 
     private static Map<String,String> getSchemaStatements( StoreCopyStats stats, SchemaStore schemaStore,
-            TokenHolders tokenHolders, PageCursorTracer cursorTracer )
+                                                           TokenHolders tokenHolders, PageCursorTracer cursorTracer )
     {
         TokenRead tokenRead = new ReadOnlyTokenRead( tokenHolders );
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
         Map<String,IndexDescriptor> indexes = new HashMap<>();
         List<ConstraintDescriptor> constraints = new ArrayList<>();
         schemaRuleAccess.indexesGetAllIgnoreMalformed( cursorTracer ).forEachRemaining( i -> indexes.put( i.getName(), i ) );
-        schemaRuleAccess.constraintsGetAllIgnoreMalformed( cursorTracer ).forEachRemaining(constraints::add );
+        schemaRuleAccess.constraintsGetAllIgnoreMalformed( cursorTracer ).forEachRemaining( constraints::add );
 
         Map<String,String> schemaStatements = new HashMap<>();
         for ( var entry : indexes.entrySet() )
@@ -489,7 +493,7 @@ public class StoreCopy
             try
             {
                 return RecordFormatSelector.selectForConfig( Config.defaults( GraphDatabaseSettings.record_format, "high_limit" ),
-                        NullLogProvider.getInstance() );
+                                                             NullLogProvider.getInstance() );
             }
             catch ( IllegalArgumentException e )
             {
@@ -503,10 +507,11 @@ public class StoreCopy
     }
 
     private static StoreCopyFilter convertFilter( List<String> deleteNodesWithLabels,
-            List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
-            List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
-            List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,  List<String> skipRelationships,
-            TokenHolders tokenHolders, StoreCopyStats stats )
+                                                  List<String> keepOnlyNodesWithLabels, List<String> skipLabels,
+                                                  List<String> skipProperties, List<List<String>> skipNodeProperties, List<List<String>> keepOnlyNodeProperties,
+                                                  List<List<String>> skipRelationshipProperties, List<List<String>> keepOnlyRelationshipProperties,
+                                                  List<String> skipRelationships,
+                                                  TokenHolders tokenHolders, StoreCopyStats stats )
     {
         int[] deleteNodesWithLabelsIds = getTokenIds( deleteNodesWithLabels, tokenHolders.labelTokens() );
         int[] keepOnlyNodesWithLabelsIds = getTokenIds( keepOnlyNodesWithLabels, tokenHolders.labelTokens() );
@@ -521,7 +526,7 @@ public class StoreCopy
         int[] skipRelationshipIds = getTokenIds( skipRelationships, tokenHolders.relationshipTypeTokens() );
 
         return new StoreCopyFilter( stats, deleteNodesWithLabelsIds, keepOnlyNodesWithLabelsIds, skipLabelsIds, skipPropertyIds, skipNodePropertyIds,
-                keepOnlyNodePropertyIds, skipRelationshipPropertyIds, keepOnlyRelationshipPropertyIds, skipRelationshipIds );
+                                    keepOnlyNodePropertyIds, skipRelationshipPropertyIds, keepOnlyRelationshipPropertyIds, skipRelationshipIds );
     }
 
     private static int[] getTokenIds( List<String> tokenNames, TokenHolder tokenHolder )
@@ -541,7 +546,7 @@ public class StoreCopy
     }
 
     private static ImmutableIntObjectMap<ImmutableIntSet> getPropertyComboTokenIds( List<List<String>> propertiesWithOwningEntityTokens,
-            TokenHolder propertyKeyTokens, TokenHolder owningEntityTokens )
+                                                                                    TokenHolder propertyKeyTokens, TokenHolder owningEntityTokens )
     {
         MutableIntObjectMap<MutableIntSet> propertyComboTokens = new IntObjectHashMap<>();
 
@@ -575,8 +580,8 @@ public class StoreCopy
     private Input.Estimates getEstimates()
     {
         long propertyStoreSize = storeSize( propertyStore ) / 2 +
-                storeSize( propertyStore.getStringStore() ) / 2 +
-                storeSize( propertyStore.getArrayStore() ) / 2;
+                                 storeSize( propertyStore.getStringStore() ) / 2 +
+                                 storeSize( propertyStore.getArrayStore() ) / 2;
         return Input.knownEstimates(
                 nodeStore.getNumberOfIdsInUse(),
                 relationshipStore.getNumberOfIdsInUse(),

@@ -17,10 +17,8 @@ import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
-import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
-import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -35,10 +33,8 @@ import java.util.Set;
 
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.procedure.Name;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
@@ -82,12 +78,10 @@ public class RaftTestFixture
             var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, fixtureMember.member, fakeDatabaseIdRepository );
             var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, fixtureMember.member, raftMessageLogger );
 
-            fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize,
-                    RaftTestMemberSetBuilder.INSTANCE )
+            fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize, RaftTestMemberSetBuilder.INSTANCE, clock )
                     .inbound( inbound )
                     .outbound( outbound )
                     .raftLog( fixtureMember.raftLog )
-                    .clock( clock )
                     .timerService( fixtureMember.timerService )
                     .build();
 
@@ -117,7 +111,7 @@ public class RaftTestFixture
 
     public static class Members implements Iterable<MemberFixture>
     {
-        private Map<MemberId, MemberFixture> memberMap = new HashMap<>();
+        private Map<MemberId,MemberFixture> memberMap = new HashMap<>();
 
         private MemberFixture put( MemberFixture value )
         {
@@ -221,10 +215,10 @@ public class RaftTestFixture
         public String toString()
         {
             return "FixtureMember{" +
-                    "raftInstance=" + raftMachine +
-                    ", timeoutService=" + timerService +
-                    ", raftLog=" + raftLog +
-                    '}';
+                   "raftInstance=" + raftMachine +
+                   ", timeoutService=" + timerService +
+                   ", raftLog=" + raftLog +
+                   '}';
         }
     }
 

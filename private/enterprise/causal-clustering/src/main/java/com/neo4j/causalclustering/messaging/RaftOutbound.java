@@ -34,14 +34,14 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
     private final MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> localMessageHandler;
 
     public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> outbound,
-            MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> localMessageHandler, Supplier<Optional<RaftId>> boundRaftId,
-            LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
+                         MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> localMessageHandler, Supplier<Optional<RaftId>> boundRaftId,
+                         LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
     {
         this.coreTopologyService = coreTopologyService;
         this.outbound = outbound;
         this.boundRaftId = boundRaftId;
         this.log = logProvider.getLog( getClass() );
-        this.unknownAddressMonitor = new UnknownAddressMonitor( log, Clocks.systemClock(), logThresholdMillis );
+        this.unknownAddressMonitor = new UnknownAddressMonitor( log, clock, logThresholdMillis );
         this.myself = myself;
         this.clock = clock;
         this.localMessageHandler = localMessageHandler;

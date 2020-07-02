@@ -53,10 +53,9 @@ class ElectionTest
         // given
         FakeClock fakeClock = Clocks.fakeClock();
         TimerService timeouts = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .outbound( outbound )
                 .timerService( timeouts )
-                .clock( fakeClock )
                 .build();
 
         raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
@@ -90,10 +89,9 @@ class ElectionTest
         // given
         FakeClock fakeClock = Clocks.fakeClock();
         TimerService timeouts = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .outbound( outbound )
                 .timerService( timeouts )
-                .clock( fakeClock )
                 .build();
 
         raft.installCoreState(
@@ -120,13 +118,12 @@ class ElectionTest
         // given
         FakeClock fakeClock = Clocks.fakeClock();
         TimerService timeouts = new OnDemandTimerService( fakeClock );
-        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE )
+        RaftMachine raft = new RaftMachineBuilder( myself, 3, RaftTestMemberSetBuilder.INSTANCE, fakeClock )
                 .outbound( outbound )
                 .timerService( timeouts )
-                .clock( fakeClock )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
 
         // when
         raft.handle( voteRequest().from( member1 ).candidate( member1 ).term( 1 ).build() );

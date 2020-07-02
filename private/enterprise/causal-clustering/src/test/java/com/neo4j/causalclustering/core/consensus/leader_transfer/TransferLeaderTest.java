@@ -28,9 +28,7 @@ import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
@@ -52,7 +50,7 @@ class TransferLeaderTest
         var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeaderJob transferLeaderJob = new TransferLeaderJob( config, messageHandler, myself, databasePenalties, new RandomStrategy(),
-                                                                     raftMembershipResolver, () -> myLeaderships );
+                                                                     raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -77,7 +75,7 @@ class TransferLeaderTest
         List<NamedDatabaseId> myLeaderships = List.of();
         TransferLeaderJob transferLeaderJob =
                 new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
-                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
 
         // when
         transferLeaderJob.run();
@@ -91,12 +89,12 @@ class TransferLeaderTest
     {
         // Priority group exist and I am in it
         var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) )
-                .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
+                           .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeaderJob transferLeaderJob =
                 new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
-                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -116,7 +114,7 @@ class TransferLeaderTest
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeaderJob transferLeaderJob =
                 new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
-                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
         // I am leader
         myLeaderships.add( databaseId1 );
 
@@ -132,20 +130,21 @@ class TransferLeaderTest
     {
         // Priority group exist for one db and I am in it
         var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) )
-                .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
+                           .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
 
         var transferee = core1;
         var selectionStrategyInputs = new ArrayList<TransferCandidates>();
         SelectionStrategy mockSelectionStrategy = validTopologies ->
         {
             selectionStrategyInputs.addAll( validTopologies );
-            var transferCandidates = validTopologies.get(0);
+            var transferCandidates = validTopologies.get( 0 );
             return new LeaderTransferTarget( transferCandidates.databaseId(), transferee );
         };
 
         var myLeaderships = List.of( databaseId1, databaseId2 );
         TransferLeaderJob transferLeaderJob =
-                new TransferLeaderJob( config, messageHandler, myself, databasePenalties, mockSelectionStrategy, raftMembershipResolver, () -> myLeaderships );
+                new TransferLeaderJob( config, messageHandler, myself, databasePenalties, mockSelectionStrategy, raftMembershipResolver, () -> myLeaderships,
+                                       Clocks.fakeClock() );
         // when
         transferLeaderJob.run();
 
@@ -163,13 +162,13 @@ class TransferLeaderTest
         SelectionStrategy mockSelectionStrategy = validTopologies ->
         {
             selectionStrategyInputs.addAll( validTopologies );
-            var transferCandidates = validTopologies.get(0);
+            var transferCandidates = validTopologies.get( 0 );
             return new LeaderTransferTarget( transferCandidates.databaseId(), transferee );
         };
         var nonSystemLeaderships = List.of( databaseId1 );
 
         var transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, myself, databasePenalties,
-                                                       mockSelectionStrategy, raftMembershipResolver, () -> nonSystemLeaderships );
+                                                       mockSelectionStrategy, raftMembershipResolver, () -> nonSystemLeaderships, Clocks.fakeClock() );
 
         // when
         transferLeaderJob.run();
@@ -181,7 +180,7 @@ class TransferLeaderTest
         selectionStrategyInputs.clear();
         var systemLeaderships = List.of( NAMED_SYSTEM_DATABASE_ID );
         transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, myself, databasePenalties,
-                                                   mockSelectionStrategy, raftMembershipResolver, () -> systemLeaderships );
+                                                   mockSelectionStrategy, raftMembershipResolver, () -> systemLeaderships, Clocks.fakeClock() );
 
         // when
         transferLeaderJob.run();
@@ -205,7 +204,7 @@ class TransferLeaderTest
         var myLeaderships = new ArrayList<>( databaseIds );
         TransferLeaderJob transferLeaderJob =
                 new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
-                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+                                       SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
 
         // when
         transferLeaderJob.run();

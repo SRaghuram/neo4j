@@ -26,6 +26,7 @@ import org.neo4j.consistency.ConsistencyCheckOptions;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.configuration.OnlineBackupSettings.DEFAULT_BACKUP_HOST;
 import static com.neo4j.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
@@ -114,11 +115,12 @@ public class OnlineBackupCommand extends AbstractCommand
         final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );
         final var internalLogProvider = verbose ? userLogProvider : NullLogProvider.getInstance();
         final var backupExecutor = OnlineBackupExecutor.builder()
-                .withFileSystem( ctx.fs() )
-                .withInternalLogProvider( internalLogProvider )
-                .withUserLogProvider( userLogProvider )
-                .withProgressMonitorFactory( ProgressMonitorFactory.textual( ctx.err() ) )
-                .build();
+                                                       .withFileSystem( ctx.fs() )
+                                                       .withInternalLogProvider( internalLogProvider )
+                                                       .withUserLogProvider( userLogProvider )
+                                                       .withClock( Clocks.nanoClock() )
+                                                       .withProgressMonitorFactory( ProgressMonitorFactory.textual( ctx.err() ) )
+                                                       .build();
 
         try
         {

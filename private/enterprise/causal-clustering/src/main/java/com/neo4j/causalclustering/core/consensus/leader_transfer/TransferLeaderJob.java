@@ -10,9 +10,9 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.ServerGroupName;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -33,9 +33,9 @@ class TransferLeaderJob extends TransferLeader implements Runnable
 
     TransferLeaderJob( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself,
                        DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing, RaftMembershipResolver membershipResolver,
-                       Supplier<List<NamedDatabaseId>> leadershipsResolver )
+                       Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
     {
-        super( config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver );
+        super( config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver, clock );
         this.selectionStrategy = leaderLoadBalancing;
     }
 
@@ -73,9 +73,9 @@ class TransferLeaderJob extends TransferLeader implements Runnable
     {
         var dbsWithPriorityGroups = prioritisedGroups( config, leaderships ).keySet();
         var unPrioritisedNonSystemLeaderships = leaderships.stream()
-                                                          .filter( not( dbsWithPriorityGroups::contains ) )
-                                                          .filter( not( NamedDatabaseId::isSystemDatabase ) )
-                                                          .collect( Collectors.toList() );
+                                                           .filter( not( dbsWithPriorityGroups::contains ) )
+                                                           .filter( not( NamedDatabaseId::isSystemDatabase ) )
+                                                           .collect( Collectors.toList() );
         var leaderTransferTarget = createTarget( unPrioritisedNonSystemLeaderships, selectionStrategy );
 
         if ( leaderTransferTarget != NO_TARGET )

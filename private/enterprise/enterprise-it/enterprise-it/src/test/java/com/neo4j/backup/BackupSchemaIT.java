@@ -37,6 +37,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.time.Clocks;
 
 import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
@@ -158,9 +159,10 @@ class BackupSchemaIT
 
         LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
-                .withUserLogProvider( logProvider )
-                .withInternalLogProvider( logProvider )
-                .build();
+                                                            .withUserLogProvider( logProvider )
+                                                            .withInternalLogProvider( logProvider )
+                                                            .withClock( Clocks.nanoClock() )
+                                                            .build();
 
         executor.executeBackup( context );
 

@@ -34,6 +34,7 @@ import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.time.Clocks;
 import org.neo4j.util.VisibleForTesting;
 
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
@@ -86,14 +87,14 @@ public class StoreCopyCommand extends AbstractCommand
             names = "--to-format",
             defaultValue = "same",
             description = "Set the format for the new database. Must be one of ${COMPLETION-CANDIDATES}. 'same' will use the same format as the source. " +
-                    "WARNING: If you go from 'high_limit' to 'standard' there is no validation that the data will actually fit."
+                          "WARNING: If you go from 'high_limit' to 'standard' there is no validation that the data will actually fit."
     )
     private StoreCopy.FormatEnum format;
 
     @Option(
             names = "--delete-nodes-with-labels",
             description = "A comma separated list of labels. All nodes that have ANY of the specified labels will be deleted." +
-                "Can not be combined with --keep-only-nodes-with-labels.",
+                          "Can not be combined with --keep-only-nodes-with-labels.",
             paramLabel = "<label>[,<label>...]",
             showDefaultValue = NEVER,
             converter = TypeConverter.class
@@ -211,11 +212,12 @@ public class StoreCopyCommand extends AbstractCommand
             {
                 checkDbState( fromDatabaseLayout, config, memoryTracker );
             }
-            try ( Closeable ignored2 = LockChecker.checkDatabaseLock( toDatabaseLayout )  )
+            try ( Closeable ignored2 = LockChecker.checkDatabaseLock( toDatabaseLayout ) )
             {
                 StoreCopy copy = new StoreCopy( fromDatabaseLayout, config, format, deleteNodesWithLabels, keepOnlyNodesWithLabels, skipLabels,
-                        skipProperties, skipNodeProperties, keepOnlyNodeProperties, skipRelationshipProperties, keepOnlyRelationshipProperties,
-                        skipRelationships, verbose, ctx.out(), pageCacheTracer );
+                                                skipProperties, skipNodeProperties, keepOnlyNodeProperties, skipRelationshipProperties,
+                                                keepOnlyRelationshipProperties,
+                                                skipRelationships, verbose, ctx.out(), pageCacheTracer, Clocks.nanoClock() );
                 try
                 {
                     copy.copyTo( toDatabaseLayout, fromPageCacheMemory, toPageCacheMemory );
@@ -286,11 +288,11 @@ public class StoreCopyCommand extends AbstractCommand
 
                 sourceTxLogs = sourceTxLogs.toAbsolutePath();
                 Config cfg = Config.newBuilder()
-                        .set( default_database, databaseName.toString() )
-                        .set( neo4j_home, source.path.getParent() )
-                        .set( databases_root_path, source.path.getParent() )
-                        .set( transaction_logs_root_path, sourceTxLogs.getParent() )
-                        .build();
+                                   .set( default_database, databaseName.toString() )
+                                   .set( neo4j_home, source.path.getParent() )
+                                   .set( databases_root_path, source.path.getParent() )
+                                   .set( transaction_logs_root_path, sourceTxLogs.getParent() )
+                                   .build();
                 return DatabaseLayout.of( cfg );
             }
         }
@@ -354,8 +356,8 @@ public class StoreCopyCommand extends AbstractCommand
         if ( checkRecoveryState( databaseLayout, additionalConfiguration, memoryTracker ) )
         {
             throw new CommandFailedException( joinAsLines( "The database " + databaseLayout.getDatabaseName() + "  was not shut down properly.",
-                    "Please perform a recovery by starting and stopping the database.",
-                    "If recovery is not possible, you can force the command to continue with the '--force' flag.") );
+                                                           "Please perform a recovery by starting and stopping the database.",
+                                                           "If recovery is not possible, you can force the command to continue with the '--force' flag." ) );
         }
     }
 
@@ -374,8 +376,8 @@ public class StoreCopyCommand extends AbstractCommand
     private Config buildConfig()
     {
         Config cfg = Config.newBuilder()
-                .fromFileNoThrow( ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .set( GraphDatabaseSettings.neo4j_home, ctx.homeDir() ).build();
+                           .fromFileNoThrow( ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
+                           .set( GraphDatabaseSettings.neo4j_home, ctx.homeDir() ).build();
         ConfigUtils.disableAllConnectors( cfg );
         return cfg;
     }
@@ -452,7 +454,7 @@ public class StoreCopyCommand extends AbstractCommand
         public List<List<String>> convert( String value )
         {
             return quoteAwareSplit( value, ',', false ).stream()
-                    .map( s -> quoteAwareSplit( s, '.', true ) ).collect( Collectors.toList() );
+                                                       .map( s -> quoteAwareSplit( s, '.', true ) ).collect( Collectors.toList() );
         }
     }
 }

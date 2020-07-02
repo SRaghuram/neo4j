@@ -20,6 +20,7 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.time.Clocks;
 
 import static java.util.Objects.requireNonNull;
 import static org.neo4j.util.Preconditions.checkArgument;
@@ -171,9 +172,10 @@ public final class OnlineBackup
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         OnlineBackupExecutor backupExecutor = OnlineBackupExecutor.builder()
-                .withUserLogProvider( logProvider )
-                .withProgressMonitorFactory( ProgressMonitorFactory.textual( outputStream ) )
-                .build();
+                                                                  .withUserLogProvider( logProvider )
+                                                                  .withClock( Clocks.nanoClock() )
+                                                                  .withProgressMonitorFactory( ProgressMonitorFactory.textual( outputStream ) )
+                                                                  .build();
 
         OnlineBackupContext context = OnlineBackupContext.builder()
                 .withAddress( hostnameOrIp, port )

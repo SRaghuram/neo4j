@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.messaging.TestNetwork;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +43,7 @@ public class Fixture
     final Set<RaftFixture> rafts = new HashSet<>();
     final TestNetwork net;
 
-    Fixture( Set<MemberId> memberIds, TestNetwork net, long electionTimeout, long heartbeatInterval )
+    Fixture( Set<MemberId> memberIds, TestNetwork net, long electionTimeout, long heartbeatInterval, Clock clock )
     {
         this.net = net;
 
@@ -60,7 +61,7 @@ public class Fixture
 
             InMemoryRaftLog raftLog = new InMemoryRaftLog();
             RaftFixture raftFixture =
-                    new RaftMachineBuilder( member, memberIds.size(), RaftTestMemberSetBuilder.INSTANCE )
+                    new RaftMachineBuilder( member, memberIds.size(), RaftTestMemberSetBuilder.INSTANCE, clock )
                             .electionTimeout( electionTimeout )
                             .heartbeatInterval( heartbeatInterval )
                             .inbound( inbound )

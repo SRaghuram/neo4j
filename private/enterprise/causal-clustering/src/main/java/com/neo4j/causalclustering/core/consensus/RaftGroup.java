@@ -76,15 +76,16 @@ public class RaftGroup
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
-            MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
-            LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker )
+               MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+               ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
+               LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
         Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
-        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId, memoryTracker );
+        RaftLog underlyingLog =
+                createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId, memoryTracker, clock );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );
 
         StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( namedDatabaseId.name(), life, logProvider );
@@ -93,13 +94,14 @@ public class RaftGroup
         StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( namedDatabaseId.name(), life, logProvider );
 
         var raftTimersConfig = new RaftTimersConfig( config );
-        leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, systemClock(), timerService, logProvider );
+        leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, clock, timerService, logProvider );
 
         SendToMyself leaderOnlyReplicator = new SendToMyself( myself, outbound );
         Integer minimumConsensusGroupSize = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         MemberIdSetBuilder memberSetBuilder = new MemberIdSetBuilder();
         raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, myself, memberSetBuilder, raftLog, logProvider, minimumConsensusGroupSize,
-                config.get( join_catch_up_max_lag ).toMillis(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
+                                                           config.get( join_catch_up_max_lag ).toMillis(), clock,
+                                                           config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
 
         dependencies.satisfyDependency( raftMembershipManager );
         life.add( raftMembershipManager );
@@ -107,7 +109,7 @@ public class RaftGroup
         // TODO: In-flight cache should support sharing between multiple databases.
         inFlightCache = InFlightCacheFactory.create( config, monitors );
         RaftLogShippingManager logShipping =
-                new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself, raftMembershipManager,
+                new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, clock, myself, raftMembershipManager,
                                             config.get( log_shipping_retry_timeout ).toMillis(), config.get( catchup_batch_size ),
                                             config.get( log_shipping_max_lag ),
                                             inFlightCache );
@@ -139,8 +141,8 @@ public class RaftGroup
     }
 
     private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
-            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler,
-            NamedDatabaseId namedDatabaseId, MemoryTracker memoryTracker )
+                                          Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler,
+                                          NamedDatabaseId namedDatabaseId, MemoryTracker memoryTracker, SystemNanoClock clock )
     {
         RaftLogImplementation raftLogImplementation = RaftLogImplementation.valueOf( config.get( CausalClusteringSettings.raft_log_implementation ) );
         switch ( raftLogImplementation )
@@ -161,8 +163,8 @@ public class RaftGroup
             File directory = layout.raftLogDirectory( namedDatabaseId.name() );
 
             return life.add(
-                    new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, systemClock(), scheduler,
-                            pruningStrategy, memoryTracker ) );
+                    new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, clock, scheduler,
+                                          pruningStrategy, memoryTracker ) );
         }
         default:
             throw new IllegalStateException( "Unknown raft log implementation: " + raftLogImplementation );

@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
@@ -28,7 +29,7 @@ class BackupOutputMonitorTest
         // given
         Monitors monitors = new Monitors();
         AssertableLogProvider logProvider = new AssertableLogProvider();
-        monitors.addMonitorListener( new BackupOutputMonitor( logProvider ) );
+        monitors.addMonitorListener( new BackupOutputMonitor( logProvider, Clocks.fakeClock() ) );
 
         // when
         StoreCopyClientMonitor storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );

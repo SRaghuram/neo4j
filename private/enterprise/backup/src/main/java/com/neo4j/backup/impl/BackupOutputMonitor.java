@@ -26,11 +26,6 @@ class BackupOutputMonitor implements StoreCopyClientMonitor
     private Stopwatch startTime;
     private Stopwatch partStartTime;
 
-    BackupOutputMonitor( LogProvider logProvider )
-    {
-        this( logProvider, Clocks.nanoClock() );
-    }
-
     BackupOutputMonitor( LogProvider logProvider, SystemNanoClock clock )
     {
         log = logProvider.getLog( getClass() );

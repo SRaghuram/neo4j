@@ -59,9 +59,9 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         var nonPriorityStrategy = pickSelectionStrategy( config, databaseManager, leaderService, myself );
 
         this.transferLeaderJob = new TransferLeaderJob( config, messageHandler, myself,
-                                                        databasePenalties, nonPriorityStrategy, membershipResolver, leadershipsResolver );
+                                                        databasePenalties, nonPriorityStrategy, membershipResolver, leadershipsResolver, clock );
         this.transferLeaderOnShutdown = new TransferLeaderOnShutdown(
-                config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver, logProvider );
+                config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver, logProvider, clock );
     }
 
     @Override
@@ -108,7 +108,7 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     }
 
     private static SelectionStrategy pickSelectionStrategy( Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
-            LeaderService leaderService, MemberId myself )
+                                                            LeaderService leaderService, MemberId myself )
     {
         var strategyChoice = config.get( leader_balancing );
         switch ( strategyChoice )

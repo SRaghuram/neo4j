@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
+import org.neo4j.time.Clocks;
+
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -50,7 +52,7 @@ class ElectionPerformanceIT
 
         TestNetwork net = new TestNetwork<>( ( i, o ) -> networkLatency );
         Set<MemberId> members = asSet( member( 0 ), member( 1 ), member( 2 ) );
-        Fixture fixture = new Fixture( members, net, electionTimeout, heartbeatInterval );
+        Fixture fixture = new Fixture( members, net, electionTimeout, heartbeatInterval, Clocks.fakeClock() );
         DisconnectLeaderScenario scenario = new DisconnectLeaderScenario( fixture, electionTimeout );
 
         try
@@ -92,7 +94,7 @@ class ElectionPerformanceIT
 
         TestNetwork net = new TestNetwork<>( ( i, o ) -> networkLatency );
         Set<MemberId> members = asSet( member( 0 ), member( 1 ), member( 2 ) );
-        Fixture fixture = new Fixture( members, net, electionTimeout, heartbeatInterval );
+        Fixture fixture = new Fixture( members, net, electionTimeout, heartbeatInterval, Clocks.fakeClock() );
         DisconnectLeaderScenario scenario = new DisconnectLeaderScenario( fixture, electionTimeout );
 
         try

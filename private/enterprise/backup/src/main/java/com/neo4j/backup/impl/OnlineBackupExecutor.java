@@ -20,6 +20,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
 
@@ -32,6 +33,7 @@ public final class OnlineBackupExecutor
     private final Monitors monitors;
     private final BackupSupportingClassesFactory backupSupportingClassesFactory;
     private final ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
+    private final SystemNanoClock clock;
 
     private OnlineBackupExecutor( Builder builder )
     {
@@ -41,6 +43,7 @@ public final class OnlineBackupExecutor
         this.progressMonitorFactory = builder.progressMonitorFactory;
         this.monitors = builder.monitors;
         this.backupSupportingClassesFactory = builder.supportingClassesFactory;
+        this.clock = builder.clock;
     }
 
     public static OnlineBackupExecutor buildDefault()
@@ -59,7 +62,7 @@ public final class OnlineBackupExecutor
 
         try ( BackupSupportingClasses supportingClasses = backupSupportingClassesFactory.createSupportingClasses( context ) )
         {
-            StoreCopyClientMonitor backupStoreCopyMonitor = new BackupOutputMonitor( userLogProvider );
+            StoreCopyClientMonitor backupStoreCopyMonitor = new BackupOutputMonitor( userLogProvider, clock );
             monitors.addMonitorListener( backupStoreCopyMonitor );
 
             PageCache pageCache = supportingClasses.getPageCache();
@@ -72,7 +75,7 @@ public final class OnlineBackupExecutor
             BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, internalLogProvider );
 
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
-                    progressMonitorFactory, wrapper );
+                                                                                   progressMonitorFactory, wrapper );
             coordinator.performBackup( context );
         }
     }
@@ -104,6 +107,7 @@ public final class OnlineBackupExecutor
         private Monitors monitors = new Monitors();
         private BackupSupportingClassesFactory supportingClassesFactory;
         private StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+        private SystemNanoClock clock;
 
         private Builder()
         {
@@ -142,6 +146,12 @@ public final class OnlineBackupExecutor
         public Builder withSupportingClassesFactory( BackupSupportingClassesFactory supportingClassesFactory )
         {
             this.supportingClassesFactory = supportingClassesFactory;
+            return this;
+        }
+
+        public Builder withClock( SystemNanoClock clock )
+        {
+            this.clock = clock;
             return this;
         }
 

@@ -37,14 +37,13 @@ import org.neo4j.configuration.helpers.DurationRange;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.time.Clocks;
 
 public class RaftMachineBuilder
 {
     private final MemberId member;
-
-    private int expectedClusterSize;
-    private RaftMembers.Builder memberSetBuilder;
+    private final int expectedClusterSize;
+    private final RaftMembers.Builder memberSetBuilder;
+    private final Clock clock;
 
     private TermState termState = new TermState();
     private StateStorage<TermState> termStateStorage = new InMemoryStateStorage<>( termState );
@@ -52,11 +51,14 @@ public class RaftMachineBuilder
     private RaftLog raftLog = new InMemoryRaftLog();
     private TimerService timerService;
 
-    private Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound = handler -> {};
-    private Outbound<MemberId, RaftMessages.RaftMessage> outbound = ( to, message, block ) -> {};
+    private Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound = handler ->
+    {
+    };
+    private Outbound<MemberId,RaftMessages.RaftMessage> outbound = ( to, message, block ) ->
+    {
+    };
 
     private LogProvider logProvider = NullLogProvider.getInstance();
-    private Clock clock = Clocks.systemClock();
 
     private long term = termState.currentTerm();
 
@@ -71,14 +73,17 @@ public class RaftMachineBuilder
     private StateStorage<RaftMembershipState> raftMembership =
             new InMemoryStateStorage<>( new RaftMembershipState() );
     private Monitors monitors = new Monitors();
-    private CommitListener commitListener = commitIndex -> {};
+    private CommitListener commitListener = commitIndex ->
+    {
+    };
     private InFlightCache inFlightCache = new ConsecutiveInFlightCache();
 
-    public RaftMachineBuilder( MemberId member, int expectedClusterSize, RaftMembers.Builder memberSetBuilder )
+    public RaftMachineBuilder( MemberId member, int expectedClusterSize, RaftMembers.Builder memberSetBuilder, Clock clock )
     {
         this.member = member;
         this.expectedClusterSize = expectedClusterSize;
         this.memberSetBuilder = memberSetBuilder;
+        this.clock = clock;
     }
 
     public RaftMachine build()
@@ -90,37 +95,40 @@ public class RaftMachineBuilder
     {
         termState.update( term );
         var config = Config.newBuilder()
-                .set( CausalClusteringSettings.leader_failure_detection_window, detectionWindow )
-                .set( CausalClusteringSettings.election_failure_detection_window, detectionWindow );
+                           .set( CausalClusteringSettings.leader_failure_detection_window, detectionWindow )
+                           .set( CausalClusteringSettings.election_failure_detection_window, detectionWindow );
         var raftTimersConfig = new RaftTimersConfig( config.build() );
         LeaderAvailabilityTimers leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, clock, timerService, logProvider );
         SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );
         RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator, member,
-                memberSetBuilder, raftLog, logProvider, expectedClusterSize, detectionWindowMin, clock, catchupTimeout, raftMembership );
+                                                                             memberSetBuilder, raftLog, logProvider, expectedClusterSize, detectionWindowMin,
+                                                                             clock, catchupTimeout, raftMembership );
         membershipManager.setRecoverFromIndexSupplier( () -> 0 );
         RaftLogShippingManager logShipping =
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, clock, member, membershipManager,
-                        retryTimeMillis, catchupBatchSize, maxAllowedShippingLag, inFlightCache );
+                                            retryTimeMillis, catchupBatchSize, maxAllowedShippingLag, inFlightCache );
 
         var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider, false, false,
-                Set::of, new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
+                                       Set::of, new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var outcomeApplier = new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
-                membershipManager, logProvider, rejection -> {} );
+                                                     membershipManager, logProvider, rejection ->
+                                                     {
+                                                     } );
         RaftMachine raft = new RaftMachine( member, leaderAvailabilityTimers, logProvider,
-                membershipManager, inFlightCache, outcomeApplier, raftState );
+                                            membershipManager, inFlightCache, outcomeApplier, raftState );
         inbound.registerHandler( incomingMessage ->
-        {
-            try
-            {
-                ConsensusOutcome outcome = raft.handle( incomingMessage.message() );
-                commitListener.notifyCommitted( outcome.getCommitIndex() );
-            }
-            catch ( IOException e )
-            {
-                throw new RuntimeException( e );
-            }
-        } );
+                                 {
+                                     try
+                                     {
+                                         ConsensusOutcome outcome = raft.handle( incomingMessage.message() );
+                                         commitListener.notifyCommitted( outcome.getCommitIndex() );
+                                     }
+                                     catch ( IOException e )
+                                     {
+                                         throw new RuntimeException( e );
+                                     }
+                                 } );
 
         try
         {
@@ -152,7 +160,7 @@ public class RaftMachineBuilder
         return this;
     }
 
-    public RaftMachineBuilder outbound( Outbound<MemberId, RaftMessages.RaftMessage> outbound )
+    public RaftMachineBuilder outbound( Outbound<MemberId,RaftMessages.RaftMessage> outbound )
     {
         this.outbound = outbound;
         return this;
@@ -173,12 +181,6 @@ public class RaftMachineBuilder
     public RaftMachineBuilder inFlightCache( InFlightCache inFlightCache )
     {
         this.inFlightCache = inFlightCache;
-        return this;
-    }
-
-    public RaftMachineBuilder clock( Clock clock )
-    {
-        this.clock = clock;
         return this;
     }
 
@@ -216,7 +218,7 @@ public class RaftMachineBuilder
 
         public RaftFixture( RaftMachine raft, RaftLogShippingManager logShipping, RaftLog raftLog )
         {
-            raftMachine = raft;
+            this.raftMachine = raft;
             this.logShipping = logShipping;
             this.raftLog = raftLog;
         }

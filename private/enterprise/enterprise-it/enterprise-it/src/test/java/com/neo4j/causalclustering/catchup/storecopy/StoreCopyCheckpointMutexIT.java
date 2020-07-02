@@ -48,6 +48,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static java.util.Collections.emptyList;
@@ -156,9 +157,10 @@ class StoreCopyCheckpointMutexIT
         var logProvider = FormattedLogProvider.toOutputStream( System.out );
 
         var backupExecutor = OnlineBackupExecutor.builder()
-                .withUserLogProvider( logProvider )
-                .withInternalLogProvider( logProvider )
-                .build();
+                                                 .withUserLogProvider( logProvider )
+                                                 .withInternalLogProvider( logProvider )
+                                                 .withClock( Clocks.nanoClock() )
+                                                 .build();
 
         backupExecutor.executeBackup( backupContext );
     }
