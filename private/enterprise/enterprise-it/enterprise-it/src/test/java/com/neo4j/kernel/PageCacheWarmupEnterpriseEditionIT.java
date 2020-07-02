@@ -344,8 +344,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         {
             builder.setConfig( metrics_enabled, false )
                    .setConfig( online_backup_enabled, false )
-                    .setConfig( pagecache_memory, "50M" )
-                    .setConfig( pagecache_warmup_enabled, false );
+                   .setConfig( pagecache_memory, "50M" )
+                   .setConfig( pagecache_warmup_enabled, false );
         }
 
         @Test
@@ -381,19 +381,19 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             assertThat( pagesInMemoryWithoutPrefetchAfterTouch ).isLessThanOrEqualTo( pagesInMemoryWithPrefetch ); //prefetch should load same or more pages
             assertThat( pagesInMemoryWithPrefetch ).isEqualTo( pagesInMemoryWithPrefetchAfterTouch ); //touching everything should not generate faults
         }
-    }
 
-    private static void touchAllPages( PageCache pageCache, PageCacheTracer pageCacheTracer ) throws IOException
-    {
-        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "touchAll" ) )
+        private void touchAllPages( PageCache pageCache, PageCacheTracer pageCacheTracer ) throws IOException
         {
-            for ( PagedFile pagedFile : pageCache.listExistingMappings() )
+            try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "touchAll" ) )
             {
-                try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK, cursorTracer ) )
+                for ( PagedFile pagedFile : pageCache.listExistingMappings() )
                 {
-                    while ( cursor.next() )
+                    try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK, cursorTracer ) )
                     {
-                        //do nothing
+                        while ( cursor.next() )
+                        {
+                            //do nothing
+                        }
                     }
                 }
             }
