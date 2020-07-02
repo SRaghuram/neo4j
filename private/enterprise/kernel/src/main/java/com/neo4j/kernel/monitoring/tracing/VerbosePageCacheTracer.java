@@ -276,7 +276,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
         @Override
         public void chunkFlushed( long notModifiedPages, long flushPerChunk, long buffersPerChunk, long mergesPerChunk )
         {
-            log.info( "'%s' chunk flushed. Not modified pages: %d, flushes: %d, used buffers: %d, merge: %d in %s ns.", fileName,
+            log.info( "'%s' chunk flushed. Not modified pages: %d, flushes: %d, used buffers: %d, merge: %d in %s.", fileName,
                     notModifiedPages, flushPerChunk, buffersPerChunk, mergesPerChunk, nanosToString( startTime.elapsed( NANOSECONDS ) ) );
         }
     }
