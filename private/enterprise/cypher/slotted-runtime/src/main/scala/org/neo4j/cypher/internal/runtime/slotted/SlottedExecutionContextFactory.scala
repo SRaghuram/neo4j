@@ -11,10 +11,18 @@ import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
 import org.neo4j.values.AnyValue
 
-case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends ExecutionContextFactory {
+case class SlottedExecutionContextFactory(slots: SlotConfiguration, argumentSize: SlotConfiguration.Size) extends ExecutionContextFactory {
+  private val nLongArgs = argumentSize.nLongs
+  private val nRefArgs = argumentSize.nReferences
 
   override def newExecutionContext(): CypherRow =
     SlottedRow(slots)
+
+  override def copyWithArgument(init: ReadableRow): CypherRow = {
+    val newCtx = SlottedRow(slots)
+    newCtx.copyFrom(init, nLongArgs, nRefArgs)
+    newCtx
+  }
 
   override def copyWith(row: ReadableRow): CypherRow = {
     val newCtx = SlottedRow(slots)

@@ -230,7 +230,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onLeaf(plan)
     }
-    pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots, argumentSize)
     pipe
   }
 
@@ -486,7 +486,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onOneChildPlan(plan, source)
     }
-    pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots, SlotConfiguration.Size.zero)
     pipe
   }
 
@@ -596,7 +596,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onTwoChildPlan(plan, lhs, rhs)
     }
-    pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots, SlotConfiguration.Size.zero)
     pipe
   }
 

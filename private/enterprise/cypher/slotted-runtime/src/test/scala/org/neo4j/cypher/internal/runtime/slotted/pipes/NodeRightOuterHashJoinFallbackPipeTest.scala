@@ -57,7 +57,7 @@ class NodeRightOuterHashJoinFallbackPipeTest extends CypherFunSuite {
     )
 
     val pipe = NodeRightOuterHashJoinPipe(Set("a", "b"), left, right, Set("c"))()
-    pipe.executionContextFactory = SlottedExecutionContextFactory(hashSlots)
+    pipe.executionContextFactory = SlottedExecutionContextFactory(hashSlots, SlotConfiguration.Size.zero)
 
     // when
     val result = pipe.createResults(queryState)
