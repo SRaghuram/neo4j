@@ -24,6 +24,7 @@ import java.util.stream.LongStream;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.cursor.Cursor;
+import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
@@ -66,6 +67,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.LogAssertions.assertThat;
@@ -290,7 +292,7 @@ class TxPullRequestHandlerTest
     private static CommittedTransactionRepresentation tx( long id )
     {
         var tx = new PhysicalTransactionRepresentation( Collections.singletonList( new TestCommand() ) );
-        tx.setHeader( new byte[0], 0, 0, 0, 0 );
+        tx.setHeader( new byte[0], 0, 0, 0, 0, ANONYMOUS );
         return new CommittedTransactionRepresentation(
                 new LogEntryStart( id, id - 1, 0, new byte[]{}, LogPosition.UNSPECIFIED ),
                 tx, new LogEntryCommit( id, id, BASE_TX_CHECKSUM ) );

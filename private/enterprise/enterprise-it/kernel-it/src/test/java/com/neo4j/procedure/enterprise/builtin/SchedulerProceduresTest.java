@@ -14,12 +14,18 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
+import org.neo4j.common.Subject;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.scheduler.GroupedDaemonThreadFactory;
+import org.neo4j.kernel.impl.security.User;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.server.security.auth.BasicLoginContext;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -30,7 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.internal.kernel.api.security.AuthenticationResult.SUCCESS;
+import static org.neo4j.kernel.api.KernelTransaction.Type.EXPLICIT;
 import static org.neo4j.scheduler.Group.RAFT_CLIENT;
 import static org.neo4j.scheduler.Group.RAFT_SERVER;
 
@@ -90,18 +97,18 @@ class SchedulerProceduresTest
                 }
             } );
 
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 1", "db 1", "job 101" ), () -> { } );
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 1" ), "db 1", "job 101" ), () -> { } );
             scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 102" ), () ->
             {
                 jobStartLatch.countDown();
                 jobLatch.await();
             } );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 2", "db 2", "job 103" ), () -> 1 );
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 2" ), "db 2", "job 103" ), () -> 1 );
             scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 104" ), () -> { } ).cancel();
 
             scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 105" ), () -> { } ).get();
 
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( "user 3", "db 3", "job 106" ), () -> { }, 1, HOURS );
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 3" ), "db 3", "job 106" ), () -> { }, 1, HOURS );
             scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 107" ), () -> { }, 0, HOURS );
             scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 108" ), () ->
             {
@@ -140,9 +147,9 @@ class SchedulerProceduresTest
     }
 
     @Test
-    void testListFailedJobRuns()
+    void testListFailedJobRuns() throws Exception
     {
-        scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( "user 1", "db 1", "job 201" ), () ->
+        scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( new Subject( "user 1" ), "db 1", "job 201" ), () ->
         {
             throw new TestException( "something went wrong 1" );
         } );
@@ -152,12 +159,12 @@ class SchedulerProceduresTest
             throw new TestException( "something went wrong 2" );
         } );
         awaitFailure( scheduler, 2 );
-        scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( "user 2", "db 2", "job 203" ), () ->
+        scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( new Subject( "user 2" ), "db 2", "job 203" ), () ->
         {
             throw new TestException( "something went wrong 4" );
         }, 0, HOURS );
         awaitFailure( scheduler, 3 );
-        scheduler.scheduleRecurring( RAFT_CLIENT, new JobMonitoringParams( "user 3", "db 3", "job 204" ), () ->
+        scheduler.scheduleRecurring( RAFT_CLIENT, new JobMonitoringParams( new Subject( "user 3" ), "db 3", "job 204" ), () ->
         {
             throw new TestException( "something went wrong 5" );
         }, 0, 1, HOURS );
@@ -165,13 +172,60 @@ class SchedulerProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            var result = tx.execute( "CALL dbms.scheduler.failedJobRuns" );
+            var result = tx.execute( "CALL dbms.scheduler.failedJobs" );
             var jobs = runJobFailure( result );
 
             assertFailure( jobs, "RaftClient", "user 1", "db 1", "job 201", "IMMEDIATE", "TestException: something went wrong 1" );
             assertFailure( jobs, "RaftClient", "", "", "job 202", "IMMEDIATE", "TestException: something went wrong 2" );
             assertFailure( jobs, "RaftClient", "user 2", "db 2", "job 203", "DELAYED", "TestException: something went wrong 4" );
             assertFailure( jobs, "RaftClient", "user 3", "db 3", "job 204", "PERIODIC", "TestException: something went wrong 5" );
+        }
+    }
+
+    @Test
+    void testIndexPopulationJobMonitoring() throws Exception
+    {
+        var monitoringBlocker = new BinaryLatch();
+        var indexBlocker = new BinaryLatch();
+        IndexingService.MonitorAdapter blockingMonitor = new IndexingService.MonitorAdapter()
+        {
+            @Override
+            public void indexPopulationScanStarting()
+            {
+                monitoringBlocker.release();
+                indexBlocker.await();
+            }
+        };
+
+        Monitors monitors = db.getDependencyResolver().resolveDependency( Monitors.class );
+        monitors.addMonitorListener( blockingMonitor );
+
+        try
+        {
+            scheduler.schedule( Group.TESTING, () ->
+            {
+                var logicContext = new BasicLoginContext( new User.Builder( "John Doe", null ).build(), SUCCESS );
+                try ( Transaction tx = db.beginTransaction( EXPLICIT, logicContext ) )
+                {
+                    tx.execute( "CREATE INDEX myIndex FOR (n:Person) ON (n.name)" );
+                    tx.commit();
+                }
+            } );
+
+            monitoringBlocker.await();
+
+            try ( Transaction tx = db.beginTx() )
+            {
+                var result = tx.execute( "CALL dbms.scheduler.jobs" );
+                var jobs = mapJobStatus( result );
+
+                assertJob( jobs, "IndexPopulationMain", "John Doe", db.databaseName(), "Population of Index 'myIndex'", "IMMEDIATE", "EXECUTING", false,
+                        false );
+            }
+        }
+        finally
+        {
+            indexBlocker.release();
         }
     }
 
@@ -207,34 +261,27 @@ class SchedulerProceduresTest
         return jobRecords;
     }
 
-    private Map<String,JobRunFailureRecord> runJobFailure( Result result )
+    private Map<String,JobRunFailureRecord> runJobFailure( Result result ) throws Exception
     {
         Map<String,JobRunFailureRecord> runFailures = new HashMap<>();
 
-        try
+        result.accept( (Result.ResultVisitor<Exception>) row ->
         {
-            result.accept( (Result.ResultVisitor<Exception>) row ->
-            {
-                var group = row.getString( "group" );
-                var database = row.getString( "database" );
-                var submitter = row.getString( "submitter" );
-                var description = row.getString( "description" );
-                var type = row.getString( "type" );
-                var failureDescription = row.getString( "failureDescription" );
+            var group = row.getString( "group" );
+            var database = row.getString( "database" );
+            var submitter = row.getString( "submitter" );
+            var description = row.getString( "description" );
+            var type = row.getString( "type" );
+            var failureDescription = row.getString( "failureDescription" );
 
-                assertFalse( row.getString( "submitted" ).isEmpty() );
-                assertFalse( row.getString( "executionStart" ).isEmpty() );
-                assertFalse( row.getString( "failureTime" ).isEmpty() );
+            assertFalse( row.getString( "submitted" ).isEmpty() );
+            assertFalse( row.getString( "executionStart" ).isEmpty() );
+            assertFalse( row.getString( "failureTime" ).isEmpty() );
 
-                runFailures.put( description, new JobRunFailureRecord( group, database, submitter, description, type, failureDescription ) );
+            runFailures.put( description, new JobRunFailureRecord( group, database, submitter, description, type, failureDescription ) );
 
-                return true;
-            } );
-        }
-        catch ( Exception e )
-        {
-            fail( e );
-        }
+            return true;
+        } );
 
         return runFailures;
     }

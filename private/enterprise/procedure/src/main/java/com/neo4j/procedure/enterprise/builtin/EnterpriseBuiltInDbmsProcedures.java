@@ -705,7 +705,7 @@ public class EnterpriseBuiltInDbmsProcedures
     @Admin
     @SystemProcedure
     @Description( "List failed job runs. There is a limit for amount of historical data" )
-    @Procedure( name = "dbms.scheduler.failedJobRuns", mode = DBMS )
+    @Procedure( name = "dbms.scheduler.failedJobs", mode = DBMS )
     public Stream<FailedJobRunResult> schedulerFailedJobRuns()
     {
         JobScheduler jobScheduler = resolver.resolveDependency( JobScheduler.class );

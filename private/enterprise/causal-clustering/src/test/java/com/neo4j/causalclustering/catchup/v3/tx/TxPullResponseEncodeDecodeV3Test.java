@@ -25,6 +25,7 @@ import org.neo4j.storageengine.api.StoreId;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 import static org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
@@ -152,7 +153,7 @@ class TxPullResponseEncodeDecodeV3Test
 
         PhysicalTransactionRepresentation physicalTransactionRepresentation =
                 new PhysicalTransactionRepresentation( singletonList( new LogEntryCommand( command ).getCommand() ) );
-        physicalTransactionRepresentation.setHeader( new byte[]{}, 0, 0, 0, 0 );
+        physicalTransactionRepresentation.setHeader( new byte[]{}, 0, 0, 0, 0, ANONYMOUS );
 
         LogEntryStart startEntry = new LogEntryStart( 0L, 0L, BASE_TX_CHECKSUM, new byte[]{}, LogPosition.UNSPECIFIED );
         LogEntryCommit commitEntry = new LogEntryCommit( 42, 0, 0 );

@@ -22,6 +22,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.helpers.collection.LongRange;
+import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -69,6 +70,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
@@ -322,7 +324,7 @@ class TransactionLogCatchUpWriterIT
     private static CommittedTransactionRepresentation tx( long txId )
     {
         StorageCommand command = new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 1 ) );
-        TransactionRepresentation tx = new PhysicalTransactionRepresentation( List.of( command ), new byte[0], 0, 0, 0, 0 );
+        TransactionRepresentation tx = new PhysicalTransactionRepresentation( List.of( command ), new byte[0], 0, 0, 0, 0, AUTH_DISABLED );
         return new CommittedTransactionRepresentation(
                 new LogEntryStart( 0, txId - 1, 0, new byte[]{}, LogPosition.UNSPECIFIED ),
                 tx,

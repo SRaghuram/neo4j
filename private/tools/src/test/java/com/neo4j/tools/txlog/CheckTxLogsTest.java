@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.function.LongFunction;
 
 import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -60,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
@@ -870,7 +872,7 @@ class CheckTxLogsTest
     private void writeTxContent( File log, long txId, Command... commands ) throws IOException
     {
         PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Arrays.asList( commands ) );
-        tx.setHeader( new byte[0], 0, 0, 0, 0 );
+        tx.setHeader( new byte[0], 0, 0, 0, 0, AUTH_DISABLED );
         writeContent( log, txWriter -> txWriter.append( tx, txId, BASE_TX_CHECKSUM ) );
     }
 

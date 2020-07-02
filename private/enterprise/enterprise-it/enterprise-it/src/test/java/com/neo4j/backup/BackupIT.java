@@ -63,6 +63,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -990,7 +991,7 @@ class BackupIT
         }
 
         PhysicalTransactionRepresentation txRepresentation = new PhysicalTransactionRepresentation( commands );
-        txRepresentation.setHeader( new byte[0], 42, 42, 42, 42 );
+        txRepresentation.setHeader( new byte[0], 42, 42, 42, 42, AuthSubject.AUTH_DISABLED );
         TransactionToApply txToApply = new TransactionToApply( txRepresentation, NULL );
 
         TransactionCommitProcess commitProcess = dependencyResolver( db ).resolveDependency( TransactionCommitProcess.class );

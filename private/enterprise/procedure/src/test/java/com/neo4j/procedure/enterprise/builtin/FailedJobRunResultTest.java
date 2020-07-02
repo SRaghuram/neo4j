@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
+import org.neo4j.common.Subject;
 import org.neo4j.scheduler.FailedJobRun;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobType;
@@ -22,7 +23,7 @@ class FailedJobRunResultTest
     void testFailedJobRun()
     {
         var jobRun = new FailedJobRun( Group.INDEX_POPULATION,
-                "user 1",
+                new Subject( "user 1" ),
                 "db 1",
                 "a very useful job",
                 JobType.IMMEDIATE,

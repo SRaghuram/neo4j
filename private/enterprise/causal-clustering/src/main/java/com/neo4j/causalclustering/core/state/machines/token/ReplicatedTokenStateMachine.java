@@ -25,6 +25,7 @@ import org.neo4j.token.TokenRegistry;
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.bytesToCommands;
 import static java.lang.String.format;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 
 public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedTokenRequest>
 {
@@ -89,7 +90,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
     private void applyToStore( Collection<StorageCommand> commands, long logIndex )
     {
         var representation = new PhysicalTransactionRepresentation( commands );
-        representation.setHeader( LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( logIndex ), 0, 0L, 0L, 0 );
+        representation.setHeader( LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( logIndex ), 0, 0L, 0L, 0, AUTH_DISABLED );
 
         try
         {

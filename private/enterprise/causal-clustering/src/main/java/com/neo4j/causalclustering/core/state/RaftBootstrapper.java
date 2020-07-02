@@ -51,6 +51,7 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
@@ -274,7 +275,7 @@ public class RaftBootstrapper
                 long lastCommittedTransactionId = readOnlyTransactionIdStore.getLastCommittedTransactionId();
                 PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.emptyList() );
                 byte[] txHeaderBytes = LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( -1 );
-                tx.setHeader( txHeaderBytes, -1, lastCommittedTransactionId, -1, -1 );
+                tx.setHeader( txHeaderBytes, -1, lastCommittedTransactionId, -1, -1, AUTH_DISABLED );
 
                 dummyTransactionId = lastCommittedTransactionId + 1;
                 channel.getCurrentPosition( logPositionMarker );

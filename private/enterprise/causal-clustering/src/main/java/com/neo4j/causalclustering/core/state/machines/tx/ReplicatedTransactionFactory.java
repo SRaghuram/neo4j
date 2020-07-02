@@ -23,6 +23,8 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.StorageCommandSerializer;
 import org.neo4j.storageengine.api.StorageCommand;
 
+import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
+
 public class ReplicatedTransactionFactory
 {
     private ReplicatedTransactionFactory()
@@ -99,7 +101,7 @@ public class ReplicatedTransactionFactory
                 }
 
                 PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( commands );
-                tx.setHeader( header, timeStarted, latestCommittedTxWhenStarted, timeCommitted, leaseId );
+                tx.setHeader( header, timeStarted, latestCommittedTxWhenStarted, timeCommitted, leaseId, AUTH_DISABLED);
 
                 return tx;
             }

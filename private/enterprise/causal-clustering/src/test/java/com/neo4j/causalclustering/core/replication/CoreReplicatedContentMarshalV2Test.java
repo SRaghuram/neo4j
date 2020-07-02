@@ -39,6 +39,7 @@ import org.neo4j.storageengine.api.StorageCommand;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class CoreReplicatedContentMarshalV2Test
@@ -52,7 +53,7 @@ class CoreReplicatedContentMarshalV2Test
         ByteBuf buffer = Unpooled.buffer();
         PhysicalTransactionRepresentation representation =
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
-        representation.setHeader( new byte[]{0}, 1, 1, 1, 1 );
+        representation.setHeader( new byte[]{0}, 1, 1, 1, 1, ANONYMOUS );
 
         TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID );
 
@@ -120,7 +121,7 @@ class CoreReplicatedContentMarshalV2Test
         {
             // hackishly set additional header to empty array...
             ((PhysicalTransactionRepresentation) tx)
-                    .setHeader( new byte[0], tx.getTimeStarted(), tx.getLatestCommittedTxWhenStarted(), tx.getTimeCommitted(), tx.getLeaseId() );
+                    .setHeader( new byte[0], tx.getTimeStarted(), tx.getLatestCommittedTxWhenStarted(), tx.getTimeCommitted(), tx.getLeaseId(), ANONYMOUS );
             extraHeader = tx.additionalHeader();
         }
         TransactionRepresentation representation =

@@ -22,6 +22,7 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 
 @Buffers.Extension
 class TransactionRepresentationReplicatedTransactionTest
@@ -35,7 +36,7 @@ class TransactionRepresentationReplicatedTransactionTest
         var expectedTx =
                 new PhysicalTransactionRepresentation( Collections.singleton( new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 2 ) ) ) );
 
-        expectedTx.setHeader( new byte[0], 3, 4, 5, 6 );
+        expectedTx.setHeader( new byte[0], 3, 4, 5, 6, ANONYMOUS );
         var replicatedTransaction = ReplicatedTransaction.from( expectedTx, new TestDatabaseIdRepository().defaultDatabase() );
 
         var stream = new ByteArrayOutputStream();

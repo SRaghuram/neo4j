@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.collection.PrimitiveLongArrayQueue;
+import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.ByteUnit;
@@ -57,6 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 import static org.neo4j.storageengine.api.LogVersionRepository.BASE_TX_LOG_VERSION;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
@@ -273,7 +275,7 @@ class TransactionLogAnalyzerTest
         commands.add( new Command.NodeCommand( new NodeRecord( nodeId ), new NodeRecord( nodeId )
                 .initialize( true, nodeId, false, nodeId, 0 ) ) );
         PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( commands );
-        tx.setHeader( new byte[0], 0, 0, 0, 0 );
+        tx.setHeader( new byte[0], 0, 0, 0, 0, AUTH_DISABLED );
         return tx;
     }
 
