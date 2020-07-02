@@ -603,7 +603,7 @@ class FunctionIT
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
                             "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " + "RETURN val" ) );
-            assertThat( exception ).hasMessageStartingWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" );
+            assertThat( exception ).hasMessageStartingWith( "Cannot use periodic commit in a non-updating query" );
         }
     }
 

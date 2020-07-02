@@ -31,7 +31,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
   test("start is not supported since a long time") {
     test(
       "start a=(0) return a",
-      "" // any error message is OK
+      " " // any error message is OK
     )
   }
 

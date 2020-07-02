@@ -1178,7 +1178,7 @@ public class ProcedureIT
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
                             "CALL com.neo4j.procedure.simpleArgument(toInteger(line[0])) YIELD someVal as val " + "RETURN val" ) );
-            assertThat( exception.getMessage() ).startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" );
+            assertThat( exception.getMessage() ).startsWith( "Cannot use periodic commit in a non-updating query" );
         }
     }
 

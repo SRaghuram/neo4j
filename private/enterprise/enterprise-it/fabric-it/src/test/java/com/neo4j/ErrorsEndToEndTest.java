@@ -86,7 +86,7 @@ class ErrorsEndToEndTest
         var e = run( "Some Garbage"  );
 
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage() ).contains( "Invalid input 'o'" );
+        assertThat( e.getMessage() ).contains( "line 1, column 1" );
         assertThat( e.getMessage() ).contains( "\"Some Garbage\"" );
 
         verifyCleanUp();
