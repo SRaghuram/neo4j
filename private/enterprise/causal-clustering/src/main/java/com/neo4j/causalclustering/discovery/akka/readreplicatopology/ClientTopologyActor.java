@@ -180,7 +180,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private static class TopologiesRefresh
     {
-        private final static TopologiesRefresh INSTANCE = new TopologiesRefresh();
+        private static final TopologiesRefresh INSTANCE = new TopologiesRefresh();
 
         private TopologiesRefresh()
         {

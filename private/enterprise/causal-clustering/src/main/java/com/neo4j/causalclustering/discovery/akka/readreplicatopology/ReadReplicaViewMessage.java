@@ -69,8 +69,8 @@ class ReadReplicaViewMessage
     Map<DatabaseId,ReplicatedDatabaseState> allReadReplicaDatabaseStates()
     {
         var allMemberStatesPerDbMultiMap = clientToReadReplicaRecords.values().stream()
-                                                                     .flatMap( this::getAllStatesFromMember )
-                                                                     .collect( Collectors.groupingBy( p -> p.other().databaseId(), Collectors.toMap( Pair::first, Pair::other ) ) );
+                .flatMap( this::getAllStatesFromMember )
+                .collect( Collectors.groupingBy( p -> p.other().databaseId(), Collectors.toMap( Pair::first, Pair::other ) ) );
 
         return allMemberStatesPerDbMultiMap.entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> ReplicatedDatabaseState.ofReadReplicas( e.getKey(), e.getValue() ) ) );

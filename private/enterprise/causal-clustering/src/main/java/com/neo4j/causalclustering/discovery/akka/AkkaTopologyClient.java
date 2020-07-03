@@ -72,8 +72,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 
     private void startTopologyActors()
     {
-        var clusterClientManager = actorSystemLifecycle.applicationActorOf( ClusterClientManager.props( actorSystemLifecycle::clusterClientSettings ),
-                                                                     ClusterClientManager.NAME );
+        var clusterClientFactory = ClusterClientManager.clusterClientProvider( actorSystemLifecycle::clusterClientSettings );
+        var clusterClientManager = actorSystemLifecycle.applicationActorOf( ClusterClientManager.props( clusterClientFactory ), ClusterClientManager.NAME );
 
         SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink =
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );

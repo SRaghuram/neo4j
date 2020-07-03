@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.ActorRef;
@@ -18,23 +23,28 @@ public class ClusterClientManager extends AbstractActorWithTimersAndLogging
 {
     public static final String NAME = "restarting-cluster-client";
 
-    public static Props props( Supplier<ClusterClientSettings> clientSettingsFactory )
+    public static Props props( ClusterClientFactory clusterClientFactory )
     {
-        return Props.create( ClusterClientManager.class, () -> new ClusterClientManager( clientSettingsFactory ) );
+        return Props.create( ClusterClientManager.class, () -> new ClusterClientManager( clusterClientFactory ) );
     }
 
-    private final Supplier<ClusterClientSettings> clientSettingsFactory;
+    public static ClusterClientFactory clusterClientProvider(  Supplier<ClusterClientSettings> clientSettingsFactory )
+    {
+        return parentContext -> parentContext.actorOf( ClusterClient.props( clientSettingsFactory.get() ), "cluster-client" );
+    }
+
+    private final ClusterClientFactory clusterClientFactory;
     private ActorRef clusterClient;
 
-    private ClusterClientManager( Supplier<ClusterClientSettings> clientSettingsFactory )
+    private ClusterClientManager( ClusterClientFactory clusterClientFactory )
     {
-        this.clientSettingsFactory = clientSettingsFactory;
+        this.clusterClientFactory = clusterClientFactory;
     }
 
     @Override
     public void preStart()
     {
-        this.clusterClient = createClusterClient();
+        this.clusterClient = clusterClientFactory.create( getContext() );
         getContext().watch( clusterClient );
     }
 
@@ -60,13 +70,13 @@ public class ClusterClientManager extends AbstractActorWithTimersAndLogging
         log().warning( "Read replica's discovery client wasn't able to contact any Cores and needed to be restarted. " +
                        "Make sure your `initial_discovery_members` are correct." );
 
-        this.clusterClient = createClusterClient();
+        this.clusterClient = clusterClientFactory.create( getContext() );
         getContext().watch( clusterClient );
     }
 
-    private ActorRef createClusterClient()
+    @FunctionalInterface
+    interface ClusterClientFactory
     {
-        var clientSettings = clientSettingsFactory.get();
-        return getContext().actorOf( ClusterClient.props( clientSettings ), "cluster-client" );
+        ActorRef create( ActorContext parent );
     }
 }
