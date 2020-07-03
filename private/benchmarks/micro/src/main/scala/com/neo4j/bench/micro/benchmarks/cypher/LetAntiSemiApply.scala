@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import java.util
-
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
@@ -17,10 +15,10 @@ import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
 import com.neo4j.bench.micro.data.LabelKeyDefinition
 import com.neo4j.bench.micro.data.Plans.IdGen
-import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astLabelToken
+import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
+import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
@@ -31,10 +29,9 @@ import org.neo4j.cypher.internal.logical.plans.IndexedProperty
 import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.kernel.impl.util.ValueUtils
+import org.neo4j.values.virtual.VirtualValues
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -74,6 +71,7 @@ class LetAntiSemiApply extends AbstractCypherBenchmark {
   private val TOLERATED_ROW_COUNT_ERROR = 0.05
 
   private lazy val buckets: Array[Bucket] = discreteBucketsFor(PROPERTY_TYPE, SELECTIVITY, 1 - SELECTIVITY)
+  private lazy val searchLiteral = if(rhsRows == 0) astLiteralFor(System.currentTimeMillis(), LNG) else astLiteralFor(buckets(0).value(), LNG)
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
@@ -87,9 +85,13 @@ class LetAntiSemiApply extends AbstractCypherBenchmark {
   override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
     super.afterDatabaseStart(config)
     val tx = db().beginTx()
-    val result = tx.execute(s"MATCH (n:$LABEL) WHERE n.$KEY=${buckets(0).value()} RETURN count(*) AS count")
+    val result = tx.execute(s"MATCH (n:$LABEL) WHERE n.$KEY=${searchLiteral.value} RETURN count(*) AS count")
     val value = result.next().get("count").asInstanceOf[Number].intValue()
-    assert(value >= rhsRows-TOLERATED_ROW_COUNT_ERROR*lhsRows && value <= rhsRows+TOLERATED_ROW_COUNT_ERROR*lhsRows)
+    if (rhsRows == 0) {
+      assert(value == 0)
+    } else {
+      assert(value >= rhsRows - TOLERATED_ROW_COUNT_ERROR * lhsRows && value <= rhsRows + TOLERATED_ROW_COUNT_ERROR * lhsRows)
+    }
     tx.close()
   }
 
@@ -98,8 +100,7 @@ class LetAntiSemiApply extends AbstractCypherBenchmark {
     val idName = "idName"
     val lhsAllNodesScan = plans.AllNodesScan(lhs, Set.empty)(IdGen)
     val node = astVariable("node")
-    val param = astParameter("thing", symbols.CTAny)
-    val seekExpression = SingleQueryExpression(param)
+    val seekExpression = SingleQueryExpression(searchLiteral)
     val indexSeek = plans.NodeIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
@@ -122,12 +123,10 @@ class LetAntiSemiApply extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: LetAntiSemiApplyThreadState, bh: Blackhole): Long = {
-    val paramMap = util.Collections.singletonMap("thing", buckets(0).value())
-    val params = ValueUtils.asMapValue(paramMap)
-    val visitor = new CountSubscriber(bh)
-    val result = threadState.executablePlan.execute(params, tx = threadState.tx, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(VirtualValues.EMPTY_MAP, tx = threadState.tx, subscriber)
     result.consumeAll()
-    assertExpectedRowCount(lhsRows, visitor)
+    assertExpectedRowCount(lhsRows, subscriber)
   }
 }
 
