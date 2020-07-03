@@ -13,7 +13,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.neo4j.kernel.database.DatabaseId;
@@ -31,7 +31,7 @@ public class GetStoreFileRequestDecoder extends ByteToMessageDecoder
         long requiredTransactionId = in.readLong();
         String fileName = StringMarshal.unmarshal( in );
         Preconditions.checkState( fileName != null, "Illegal request without a file name" );
-        GetStoreFileRequest request = new GetStoreFileRequest( storeId, new File( fileName ), requiredTransactionId, databaseId );
+        GetStoreFileRequest request = new GetStoreFileRequest( storeId, Path.of( fileName ), requiredTransactionId, databaseId );
         out.add( request );
     }
 }

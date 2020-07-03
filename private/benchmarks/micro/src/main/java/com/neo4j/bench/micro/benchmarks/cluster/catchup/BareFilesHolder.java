@@ -13,6 +13,7 @@ import io.netty.channel.ChannelHandlerContext;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.Random;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
@@ -61,12 +62,12 @@ class BareFilesHolder
 
     void sendFile( ChannelHandlerContext ctx, String fileName )
     {
-        var file = new File( fileName );
-        if ( !fs.fileExists( file ) )
+        var file = Path.of( fileName );
+        if ( !fs.fileExists( file.toFile() ) )
         {
             throw new IllegalArgumentException( fileName );
         }
-        var resource = new StoreResource( file, file.getName(), 0, fs );
+        var resource = new StoreResource( file, file.getFileName().toString(), 0, fs );
         storeFileStreamingProtocol.stream( ctx, resource );
     }
 

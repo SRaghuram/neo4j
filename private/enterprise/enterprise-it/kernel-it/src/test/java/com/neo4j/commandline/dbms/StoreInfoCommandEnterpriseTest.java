@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -73,16 +72,16 @@ class StoreInfoCommandEnterpriseTest
 
     private void prepareNeoStoreFile( String storeVersion ) throws IOException
     {
-        File neoStoreFile = createNeoStoreFile();
+        Path neoStoreFile = createNeoStoreFile();
         long value = MetaDataStore.versionStringToLong( storeVersion );
         MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, NULL );
     }
 
-    private File createNeoStoreFile() throws IOException
+    private Path createNeoStoreFile() throws IOException
     {
         fileSystem.mkdir( databaseDirectory.toFile() );
-        File neoStoreFile = DatabaseLayout.ofFlat( databaseDirectory ).metadataStore().toFile();
-        fileSystem.write( neoStoreFile ).close();
+        Path neoStoreFile = DatabaseLayout.ofFlat( databaseDirectory ).metadataStore();
+        fileSystem.write( neoStoreFile.toFile() ).close();
         return neoStoreFile;
     }
 }

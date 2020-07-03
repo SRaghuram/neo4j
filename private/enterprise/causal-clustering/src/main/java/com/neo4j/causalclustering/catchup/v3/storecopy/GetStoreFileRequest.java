@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.v3.storecopy;
 import com.neo4j.causalclustering.catchup.RequestMessageType;
 import com.neo4j.causalclustering.messaging.StoreCopyRequest;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Objects;
 
 import org.neo4j.kernel.database.DatabaseId;
@@ -16,17 +16,17 @@ import org.neo4j.storageengine.api.StoreId;
 
 public class GetStoreFileRequest extends StoreCopyRequest
 {
-    private final File file;
+    private final Path path;
 
-    public GetStoreFileRequest( StoreId expectedStoreId, File file, long requiredTransactionId, DatabaseId databaseId )
+    public GetStoreFileRequest( StoreId expectedStoreId, Path path, long requiredTransactionId, DatabaseId databaseId )
     {
         super( RequestMessageType.STORE_FILE, databaseId, expectedStoreId, requiredTransactionId );
-        this.file = file;
+        this.path = path;
     }
 
-    public File file()
+    public Path path()
     {
-        return file;
+        return path;
     }
 
     @Override
@@ -45,13 +45,13 @@ public class GetStoreFileRequest extends StoreCopyRequest
             return false;
         }
         GetStoreFileRequest that = (GetStoreFileRequest) o;
-        return Objects.equals( file, that.file );
+        return Objects.equals( path, that.path );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( super.hashCode(), file );
+        return Objects.hash( super.hashCode(), path );
     }
 
     @Override
@@ -59,7 +59,7 @@ public class GetStoreFileRequest extends StoreCopyRequest
     {
         return "GetStoreFileRequest{" +
                "expectedStoreId=" + expectedStoreId() +
-               ", file=" + file.getName() +
+               ", file=" + path.getFileName() +
                ", requiredTransactionId=" + requiredTransactionId() +
                ", databaseId=" + databaseId() +
                "}";

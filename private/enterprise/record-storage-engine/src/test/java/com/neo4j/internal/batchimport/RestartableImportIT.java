@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
@@ -75,7 +76,7 @@ class RestartableImportIT
             Neo4jLayout neo4jLayout = Neo4jLayout.ofFlat( testDirectory.homePath() );
             DatabaseLayout dbLayout = neo4jLayout.databaseLayout( DEFAULT_DATABASE_NAME );
             long startTime = System.currentTimeMillis();
-            File dbDirectory = dbLayout.databaseDirectory().toFile();
+            Path dbDirectory = dbLayout.databaseDirectory();
             int timeMeasuringImportExitCode = startImportInSeparateProcess( dbDirectory ).waitFor();
             long time = System.currentTimeMillis() - startTime;
             assertEquals( 0, timeMeasuringImportExitCode );
@@ -99,16 +100,16 @@ class RestartableImportIT
                     assertEquals( 0, exitCode );
                 }
 
-                zip( fs, dbDirectory, new File( testDirectory.directory( "snapshots" ), format( "killed-%02d.zip", restartCount ) ) );
+                zip( fs, dbDirectory, testDirectory.directoryPath( "snapshots" ).resolve( format( "killed-%02d.zip", restartCount ) ) );
 
-                if ( !completedOnItsOwn && !fs.fileExists( new File( dbDirectory, FILE_NAME_STATE ) ) &&
-                        !fs.fileExists( new File( dbDirectory, COMPLETED ) ) )
+                if ( !completedOnItsOwn && !fs.fileExists( dbDirectory.resolve( FILE_NAME_STATE ).toFile() ) &&
+                        !fs.fileExists( dbDirectory.resolve( COMPLETED ).toFile() ) )
                 {
                     // This is a case which is, by all means, quite the edge case. This is state where an import started, but was killed
                     // immediately afterwards... in the middle of creating the store files. There have been attempts to solve this in the
                     // restartable importer, which works, but there's always some case somewhere else that breaks. This edge case is only
                     // visible in this test and for users it's just this thing where you'll need to clear out your store manually if this happens.
-                    File[] files = fs.listFiles( dbDirectory );
+                    File[] files = fs.listFiles( dbDirectory.toFile() );
                     if ( files != null )
                     {
                         for ( File file : files )
@@ -135,11 +136,11 @@ class RestartableImportIT
         } );
     }
 
-    private Process startImportInSeparateProcess( File databaseDirectory ) throws IOException
+    private Process startImportInSeparateProcess( Path databaseDirectory ) throws IOException
     {
         long seed = random.seed();
         ProcessBuilder pb = new ProcessBuilder( getJavaExecutable().toString(), "-cp", getClassPath(),
-                getClass().getCanonicalName(), databaseDirectory.getPath(), Long.toString( seed ) );
+                getClass().getCanonicalName(), databaseDirectory.toAbsolutePath().toString(), Long.toString( seed ) );
         File wd = new File( "target/test-classes" ).getAbsoluteFile();
         Files.createDirectories( wd.toPath() );
         File reportFile = testDirectory.createFile( "testReport" + seed );

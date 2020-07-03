@@ -18,14 +18,13 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponseListener;
 import com.neo4j.causalclustering.common.RaftMonitors;
 import io.netty.buffer.ByteBuf;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -33,7 +32,7 @@ import static com.neo4j.causalclustering.catchup.storecopy.TerminationCondition.
 
 class CatchupClientsWrapper
 {
-    private final File ignoredDestDir = new File( "." );
+    private final Path ignoredDestDir = Path.of( "." );
     private final StoreCopyClient storeCopyClient;
     private final TxPullClient txPullClient;
     private final CatchupAddressProvider catchupAddressProvider;

@@ -10,7 +10,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +32,7 @@ class PrepareStoreCopyResponseMarshalTest
         long transactionId = Long.MAX_VALUE;
 
         // when a transaction id is serialised
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( new File[0], transactionId );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( new Path[0], transactionId );
         sendToChannel( prepareStoreCopyResponse, embeddedChannel );
 
         // then it can be deserialised
@@ -44,8 +44,8 @@ class PrepareStoreCopyResponseMarshalTest
     void fileListGetsTransmitted()
     {
         // given
-        File[] files =
-                new File[]{new File( "File a.txt" ), new File( "file-b" ), new File( "aoifnoasndfosidfoisndfoisnodainfsonidfaosiidfna" ), new File( "" )};
+        Path[] files =
+                new Path[]{Path.of( "File a.txt" ), Path.of( "file-b" ), Path.of( "aoifnoasndfosidfoisndfoisnodainfsonidfaosiidfna" ), Path.of( "" )};
 
         // when
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, 0L );
@@ -53,10 +53,11 @@ class PrepareStoreCopyResponseMarshalTest
 
         // then it can be deserialised
         PrepareStoreCopyResponse readPrepareStoreCopyResponse = embeddedChannel.readInbound();
-        assertEquals( prepareStoreCopyResponse.getFiles().length, readPrepareStoreCopyResponse.getFiles().length );
-        for ( File file : files )
+        assertEquals( prepareStoreCopyResponse.getPaths().length, readPrepareStoreCopyResponse.getPaths().length );
+        for ( Path file : files )
         {
-            assertEquals( 1, Stream.of( readPrepareStoreCopyResponse.getFiles() ).map( File::getName ).filter( f -> f.equals( file.getName() ) ).count() );
+            assertEquals( 1,
+                    Stream.of( readPrepareStoreCopyResponse.getPaths() ).map( Path::getFileName ).filter( f -> f.equals( file.getFileName() ) ).count() );
         }
     }
 
@@ -64,8 +65,8 @@ class PrepareStoreCopyResponseMarshalTest
     void descriptorsGetTransmitted()
     {
         // given
-        File[] files =
-                new File[]{new File( "File a.txt" ), new File( "file-b" ), new File( "aoifnoasndfosidfoisndfoisnodainfsonidfaosiidfna" ), new File( "" )};
+        Path[] files =
+                new Path[]{Path.of( "File a.txt" ), Path.of( "file-b" ), Path.of( "aoifnoasndfosidfoisndfoisnodainfsonidfaosiidfna" ), Path.of( "" )};
 
         // when
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, 1L );
@@ -73,10 +74,11 @@ class PrepareStoreCopyResponseMarshalTest
 
         // then it can be deserialised
         PrepareStoreCopyResponse readPrepareStoreCopyResponse = embeddedChannel.readInbound();
-        assertEquals( prepareStoreCopyResponse.getFiles().length, readPrepareStoreCopyResponse.getFiles().length );
-        for ( File file : files )
+        assertEquals( prepareStoreCopyResponse.getPaths().length, readPrepareStoreCopyResponse.getPaths().length );
+        for ( Path file : files )
         {
-            assertEquals( 1, Stream.of( readPrepareStoreCopyResponse.getFiles() ).map( File::getName ).filter( f -> f.equals( file.getName() ) ).count() );
+            assertEquals( 1,
+                    Stream.of( readPrepareStoreCopyResponse.getPaths() ).map( Path::getFileName ).filter( f -> f.equals( file.getFileName() ) ).count() );
         }
     }
 

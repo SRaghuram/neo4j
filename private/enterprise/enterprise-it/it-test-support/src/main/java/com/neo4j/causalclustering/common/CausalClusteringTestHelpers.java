@@ -25,10 +25,10 @@ import org.apache.commons.io.IOUtils;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.HamcrestCondition;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -158,9 +158,9 @@ public final class CausalClusteringTestHelpers
                 .build();
     }
 
-    public static String fileContent( File file, FileSystemAbstraction fsa ) throws IOException
+    public static String fileContent( Path file, FileSystemAbstraction fsa ) throws IOException
     {
-        try ( Reader reader = fsa.openAsReader( file, UTF_8 ) )
+        try ( Reader reader = fsa.openAsReader( file.toFile(), UTF_8 ) )
         {
             return IOUtils.toString( reader );
         }

@@ -192,7 +192,7 @@ public class RaftBootstrapper
             if ( storeId != null )
             {
                 log.info( "Changing store ID of bootstrapped database to " + storeId );
-                MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore().toFile(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP,
+                MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP,
                         cursorTracer );
             }
             log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );

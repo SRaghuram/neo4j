@@ -7,7 +7,7 @@ package com.neo4j.kernel.monitoring.tracing;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.ByteUnit;
@@ -36,7 +36,7 @@ class VerbosePageCacheTracerTest
     void traceFileMap()
     {
         VerbosePageCacheTracer tracer = createTracer();
-        tracer.mappedFile( new File( "mapFile" ) );
+        tracer.mappedFile( Path.of( "mapFile" ) );
         assertThat( logProvider ).containsMessages( "Map file: 'mapFile'." );
     }
 
@@ -44,7 +44,7 @@ class VerbosePageCacheTracerTest
     void traceUnmapFile()
     {
         VerbosePageCacheTracer tracer = createTracer();
-        tracer.unmappedFile( new File( "unmapFile" ) );
+        tracer.unmappedFile( Path.of( "unmapFile" ) );
         assertThat( logProvider ).containsMessages( "Unmap file: 'unmapFile'." );
     }
 
@@ -101,7 +101,7 @@ class VerbosePageCacheTracerTest
     {
         VerbosePageCacheTracer tracer = createTracer();
         PageSwapper swapper = mock( PageSwapper.class );
-        when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
+        when( swapper.path() ).thenReturn( Path.of( "fileToFlush" ) );
         try ( MajorFlushEvent fileToFlush = tracer.beginFileFlush( swapper ) )
         {
             FlushEventOpportunity flushEventOpportunity = fileToFlush.flushEventOpportunity();
@@ -126,7 +126,7 @@ class VerbosePageCacheTracerTest
     {
         var tracer = createTracer();
         var swapper = mock( PageSwapper.class );
-        when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
+        when( swapper.path() ).thenReturn( Path.of( "fileToFlush" ) );
         try ( var flushEvent = tracer.beginFileFlush( swapper ) )
         {
             var flushEventOpportunity = flushEvent.flushEventOpportunity();
@@ -141,7 +141,7 @@ class VerbosePageCacheTracerTest
     {
         var tracer = createTracer();
         var swapper = mock( PageSwapper.class );
-        when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
+        when( swapper.path() ).thenReturn( Path.of( "fileToFlush" ) );
         try ( var flushEvent = tracer.beginFileFlush( swapper ) )
         {
             var flushEventOpportunity = flushEvent.flushEventOpportunity();

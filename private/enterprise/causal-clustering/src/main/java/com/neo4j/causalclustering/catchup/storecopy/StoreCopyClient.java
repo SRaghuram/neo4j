@@ -12,11 +12,9 @@ import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
 
-import java.io.File;
 import java.net.ConnectException;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -56,7 +54,7 @@ public class StoreCopyClient
     }
 
     public RequiredTransactions copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId,
-            StoreFileStreamProvider storeFileStreamProvider, Supplier<TerminationCondition> requestWiseTerminationCondition, File destDir )
+            StoreFileStreamProvider storeFileStreamProvider, Supplier<TerminationCondition> requestWiseTerminationCondition, Path destDir )
             throws StoreCopyFailedException
     {
         try
@@ -79,7 +77,7 @@ public class StoreCopyClient
     }
 
     private void copyFilesIndividually( PrepareStoreCopyResponse prepareStoreCopyResponse, StoreId expectedStoreId, CatchupAddressProvider addressProvider,
-            StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions, File destDir, TransactionIdHandler txIdHandler )
+            StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions, Path destDir, TransactionIdHandler txIdHandler )
             throws StoreCopyFailedException
     {
         StoreCopyClientMonitor
@@ -87,15 +85,15 @@ public class StoreCopyClient
         storeCopyClientMonitor.startReceivingStoreFiles();
         long lastCheckPointedTxId = prepareStoreCopyResponse.lastCheckPointedTransactionId();
 
-        for ( File file : prepareStoreCopyResponse.getFiles() )
+        for ( Path path : prepareStoreCopyResponse.getPaths() )
         {
-            storeCopyClientMonitor.startReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
+            storeCopyClientMonitor.startReceivingStoreFile( destDir.resolve( path.getFileName() ).toString() );
 
             persistentCallToSecondary( addressProvider,
-                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, namedDatabaseId ),
+                    c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId ),
                     storeFileStream, terminationConditions.get(), txIdHandler );
 
-            storeCopyClientMonitor.finishReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
+            storeCopyClientMonitor.finishReceivingStoreFile( destDir.resolve( path.getFileName() ).toString() );
         }
         storeCopyClientMonitor.finishReceivingStoreFiles();
     }

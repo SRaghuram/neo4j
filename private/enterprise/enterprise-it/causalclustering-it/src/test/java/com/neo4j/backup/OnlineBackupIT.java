@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -188,7 +187,7 @@ class OnlineBackupIT
     {
         Path backupDir = backupsDir.resolve( DB_NAME );
         PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
-        File metadataStore = DatabaseLayout.ofFlat( backupDir ).metadataStore().toFile();
+        Path metadataStore = DatabaseLayout.ofFlat( backupDir ).metadataStore();
 
         // update store creation time and store random number
         MetaDataStore.setRecord( pageCache, metadataStore, TIME, random.nextInt(), NULL );

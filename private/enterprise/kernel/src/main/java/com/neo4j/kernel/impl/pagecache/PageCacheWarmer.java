@@ -80,8 +80,8 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
     private final JobScheduler scheduler;
-    private final File databaseDirectory;
-    private final File profilesDirectory;
+    private final Path databaseDirectory;
+    private final Path profilesDirectory;
     private final Log log;
     private final ProfileRefCounts refCounts;
     private final Config config;
@@ -90,14 +90,14 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private ExecutorService executor;
     private PageLoaderFactory pageLoaderFactory;
 
-    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory, Config config, Log log,
+    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, Path databaseDirectory, Config config, Log log,
             Tracers tracers )
     {
         this.fs = fs;
         this.pageCache = pageCache;
         this.scheduler = scheduler;
         this.databaseDirectory = databaseDirectory;
-        this.profilesDirectory = new File( databaseDirectory, Profile.PROFILE_DIR );
+        this.profilesDirectory = databaseDirectory.resolve( Profile.PROFILE_DIR );
         this.log = log;
         this.pageCacheTracer = tracers.getPageCacheTracer();
         this.refCounts = new ProfileRefCounts();
@@ -180,7 +180,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
             LongAdder totalPageCounter = new LongAdder();
             for ( PagedFile pagedFile : pageCache.listExistingMappings() )
             {
-                if ( whitelist.matcher( pagedFile.file().toString() ).find() )
+                if ( whitelist.matcher( pagedFile.path().toString() ).find() )
                 {
                     handles.add( scheduler.schedule( Group.FILE_IO_HELPER, () -> totalPageCounter.add( touchAllPages( pagedFile ) ) ) );
                 }
@@ -205,7 +205,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     private long touchAllPages( PagedFile pagedFile )
     {
-        log.debug( "Pre-fetching %s", pagedFile.file().getName() );
+        log.debug( "Pre-fetching %s", pagedFile.path().getFileName() );
         try ( PageCursorTracer cursorTracer = pageCacheTracer.createPageCursorTracer( PAGE_CACHE_WARMER );
               PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK, cursorTracer ) )
         {
@@ -343,7 +343,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         Profile nextProfile = filterRelevant( existingProfiles, file )
                 .max( naturalOrder() )
                 .map( Profile::next )
-                .orElse( Profile.first( databaseDirectory, file.file() ) );
+                .orElse( Profile.first( databaseDirectory, file.path() ) );
 
         try ( PageCursorTracer cursorTracer = pageCacheTracer.createPageCursorTracer( PAGE_CACHE_PROFILER );
               OutputStream output = nextProfile.write( fs );
@@ -395,23 +395,21 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     private Profile[] findExistingProfiles( List<PagedFile> pagedFilesInDatabase ) throws IOException
     {
-        List<Path> allProfilePaths = fs.streamFilesRecursive( profilesDirectory )
+        List<Path> allProfilePaths = fs.streamFilesRecursive( profilesDirectory.toFile() )
                 .map( FileHandle::getFile )
                 .map( File::toPath )
                 .collect( Collectors.toList() );
         return pagedFilesInDatabase.stream()
-                .map( pagedFile -> pagedFile.file().toPath() )
+                .map( PagedFile::path )
                 .flatMap( pagedFilePath -> extractRelevantProfiles( allProfilePaths, pagedFilePath ) )
                 .toArray( Profile[]::new );
     }
 
     private Stream<? extends Profile> extractRelevantProfiles( List<Path> allProfilePaths, Path pagedFilePath )
     {
-        Path databasePath = databaseDirectory.toPath();
-        Path profilesPath = profilesDirectory.toPath();
         return allProfilePaths.stream()
-                .filter( profilePath -> sameRelativePath( databasePath, pagedFilePath, profilesPath, profilePath ) )
-                .flatMap( profilePath -> Profile.parseProfileName( databasePath, profilePath, pagedFilePath ) );
+                .filter( profilePath -> sameRelativePath( databaseDirectory, pagedFilePath, profilesDirectory, profilePath ) )
+                .flatMap( profilePath -> Profile.parseProfileName( databaseDirectory, profilePath, pagedFilePath ) );
     }
 
     private boolean sameRelativePath( Path databasePath, Path pagedFilePath, Path profilesPath, Path profilePath )

@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.buffer.ByteBuf;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,9 +23,9 @@ public class StreamToDisk implements StoreFileStream
     private StoreChannel storeChannel;
     private List<AutoCloseable> closeables;
 
-    static StreamToDisk fromFile( FileSystemAbstraction fsa, File file ) throws IOException
+    static StreamToDisk fromFile( FileSystemAbstraction fsa, Path file ) throws IOException
     {
-        return new StreamToDisk( fsa.write( file ) );
+        return new StreamToDisk( fsa.write( file.toFile() ) );
     }
 
     private StreamToDisk( StoreChannel storeChannel, AutoCloseable... closeables )

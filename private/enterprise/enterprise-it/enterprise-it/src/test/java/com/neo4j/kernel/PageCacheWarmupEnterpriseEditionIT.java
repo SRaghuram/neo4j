@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
@@ -65,7 +64,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_profiling_interval;
-import static org.neo4j.io.fs.FileUtils.deleteRecursively;
+import static org.neo4j.io.fs.FileUtils.deletePathRecursively;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -101,7 +100,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         @Test
         void warmupMustReloadHotPagesAfterRestartAndFaultsMustBeVisibleViaMetrics()
         {
-            File metricsDirectory = testDirectory.directory( "metrics" );
+            Path metricsDirectory = testDirectory.directoryPath( "metrics" );
 
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
@@ -110,7 +109,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                             builder.setConfig( metrics_enabled, true )
                                    .setConfig( csv_enabled, true )
                                    .setConfig( csv_interval, Duration.ofMillis( 100 ) )
-                                   .setConfig( csv_path, metricsDirectory.toPath().toAbsolutePath() ) );
+                                   .setConfig( csv_path, metricsDirectory.toAbsolutePath() ) );
 
             verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
         }
@@ -148,7 +147,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
             for ( int i = 0; i < 5; i++ )
             {
-                File backupDir = testDirectory.cleanDirectory( "backup" );
+                Path backupDir = testDirectory.cleanDirectoryPath( "backup" );
                 executeBackup( db, backupDir );
             }
         }
@@ -189,8 +188,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
             BinaryLatch latch = pauseProfile( monitors ); // We don't want torn profile files in this test.
 
-            File metricsDirectory = testDirectory.cleanDirectory( "metrics" );
-            File backupDir = testDirectory.cleanDirectory( "backup" );
+            Path metricsDirectory = testDirectory.cleanDirectoryPath( "metrics" );
+            Path backupDir = testDirectory.cleanDirectoryPath( "backup" );
             executeBackup( db, backupDir );
             latch.release();
             controller.restartDbms( builder ->
@@ -199,19 +198,19 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                 return builder.setConfig( online_backup_enabled, false )
                         .setConfig( metrics_enabled, true )
                         .setConfig( csv_interval, Duration.ofMillis( 100 ) )
-                        .setConfig( csv_path, metricsDirectory.toPath().toAbsolutePath() )
+                        .setConfig( csv_path, metricsDirectory.toAbsolutePath() )
                         .setConfig( csv_enabled, true );
             } );
 
             verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
         }
 
-        private void cleanupDirectories( File backupDir )
+        private void cleanupDirectories( Path backupDir )
         {
             try
             {
                 fs.deleteRecursively( databaseLayout.databaseDirectory().toFile() );
-                fs.copyRecursively( backupDir, databaseLayout.getNeo4jLayout().databasesDirectory().toFile() );
+                fs.copyRecursively( backupDir.toFile(), databaseLayout.getNeo4jLayout().databasesDirectory().toFile() );
             }
             catch ( IOException e )
             {
@@ -248,37 +247,37 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         @Test
         void cacheProfilesMustBeIncludedInOfflineBackups() throws Exception
         {
-            File data = testDirectory.directory( "data" );
-            File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
+            Path data = testDirectory.directoryPath( "data" );
+            Path logs = data.resolve( DEFAULT_TX_LOGS_ROOT_DIR_NAME );
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
 
             dbms.shutdown();
 
-            File databaseDir = db.databaseLayout().databaseDirectory().toFile();
-            File databases = new File( data, "databases" );
-            File graphdb = new File( databases, "neo4j" );
-            FileUtils.copyRecursively( databaseDir, graphdb );
-            deleteRecursively( databaseDir );
-            Path homePath = data.toPath().getParent();
-            File dumpDir = testDirectory.cleanDirectory( "dump-dir" );
+            Path databaseDir = db.databaseLayout().databaseDirectory();
+            Path databases = data.resolve( "databases" );
+            Path graphdb = databases.resolve( "neo4j" );
+            FileUtils.copyDirectory( databaseDir, graphdb );
+            deletePathRecursively( databaseDir );
+            Path homePath = data.getParent();
+            Path dumpDir = testDirectory.cleanDirectoryPath( "dump-dir" );
 
             ExecutionContext ctx = new ExecutionContext( homePath, homePath, System.out, System.err, testDirectory.getFileSystem() );
             AdminTool.execute( ctx, "dump", "--database=" + DEFAULT_DATABASE_NAME, "--to=" + dumpDir );
-            deleteRecursively( graphdb );
-            cleanDirectory( logs );
-            File dumpFile = new File( dumpDir, "neo4j.dump" );
+            deletePathRecursively( graphdb );
+            cleanDirectory( logs.toFile() );
+            Path dumpFile = dumpDir.resolve( "neo4j.dump" );
             AdminTool.execute( ctx, "load", "--database=" + DEFAULT_DATABASE_NAME, "--from=" + dumpFile );
-            FileUtils.copyRecursively( graphdb, databaseDir );
-            deleteRecursively( graphdb );
+            FileUtils.copyDirectory( graphdb, databaseDir );
+            deletePathRecursively( graphdb );
 
-            File metricsDirectory = testDirectory.cleanDirectory( "metrics" );
+            Path metricsDirectory = testDirectory.cleanDirectoryPath( "metrics" );
             controller.restartDbms( builder ->
                     builder.setConfig( metrics_enabled, true )
                            .setConfig( csv_enabled, true )
                            .setConfig( csv_interval, Duration.ofMillis( 100 ) )
                            .setConfig( fail_on_missing_files, false )
-                           .setConfig( csv_path, metricsDirectory.toPath().toAbsolutePath() ) );
+                           .setConfig( csv_path, metricsDirectory.toAbsolutePath() ) );
 
             verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
         }
@@ -310,7 +309,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         @Test
         void logPageCacheWarmupStartCompletionMessages()
         {
-            File metricsDirectory = testDirectory.directory( "metrics" );
+            Path metricsDirectory = testDirectory.directoryPath( "metrics" );
 
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
@@ -319,7 +318,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                     builder.setConfig( metrics_enabled, true )
                            .setConfig( csv_enabled, true )
                            .setConfig( csv_interval, Duration.ofMillis( 100 ) )
-                           .setConfig( csv_path, metricsDirectory.toPath().toAbsolutePath() ) );
+                           .setConfig( csv_path, metricsDirectory.toAbsolutePath() ) );
 
             verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
 
@@ -351,7 +350,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         @Test
         void willPrefetchEverything() throws Exception
         {
-            File metricsDirectory = testDirectory.directory( "metrics" );
+            Path metricsDirectory = testDirectory.directoryPath( "metrics" );
 
             createData( db );
 
@@ -367,7 +366,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                            .setConfig( pagecache_warmup_prefetch, true )
                            .setConfig( csv_enabled, true )
                            .setConfig( csv_interval, Duration.ofMillis( 100 ) )
-                           .setConfig( csv_path, metricsDirectory.toPath().toAbsolutePath() )
+                           .setConfig( csv_path, metricsDirectory.toAbsolutePath() )
                            .setConfig( metrics_enabled, true ) );
             verifyEventuallyWarmsUp( pagesInMemoryWithoutPrefetchAfterTouch, metricsDirectory );
 
@@ -400,10 +399,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         }
     }
 
-    private static void verifyEventuallyWarmsUp( long pagesInMemory, File metricsDirectory )
+    private static void verifyEventuallyWarmsUp( long pagesInMemory, Path metricsDirectory )
     {
         assertEventually( "Metrics report should include page cache page faults",
-                () -> readLongCounterValue( metricsCsv( metricsDirectory, "neo4j.page_cache.page_faults" ) ), v -> v >= pagesInMemory, 20, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsDirectory.toFile(), "neo4j.page_cache.page_faults" ) ), v -> v >= pagesInMemory, 20, SECONDS );
     }
 
     private static void createData( GraphDatabaseService db )
@@ -415,14 +414,14 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         }
     }
 
-    private static void executeBackup( GraphDatabaseAPI db, File backupDir ) throws Exception
+    private static void executeBackup( GraphDatabaseAPI db, Path backupDir ) throws Exception
     {
         HostnamePort address = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class ).getLocalAddress( BACKUP_SERVER_NAME );
 
         OnlineBackupContext context = OnlineBackupContext.builder()
                 .withAddress( address.getHost(), address.getPort() )
-                .withBackupDirectory( backupDir.toPath() )
-                .withReportsDirectory( backupDir.toPath() )
+                .withBackupDirectory( backupDir )
+                .withReportsDirectory( backupDir )
                 .build();
 
         OnlineBackupExecutor.buildDefault().executeBackup( context );

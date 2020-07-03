@@ -10,8 +10,8 @@ import org.eclipse.collections.api.factory.Sets;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.graphdb.Direction;
@@ -48,7 +48,7 @@ class HighLimitRecordRelationshipTraversalCursorTest extends RecordRelationshipT
         createRelationshipStructure( dense, homogenousRelationships( recordsPerPage, TYPE1, RelationshipDirection.LOOP ) );
         int maxRecordId = recordsPerPage - 1;
         store.setHighestPossibleIdInUse( maxRecordId );
-        File storageFile = store.getStorageFile();
+        Path storageFile = store.getStorageFile();
         unUseRecord( maxRecordId );
 
         // Sabotage the last record in the page, so that reading it will go out of bounds on the page.

@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Objects;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -14,32 +14,32 @@ import org.neo4j.io.fs.StoreChannel;
 
 public class StoreResource
 {
-    private final File file;
-    private final String path;
+    private final Path path;
+    private final String relativePath;
     private final int recordSize;
     private final FileSystemAbstraction fs;
 
-    public StoreResource( File file, String relativePath, int recordSize, FileSystemAbstraction fs )
+    public StoreResource( Path path, String relativePath, int recordSize, FileSystemAbstraction fs )
     {
-        this.file = file;
-        this.path = relativePath;
+        this.path = path;
+        this.relativePath = relativePath;
         this.recordSize = recordSize;
         this.fs = fs;
     }
 
     StoreChannel open() throws IOException
     {
-        return fs.read( file );
+        return fs.read( path.toFile() );
     }
 
-    public String path()
+    public String relativePath()
+    {
+        return relativePath;
+    }
+
+    Path path()
     {
         return path;
-    }
-
-    File file()
-    {
-        return file;
     }
 
     int recordSize()
@@ -59,18 +59,18 @@ public class StoreResource
             return false;
         }
         StoreResource that = (StoreResource) o;
-        return recordSize == that.recordSize && Objects.equals( file, that.file ) && Objects.equals( path, that.path );
+        return recordSize == that.recordSize && Objects.equals( path, that.path ) && Objects.equals( relativePath, that.relativePath );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( file, path, recordSize );
+        return Objects.hash( path, relativePath, recordSize );
     }
 
     @Override
     public String toString()
     {
-        return "StoreResource{" + "path='" + path + '\'' + ", recordSize=" + recordSize + '}';
+        return "StoreResource{" + "path='" + relativePath + '\'' + ", recordSize=" + recordSize + '}';
     }
 }

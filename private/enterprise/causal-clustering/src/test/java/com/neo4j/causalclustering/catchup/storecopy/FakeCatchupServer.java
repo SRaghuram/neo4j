@@ -16,6 +16,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,8 +65,8 @@ class FakeCatchupServer implements CatchupServerHandler
             @Override
             protected void channelRead0( ChannelHandlerContext channelHandlerContext, GetStoreFileRequest getStoreFileRequest )
             {
-                log.info( "Received request for file %s", getStoreFileRequest.file().getName() );
-                incrementRequestCount( getStoreFileRequest.file() );
+                log.info( "Received request for file %s", getStoreFileRequest.path().getFileName() );
+                incrementRequestCount( getStoreFileRequest.path() );
                 try
                 {
                     if ( handleFileDoesNotExist( channelHandlerContext, getStoreFileRequest ) )
@@ -73,7 +74,7 @@ class FakeCatchupServer implements CatchupServerHandler
                         catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
                         return;
                     }
-                    handleFileExists( channelHandlerContext, getStoreFileRequest.file() );
+                    handleFileExists( channelHandlerContext, getStoreFileRequest.path() );
                 }
                 finally
                 {
@@ -85,11 +86,11 @@ class FakeCatchupServer implements CatchupServerHandler
 
     private boolean handleFileDoesNotExist( ChannelHandlerContext channelHandlerContext, GetStoreFileRequest getStoreFileRequest )
     {
-        FakeFile file = findFile( filesystem, getStoreFileRequest.file().getName() );
+        FakeFile file = findFile( filesystem, getStoreFileRequest.path().getFileName().toString() );
         if ( file.getRemainingFailed() > 0 )
         {
             file.setRemainingFailed( file.getRemainingFailed() - 1 );
-            log.info( "FakeServer failing for file %s", getStoreFileRequest.file() );
+            log.info( "FakeServer failing for file %s", getStoreFileRequest.path() );
             failed( channelHandlerContext );
             return true;
         }
@@ -109,27 +110,27 @@ class FakeCatchupServer implements CatchupServerHandler
                 .orElseThrow( () -> new RuntimeException( "FakeFile should handle all cases with regards to how server should respond" ) );
     }
 
-    private void handleFileExists( ChannelHandlerContext channelHandlerContext, File file )
+    private void handleFileExists( ChannelHandlerContext channelHandlerContext, Path file )
     {
         log.info( "FakeServer File %s does exist", file );
         channelHandlerContext.writeAndFlush( ResponseMessageType.FILE );
-        channelHandlerContext.writeAndFlush( new FileHeader( file.getName() ) );
+        channelHandlerContext.writeAndFlush( new FileHeader( file.getFileName().toString() ) );
         StoreResource storeResource = storeResourceFromEntry( file );
         channelHandlerContext.writeAndFlush( new FileSender( storeResource, 32768 ) );
         new StoreFileStreamingProtocol( maxChunkSize ).end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS, startTxId );
     }
 
-    private void incrementRequestCount( File file )
+    private void incrementRequestCount( Path file )
     {
-        String path = file.getName();
+        String path = file.getFileName().toString();
         int count = pathToRequestCountMapping.getOrDefault( path, 0 );
         pathToRequestCountMapping.put( path, count + 1 );
     }
 
-    private StoreResource storeResourceFromEntry( File file )
+    private StoreResource storeResourceFromEntry( Path file )
     {
-        file = testDirectory.file( file.getName() );
-        return new StoreResource( file, file.getAbsolutePath(), 16, fileSystemAbstraction );
+        file = testDirectory.filePath( file.getFileName().toString() );
+        return new StoreResource( file, file.toAbsolutePath().toString(), 16, fileSystemAbstraction );
     }
 
     @Override
@@ -160,8 +161,8 @@ class FakeCatchupServer implements CatchupServerHandler
             protected void channelRead0( ChannelHandlerContext channelHandlerContext, PrepareStoreCopyRequest prepareStoreCopyRequest )
             {
                 channelHandlerContext.writeAndFlush( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
-                List<File> list = filesystem.stream().map( FakeFile::getFile ).collect( Collectors.toList() );
-                File[] files = new File[list.size()];
+                List<Path> list = filesystem.stream().map( FakeFile::getFile ).map( File::toPath ).collect( Collectors.toList() );
+                Path[] files = new Path[list.size()];
                 files = list.toArray( files );
                 startTxId = 123L;
                 channelHandlerContext.writeAndFlush( PrepareStoreCopyResponse.success( files, startTxId ) );

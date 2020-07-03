@@ -14,8 +14,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.neo4j.collection.Dependencies;
@@ -95,7 +95,7 @@ class PrepareStoreCopyRequestHandlerTest
     void shouldGetSuccessfulResponseFromPrepareStoreCopyRequest() throws Exception
     {
         // given storeId matches
-        File[] files = new File[]{new File( "file" )};
+        Path[] files = new Path[]{Path.of( "file" )};
         long lastCheckpoint = 1;
 
         configureProvidedStoreCopyFiles( new StoreResource[0], files, lastCheckpoint );
@@ -125,7 +125,7 @@ class PrepareStoreCopyRequestHandlerTest
         PrepareStoreCopyRequestHandler subjectHandler = createHandler();
 
         // and
-        File[] files = new File[]{new File( "file" )};
+        Path[] files = new Path[]{Path.of( "file" )};
         long lastCheckpoint = 1;
         configureProvidedStoreCopyFiles( new StoreResource[0], files, lastCheckpoint );
 
@@ -176,7 +176,7 @@ class PrepareStoreCopyRequestHandlerTest
         return new PrepareStoreCopyRequestHandler( catchupServerProtocol, db, prepareStoreCopyFilesProvider, 32768 );
     }
 
-    private void configureProvidedStoreCopyFiles( StoreResource[] atomicFiles, File[] files, long lastCommitedTx )
+    private void configureProvidedStoreCopyFiles( StoreResource[] atomicFiles, Path[] files, long lastCommitedTx )
             throws IOException
     {
         when( prepareStoreCopyFiles.getAtomicFilesSnapshot() ).thenReturn( atomicFiles );

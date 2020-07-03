@@ -52,6 +52,6 @@ public class TestStoreId
 
     private static StoreId doReadStoreId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        return MetaDataStore.getStoreId( pageCache, databaseLayout.metadataStore().toFile(), NULL );
+        return MetaDataStore.getStoreId( pageCache, databaseLayout.metadataStore(), NULL );
     }
 }

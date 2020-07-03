@@ -60,8 +60,8 @@ class FileSenderTest
     void sendEmptyFile() throws Exception
     {
         // given
-        var emptyFile = testDirectory.file( "emptyFile" );
-        fs.write( emptyFile ).close();
+        var emptyFile = testDirectory.filePath( "emptyFile" );
+        fs.write( emptyFile.toFile() ).close();
         var fileSender = new FileSender( new StoreResource( emptyFile, null, 16, fs ), maxChunkSize );
 
         // when + then
@@ -77,8 +77,8 @@ class FileSenderTest
         // given
         var buffer = getRandomBuffer( 10 );
 
-        var smallFile = testDirectory.file( "smallFile" );
-        try ( var channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.filePath( "smallFile" );
+        try ( var channel = fs.write( smallFile.toFile() ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }
@@ -99,8 +99,8 @@ class FileSenderTest
         var totalSize = maxChunkSize + (maxChunkSize / 2);
         var buffer = getRandomBuffer( totalSize );
 
-        var smallFile = testDirectory.file( "smallFile" );
-        try ( var channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.filePath( "smallFile" );
+        try ( var channel = fs.write( smallFile.toFile() ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }
@@ -121,8 +121,8 @@ class FileSenderTest
         // given
         var buffer = getRandomBuffer( maxChunkSize * 3 );
 
-        var smallFile = testDirectory.file( "smallFile" );
-        try ( var channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.filePath( "smallFile" );
+        try ( var channel = fs.write( smallFile.toFile() ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }
@@ -142,8 +142,8 @@ class FileSenderTest
     void sendEmptyFileWhichGrowsBeforeSendCommences() throws Exception
     {
         // given
-        var file = testDirectory.file( "file" );
-        var channel = fs.write( file );
+        var file = testDirectory.filePath( "file" );
+        var channel = fs.write( file.toFile() );
         var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
@@ -160,8 +160,8 @@ class FileSenderTest
     void sendEmptyFileWhichGrowsWithPartialChunkSizes() throws Exception
     {
         // given
-        var file = testDirectory.file( "file" );
-        var channel = fs.write( file );
+        var file = testDirectory.filePath( "file" );
+        var channel = fs.write( file.toFile() );
         var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
@@ -185,8 +185,8 @@ class FileSenderTest
     void sendFileWhichGrowsAfterLastChunkWasSent() throws Exception
     {
         // given
-        var file = testDirectory.file( "file" );
-        var channel = fs.write( file );
+        var file = testDirectory.filePath( "file" );
+        var channel = fs.write( file.toFile() );
         var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
@@ -208,8 +208,8 @@ class FileSenderTest
     void sendLargerFileWhichGrows() throws Exception
     {
         // given
-        var file = testDirectory.file( "file" );
-        var channel = fs.write( file );
+        var file = testDirectory.filePath( "file" );
+        var channel = fs.write( file.toFile() );
         var fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
@@ -241,8 +241,8 @@ class FileSenderTest
         // given
         var buffer = getRandomBuffer( maxChunkSize * 3 );
 
-        var smallFile = testDirectory.file( "smallFile" );
-        try ( var channel = fs.write( smallFile ) )
+        var smallFile = testDirectory.filePath( "smallFile" );
+        try ( var channel = fs.write( smallFile.toFile() ) )
         {
             buffer.readBytes( channel, buffer.readableBytes() );
         }

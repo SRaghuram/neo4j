@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -49,9 +48,9 @@ class StoreFilesTest
     @Inject
     private PageCache pageCache;
 
-    private File databaseDir;
+    private Path databaseDir;
     private DatabaseLayout databaseLayout;
-    private File otherDatabaseDir;
+    private Path otherDatabaseDir;
     private DatabaseLayout otherDatabaseLayout;
     private LogFiles logFiles;
     private LogFiles otherLogFiles;
@@ -59,12 +58,12 @@ class StoreFilesTest
     @BeforeEach
     void beforeEach() throws Exception
     {
-        databaseDir = testDirectory.directory( "databasedir" );
-        databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
-        otherDatabaseDir = testDirectory.directory( "otherdatabasedir" );
-        otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir.toPath() );
-        logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fs ).build();
-        otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir, fs ).build();
+        databaseDir = testDirectory.directoryPath( "databasedir" );
+        databaseLayout = DatabaseLayout.ofFlat( databaseDir );
+        otherDatabaseDir = testDirectory.directoryPath( "otherdatabasedir" );
+        otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir );
+        logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir.toFile(), fs ).build();
+        otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir.toFile(), fs ).build();
     }
 
     @Test
@@ -72,16 +71,16 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        List<File> files = Arrays.asList(
+        List<Path> files = Arrays.asList(
                 createFile( databaseDir, "KnownFile1" ),
                 createFile( databaseDir, "KnownFile2" ),
                 createFile( databaseDir, "KnownFile3" ) );
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        for ( File file : files )
+        for ( Path file : files )
         {
-            assertFalse( fs.fileExists( file ) );
+            assertFalse( fs.fileExists( file.toFile() ) );
         }
     }
 
@@ -90,21 +89,21 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "knownDirectory" ) );
 
-        List<File> directories = Arrays.asList(
+        List<Path> directories = Arrays.asList(
                 createDirectory( databaseDir, "knownDirectory1" ),
                 createDirectory( databaseDir, "knownDirectory2" ),
                 createDirectory( databaseDir, "knownDirectory3" ) );
 
-        for ( File directory : directories )
+        for ( Path directory : directories )
         {
             createFile( directory, "dummy-file" );
         }
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        for ( File directory : directories )
+        for ( Path directory : directories )
         {
-            assertFalse( fs.fileExists( directory ) );
+            assertFalse( fs.fileExists( directory.toFile() ) );
         }
     }
 
@@ -113,17 +112,18 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        File[] txLogFiles = {logFiles.getLogFileForVersion( 1 ), logFiles.getLogFileForVersion( 2 ), logFiles.getLogFileForVersion( 42 )};
-        for ( File txLogFile : txLogFiles )
+        Path[] txLogFiles =
+                {logFiles.getLogFileForVersion( 1 ).toPath(), logFiles.getLogFileForVersion( 2 ).toPath(), logFiles.getLogFileForVersion( 42 ).toPath()};
+        for ( Path txLogFile : txLogFiles )
         {
             createFile( txLogFile );
         }
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        for ( File txLogFile : txLogFiles )
+        for ( Path txLogFile : txLogFiles )
         {
-            assertFalse( fs.fileExists( txLogFile ) );
+            assertFalse( fs.fileExists( txLogFile.toFile() ) );
         }
     }
 
@@ -132,15 +132,15 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        File file1 = createFile( databaseDir, "UnknownFile1" );
-        File file2 = createFile( databaseDir, "KnownFile2" );
-        File file3 = createFile( databaseDir, "UnknownFile3" );
+        Path file1 = createFile( databaseDir, "UnknownFile1" );
+        Path file2 = createFile( databaseDir, "KnownFile2" );
+        Path file3 = createFile( databaseDir, "UnknownFile3" );
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        assertTrue( fs.fileExists( file1 ) );
-        assertFalse( fs.fileExists( file2 ) );
-        assertTrue( fs.fileExists( file3 ) );
+        assertTrue( fs.fileExists( file1.toFile() ) );
+        assertFalse( fs.fileExists( file2.toFile() ) );
+        assertTrue( fs.fileExists( file3.toFile() ) );
     }
 
     @Test
@@ -148,16 +148,16 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
 
-        File dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
-        File dir2 = createDirectory( databaseDir, "KnownDirectory2" );
-        File dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
+        Path dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
+        Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
+        Path dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        assertTrue( fs.isDirectory( dir1 ) );
-        assertFalse( fs.isDirectory( dir2 ) );
-        assertFalse( fs.fileExists( dir2 ) );
-        assertTrue( fs.isDirectory( dir3 ) );
+        assertTrue( fs.isDirectory( dir1.toFile() ) );
+        assertFalse( fs.isDirectory( dir2.toFile() ) );
+        assertFalse( fs.fileExists( dir2.toFile() ) );
+        assertTrue( fs.isDirectory( dir3.toFile() ) );
     }
 
     @Test
@@ -165,19 +165,19 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        File file1 = createFile( databaseDir, "KnownFile1" );
-        File file2 = createFile( databaseDir, "KnownFile2" );
-        File file3 = createFile( databaseDir, "KnownFile3" );
+        Path file1 = createFile( databaseDir, "KnownFile1" );
+        Path file2 = createFile( databaseDir, "KnownFile2" );
+        Path file3 = createFile( databaseDir, "KnownFile3" );
 
-        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertFalse( fs.fileExists( file1 ) );
-        assertFalse( fs.fileExists( file2 ) );
-        assertFalse( fs.fileExists( file3 ) );
+        assertFalse( fs.fileExists( file1.toFile() ) );
+        assertFalse( fs.fileExists( file2.toFile() ) );
+        assertFalse( fs.fileExists( file3.toFile() ) );
 
-        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile1" ) ) );
-        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile2" ) ) );
-        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile3" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile1" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile3" ).toFile() ) );
     }
 
     @Test
@@ -185,28 +185,28 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
 
-        File dir1 = createDirectory( databaseDir, "KnownDirectory1" );
-        File dir2 = createDirectory( databaseDir, "KnownDirectory2" );
-        File dir3 = createDirectory( databaseDir, "KnownDirectory3" );
+        Path dir1 = createDirectory( databaseDir, "KnownDirectory1" );
+        Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
+        Path dir3 = createDirectory( databaseDir, "KnownDirectory3" );
 
         createFile( dir1, "dummy-file-1" );
         createFile( dir2, "dummy-file-2" );
         createFile( dir3, "dummy-file-3" );
 
-        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertFalse( fs.fileExists( dir1 ) );
-        assertFalse( fs.fileExists( dir2 ) );
-        assertFalse( fs.fileExists( dir3 ) );
+        assertFalse( fs.fileExists( dir1.toFile() ) );
+        assertFalse( fs.fileExists( dir2.toFile() ) );
+        assertFalse( fs.fileExists( dir3.toFile() ) );
 
-        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory1" ) ) );
-        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory1" ), "dummy-file-1" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory1" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory1" ).resolve( "dummy-file-1" ).toFile() ) );
 
-        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory2" ) ) );
-        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory2" ), "dummy-file-2" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ).toFile() ) );
 
-        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory3" ) ) );
-        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory3" ), "dummy-file-3" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory3" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory3" ).resolve( "dummy-file-3" ).toFile() ) );
     }
 
     @Test
@@ -214,19 +214,20 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        File[] txLogFiles = {logFiles.getLogFileForVersion( 99 ), logFiles.getLogFileForVersion( 100 ), logFiles.getLogFileForVersion( 101 )};
-        for ( File txLogFile : txLogFiles )
+        Path[] txLogFiles =
+                {logFiles.getLogFileForVersion( 99 ).toPath(), logFiles.getLogFileForVersion( 100 ).toPath(), logFiles.getLogFileForVersion( 101 ).toPath()};
+        for ( Path txLogFile : txLogFiles )
         {
             createFile( txLogFile );
         }
 
-        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        for ( File txLogFile : txLogFiles )
+        for ( Path txLogFile : txLogFiles )
         {
-            assertFalse( fs.fileExists( txLogFile ) );
-            File copiedTxLogFile = new File( otherDatabaseDir, txLogFile.getName() );
-            assertTrue( fs.fileExists( copiedTxLogFile ) );
+            assertFalse( fs.fileExists( txLogFile.toFile() ) );
+            Path copiedTxLogFile = otherDatabaseDir.resolve( txLogFile.getFileName().toString() );
+            assertTrue( fs.fileExists( copiedTxLogFile.toFile() ) );
         }
     }
 
@@ -235,19 +236,19 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        File file1 = createFile( databaseDir, "UnknownFile1" );
-        File file2 = createFile( databaseDir, "KnownFile2" );
-        File file3 = createFile( databaseDir, "UnknownFile3" );
+        Path file1 = createFile( databaseDir, "UnknownFile1" );
+        Path file2 = createFile( databaseDir, "KnownFile2" );
+        Path file3 = createFile( databaseDir, "UnknownFile3" );
 
-        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertTrue( fs.fileExists( file1 ) );
-        assertFalse( fs.fileExists( file2 ) );
-        assertTrue( fs.fileExists( file3 ) );
+        assertTrue( fs.fileExists( file1.toFile() ) );
+        assertFalse( fs.fileExists( file2.toFile() ) );
+        assertTrue( fs.fileExists( file3.toFile() ) );
 
-        assertFalse( fs.fileExists( new File( otherDatabaseDir, "UnknownFile1" ) ) );
-        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile2" ) ) );
-        assertFalse( fs.fileExists( new File( otherDatabaseDir, "UnknownFile3" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile1" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ).toFile() ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile3" ).toFile() ) );
     }
 
     @Test
@@ -255,29 +256,29 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
 
-        File dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
-        File dir2 = createDirectory( databaseDir, "KnownDirectory2" );
-        File dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
+        Path dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
+        Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
+        Path dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
 
-        File file1 = createFile( dir1, "dummy-file-1" );
-        File file2 = createFile( dir2, "dummy-file-2" );
-        File file3 = createFile( dir3, "dummy-file-3" );
+        Path file1 = createFile( dir1, "dummy-file-1" );
+        Path file2 = createFile( dir2, "dummy-file-2" );
+        Path file3 = createFile( dir3, "dummy-file-3" );
 
-        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertTrue( fs.isDirectory( dir1 ) );
-        assertTrue( fs.fileExists( file1 ) );
-        assertFalse( fs.isDirectory( dir2 ) );
-        assertFalse( fs.fileExists( file2 ) );
-        assertTrue( fs.isDirectory( dir3 ) );
-        assertTrue( fs.fileExists( file3 ) );
+        assertTrue( fs.isDirectory( dir1.toFile() ) );
+        assertTrue( fs.fileExists( file1.toFile() ) );
+        assertFalse( fs.isDirectory( dir2.toFile() ) );
+        assertFalse( fs.fileExists( file2.toFile() ) );
+        assertTrue( fs.isDirectory( dir3.toFile() ) );
+        assertTrue( fs.fileExists( file3.toFile() ) );
 
-        assertFalse( fs.isDirectory( new File( otherDatabaseDir, "UnknownDirectory1" ) ) );
-        assertFalse( fs.fileExists( new File( new File( otherDatabaseDir, "UnknownDirectory1" ), "dummy-file-1" ) ) );
-        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory2" ) ) );
-        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory2" ), "dummy-file-2" ) ) );
-        assertFalse( fs.isDirectory( new File( otherDatabaseDir, "UnknownDirectory3" ) ) );
-        assertFalse( fs.fileExists( new File( new File( otherDatabaseDir, "UnknownDirectory3" ), "dummy-file-3" ) ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory1" ).toFile() ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory1" ).resolve( "dummy-file-1" ).toFile() ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ).toFile() ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory3" ).toFile() ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory3" ).resolve( "dummy-file-3" ).toFile() ) );
     }
 
     @Test
@@ -311,7 +312,7 @@ class StoreFilesTest
         createFile( databaseDir, DatabaseFile.NODE_STORE.getName() );
         createFile( databaseDir, DatabaseFile.RELATIONSHIP_STORE.getName() );
 
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
         assertFalse( storeFiles.isEmpty( databaseLayout ) );
     }
@@ -320,7 +321,7 @@ class StoreFilesTest
     void shouldReadStoreIdWhenMetadataStoreExists() throws Exception
     {
         StoreFiles storeFiles = newStoreFiles();
-        File metadataStore = new File( databaseDir, DatabaseFile.METADATA_STORE.getName() );
+        Path metadataStore = databaseDir.resolve( DatabaseFile.METADATA_STORE.getName() );
         createFile( metadataStore );
 
         ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -336,7 +337,7 @@ class StoreFilesTest
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime, NULL );
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId, NULL );
 
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
         StoreId storeId = storeFiles.readStoreId( databaseLayout, NULL );
 
@@ -348,7 +349,7 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir.toPath() );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
         assertThrows( IOException.class, () -> storeFiles.readStoreId( databaseLayout, NULL ) );
     }
@@ -358,15 +359,15 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        File tempCopyDir = createDirectory( databaseDir, "temp-copy" );
-        File notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
-        assertTrue( fs.isDirectory( tempCopyDir ) );
-        assertTrue( fs.isDirectory( notTempCopyDir ) );
+        Path tempCopyDir = createDirectory( databaseDir, "temp-copy" );
+        Path notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
+        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
+        assertTrue( fs.isDirectory( notTempCopyDir.toFile() ) );
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        assertTrue( fs.isDirectory( tempCopyDir ) );
-        assertFalse( fs.isDirectory( notTempCopyDir ) );
+        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
+        assertFalse( fs.isDirectory( notTempCopyDir.toFile() ) );
     }
 
     @Test
@@ -374,38 +375,37 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        File tempCopyDir = createDirectory( databaseDir, "temp-copy" );
-        File notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
-        assertTrue( fs.isDirectory( tempCopyDir ) );
-        assertTrue( fs.isDirectory( notTempCopyDir ) );
+        Path tempCopyDir = createDirectory( databaseDir, "temp-copy" );
+        Path notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
+        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
+        assertTrue( fs.isDirectory( notTempCopyDir.toFile() ) );
 
-        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertTrue( fs.isDirectory( tempCopyDir ) );
-        assertFalse( fs.isDirectory( new File( otherDatabaseDir, "temp-copy" ) ) );
-        assertFalse( fs.isDirectory( notTempCopyDir ) );
-        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "not-temp-copy" ) ) );
+        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "temp-copy" ).toFile() ) );
+        assertFalse( fs.isDirectory( notTempCopyDir.toFile() ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "not-temp-copy" ).toFile() ) );
     }
 
-    private File createFile( File parentDir, String name ) throws IOException
+    private Path createFile( Path parentDir, String name ) throws IOException
     {
-        File file = new File( parentDir, name );
-        return createFile( file );
+        return createFile( parentDir.resolve( name ) );
     }
 
-    private File createFile( File file ) throws IOException
+    private Path createFile( Path file ) throws IOException
     {
-        fs.mkdirs( file.getParentFile() );
-        fs.write( file ).close();
-        assertTrue( fs.fileExists( file ) );
+        fs.mkdirs( file.getParent().toFile() );
+        fs.write( file.toFile() ).close();
+        assertTrue( fs.fileExists( file.toFile() ) );
         return file;
     }
 
-    private File createDirectory( File parentDir, String name ) throws IOException
+    private Path createDirectory( Path parentDir, String name ) throws IOException
     {
-        File dir = new File( parentDir, name );
-        fs.mkdirs( dir );
-        assertTrue( fs.isDirectory( dir ) );
+        Path dir = parentDir.resolve( name );
+        fs.mkdirs( dir.toFile() );
+        assertTrue( fs.isDirectory( dir.toFile() ) );
         return dir;
     }
 

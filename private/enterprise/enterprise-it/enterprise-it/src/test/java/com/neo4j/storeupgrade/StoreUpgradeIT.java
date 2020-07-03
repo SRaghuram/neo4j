@@ -444,7 +444,7 @@ public class StoreUpgradeIT
             NeoBootstrapper bootstrapper = new CommunityBootstrapper();
             try
             {
-                bootstrapper.start( rootDir.toAbsolutePath().toFile(), configFile.toFile(), Collections.emptyMap() );
+                bootstrapper.start( rootDir.toAbsolutePath(), configFile, Collections.emptyMap() );
                 assertTrue( bootstrapper.isRunning() );
                 checkInstance( store, (GraphDatabaseAPI) bootstrapper.getDatabaseManagementService().database( DEFAULT_DATABASE_NAME ) );
             }
@@ -538,8 +538,7 @@ public class StoreUpgradeIT
                 {
                     try
                     {
-                        File neoStore = databaseLayout.metadataStore().toFile();
-                        return MetaDataStore.getRecord( pageCache, neoStore, MetaDataStore.Position.LAST_TRANSACTION_ID,
+                        return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(), MetaDataStore.Position.LAST_TRANSACTION_ID,
                                 PageCursorTracer.NULL );
                     }
                     catch ( IOException e )

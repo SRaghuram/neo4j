@@ -9,7 +9,6 @@ import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -102,7 +101,7 @@ class PrepareStoreCopyFilesIT
         }
     }
 
-    private void assertContainsAllExpectedGBPTreeFiles( Set<File> atomicFiles )
+    private void assertContainsAllExpectedGBPTreeFiles( Set<Path> atomicFiles )
     {
         DatabaseLayout layout = db.databaseLayout();
         NativeIndexFileFilter nativeIndexFileFilter = getNativeIndexFileFilter();
@@ -110,25 +109,25 @@ class PrepareStoreCopyFilesIT
         // - Label index
         // - Index statistics store
         // - Counts store
-        assertThat( atomicFiles ).contains( layout.labelScanStore().toFile(), layout.indexStatisticsStore().toFile(), layout.countStore().toFile() );
+        assertThat( atomicFiles ).contains( layout.labelScanStore(), layout.indexStatisticsStore(), layout.countStore() );
 
         // - RelationshipType index
         if ( config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) )
         {
-            assertThat( atomicFiles ).contains( layout.relationshipTypeScanStore().toFile() );
+            assertThat( atomicFiles ).contains( layout.relationshipTypeScanStore() );
         }
 
         // - .id files
-        assertThat( atomicFiles ).contains( layout.idFiles().stream().map( Path::toFile ).toArray( File[]::new ) );
+        assertThat( atomicFiles ).contains( layout.idFiles().toArray( new Path[0] ) );
 
         // - Native indexes
-        assertThat( atomicFiles ).filteredOn( nativeIndexFileFilter::accept ).isNotEmpty();
+        assertThat( atomicFiles ).filteredOn( file -> nativeIndexFileFilter.accept( file.toFile() ) ).isNotEmpty();
     }
 
-    private void assertContainsNoGBPTreeFiles( Set<File> files )
+    private void assertContainsNoGBPTreeFiles( Set<Path> files )
     {
         NativeIndexFileFilter nativeIndexFileFilter = getNativeIndexFileFilter();
-        for ( File file : files )
+        for ( Path file : files )
         {
             // What we know today
             assertFalse( isKnownGBPTreeFile( nativeIndexFileFilter, db.databaseLayout(), file ) );
@@ -142,12 +141,12 @@ class PrepareStoreCopyFilesIT
         return new NativeIndexFileFilter( db.databaseLayout().databaseDirectory().toFile() );
     }
 
-    private static boolean fileContentsLooksLikeAGBPTree( File file, PageCache pageCache )
+    private static boolean fileContentsLooksLikeAGBPTree( Path file, PageCache pageCache )
     {
         try
         {
             MutableBoolean headerRead = new MutableBoolean();
-            GBPTree.readHeader( pageCache, file, buffer -> headerRead.setTrue(), NULL );
+            GBPTree.readHeader( pageCache, file.toFile(), buffer -> headerRead.setTrue(), NULL );
             return headerRead.booleanValue();
         }
         catch ( Exception e )
@@ -159,14 +158,14 @@ class PrepareStoreCopyFilesIT
         }
     }
 
-    private static boolean isKnownGBPTreeFile( NativeIndexFileFilter nativeIndexFileFilter, DatabaseLayout databaseLayout, File file )
+    private static boolean isKnownGBPTreeFile( NativeIndexFileFilter nativeIndexFileFilter, DatabaseLayout databaseLayout, Path file )
     {
-        String name = file.getName();
+        String name = file.getFileName().toString();
         return name.equals( DatabaseFile.LABEL_SCAN_STORE.getName() ) ||
                 name.equals( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName() ) ||
                 name.equals( DatabaseFile.COUNTS_STORE.getName() ) ||
                 name.equals( DatabaseFile.INDEX_STATISTICS_STORE.getName() ) ||
-                nativeIndexFileFilter.accept( file ) ||
+                nativeIndexFileFilter.accept( file.toFile() ) ||
                 databaseLayout.idFiles().contains( file );
     }
 
@@ -175,10 +174,10 @@ class PrepareStoreCopyFilesIT
         return new PrepareStoreCopyFiles( database, fileSystem );
     }
 
-    private static Set<File> atomicFiles( PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException
+    private static Set<Path> atomicFiles( PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException
     {
         var atomicFilesList = Arrays.stream( prepareStoreCopyFiles.getAtomicFilesSnapshot() )
-                .map( StoreResource::file )
+                .map( StoreResource::path )
                 .collect( toList() );
 
         var atomicFilesSet = Set.copyOf( atomicFilesList );
@@ -186,7 +185,7 @@ class PrepareStoreCopyFilesIT
         return atomicFilesSet;
     }
 
-    private static Set<File> replayableFiles( PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException
+    private static Set<Path> replayableFiles( PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException
     {
         var replayableFilesArray = prepareStoreCopyFiles.listReplayableFiles();
         var replayableFilesSet = Set.of( replayableFilesArray );

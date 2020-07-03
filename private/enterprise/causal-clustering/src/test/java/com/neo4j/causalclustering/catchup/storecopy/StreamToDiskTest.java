@@ -44,7 +44,7 @@ class StreamToDiskTest
         var layout = DatabaseLayout.ofFlat( directory.file( DEFAULT_DATABASE_NAME ).toPath() );
         // GIVEN
         var monitors = new Monitors();
-        var writerProvider = new StreamToDiskProvider( layout.databaseDirectory().toFile(), fs, monitors );
+        var writerProvider = new StreamToDiskProvider( layout.databaseDirectory(), fs, monitors );
 
         // WHEN
         for ( var type : StoreType.values() )

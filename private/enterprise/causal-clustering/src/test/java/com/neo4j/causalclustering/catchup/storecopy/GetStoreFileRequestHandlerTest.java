@@ -12,7 +12,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,7 +79,7 @@ class GetStoreFileRequestHandlerTest
     void shouldGiveProperErrorOnStoreIdMismatch()
     {
         embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MISMATCHING,
-                new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) );
+                Path.of( "some-file" ), 1, DEFAULT_DATABASE_ID ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -94,7 +93,7 @@ class GetStoreFileRequestHandlerTest
     void shouldGiveProperErrorOnTxBehind()
     {
         embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
-                new File( "some-file" ), 2, DEFAULT_DATABASE_ID ) );
+                Path.of( "some-file" ), 2, DEFAULT_DATABASE_ID ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -110,7 +109,7 @@ class GetStoreFileRequestHandlerTest
         when( database.getStoreId() ).thenThrow( new IllegalStateException() );
 
         assertThrows( IllegalStateException.class,
-                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );
+                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, Path.of( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -127,7 +126,7 @@ class GetStoreFileRequestHandlerTest
                 new EvilGetStoreFileRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol( maxChunkSize ), fileSystemAbstraction ) );
 
         assertThrows( IllegalStateException.class,
-                () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );
+                () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, Path.of( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, alternativeChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse =
@@ -145,7 +144,7 @@ class GetStoreFileRequestHandlerTest
 
         // when
         RuntimeException error = assertThrows( RuntimeException.class,
-                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 123, DEFAULT_DATABASE_ID ) ) );
+                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, Path.of( "some-file" ), 123, DEFAULT_DATABASE_ID ) ) );
 
         assertEquals( "FakeCheckPointer", error.getMessage() );
 

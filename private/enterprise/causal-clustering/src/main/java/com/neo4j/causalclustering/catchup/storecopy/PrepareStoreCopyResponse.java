@@ -13,8 +13,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -33,7 +33,7 @@ public class PrepareStoreCopyResponse
         E_DATABASE_UNKNOWN
     }
 
-    private final File[] files;
+    private final Path[] paths;
     private final long lastCheckPointedTransactionId;
     private final Status status;
 
@@ -43,24 +43,24 @@ public class PrepareStoreCopyResponse
         {
             throw new IllegalStateException( "Cannot create error result from state: " + errorStatus );
         }
-        return new PrepareStoreCopyResponse( new File[0], 0, errorStatus );
+        return new PrepareStoreCopyResponse( new Path[0], 0, errorStatus );
     }
 
-    public static PrepareStoreCopyResponse success( File[] storeFiles, long lastCheckPointedTransactionId )
+    public static PrepareStoreCopyResponse success( Path[] storeFiles, long lastCheckPointedTransactionId )
     {
         return new PrepareStoreCopyResponse( storeFiles, lastCheckPointedTransactionId, Status.SUCCESS );
     }
 
-    private PrepareStoreCopyResponse( File[] files, long lastCheckPointedTransactionId, Status status )
+    private PrepareStoreCopyResponse( Path[] paths, long lastCheckPointedTransactionId, Status status )
     {
-        this.files = files;
+        this.paths = paths;
         this.lastCheckPointedTransactionId = lastCheckPointedTransactionId;
         this.status = status;
     }
 
-    public File[] getFiles()
+    public Path[] getPaths()
     {
-        return files;
+        return paths;
     }
 
     public long lastCheckPointedTransactionId()
@@ -87,14 +87,14 @@ public class PrepareStoreCopyResponse
         PrepareStoreCopyResponse that = (PrepareStoreCopyResponse) o;
         return lastCheckPointedTransactionId == that.lastCheckPointedTransactionId &&
                 status == that.status &&
-                Arrays.equals( files, that.files );
+                Arrays.equals( paths, that.paths );
     }
 
     @Override
     public int hashCode()
     {
         int result = Objects.hash( lastCheckPointedTransactionId, status );
-        result = 31 * result + Arrays.hashCode( files );
+        result = 31 * result + Arrays.hashCode( paths );
         return result;
     }
 
@@ -105,7 +105,7 @@ public class PrepareStoreCopyResponse
         {
             buffer.putInt( prepareStoreCopyResponse.status.ordinal() );
             buffer.putLong( prepareStoreCopyResponse.lastCheckPointedTransactionId );
-            marshalFiles( buffer, prepareStoreCopyResponse.files );
+            marshalPaths( buffer, prepareStoreCopyResponse.paths );
         }
 
         @Override
@@ -114,34 +114,34 @@ public class PrepareStoreCopyResponse
             int ordinal = channel.getInt();
             Status status = Status.values()[ordinal];
             long transactionId = channel.getLong();
-            File[] files = unmarshalFiles( channel );
+            Path[] files = unmarshalPaths( channel );
             return new PrepareStoreCopyResponse( files, transactionId, status );
         }
 
-        private static void marshalFiles( WritableChannel buffer, File[] files ) throws IOException
+        private static void marshalPaths( WritableChannel buffer, Path[] files ) throws IOException
         {
             buffer.putInt( files.length );
-            for ( File file : files )
+            for ( Path file : files )
             {
-                putBytes( buffer, file.getName() );
+                putBytes( buffer, file.getFileName().toString() );
             }
         }
 
-        private static File[] unmarshalFiles( ReadableChannel channel ) throws IOException
+        private static Path[] unmarshalPaths( ReadableChannel channel ) throws IOException
         {
             int numberOfFiles = channel.getInt();
-            File[] files = new File[numberOfFiles];
+            Path[] paths = new Path[numberOfFiles];
             for ( int i = 0; i < numberOfFiles; i++ )
             {
-                files[i] = unmarshalFile( channel );
+                paths[i] = unmarshalPath( channel );
             }
-            return files;
+            return paths;
         }
 
-        private static File unmarshalFile( ReadableChannel channel ) throws IOException
+        private static Path unmarshalPath( ReadableChannel channel ) throws IOException
         {
             byte[] name = readBytes( channel );
-            return new File( UTF8.decode( name ) );
+            return Path.of( UTF8.decode( name ) );
         }
 
         private static void putBytes( WritableChannel buffer, String value ) throws IOException

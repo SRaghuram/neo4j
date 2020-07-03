@@ -23,7 +23,7 @@ class PageLoaderFactory
 
     PageLoader getLoader( PagedFile file, PageCacheTracer tracer ) throws IOException
     {
-        if ( FileUtils.highIODevice( file.file().toPath() ) )
+        if ( FileUtils.highIODevice( file.path() ) )
         {
             return new ParallelPageLoader( file, executor, tracer );
         }

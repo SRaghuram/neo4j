@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -30,7 +30,6 @@ import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
-import static org.neo4j.io.fs.FileUtils.relativePath;
 
 public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetStoreFileRequest>
 {
@@ -71,14 +70,15 @@ public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetS
             }
             else
             {
-                File databaseDirectory = db.getDatabaseLayout().databaseDirectory().toFile();
+                Path databaseDirectory = db.getDatabaseLayout().databaseDirectory();
                 try ( ResourceIterator<StoreFileMetadata> resourceIterator = files( request, db ) )
                 {
                     while ( resourceIterator.hasNext() )
                     {
                         StoreFileMetadata storeFileMetadata = resourceIterator.next();
-                        StoreResource storeResource = new StoreResource( storeFileMetadata.file(), relativePath( databaseDirectory, storeFileMetadata.file() ),
-                                storeFileMetadata.recordSize(), fs );
+                        StoreResource storeResource =
+                                new StoreResource( storeFileMetadata.path(), databaseDirectory.relativize( storeFileMetadata.path() ).toString(),
+                                        storeFileMetadata.recordSize(), fs );
                         storeFileStreamingProtocol.stream( ctx, storeResource );
                     }
                 }
@@ -98,7 +98,7 @@ public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetS
     {
         try ( ResourceIterator<StoreFileMetadata> resourceIterator = database.listStoreFiles( false ) )
         {
-            String fileName = request.file().getName();
+            String fileName = request.path().getFileName().toString();
             return Iterators.asResourceIterator(
                     onlyOne( resourceIterator.stream().filter( matchesRequested( fileName ) ).collect( Collectors.toList() ), fileName ) );
         }
@@ -115,7 +115,7 @@ public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetS
 
     private static Predicate<StoreFileMetadata> matchesRequested( String fileName )
     {
-        return f -> f.file().getName().equals( fileName );
+        return f -> f.path().getFileName().toString().equals( fileName );
     }
 
     private void tryAsyncCheckpoint( Database db, CheckPointer checkPointer )

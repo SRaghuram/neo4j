@@ -24,8 +24,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -53,7 +53,7 @@ class BareClient implements CatchupResponseHandler
     private DatabaseId databaseId;
     private StoreId storeId;
     private long lastCheckPointedTxId;
-    private Iterator<File> files;
+    private Iterator<Path> files;
 
     void registerErrorCallback( Consumer<Exception> errorCallback )
     {
@@ -79,7 +79,7 @@ class BareClient implements CatchupResponseHandler
     @Override
     public void onStoreListingResponse( PrepareStoreCopyResponse response )
     {
-        var files = response.getFiles();
+        var files = response.getPaths();
         this.files = List.of( files ).iterator();
         lastCheckPointedTxId = response.lastCheckPointedTransactionId();
         log.info( "Received PrepareStoreCopyResponse with %s,files=%d, %d", response.status(), files.length, lastCheckPointedTxId );

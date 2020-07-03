@@ -27,7 +27,7 @@ public class StoreFileStreamingProtocol
     public void stream( ChannelHandlerContext ctx, StoreResource resource )
     {
         ctx.write( ResponseMessageType.FILE );
-        ctx.write( new FileHeader( resource.path(), resource.recordSize() ) );
+        ctx.write( new FileHeader( resource.relativePath(), resource.recordSize() ) );
         ctx.write( new FileSender( resource, maxChunkSize ) );
     }
 

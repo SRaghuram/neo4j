@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import java.io.File;
+import java.nio.file.Path;
 
 public interface FileCopyMonitor
 {
-    void copyFile( File file );
+    void copyFile( Path file );
 }

@@ -13,6 +13,7 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -32,7 +33,7 @@ class StoreFileStreamingProtocolTest
     @Inject
     private EphemeralFileSystemAbstraction fs;
 
-    private int maxChunkSize = 32768;
+    private final int maxChunkSize = 32768;
 
     @Test
     void shouldStreamResources() throws Exception
@@ -49,7 +50,7 @@ class StoreFileStreamingProtocolTest
         var resourceList = new ArrayList<StoreResource>();
         for ( var file : files )
         {
-            resourceList.add( createResource( new File( file ), ThreadLocalRandom.current().nextInt( 1, 4096 ) ) );
+            resourceList.add( createResource( Path.of( file ), ThreadLocalRandom.current().nextInt( 1, 4096 ) ) );
         }
 
         // when
@@ -64,7 +65,7 @@ class StoreFileStreamingProtocolTest
         for ( var resource : resourceList )
         {
             inOrder.verify( ctx ).write( ResponseMessageType.FILE );
-            inOrder.verify( ctx ).write( new FileHeader( resource.path(), resource.recordSize() ) );
+            inOrder.verify( ctx ).write( new FileHeader( resource.relativePath(), resource.recordSize() ) );
             inOrder.verify( ctx ).write( new FileSender( resource, 32768 ) );
         }
         verifyNoMoreInteractions( ctx );
@@ -104,9 +105,9 @@ class StoreFileStreamingProtocolTest
         inOrder.verifyNoMoreInteractions();
     }
 
-    private StoreResource createResource( File file, int recordSize ) throws IOException
+    private StoreResource createResource( Path file, int recordSize ) throws IOException
     {
-        fs.write( file );
-        return new StoreResource( file, file.getPath(), recordSize, fs );
+        fs.write( file.toFile() );
+        return new StoreResource( file, file.toAbsolutePath().toString(), recordSize, fs );
     }
 }

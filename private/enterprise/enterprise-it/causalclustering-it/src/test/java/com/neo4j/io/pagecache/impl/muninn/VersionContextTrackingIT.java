@@ -12,8 +12,8 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 import org.neo4j.common.DependencyResolver;
@@ -115,7 +115,7 @@ class VersionContextTrackingIT
         DependencyResolver dependencyResolver = databaseFacade.getDependencyResolver();
         PageCache pageCache = dependencyResolver.resolveDependency( PageCache.class );
         NeoStores neoStores = dependencyResolver.resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
-        File storeFile = neoStores.getNodeStore().getStorageFile();
+        Path storeFile = neoStores.getNodeStore().getStorageFile();
         long maxTransactionId = Long.MIN_VALUE;
         PagedFile pageFile = pageCache.getExistingMapping( storeFile ).get();
         long lastPageId = pageFile.getLastPageId();

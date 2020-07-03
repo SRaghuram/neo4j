@@ -94,10 +94,10 @@ public class RemoteStore
 
     public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout ) throws StoreCopyFailedException
     {
-        StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory().toFile(), fs, monitors );
+        StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors );
         RequiredTransactions requiredTransactions =
                 storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider, this::getTerminationCondition,
-                        destinationLayout.databaseDirectory().toFile() );
+                        destinationLayout.databaseDirectory() );
 
         log.info( "Store files need to be recovered starting from: %s", requiredTransactions );
 

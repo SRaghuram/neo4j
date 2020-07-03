@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.internal.id.indexed.IndexedIdGenerator;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -30,7 +30,7 @@ public class DumpIdGenerator
             return;
         }
 
-        File file = new File( args[0] );
+        Path file = Path.of( args[0] );
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         SingleFilePageSwapperFactory swapper = new SingleFilePageSwapperFactory( fs );
         LifeSupport life = new LifeSupport();

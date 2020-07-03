@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -74,7 +74,7 @@ public interface VersionedCatchupClients extends AutoCloseable
 
         PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, NamedDatabaseId namedDatabaseId );
 
-        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, NamedDatabaseId namedDatabaseId );
+        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, Path path, long requiredTxId, NamedDatabaseId namedDatabaseId );
     }
 
     @FunctionalInterface

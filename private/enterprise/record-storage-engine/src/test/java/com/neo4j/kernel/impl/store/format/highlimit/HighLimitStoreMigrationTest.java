@@ -9,8 +9,8 @@ import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
@@ -132,23 +132,23 @@ class HighLimitStoreMigrationTest
     private static void prepareStoreFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, String storeVersion, PageCache pageCache )
             throws IOException
     {
-        File neoStoreFile = createNeoStoreFile( fileSystem, databaseLayout );
+        Path neoStoreFile = createNeoStoreFile( fileSystem, databaseLayout );
         long value = MetaDataStore.versionStringToLong( storeVersion );
         MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, PageCursorTracer.NULL );
         createSchemaStoreFile( fileSystem, databaseLayout, pageCache );
     }
 
-    private static File createNeoStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
+    private static Path createNeoStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
     {
-        File neoStoreFile = databaseLayout.metadataStore().toFile();
-        fileSystem.write( neoStoreFile ).close();
+        Path neoStoreFile = databaseLayout.metadataStore();
+        fileSystem.write( neoStoreFile.toFile() ).close();
         return neoStoreFile;
     }
 
     private static void createSchemaStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, PageCache pageCache )
     {
-        File store = databaseLayout.schemaStore().toFile();
-        File idFile = databaseLayout.idSchemaStore().toFile();
+        Path store = databaseLayout.schemaStore();
+        Path idFile = databaseLayout.idSchemaStore();
         DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         RecordFormats recordFormats = HighLimitV3_0_0.RECORD_FORMATS;

@@ -187,7 +187,7 @@ class DatabaseRebuildToolTest
               JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = createPageCache( fileSystem, scheduler, PageCacheTracer.NULL ) )
         {
-            return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore().toFile(), MetaDataStore.Position.LAST_TRANSACTION_ID, NULL );
+            return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(), MetaDataStore.Position.LAST_TRANSACTION_ID, NULL );
         }
         catch ( Exception e )
         {

@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -192,7 +192,7 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, NamedDatabaseId namedDatabaseId )
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, Path file, long requiredTxId, NamedDatabaseId namedDatabaseId )
         {
             return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, namedDatabaseId.databaseId() ), handler, channel );
         }

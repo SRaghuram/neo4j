@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.collection.Dependencies;
@@ -135,8 +134,7 @@ public class EnterpriseDatabaseTest
 
     private String getRecordFormat( PageCache pageCache, Database database ) throws IOException
     {
-        File file = database.getDatabaseLayout().metadataStore().toFile();
-        long record = MetaDataStore.getRecord( pageCache, file, MetaDataStore.Position.STORE_VERSION, NULL );
+        long record = MetaDataStore.getRecord( pageCache, database.getDatabaseLayout().metadataStore(), MetaDataStore.Position.STORE_VERSION, NULL );
         return MetaDataStore.versionLongToString( record );
     }
 }

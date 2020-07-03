@@ -160,7 +160,7 @@ class ReadReplicaReplicationIT
         var readReplica = cluster.addReadReplicaWithIdAndMonitors( 0, monitors );
         monitors.addMonitorListener( (FileCopyMonitor) file ->
         {
-            if ( labelScanStoreFiles.contains( file.toPath().getFileName() ) )
+            if ( labelScanStoreFiles.contains( file.getFileName() ) )
             {
                 labelScanStoreCorrectlyPlaced.set( true );
             }
@@ -397,7 +397,7 @@ class ReadReplicaReplicationIT
 
     private static void changeStoreId( ReadReplica replica ) throws IOException
     {
-        var neoStoreFile = replica.databaseLayout().metadataStore().toFile();
+        var neoStoreFile = replica.databaseLayout().metadataStore();
         var pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis(), NULL );
     }

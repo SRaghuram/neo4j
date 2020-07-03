@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Objects;
 
 import org.neo4j.graphdb.Resource;
@@ -79,7 +79,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 
     private PrepareStoreCopyResponse createSuccessfulResponse( CheckPointer checkPointer, PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException
     {
-        File[] files = prepareStoreCopyFiles.listReplayableFiles();
+        Path[] files = prepareStoreCopyFiles.listReplayableFiles();
         long lastCheckPointedTransactionId = checkPointer.lastCheckPointedTransactionId();
         return PrepareStoreCopyResponse.success( files, lastCheckPointedTransactionId );
     }

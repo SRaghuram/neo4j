@@ -22,7 +22,7 @@ public class GetStoreFileRequestEncoder extends MessageToByteEncoder<GetStoreFil
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( msg.databaseId(), channel );
         StoreIdMarshal.INSTANCE.marshal( msg.expectedStoreId(), channel );
         out.writeLong( msg.requiredTransactionId() );
-        String name = msg.file().getName();
+        String name = msg.path().getFileName().toString();
         StringMarshal.marshal( out, name );
     }
 }

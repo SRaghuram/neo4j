@@ -5,9 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.function.Function;
+import java.nio.file.Path;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -16,8 +15,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.storageengine.api.StoreFileMetadata;
-
-import static org.neo4j.io.fs.FileUtils.relativePath;
 
 public class PrepareStoreCopyFiles implements AutoCloseable
 {
@@ -47,45 +44,30 @@ public class PrepareStoreCopyFiles implements AutoCloseable
                 .build() );
 
         return Stream.concat( neoStoreFilesIterator.stream().filter( isCountFile( database.getDatabaseLayout() ) ), indexIterator.stream() ).map(
-                mapToStoreResource() ).toArray( StoreResource[]::new );
+                this::toStoreResource ).toArray( StoreResource[]::new );
     }
 
-    private Function<StoreFileMetadata,StoreResource> mapToStoreResource()
-    {
-        return storeFileMetadata ->
-        {
-            try
-            {
-                return toStoreResource( storeFileMetadata );
-            }
-            catch ( IOException e )
-            {
-                throw new IllegalStateException( "Unable to create store resource", e );
-            }
-        };
-    }
-
-    File[] listReplayableFiles() throws IOException
+    Path[] listReplayableFiles() throws IOException
     {
         try ( Stream<StoreFileMetadata> stream = database.getDatabaseFileListing().builder()
                 .excludeAll()
                 .includeNeoStoreFiles()
                 .build().stream() )
         {
-            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::file ).toArray( File[]::new );
+            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::path ).toArray( Path[]::new );
         }
     }
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
     {
-        return storeFileMetadata -> databaseLayout.countStore().toFile().equals( storeFileMetadata.file() );
+        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.path() );
     }
 
-    private StoreResource toStoreResource( StoreFileMetadata storeFileMetadata ) throws IOException
+    private StoreResource toStoreResource( StoreFileMetadata storeFileMetadata )
     {
-        File databaseDirectory = database.getDatabaseLayout().databaseDirectory().toFile();
-        File file = storeFileMetadata.file();
-        String relativePath = relativePath( databaseDirectory, file );
+        Path databaseDirectory = database.getDatabaseLayout().databaseDirectory();
+        Path file = storeFileMetadata.path();
+        String relativePath = databaseDirectory.relativize( file ).toString();
         return new StoreResource( file, relativePath, storeFileMetadata.recordSize(), fileSystemAbstraction );
     }
 

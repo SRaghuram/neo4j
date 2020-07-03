@@ -24,10 +24,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -85,17 +85,17 @@ class StoreCopyClientIT
     private final Supplier<TerminationCondition> defaultTerminationCondition = () -> TerminationCondition.CONTINUE_INDEFINITELY;
     private final FakeFile fileA = new FakeFile( "fileA", "This is file a content" );
     private final FakeFile fileB = new FakeFile( "another-file-b", "Totally different content 123" );
-    private final File targetLocation = new File( "copyTargetLocation" );
+    private final Path targetLocation = Path.of( "copyTargetLocation" );
     private JobScheduler scheduler;
     private LogProvider logProvider;
     private StoreCopyClient storeCopyClient;
     private Server catchupServer;
     private FakeCatchupServer serverHandler;
 
-    private static void writeContents( FileSystemAbstraction fileSystemAbstraction, File file, String contents )
+    private static void writeContents( FileSystemAbstraction fileSystemAbstraction, Path file, String contents )
     {
         byte[] bytes = contents.getBytes();
-        try ( StoreChannel storeChannel = fileSystemAbstraction.write( file ) )
+        try ( StoreChannel storeChannel = fileSystemAbstraction.write( file.toFile() ) )
         {
             storeChannel.writeAll( ByteBuffer.wrap( bytes ) );
         }
@@ -208,8 +208,8 @@ class StoreCopyClientIT
                     protected void channelRead0( ChannelHandlerContext ctx, GetStoreFileRequest msg )
                     {
                         // create the files and write the given content
-                        File file = new File( fileName );
-                        File fileCopy = new File( copyFileName );
+                        Path file = Path.of( fileName );
+                        Path fileCopy = Path.of( copyFileName );
                         String thisContent = contents.next();
                         writeContents( fs, file, thisContent );
                         writeContents( fs, fileCopy, thisContent );
@@ -222,12 +222,13 @@ class StoreCopyClientIT
                         catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
                     }
 
-                    private void sendFile( ChannelHandlerContext ctx, File file )
+                    private void sendFile( ChannelHandlerContext ctx, Path file )
                     {
                         ctx.write( ResponseMessageType.FILE );
-                        ctx.write( new FileHeader( file.getName() ) );
-                        ctx.writeAndFlush( new FileSender( new StoreResource( file, file.getName(), 16, fs ), MAX_CHUNK_SIZE ) ).addListener(
-                                future -> fs.deleteFile( file ) );
+                        String name = file.getFileName().toString();
+                        ctx.write( new FileHeader( name ) );
+                        ctx.writeAndFlush( new FileSender( new StoreResource( file, name, 16, fs ), MAX_CHUNK_SIZE ) ).addListener(
+                                future -> fs.deleteFile( file.toFile() ) );
                     }
                 };
             }
@@ -241,7 +242,7 @@ class StoreCopyClientIT
                     protected void channelRead0( ChannelHandlerContext ctx, PrepareStoreCopyRequest msg )
                     {
                         ctx.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
-                        ctx.writeAndFlush( PrepareStoreCopyResponse.success( new File[]{new File( fileName )}, 1 ) );
+                        ctx.writeAndFlush( PrepareStoreCopyResponse.success( new Path[]{Path.of( fileName )}, 1 ) );
                         catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
                     }
                 };
@@ -256,20 +257,20 @@ class StoreCopyClientIT
                 new SingleAddressProvider( new SocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
 
         StoreId storeId = halfWayFailingServerHandler.getStoreId();
-        File databaseDir = testDirectory.homeDir();
+        Path databaseDir = testDirectory.homePath();
         StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( databaseDir, fs, new Monitors() );
 
         // and
         storeCopyClient.copyStoreFiles( addressProvider, storeId, streamToDiskProvider, defaultTerminationCondition, targetLocation );
 
         // then
-        assertEquals( finishedContent, fileContent( new File( databaseDir, fileName ) ) );
+        assertEquals( finishedContent, fileContent( databaseDir.resolve( fileName ) ) );
 
         // and
-        File fileCopy = new File( databaseDir, copyFileName );
+        Path fileCopy = databaseDir.resolve( copyFileName );
 
         ByteBuffer buffer = ByteBuffer.wrap( new byte[finishedContent.length()] );
-        try ( StoreChannel storeChannel = fs.write( fileCopy ) )
+        try ( StoreChannel storeChannel = fs.write( fileCopy.toFile() ) )
         {
             storeChannel.read( buffer );
         }
@@ -335,12 +336,12 @@ class StoreCopyClientIT
         assertThat( assertableLogProvider ).containsMessages( catchupAddressResolutionException.getMessage() );
     }
 
-    private File relative( String filename )
+    private Path relative( String filename )
     {
-        return testDirectory.file( filename );
+        return testDirectory.filePath( filename );
     }
 
-    private String fileContent( File file ) throws IOException
+    private String fileContent( Path file ) throws IOException
     {
         return CausalClusteringTestHelpers.fileContent( file, fs );
     }

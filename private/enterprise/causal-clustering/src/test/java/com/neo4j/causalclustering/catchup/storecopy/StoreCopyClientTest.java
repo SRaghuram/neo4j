@@ -22,11 +22,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -70,8 +70,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.atMostOnce;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -103,8 +101,8 @@ class StoreCopyClientTest
     private final StoreFileStreamProvider expectedStoreFileStream = mock( StoreFileStreamProvider.class );
 
     // helpers
-    private File[] serverFiles = new File[]{new File( "fileA.txt" ), new File( "fileB.bmp" )};
-    private File targetLocation = new File( "targetLocation" );
+    private Path[] serverFiles = new Path[]{Path.of( "fileA.txt" ), Path.of( "fileB.bmp" )};
+    private Path targetLocation = Path.of( "targetLocation" );
     private ConstantTimeTimeoutStrategy backOffStrategy;
     private MockCatchupClient catchupClient;
     private final MockCatchupClient.MockClientResponses clientResponses = responses();
@@ -147,7 +145,7 @@ class StoreCopyClientTest
                 logProvider,
                 backoffStrategy );
 
-        var files = new File[] { new File( "fileA.txt" ) };
+        var files = new Path[] { Path.of( "fileA.txt" ) };
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );
 
@@ -202,7 +200,7 @@ class StoreCopyClientTest
 
         // then there are as many requests to the server for individual requests
         List<String> filteredRequests = getRequestFileNames( protocol );
-        List<String> expectedFiles = Stream.of( serverFiles ).map( File::getName ).collect( Collectors.toList() );
+        List<String> expectedFiles = Stream.of( serverFiles ).map( Path::getFileName ).map( Path::toString ).collect( Collectors.toList() );
         assertThat( expectedFiles, containsInAnyOrder( filteredRequests.toArray() ) );
     }
 
@@ -366,7 +364,7 @@ class StoreCopyClientTest
 
         // then
         verify( storeCopyClientMonitor ).startReceivingStoreFiles();
-        for ( File storeFileRequested : serverFiles )
+        for ( Path storeFileRequested : serverFiles )
         {
             verify( storeCopyClientMonitor ).startReceivingStoreFile( Paths.get( targetLocation.toString(), storeFileRequested.toString() ).toString() );
             verify( storeCopyClientMonitor ).finishReceivingStoreFile( Paths.get( targetLocation.toString(), storeFileRequested.toString() ).toString() );
@@ -377,7 +375,7 @@ class StoreCopyClientTest
     private List<String> getRequestFileNames( ApplicationProtocol protocol )
     {
 
-        ArgumentCaptor<File> fileArgumentCaptor = ArgumentCaptor.forClass( File.class );
+        ArgumentCaptor<Path> fileArgumentCaptor = ArgumentCaptor.forClass( Path.class );
         if ( protocol.equals( CATCHUP_3_0 ) )
         {
             verify( v3Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( NamedDatabaseId.class ) );
@@ -387,7 +385,8 @@ class StoreCopyClientTest
             throw new IllegalArgumentException( "Unknown protocol: " + protocol );
         }
         return fileArgumentCaptor.getAllValues().stream()
-                .map( File::getName )
+                .map( Path::getFileName )
+                .map( Path::toString )
                 .collect( Collectors.toList() );
     }
 

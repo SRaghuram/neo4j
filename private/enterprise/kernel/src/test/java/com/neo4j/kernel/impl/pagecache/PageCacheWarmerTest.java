@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -94,7 +93,7 @@ class PageCacheWarmerTest
     private JobScheduler scheduler;
     private PageCacheTracer cacheTracer;
     private PageCacheConfig cfg;
-    private File file;
+    private Path file;
     private Tracers tracers;
     private Log log = NullLog.getInstance();
 
@@ -107,8 +106,8 @@ class PageCacheWarmerTest
         tracers = new Tracers( "", log, null, null, Clocks.nanoClock() );
         cacheTracer = tracers.getPageCacheTracer();
         cfg = PageCacheConfig.config().withTracer( cacheTracer );
-        file = new File( testDirectory.homeDir(), "a" );
-        fs.write( file );
+        file = testDirectory.homePath().resolve( "a" );
+        fs.write( file.toFile() );
     }
 
     @AfterEach
@@ -313,10 +312,10 @@ class PageCacheWarmerTest
     @Test
     void profilerMustProfileMultipleFilesWithSameName() throws IOException
     {
-        File aaFile = new File( new File( testDirectory.homeDir(), "a" ), "a" );
-        File baFile = new File( new File( testDirectory.homeDir(), "b" ), "a" );
-        fs.mkdirs( aaFile.getParentFile() );
-        fs.mkdirs( baFile.getParentFile() );
+        Path aaFile = testDirectory.homePath().resolve( "a" ).resolve( "a" );
+        Path baFile = testDirectory.homePath().resolve( "b" ).resolve( "a" );
+        fs.mkdirs( aaFile.getParent().toFile() );
+        fs.mkdirs( baFile.getParent().toFile() );
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile aa = pageCache.map( aaFile, pageCache.pageSize(), immutable.of( CREATE ) );
               PagedFile ba = pageCache.map( baFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
@@ -327,8 +326,8 @@ class PageCacheWarmerTest
             List<StoreFileMetadata> fileListing = new ArrayList<>();
             try ( Resource resource = warmer.addFilesTo( fileListing ) )
             {
-                List<File> uniqueProfileFiles = fileListing.stream()
-                        .map( StoreFileMetadata::file )
+                List<Path> uniqueProfileFiles = fileListing.stream()
+                        .map( StoreFileMetadata::path )
                         .distinct()
                         .collect( Collectors.toList() );
                 assertEquals( 2, uniqueProfileFiles.size(),
@@ -351,11 +350,10 @@ class PageCacheWarmerTest
         Path fileAA = dirA.resolve( "a" );
         Path fileBA = dirB.resolve( "a" );
         Path fileA = baseDir.resolve( "a" );
-        File baseDirFile = baseDir.toFile();
-        Profile aaa = Profile.first( baseDirFile, fileAAA.toFile() );
-        Profile aa = Profile.first( baseDirFile, fileAA.toFile() );
-        Profile ba = Profile.first( baseDirFile, fileBA.toFile() );
-        Profile a = Profile.first( baseDirFile, fileA.toFile() );
+        Profile aaa = Profile.first( baseDir, fileAAA );
+        Profile aa = Profile.first( baseDir, fileAA );
+        Profile ba = Profile.first( baseDir, fileBA );
+        Profile a = Profile.first( baseDir, fileA );
         Profile aaaNext = aaa.next();
         Profile aaNext = aa.next();
         Profile baNext = ba.next();
@@ -374,7 +372,7 @@ class PageCacheWarmerTest
     private void assertSameRelativePath( Path baseDir, Path profileDir, Path mappedFile, Profile profile )
     {
         Path fileRelativePath = baseDir.relativize( mappedFile ).getParent();
-        Path profileRelativePath = profileDir.relativize( profile.file().toPath() ).getParent();
+        Path profileRelativePath = profileDir.relativize( profile.file() ).getParent();
         assertEquals( fileRelativePath, profileRelativePath,
                 "expected relative path to be equal but was " + fileRelativePath + " and " + profileRelativePath );
     }
@@ -382,10 +380,10 @@ class PageCacheWarmerTest
     @Test
     void profilesMustSortByPagedFileAndProfileSequenceId()
     {
-        File baseDir = new File( "baseDir" );
-        File fileAA = new File( baseDir, "aa" );
-        File fileAB = new File( baseDir, "ab" );
-        File fileBA = new File( baseDir, "ba" );
+        Path baseDir = Path.of( "baseDir" );
+        Path fileAA = baseDir.resolve( "aa" );
+        Path fileAB = baseDir.resolve( "ab" );
+        Path fileBA = baseDir.resolve( "ba" );
         Profile aa;
         Profile ab;
         Profile ba;
@@ -420,8 +418,8 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
         {
             int pageSize = pageCache.pageSize();
-            File testFile = testDirectory.createFile( "testfile" );
-            fs.write( testFile ).writeAll( ByteBuffer.wrap( new byte[ numPages * pageSize] ) );
+            Path testFile = testDirectory.createFilePath( "testfile" );
+            fs.write( testFile.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPages * pageSize] ) );
 
             try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
             {
@@ -449,10 +447,10 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
         {
             int pageSize = pageCache.pageSize();
-            File testFile1 = testDirectory.createFile( "testfile1" );
-            File testFile2 = testDirectory.createFile( "testfile2" );
-            fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
-            fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
+            Path testFile1 = testDirectory.createFilePath( "testfile1" );
+            Path testFile2 = testDirectory.createFilePath( "testfile2" );
+            fs.write( testFile1.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
+            fs.write( testFile2.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
 
             try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize(), immutable.of( READ ) );
                   PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize(), immutable.of( READ ) ) )
@@ -479,12 +477,12 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
         {
             int pageSize = pageCache.pageSize();
-            File testFile1 = testDirectory.createFile( "testfile1.taken" );
-            File testFile2 = testDirectory.createFile( "testfile.ignored" );
-            File testFile3 = testDirectory.createFile( "testfile2.taken" );
-            fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
-            fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
-            fs.write( testFile3 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile3 * pageSize] ) );
+            Path testFile1 = testDirectory.createFilePath( "testfile1.taken" );
+            Path testFile2 = testDirectory.createFilePath( "testfile.ignored" );
+            Path testFile3 = testDirectory.createFilePath( "testfile2.taken" );
+            fs.write( testFile1.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
+            fs.write( testFile2.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
+            fs.write( testFile3.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile3 * pageSize] ) );
 
             try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize() );
                   PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize() );
@@ -515,7 +513,7 @@ class PageCacheWarmerTest
             var logProvider = new AssertableLogProvider();
             var log = logProvider.getLog( PageCacheWarmer.class );
 
-            File testfile = testDirectory.createFile( "testfile" );
+            Path testfile = testDirectory.createFilePath( "testfile" );
             try ( PagedFile ignore = pageCache.map( testfile, pageCache.pageSize(), immutable.of( CREATE ) ) )
             {
 
@@ -530,7 +528,7 @@ class PageCacheWarmerTest
             assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( INFO ).containsMessageWithArguments(
                     "Warming up page cache by pre-fetching files matching regex: %s", pagecache_warmup_prefetch_whitelist.defaultValue() );
             assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( DEBUG )
-                    .containsMessageWithArguments(  "Pre-fetching %s", testfile.getName() );
+                    .containsMessageWithArguments(  "Pre-fetching %s", testfile.getFileName() );
             assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( INFO ).containsMessages( "Warming of page cache completed" );
         }
     }
@@ -546,7 +544,7 @@ class PageCacheWarmerTest
             PageCursor cursor = mock( PageCursor.class );
             doReturn( List.of( pagedFile ) ).when( pageCache ).listExistingMappings();
             when( pagedFile.io( eq( 0L ), eq( PF_READ_AHEAD | PF_SHARED_READ_LOCK ), any( PageCursorTracer.class ) ) ).thenReturn( cursor );
-            when( pagedFile.file() ).thenReturn( new File( "testfile" ) );
+            when( pagedFile.path() ).thenReturn( Path.of( "testfile" ) );
 
             AtomicBoolean startedFetching = new AtomicBoolean( false );
             Semaphore lock = new Semaphore( 0 );
@@ -585,14 +583,14 @@ class PageCacheWarmerTest
 
     private PageCacheWarmer createPageCacheWarmer( PageCache pageCache, Config defaults, Log log )
     {
-        return new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.homeDir(), defaults, log, tracers );
+        return new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.homePath(), defaults, log, tracers );
     }
 
     private void assertFilesExists( List<StoreFileMetadata> fileListing )
     {
         for ( StoreFileMetadata fileMetadata : fileListing )
         {
-            assertTrue( fs.fileExists( fileMetadata.file() ) );
+            assertTrue( fs.fileExists( fileMetadata.path().toFile() ) );
         }
     }
 
@@ -600,7 +598,7 @@ class PageCacheWarmerTest
     {
         for ( StoreFileMetadata fileMetadata : fileListing )
         {
-            assertFalse( fs.fileExists( fileMetadata.file() ) );
+            assertFalse( fs.fileExists( fileMetadata.path().toFile() ) );
         }
     }
 

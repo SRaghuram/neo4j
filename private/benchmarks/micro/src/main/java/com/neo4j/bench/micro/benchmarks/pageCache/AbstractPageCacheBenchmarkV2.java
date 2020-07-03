@@ -13,6 +13,7 @@ import org.openjdk.jmh.infra.ThreadParams;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.SplittableRandom;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -51,7 +52,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
     private static final ExecutorService executor;
     private static final int TARGET_INTERFERING_OPSSEC;
     private static final long FILE_SIZE;
-    private static final File STORE_FILE;
+    private static final Path STORE_FILE;
     private static final ByteBuffer buf;
 
     static
@@ -66,8 +67,8 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
         FILE_SIZE = ByteUnit.mebiBytes( 100 );
         try
         {
-            STORE_FILE = File.createTempFile( "neostore.nodestore.db", "tmp" ).getCanonicalFile();
-            STORE_FILE.deleteOnExit();
+            STORE_FILE = File.createTempFile( "neostore.nodestore.db", "tmp" ).getCanonicalFile().toPath();
+            STORE_FILE.toFile().deleteOnExit();
         }
         catch ( IOException e )
         {
@@ -119,8 +120,8 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
     private void setUpForPageCache() throws IOException
     {
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        fs.mkdirs( STORE_FILE.getParentFile() );
-        try ( StoreChannel storeChannel = fs.write( STORE_FILE ) )
+        fs.mkdirs( STORE_FILE.getParent().toFile() );
+        try ( StoreChannel storeChannel = fs.write( STORE_FILE.toFile() ) )
         {
             long fileSize = 0;
             while ( fileSize < getFileSize() )

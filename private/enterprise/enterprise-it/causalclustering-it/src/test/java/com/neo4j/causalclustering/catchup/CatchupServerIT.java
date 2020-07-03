@@ -13,8 +13,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -64,7 +64,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.io.fs.FileUtils.relativePath;
 
 @Neo4jLayoutExtension
 class CatchupServerIT
@@ -87,7 +86,7 @@ class CatchupServerIT
 
     private GraphDatabaseAPI db;
     private TestCatchupServer catchupServer;
-    private File temporaryDirectory;
+    private Path temporaryDirectory;
     private ExecutorService executor;
     private PageCache pageCache;
     private CatchupClientFactory catchupClient;
@@ -97,7 +96,7 @@ class CatchupServerIT
     @BeforeEach
     void startDb()
     {
-        temporaryDirectory = testDirectory.directory( "temp" );
+        temporaryDirectory = testDirectory.directoryPath( "temp" );
         TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() );
         configure( builder );
         managementService = builder.build();
@@ -153,11 +152,11 @@ class CatchupServerIT
         simpleCatchupClient.close();
 
         // then
-        listOfDownloadedFilesMatchesServer( database, prepareStoreCopyResponse.getFiles() );
+        listOfDownloadedFilesMatchesServer( database, prepareStoreCopyResponse.getPaths() );
 
         // and downloaded files are identical to source
-        List<File> expectedCountStoreFiles = listServerExpectedNonReplayableFiles( database );
-        for ( File storeFileSnapshot : expectedCountStoreFiles )
+        List<Path> expectedCountStoreFiles = listServerExpectedNonReplayableFiles( database );
+        for ( Path storeFileSnapshot : expectedCountStoreFiles )
         {
             fileContentEquals( databaseFileToClientFile( storeFileSnapshot ), storeFileSnapshot );
         }
@@ -182,8 +181,8 @@ class CatchupServerIT
         assertEquals( Status.E_STORE_ID_MISMATCH, prepareStoreCopyResponse.status() );
 
         // and the list of files is empty because the request should have failed
-        File[] remoteFiles = prepareStoreCopyResponse.getFiles();
-        assertArrayEquals( new File[]{}, remoteFiles );
+        Path[] remoteFiles = prepareStoreCopyResponse.getPaths();
+        assertArrayEquals( new Path[]{}, remoteFiles );
     }
 
     @Test
@@ -191,7 +190,7 @@ class CatchupServerIT
     {
         // given a file exists on the server
         addData( db );
-        File existingFile = new File( temporaryDirectory, EXISTING_FILE_NAME );
+        Path existingFile = temporaryDirectory.resolve( EXISTING_FILE_NAME );
 
         // and
         SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
@@ -213,7 +212,7 @@ class CatchupServerIT
     {
         // given a file exists on the server
         addData( db );
-        File expectedExistingFile = db.databaseLayout().file( EXISTING_FILE_NAME ).toFile();
+        Path expectedExistingFile = db.databaseLayout().file( EXISTING_FILE_NAME );
 
         // and
         SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
@@ -246,7 +245,7 @@ class CatchupServerIT
         try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_NAMED_DB_ID ) )
         {
             // individual file request does not throw when error response is received, it returns a status instead
-            StoreCopyFinishedResponse response = simpleCatchupClient.requestIndividualFile( new File( EXISTING_FILE_NAME ) );
+            StoreCopyFinishedResponse response = simpleCatchupClient.requestIndividualFile( Path.of( EXISTING_FILE_NAME ) );
             assertEquals( E_DATABASE_UNKNOWN, response.status() );
         }
     }
@@ -297,34 +296,34 @@ class CatchupServerIT
         assertEquals( expectedTransactionId, lastTxId);
     }
 
-    private File databaseFileToClientFile( File file ) throws IOException
+    private Path databaseFileToClientFile( Path path )
     {
-        String relativePathToDatabaseDir = relativePath( databaseLayout.databaseDirectory().toFile(), file );
-        return new File( temporaryDirectory, relativePathToDatabaseDir );
+        Path relativePathToDatabaseDir = databaseLayout.databaseDirectory().relativize( path );
+        return temporaryDirectory.resolve( relativePathToDatabaseDir );
     }
 
-    private File clientFileToDatabaseFile( File file ) throws IOException
+    private Path clientFileToDatabaseFile( Path path )
     {
-        String relativePathToDatabaseDir = relativePath( temporaryDirectory, file );
-        return new File( databaseLayout.databaseDirectory().toFile(), relativePathToDatabaseDir );
+        Path relativePathToDatabaseDir = temporaryDirectory.relativize( path );
+        return databaseLayout.databaseDirectory().resolve( relativePathToDatabaseDir );
     }
 
-    private void fileContentEquals( File fileA, File fileB ) throws IOException
+    private void fileContentEquals( Path pathA, Path pathB ) throws IOException
     {
-        assertNotEquals( fileA.getPath(), fileB.getPath() );
-        String message = String.format( "Expected file: %s\ndoes not match actual file: %s", fileA, fileB );
-        assertEquals( CausalClusteringTestHelpers.fileContent( fileA, fs ), CausalClusteringTestHelpers.fileContent( fileB, fs ), message );
+        assertNotEquals( pathA, pathB );
+        String message = String.format( "Expected file: %s\ndoes not match actual file: %s", pathA, pathB );
+        assertEquals( CausalClusteringTestHelpers.fileContent( pathA, fs ), CausalClusteringTestHelpers.fileContent( pathB, fs ), message );
     }
 
-    private void listOfDownloadedFilesMatchesServer( Database database, File[] files )
+    private void listOfDownloadedFilesMatchesServer( Database database, Path[] files )
             throws IOException
     {
         List<String> expectedStoreFiles = getExpectedStoreFiles( database );
-        List<String> givenFile = Arrays.stream( files ).map( File::getName ).collect( toList() );
+        List<String> givenFile = Arrays.stream( files ).map( Path::getFileName ).map( Path::toString ).collect( toList() );
         assertThat( givenFile, containsInAnyOrder( expectedStoreFiles.toArray( new String[givenFile.size()] ) ) );
     }
 
-    private static List<File> listServerExpectedNonReplayableFiles( Database database ) throws IOException
+    private static List<Path> listServerExpectedNonReplayableFiles( Database database ) throws IOException
     {
         try ( Stream<StoreFileMetadata> countStoreStream = database.getDatabaseFileListing().builder().excludeAll()
                 .includeNeoStoreFiles().build().stream();
@@ -332,7 +331,7 @@ class CatchupServerIT
                          .build().stream() )
         {
             return Stream.concat( countStoreStream.filter( isCountFile( database.getDatabaseLayout() ) ), explicitIndexStream ).map(
-                    StoreFileMetadata::file ).collect( toList() );
+                    StoreFileMetadata::path ).collect( toList() );
         }
     }
 
@@ -343,7 +342,7 @@ class CatchupServerIT
                 .excludeAdditionalProviders().excludeIdFiles();
         try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
         {
-            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( sfm -> sfm.file().getName() ).collect( toList() );
+            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( sfm -> sfm.path().getFileName().toString() ).collect( toList() );
         }
     }
 
@@ -359,7 +358,7 @@ class CatchupServerIT
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
     {
-        return storeFileMetadata -> databaseLayout.countStore().toFile().equals( storeFileMetadata.file() );
+        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.path() );
     }
 
     private static void addData( GraphDatabaseAPI graphDb )

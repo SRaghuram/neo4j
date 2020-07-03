@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyResponseAdaptors;
 import com.neo4j.causalclustering.catchup.storecopy.StreamToDiskProvider;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.IOUtils;
@@ -49,7 +49,7 @@ class SimpleCatchupClient implements AutoCloseable
     private final LogProvider logProvider;
 
     SimpleCatchupClient( GraphDatabaseAPI graphDb, NamedDatabaseId namedDatabaseId, FileSystemAbstraction fileSystemAbstraction,
-            CatchupClientFactory catchUpClientFactory, TestCatchupServer catchupServer, File temporaryDirectory, LogProvider logProvider )
+            CatchupClientFactory catchUpClientFactory, TestCatchupServer catchupServer, Path temporaryDirectory, LogProvider logProvider )
     {
         this.graphDb = graphDb;
         this.fsa = fileSystemAbstraction;
@@ -81,12 +81,12 @@ class SimpleCatchupClient implements AutoCloseable
                 .request();
     }
 
-    public StoreCopyFinishedResponse requestIndividualFile( File file ) throws Exception
+    public StoreCopyFinishedResponse requestIndividualFile( Path file ) throws Exception
     {
         return requestIndividualFile( file, correctStoreId, namedDatabaseId );
     }
 
-    public StoreCopyFinishedResponse requestIndividualFile( File file, StoreId expectedStoreId, NamedDatabaseId expectedNamedDatabaseId ) throws Exception
+    public StoreCopyFinishedResponse requestIndividualFile( Path file, StoreId expectedStoreId, NamedDatabaseId expectedNamedDatabaseId ) throws Exception
     {
         long lastTransactionId = getCheckPointer( graphDb ).lastCheckPointedTransactionId();
         CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );

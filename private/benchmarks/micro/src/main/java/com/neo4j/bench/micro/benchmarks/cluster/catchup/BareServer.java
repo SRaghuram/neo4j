@@ -23,6 +23,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -102,7 +103,8 @@ class BareServer implements CatchupServerHandler
             protected void channelRead0( ChannelHandlerContext ctx, PrepareStoreCopyRequest msg )
             {
                 fileHolder.sendFile( ctx, ATOMIC );
-                var nonAtomics = Stream.of( fileHolder.getFiles() ).filter( file -> !file.getName().equals( ATOMIC ) ).toArray( File[]::new );
+                var nonAtomics =
+                        Stream.of( fileHolder.getFiles() ).filter( file -> !file.getName().equals( ATOMIC ) ).map( File::toPath ).toArray( Path[]::new );
                 respond( ctx, protocol, PREPARE_STORE_COPY_RESPONSE, PrepareStoreCopyResponse.success( nonAtomics, lastTxId ) );
             }
         };
@@ -116,7 +118,7 @@ class BareServer implements CatchupServerHandler
             @Override
             protected void channelRead0( ChannelHandlerContext ctx, GetStoreFileRequest msg )
             {
-                fileHolder.sendFileWithFileComplete( ctx, msg.file().getName(), lastTxId );
+                fileHolder.sendFileWithFileComplete( ctx, msg.path().getFileName().toString(), lastTxId );
                 protocol.expect( MESSAGE_TYPE );
             }
         };

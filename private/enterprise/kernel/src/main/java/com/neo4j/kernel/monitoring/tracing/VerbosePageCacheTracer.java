@@ -5,8 +5,8 @@
  */
 package com.neo4j.kernel.monitoring.tracing;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -46,17 +46,17 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
     }
 
     @Override
-    public void mappedFile( File file )
+    public void mappedFile( Path path )
     {
-        log.info( format( "Map file: '%s'.", file.getName() ) );
-        super.mappedFile( file );
+        log.info( format( "Map file: '%s'.", path.getFileName() ) );
+        super.mappedFile( path );
     }
 
     @Override
-    public void unmappedFile( File file )
+    public void unmappedFile( Path path )
     {
-        log.info( format( "Unmap file: '%s'.", file.getName() ) );
-        super.unmappedFile( file );
+        log.info( format( "Unmap file: '%s'.", path.getFileName() ) );
+        super.unmappedFile( path );
     }
 
     @Override
@@ -69,7 +69,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
     @Override
     public MajorFlushEvent beginFileFlush( PageSwapper swapper )
     {
-        String fileName = swapper.file().getName();
+        String fileName = swapper.path().getFileName().toString();
         log.info( format( "Flushing file: '%s'.", fileName ) );
         return new FileFlushEvent( fileName, flushedPages.get(), flushBytesWritten.get(), mergedPages.get(), clock.startStopWatch() );
     }

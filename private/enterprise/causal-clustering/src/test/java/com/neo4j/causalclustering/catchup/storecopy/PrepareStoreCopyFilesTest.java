@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 
 import org.neo4j.internal.helpers.collection.Iterators;
@@ -27,7 +27,6 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.io.fs.FileUtils.relativePath;
 
 @TestDirectoryExtension
 class PrepareStoreCopyFilesTest
@@ -71,8 +70,8 @@ class PrepareStoreCopyFilesTest
     void shouldReturnExpectedListOfFileNamesForEachType() throws Exception
     {
         // given
-        var expectedFiles = new StoreFileMetadata[]{new StoreFileMetadata( databaseLayout.file( "a" ).toFile(), 1 ),
-                new StoreFileMetadata( databaseLayout.file( "b" ).toFile(), 2 )};
+        var expectedFiles = new StoreFileMetadata[]{new StoreFileMetadata( databaseLayout.file( "a" ), 1 ),
+                new StoreFileMetadata( databaseLayout.file( "b" ), 2 )};
         setExpectedFiles( expectedFiles );
 
         // when
@@ -80,29 +79,22 @@ class PrepareStoreCopyFilesTest
         var atomicFilesSnapshot = prepareStoreCopyFiles.getAtomicFilesSnapshot();
 
         // then
-        var expectedFilesConverted = Arrays.stream( expectedFiles ).map( StoreFileMetadata::file ).toArray( File[]::new );
+        var expectedFilesConverted = Arrays.stream( expectedFiles ).map( StoreFileMetadata::path ).toArray( Path[]::new );
         var expectedAtomicFilesConverted = Arrays.stream( expectedFiles ).map(
-                f -> new StoreResource( f.file(), getRelativePath( f ), f.recordSize(), testDirectory.getFileSystem() ) ).toArray( StoreResource[]::new );
+                f -> new StoreResource( f.path(), getRelativePath( f ), f.recordSize(), testDirectory.getFileSystem() ) ).toArray( StoreResource[]::new );
         assertArrayEquals( expectedFilesConverted, files );
         assertEquals( expectedAtomicFilesConverted.length, atomicFilesSnapshot.length );
         for ( var i = 0; i < expectedAtomicFilesConverted.length; i++ )
         {
             StoreResource expected = expectedAtomicFilesConverted[i];
             StoreResource storeResource = atomicFilesSnapshot[i];
-            assertEquals( expected.path(), storeResource.path() );
+            assertEquals( expected.relativePath(), storeResource.relativePath() );
             assertEquals( expected.recordSize(), storeResource.recordSize() );
         }
     }
 
     private String getRelativePath( StoreFileMetadata f )
     {
-        try
-        {
-            return relativePath( databaseLayout.databaseDirectory().toFile(), f.file() );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Failed to create relative path" );
-        }
+        return databaseLayout.databaseDirectory().relativize( f.path() ).toString();
     }
 }

@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -367,15 +367,15 @@ class RecordFormatSelectorTest
 
     private void prepareNeoStoreFile( String storeVersion, PageCache pageCache, DatabaseLayout databaseLayout ) throws IOException
     {
-        File neoStoreFile = createNeoStoreFile( databaseLayout );
+        Path neoStoreFile = createNeoStoreFile( databaseLayout );
         long value = MetaDataStore.versionStringToLong( storeVersion );
         MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, PageCursorTracer.NULL );
     }
 
-    private File createNeoStoreFile( DatabaseLayout databaseLayout ) throws IOException
+    private Path createNeoStoreFile( DatabaseLayout databaseLayout ) throws IOException
     {
-        File neoStoreFile = databaseLayout.metadataStore().toFile();
-        fs.write( neoStoreFile ).close();
+        Path neoStoreFile = databaseLayout.metadataStore();
+        fs.write( neoStoreFile.toFile() ).close();
         return neoStoreFile;
     }
 
