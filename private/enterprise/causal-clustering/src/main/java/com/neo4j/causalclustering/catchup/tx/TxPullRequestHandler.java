@@ -132,7 +132,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         try
         {
             TransactionCursor transactions = logicalTransactionStore.getTransactions( firstTxId );
-            return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, firstTxId, txIdPromise ) );
+            return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, firstTxId, txIdPromise, transactionIdStore ) );
         }
         catch ( NoSuchTransactionException e )
         {

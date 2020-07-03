@@ -32,6 +32,7 @@ public class TransactionStream implements ChunkedInput<Object>
     private final Log log;
     private final StoreId storeId;
     private final IOCursor<CommittedTransactionRepresentation> txCursor;
+    private final TxPullingContext txPullingContext;
     private final CatchupServerProtocol protocol;
     private final long txIdPromise;
 
@@ -49,6 +50,7 @@ public class TransactionStream implements ChunkedInput<Object>
         this.expectedTxId = txPullingContext.firstTxId();
         this.txIdPromise = txPullingContext.txIdPromise();
         this.txCursor = txPullingContext.transactions();
+        this.txPullingContext = txPullingContext;
         this.protocol = protocol;
     }
 
@@ -110,7 +112,11 @@ public class TransactionStream implements ChunkedInput<Object>
      */
     private boolean addNextTx()
     {
-        CommittedTransactionRepresentation tx = null;
+        CommittedTransactionRepresentation tx;
+        if ( noTransactionsToPull() )
+        {
+            return false;
+        }
         try
         {
             if ( txCursor.next() )
@@ -129,6 +135,11 @@ public class TransactionStream implements ChunkedInput<Object>
         }
         addTx( tx );
         return true;
+    }
+
+    private boolean noTransactionsToPull()
+    {
+        return txPullingContext.lastCommittedTransactionId() <= lastTxId;
     }
 
     /**

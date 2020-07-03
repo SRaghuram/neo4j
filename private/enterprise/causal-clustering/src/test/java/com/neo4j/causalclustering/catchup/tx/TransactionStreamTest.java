@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_GENERAL_ERROR;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
@@ -49,6 +50,7 @@ class TransactionStreamTest
     private final ByteBufAllocator allocator = mock( ByteBufAllocator.class );
     private final TransactionCursor cursor = mock( TransactionCursor.class );
     private final int baseTxId = (int) BASE_TX_ID;
+    private final TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );
 
     @Test
     void shouldSucceedExactNumberOfTransactions() throws Exception
@@ -104,7 +106,9 @@ class TransactionStreamTest
         var exception = new Exception();
         var txs = prepareCursor( firstTxId, lastTxId, exception, null );
 
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, lastTxId ), protocol );
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId + 1 );
+
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, lastTxId, transactionIdStore ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, txs, E_GENERAL_ERROR );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
@@ -124,7 +128,9 @@ class TransactionStreamTest
         var exception = new Exception();
         var txs = prepareCursor( firstTxId, lastTxId, null, exception );
 
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, lastTxId ), protocol );
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId + 1 );
+
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, lastTxId, transactionIdStore ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, txs, E_GENERAL_ERROR );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
@@ -145,7 +151,9 @@ class TransactionStreamTest
         when( cursor.next() ).thenReturn( true, true, false );
         when( cursor.get() ).thenReturn( tx1, tx2, null );
 
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, lastTxId - 1, lastTxId ), protocol );
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
+
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, lastTxId - 1, lastTxId, transactionIdStore ), protocol );
         var expectedChucks = List.of( ResponseMessageType.TX, new TxPullResponse( storeId, tx1 ),
                 ResponseMessageType.TX_STREAM_FINISHED, new TxStreamFinishedResponse( E_GENERAL_ERROR, lastTxId + 1 ) );
 
@@ -155,11 +163,31 @@ class TransactionStreamTest
         assertEquals( thrownException.getMessage(), "Transaction cursor out of order. Expected 1000 but was 1001" );
     }
 
+    @Test
+    void shouldNotContinueIfTransactionIdStoreDoesNotAllowIt() throws Exception
+    {
+        var lastTxId = 2;
+        var firstTxId = 1;
+        var txPromise = 1;
+        var tx1 = tx( firstTxId );
+        var tx2 = tx( firstTxId + 1 );
+
+        when( cursor.next() ).thenReturn( true );
+        when( cursor.get() ).thenReturn( tx1 ).thenReturn( tx2 ).thenThrow( new IllegalStateException( "Should never try to get this transaction" ) );
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
+
+        var transactionStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, txPromise, transactionIdStore ), protocol );
+        var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, List.of( tx1, tx2 ), SUCCESS_END_OF_STREAM );
+
+        assertExpectedElements( transactionStream, expectedChucks, true );
+    }
+
     @SuppressWarnings( "SameParameterValue" )
     private void testTransactionStream( int firstTxId, int lastTxId, int txIdPromise, CatchupResult expectedResult ) throws Exception
     {
         // given
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, txIdPromise ), protocol );
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, txIdPromise, transactionIdStore ), protocol );
         var txs = prepareCursor( firstTxId, lastTxId );
         var expectedElements = prepareExpectedElements( firstTxId, lastTxId, txs, expectedResult );
 
