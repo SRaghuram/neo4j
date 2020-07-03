@@ -12,13 +12,11 @@ import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class NodesByLabelScanSlottedPipe(ident: String,
                                        label: LazyLabel,
                                        slots: SlotConfiguration,
-                                       argumentSize: SlotConfiguration.Size,
                                        indexOrder: IndexOrder)
                                       (val id: Id = Id.INVALID_ID) extends Pipe {
 
@@ -30,8 +28,7 @@ case class NodesByLabelScanSlottedPipe(ident: String,
     if (labelId == LazyLabel.UNKNOWN) Iterator.empty
     else {
       PrimitiveLongHelper.map(state.query.getNodesByLabelPrimitive(labelId, indexOrder), { nodeId =>
-        val context = SlottedRow(slots)
-        state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
+        val context = state.newExecutionContextWithInitialContext(executionContextFactory)
         context.setLongAt(offset, nodeId)
         context
       })

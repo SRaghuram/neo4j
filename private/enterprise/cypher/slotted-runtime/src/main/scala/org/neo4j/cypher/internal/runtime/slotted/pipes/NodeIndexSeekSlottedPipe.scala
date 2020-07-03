@@ -17,7 +17,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class NodeIndexSeekSlottedPipe(ident: String,
@@ -27,8 +26,7 @@ case class NodeIndexSeekSlottedPipe(ident: String,
                                     valueExpr: QueryExpression[Expression],
                                     indexMode: IndexSeekMode = IndexSeek,
                                     indexOrder: IndexOrder,
-                                    slots: SlotConfiguration,
-                                    argumentSize: SlotConfiguration.Size)
+                                    slots: SlotConfiguration)
                                    (val id: Id = Id.INVALID_ID) extends Pipe with NodeIndexSeeker with IndexSlottedPipeWithValues {
 
   override val offset: Int = slots.getLongOffsetFor(ident)
@@ -41,9 +39,8 @@ case class NodeIndexSeekSlottedPipe(ident: String,
 
   protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
     val index = state.queryIndexes(queryIndexId)
-    val context = SlottedRow(slots)
-    state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
-    new SlottedIndexIterator(state, slots, indexSeek(state, index, needsValues, indexOrder, context))
+    val context = state.newExecutionContextWithInitialContext(executionContextFactory)
+    new SlottedIndexIterator(state, indexSeek(state, index, needsValues, indexOrder, context))
   }
 
   def canEqual(other: Any): Boolean = other.isInstanceOf[NodeIndexSeekSlottedPipe]
@@ -56,13 +53,12 @@ case class NodeIndexSeekSlottedPipe(ident: String,
         (properties == that.properties) &&
         valueExpr == that.valueExpr &&
         indexMode == that.indexMode &&
-        slots == that.slots &&
-        argumentSize == that.argumentSize
+        slots == that.slots
     case _ => false
   }
 
   override def hashCode(): Int = {
-    val state = Seq(ident, label, properties, valueExpr, indexMode, slots, argumentSize)
+    val state = Seq(ident, label, properties, valueExpr, indexMode, slots)
     state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
   }
 }

@@ -8,19 +8,15 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.Values
 
 case class OptionalSlottedPipe(source: Pipe,
-                               nullableSlots: Seq[Slot],
-                               slots: SlotConfiguration,
-                               argumentSize: SlotConfiguration.Size)
+                               nullableSlots: Seq[Slot])
                               (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) with Pipe {
 
@@ -46,8 +42,7 @@ case class OptionalSlottedPipe(source: Pipe,
   }
 
   private def notFoundExecutionContext(state: QueryState): CypherRow = {
-    val context = SlottedRow(slots)
-    state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
+    val context = state.newExecutionContextWithInitialContext(executionContextFactory)
     setNullableSlotsToNull(context)
     context
   }

@@ -200,28 +200,28 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
     val pipe = plan match {
       case AllNodesScan(column, _) =>
-        AllNodesScanSlottedPipe(column, slots, argumentSize)(id)
+        AllNodesScanSlottedPipe(column, slots)(id)
 
       case NodeIndexScan(column, label, properties, _, indexOrder) =>
         NodeIndexScanSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)),
-          indexRegistrator.registerQueryIndex(label, properties), indexOrder, slots, argumentSize)(id)
+          indexRegistrator.registerQueryIndex(label, properties), indexOrder, slots)(id)
 
       case NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         NodeIndexSeekSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)).toIndexedSeq,
-          indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id)
+          indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots)(id)
 
       case NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
         NodeIndexSeekSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)).toIndexedSeq,
-          indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id = id)
+          indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots)(id = id)
 
       case NodeByLabelScan(column, label, _, indexOrder) =>
         indexRegistrator.registerLabelScan()
-        NodesByLabelScanSlottedPipe(column, LazyLabel(label), slots, argumentSize, indexOrder)(id)
+        NodesByLabelScanSlottedPipe(column, LazyLabel(label), slots, indexOrder)(id)
 
       case _: Argument =>
-        ArgumentSlottedPipe(slots, argumentSize)(id)
+        ArgumentSlottedPipe()(id)
 
       // Currently used for testing only
       case _: MultiNodeIndexSeek =>
@@ -239,6 +239,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val id = plan.id
     val convertExpressions = (e: internal.expressions.Expression) => expressionConverters.toCommandExpression(id, e)
     val slots = physicalPlan.slotConfigurations(id)
+    // some operators will overwrite this value
+    var argumentSize = physicalPlan.argumentSizes.getOrElse(id, SlotConfiguration.Size.zero)
     generateSlotAccessorFunctions(slots)
 
     val pipe = plan match {
@@ -298,7 +300,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val sourceSlots = physicalPlan.slotConfigurations(sourcePlan.id)
         val tempNodeOffset = expressionSlotForPredicate(nodePredicate)
         val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)
-        val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs, sourceSlots.numberOfReferences)
+        argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs, sourceSlots.numberOfReferences)
         VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, RelationshipTypes(types.toArray), min,
           max, shouldExpandAll, slots,
           tempNodeOffset = tempNodeOffset,
@@ -309,8 +311,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case Optional(inner, symbols) =>
         val nullableSlots = symbolsToSlots(inner.availableSymbols -- symbols, slots)
-        val argumentSize = physicalPlan.argumentSizes(plan.id)
-        OptionalSlottedPipe(source, nullableSlots, slots, argumentSize)(id)
+        OptionalSlottedPipe(source, nullableSlots)(id)
 
       case Projection(_, expressions) =>
         val toProject = expressions collect {
@@ -486,7 +487,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onOneChildPlan(plan, source)
     }
-    pipe.executionContextFactory = SlottedExecutionContextFactory(slots, SlotConfiguration.Size.zero)
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots, argumentSize)
     pipe
   }
 
@@ -496,6 +497,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val id = plan.id
     val convertExpressions = (e: internal.expressions.Expression) => expressionConverters.toCommandExpression(id, e)
     val slots = slotConfigs(id)
+    // some plans (e.g. Apply) have no argument size attribute set
+    val argumentSize = physicalPlan.argumentSizes.getOrElse(id, SlotConfiguration.Size.zero)
     generateSlotAccessorFunctions(slots)
 
     val pipe = plan match {
@@ -509,7 +512,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
         RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset, identifierToCollectExpression, slots)(id = id)
 
       case _: CartesianProduct =>
-        val argumentSize = physicalPlan.argumentSizes(plan.id)
         val lhsPlan = plan.lhs.get
         val lhsSlots = slotConfigs(lhsPlan.id)
 
@@ -520,7 +522,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
         CartesianProductSlottedPipe(lhs, rhs, lhsSlots.numberOfLongs, lhsSlots.numberOfReferences, slots, argumentSize)(id)
 
       case joinPlan: NodeHashJoin =>
-        val argumentSize = physicalPlan.argumentSizes(plan.id)
         val nodes = joinPlan.nodes.toArray // Make sure that leftNodes and rightNodes have the same order
         val leftNodes = KeyOffsets.create(slots, nodes)
         val rhsSlots = slotConfigs(joinPlan.right.id)
@@ -537,7 +538,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
         }
 
       case ValueHashJoin(lhsPlan, rhsPlan, Equals(lhsAstExp, rhsAstExp)) =>
-        val argumentSize = physicalPlan.argumentSizes(plan.id)
         val lhsCmdExp = convertExpressions(lhsAstExp)
         val rhsCmdExp = convertExpressions(rhsAstExp)
         val rhsSlots = slotConfigs(rhsPlan.id)
@@ -596,7 +596,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onTwoChildPlan(plan, lhs, rhs)
     }
-    pipe.executionContextFactory = SlottedExecutionContextFactory(slots, SlotConfiguration.Size.zero)
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots, argumentSize)
     pipe
   }
 

@@ -19,8 +19,7 @@ case class NodeIndexScanSlottedPipe(ident: String,
                                     properties: Seq[SlottedIndexedProperty],
                                     queryIndexId: Int,
                                     indexOrder: IndexOrder,
-                                    slots: SlotConfiguration,
-                                    argumentSize: SlotConfiguration.Size)
+                                    slots: SlotConfiguration)
                                    (val id: Id = Id.INVALID_ID)
   extends Pipe with IndexSlottedPipeWithValues {
 
@@ -32,6 +31,6 @@ case class NodeIndexScanSlottedPipe(ident: String,
 
   protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
     val cursor = state.query.indexScan(state.queryIndexes(queryIndexId), needsValues, indexOrder)
-    new SlottedIndexIterator(state, slots, cursor)
+    new SlottedIndexIterator(state, cursor)
   }
 }
