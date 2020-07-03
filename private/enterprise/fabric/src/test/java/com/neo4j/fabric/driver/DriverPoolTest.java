@@ -121,7 +121,7 @@ class DriverPoolTest
         driverPool.start();
 
         ArgumentCaptor<Runnable> argumentCaptor = ArgumentCaptor.forClass( Runnable.class );
-        verify( jobScheduler ).schedule( any(), any(), argumentCaptor.capture(), anyLong(), any() );
+        verify( jobScheduler ).scheduleRecurring( any(), any(), argumentCaptor.capture(), anyLong(), any() );
 
         Runnable idleDriverCheck = argumentCaptor.getValue();
 
