@@ -22,6 +22,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.DriverApi;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -164,6 +165,12 @@ public class FabricEnterpriseConfig extends FabricConfig
         if ( database.isPresent() )
         {
             var serverAddresses = config.get( FabricEnterpriseSettings.fabric_servers_setting );
+
+            if ( serverAddresses == null )
+            {
+                serverAddresses = List.of( config.get( BoltConnector.advertised_address ) );
+            }
+
             var routingTtl = config.get( FabricEnterpriseSettings.routing_ttl_setting );
             var fabricConfig = new FabricEnterpriseConfig( database.get(), serverAddresses, routingTtl, transactionTimeout, externalGraphDriver, dataStream,
                     routingEnabled );

@@ -34,11 +34,7 @@ class FabricConfigTest
                 "fabric.graph.1.name", "source-of-all-wisdom"
         );
 
-        var config = Config.newBuilder()
-                .setRaw( properties )
-                .build();
-
-        var fabricConfig = FabricEnterpriseConfig.from( config );
+        var fabricConfig = toFabricEnterpriseConfig( properties );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
@@ -56,11 +52,7 @@ class FabricConfigTest
                 "fabric.database.name", "MeGa"
         );
 
-        var config = Config.newBuilder()
-                .setRaw( properties )
-                .build();
-
-        var fabricConfig = FabricEnterpriseConfig.from( config );
+        var fabricConfig = toFabricEnterpriseConfig( properties );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
@@ -168,11 +160,7 @@ class FabricConfigTest
                 "fabric.graph.1.uri", "bolt://mega:2222"
         );
 
-        var config = Config.newBuilder()
-                .setRaw( properties )
-                .build();
-
-        var fabricConfig = FabricEnterpriseConfig.from( config );
+        var fabricConfig = toFabricEnterpriseConfig( properties );
         assertNull( fabricConfig.getDatabase() );
     }
 
@@ -181,11 +169,7 @@ class FabricConfigTest
     {
         var properties = Map.<String,String>of();
 
-        var config = Config.newBuilder()
-                .setRaw( properties )
-                .build();
-
-        var fabricConfig = FabricEnterpriseConfig.from( config );
+        var fabricConfig = toFabricEnterpriseConfig( properties );
         assertNull( fabricConfig.getDatabase() );
     }
 
@@ -264,10 +248,61 @@ class FabricConfigTest
                 "fabric.stream.buffer.low_watermark'", "20"
         );
 
-        var config = Config.newBuilder().setRaw( properties ).build();
-
-        var fabricConfig = FabricEnterpriseConfig.from( config );
+        var fabricConfig = toFabricEnterpriseConfig( properties );
         assertEquals( 10, fabricConfig.getDataStream().getBufferLowWatermark() );
+    }
+
+    @Test
+    void testDefaultRoutingServers()
+    {
+        var properties = Map.of( "fabric.database.name", "mega" );
+
+        var fabricConfig = toFabricEnterpriseConfig( properties );
+        assertThat( fabricConfig.getFabricServers() ).contains( new SocketAddress( "localhost", 7687 ) );
+    }
+
+    @Test
+    void testRoutingServersDelegatedToDefaultAdvertisedAddress()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "dbms.default_listen_address", "somewhere",
+                "dbms.default_advertised_address", "somewhere-else"
+        );
+
+        var fabricConfig = toFabricEnterpriseConfig( properties );
+        assertThat( fabricConfig.getFabricServers() ).contains( new SocketAddress( "somewhere-else", 7687 ) );
+    }
+
+    @Test
+    void testRoutingServersDelegatedToBoltAdvertisedAddress()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "dbms.connector.bolt.listen_address", "somewhere:6543",
+                "dbms.connector.bolt.advertised_address", "somewhere-else"
+        );
+
+        var fabricConfig = toFabricEnterpriseConfig( properties );
+        assertThat( fabricConfig.getFabricServers() ).contains( new SocketAddress( "somewhere-else", 6543 ) );
+    }
+
+    @Test
+    void testRoutingServersConfigured()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "fabric.routing.servers", "host-1:1111,host-2:2222"
+        );
+
+        var fabricConfig = toFabricEnterpriseConfig( properties );
+        assertThat( fabricConfig.getFabricServers() ).contains( new SocketAddress( "host-1", 1111 ), new SocketAddress( "host-2", 2222 ) );
+    }
+
+    private FabricEnterpriseConfig toFabricEnterpriseConfig( Map<String,String> properties )
+    {
+        var config = Config.newBuilder().setRaw( properties ).build();
+        return FabricEnterpriseConfig.from( config );
     }
 
     void doTestStreamConstraint( String settingKey, String settingValue, String expectedMessage )

@@ -51,7 +51,7 @@ public class FabricEnterpriseSettings implements SettingsDeclaration
             "A Fabric instance is represented by its Bolt connector address." )
     public static final Setting<List<SocketAddress>> fabric_servers_setting = newBuilder( "fabric.routing.servers",
             SettingValueParsers.listOf( SettingValueParsers.SOCKET_ADDRESS ),
-            List.of(new SocketAddress( "localhost", 7687 )))
+            null )
             .dynamic()
             .build();
 
