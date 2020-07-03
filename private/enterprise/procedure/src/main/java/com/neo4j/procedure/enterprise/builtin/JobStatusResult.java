@@ -30,7 +30,7 @@ public class JobStatusResult
     {
         group = job.getGroup().groupName();
         submitted = formatTime( job.getSubmitted(), zoneId );
-        submitter = SubjectFormatHelper.formatSubject( job.getSubmitter() );
+        submitter = job.getSubmitter().describe();
         database = defaultString( job.getTargetDatabaseName() );
         description = job.getDescription();
         type = job.getType().name();

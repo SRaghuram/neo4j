@@ -27,7 +27,7 @@ public class FailedJobRunResult
     FailedJobRunResult( FailedJobRun failedJobRun, ZoneId zoneId )
     {
         group = failedJobRun.getGroup().groupName();
-        submitter = SubjectFormatHelper.formatSubject( failedJobRun.getSubmitter() );
+        submitter = failedJobRun.getSubmitter().describe();
         database = defaultString( failedJobRun.getTargetDatabaseName() );
         description = failedJobRun.getDescription();
         type = failedJobRun.getJobType().name();
