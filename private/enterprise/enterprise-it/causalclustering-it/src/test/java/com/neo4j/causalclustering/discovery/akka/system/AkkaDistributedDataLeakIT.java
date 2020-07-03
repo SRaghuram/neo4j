@@ -169,7 +169,6 @@ class AkkaDistributedDataLeakIT
         static final Key<LWWMap<UniqueAddress,CoreServerInfoForMemberId>> KEY = LWWMapKey.create( "member-data" );
         LWWMap<?,?> replicatedData = LWWMap.empty();
         private final ActorSystemComponents actorSystemComponents;
-        private final ExecutorService executor;
 
         Harness()
         {
@@ -183,8 +182,7 @@ class AkkaDistributedDataLeakIT
                     .build();
 
             var logProvider = NullLogProvider.getInstance();
-            executor = Executors.newWorkStealingPool();
-            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), executor, config, logProvider );
+            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), config, logProvider );
             actorSystemComponents = new ActorSystemComponents( actorSystemFactory, ProviderSelection.cluster() );
             actorSystemComponents.cluster().joinSeedNodes(
                     singletonList( new Address( AKKA_SCHEME, actorSystemComponents.cluster().system().name(), "localhost", port ) ) );
@@ -197,7 +195,6 @@ class AkkaDistributedDataLeakIT
         public void shutdown()
         {
             actorSystemComponents.coordinatedShutdown().runAll();
-            executor.shutdown();
         }
     }
 

@@ -27,12 +27,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -43,7 +44,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
@@ -240,12 +240,9 @@ class AkkaCoreTopologyDowningIT
 
         LogProvider logProvider = NullLogProvider.getInstance();
 
-        int parallelism = config.get( CausalClusteringInternalSettings.middleware_akka_default_parallelism_level );
-        ForkJoinPool pool = new ForkJoinPool( parallelism, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true );
-        ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), pool, config, logProvider  );
+        Executor executor = Executors.newCachedThreadPool();
+        ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), config, logProvider  );
         TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
-
-        var dbStateService = new StubDatabaseStateService( Collections.emptyMap() );
 
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
@@ -256,7 +253,7 @@ class AkkaCoreTopologyDowningIT
                 new NoRetriesStrategy(),
                 new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 2 ),
                 TestDiscoveryMember::new,
-                pool,
+                executor,
                 Clocks.systemClock(),
                 new Monitors() );
 

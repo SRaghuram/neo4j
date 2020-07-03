@@ -54,6 +54,7 @@ import org.neo4j.kernel.database.DatabaseId;
 public final class TypesafeConfigService
 {
     static final String DISCOVERY_SINK_DISPATCHER = "discovery-dispatcher";
+    static final String DISCOVERY_DEFAULT_DISPATCHER = "default-dispatcher";
     static final String LOGGING_DISPATCHER = "logging-dispatcher";
 
     public enum ArteryTransport
@@ -164,16 +165,13 @@ public final class TypesafeConfigService
 
     private com.typesafe.config.Config dispatcherConfig()
     {
-        // parallelism is processors * parallelism-factor, bounded between parallelism-min and parallelism-max
-        Integer parallelism = config.get( CausalClusteringInternalSettings.middleware_akka_sink_parallelism_level );
-
         Map<String,Object> configMap = new HashMap<>();
-        configMap.put( DISCOVERY_SINK_DISPATCHER + ".type", "Dispatcher" );
-        configMap.put( DISCOVERY_SINK_DISPATCHER + ".executor", "fork-join-executor" );
-        configMap.put( DISCOVERY_SINK_DISPATCHER + ".fork-join-executor.parallelism-min", parallelism );
-        configMap.put( DISCOVERY_SINK_DISPATCHER + ".fork-join-executor.parallelism-factor", 1.0);
-        configMap.put( DISCOVERY_SINK_DISPATCHER + ".fork-join-executor.parallelism-max", parallelism );
-        configMap.put( DISCOVERY_SINK_DISPATCHER + ".throughput", 10 );
+
+        Integer sinkParallelism = config.get( CausalClusteringInternalSettings.middleware_akka_sink_parallelism_level );
+        forkJoinDispatcher( configMap, sinkParallelism, DISCOVERY_SINK_DISPATCHER );
+
+        Integer defaultParallelism = config.get( CausalClusteringInternalSettings.middleware_akka_default_parallelism_level );
+        forkJoinDispatcher( configMap, defaultParallelism, DISCOVERY_DEFAULT_DISPATCHER );
 
         configMap.put( LOGGING_DISPATCHER + ".type", "Dispatcher" );
         configMap.put( LOGGING_DISPATCHER + ".executor", "thread-pool-executor" );
@@ -181,6 +179,17 @@ public final class TypesafeConfigService
         configMap.put( LOGGING_DISPATCHER + ".throughput", 1 );
 
         return ConfigFactory.parseMap( configMap );
+    }
+
+    private void forkJoinDispatcher( Map<String,Object> configMap, Integer parallelism, String dispatcherName )
+    {
+        // parallelism is processors * parallelism-factor, bounded between parallelism-min and parallelism-max
+        configMap.put( dispatcherName + ".type", "Dispatcher" );
+        configMap.put( dispatcherName + ".executor", "fork-join-executor" );
+        configMap.put( dispatcherName + ".fork-join-executor.parallelism-min", parallelism );
+        configMap.put( dispatcherName + ".fork-join-executor.parallelism-factor", 1.0 );
+        configMap.put( dispatcherName + ".fork-join-executor.parallelism-max", parallelism );
+        configMap.put( dispatcherName + ".throughput", 10 );
     }
 
     static String hostname( SocketAddress socketAddress )

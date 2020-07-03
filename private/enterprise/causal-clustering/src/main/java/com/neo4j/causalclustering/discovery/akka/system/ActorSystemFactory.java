@@ -9,14 +9,11 @@ import akka.actor.ActorSystem;
 import akka.actor.BootstrapSetup;
 import akka.actor.ProviderSelection;
 import akka.actor.setup.ActorSystemSetup;
-import akka.dispatch.ExecutionContexts;
 import akka.remote.artery.tcp.SSLEngineProvider;
 import akka.remote.artery.tcp.SSLEngineProviderSetup;
 import com.typesafe.config.ConfigRenderOptions;
-import scala.concurrent.ExecutionContextExecutor;
 
 import java.util.Optional;
-import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
@@ -28,12 +25,10 @@ public class ActorSystemFactory
     private final LogProvider logProvider;
     private final Optional<SSLEngineProvider> sslEngineProvider;
     private final TypesafeConfigService configService;
-    private final Executor executor;
     private final Log log;
 
-    public ActorSystemFactory( Optional<SSLEngineProvider> sslEngineProvider, Executor executor, Config config, LogProvider logProvider )
+    public ActorSystemFactory( Optional<SSLEngineProvider> sslEngineProvider, Config config, LogProvider logProvider )
     {
-        this.executor = executor;
         this.logProvider = logProvider;
         this.sslEngineProvider = sslEngineProvider;
         TypesafeConfigService.ArteryTransport arteryTransport =
@@ -47,11 +42,8 @@ public class ActorSystemFactory
         com.typesafe.config.Config tsConfig = configService.generate();
         log.debug( "Akka config: " + tsConfig.root().render( ConfigRenderOptions.concise() ) );
 
-        ExecutionContextExecutor ec = ExecutionContexts.fromExecutor( executor );
-
         BootstrapSetup bootstrapSetup = BootstrapSetup.create( tsConfig )
-                .withActorRefProvider( providerSelection )
-                .withDefaultExecutionContext( ec );
+                .withActorRefProvider( providerSelection );
 
         ActorSystemSetup actorSystemSetup = ActorSystemSetup.create( bootstrapSetup );
 
