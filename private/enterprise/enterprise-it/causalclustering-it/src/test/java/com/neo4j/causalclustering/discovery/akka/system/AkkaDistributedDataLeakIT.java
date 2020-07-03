@@ -35,8 +35,6 @@ import org.junit.jupiter.api.TestInstance;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -79,7 +77,7 @@ class AkkaDistributedDataLeakIT
     private CoreTopologyService repairer;
 
     private int metadataCount = 2;
-    private NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
+    static NamedDatabaseId NAMED_DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     @BeforeAll
     void setUp() throws Throwable
@@ -140,9 +138,14 @@ class AkkaDistributedDataLeakIT
         }
     }
 
-    private CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory )
+    static CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory )
     {
-        var discoverySocket = new SocketAddress( "localhost", PortAuthority.allocatePort() );
+        return coreTopologyService( harnessPort, discoveryServiceFactory, PortAuthority.allocatePort() );
+    }
+
+    static CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory, int discoPort )
+    {
+        var discoverySocket = new SocketAddress( "localhost", discoPort );
         var config = Config.newBuilder()
                 .setDefaults( SERVER_DEFAULTS )
                 .set( discovery_listen_address, discoverySocket )
@@ -157,7 +160,7 @@ class AkkaDistributedDataLeakIT
         var monitors = new Monitors();
         var retryStrategy = new RetryStrategy( 100, 3 );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
-        DiscoveryMemberFactory discoveryMemberFactory = ( MemberId mbr ) -> new TestDiscoveryMember( mbr, asSet( namedDatabaseId ) );
+        DiscoveryMemberFactory discoveryMemberFactory = ( MemberId mbr ) -> new TestDiscoveryMember( mbr, asSet( NAMED_DATABASE_ID ) );
 
         return discoveryServiceFactory.coreTopologyService( config, memberId, createInitialisedScheduler(), logProvider,
                 logProvider, membersResolver, retryStrategy, sslPolicyLoader, discoveryMemberFactory, monitors, Clocks.systemClock() );
