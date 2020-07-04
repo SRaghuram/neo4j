@@ -235,7 +235,7 @@ class ProcedureResourcesIT
             proc.withParam( "'RelType'" );
             break;
         case "dbms.queryJmx":
-            proc.withParam( "'*:*'" );
+            proc.withParam( "'*:*,name=*" + db.databaseName() + "*'" );
             break;
         case "db.awaitIndex":
             proc.withParam( "'" + indexName + "'" );
