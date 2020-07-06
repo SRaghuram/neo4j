@@ -6,8 +6,7 @@
 package com.neo4j.server.rest.security;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -15,16 +14,19 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.server.rest.security.AuthenticationIT;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
 import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class EnterpriseAuthenticationIT extends AuthenticationIT
+@TestDirectoryExtension
+class EnterpriseAuthenticationIT extends AuthenticationIT
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    TestDirectory testDirectory;
 
     @Override
     public void startServer( boolean authEnabled ) throws IOException
@@ -37,7 +39,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     }
 
     @Test
-    public void shouldHavePredefinedRoles() throws Exception
+    void shouldHavePredefinedRoles() throws Exception
     {
         // Given
         startServerWithConfiguredUser();
@@ -63,7 +65,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     }
 
     @Test
-    public void shouldAllowExecutingEnterpriseBuiltInProceduresWithAuthDisabled() throws Exception
+    void shouldAllowExecutingEnterpriseBuiltInProceduresWithAuthDisabled() throws Exception
     {
         // Given
         startServerWithAuthDisabled();
