@@ -244,6 +244,11 @@
       "name": "Q36",
       "description": "Cartesian Product",
       "queryFile": "queries/Q36.cypher"
+    },
+    {
+      "name": "Q37",
+      "description": "GetDegree vs. SemiApply",
+      "queryFile": "queries/Q37.cypher"
     }
   ]
 }
