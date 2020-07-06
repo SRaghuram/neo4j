@@ -22,13 +22,13 @@ import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.IndexedProperty
 import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.VirtualValues
