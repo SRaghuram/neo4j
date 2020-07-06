@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.time.Clock;
 import java.time.Duration;
 
-import org.neo4j.time.Clocks;
 
 import static java.lang.String.format;
 

@@ -18,4 +18,19 @@ public interface TerminationCondition
      * @throws StoreCopyFailedException if the process should be stopped.
      */
     void assertContinue() throws StoreCopyFailedException;
+
+    /**
+     * Chain termination condition with another, returning a {@link CompositeTerminationCondition}.
+     *
+     * Note: we only have to check whether `other` is a composite condition as the class itself overrides the `and()` method.
+     * In other words, `this` knows if it is composite.
+     */
+    default TerminationCondition and( TerminationCondition other )
+    {
+        if ( other instanceof CompositeTerminationCondition )
+        {
+            return other.and( this );
+        }
+        return new CompositeTerminationCondition( this, other );
+    }
 }

@@ -234,7 +234,7 @@ class RemoteStoreTest
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
                                                    storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID,
                                                    PageCacheTracer.NULL, INSTANCE,
-                                                   Clocks.fakeClock() );
+                                                   Clocks.fakeClock(), null );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout );
     }

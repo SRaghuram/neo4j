@@ -41,6 +41,7 @@ import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
@@ -63,6 +64,8 @@ import static java.lang.Math.toIntExact;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
@@ -142,6 +145,22 @@ class StoreCopyClientIT
         assertEquals( expectedFiles, storeFileStream.fileStreams().keySet() );
         assertEquals( fileContent( relative( fileA.getFilename() ) ), clientFileContents( storeFileStream, fileA.getFilename() ) );
         assertEquals( fileContent( relative( fileB.getFilename() ) ), clientFileContents( storeFileStream, fileB.getFilename() ) );
+    }
+
+    @Test
+    void shouldFailIfShutdownDuringCatchup()
+    {
+        // given
+        fileB.setRemainingFailed( 2 );
+        var storeFileStream = new InMemoryStoreStreamProvider();
+        var guard = mock( AvailabilityGuard.class );
+        when( guard.isShutdown() ).thenReturn( false ).thenReturn( true );
+        Supplier<TerminationCondition> shutdownCondition = () -> new IsShutdownTerminationCondition( guard );
+
+        // when
+        var catchupAddressProvider = new SingleAddressProvider( from( catchupServer.address().getPort() ) );
+        assertThrows( StoreCopyFailedException.class, () -> storeCopyClient.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(),
+                                        storeFileStream, shutdownCondition, targetLocation ) );
     }
 
     @Test

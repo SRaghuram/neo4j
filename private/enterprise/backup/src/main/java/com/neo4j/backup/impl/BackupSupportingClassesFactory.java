@@ -101,9 +101,10 @@ public class BackupSupportingClassesFactory
         Function<NamedDatabaseId,StoreCopyClient> storeCopyClient = databaseId ->
                 new StoreCopyClient( catchUpClient, databaseId, () -> monitors, logProvider, backOffStrategy );
 
-        Function<NamedDatabaseId,RemoteStore> remoteStore = databaseId -> new RemoteStore( logProvider, fileSystemAbstraction, pageCache,
-                storeCopyClient.apply( databaseId ), txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
-                databaseId, pageCacheTracer, memoryTracker, clock );
+        Function<NamedDatabaseId,RemoteStore> remoteStore = databaseId ->
+                new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient.apply( databaseId ),
+                                 txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
+                                 databaseId, pageCacheTracer, memoryTracker, clock, null );
 
         return backupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }

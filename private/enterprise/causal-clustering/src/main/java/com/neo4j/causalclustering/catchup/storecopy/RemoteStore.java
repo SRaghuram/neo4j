@@ -20,6 +20,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -54,11 +55,13 @@ public class RemoteStore
     private final NamedDatabaseId namedDatabaseId;
     private final PageCacheTracer pageCacheTracer;
     private final MemoryTracker memoryTracker;
+    private final AvailabilityGuard availabilityGuard;
     private final SystemNanoClock clock;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
-                        TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
-                        NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, SystemNanoClock clock )
+            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
+            NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, SystemNanoClock clock,
+            AvailabilityGuard availabilityGuard )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -74,6 +77,7 @@ public class RemoteStore
         this.namedDatabaseId = namedDatabaseId;
         this.pageCacheTracer = pageCacheTracer;
         this.memoryTracker = memoryTracker;
+        this.availabilityGuard = availabilityGuard;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
         this.clock = clock;
     }
@@ -108,9 +112,16 @@ public class RemoteStore
         pullTransactions( addressProvider, destinationLayout, context, true, true );
     }
 
-    private MaximumTotalTime getTerminationCondition()
+    private TerminationCondition getTerminationCondition()
     {
-        return new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ), clock );
+        var totalTimeCondition = new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ), clock );
+
+        if ( availabilityGuard == null )
+        {
+            return totalTimeCondition;
+        }
+
+        return totalTimeCondition.and( new IsShutdownTerminationCondition( availabilityGuard ) );
     }
 
     private void pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,
