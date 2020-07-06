@@ -15,7 +15,7 @@ import org.opencypher.tools.tck.api.Scenario
 abstract class EnterpriseBaseTCKTests extends BaseFeatureTest {
 
   // these two should be empty on commit!
-  val featureToRun = ""
+  val featureToRun = "MiscellaneousErrorAcceptance"
   val scenarioToRun = ""
 
   lazy val scenarios: Seq[Scenario] = filterScenarios(BaseFeatureTestHolder.allTckScenarios, featureToRun, scenarioToRun)
