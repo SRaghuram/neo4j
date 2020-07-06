@@ -179,4 +179,22 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     val res2 = order2.toComparableResult
     res1 should equal(res2)
   }
+
+  test("should not support aggregation in a list to unwind") {
+    createLabeledNode("Person")
+
+    failWithError(Configs.All,
+      "MATCH (p:Person) UNWIND ['j', count(*)] AS var RETURN var",
+      List("Can't use aggregating expressions inside of expressions executing over lists")
+    )
+  }
+
+  test("should support aggregation in unwind horizon") {
+    createLabeledNode("Person")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      "MATCH (p:Person) UNWIND ['a', 'b', 'c' ] AS var WITH var, count(*) as c RETURN var,c"
+    )
+    result.toSet shouldBe Set(Map("var" -> "a", "c" -> 1), Map("var" -> "b", "c" -> 1), Map("var" -> "c", "c" -> 1))
+  }
 }
