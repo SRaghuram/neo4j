@@ -75,7 +75,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         this.log = logProvider.getLog( getClass() );
         this.fullStoreCopy = fullStoreCopy;
         this.pageCacheTracer = pageCacheTracer;
-        this.databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
+        this.databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY, databaseLayout.getDatabaseName() );
 
         Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
         this.metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout,

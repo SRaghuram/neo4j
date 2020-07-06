@@ -369,7 +369,7 @@ class CoreDatabaseFactory
                                          BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory,
                                          DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker )
     {
-        var pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
+        var pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY, namedDatabaseId.name() );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, pageCache, fileSystem, debugLog,
                                                      storageEngineFactory, config, bootstrapSaver, pageCacheTracer, memoryTracker );
 

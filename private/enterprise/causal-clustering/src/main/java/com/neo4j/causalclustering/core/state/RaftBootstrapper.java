@@ -252,7 +252,8 @@ public class RaftBootstrapper
             PageCursorTracer cursorTracer ) throws IOException
     {
         DatabaseLayout layout = bootstrapContext.databaseLayout();
-        try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
+        try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY,
+                bootstrapContext.databaseId().name() ) )
         {
             StoreId storeId = storageEngineFactory.storeId( layout, pageCache, cursorTracer );
             TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, layout, databasePageCache,
