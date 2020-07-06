@@ -67,7 +67,7 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 class AkkaDistributedDataLeakIT
 {
     private static final int TIMEOUT = 60;
-    private static final int WAIT_FOR_RESTART = 3_000;
+    private static final int WAIT_FOR_RESTART = 3_500;
 
     /** Part of Akka cluster. Bootstraps cluster. Listens to changes in distributed data, exposes for assertions */
     private Harness harness;
@@ -120,7 +120,7 @@ class AkkaDistributedDataLeakIT
         assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount - 1 ), TIMEOUT, SECONDS );
     }
 
-    @RepeatedTest( 10 )
+    @RepeatedTest( 1000 )
     void shouldNotLeakMetadataOnUncleanLeave( RepetitionInfo repetitionInfo ) throws Throwable
     {
         uncleanRestarter.start();
