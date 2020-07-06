@@ -98,27 +98,27 @@ class SchedulerProceduresTest
             } );
 
             scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 1" ), "db 1", "job 101" ), () -> { } );
-            scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 102" ), () ->
+            scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( Subject.AUTH_DISABLED, null, "job 102" ), () ->
             {
                 jobStartLatch.countDown();
                 jobLatch.await();
             } );
             scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 2" ), "db 2", "job 103" ), () -> 1 );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 104" ), () -> { } ).cancel();
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( Subject.SYSTEM, null, "job 104" ), () -> { } ).cancel();
 
-            scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 105" ), () -> { } ).get();
+            scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( Subject.SYSTEM, null, "job 105" ), () -> { } ).get();
 
             scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 3" ), "db 3", "job 106" ), () -> { }, 1, HOURS );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 107" ), () -> { }, 0, HOURS );
-            scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 108" ), () ->
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( Subject.AUTH_DISABLED, null, "job 107" ), () -> { }, 0, HOURS );
+            scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( Subject.SYSTEM, null, "job 108" ), () ->
             {
                 jobStartLatch.countDown();
                 jobLatch.await();
             }, 1, TimeUnit.NANOSECONDS );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( null, null, "job 109" ), () -> { }, 1, HOURS ).cancel();
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( Subject.SYSTEM, null, "job 109" ), () -> { }, 1, HOURS ).cancel();
 
-            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( null, null, "job 110" ), () -> { }, 1, HOURS );
-            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( null, null, "job 111" ), () -> { }, 1, 1, HOURS );
+            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( Subject.SYSTEM, null, "job 110" ), () -> { }, 1, HOURS );
+            scheduler.scheduleRecurring( RAFT_SERVER, new JobMonitoringParams( Subject.SYSTEM, null, "job 111" ), () -> { }, 1, 1, HOURS );
 
             assertTrue( jobStartLatch.await( 10, TimeUnit.SECONDS ) );
 
@@ -127,16 +127,16 @@ class SchedulerProceduresTest
                 var result = tx.execute( "CALL dbms.scheduler.jobs" );
                 var jobs = mapJobStatus( result );
 
-                assertJob( jobs, "RaftServer", "user 1", "db 1", "job 101", "IMMEDIATE", "ENQUEUED", false, false );
+                assertJob( jobs, "RaftServer", "user 1", "db 1", "job 101", "IMMEDIATE", "SCHEDULED", false, false );
                 assertJob( jobs, "RaftClient", "", "", "job 102", "IMMEDIATE", "EXECUTING", false, false );
-                assertJob( jobs, "RaftServer", "user 2", "db 2", "job 103", "IMMEDIATE", "ENQUEUED", false, false );
+                assertJob( jobs, "RaftServer", "user 2", "db 2", "job 103", "IMMEDIATE", "SCHEDULED", false, false );
                 assertFalse( jobs.containsKey( "job 104" ) );
                 assertFalse( jobs.containsKey( "job 105" ) );
                 assertJob( jobs, "RaftServer", "user 3", "db 3", "job 106", "DELAYED", "SCHEDULED", true, false );
-                assertJob( jobs, "RaftServer", "", "", "job 107", "DELAYED", "ENQUEUED", true, false );
+                assertJob( jobs, "RaftServer", "", "", "job 107", "DELAYED", "SCHEDULED", true, false );
                 assertJob( jobs, "RaftClient", "", "", "job 108", "DELAYED", "EXECUTING", true, false );
                 assertFalse( jobs.containsKey( "job 9" ) );
-                assertJob( jobs, "RaftServer", "", "", "job 110", "PERIODIC", "ENQUEUED", true, true );
+                assertJob( jobs, "RaftServer", "", "", "job 110", "PERIODIC", "SCHEDULED", true, true );
                 assertJob( jobs, "RaftServer", "", "", "job 111", "PERIODIC", "SCHEDULED", true, true );
             }
         }
@@ -154,7 +154,7 @@ class SchedulerProceduresTest
             throw new TestException( "something went wrong 1" );
         } );
         awaitFailure( scheduler, 1 );
-        scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( null, null, "job 202" ), () ->
+        scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( Subject.SYSTEM, null, "job 202" ), () ->
         {
             throw new TestException( "something went wrong 2" );
         } );

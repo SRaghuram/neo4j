@@ -704,7 +704,7 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Admin
     @SystemProcedure
-    @Description( "List failed job runs. There is a limit for amount of historical data" )
+    @Description( "List failed job runs. There is a limit for amount of historical data." )
     @Procedure( name = "dbms.scheduler.failedJobs", mode = DBMS )
     public Stream<FailedJobRunResult> schedulerFailedJobRuns()
     {

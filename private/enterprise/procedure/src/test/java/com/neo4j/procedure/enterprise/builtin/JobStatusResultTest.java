@@ -16,6 +16,7 @@ import org.neo4j.scheduler.MonitoredJobInfo;
 
 import static java.time.ZoneOffset.UTC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.common.Subject.SYSTEM;
 import static org.neo4j.scheduler.Group.INDEX_POPULATION;
 import static org.neo4j.scheduler.JobType.IMMEDIATE;
 import static org.neo4j.scheduler.MonitoredJobInfo.State.SCHEDULED;
@@ -34,7 +35,7 @@ class JobStatusResultTest
     @Test
     void testImmediateJobWithoutDatabaseAndUser()
     {
-        var jobInfo = new MonitoredJobInfo( INDEX_POPULATION, Instant.parse( "2020-06-24T18:00:00Z" ), null, null, "something very useful", null, null,
+        var jobInfo = new MonitoredJobInfo( INDEX_POPULATION, Instant.parse( "2020-06-24T18:00:00Z" ), SYSTEM, null, "something very useful", null, null,
                 MonitoredJobInfo.State.EXECUTING, IMMEDIATE );
         var jobStatusResult = new JobStatusResult( jobInfo, UTC );
         assertEquals( "IndexPopulationMain 2020-06-24T18:00:00Z   something very useful IMMEDIATE   EXECUTING", resultToString( jobStatusResult ) );
