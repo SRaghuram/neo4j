@@ -1741,6 +1741,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.Rand =>
       Some(IntermediateExpression(invokeStatic(method[CypherFunctions, DoubleValue]("rand")),
                                   Seq.empty, Seq.empty, Set.empty))
+    case functions.RandomUUID =>
+      Some(IntermediateExpression(invokeStatic(method[CypherFunctions, TextValue]("randomUuid")),
+                                  Seq.empty, Seq.empty, Set.empty))
     case functions.Abs =>
       compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, NumberValue, AnyValue]("abs"), in.ir), in.fields, in.variables, in.nullChecks))

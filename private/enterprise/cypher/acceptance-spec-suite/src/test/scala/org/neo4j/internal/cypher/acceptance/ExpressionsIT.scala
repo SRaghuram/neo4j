@@ -9,6 +9,7 @@ import java.lang.Math.PI
 import java.lang.Math.sin
 import java.time.Clock
 import java.time.Duration
+import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
 import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
@@ -138,6 +139,7 @@ import org.neo4j.values.storable.LocalDateTimeValue
 import org.neo4j.values.storable.LocalTimeValue
 import org.neo4j.values.storable.LocalTimeValue.localTime
 import org.neo4j.values.storable.PointValue
+import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.TimeValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
@@ -399,6 +401,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(pointValue(Cartesian, 0.0, 0.0),
       pointValue(WGS84, 1.0, 1.0))) should equal(NO_VALUE)
 
+  }
+
+  test("randomUUID function") {
+    val compiled = compile(function("randomuuid"))
+    val result1 = evaluate(compiled).asInstanceOf[TextValue].stringValue()
+    val result2 = evaluate(compiled).asInstanceOf[TextValue].stringValue()
+
+    UUID.fromString(result1) should be(a[UUID])
+    UUID.fromString(result2) should be(a[UUID])
+    result1 shouldNot be (result2)
   }
 
   test("startNode") {
