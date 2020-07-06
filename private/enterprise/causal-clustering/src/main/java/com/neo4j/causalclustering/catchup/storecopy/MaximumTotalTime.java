@@ -25,11 +25,6 @@ public class MaximumTotalTime implements TerminationCondition
         this.clock = clock;
     }
 
-    MaximumTotalTime( Duration duration )
-    {
-        this( duration, Clocks.systemClock() );
-    }
-
     @Override
     public void assertContinue() throws StoreCopyFailedException
     {

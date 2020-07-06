@@ -37,6 +37,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.Clocks;
 
 abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAbstractBenchmark
 {
@@ -96,7 +97,8 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
         var logProvider = AbstractWithInfrastructureBenchmark.logProvider();
         var supportedProtocolCreator = new SupportedProtocolCreator( config(), logProvider );
         var dependencyResolver = db().getDependencyResolver();
-        return CatchupClientBuilder.builder()
+        return CatchupClientBuilder
+                .builder()
                 .catchupProtocols( supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration() )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
@@ -104,6 +106,7 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
                 .scheduler( dependencyResolver.resolveDependency( JobScheduler.class ) )
                 .bootstrapConfig( BootstrapConfiguration.clientConfig( config() ) )
                 .commandReader( module().getStorageEngineFactory().commandReaderFactory() )
+                .clock( Clocks.nanoClock() )
                 .build();
     }
 

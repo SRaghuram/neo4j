@@ -55,7 +55,7 @@ public final class CatchupClientBuilder
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
         private Duration inactivityTimeout;
         private Duration handshakeTimeout = Duration.ofSeconds( 5 );
-        private Clock clock = systemClock();
+        private Clock clock;
         private BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
         private CommandReaderFactory commandReaderFactory;
 

@@ -20,6 +20,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
@@ -48,7 +49,7 @@ public final class OnlineBackupExecutor
 
     public static OnlineBackupExecutor buildDefault()
     {
-        return builder().build();
+        return builder().withClock( Clocks.nanoClock() ).build();
     }
 
     public static Builder builder()
@@ -165,7 +166,7 @@ public final class OnlineBackupExecutor
         {
             if ( supportingClassesFactory == null )
             {
-                supportingClassesFactory = new BackupSupportingClassesFactory( storageEngineFactory, fs, internalLogProvider, monitors );
+                supportingClassesFactory = new BackupSupportingClassesFactory( storageEngineFactory, fs, internalLogProvider, monitors, clock );
             }
 
             return new OnlineBackupExecutor( this );

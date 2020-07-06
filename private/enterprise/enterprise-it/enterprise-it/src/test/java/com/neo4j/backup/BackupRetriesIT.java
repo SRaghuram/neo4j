@@ -299,7 +299,7 @@ class BackupRetriesIT
         ChannelTrackingBackupSupportingClassesFactory( LogProvider logProvider, Monitors monitors, FileSystemAbstraction fileSystemAbstraction,
                 StorageEngineFactory storageEngineFactory, Set<Channel> channels )
         {
-            super( storageEngineFactory, fileSystemAbstraction, logProvider, monitors );
+            super( storageEngineFactory, fileSystemAbstraction, logProvider, monitors, Clocks.nanoClock() );
             this.channels = channels;
         }
 

@@ -39,6 +39,8 @@ import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
@@ -67,6 +69,7 @@ public final class CatchupComponentsProvider
     private final ExponentialBackoffStrategy storeCopyBackoffStrategy;
     private final DatabaseTracers databaseTracers;
     private final MemoryTracker otherMemoryGlobalTracker;
+    private final SystemNanoClock clock;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -86,6 +89,7 @@ public final class CatchupComponentsProvider
         this.portRegister = globalModule.getConnectorPortRegister();
         this.databaseTracers = new DatabaseTracers( globalModule.getTracers() );
         this.otherMemoryGlobalTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
+        this.clock = globalModule.getGlobalClock();
         this.copiedStoreRecovery = globalLife.add(
                 new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
@@ -94,7 +98,8 @@ public final class CatchupComponentsProvider
 
     private CatchupClientFactory createCatchupClientFactory()
     {
-        CatchupClientFactory catchupClient = CatchupClientBuilder.builder()
+        CatchupClientFactory catchupClient = CatchupClientBuilder
+                .builder()
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.client() )
@@ -103,7 +108,9 @@ public final class CatchupComponentsProvider
                 .bootstrapConfig( clientConfig( config ) )
                 .commandReader( storageEngineFactory.commandReaderFactory() )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
-                .debugLogProvider( logProvider ).build();
+                .debugLogProvider( logProvider )
+                .clock( Clocks.nanoClock() )
+                .build();
         globalLife.add( catchupClient );
         return catchupClient;
     }
@@ -165,7 +172,7 @@ public final class CatchupComponentsProvider
         TxPullClient txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider );
 
         RemoteStore remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache, storeCopyClient, txPullClient, transactionLogFactory, config,
-                monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer(), otherMemoryGlobalTracker );
+                monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer(), otherMemoryGlobalTracker, clock );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext,
                 copiedStoreRecovery, remoteStore, databaseLogProvider );

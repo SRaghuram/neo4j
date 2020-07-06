@@ -33,6 +33,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -231,7 +232,9 @@ class RemoteStoreTest
             throws IOException, StoreCopyFailedException
     {
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
-                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID, PageCacheTracer.NULL, INSTANCE );
+                                                   storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID,
+                                                   PageCacheTracer.NULL, INSTANCE,
+                                                   Clocks.fakeClock() );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout );
     }

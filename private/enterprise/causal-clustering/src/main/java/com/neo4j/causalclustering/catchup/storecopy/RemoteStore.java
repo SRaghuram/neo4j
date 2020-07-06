@@ -27,6 +27,7 @@ import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromCatchingUp;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromStoreCopy;
@@ -53,10 +54,11 @@ public class RemoteStore
     private final NamedDatabaseId namedDatabaseId;
     private final PageCacheTracer pageCacheTracer;
     private final MemoryTracker memoryTracker;
+    private final SystemNanoClock clock;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
-            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
-            NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+                        TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
+                        NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, SystemNanoClock clock )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -73,6 +75,7 @@ public class RemoteStore
         this.pageCacheTracer = pageCacheTracer;
         this.memoryTracker = memoryTracker;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
+        this.clock = clock;
     }
 
     public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout,
@@ -107,7 +110,7 @@ public class RemoteStore
 
     private MaximumTotalTime getTerminationCondition()
     {
-        return new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ) );
+        return new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ), clock );
     }
 
     private void pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,

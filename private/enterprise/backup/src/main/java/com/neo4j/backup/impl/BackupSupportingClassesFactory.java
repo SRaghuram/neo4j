@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 
-import java.time.Clock;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -39,6 +38,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.time.SystemNanoClock;
 import org.neo4j.util.VisibleForTesting;
 
 import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
@@ -51,17 +51,17 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
 public class BackupSupportingClassesFactory
 {
     private final LogProvider logProvider;
-    private final Clock clock;
+    private final SystemNanoClock clock;
     private final Monitors monitors;
     private final FileSystemAbstraction fileSystemAbstraction;
     private final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
     private final StorageEngineFactory storageEngineFactory;
 
     public BackupSupportingClassesFactory( StorageEngineFactory storageEngineFactory, FileSystemAbstraction fileSystemAbstraction, LogProvider logProvider,
-            Monitors monitors )
+                                           Monitors monitors, SystemNanoClock clock )
     {
         this.logProvider = logProvider;
-        this.clock = Clock.systemUTC();
+        this.clock = clock;
         this.monitors = monitors;
         this.fileSystemAbstraction = fileSystemAbstraction;
         this.transactionLogCatchUpFactory = new TransactionLogCatchUpFactory();
@@ -76,7 +76,7 @@ public class BackupSupportingClassesFactory
      */
     BackupSupportingClasses createSupportingClasses( OnlineBackupContext context )
     {
-        JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
+        JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler(clock);
         PageCacheTracer pageCacheTracer = PageCacheTracer.NULL;
         MemoryTracker memoryTracker = EmptyMemoryTracker.INSTANCE;
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler, pageCacheTracer );
@@ -103,7 +103,7 @@ public class BackupSupportingClassesFactory
 
         Function<NamedDatabaseId,RemoteStore> remoteStore = databaseId -> new RemoteStore( logProvider, fileSystemAbstraction, pageCache,
                 storeCopyClient.apply( databaseId ), txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
-                databaseId, pageCacheTracer, memoryTracker );
+                databaseId, pageCacheTracer, memoryTracker, clock );
 
         return backupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }
@@ -122,7 +122,8 @@ public class BackupSupportingClassesFactory
         SslPolicy sslPolicy = loadSslPolicy( config );
         NettyPipelineBuilderFactory pipelineBuilderFactory = createPipelineBuilderFactory( sslPolicy );
 
-        return CatchupClientBuilder.builder()
+        return CatchupClientBuilder
+                .builder()
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( pipelineBuilderFactory )

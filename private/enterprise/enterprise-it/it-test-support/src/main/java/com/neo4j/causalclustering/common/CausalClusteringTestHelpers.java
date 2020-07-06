@@ -73,6 +73,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
@@ -129,7 +130,8 @@ public final class CausalClusteringTestHelpers
 
     public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler )
     {
-        return CatchupClientBuilder.builder()
+        return CatchupClientBuilder
+                .builder()
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
@@ -137,6 +139,7 @@ public final class CausalClusteringTestHelpers
                 .bootstrapConfig( clientConfig( Config.defaults() ) )
                 .commandReader( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                 .debugLogProvider( logProvider )
+                .clock( Clocks.nanoClock() )
                 .build();
     }
 
