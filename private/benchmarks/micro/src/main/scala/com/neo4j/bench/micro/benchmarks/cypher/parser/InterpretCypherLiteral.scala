@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.parser
 
+import java.util
+
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
@@ -169,5 +171,13 @@ class InterpretCypherLiteralState {
 }
 
 class TestExceptionFactory extends ASTExceptionFactory {
+
+  override def syntaxException(got: String,
+                               expected: util.List[String],
+                               source: Exception,
+                               offset: Int,
+                               line: Int,
+                               column: Int): Exception = new SyntaxException("", source)
+
   override def syntaxException(source: Exception, offset: Int, line: Int, column: Int): Exception = new SyntaxException("", source)
 }
