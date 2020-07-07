@@ -120,7 +120,7 @@ class AkkaDistributedDataLeakIT
         assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount - 1 ), TIMEOUT, SECONDS );
     }
 
-    @RepeatedTest( 1000 )
+    @RepeatedTest( 10 )
     void shouldNotLeakMetadataOnUncleanLeave( RepetitionInfo repetitionInfo ) throws Throwable
     {
         uncleanRestarter.start();
