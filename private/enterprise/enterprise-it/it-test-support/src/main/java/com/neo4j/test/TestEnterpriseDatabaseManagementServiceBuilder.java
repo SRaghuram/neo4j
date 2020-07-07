@@ -8,12 +8,14 @@ package com.neo4j.test;
 import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Map;
 import java.util.function.Function;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -58,6 +60,7 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
         config = super.augmentConfig( config );
         config.setIfNotSet( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "127.0.0.1",0 ) );
         config.setIfNotSet( OnlineBackupSettings.online_backup_enabled, FALSE );
+        config.setIfNotSet( GraphDatabaseInternalSettings.routing_driver_idle_check_interval, Duration.ofMinutes( 10 ) );
         return config;
     }
 

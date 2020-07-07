@@ -28,6 +28,7 @@ import org.neo4j.driver.internal.retry.RetrySettings;
 import org.neo4j.driver.internal.shaded.io.netty.channel.EventLoopGroup;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
 import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
@@ -45,6 +46,8 @@ public class DriverPool extends LifecycleAdapter
     private final DriverConfigFactory driverConfigFactory;
     private final FabricEnterpriseConfig fabricConfig;
     private final EventLoopGroup eventLoopGroup;
+
+    private JobHandle<?> idleMonitorJobHandle;
 
     public DriverPool( JobScheduler jobScheduler,
             DriverConfigFactory driverConfigFactory,
@@ -117,7 +120,7 @@ public class DriverPool extends LifecycleAdapter
     {
         long checkInterval = fabricConfig.getGlobalDriverConfig().getDriverIdleCheckInterval().toSeconds();
         Duration idleTimeout = fabricConfig.getGlobalDriverConfig().getIdleTimeout();
-        jobScheduler.scheduleRecurring( FABRIC_IDLE_DRIVER_MONITOR, systemJob( "Clean up of idle drivers" ), () ->
+        idleMonitorJobHandle = jobScheduler.scheduleRecurring( FABRIC_IDLE_DRIVER_MONITOR, systemJob( "Clean up of idle drivers" ), () ->
         {
             List<Key> timeoutCandidates = idleDrivers.entrySet().stream()
                     .filter( entry -> Duration.between( entry.getValue().getLastUsedTimestamp(), clock.instant() ).compareTo( idleTimeout ) > 0 )
@@ -135,6 +138,11 @@ public class DriverPool extends LifecycleAdapter
     @Override
     public void stop()
     {
+        if ( idleMonitorJobHandle != null )
+        {
+            idleMonitorJobHandle.cancel();
+        }
+
         idleDrivers.values().forEach( PooledDriver::close );
         driversInUse.values().forEach( PooledDriver::close );
         eventLoopGroup.shutdownGracefully( 1, 4,  TimeUnit.SECONDS);
