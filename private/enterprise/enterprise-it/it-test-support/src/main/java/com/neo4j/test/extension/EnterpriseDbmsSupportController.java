@@ -14,8 +14,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 
-import org.neo4j.collection.Dependencies;
-import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DbmsController;
@@ -29,7 +27,7 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
     }
 
     @Override
-    public void startDbms( UnaryOperator<TestDatabaseManagementServiceBuilder> callback )
+    public void startDbms( String databaseName, UnaryOperator<TestDatabaseManagementServiceBuilder> callback )
     {
         // Find closest configuration
         TestConfiguration enterpriseDbmsExtension = getAnnotatedConfiguration(
@@ -37,11 +35,8 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
                 getTestAnnotation( ImpermanentEnterpriseDbmsExtension.class ) );
 
         // Create service
-        DatabaseManagementService dbms = buildDbms( enterpriseDbmsExtension.configurationCallback, callback );
-
-        var dbmsDependency = new Dependencies();
-        dbmsDependency.satisfyDependencies( dbms );
-        injectDependencies( dbmsDependency );
+        buildDbms( enterpriseDbmsExtension.configurationCallback, callback );
+        startDatabase( databaseName );
     }
 
     @Override
@@ -62,12 +57,12 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
         return new DbmsController()
         {
             @Override
-            public void restartDbms( UnaryOperator<TestDatabaseManagementServiceBuilder> callback )
+            public void restartDbms( String databaseName, UnaryOperator<TestDatabaseManagementServiceBuilder> callback )
             {
                 shutdown();
                 try
                 {
-                    startDbms( callback );
+                    startDbms( databaseName, callback );
                 }
                 catch ( Exception e )
                 {
@@ -76,9 +71,9 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
             }
 
             @Override
-            public void restartDatabase()
+            public void restartDatabase( String databaseName )
             {
-                EnterpriseDbmsSupportController.this.restartDatabase();
+                EnterpriseDbmsSupportController.this.restartDatabase( databaseName );
             }
         };
     }

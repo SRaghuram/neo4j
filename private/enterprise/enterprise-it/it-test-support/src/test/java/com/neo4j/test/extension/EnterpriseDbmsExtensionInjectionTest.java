@@ -69,7 +69,11 @@ class EnterpriseDbmsExtensionInjectionTest
         File preHomeDir = testDirectory.homeDir();
 
         // when
-        dbmsController.restartDbms();
+        var databaseName = dbApi.databaseName();
+        dbmsController.restartDbms( databaseName );
+
+        assertEquals( databaseName, dbApi.databaseName() );
+        assertTrue( dbApi.isAvailable( 0 ) );
 
         // then
         File postHomeDir = testDirectory.homeDir();

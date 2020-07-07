@@ -105,7 +105,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
 
-            controller.restartDbms( builder ->
+            controller.restartDbms( db.databaseName(), builder ->
                             builder.setConfig( metrics_enabled, true )
                                    .setConfig( csv_enabled, true )
                                    .setConfig( csv_interval, Duration.ofMillis( 100 ) )
@@ -192,7 +192,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             Path backupDir = testDirectory.cleanDirectoryPath( "backup" );
             executeBackup( db, backupDir );
             latch.release();
-            controller.restartDbms( builder ->
+            controller.restartDbms( db.databaseName(), builder ->
             {
                 cleanupDirectories( backupDir );
                 return builder.setConfig( online_backup_enabled, false )
@@ -272,7 +272,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             deletePathRecursively( graphdb );
 
             Path metricsDirectory = testDirectory.cleanDirectoryPath( "metrics" );
-            controller.restartDbms( builder ->
+            controller.restartDbms( db.databaseName(), builder ->
                     builder.setConfig( metrics_enabled, true )
                            .setConfig( csv_enabled, true )
                            .setConfig( csv_interval, Duration.ofMillis( 100 ) )
@@ -314,7 +314,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
 
-            controller.restartDbms( builder ->
+            controller.restartDbms( db.databaseName(), builder ->
                     builder.setConfig( metrics_enabled, true )
                            .setConfig( csv_enabled, true )
                            .setConfig( csv_interval, Duration.ofMillis( 100 ) )
@@ -361,7 +361,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             touchAllPages( pageCache, pageCacheTracer );
             long pagesInMemoryWithoutPrefetchAfterTouch = pageCacheTracer.faults();
 
-            controller.restartDbms( builder ->
+            controller.restartDbms( db.databaseName(), builder ->
                     builder.setConfig( pagecache_warmup_enabled, true )
                            .setConfig( pagecache_warmup_prefetch, true )
                            .setConfig( csv_enabled, true )

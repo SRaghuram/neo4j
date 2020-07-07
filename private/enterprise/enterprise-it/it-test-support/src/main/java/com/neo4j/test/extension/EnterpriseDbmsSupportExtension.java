@@ -17,8 +17,11 @@ import org.neo4j.test.extension.DbmsSupportExtension;
 
 public class EnterpriseDbmsSupportExtension extends DbmsSupportExtension implements BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback
 {
+    private static final String DATABASE_NAME = "database";
+    private static final ExtensionContext.Namespace DBMS_SUPPORT_NAMESPACE = ExtensionContext.Namespace.create( "org", "neo4j", "dbms", "support" );
+
     @Override
-    public void beforeAll( ExtensionContext context ) throws Exception
+    public void beforeAll( ExtensionContext context )
     {
         EnterpriseDbmsSupportController controller = new EnterpriseDbmsSupportController( context );
         controller.startDbms();
@@ -36,13 +39,19 @@ public class EnterpriseDbmsSupportExtension extends DbmsSupportExtension impleme
         // Create a new database for each test method
         DbmsSupportController controller = DbmsSupportController.get( context );
         String uniqueTestName = getUniqueTestName( context );
+        getStore( context ).put( DATABASE_NAME, uniqueTestName );
         controller.startDatabase( uniqueTestName );
     }
 
     @Override
     public void afterEach( ExtensionContext context )
     {
-        DbmsSupportController.get( context ).stopDatabase();
+        DbmsSupportController.get( context ).stopDatabase( getStore( context ).get( DATABASE_NAME, String.class ) );
+    }
+
+    private static ExtensionContext.Store getStore( ExtensionContext context )
+    {
+        return context.getStore( DBMS_SUPPORT_NAMESPACE );
     }
 
     private static String getUniqueTestName( ExtensionContext context )

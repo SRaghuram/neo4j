@@ -55,6 +55,8 @@ import org.neo4j.resources.CpuClock;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
+import org.neo4j.token.TokenHolders;
+import org.neo4j.token.api.TokenHolder;
 
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -65,7 +67,6 @@ import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier.ON_HEAP;
 import static org.neo4j.lock.LockType.SHARED;
-import static org.neo4j.test.rule.DatabaseRule.mockedTokenHolders;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 class TransactionStatusResultTest
@@ -265,6 +266,14 @@ class TransactionStatusResultTest
         {
             return getTestConnectionInfo();
         }
+    }
+
+    private static TokenHolders mockedTokenHolders()
+    {
+        return new TokenHolders(
+                mock( TokenHolder.class ),
+                mock( TokenHolder.class ),
+                mock( TokenHolder.class ) );
     }
 
     private static class TestStatistics extends KernelTransactionImplementation.Statistics

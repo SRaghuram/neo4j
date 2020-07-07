@@ -6,74 +6,63 @@
 package com.neo4j.kernel.database;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.extension.EnterpriseDbmsExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import org.neo4j.collection.Dependencies;
-import org.neo4j.configuration.Config;
-import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.test.rule.DatabaseRule;
-import org.neo4j.test.rule.PageCacheRule;
-import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.DbmsController;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Inject;
 
+import static java.lang.Boolean.TRUE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.kernel.impl.store.format.aligned.PageAligned.LATEST_RECORD_FORMATS;
 
-/**
- * Based on {@code DatabaseTest} in kernel-it.
- * This test is only placed in the enterprise code base so we can test upgrading using the
- * standard format to high_limit upgrade path.
- */
-public class EnterpriseDatabaseTest
+@EnterpriseDbmsExtension( configurationCallback = "configure" )
+class EnterpriseDatabaseTest
 {
-    @Rule
-    public DefaultFileSystemRule fs = new DefaultFileSystemRule();
-    @Rule
-    public TestDirectory directory = TestDirectory.testDirectory( fs.get() );
-    @Rule
-    public DatabaseRule databaseRule = new DatabaseRule();
-    @Rule
-    public PageCacheRule pageCacheRule = new PageCacheRule();
-
-    private DatabaseLayout databaseLayout;
-    private Config cfg;
-    private Dependencies deps;
+    @Inject
+    private Database database;
+    @Inject
+    private DbmsController controller;
+    @Inject
+    private DatabaseManagementService managementService;
+    @Inject
     private PageCache pageCache;
+    private String databaseName;
 
-    @Before
-    public void setUp()
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        databaseLayout = DatabaseLayout.ofFlat( directory.directoryPath( DEFAULT_DATABASE_NAME ) );
-        cfg = Config.newBuilder()
-                    .set( neo4j_home, directory.homeDir().toPath() )
-                    .set( record_format, "standard" )
-                    .build();
-        deps = new Dependencies();
-        deps.satisfyDependencies( cfg );
-        pageCache = pageCacheRule.getPageCache( fs );
+        builder.setConfig( allow_upgrade, TRUE );
+    }
+
+    @BeforeEach
+    void setUp()
+    {
+        databaseName = database.getNamedDatabaseId().name();
+        managementService.dropDatabase( databaseName );
+        controller.restartDbms( databaseName, builder -> builder.setConfig( record_format, LATEST_RECORD_FORMATS.name() ) );
     }
 
     @Test
-    public void upgradeOfStartedDatabaseMustObeyStartAfterUpgradeTrue() throws IOException
+    void upgradeOfStartedDatabaseMustObeyStartAfterUpgradeTrue() throws IOException
     {
-        Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
-        database.start();
-        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( Standard.LATEST_STORE_VERSION );
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( LATEST_RECORD_FORMATS.storeVersion() );
 
-        cfg.set( record_format, "high_limit" );
+        controller.restartDbms( databaseName, builder -> builder.setConfig( record_format, HighLimit.NAME ) );
         database.upgrade( true );
 
         assertTrue( database.isStarted() );
@@ -81,14 +70,12 @@ public class EnterpriseDatabaseTest
     }
 
     @Test
-    public void upgradeOfStoppedDatabaseMustObeyStartAfterUpgradeTrue() throws IOException
+    void upgradeOfStoppedDatabaseMustObeyStartAfterUpgradeTrue() throws IOException
     {
-        Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
-        database.start();
-        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( Standard.LATEST_STORE_VERSION );
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( LATEST_RECORD_FORMATS.storeVersion() );
         database.stop();
 
-        cfg.set( record_format, "high_limit" );
+        controller.restartDbms( databaseName, builder -> builder.setConfig( record_format, HighLimit.NAME ) );
         database.upgrade( true );
 
         assertTrue( database.isStarted() );
@@ -96,13 +83,11 @@ public class EnterpriseDatabaseTest
     }
 
     @Test
-    public void upgradeOfStartedDatabaseMustObeyStartAfterUpgradeFalse() throws IOException
+    void upgradeOfStartedDatabaseMustObeyStartAfterUpgradeFalse() throws IOException
     {
-        Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
-        database.start();
-        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( Standard.LATEST_STORE_VERSION );
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( LATEST_RECORD_FORMATS.storeVersion() );
 
-        cfg.set( record_format, "high_limit" );
+        controller.restartDbms( builder -> builder.setConfig( record_format, HighLimit.NAME ) );
         database.upgrade( false );
 
         assertFalse( database.isStarted() );
@@ -114,14 +99,11 @@ public class EnterpriseDatabaseTest
     }
 
     @Test
-    public void upgradeOfStoppedDatabaseMustObeyStartAfterUpgradeFalse() throws IOException
+    void upgradeOfStoppedDatabaseMustObeyStartAfterUpgradeFalse() throws IOException
     {
-        Database database = databaseRule.getDatabase( databaseLayout, fs, pageCache, deps );
-        database.start();
-        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( Standard.LATEST_STORE_VERSION );
-        database.stop();
+        assertThat( getRecordFormat( pageCache, database ) ).isEqualTo( LATEST_RECORD_FORMATS.storeVersion() );
 
-        cfg.set( record_format, "high_limit" );
+        controller.restartDbms( builder -> builder.setConfig( record_format, HighLimit.NAME ) );
         database.upgrade( false );
 
         assertFalse( database.isStarted() );
