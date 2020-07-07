@@ -8,6 +8,8 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.dbms.commandline.StoreCopyCommand;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -58,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
+@ResourceLock( Resources.SYSTEM_OUT )
 class StoreCopyCommandIT extends AbstractCommandIT
 {
     @Inject
