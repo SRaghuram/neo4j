@@ -300,7 +300,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     val expectedErrors =
       List(
         "Parentheses are required to identify nodes in patterns, i.e. (n) (line 1, column 7 (offset: 6))",
-        """Encountered " <IDENTIFIER> "n"" at line 1, column 7."""
+        """Invalid input 'n': expected "shortestPath", "allShortestPaths" or "(" (line 1, column 7 (offset: 6))"""
       )
 
     executeAndEnsureError(
