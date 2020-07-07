@@ -9,6 +9,9 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.cli.CommandProvider;
 import org.neo4j.cli.ExecutionContext;
 
+import static org.neo4j.cli.Command.CommandType;
+import static org.neo4j.cli.Command.CommandType.RESTORE_DB;
+
 @ServiceProvider
 public class RestoreDatabaseCliProvider implements CommandProvider<RestoreDatabaseCli>
 {
@@ -16,5 +19,11 @@ public class RestoreDatabaseCliProvider implements CommandProvider<RestoreDataba
     public RestoreDatabaseCli createCommand( ExecutionContext ctx )
     {
         return new RestoreDatabaseCli( ctx );
+    }
+
+    @Override
+    public CommandType commandType()
+    {
+        return RESTORE_DB;
     }
 }

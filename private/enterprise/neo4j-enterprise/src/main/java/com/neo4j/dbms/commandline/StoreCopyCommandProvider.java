@@ -6,8 +6,11 @@
 package com.neo4j.dbms.commandline;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.cli.Command;
 import org.neo4j.cli.CommandProvider;
 import org.neo4j.cli.ExecutionContext;
+
+import static org.neo4j.cli.Command.CommandType.STORE_COPY;
 
 @ServiceProvider
 public class StoreCopyCommandProvider implements CommandProvider<StoreCopyCommand>
@@ -16,5 +19,11 @@ public class StoreCopyCommandProvider implements CommandProvider<StoreCopyComman
     public StoreCopyCommand createCommand( ExecutionContext ctx )
     {
         return new StoreCopyCommand( ctx );
+    }
+
+    @Override
+    public Command.CommandType commandType()
+    {
+        return STORE_COPY;
     }
 }

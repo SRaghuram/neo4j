@@ -5,6 +5,7 @@
  */
 package com.neo4j.commandline.dbms;
 
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,19 +17,21 @@ import java.nio.file.Path;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LoadCommand;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.archive.Dumper;
 import org.neo4j.dbms.archive.Loader;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.ArrayUtil;
-import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.dbms.archive.CompressionFormat.ZSTD;
 import static org.neo4j.function.Predicates.alwaysFalse;
 import static org.neo4j.function.Predicates.alwaysTrue;
@@ -71,7 +74,7 @@ class LoadCommandIT extends AbstractCommandIT
         Label marker = Label.label( "marker" );
         var newDatabase = "mydatabase";
         var databaseName = databaseAPI.databaseName();
-        DatabaseLayout databaseLayout = databaseAPI.databaseLayout();
+        var databaseLayout = databaseAPI.databaseLayout();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             transaction.createNode( marker );
@@ -81,12 +84,44 @@ class LoadCommandIT extends AbstractCommandIT
 
         var dump = testDirectory.file( "dump1" ).toPath();
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
-                alwaysFalse() );
+                                       alwaysFalse() );
 
         load( newDatabase, dump );
 
         managementService.createDatabase( newDatabase );
-        GraphDatabaseService database = managementService.database( newDatabase );
+        var database = managementService.database( newDatabase );
+
+        try ( Transaction tx = database.beginTx() )
+        {
+            assertTrue( tx.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
+        }
+    }
+
+    @Test
+    void loadShouldntFailIfHasClusterStateForDatabase() throws IOException
+    {
+        var marker = Label.label( "marker" );
+        var newDatabase = "mydatabase2";
+        var databaseName = databaseAPI.databaseName();
+        var databaseLayout = databaseAPI.databaseLayout();
+        try ( Transaction transaction = databaseAPI.beginTx() )
+        {
+            transaction.createNode( marker );
+            transaction.commit();
+        }
+        managementService.shutdownDatabase( databaseName );
+
+        var dump = testDirectory.file( "dump2" ).toPath();
+        new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
+                                       alwaysFalse() );
+
+        var config = configWith( neo4jLayout );
+        createRaftGroupDirectoryFor( config, databaseName );
+
+        load( newDatabase, dump );
+
+        managementService.createDatabase( newDatabase );
+        var database = managementService.database( newDatabase );
 
         try ( Transaction tx = database.beginTx() )
         {
@@ -97,9 +132,9 @@ class LoadCommandIT extends AbstractCommandIT
     @Test
     void loadDeletedDatabase() throws IOException
     {
-        Label marker = Label.label( "marker" );
+        var marker = Label.label( "marker" );
         var databaseName = databaseAPI.databaseName();
-        DatabaseLayout databaseLayout = databaseAPI.databaseLayout();
+        var databaseLayout = databaseAPI.databaseLayout();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             transaction.createNode( marker );
@@ -107,9 +142,9 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.file( "dump2" ).toPath();
+        var dump = testDirectory.file( "dump3" ).toPath();
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
-                alwaysFalse() );
+                                       alwaysFalse() );
 
         managementService.dropDatabase( databaseName );
         load( databaseName, dump );
@@ -120,9 +155,9 @@ class LoadCommandIT extends AbstractCommandIT
     @Test
     void overwriteDatabaseWithForce() throws IOException
     {
-        Label marker = Label.label( "marker" );
+        var marker = Label.label( "marker" );
         var databaseName = databaseAPI.databaseName();
-        DatabaseLayout databaseLayout = databaseAPI.databaseLayout();
+        var databaseLayout = databaseAPI.databaseLayout();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             transaction.createNode( marker );
@@ -130,24 +165,71 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.file( "dump3" ).toPath();
+        var dump = testDirectory.file( "dump4" ).toPath();
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
-                alwaysFalse() );
+                                       alwaysFalse() );
 
         assertThrows( CommandFailedException.class, () -> load( databaseName, dump ) );
 
         assertDoesNotThrow( () -> load( databaseName, dump, true ) );
     }
 
+    @Test
+    void enterpriseLoadShouldFailIfHasClusterStateForDatabase() throws IOException
+    {
+        var databaseName = databaseAPI.databaseName();
+        var databaseLayout = databaseAPI.databaseLayout();
+        managementService.shutdownDatabase( databaseName );
+
+        var dump = testDirectory.file( "dump5" ).toPath();
+        new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
+                                       alwaysFalse() );
+
+        var config = configWith( neo4jLayout );
+        createRaftGroupDirectoryFor( config, databaseName );
+
+        IllegalArgumentException illegalArgumentException = assertThrows(
+                IllegalArgumentException.class, () -> enterpriseLoad( databaseName, dump ) );
+
+        assertThat( illegalArgumentException.getMessage() ).isEqualTo(
+                "Database with name [" + databaseName + "] already exists locally. " +
+                "Please run `DROP DATABASE " + databaseName + "` against the system database. " +
+                "If the database already is dropped, then you need to unbind the local instance using `neo4j-admin unbind`. " +
+                "Note that unbind requires stopping the instance, and affects all databases."
+        );
+    }
+
+    private void createRaftGroupDirectoryFor( Config config, String databaseName ) throws IOException
+    {
+        var raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).raftGroupDir( databaseName );
+        fs.mkdirs( raftGroupDir );
+    }
+
+    private Config configWith( Neo4jLayout layout )
+    {
+        return Config.defaults( neo4j_home, layout.homeDirectory() );
+    }
+
+    private void enterpriseLoad( String database, Path dump )
+    {
+        load( database, dump, false, true );
+    }
+
     private void load( String database, Path dump )
     {
-        load( database, dump, false );
+        load( database, dump, false, false );
     }
 
     private void load( String database, Path dump, boolean force )
     {
+        load( database, dump, force, false );
+    }
+
+    private void load( String database, Path dump, boolean force, boolean enterprise )
+    {
         var context = new ExecutionContext( neo4jHome, configDir );
-        var command = new LoadCommand( context, new Loader( System.out ) );
+        var loader = new Loader( System.out );
+        var command = enterprise ? new EnterpriseLoadCommand( context, loader ) : new LoadCommand( context, loader );
 
         String[] args = {"--database=" + database, "--from=" + dump.toAbsolutePath()};
         if ( force )
