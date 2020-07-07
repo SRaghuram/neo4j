@@ -80,9 +80,12 @@ class RunReportCommandIT
                     Jvm.defaultJvm(),
                     "Trinity",
                     Lists.newArrayList( ProfilerType.GC ),
-                    "neo4j://localhost", "user", "pass",
+                    "neo4j://localhost",
+                    "user",
+                    "pass",
                     "s3://benchmarking.neo.hq"
             );
+            Main.main( commandArgs.toArray( new String[]{} ) );
         } );
         assertEquals( "Validation Failed\n" +
                       "\tNo benchmarks were configured!", exception.getMessage() );
