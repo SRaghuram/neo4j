@@ -615,7 +615,7 @@ public class RunReportCommand implements Runnable
             System.out.println( "Export results to: " + jsonOutput.getAbsolutePath() );
             JsonUtil.serializeJson( jsonOutput.toPath(), testRunReport );
 
-            ResultsReporter resultsReporter = new ResultsReporter( resultsDir,
+            ResultsReporter resultsReporter = new ResultsReporter( profilesDir,
                                                                    testRunReport,
                                                                    s3Bucket,
                                                                    true,
