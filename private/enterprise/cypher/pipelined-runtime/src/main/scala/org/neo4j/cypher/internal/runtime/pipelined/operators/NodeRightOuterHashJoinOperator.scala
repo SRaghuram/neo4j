@@ -22,7 +22,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBu
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
-import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
@@ -55,6 +54,7 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
     lhsRefMappings.foreach { case (from, _) =>
       row.setRefAt(from, Values.NO_VALUE)
     }
+    row.next()
     row.truncate()
     morsel
   }
