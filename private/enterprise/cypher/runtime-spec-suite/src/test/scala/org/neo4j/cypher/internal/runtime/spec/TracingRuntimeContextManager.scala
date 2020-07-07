@@ -24,8 +24,7 @@ import org.neo4j.logging.Log
 case class TracingRuntimeContextManager(log: Log,
                                         config: CypherRuntimeConfiguration,
                                         runtimeEnvironment: RuntimeEnvironment,
-                                        cursors: CursorFactory,
-                                        newTracer: () => SchedulerTracer)
+                                        cursors: CursorFactory)
   extends RuntimeContextManager[EnterpriseRuntimeContext] {
 
   override def create(tokenContext: TokenContext,

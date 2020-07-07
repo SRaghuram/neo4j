@@ -13,12 +13,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.CallingThreadQueryE
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FixedWorkersQueryExecutor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.CsvDataWriter
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.CsvFileDataWriter
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.CsvStdOutDataWriter
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.DataPointSchedulerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SingleConsumerDataBuffers
-import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.lifecycle.LifeSupport
@@ -38,7 +38,7 @@ object RuntimeEnvironment {
          workerManager: WorkerManagement,
          memoryTracker: MemoryTracker): RuntimeEnvironment = {
 
-    new RuntimeEnvironment(config,
+    new RuntimeEnvironment(
       createPipelinedQueryExecutor(cursors),
       createParallelQueryExecutor(cursors, lifeSupport, workerManager, memoryTracker),
       createTracer(config, jobScheduler, lifeSupport),
@@ -61,35 +61,33 @@ object RuntimeEnvironment {
     val resourceFactory = (workerId: Int) => new QueryResources(cursors, PageCursorTracer.NULL, memoryTracker, workerId, workerManager.numberOfWorkers)
     val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
     lifeSupport.add(workerResourceProvider)
-    val queryExecutor = new FixedWorkersQueryExecutor( workerResourceProvider, workerManager)
+    val queryExecutor = new FixedWorkersQueryExecutor(workerResourceProvider, workerManager)
     queryExecutor
   }
 
   def createTracer(config: CypherRuntimeConfiguration,
                    jobScheduler: JobScheduler,
                    lifeSupport: LifeSupport): SchedulerTracer = {
-    if (config.schedulerTracing == NoSchedulerTracing)
-      SchedulerTracer.NoSchedulerTracer
-    else {
-      val dataWriter =
-        config.schedulerTracing match {
-          case StdOutSchedulerTracing => new CsvStdOutDataWriter
-          case FileSchedulerTracing(file) => new CsvFileDataWriter(file)
-          case tracing => throw new InternalException(s"Unknown scheduler tracing: $tracing")
-        }
-
-      val dataTracer = new SingleConsumerDataBuffers()
-      val threadFactory = jobScheduler.threadFactory(Group.CYPHER_WORKER)
-      val tracerWorker = new SchedulerTracerOutputWorker(dataWriter, dataTracer, threadFactory)
-      lifeSupport.add(tracerWorker)
-
-      new DataPointSchedulerTracer(dataTracer)
+    config.schedulerTracing match {
+      case NoSchedulerTracing => SchedulerTracer.NoSchedulerTracer
+      case StdOutSchedulerTracing => dataPointTracer(jobScheduler, lifeSupport, new CsvStdOutDataWriter)
+      case FileSchedulerTracing(file) => dataPointTracer(jobScheduler, lifeSupport, new CsvFileDataWriter(file))
     }
+  }
+
+  private def dataPointTracer(jobScheduler: JobScheduler,
+                              lifeSupport: LifeSupport,
+                              dataWriter: CsvDataWriter) = {
+    val dataTracer = new SingleConsumerDataBuffers()
+    val threadFactory = jobScheduler.threadFactory(Group.CYPHER_WORKER)
+    val tracerWorker = new SchedulerTracerOutputWorker(dataWriter, dataTracer, threadFactory)
+    lifeSupport.add(tracerWorker)
+
+    new DataPointSchedulerTracer(dataTracer)
   }
 }
 
-class RuntimeEnvironment(config: CypherRuntimeConfiguration,
-                         pipelinedQueryExecutor: QueryExecutor,
+class RuntimeEnvironment(pipelinedQueryExecutor: QueryExecutor,
                          parallelQueryExecutor: QueryExecutor,
                          val tracer: SchedulerTracer,
                          val cursors: CursorFactory,
@@ -101,5 +99,16 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
 
   def getCompiledExpressionCache: CachingExpressionCompilerCache = expressionCache
 
+  /**
+   * Create a copy of this runtime environment but switch the scheduler tracer implementation.
+   */
+  def withSchedulerTracer(tracer: SchedulerTracer): RuntimeEnvironment = {
+    new RuntimeEnvironment(
+      pipelinedQueryExecutor,
+      parallelQueryExecutor,
+      tracer,
+      cursors,
+      expressionCache)
+  }
 }
 

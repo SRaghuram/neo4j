@@ -21,6 +21,8 @@ abstract class ParallelInputTestBase(edition: Edition[EnterpriseRuntimeContext],
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
+      .unwind("[1] AS whoCares")
+      .nonFuseable()
       .input(variables = Seq("x"))
       .build()
 

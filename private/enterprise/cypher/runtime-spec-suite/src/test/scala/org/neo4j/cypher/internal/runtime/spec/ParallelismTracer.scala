@@ -21,9 +21,6 @@ import scala.collection.mutable.ArrayBuffer
 
 class ParallelismTracer extends SchedulerTracer {
 
-  private val _workerCount = new AtomicInteger()
-  private val x: ThreadLocal[Int] = ThreadLocal.withInitial(() => _workerCount.getAndIncrement())
-
   private val workUnitEventLists = new ConcurrentLinkedQueue[ArrayBuffer[TestWorkUnitEvent]]()
   private val workUnitEvents: ThreadLocal[ArrayBuffer[TestWorkUnitEvent]] =
     ThreadLocal.withInitial(
@@ -52,29 +49,27 @@ class ParallelismTracer extends SchedulerTracer {
     false
   }
 
-  override def traceQuery(): QueryExecutionTracer = new TestQueryExecutionTracer
+  override def traceQuery(): QueryExecutionTracer = {
+    workUnitEventLists.forEach(_.clear())
+    new TestQueryExecutionTracer
+  }
 
   private class TestQueryExecutionTracer extends QueryExecutionTracer {
 
     override def scheduleWorkUnit(workId: WorkIdentity,
                                   upstreamWorkUnitEvent: WorkUnitEvent): ScheduledWorkUnitEvent =
-      new TestScheduledWorkUnitEvent(workId.workId, workId.workDescription)
+      new TestScheduledWorkUnitEvent(workId.workId)
 
     override def stopQuery(): Unit = {}
   }
 
-  private class TestScheduledWorkUnitEvent(workId: Id, workDescription: String) extends ScheduledWorkUnitEvent {
+  private class TestScheduledWorkUnitEvent(workId: Id) extends ScheduledWorkUnitEvent {
 
-    override def start(): WorkUnitEvent = {
-      x.get()
-
-      new TestWorkUnitEvent(System.nanoTime(), workId, workDescription)
-    }
+    override def start(): WorkUnitEvent = new TestWorkUnitEvent(System.nanoTime(), workId)
   }
 
   private class TestWorkUnitEvent(val startTime: Long,
-                                  val workId: Id,
-                                  val workDescription: String) extends WorkUnitEvent {
+                                  val workId: Id) extends WorkUnitEvent {
 
     var stopTime: Long = -1L
 

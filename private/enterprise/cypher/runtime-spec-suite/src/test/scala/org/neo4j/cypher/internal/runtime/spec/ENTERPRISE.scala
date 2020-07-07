@@ -33,15 +33,16 @@ object ENTERPRISE {
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
       val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
 
-      val runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE)
+      val runtimeEnvironment = RuntimeEnvironment.
+        of(runtimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE)
+          .withSchedulerTracer(new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler, lifeSupport),
+            new ParallelismTracer))
 
       TracingRuntimeContextManager(
         logProvider.getLog("test"),
         runtimeConfig,
         runtimeEnvironment,
-        kernel.cursors(),
-        () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler, lifeSupport),
-          new ParallelismTracer))
+        kernel.cursors())
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
     GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(-1),
@@ -69,13 +70,12 @@ object ENTERPRISE {
 
   val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](
-      context =>
-        if (System.getenv().containsKey("RUN_EXPERIMENTAL")) {
-          val composingTracer = context.runtimeEnvironment.tracer.asInstanceOf[ComposingSchedulerTracer]
-          composingTracer.inners.collectFirst {
-            case x: ParallelismTracer => x.hasEvidenceOfParallelism
-          }.get
-        } else true,
+      context => {
+        val composingTracer = context.runtimeEnvironment.tracer.asInstanceOf[ComposingSchedulerTracer]
+        composingTracer.inners.collectFirst {
+          case x: ParallelismTracer => x.hasEvidenceOfParallelism
+        }.get
+      },
       "Evidence of parallelism could not be found"
     )
 }
