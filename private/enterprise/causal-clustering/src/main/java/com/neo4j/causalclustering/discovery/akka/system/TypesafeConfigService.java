@@ -53,8 +53,8 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public final class TypesafeConfigService
 {
-    static final String DISCOVERY_SINK_DISPATCHER = "discovery-dispatcher";
-    static final String DISCOVERY_DEFAULT_DISPATCHER = "default-dispatcher";
+    static final String DISCOVERY_SINK_DISPATCHER = "discovery-to-neo4j-dispatcher";
+    static final String DISCOVERY_DEFAULT_DISPATCHER = "default-dispatcher"; // Akka's name, do not change
     static final String LOGGING_DISPATCHER = "logging-dispatcher";
 
     public enum ArteryTransport

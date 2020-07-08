@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.discovery.akka.system;
 
 import akka.actor.Address;
 import akka.remote.ThisActorSystemQuarantinedEvent;
-import akka.remote.artery.tcp.SSLEngineProvider;
-import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
@@ -36,14 +34,13 @@ import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.ports.PortAuthority;
 
-import static com.neo4j.causalclustering.discovery.akka.system.AkkaDistributedDataLeakIT.coreTopologyService;
+import static com.neo4j.causalclustering.discovery.akka.system.AkkaDiscoverySystemHelper.NAMED_DATABASE_ID;
+import static com.neo4j.causalclustering.discovery.akka.system.AkkaDiscoverySystemHelper.coreTopologyService;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
@@ -97,7 +94,7 @@ public class AkkaDiscoveryRestartIT
 
     private void awaitTopology( CoreTopologyService topologyService )
     {
-        assertEventually( () -> topologyService.coreTopologyForDatabase( AkkaDistributedDataLeakIT.NAMED_DATABASE_ID ),
+        assertEventually( () -> topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ),
                 topology -> topology.members().size() == CLUSTER_SIZE,
                 TIMEOUT, SECONDS );
     }
@@ -147,11 +144,9 @@ public class AkkaDiscoveryRestartIT
                     logProvider );
         }
 
-        protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, Config config, LogProvider logProvider )
+        protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader ignored, Config config, LogProvider logProvider )
         {
-            SslPolicy sslPolicy = sslPolicyLoader.hasPolicyForSource( CLUSTER ) ? sslPolicyLoader.getPolicy( CLUSTER ) : null;
-            Optional<SSLEngineProvider> sslEngineProvider = Optional.ofNullable( sslPolicy ).map( AkkaDiscoverySSLEngineProvider::new );
-            return new ActorSystemFactory( sslEngineProvider, config, logProvider );
+            return new ActorSystemFactory( Optional.empty(), config, logProvider );
         }
     }
 
