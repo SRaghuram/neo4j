@@ -143,7 +143,6 @@ class ClusterStartWithVMPauseIT
             {
                 if ( leader == null && previousState.operatorState() == INITIAL && newState.operatorState() == STARTED )
                 {
-                    SECONDS.sleep( 5 );
                     var databaseName = previousState.databaseId().name();
                     var monitors = core.resolveDependency( databaseName, RaftMonitors.class );
                     monitors.addMonitorListener( new VmPauseSimulatorMonitor( core, databaseName ) );
