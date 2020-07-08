@@ -41,7 +41,7 @@ import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
@@ -153,7 +153,7 @@ class StoreCopyClientIT
         // given
         fileB.setRemainingFailed( 2 );
         var storeFileStream = new InMemoryStoreStreamProvider();
-        var guard = mock( AvailabilityGuard.class );
+        var guard = mock( CompositeDatabaseAvailabilityGuard.class );
         when( guard.isShutdown() ).thenReturn( false ).thenReturn( true );
         Supplier<TerminationCondition> shutdownCondition = () -> new IsShutdownTerminationCondition( guard );
 

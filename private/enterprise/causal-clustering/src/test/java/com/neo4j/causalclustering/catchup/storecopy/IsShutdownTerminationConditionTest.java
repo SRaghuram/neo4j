@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -19,7 +19,7 @@ class IsShutdownTerminationConditionTest
     void shouldThrowIfAvailabilityGuardIsShutdown() throws StoreCopyFailedException
     {
         // given
-        var guard = mock( AvailabilityGuard.class );
+        var guard = mock( CompositeDatabaseAvailabilityGuard.class );
         var isShutdownCondition = new IsShutdownTerminationCondition( guard );
         when( guard.isShutdown() ).thenReturn( false ).thenReturn( true );
 

@@ -21,7 +21,6 @@ import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
-import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -32,12 +31,11 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.memory.MemoryTracker;
-import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
@@ -71,6 +69,7 @@ public final class CatchupComponentsProvider
     private final DatabaseTracers databaseTracers;
     private final MemoryTracker otherMemoryGlobalTracker;
     private final SystemNanoClock clock;
+    private final CompositeDatabaseAvailabilityGuard availabilityGuard;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -95,6 +94,7 @@ public final class CatchupComponentsProvider
                 new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
+        this.availabilityGuard = globalModule.getGlobalAvailabilityGuard();
     }
 
     private CatchupClientFactory createCatchupClientFactory()
@@ -171,8 +171,6 @@ public final class CatchupComponentsProvider
                 databaseLogProvider, storeCopyBackoffStrategy );
         var transactionLogFactory = new TransactionLogCatchUpFactory();
         var txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider );
-
-        var availabilityGuard = clusteredDatabaseContext.database().getDatabaseAvailabilityGuard();
 
         var remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache, storeCopyClient, txPullClient, transactionLogFactory, config,
                                            monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer(),

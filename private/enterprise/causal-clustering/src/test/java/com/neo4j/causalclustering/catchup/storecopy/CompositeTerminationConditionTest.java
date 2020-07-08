@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.internal.helpers.Exceptions;
-import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.time.FakeClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,9 +87,9 @@ public class CompositeTerminationConditionTest
         assertThat( Exceptions.findCauseOrSuppressed( compositeException, e -> Objects.equals( e.getMessage(), shutdownException.getMessage() ) ) ).isPresent();
     }
 
-    private AvailabilityGuard nonShutdownGuard()
+    private CompositeDatabaseAvailabilityGuard nonShutdownGuard()
     {
-        var guard = mock( AvailabilityGuard.class );
+        var guard = mock( CompositeDatabaseAvailabilityGuard.class );
         when( guard.isShutdown() ).thenReturn( false );
         return guard;
     }

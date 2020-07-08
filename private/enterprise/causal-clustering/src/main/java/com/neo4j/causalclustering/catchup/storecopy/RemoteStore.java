@@ -20,7 +20,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -55,13 +55,13 @@ public class RemoteStore
     private final NamedDatabaseId namedDatabaseId;
     private final PageCacheTracer pageCacheTracer;
     private final MemoryTracker memoryTracker;
-    private final AvailabilityGuard availabilityGuard;
+    private final CompositeDatabaseAvailabilityGuard availabilityGuard;
     private final SystemNanoClock clock;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
             TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
             NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, SystemNanoClock clock,
-            AvailabilityGuard availabilityGuard )
+            CompositeDatabaseAvailabilityGuard availabilityGuard )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
