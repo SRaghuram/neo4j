@@ -177,8 +177,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     profile(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n) WHERE (n)-[:FOO]->() RETURN *",
       _ should (
-        includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
-          includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
+        includeSomewhere.aPlan.withRows(1).withDBHits(0) // SemiApply or Apply/Limit
+          .withRHS(includeSomewhere.aPlan("Expand(All)").withDBHitsBetween(2, 4))
+          and includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
         ))
   }
 
@@ -205,7 +206,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     profile(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *",
       _ should (
-        includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
+        includeSomewhere.aPlan.withRows(1).withDBHits(0) // AntiSemiApply or Apply/Anti/Limit
+          .withRHS(includeSomewhere.aPlan("Expand(All)").withDBHitsBetween(2, 4))
+          and
           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
         ))
   }
