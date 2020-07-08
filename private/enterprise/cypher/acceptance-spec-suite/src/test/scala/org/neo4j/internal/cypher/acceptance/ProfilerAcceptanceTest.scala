@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.exceptions.ProfilerStatisticsNotReadyException
 import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.graphdb.Result
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -137,6 +138,40 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
           haveAsRoot.aPlan.withGlobalMemory()
             .onTopOf(aPlan("Distinct").withMemory()))
     )
+  }
+
+  test("report total memory") {
+    val result = profileSingle("MATCH (n) RETURN collect(n)")
+    val planString = result.executionPlanDescription().toString
+    planString should include regex "total allocated memory: [1-9][0-9]*"
+  }
+
+  test("report total memory outside transaction") {
+    def drain(res: Result): Result = {
+      while (res.hasNext) res.next()
+      res
+    }
+
+    val result = inTx(tx => drain(tx.execute("PROFILE MATCH (n) RETURN collect(n)")))
+    val planString = result.getExecutionPlanDescription.toString
+    planString should include regex "total allocated memory: [1-9][0-9]*"
+  }
+
+  test("total memory should be tracked per query in a transaction") {
+    def drain(res: Result): Result = {
+      while (res.hasNext) res.next()
+      res
+    }
+
+    val (p1, p2) = inTx { tx =>
+      val r1 = drain(tx.execute("PROFILE UNWIND range(0,100) AS x RETURN collect(x)"))
+      val r2 = drain(tx.execute("PROFILE UNWIND range(0,500) AS x RETURN collect(x)"))
+      (r1.getExecutionPlanDescription, r2.getExecutionPlanDescription)
+    }
+    val mem1 = p1.getArguments.get("GlobalMemory").asInstanceOf[Long]
+    val mem2 = p2.getArguments.get("GlobalMemory").asInstanceOf[Long]
+    mem1 should be > 0L
+    mem1 should be < mem2
   }
 
   test("profile standalone call") {

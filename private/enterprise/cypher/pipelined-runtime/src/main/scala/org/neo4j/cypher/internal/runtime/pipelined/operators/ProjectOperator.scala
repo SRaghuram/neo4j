@@ -10,7 +10,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler

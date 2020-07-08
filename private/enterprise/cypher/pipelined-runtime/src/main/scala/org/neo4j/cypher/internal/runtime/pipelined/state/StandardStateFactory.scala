@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
-import org.neo4j.cypher.internal.runtime.BoundedMemoryTracker
+import org.neo4j.cypher.internal.runtime.BoundedQueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.NoOpQueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -57,11 +57,11 @@ class StandardStateFactory extends StateFactory {
 
   override def newMemoryTracker(operatorId: Int): MemoryTracker = EmptyMemoryTracker.INSTANCE
 
-  override val memoryTracker: QueryMemoryTracker = NoMemoryTracker
+  override val memoryTracker: QueryMemoryTracker = NoOpQueryMemoryTracker
 }
 
 class MemoryTrackingStandardStateFactory(transactionMemoryTracker: MemoryTracker) extends StandardStateFactory {
-  override val memoryTracker: QueryMemoryTracker = BoundedMemoryTracker(transactionMemoryTracker)
+  override val memoryTracker: QueryMemoryTracker = BoundedQueryMemoryTracker(transactionMemoryTracker)
 
   override def newBuffer[T <: MemoizingMeasurable](operatorId: Id): Buffer[T] = {
     val operatorMemoryTracker = memoryTracker.memoryTrackerForOperator(operatorId.x)

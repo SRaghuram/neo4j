@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.NoOpQueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -56,7 +56,7 @@ class ConcurrentStateFactory extends StateFactory {
   }
 
   // We currently don't track memory in parallel
-  override val memoryTracker: QueryMemoryTracker = NoMemoryTracker
+  override val memoryTracker: QueryMemoryTracker = NoOpQueryMemoryTracker
 
   override def newMemoryTracker(operatorId: Int): MemoryTracker = EmptyMemoryTracker.INSTANCE
 }

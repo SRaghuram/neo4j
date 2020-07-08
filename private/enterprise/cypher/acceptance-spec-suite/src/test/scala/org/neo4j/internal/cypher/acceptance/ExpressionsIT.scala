@@ -73,7 +73,7 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.MapCypherRow
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.NoOpQueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
@@ -4564,7 +4564,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
       Array.empty,
       expressionVariables,
       DO_NOTHING_SUBSCRIBER,
-      NoMemoryTracker)
+      NoOpQueryMemoryTracker)
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
     val plan = PhysicalPlan(null,
