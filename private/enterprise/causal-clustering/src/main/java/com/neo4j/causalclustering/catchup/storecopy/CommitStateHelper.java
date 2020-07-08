@@ -28,9 +28,9 @@ import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 public class CommitStateHelper
 {
     private final StorageEngineFactory storageEngineFactory;
-    private PageCache pageCache;
-    private FileSystemAbstraction fs;
-    private Config config;
+    private final PageCache pageCache;
+    private final FileSystemAbstraction fs;
+    private final Config config;
 
     public CommitStateHelper( PageCache pageCache, FileSystemAbstraction fs, Config config, StorageEngineFactory storageEngineFactory )
     {

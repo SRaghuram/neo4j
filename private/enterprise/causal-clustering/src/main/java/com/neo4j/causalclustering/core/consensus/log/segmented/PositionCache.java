@@ -7,6 +7,8 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 
+import static java.util.Arrays.fill;
+
 /**
  * Caches (offsetIndex) -> (byteOffset) mappings, which can be used to find an exact or
  * approximate byte position for an entry given an index. The index is defined as a relative
@@ -23,16 +25,13 @@ class PositionCache
 
     private final LogPosition first;
 
-    private LogPosition[] cache = new LogPosition[CACHE_SIZE];
+    private final LogPosition[] cache = new LogPosition[CACHE_SIZE];
     private int pos;
 
     PositionCache( long recordOffset )
     {
         first = new LogPosition( 0, recordOffset );
-        for ( int i = 0; i < cache.length; i++ )
-        {
-            cache[i] = first;
-        }
+        fill( cache, first );
     }
 
     /**

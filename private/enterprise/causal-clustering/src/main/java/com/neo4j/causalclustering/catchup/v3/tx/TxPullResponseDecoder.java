@@ -27,8 +27,8 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
     private PhysicalTransactionCursor transactionCursor;
     private NextTxInfo nextTxInfo;
     private StoreId storeId;
-    private LogEntryReader reader;
-    private ReadableNetworkChannelDelegator delegatingChannel = new ReadableNetworkChannelDelegator();
+    private final LogEntryReader reader;
+    private final ReadableNetworkChannelDelegator delegatingChannel = new ReadableNetworkChannelDelegator();
 
     public TxPullResponseDecoder( CommandReaderFactory commandReaderFactory )
     {

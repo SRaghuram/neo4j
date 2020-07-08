@@ -25,7 +25,7 @@ public class ChunkedTransaction implements ChunkedInput<ByteBuf>
     private final ReplicatedTransactionFactory.TransactionRepresentationWriter txWriter;
     private final DatabaseId databaseId;
     private ChunkingNetworkChannel channel;
-    private Queue<ByteBuf> chunks = new LinkedList<>();
+    private final Queue<ByteBuf> chunks = new LinkedList<>();
 
     ChunkedTransaction( TransactionRepresentationReplicatedTransaction tx )
     {

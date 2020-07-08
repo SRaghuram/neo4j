@@ -19,9 +19,9 @@ public class RaftTimersConfig
      */
     static final int HEARTBEAT_COUNT_IN_FAILURE_DETECTION = 3;
 
-    private DurationRange detectionWindow;
-    private DurationRange resolutionWindow;
-    private Duration heartbeatInterval;
+    private final DurationRange detectionWindow;
+    private final DurationRange resolutionWindow;
+    private final Duration heartbeatInterval;
 
     RaftTimersConfig( Config config )
     {

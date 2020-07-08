@@ -29,7 +29,7 @@ public class RaftGroupFactory
     private final ClusterStateLayout clusterState;
     private final CoreTopologyService topologyService;
     private final ClusterStateStorageFactory storageFactory;
-    private LeaderTransferService leaderTransferService;
+    private final LeaderTransferService leaderTransferService;
     private final Function<NamedDatabaseId,LeaderListener> listenerFactory;
     private final MemoryTracker memoryTracker;
 
