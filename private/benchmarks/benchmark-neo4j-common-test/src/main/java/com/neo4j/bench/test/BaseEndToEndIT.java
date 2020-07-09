@@ -39,7 +39,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,17 +50,15 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.harness.junit.extension.Neo4jExtension;
-import org.neo4j.internal.helpers.HostnamePort;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -186,9 +183,15 @@ public abstract class BaseEndToEndIT
     }
 
     @AfterEach
-    public void tearDown()
+    public void tearDown( GraphDatabaseService databaseService )
     {
         s3api.shutdown();
+        // this is hacky HACK, needs to be fixed in Neo4jExtension
+        try ( Transaction transaction = databaseService.beginTx() )
+        {
+            transaction.execute( "MATCH (n) DETACH DELETE n" ).close();
+            transaction.commit();
+        }
     }
 
     /**
@@ -225,6 +228,8 @@ public abstract class BaseEndToEndIT
                             resolvedToolJar.toAbsolutePath() ) );
 
         // assert if environment is setup
+        assertSysctlParameter( asList( 1, -1 ), "kernel.perf_event_paranoid" );
+        assertSysctlParameter( asList( 0 ), "kernel.kptr_restrict" );
 
         // logs tailer
         File outputLog = temporaryFolder.resolve( "endtoend.out.log" ).toFile();
