@@ -14,7 +14,7 @@ case class ArgumentSlottedPipe()(val id: Id = Id.INVALID_ID)
   extends Pipe {
 
   def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
-    val context = state.newExecutionContextWithInitialContext(executionContextFactory)
+    val context = state.newRowWithArgument(rowFactory)
     Iterator(context)
   }
 }

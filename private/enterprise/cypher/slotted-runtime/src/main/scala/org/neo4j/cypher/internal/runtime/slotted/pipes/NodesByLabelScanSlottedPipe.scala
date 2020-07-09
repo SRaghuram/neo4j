@@ -28,7 +28,7 @@ case class NodesByLabelScanSlottedPipe(ident: String,
     if (labelId == LazyLabel.UNKNOWN) Iterator.empty
     else {
       PrimitiveLongHelper.map(state.query.getNodesByLabelPrimitive(labelId, indexOrder), { nodeId =>
-        val context = state.newExecutionContextWithInitialContext(executionContextFactory)
+        val context = state.newRowWithArgument(rowFactory)
         context.setLongAt(offset, nodeId)
         context
       })

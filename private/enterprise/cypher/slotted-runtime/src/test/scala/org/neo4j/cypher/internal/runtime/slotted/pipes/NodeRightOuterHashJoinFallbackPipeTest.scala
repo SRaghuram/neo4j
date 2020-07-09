@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeRightOuterHashJoinPipe
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.slotted.SlottedCypherRowFactory
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.RowL
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.mockPipeFor
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.testableResult
@@ -57,7 +57,7 @@ class NodeRightOuterHashJoinFallbackPipeTest extends CypherFunSuite {
     )
 
     val pipe = NodeRightOuterHashJoinPipe(Set("a", "b"), left, right, Set("c"))()
-    pipe.executionContextFactory = SlottedExecutionContextFactory(hashSlots, SlotConfiguration.Size.zero)
+    pipe.rowFactory = SlottedCypherRowFactory(hashSlots, SlotConfiguration.Size.zero)
 
     // when
     val result = pipe.createResults(queryState)

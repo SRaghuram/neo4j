@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.CypherRowFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedAggregationTableFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedChunkReceiver
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -59,7 +59,7 @@ object SlottedOrderedGroupingAggTable {
                      unorderedGroupingColumns: GroupingExpression,
                      aggregations: Map[Int, AggregationExpression]) extends OrderedAggregationTableFactory {
 
-    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationTable with OrderedChunkReceiver =
+    override def table(state: QueryState, rowFactory: CypherRowFactory, operatorId: Id): AggregationTable with OrderedChunkReceiver =
       new SlottedOrderedGroupingAggTable(slots, orderedGroupingColumns,unorderedGroupingColumns, aggregations, state, operatorId)
   }
 }

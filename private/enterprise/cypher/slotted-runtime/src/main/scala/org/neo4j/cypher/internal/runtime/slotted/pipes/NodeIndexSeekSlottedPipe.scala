@@ -39,7 +39,7 @@ case class NodeIndexSeekSlottedPipe(ident: String,
 
   protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
     val index = state.queryIndexes(queryIndexId)
-    val context = state.newExecutionContextWithInitialContext(executionContextFactory)
+    val context = state.newRowWithArgument(rowFactory)
     new SlottedIndexIterator(state, indexSeek(state, index, needsValues, indexOrder, context))
   }
 

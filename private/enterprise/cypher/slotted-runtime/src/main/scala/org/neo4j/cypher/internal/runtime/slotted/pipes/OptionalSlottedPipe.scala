@@ -42,7 +42,7 @@ case class OptionalSlottedPipe(source: Pipe,
   }
 
   private def notFoundExecutionContext(state: QueryState): CypherRow = {
-    val context = state.newExecutionContextWithInitialContext(executionContextFactory)
+    val context = state.newRowWithArgument(rowFactory)
     setNullableSlotsToNull(context)
     context
   }

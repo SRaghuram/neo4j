@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Aggreg
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTableFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.computeNewAggregatorsFunction
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.CypherRowFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
@@ -87,7 +87,7 @@ object SlottedGroupingAggTable {
   case class Factory(slots: SlotConfiguration,
                      groupingColumns: GroupingExpression,
                      aggregations: Map[Int, AggregationExpression]) extends AggregationTableFactory {
-    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationTable =
+    override def table(state: QueryState, rowFactory: CypherRowFactory, operatorId: Id): AggregationTable =
       new SlottedGroupingAggTable(slots, groupingColumns, aggregations, state, operatorId)
   }
 

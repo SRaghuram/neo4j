@@ -8,17 +8,17 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.CypherRowFactory
 import org.neo4j.values.AnyValue
 
-case class SlottedExecutionContextFactory(slots: SlotConfiguration, argumentSize: SlotConfiguration.Size) extends ExecutionContextFactory {
+case class SlottedCypherRowFactory(slots: SlotConfiguration, argumentSize: SlotConfiguration.Size) extends CypherRowFactory {
   private val nLongArgs = argumentSize.nLongs
   private val nRefArgs = argumentSize.nReferences
 
-  override def newExecutionContext(): CypherRow =
+  override def newRow(): CypherRow =
     SlottedRow(slots)
 
-  override def copyWithArgument(init: ReadableRow): CypherRow = {
+  override def copyArgumentOf(init: ReadableRow): CypherRow = {
     val newCtx = SlottedRow(slots)
     newCtx.copyFrom(init, nLongArgs, nRefArgs)
     newCtx

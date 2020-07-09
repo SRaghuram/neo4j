@@ -29,7 +29,7 @@ trait IndexSlottedPipeWithValues extends Pipe {
 
     override protected def fetchNext(): CypherRow = {
       if (cursor.next()) {
-        val slottedContext = state.newExecutionContextWithInitialContext(executionContextFactory)
+        val slottedContext = state.newRowWithArgument(rowFactory)
         slottedContext.setLongAt(offset, cursor.nodeReference())
         var i = 0
         while (i < indexPropertyIndices.length) {
