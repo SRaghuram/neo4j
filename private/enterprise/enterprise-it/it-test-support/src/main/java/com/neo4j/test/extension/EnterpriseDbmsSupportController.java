@@ -19,6 +19,8 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DbmsController;
 import org.neo4j.test.extension.DbmsSupportController;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+
 public class EnterpriseDbmsSupportController extends DbmsSupportController
 {
     public EnterpriseDbmsSupportController( ExtensionContext context )
@@ -35,8 +37,9 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
                 getTestAnnotation( ImpermanentEnterpriseDbmsExtension.class ) );
 
         // Create service
-        buildDbms( enterpriseDbmsExtension.configurationCallback, callback );
-        startDatabase( databaseName );
+        var dbms = buildDbms( enterpriseDbmsExtension.configurationCallback, callback );
+        var databaseToStart = isNotEmpty( databaseName ) ? databaseName : getDatabaseName( dbms );
+        startDatabase( databaseToStart );
     }
 
     @Override
