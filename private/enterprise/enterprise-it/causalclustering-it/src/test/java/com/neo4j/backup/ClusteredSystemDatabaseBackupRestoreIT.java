@@ -18,6 +18,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -58,6 +60,7 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
 @ClusterExtension
 @TestInstance( PER_METHOD )
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class ClusteredSystemDatabaseBackupRestoreIT
 {
     @Inject

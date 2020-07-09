@@ -8,6 +8,8 @@ package com.neo4j.dbms.database;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -38,6 +40,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 @EnterpriseDbmsExtension
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 public class DropDumpDatabaseIT
 {
     @Inject

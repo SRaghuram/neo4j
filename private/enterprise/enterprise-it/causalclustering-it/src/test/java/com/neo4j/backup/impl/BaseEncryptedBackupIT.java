@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -54,6 +56,7 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 @ExtendWith( SuppressOutputExtension.class )
 @TestDirectoryExtension
 @ClusterExtension
+@ResourceLock( Resources.SYSTEM_OUT )
 abstract class BaseEncryptedBackupIT
 {
     private static final String BACKUP_POLICY_NAME = "backup";

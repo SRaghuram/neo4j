@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -71,6 +73,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( SuppressOutputExtension.class )
 @Execution( CONCURRENT )
+@ResourceLock( Resources.SYSTEM_OUT )
 public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSupport
 {
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );

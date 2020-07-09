@@ -17,6 +17,8 @@ import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
@@ -79,6 +81,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class StoreCopyClientTest
 {
     private static final long LAST_CHECKPOINTED_TX = 11;

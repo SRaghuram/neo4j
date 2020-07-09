@@ -8,6 +8,8 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,6 +36,7 @@ import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_ro
 
 @ExtendWith( SuppressOutputExtension.class )
 @EnterpriseDbmsExtension( configurationCallback = "configuration" )
+@ResourceLock( Resources.SYSTEM_OUT )
 abstract class AbstractCommandIT
 {
     @Inject

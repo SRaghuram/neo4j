@@ -8,6 +8,8 @@ package com.neo4j.procedure.routing;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -39,6 +41,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
 {
     @Inject

@@ -22,6 +22,8 @@ import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,6 +67,7 @@ import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 @ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
 @TestInstance( PER_METHOD )
+@ResourceLock( Resources.SYSTEM_OUT )
 class ServerPoliciesLoadBalancingIT
 {
     @Inject

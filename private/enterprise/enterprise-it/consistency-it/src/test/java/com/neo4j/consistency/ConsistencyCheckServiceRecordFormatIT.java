@@ -8,6 +8,8 @@ package com.neo4j.consistency;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -35,6 +37,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @Neo4jLayoutExtension
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class ConsistencyCheckServiceRecordFormatIT
 {
     @Inject

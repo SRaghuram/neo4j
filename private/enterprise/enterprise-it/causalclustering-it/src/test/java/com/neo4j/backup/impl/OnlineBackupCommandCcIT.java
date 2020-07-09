@@ -17,6 +17,8 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,6 +77,7 @@ import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 @ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
+@ResourceLock( Resources.SYSTEM_OUT )
 class OnlineBackupCommandCcIT
 {
     @Inject

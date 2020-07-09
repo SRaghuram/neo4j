@@ -15,6 +15,8 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -42,6 +44,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 @ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
 @TestInstance( PER_METHOD )
+@ResourceLock( Resources.SYSTEM_OUT )
 class ClusterSeedingIT
 {
     @Inject

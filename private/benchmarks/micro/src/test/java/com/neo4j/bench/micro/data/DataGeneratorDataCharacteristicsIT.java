@@ -17,6 +17,8 @@ import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -37,6 +39,7 @@ import static org.neo4j.graphdb.Label.label;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class DataGeneratorDataCharacteristicsIT
 {
     @Inject

@@ -16,6 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,6 +51,7 @@ import static org.neo4j.internal.helpers.Strings.joinAsLines;
 @ExtendWith( SuppressOutputExtension.class )
 @ExtendWith( MockedRoutingContextExtension.class )
 @ClusterExtension
+@ResourceLock( Resources.SYSTEM_OUT )
 class ClusterRoutingIT extends ClusterTestSupport
 {
     @Inject

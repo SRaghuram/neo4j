@@ -23,6 +23,8 @@ import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
 import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.io.File;
@@ -46,6 +48,7 @@ import static org.hamcrest.Matchers.equalTo;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class InteractiveRunIT extends AnnotationsFixture
 {
     @Inject

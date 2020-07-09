@@ -15,6 +15,8 @@ import org.apache.commons.lang3.SystemUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -41,6 +43,7 @@ import static org.neo4j.graphdb.RelationshipType.withName;
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
+@ResourceLock( Resources.SYSTEM_OUT )
 class AdminToolCausalClusterBackupIT
 {
     @Inject
