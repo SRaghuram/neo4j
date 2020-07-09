@@ -8,6 +8,7 @@ package com.neo4j.fabric.driver;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.Neo4jException;
+import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
 import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -36,9 +37,9 @@ public class Utils
 
     static FabricException translateError( Neo4jException driverException )
     {
-        // only user errors ( typically wrongly written query ) keep the original status code
+        // only user ( typically wrongly written query ) and transient errors keep the original status code
         // server errors get a special status to distinguish them from error occurring on the local server
-        if ( driverException instanceof ClientException )
+        if ( driverException instanceof ClientException || driverException instanceof TransientException )
         {
             var serverCode = Status.Code.all().stream().filter( code -> code.code().serialize().equals( driverException.code() ) ).findAny();
 
