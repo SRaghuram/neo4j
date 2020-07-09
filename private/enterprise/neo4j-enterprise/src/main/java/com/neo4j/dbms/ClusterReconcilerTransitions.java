@@ -7,8 +7,12 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
-import org.neo4j.logging.LogProvider;
+import java.util.function.Consumer;
 
+import org.neo4j.kernel.database.NamedDatabaseId;
+
+import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -20,14 +24,12 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
  */
 final class ClusterReconcilerTransitions extends ReconcilerTransitions
 {
-    private final Transition startAfterStoreCopy;
-    private final Transition stopBeforeStoreCopy;
+    private final ClusteredMultiDatabaseManager databaseManager;
 
-    ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider )
+    ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager )
     {
         super( databaseManager );
-        this.startAfterStoreCopy = startAfterStoreCopyFactory( databaseManager );
-        this.stopBeforeStoreCopy = stopBeforeStoreCopyFactory( databaseManager );
+        this.databaseManager = databaseManager;
     }
 
     private static Transition startAfterStoreCopyFactory( ClusteredMultiDatabaseManager databaseManager )
@@ -46,13 +48,34 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
                          .ifFailedThenDo( databaseManager::stopDatabase, STOPPED );
     }
 
+    private static Transition ensureDirtyDatabaseExists( ClusteredMultiDatabaseManager databaseManager )
+    {
+        Consumer<NamedDatabaseId> transitionFunction = databaseId ->
+        {
+            var databaseExists = databaseManager.getDatabaseContext( databaseId ).isPresent();
+            if ( !databaseExists )
+            {
+                databaseManager.createDatabase( databaseId );
+            }
+        };
+        return Transition.from( DIRTY )
+                         .doTransition( transitionFunction )
+                         .ifSucceeded( DIRTY )
+                         .ifFailedThenDo( ReconcilerTransitions.nothing, DIRTY );
+    }
+
+    Transition ensureDirtyDatabaseExists()
+    {
+        return ensureDirtyDatabaseExists( databaseManager );
+    }
+
     Transition startAfterStoreCopy()
     {
-        return startAfterStoreCopy;
+        return startAfterStoreCopyFactory( databaseManager );
     }
 
     Transition stopBeforeStoreCopy()
     {
-        return stopBeforeStoreCopy;
+        return stopBeforeStoreCopyFactory( databaseManager );
     }
 }

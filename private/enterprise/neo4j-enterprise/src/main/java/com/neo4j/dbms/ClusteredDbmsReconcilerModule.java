@@ -13,7 +13,9 @@ import java.util.stream.Stream;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED_DUMPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -63,6 +65,8 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     {
         var standaloneTransitionsTable = StandaloneDbmsReconcilerModule.createTransitionsTable( t );
         TransitionsTable clusteredTransitionsTable = TransitionsTable.builder()
+                .from( DIRTY ).to( DROPPED ).doTransitions( t.ensureDirtyDatabaseExists(), t.drop() )
+                .from( DIRTY ).to( DROPPED_DUMPED ).doTransitions( t.ensureDirtyDatabaseExists(), t.dropDumpData() )
                 // No prepareDrop step needed here as the database will be stopped for store copying anyway
                 .from( STORE_COPYING ).to( DROPPED ).doTransitions( t.stop(), t.drop() )
                 // Some Cluster components still need stopped when store copying.
@@ -80,7 +84,7 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     {
 
         var logProvider = globalModule.getLogService().getInternalLogProvider();
-        var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, logProvider ) );
+        var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager ) );
 
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
                 stateStorageFactory, transitionsTable );
