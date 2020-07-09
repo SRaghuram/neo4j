@@ -53,7 +53,7 @@ import static com.neo4j.configuration.OnlineBackupSettings.online_backup_enabled
 import static com.neo4j.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.commons.io.FileUtils.cleanDirectory;
 import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
@@ -402,7 +402,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     private static void verifyEventuallyWarmsUp( long pagesInMemory, Path metricsDirectory )
     {
         assertEventually( "Metrics report should include page cache page faults",
-                () -> readLongCounterValue( metricsCsv( metricsDirectory.toFile(), "neo4j.page_cache.page_faults" ) ), v -> v >= pagesInMemory, 20, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsDirectory.toFile(), "neo4j.page_cache.page_faults" ) ), v -> v >= pagesInMemory, 20, MINUTES );
     }
 
     private static void createData( GraphDatabaseService db )
