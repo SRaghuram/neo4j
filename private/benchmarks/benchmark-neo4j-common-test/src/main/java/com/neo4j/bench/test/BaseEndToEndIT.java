@@ -187,7 +187,8 @@ public abstract class BaseEndToEndIT
     {
         s3api.shutdown();
         // this is hacky HACK, needs to be fixed in Neo4jExtension
-        try ( Transaction transaction = databaseService.beginTx() )
+        Transaction transaction = databaseService.beginTx();
+        try ( transaction )
         {
             transaction.execute( "MATCH (n) DETACH DELETE n" ).close();
             transaction.commit();
@@ -369,7 +370,7 @@ public abstract class BaseEndToEndIT
 
     private static class VerifyProfileNodes implements Query<Void>
     {
-        private Path recordingsBasePath;
+        private final Path recordingsBasePath;
 
         VerifyProfileNodes( Path recordingsBasePath )
         {
@@ -380,32 +381,25 @@ public abstract class BaseEndToEndIT
         public Void execute( Driver driver )
         {
             String query = "MATCH (p:Profiles) RETURN p{.*} as profiles";
-            System.out.println( query );
+
+            Path recordingsPath = recordingsBasePath.resolve( "benchmarking.neo4j.com/recordings" );
+            List<String> fileList = new ArrayList<>( Arrays.asList( recordingsPath.toFile().list() ) );
+            for ( File file : recordingsPath.toFile().listFiles() )
+            {
+                if ( file.isDirectory() )
+                {
+                    fileList.addAll( Arrays.asList( file.list() ) );
+                }
+            }
+
             try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
             {
-                List<Record> results = session.run( query ).list();
-                for ( Record record : results )
-                {
-                    Path recordingsPath = recordingsBasePath.resolve( "benchmarking.neo4j.com/recordings" );
-                    List<String> fileList = new ArrayList<>( Arrays.asList( recordingsPath.toFile().list() ) );
-                    for ( File file : recordingsPath.toFile().listFiles() )
-                    {
-                        if ( file.isDirectory() )
-                        {
-                            fileList.addAll( Arrays.asList( file.list() ) );
-                        }
-                    }
-                    Map<String,Object> profiles = record.get( "profiles" ).asMap();
-                    profiles.values().forEach( System.out::println );
-                    profiles.values().forEach( p -> recordingsBasePath.resolve( p.toString() ) );
-                    profiles.values().forEach(
-                            storePath ->
-                            {
-                                assertThat( "File not found: " + recordingsBasePath.resolve( storePath.toString() ).toAbsolutePath().toFile() +
-                                            "Found some other files " + fileList,
-                                            recordingsBasePath.resolve( storePath.toString() ).toFile(), anExistingFile() );
-                            } );
-                }
+                session.run( query ).stream()
+                       .map( r -> r.get( "profiles" ).asMap() )
+                       .forEach( storePath ->
+                                         assertThat( "File not found: " + recordingsBasePath.resolve( storePath.toString() ).toAbsolutePath().toFile() +
+                                                     "Found some other files " + fileList,
+                                                     recordingsBasePath.resolve( storePath.toString() ).toFile(), anExistingFile() ) );
             }
             return null;
         }

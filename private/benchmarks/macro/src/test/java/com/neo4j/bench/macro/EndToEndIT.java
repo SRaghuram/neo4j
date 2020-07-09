@@ -55,7 +55,7 @@ class EndToEndIT extends BaseEndToEndIT
     public void runZeroWorkloadEmbedded() throws Exception
     {
 
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.GC );
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
         Deployment deployment = Deployment.embedded();
         String workloadName = "zero";
         int recordingDirsCount = 1;
