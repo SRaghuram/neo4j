@@ -249,6 +249,7 @@ class DatabaseMetricsExtensionTest
         {
             Database database = mock( Database.class );
             when( database.getNamedDatabaseId() ).thenReturn( DATABASE_ID );
+            when( database.getDatabaseLayout() ).thenReturn( databaseLayout );
             return database;
         }
 

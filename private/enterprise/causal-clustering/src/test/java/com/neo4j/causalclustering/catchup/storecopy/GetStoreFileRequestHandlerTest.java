@@ -26,6 +26,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.TriggerInfo;
@@ -64,11 +65,16 @@ class GetStoreFileRequestHandlerTest
         catchupServerProtocol.expect( CatchupServerProtocol.State.GET_STORE_FILE );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
+
+        NamedDatabaseId dbId = mock( NamedDatabaseId.class );
+        when( dbId.name() ).thenReturn( "test database" );
+
         when( database.getStoreId() ).thenReturn( STORE_ID_MATCHING );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.ofFlat( Path.of("." ) ) );
         when( database.getScheduler() ).thenReturn( jobScheduler );
         when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
+        when( database.getNamedDatabaseId() ).thenReturn( dbId );
 
         GetStoreFileRequestHandler getStoreFileRequestHandler = new NiceGetStoreFileRequestHandler( catchupServerProtocol, database,
                 new StoreFileStreamingProtocol( maxChunkSize ), fileSystemAbstraction );

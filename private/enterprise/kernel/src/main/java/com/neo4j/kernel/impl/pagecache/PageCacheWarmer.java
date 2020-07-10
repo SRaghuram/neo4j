@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.common.Subject;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.io.fs.FileHandle;
@@ -44,6 +45,7 @@ import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
+import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
@@ -182,7 +184,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
             {
                 if ( whitelist.matcher( pagedFile.path().toString() ).find() )
                 {
-                    handles.add( scheduler.schedule( Group.FILE_IO_HELPER, () -> totalPageCounter.add( touchAllPages( pagedFile ) ) ) );
+                    var fileName = pagedFile.path().getFileName();
+                    var monitoringParams = new JobMonitoringParams( Subject.SYSTEM, null, "Pre-fetching file '" + fileName + "' into the page cache" );
+                    handles.add( scheduler.schedule( Group.FILE_IO_HELPER, monitoringParams, () -> totalPageCounter.add( touchAllPages( pagedFile ) ) ) );
                 }
             }
             for ( JobHandle handle : handles )

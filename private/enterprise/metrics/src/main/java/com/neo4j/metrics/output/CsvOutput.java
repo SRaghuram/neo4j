@@ -11,6 +11,7 @@ import com.neo4j.configuration.MetricsSettings;
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
@@ -20,11 +21,14 @@ import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.scheduler.MonitoredJobExecutor;
 
 import static com.neo4j.configuration.MetricsSettings.csv_enabled;
 import static com.neo4j.configuration.MetricsSettings.csv_interval;
 import static com.neo4j.configuration.MetricsSettings.csv_path;
+import static org.neo4j.common.Subject.SYSTEM;
 
 public class CsvOutput implements Lifecycle
 {
@@ -95,8 +99,10 @@ public class CsvOutput implements Lifecycle
         return ( file, listener ) -> {
             try
             {
-                return new RotatingFileOutputStreamSupplier( fileSystem, file, rotationThreshold, 0, maxArchives,
-                        scheduler.executor( Group.LOG_ROTATION ), listener );
+                MonitoredJobExecutor monitoredJobExecutor = scheduler.monitoredJobExecutor( Group.LOG_ROTATION );
+                var jobMonitoringParams = new JobMonitoringParams( SYSTEM, null, "Rotation of CSV metrics output file '" + file.getName() + "'" );
+                Executor executor = job -> monitoredJobExecutor.execute( jobMonitoringParams, job );
+                return new RotatingFileOutputStreamSupplier( fileSystem, file, rotationThreshold, 0, maxArchives, executor, listener );
             }
             catch ( IOException e )
             {

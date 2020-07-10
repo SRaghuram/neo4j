@@ -12,6 +12,8 @@ import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 
+import java.util.concurrent.Executor;
+
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
@@ -25,7 +27,10 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
+
+import static org.neo4j.common.Subject.SYSTEM;
 
 public interface AbstractEnterpriseEditionModule
 {
@@ -75,7 +80,8 @@ public interface AbstractEnterpriseEditionModule
         Config config = globalModule.getGlobalConfig();
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
         SecurityLog securityLog = makeSecurityLog( config );
-        CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( globalModule.getJobScheduler().executor( Group.AUTH_CACHE ) );
+        var authCacheExecutor = getAuthCacheExecutor( globalModule );
+        CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( authCacheExecutor );
         globalModule.getGlobalLife().add( securityLog );
         SecurityProvider securityProvider;
         EnterpriseSecurityGraphComponent securityComponent = setupSecurityGraphInitializer( globalModule, securityLog );
@@ -103,5 +109,11 @@ public interface AbstractEnterpriseEditionModule
     default SecurityLog makeSecurityLog( Config config )
     {
         return new SecurityLog( config );
+    }
+
+    private Executor getAuthCacheExecutor( GlobalModule globalModule )
+    {
+        var monitoredJobExecutor = globalModule.getJobScheduler().monitoredJobExecutor( Group.AUTH_CACHE );
+        return job -> monitoredJobExecutor.execute( new JobMonitoringParams( SYSTEM, null, "Authentication cache maintenance" ), job );
     }
 }
