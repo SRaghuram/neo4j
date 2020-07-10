@@ -394,12 +394,18 @@ public abstract class BaseEndToEndIT
 
             try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
             {
-                session.run( query ).stream()
-                       .map( r -> r.get( "profiles" ).asMap() )
-                       .forEach( storePath ->
-                                         assertThat( "File not found: " + recordingsBasePath.resolve( storePath.toString() ).toAbsolutePath().toFile() +
-                                                     "Found some other files " + fileList,
-                                                     recordingsBasePath.resolve( storePath.toString() ).toFile(), anExistingFile() ) );
+                List<Record> results = session.run( query ).list();
+                for ( Record record : results )
+                {
+                    Map<String,Object> profiles = record.get( "profiles" ).asMap();
+                    profiles.values().forEach(
+                            storePath ->
+                            {
+                                assertThat( "File not found: " + recordingsBasePath.resolve( storePath.toString() ).toAbsolutePath().toFile() +
+                                            "Found some other files " + fileList,
+                                            recordingsBasePath.resolve( storePath.toString() ).toFile(), anExistingFile() );
+                            } );
+                }
             }
             return null;
         }
