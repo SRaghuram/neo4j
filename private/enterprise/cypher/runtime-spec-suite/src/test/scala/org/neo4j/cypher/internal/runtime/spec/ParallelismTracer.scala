@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.spec
 
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.atomic.AtomicInteger
 
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.ScheduledWorkUnitEvent
@@ -35,6 +34,8 @@ class ParallelismTracer extends SchedulerTracer {
 
     val allWorkUnitEvents: Map[Id, immutable.IndexedSeq[TestWorkUnitEvent]] =
       workUnitEventLists.asScala.flatten.toIndexedSeq.sortBy(_.startTime).groupBy(_.workId)
+    // Clear for the next run
+    workUnitEventLists.forEach(_.clear())
 
     for (workIdGroup <- allWorkUnitEvents.values) {
       var previousStop = workIdGroup.head.stopTime
@@ -49,10 +50,7 @@ class ParallelismTracer extends SchedulerTracer {
     false
   }
 
-  override def traceQuery(): QueryExecutionTracer = {
-    workUnitEventLists.forEach(_.clear())
-    new TestQueryExecutionTracer
-  }
+  override def traceQuery(): QueryExecutionTracer = new TestQueryExecutionTracer
 
   private class TestQueryExecutionTracer extends QueryExecutionTracer {
 
