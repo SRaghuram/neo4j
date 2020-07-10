@@ -9,6 +9,7 @@ import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -16,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.internal.kernel.api.DefaultCloseListenable
 import org.neo4j.values.AnyValue
 
 case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
@@ -34,11 +36,13 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[CypherRow],
-                                      state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
 
     new PrefetchingIterator[CypherRow] {
       private var seen = HeapTrackingCollections.newLongSet(state.memoryTracker.memoryTrackerForOperator(id.x))
+      private var seenWrapper = DefaultCloseListenable.wrap(seen)
+
+      state.query.resources.trace(seenWrapper)
 
       override def produceNext(): Option[CypherRow] = {
         while (input.hasNext) { // Let's pull data until we find something not already seen
@@ -51,10 +55,13 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
             return Some(next)
           }
         }
-        seen.close()
+        seenWrapper.close()
         seen = null
+        seenWrapper = null
         None
       }
+
+      override protected[this] def closeMore(): Unit = if(seenWrapper != null) seenWrapper.close()
     }
   }
 }

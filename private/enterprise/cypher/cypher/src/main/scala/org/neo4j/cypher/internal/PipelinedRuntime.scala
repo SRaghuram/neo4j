@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -72,7 +73,6 @@ import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
-import org.neo4j.kernel.impl.query.QuerySubscription
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -469,7 +469,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
    * Fake pipe used for now to allow using NestedPipeSlottedExpression from Pipelined.
    */
   object NoPipe extends Pipe {
-    override protected def internalCreateResults(state: QueryState): Iterator[CypherRow] =
+    override protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] =
       throw new IllegalStateException("Cannot use NoPipe to create results")
     override def id: Id = Id.INVALID_ID
   }

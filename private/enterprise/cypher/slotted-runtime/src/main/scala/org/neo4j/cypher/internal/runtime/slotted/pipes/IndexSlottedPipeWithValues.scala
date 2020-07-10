@@ -25,7 +25,7 @@ trait IndexSlottedPipeWithValues extends Pipe {
 
   class SlottedIndexIterator(state: QueryState,
                              cursor: NodeValueIndexCursor
-                            ) extends IndexIteratorBase[CypherRow](cursor) {
+                            ) extends IndexIteratorBase[CypherRow](state, cursor) {
 
     override protected def fetchNext(): CypherRow = {
       if (cursor.next()) {

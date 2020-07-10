@@ -5,11 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.ClosingIterator
+import org.neo4j.cypher.internal.runtime.ClosingLongIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.RelationshipCursorIterator
@@ -49,16 +50,17 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     val query = state.query
     val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection, state.memoryTracker.memoryTrackerForOperator(id.x))
+    state.query.resources.trace(expandInto)
     input.flatMap {
       inputRow: CypherRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
         val toNode = getToNodeFunction.applyAsLong(inputRow)
 
         if (entityIsNull(fromNode) || entityIsNull(toNode)) {
-          Iterator(withNulls(inputRow))
+          ClosingIterator.single(withNulls(inputRow))
         } else {
           val traversalCursor = query.traversalCursor()
           val nodeCursor = query.nodeCursor()
@@ -73,18 +75,18 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
               new RelationshipCursorIterator(selectionCursor)
             val matchIterator = findMatchIterator(inputRow, state, relationships)
 
-            if (matchIterator.isEmpty) Iterator(withNulls(inputRow))
+            if (matchIterator.isEmpty) ClosingIterator.single(withNulls(inputRow))
             else matchIterator
           } finally {
             nodeCursor.close()
           }
         }
-    }
+    }.closing(expandInto)
   }
 
   def findMatchIterator(inputRow: CypherRow,
                         state: QueryState,
-                        relationships: LongIterator): Iterator[SlottedRow]
+                        relationships: ClosingLongIterator): ClosingIterator[SlottedRow]
 
   private def withNulls(inputRow: CypherRow) = {
     val outputRow = SlottedRow(slots)
@@ -123,7 +125,7 @@ case class NonFilteringOptionalExpandIntoSlottedPipe(source: Pipe,
 
   override def findMatchIterator(inputRow: CypherRow,
                                  state: QueryState,
-                                 relationships: LongIterator): Iterator[SlottedRow] = {
+                                 relationships: ClosingLongIterator): ClosingIterator[SlottedRow] = {
     PrimitiveLongHelper.map(relationships, relId => {
       val outputRow = SlottedRow(slots)
       outputRow.copyAllFrom(inputRow)
@@ -145,7 +147,7 @@ case class FilteringOptionalExpandIntoSlottedPipe(source: Pipe,
 
   override def findMatchIterator(inputRow: CypherRow,
                                  state: QueryState,
-                                 relationships: LongIterator): Iterator[SlottedRow] = {
+                                 relationships: ClosingLongIterator): ClosingIterator[SlottedRow] = {
     PrimitiveLongHelper.map(relationships, relId => {
       val outputRow = SlottedRow(slots)
       outputRow.copyAllFrom(inputRow)

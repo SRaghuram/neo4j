@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
@@ -49,7 +50,7 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
     }
   }
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] =
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] =
     input.flatMap {
       lhsContext =>
 
@@ -61,7 +62,7 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
           val output = SlottedRow(slots)
           setNullableSlotsToNull(output)
           output.copyAllFrom(lhsContext)
-          Iterator.single(output)
+          ClosingIterator.single(output)
         }
     }
 

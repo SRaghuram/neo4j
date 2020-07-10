@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -29,7 +30,7 @@ case class NodeIndexScanSlottedPipe(ident: String,
   override val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.maybeCachedNodePropertySlot.isDefined).map(_._2).toArray
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
     val cursor = state.query.indexScan(state.queryIndexes(queryIndexId), needsValues, indexOrder)
     new SlottedIndexIterator(state, cursor)
   }

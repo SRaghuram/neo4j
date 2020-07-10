@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -46,13 +47,13 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     input.flatMap {
       inputRow: CypherRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
 
         if (NullChecker.entityIsNull(fromNode)) {
-          Iterator(withNulls(inputRow))
+          ClosingIterator.single(withNulls(inputRow))
         } else {
           val nodeCursor = state.query.nodeCursor()
           val relCursor = state.query.traversalCursor()
@@ -60,7 +61,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
             val read = state.query.transactionalContext.dataRead
             read.singleNode(fromNode, nodeCursor)
             if (!nodeCursor.next()) {
-              Iterator.empty
+              ClosingIterator.empty
             } else {
               val nodePropsToCache = ExpandAllSlottedPipe.getNodePropertiesToCache(nodePropsToRead, nodeCursor, state.cursors.propertyCursor, state.query)
               val selectionCursor = dir match {
@@ -81,7 +82,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
               }, state)
 
               if (matchIterator.isEmpty)
-                Iterator(withNulls(inputRow))
+                ClosingIterator.single(withNulls(inputRow))
               else
                 matchIterator
             }
@@ -91,9 +92,9 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
         }
     }
   }
-  def filter(iterator: Iterator[SlottedRow], state: QueryState): Iterator[SlottedRow]
+  def filter(iterator: ClosingIterator[SlottedRow], state: QueryState): ClosingIterator[SlottedRow]
 
-  private def withNulls(inputRow: CypherRow) = {
+  private def withNulls(inputRow: CypherRow): SlottedRow = {
     val outputRow = SlottedRow(slots)
     outputRow.copyAllFrom(inputRow)
     outputRow.setLongAt(relOffset, -1)
@@ -132,7 +133,7 @@ case class NonFilteringOptionalExpandAllSlottedPipe(source: Pipe,
                                                     relsPropsToRead: Option[SlottedPropertyKeys] = None)(val id: Id)
   extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots, nodePropsToRead, relsPropsToRead) {
 
-  override def filter(iterator: Iterator[SlottedRow], state: QueryState): Iterator[SlottedRow] = iterator
+  override def filter(iterator: ClosingIterator[SlottedRow], state: QueryState): ClosingIterator[SlottedRow] = iterator
 }
 
 case class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
@@ -147,6 +148,6 @@ case class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
                                                  relsPropsToRead: Option[SlottedPropertyKeys] = None)(val id: Id)
   extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots, nodePropsToRead, relsPropsToRead) {
 
-  override def filter(iterator: Iterator[SlottedRow], state: QueryState): Iterator[SlottedRow] =
+  override def filter(iterator: ClosingIterator[SlottedRow], state: QueryState): ClosingIterator[SlottedRow] =
     iterator.filter(ctx => predicate(ctx, state) eq Values.TRUE)
 }

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.ReadableRow
@@ -29,10 +30,11 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[CypherRow],
-                                      state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     new PrefetchingIterator[CypherRow] {
       private var seen = DistinctSet.createDistinctSet[LongArray](state.memoryTracker.memoryTrackerForOperator(id.x))
+
+      state.query.resources.trace(seen)
 
       override def produceNext(): Option[CypherRow] = {
         while (input.hasNext) {
@@ -50,6 +52,8 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
         seen = null
         None
       }
+
+      override protected[this] def closeMore(): Unit = if(seen != null) seen.close()
     }
   }
 }

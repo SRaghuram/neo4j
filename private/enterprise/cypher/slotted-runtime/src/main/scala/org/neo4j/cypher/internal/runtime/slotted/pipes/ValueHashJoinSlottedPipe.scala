@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.Iterators
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -34,25 +34,23 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
   private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
 
-  override def probeInput(rhsIterator: Iterator[CypherRow],
+  override def probeInput(rhsIterator: ClosingIterator[CypherRow],
                           state: QueryState,
-                          table: ProbeTable[AnyValue, CypherRow]): Iterator[SlottedRow] = {
-    val result = for {rhs: CypherRow <- rhsIterator
-                      joinKey <- computeKey(rhs, rightSide, state)}
-      yield {
-        val matchesFromLhs = table.get(joinKey)
-
-        matchesFromLhs.asScala.map { lhs =>
-          val newRow = SlottedRow(slots)
-          newRow.copyAllFrom(lhs)
-          NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, rhs)
-          newRow
-        }
-      }
-    Iterators.resourceClosingIterator(result.flatten, table)
+                          table: ProbeTable[AnyValue, CypherRow]): ClosingIterator[SlottedRow] = {
+    val result = for {
+      rhs <- rhsIterator
+      joinKey <- computeKey(rhs, rightSide, state).toIterator
+      lhs <- table.get(joinKey).asScala
+    } yield {
+      val newRow = SlottedRow(slots)
+      newRow.copyAllFrom(lhs)
+      NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, rhs)
+      newRow
+    }
+    result.closing(table)
   }
 
-  override def buildProbeTable(input: Iterator[CypherRow], queryState: QueryState): collection.ProbeTable[AnyValue, CypherRow] = {
+  override def buildProbeTable(input: ClosingIterator[CypherRow], queryState: QueryState): collection.ProbeTable[AnyValue, CypherRow] = {
     val table = collection.ProbeTable.createProbeTable[AnyValue, CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
 
     for {context <- input

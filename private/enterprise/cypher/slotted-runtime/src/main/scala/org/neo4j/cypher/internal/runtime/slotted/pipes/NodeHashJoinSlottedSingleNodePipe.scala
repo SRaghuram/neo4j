@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -36,26 +37,27 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsKeyOffset: SingleKeyOffset,
   private val rhsOffset: Int = rhsKeyOffset.offset
   private val rhsIsReference: Boolean = rhsKeyOffset.isReference
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
 
     if (input.isEmpty)
-      return Iterator.empty
+      return ClosingIterator.empty
 
     val rhsIterator = right.createResults(state)
 
     if (rhsIterator.isEmpty)
-      return Iterator.empty
+      return ClosingIterator.empty
 
     val table = buildProbeTable(input, state)
+    state.query.resources.trace(table)
 
     // This will only happen if all the lhs-values evaluate to null, which is probably rare.
     // But, it's cheap to check and will save us from exhausting the rhs, so it's probably worth it
     if (table.isEmpty) {
       table.close()
-      return Iterator.empty
+      return ClosingIterator.empty
     }
 
-    probeInput(rhsIterator, state, table)
+    probeInput(rhsIterator, table)
   }
 
   private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): LongProbeTable[CypherRow] = {
@@ -72,8 +74,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsKeyOffset: SingleKeyOffset,
   }
 
   private def probeInput(rhsInput: Iterator[CypherRow],
-                         queryState: QueryState,
-                         probeTable: LongProbeTable[CypherRow]): Iterator[CypherRow] =
+                         probeTable: LongProbeTable[CypherRow]): ClosingIterator[CypherRow] =
     new PrefetchingIterator[CypherRow] {
       private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
       private var currentRhsRow: CypherRow = _
@@ -105,5 +106,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsKeyOffset: SingleKeyOffset,
 
         None
       }
+
+      override protected[this] def closeMore(): Unit = probeTable.close()
     }
 }

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
@@ -22,10 +23,10 @@ case class NodesByLabelScanSlottedPipe(ident: String,
 
   private val offset = slots.getLongOffsetFor(ident)
 
-  protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
 
     val labelId = label.getId(state.query)
-    if (labelId == LazyLabel.UNKNOWN) Iterator.empty
+    if (labelId == LazyLabel.UNKNOWN) ClosingIterator.empty
     else {
       PrimitiveLongHelper.map(state.query.getNodesByLabelPrimitive(labelId, indexOrder), { nodeId =>
         val context = state.newRowWithArgument(rowFactory)

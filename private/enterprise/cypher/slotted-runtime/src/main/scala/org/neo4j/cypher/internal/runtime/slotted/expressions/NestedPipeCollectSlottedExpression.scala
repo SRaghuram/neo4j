@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -27,7 +26,7 @@ case class NestedPipeCollectSlottedExpression(pipe: Pipe,
   extends NestedPipeSlottedExpression(pipe, slots, availableExpressionVariables, owningPlanId) {
 
   override def apply(row: ReadableRow, state: QueryState): AnyValue = {
-    val results: Iterator[CypherRow] = createNestedResults(row, state)
+    val results = createNestedResults(row, state)
     collectResults(state, results, projection)
   }
 

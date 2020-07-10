@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -19,8 +20,8 @@ case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
                                        argumentSize: SlotConfiguration.Size)
                                       (val id: Id = Id.INVALID_ID) extends Pipe {
 
-  protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
-    lhs.createResults(state) flatMap {
+  protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
+    lhs.createResults(state).flatMap {
       lhsCtx =>
         rhs.createResults(state) map {
           rhsCtx =>

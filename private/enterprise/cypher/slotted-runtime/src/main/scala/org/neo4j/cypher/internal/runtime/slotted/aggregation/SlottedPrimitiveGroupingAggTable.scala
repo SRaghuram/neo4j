@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
 import org.eclipse.collections.api.block.function.Function2
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe
@@ -83,6 +84,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
       resultMap.close()
     }
     resultMap = HeapTrackingOrderedAppendMap.createOrderedMap[LongArray, Array[AggregationFunction]](memoryTracker)
+    state.query.resources.trace(resultMap)
   }
 
   override def processRow(row: CypherRow): Unit = {
@@ -95,10 +97,10 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  override def result(): Iterator[CypherRow] = {
-    resultMap.autoClosingEntryIterator.asScala.map {
+  override def result(): ClosingIterator[CypherRow] = {
+    ClosingIterator(resultMap.autoClosingEntryIterator.asScala).map {
       e: java.util.Map.Entry[LongArray, Array[AggregationFunction]] => createResultRow(e.getKey, e.getValue)
-    }
+    }.closing(resultMap)
   }
 }
 

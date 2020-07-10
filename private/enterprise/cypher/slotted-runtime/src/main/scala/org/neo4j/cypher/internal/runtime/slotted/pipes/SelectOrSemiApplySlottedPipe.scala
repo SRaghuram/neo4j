@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -23,19 +24,21 @@ case class SelectOrSemiApplySlottedPipe(lhs: Pipe,
                                        (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(lhs) with Pipe {
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
-   input.filter {
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
+    input.filter {
       row =>
         (predicate.apply(row, state) eq Values.TRUE) || {
           val rhsState = state.withInitialContext(row)
           val innerResult = rhs.createResults(rhsState)
-          if (negated) !innerResult.hasNext else innerResult.hasNext
+          val result = if (negated) !innerResult.hasNext else innerResult.hasNext
+          innerResult.close()
+          result
         }
-    }.flatMap {
+    }.map {
       row: CypherRow =>
         val output = SlottedRow(slots)
         output.copyAllFrom(row)
-        Iterator.single(output)
+        output
     }
   }
 }

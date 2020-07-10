@@ -8,9 +8,8 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -41,19 +40,17 @@ object HashJoinSlottedPipeTestHelper extends CypherFunSuite with SlottedPipeTest
 
   def mockPipeFor(slots: SlotConfiguration, rows: Row*): Pipe = {
     val p = mock[Pipe]
-    when(p.createResults(any())).thenAnswer(new Answer[Iterator[CypherRow]]() {
-      override def answer(invocationOnMock: InvocationOnMock): Iterator[CypherRow] = {
-        rows.toIterator.map { row =>
-          val createdRow = SlottedRow(slots)
-          row.l.l.zipWithIndex foreach {
-            case (v, idx) => createdRow.setLongAt(idx, v)
-          }
-          row.r.l.zipWithIndex foreach {
-            case (v, idx) => createdRow.setRefAt(idx, v)
-          }
-          createdRow
+    when(p.createResults(any())).thenAnswer((_: InvocationOnMock) => {
+      ClosingIterator(rows.toIterator.map { row =>
+        val createdRow = SlottedRow(slots)
+        row.l.l.zipWithIndex foreach {
+          case (v, idx) => createdRow.setLongAt(idx, v)
         }
-      }
+        row.r.l.zipWithIndex foreach {
+          case (v, idx) => createdRow.setRefAt(idx, v)
+        }
+        createdRow
+      })
     })
     p
   }

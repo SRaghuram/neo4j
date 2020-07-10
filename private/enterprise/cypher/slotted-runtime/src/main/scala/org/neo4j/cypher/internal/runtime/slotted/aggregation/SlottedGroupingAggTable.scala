@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
 import org.eclipse.collections.api.block.function.Function2
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
@@ -40,11 +41,16 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
   private[this] val newAggregators: Function2[groupingColumns.KeyType, MemoryTracker, Array[AggregationFunction]] =
     computeNewAggregatorsFunction(aggregationExpressions)
 
-  override def clear(): Unit = {
+  protected def close(): Unit = {
     if (resultMap != null) {
       resultMap.close()
     }
+  }
+
+  override def clear(): Unit = {
+    close()
     resultMap = HeapTrackingOrderedAppendMap.createOrderedMap[groupingColumns.KeyType, Array[AggregationFunction]](memoryTracker)
+    state.query.resources.trace(resultMap)
   }
 
   override def processRow(row: CypherRow): Unit = {
@@ -57,10 +63,12 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  override def result(): Iterator[CypherRow] = {
+  override def result(): ClosingIterator[CypherRow] = {
     val innerIterator = resultMap.autoClosingEntryIterator()
-    new Iterator[CypherRow] {
-      override def hasNext: Boolean = innerIterator.hasNext
+    new ClosingIterator[CypherRow] {
+      override protected[this] def closeMore(): Unit = resultMap.close()
+
+      override def innerHasNext: Boolean = innerIterator.hasNext
 
       override def next(): CypherRow = {
         val entry = innerIterator.next() // NOTE: This entry is transient and only valid until we call next() again

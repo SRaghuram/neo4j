@@ -258,7 +258,7 @@ object TopSlottedPipeTestSupport {
 
     val topPipe = createTopPipe(source, topOrderBy, limit, withTies)
 
-    val results = topPipe.createResults(QueryStateHelper.empty)
+    val results = topPipe.createResults(QueryStateHelper.emptyWithValueSerialization)
     results.map {
       case c: SlottedRow =>
         slot match {
@@ -286,7 +286,7 @@ object TopSlottedPipeTestSupport {
 
     val topPipe = createTopPipe(source, topOrderBy, limit, withTies)
 
-    topPipe.createResults(QueryStateHelper.empty).map {
+    topPipe.createResults(QueryStateHelper.emptyWithValueSerialization).map {
       case c: SlottedRow =>
         (slots(0), slots(1)) match {
           case (RefSlot(offset1, _, _), RefSlot(offset2, _, _)) =>

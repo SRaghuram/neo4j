@@ -10,6 +10,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
@@ -23,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHe
 import org.neo4j.cypher.internal.util.symbols.CTInteger
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.kernel.impl.util.collection
 import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.storable.Values.intValue
 
@@ -30,7 +32,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
 
   test("should not fetch results from RHS if LHS is empty") {
     // given
-    val queryState = QueryStateHelper.empty
+    val queryState = QueryStateHelper.emptyWithValueSerialization
 
     val slotInfo = SlotConfiguration.empty
     slotInfo.newLong("a", nullable = false, CTNode)
@@ -54,7 +56,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
 
   test("should not fetch results from RHS if LHS did not contain any nodes that can be hashed against") {
     // given
-    val queryState = QueryStateHelper.empty
+    val queryState = QueryStateHelper.emptyWithValueSerialization
 
     val slotInfo = SlotConfiguration.empty
     slotInfo.newReference("a", nullable = false, CTNode)
@@ -78,7 +80,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
 
   test("should support hash join between two identifiers with shared arguments") {
     // given
-    val queryState = QueryStateHelper.empty
+    val queryState = QueryStateHelper.emptyWithValueSerialization
     val slotInfoForInputs = SlotConfiguration.empty
       .newLong("arg1", nullable = false, CTNode)
       .newReference("arg2", nullable = false, CTInteger)
@@ -114,4 +116,46 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
       List(Map("arg1" -> 42L, "arg2" -> intValue(666), "a" -> intValue(2), "b" -> intValue(2))))
   }
 
+  test("exhaust should close table") {
+    // given
+    val monitor = QueryStateHelper.trackClosedMonitor
+    val queryState = QueryStateHelper.emptyWithResourceManager(new ResourceManager(monitor))
+
+    val slots = SlotConfiguration.empty
+    slots.newReference("n", nullable = false, CTInteger)
+
+    val left = mockPipeFor(slots, RowR(intValue(1)))
+    val right = mockPipeFor(slots, RowR(intValue(1)))
+
+    // when
+    ValueHashJoinSlottedPipe(
+      ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slots,
+      SlotMappings(Array(), Array((0,0)), Array.empty)
+    )().createResults(queryState).toList
+
+    // then
+    monitor.closedResources.collect { case t: collection.ProbeTable[_, _] => t } should have size(1)
+  }
+
+  test("close should close table") {
+    // given
+    val monitor = QueryStateHelper.trackClosedMonitor
+    val queryState = QueryStateHelper.emptyWithResourceManager(new ResourceManager(monitor))
+
+    val slots = SlotConfiguration.empty
+    slots.newReference("n", nullable = false, CTInteger)
+
+    val left = mockPipeFor(slots, RowR(intValue(1)))
+    val right = mockPipeFor(slots, RowR(intValue(1)))
+
+    // when
+    val result = ValueHashJoinSlottedPipe(
+      ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slots,
+      SlotMappings(Array(), Array((0,0)), Array.empty)
+    )().createResults(queryState)
+    result.close()
+
+    // then
+    monitor.closedResources.collect { case t: collection.ProbeTable[_, _] => t } should have size(1)
+  }
 }

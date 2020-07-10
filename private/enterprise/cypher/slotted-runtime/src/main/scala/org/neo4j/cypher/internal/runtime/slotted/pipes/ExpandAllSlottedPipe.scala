@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -52,13 +53,13 @@ case class ExpandAllSlottedPipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     input.flatMap {
       inputRow: CypherRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
 
         if (NullChecker.entityIsNull(fromNode)) {
-          Iterator.empty
+          ClosingIterator.empty
         } else {
           val nodeCursor = state.query.nodeCursor()
           val relCursor = state.query.traversalCursor()
@@ -66,7 +67,7 @@ case class ExpandAllSlottedPipe(source: Pipe,
             val read = state.query.transactionalContext.dataRead
             read.singleNode(fromNode, nodeCursor)
             if (!nodeCursor.next()) {
-              Iterator.empty
+              ClosingIterator.empty
             } else {
               val nodePropsToCache = getNodePropertiesToCache(nodePropsToRead, nodeCursor, state.cursors.propertyCursor, state.query)
               val selectionCursor = dir match {
@@ -110,7 +111,7 @@ object ExpandAllSlottedPipe {
     }).getOrElse(Seq.empty)
   }
 
-  def cacheNodeProperties(nodePropsToCache: Seq[(Int, Value)], outputRow: SlottedRow) = {
+  def cacheNodeProperties(nodePropsToCache: Seq[(Int, Value)], outputRow: SlottedRow): Unit = {
     nodePropsToCache.foreach {
       case (offset, value) => outputRow.setCachedPropertyAt(offset, value)
     }
@@ -128,23 +129,17 @@ object ExpandAllSlottedPipe {
   }
 }
 
-abstract class ExpandIterator(selectionCursor: RelationshipTraversalCursor, queryContext: QueryContext) extends Iterator[SlottedRow] {
+abstract class ExpandIterator(selectionCursor: RelationshipTraversalCursor, queryContext: QueryContext) extends ClosingIterator[SlottedRow] {
   queryContext.resources.trace(selectionCursor)
 
   private var initialized = false
   private var hasMore = false
 
-  private def fetchNext(): Boolean =
-    if (selectionCursor.next()) {
-      true
-    } else {
-      selectionCursor.close()
-      false
-    }
+  override protected[this] def closeMore(): Unit = selectionCursor.close()
 
-  override def hasNext: Boolean = {
+  override def innerHasNext: Boolean = {
     if (!initialized) {
-      hasMore = fetchNext()
+      hasMore = selectionCursor.next()
       initialized = true
     }
 
@@ -159,7 +154,7 @@ abstract class ExpandIterator(selectionCursor: RelationshipTraversalCursor, quer
       Iterator.empty.next()
     }
     val outputRow = createOutputRow(selectionCursor.relationshipReference(), selectionCursor.otherNodeReference())
-    hasMore = fetchNext()
+    hasMore = selectionCursor.next()
     outputRow
   }
 }

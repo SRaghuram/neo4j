@@ -5,16 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
-import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.virtual.VirtualValues
 
 case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
@@ -29,7 +27,7 @@ case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
     state: QueryState => (ctx: CypherRow) => expression(ctx, state)
   }
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState) = {
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     input.map {
       ctx =>
         val innerState = state.withInitialContext(ctx)

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -20,12 +21,12 @@ case class UnionSlottedPipe(lhs: Pipe,
                             rhsMapping: RowMapping)
                            (val id: Id = Id.INVALID_ID) extends Pipe {
 
-  protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
     val left = lhs.createResults(state)
     val right = rhs.createResults(state)
 
-    new Iterator[CypherRow] {
-      override def hasNext: Boolean = left.hasNext || right.hasNext
+    new ClosingIterator[CypherRow] {
+      override def innerHasNext: Boolean = left.hasNext || right.hasNext
 
       override def next(): CypherRow = {
         val outgoing = SlottedRow(slots)
@@ -38,6 +39,12 @@ case class UnionSlottedPipe(lhs: Pipe,
         }
         outgoing
       }
+
+      override def closeMore(): Unit = {
+        left.close()
+        right.close()
+      }
+
     }
   }
 }

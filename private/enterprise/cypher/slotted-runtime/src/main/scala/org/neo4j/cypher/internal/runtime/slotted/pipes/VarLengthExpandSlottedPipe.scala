@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.RelationshipContainer
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
@@ -96,6 +97,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
             }
           }
 
+          // relationships get immediately exhausted. Therefore we do not need a ClosingIterator here.
           while (relationships.hasNext) {
             val relId = relationships.next()
             relationships.relationshipVisit(relId, relVisitor)
@@ -127,12 +129,12 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
     }
   }
 
-  protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     input.flatMap {
       inputRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
         if (entityIsNull(fromNode)) {
-          Iterator.empty
+          ClosingIterator.empty
         }
         else {
           // Ensure that the start-node also adheres to the node predicate
@@ -152,7 +154,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
             }
           }
           else {
-            Iterator.empty
+            ClosingIterator.empty
           }
         }
     }

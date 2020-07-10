@@ -10,6 +10,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
@@ -18,14 +19,18 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SingleKeyOffset
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.kernel.impl.util.collection.LongProbeTable
 
 import scala.collection.immutable
 
 class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
 
+  private val node0 = 0
+  private val NULL = -1
+
   test("should not fetch results from RHS if LHS is empty") {
     // given
-    val queryState = QueryStateHelper.empty
+    val queryState = QueryStateHelper.emptyWithValueSerialization
 
     val slots = SlotConfiguration.empty
     slots.newLong("a", nullable = false, CTNode)
@@ -50,7 +55,7 @@ class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
 
   test("should not fetch results from RHS if LHS did not contain any nodes that can be hashed against") {
     // given
-    val queryState = QueryStateHelper.empty
+    val queryState = QueryStateHelper.emptyWithValueSerialization
 
     val slots = SlotConfiguration.empty
     slots.newLong("a", nullable = false, CTNode)
@@ -97,14 +102,58 @@ class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
       right = rhsPipe,
       slots = slotConfig,
       rhsSlotMappings = SlotMappings(Array(), Array(), Array())
-    )().createResults(QueryStateHelper.empty)
+    )().createResults(QueryStateHelper.emptyWithValueSerialization)
 
     // If we got here it means we did not throw a stack overflow exception. ooo-eeh!
     result should be(empty)
   }
 
-  private val node0 = 0
-  private val NULL = -1
+  test("exhaust should close table") {
+    // given
+    val monitor = QueryStateHelper.trackClosedMonitor
+    val queryState = QueryStateHelper.emptyWithResourceManager(new ResourceManager(monitor))
+
+    val slots = SlotConfiguration.empty
+    slots.newLong("n", nullable = false, CTNode)
+
+    val left = mockPipeFor(slots, RowL(node0))
+    val right = mockPipeFor(slots, RowL(node0))
+
+    // when
+    NodeHashJoinSlottedSingleNodePipe(
+      SingleKeyOffset(0, isReference = false),
+      SingleKeyOffset(0, isReference = false),
+      left, right, slots,
+      SlotMappings(Array((0,0)), Array(), Array())
+    )().createResults(queryState).toList
+
+    // then
+    monitor.closedResources.collect { case t: LongProbeTable[_] => t } should have size(1)
+  }
+
+  test("close should close table") {
+    // given
+    val monitor = QueryStateHelper.trackClosedMonitor
+    val queryState = QueryStateHelper.emptyWithResourceManager(new ResourceManager(monitor))
+
+    val slots = SlotConfiguration.empty
+    slots.newLong("n", nullable = false, CTNode)
+
+    val left = mockPipeFor(slots, RowL(node0))
+    val right = mockPipeFor(slots, RowL(node0))
+
+    // when
+    val result = NodeHashJoinSlottedSingleNodePipe(
+      SingleKeyOffset(0, isReference = false),
+      SingleKeyOffset(0, isReference = false),
+      left, right, slots,
+      SlotMappings(Array((0,0)), Array(), Array())
+    )().createResults(queryState)
+    result.close()
+
+    // then
+    monitor.closedResources.collect { case t: LongProbeTable[_] => t } should have size(1)
+  }
 
 }
 

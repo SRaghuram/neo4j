@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocationFailed
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.ReadableRow
@@ -45,7 +46,7 @@ case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
   private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
 
-  override def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
+  override def buildProbeTable(lhsInput: ClosingIterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
     val table = ProbeTable.createProbeTable[LongArray, CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
 
     for (current <- lhsInput) {
@@ -60,9 +61,9 @@ case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
     table
   }
 
-  override def probeInput(rhsInput: Iterator[CypherRow],
+  override def probeInput(rhsInput: ClosingIterator[CypherRow],
                           queryState: QueryState,
-                          probeTable: ProbeTable[LongArray, CypherRow]): Iterator[CypherRow] =
+                          probeTable: ProbeTable[LongArray, CypherRow]): ClosingIterator[CypherRow] =
     new PrefetchingIterator[CypherRow] {
       private val key = new Array[Long](width)
       private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
@@ -95,6 +96,8 @@ case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
 
         None
       }
+
+      override protected[this] def closeMore(): Unit = probeTable.close()
     }
 }
 

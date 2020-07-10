@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -33,8 +34,7 @@ case class OrderedDistinctSlottedSinglePrimitivePipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[CypherRow],
-                                      state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
 
     new PrefetchingIterator[CypherRow] {
       private var currentOrderedGroupingValue: Long = -1
@@ -54,6 +54,8 @@ case class OrderedDistinctSlottedSinglePrimitivePipe(source: Pipe,
 
         None
       }
+
+      override protected[this] def closeMore(): Unit = ()
     }
   }
 }

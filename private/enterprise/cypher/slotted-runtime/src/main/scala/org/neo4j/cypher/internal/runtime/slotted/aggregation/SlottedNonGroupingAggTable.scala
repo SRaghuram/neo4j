@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
@@ -31,6 +32,10 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
   private val aggregationFunctions = new Array[AggregationFunction](aggregationExpressions.length)
   private val scopedMemoryTracker: MemoryTracker = state.memoryTracker.memoryTrackerForOperator(operatorId.x).getScopedMemoryTracker
 
+  protected def close(): Unit = {
+    scopedMemoryTracker.close()
+  }
+
   override def clear(): Unit = {
     scopedMemoryTracker.reset()
     var i = 0
@@ -48,10 +53,10 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  override def result(): Iterator[CypherRow] = {
+  override def result(): ClosingIterator[CypherRow] = {
     val row = resultRow()
     scopedMemoryTracker.close()
-    Iterator.single(row)
+    ClosingIterator.single(row)
   }
 
   protected def resultRow(): CypherRow = {

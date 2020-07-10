@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
@@ -23,12 +24,13 @@ case class OrderedDistinctSlottedPipe(source: Pipe,
                                      (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) {
 
-  protected def internalCreateResults(input: Iterator[CypherRow],
-                                      state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     new PrefetchingIterator[CypherRow] {
       private val memoryTracker = state.memoryTracker.memoryTrackerForOperator(id.x)
       private var seen: DistinctSet[AnyValue] = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
       private var currentOrderedGroupingValue: AnyValue = _
+
+      state.query.resources.trace(seen)
 
       override def produceNext(): Option[CypherRow] = {
         while (input.hasNext) {
@@ -54,6 +56,8 @@ case class OrderedDistinctSlottedPipe(source: Pipe,
         seen = null
         None
       }
+
+      override protected[this] def closeMore(): Unit = if(seen != null) seen.close()
     }
   }
 }
@@ -67,8 +71,7 @@ case class AllOrderedDistinctSlottedPipe(source: Pipe,
                                         (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) {
 
-  protected def internalCreateResults(input: Iterator[CypherRow],
-                                      state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     new PrefetchingIterator[CypherRow] {
       private var currentOrderedGroupingValue: AnyValue = _
 
@@ -87,6 +90,8 @@ case class AllOrderedDistinctSlottedPipe(source: Pipe,
         }
         None
       }
+
+      override protected[this] def closeMore(): Unit = ()
     }
   }
 }

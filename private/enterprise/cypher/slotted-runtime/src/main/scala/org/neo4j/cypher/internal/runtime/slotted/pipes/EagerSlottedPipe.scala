@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
@@ -19,21 +20,22 @@ import scala.collection.JavaConverters.asScalaIteratorConverter
 case class EagerSlottedPipe(source: Pipe, slots: SlotConfiguration)(val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) {
 
-  protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     val buffer = EagerBuffer.createEagerBuffer[CypherRow](state.memoryTracker.memoryTrackerForOperator(id.x),
                                                           1024,
                                                           8192,
                                                           EagerBuffer.GROW_NEW_CHUNKS_BY_100_PCT
                                                           )
+    state.query.resources.trace(buffer)
     while (input.hasNext) {
       buffer.add(input.next)
     }
-    buffer.autoClosingIterator().asScala.map { bufferedRow =>
+    ClosingIterator(buffer.autoClosingIterator().asScala).map { bufferedRow =>
       // this is necessary because Eager is the beginning of a new pipeline
       // We do this on the output side, and buffer the input rows they will use less memory
       val outputRow = SlottedRow(slots)
       outputRow.copyAllFrom(bufferedRow)
       outputRow
-    }
+    }.closing(buffer)
   }
 }

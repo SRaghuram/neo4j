@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
@@ -30,6 +31,11 @@ class SlottedOrderedGroupingAggTable(slots: SlotConfiguration,
 
   private var currentGroupKey: orderedGroupingColumns.KeyType = _
 
+  override def close(): Unit = {
+    currentGroupKey = null.asInstanceOf[orderedGroupingColumns.KeyType]
+    super.close()
+  }
+
   override def clear(): Unit = {
     currentGroupKey = null.asInstanceOf[orderedGroupingColumns.KeyType]
     super.clear()
@@ -43,7 +49,7 @@ class SlottedOrderedGroupingAggTable(slots: SlotConfiguration,
     current.eq(first) || currentGroupKey == orderedGroupingColumns.computeGroupingKey(current, state)
   }
 
-  override def result(): Iterator[CypherRow] = {
+  override def result(): ClosingIterator[CypherRow] = {
     super.result().map { row =>
       orderedGroupingColumns.project(row, currentGroupKey)
       row

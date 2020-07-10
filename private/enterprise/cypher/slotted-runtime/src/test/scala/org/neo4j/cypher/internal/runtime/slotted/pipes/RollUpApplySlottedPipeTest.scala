@@ -8,9 +8,8 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.FakeEntityTestSupport
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -33,12 +32,10 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
     // given
     val lhs = createLhs(1)
     val rhs = mock[Pipe]
-    when(rhs.createResults(any())).then(new Answer[Iterator[CypherRow]] {
-      override def answer(invocation: InvocationOnMock) = {
-        val state = invocation.getArguments.apply(0).asInstanceOf[QueryState]
-        state.initialContext should not be empty
-        Iterator.empty
-      }
+    when(rhs.createResults(any())).then((invocation: InvocationOnMock) => {
+      val state = invocation.getArguments.apply(0).asInstanceOf[QueryState]
+      state.initialContext should not be empty
+      ClosingIterator.empty
     })
     val pipe = RollUpApplySlottedPipe(lhs, rhs, collectionRefSlotOffset,
       identifierToCollect = "y" -> ReferenceFromSlot(0), slots)()

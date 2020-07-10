@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ListSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -25,8 +26,8 @@ case class UnwindSlottedPipe(source: Pipe,
                              slots: SlotConfiguration)
                             (val id: Id = Id.INVALID_ID) extends PipeWithSource(source) with ListSupport {
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] =
-    new UnwindIterator(input, state)
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] =
+    ClosingIterator(new UnwindIterator(input, state))
 
   private class UnwindIterator(input: Iterator[CypherRow], state: QueryState) extends Iterator[CypherRow] {
     private var currentInputRow: CypherRow = _

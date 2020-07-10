@@ -20,7 +20,7 @@ class NodeRightOuterHashJoinFallbackPipeTest extends CypherFunSuite {
 
   test("should support joining on two different variables") {
     // given
-    val queryState = QueryStateHelper.empty
+    val queryState = QueryStateHelper.emptyWithValueSerialization
 
     val leftSlots = SlotConfiguration.empty
     leftSlots.newLong("a", nullable = false, CTNode)

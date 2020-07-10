@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.profiling.QueryProfiler.NONE
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -287,15 +288,17 @@ class FeedPipeQueryState(query: QueryContext,
 
 case class MorselFeedPipe()(val id: Id = Id.INVALID_ID) extends Pipe {
 
-  override protected def internalCreateResults(state: pipes.QueryState): Iterator[CypherRow] = {
+  override protected def internalCreateResults(state: pipes.QueryState): ClosingIterator[CypherRow] = {
     val feedPipeQueryState = state.asInstanceOf[FeedPipeQueryState]
     val morselCursor = feedPipeQueryState.morselCursor
 
     morselCursor.setToStart()
 
-    new Iterator[CypherRow] {
+    new ClosingIterator[CypherRow] {
 
-      override def hasNext: Boolean = {
+      override protected[this] def closeMore(): Unit = ()
+
+      override def innerHasNext: Boolean = {
         morselCursor.hasNext
       }
 

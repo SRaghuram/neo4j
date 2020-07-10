@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ValuePopulation
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -18,8 +19,7 @@ case class ProduceResultSlottedPipe(source: Pipe, columns: Seq[(String, Expressi
 
   private val columnExpressionArray = columns.map(_._2).toArray
 
-  protected def internalCreateResults(input: Iterator[CypherRow],
-                                      state: QueryState): Iterator[CypherRow] = {
+  protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     // do not register this pipe as parent as it does not do anything except filtering of already fetched
     // key-value pairs and thus should not have any stats
     if (state.prePopulateResults)

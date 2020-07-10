@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util.function.ToLongFunction
 
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.ReadableRow
@@ -96,7 +97,7 @@ case class CreateSlottedPipe(source: Pipe,
                             (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     input.map {
       row =>
         var i = 0
@@ -132,7 +133,7 @@ case class MergeCreateNodeSlottedPipe(source: Pipe,
                                      (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     input.map {
       row =>
         row.setLongAt(command.idOffset, createNode(row, state, command))
@@ -152,7 +153,7 @@ case class MergeCreateRelationshipSlottedPipe(source: Pipe,
                                              (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
 
-  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
+  override protected def internalCreateResults(input: ClosingIterator[CypherRow], state: QueryState): ClosingIterator[CypherRow] = {
     input.map {
       row =>
         row.setLongAt(command.relIdOffset, createRelationship(row, state, command))

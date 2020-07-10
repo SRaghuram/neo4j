@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -13,8 +14,8 @@ import org.neo4j.cypher.internal.util.attribution.Id
 case class ArgumentSlottedPipe()(val id: Id = Id.INVALID_ID)
   extends Pipe {
 
-  def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
+  def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
     val context = state.newRowWithArgument(rowFactory)
-    Iterator(context)
+    ClosingIterator.single(context)
   }
 }

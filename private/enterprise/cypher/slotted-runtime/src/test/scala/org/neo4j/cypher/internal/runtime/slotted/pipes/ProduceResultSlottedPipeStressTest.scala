@@ -10,6 +10,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
@@ -72,8 +73,8 @@ class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
 
   private val sourcePipe: Pipe =
     new Pipe {
-      override protected def internalCreateResults(state: QueryState): Iterator[CypherRow] =
-        Iterator(SlottedRow(slotConfig))
+      override protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] =
+        ClosingIterator.single(SlottedRow(slotConfig))
       override val id: Id = Id.INVALID_ID
     }
 }
