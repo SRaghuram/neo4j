@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -49,14 +48,14 @@ class AkkaCoreTopologyServiceIT
                 .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", allocatePort() ) )
                 .build();
 
-        var id = new MemberId( UUID.randomUUID() );
+        var identityModule = new StubClusteringIdentityModule();
 
         var logProvider = NullLogProvider.getInstance();
         jobScheduler = createInitialisedScheduler();
         var initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
 
-        service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, id, jobScheduler, logProvider, logProvider,
+        service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, identityModule, jobScheduler, logProvider, logProvider,
                 initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader, TestDiscoveryMember::new,
                 new Monitors(), Clocks.systemClock() );
     }

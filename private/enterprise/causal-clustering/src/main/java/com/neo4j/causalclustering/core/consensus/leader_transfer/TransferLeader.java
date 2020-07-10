@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound;
@@ -13,7 +14,6 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -32,7 +32,7 @@ import static java.util.stream.Collectors.toSet;
 public abstract class TransferLeader
 {
     protected final Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler;
-    protected final MemberId myself;
+    protected final ClusteringIdentityModule identityModule;
     protected final DatabasePenalties databasePenalties;
     protected final RaftMembershipResolver membershipResolver;
     protected final Set<ServerGroupName> myGroups;
@@ -40,12 +40,12 @@ public abstract class TransferLeader
     protected final Config config;
     private final Clock clock;
 
-    public TransferLeader( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself,
-                           DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Supplier<List<NamedDatabaseId>> leadershipsResolver,
-                           Clock clock )
+    public TransferLeader( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
+                           ClusteringIdentityModule identityModule, DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver,
+                           Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
     {
         this.messageHandler = messageHandler;
-        this.myself = myself;
+        this.identityModule = identityModule;
         this.databasePenalties = databasePenalties;
         this.membershipResolver = membershipResolver;
         this.leadershipsResolver = leadershipsResolver;
@@ -73,7 +73,7 @@ public abstract class TransferLeader
         var votingMembers = raftMembership.votingMembers();
         Predicate<MemberId> notSuspendedOrMe = member ->
                 databasePenalties.notSuspended( namedDatabaseId.databaseId(), member ) &&
-                !Objects.equals( member, myself );
+                !Objects.equals( member, identityModule.memberId( namedDatabaseId ) );
 
         var validMembers = votingMembers.stream()
                                         .filter( notSuspendedOrMe )
@@ -90,7 +90,8 @@ public abstract class TransferLeader
     protected void handleProposal( LeaderTransferTarget transferTarget, Set<ServerGroupName> prioritisedGroups )
     {
         var raftId = RaftId.from( transferTarget.databaseId().databaseId() );
-        var proposal = new RaftMessages.LeadershipTransfer.Proposal( myself, transferTarget.to(), prioritisedGroups );
+        var proposal =
+                new RaftMessages.LeadershipTransfer.Proposal( identityModule.memberId( transferTarget.databaseId() ), transferTarget.to(), prioritisedGroups );
         var message = RaftMessages.InboundRaftMessageContainer.of( clock.instant(), raftId, proposal );
         messageHandler.handle( message );
     }

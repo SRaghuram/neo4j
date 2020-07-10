@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -190,7 +191,7 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public MemberId id()
     {
-        return systemDatabase.getDependencyResolver().resolveDependency( RaftMachine.class ).memberId();
+        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).memberId();
     }
 
     @Override

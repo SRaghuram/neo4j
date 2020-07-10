@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
@@ -24,7 +25,7 @@ import org.neo4j.monitoring.Monitors;
 
 public class RaftGroupFactory
 {
-    private final MemberId myself;
+    private final ClusteringIdentityModule identityModule;
     private final GlobalModule globalModule;
     private final ClusterStateLayout clusterState;
     private final CoreTopologyService topologyService;
@@ -33,11 +34,11 @@ public class RaftGroupFactory
     private final Function<NamedDatabaseId,LeaderListener> listenerFactory;
     private final MemoryTracker memoryTracker;
 
-    public RaftGroupFactory( MemberId myself, GlobalModule globalModule, ClusterStateLayout clusterState, CoreTopologyService topologyService,
-            ClusterStateStorageFactory storageFactory, LeaderTransferService leaderTransferService,
+    public RaftGroupFactory( ClusteringIdentityModule identityModule, GlobalModule globalModule, ClusterStateLayout clusterState,
+            CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, LeaderTransferService leaderTransferService,
             Function<NamedDatabaseId,LeaderListener> listenerFactory, MemoryTracker memoryTracker )
     {
-        this.myself = myself;
+        this.identityModule = identityModule;
         this.globalModule = globalModule;
         this.clusterState = clusterState;
         this.topologyService = topologyService;
@@ -52,7 +53,7 @@ public class RaftGroupFactory
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
-                globalModule.getGlobalClock(), myself, life, monitors, dependencies, outbound, clusterState,
+                globalModule.getGlobalClock(), identityModule.memberId( namedDatabaseId ), life, monitors, dependencies, outbound, clusterState,
                 topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker );
     }
 }

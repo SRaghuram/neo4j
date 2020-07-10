@@ -7,7 +7,9 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
@@ -28,15 +30,15 @@ import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class TransferLeaderTest
 {
-    private final MemberId myself = new MemberId( randomUUID() );
-    private final MemberId core1 = new MemberId( randomUUID() );
+    private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
+    private final MemberId myself = identityModule.memberId();
+    private final ClusteringIdentityModule remoteIdentityModule = new StubClusteringIdentityModule();
+    private final MemberId core1 = remoteIdentityModule.memberId();
     private final NamedDatabaseId databaseId1 = randomNamedDatabaseId();
     private final NamedDatabaseId databaseId2 = randomNamedDatabaseId();
     private final RaftMembershipResolver raftMembershipResolver = new StubRaftMembershipResolver( myself, core1 );
@@ -49,7 +51,7 @@ class TransferLeaderTest
         // Priority group exist and I am not in it
         var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
-        TransferLeaderJob transferLeaderJob = new TransferLeaderJob( config, messageHandler, myself, databasePenalties, new RandomStrategy(),
+        TransferLeaderJob transferLeaderJob = new TransferLeaderJob( config, messageHandler, identityModule, databasePenalties, new RandomStrategy(),
                                                                      raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
         // I am leader
         myLeaderships.add( databaseId1 );
@@ -74,7 +76,7 @@ class TransferLeaderTest
         // I am not leader for any database
         List<NamedDatabaseId> myLeaderships = List.of();
         TransferLeaderJob transferLeaderJob =
-                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                new TransferLeaderJob( config, messageHandler, identityModule, databasePenalties,
                                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
 
         // when
@@ -93,7 +95,7 @@ class TransferLeaderTest
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeaderJob transferLeaderJob =
-                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                new TransferLeaderJob( config, messageHandler, identityModule, databasePenalties,
                                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
         // I am leader
         myLeaderships.add( databaseId1 );
@@ -113,7 +115,7 @@ class TransferLeaderTest
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeaderJob transferLeaderJob =
-                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                new TransferLeaderJob( config, messageHandler, identityModule, databasePenalties,
                                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
         // I am leader
         myLeaderships.add( databaseId1 );
@@ -143,8 +145,8 @@ class TransferLeaderTest
 
         var myLeaderships = List.of( databaseId1, databaseId2 );
         TransferLeaderJob transferLeaderJob =
-                new TransferLeaderJob( config, messageHandler, myself, databasePenalties, mockSelectionStrategy, raftMembershipResolver, () -> myLeaderships,
-                                       Clocks.fakeClock() );
+                new TransferLeaderJob( config, messageHandler, identityModule, databasePenalties, mockSelectionStrategy, raftMembershipResolver,
+                                       () -> myLeaderships, Clocks.fakeClock() );
         // when
         transferLeaderJob.run();
 
@@ -167,7 +169,7 @@ class TransferLeaderTest
         };
         var nonSystemLeaderships = List.of( databaseId1 );
 
-        var transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, myself, databasePenalties,
+        var transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, identityModule, databasePenalties,
                                                        mockSelectionStrategy, raftMembershipResolver, () -> nonSystemLeaderships, Clocks.fakeClock() );
 
         // when
@@ -179,7 +181,7 @@ class TransferLeaderTest
         // given
         selectionStrategyInputs.clear();
         var systemLeaderships = List.of( NAMED_SYSTEM_DATABASE_ID );
-        transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, myself, databasePenalties,
+        transferLeaderJob = new TransferLeaderJob( Config.defaults(), messageHandler, identityModule, databasePenalties,
                                                    mockSelectionStrategy, raftMembershipResolver, () -> systemLeaderships, Clocks.fakeClock() );
 
         // when
@@ -203,7 +205,7 @@ class TransferLeaderTest
 
         var myLeaderships = new ArrayList<>( databaseIds );
         TransferLeaderJob transferLeaderJob =
-                new TransferLeaderJob( config, messageHandler, myself, databasePenalties,
+                new TransferLeaderJob( config, messageHandler, identityModule, databasePenalties,
                                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships, Clocks.fakeClock() );
 
         // when

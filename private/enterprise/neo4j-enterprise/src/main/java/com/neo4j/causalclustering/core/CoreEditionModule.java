@@ -28,8 +28,9 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
-import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModuleImpl;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
 import com.neo4j.causalclustering.logging.NullRaftMessageLogger;
@@ -121,7 +122,7 @@ import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
  */
 public class CoreEditionModule extends ClusteringEditionModule implements AbstractEnterpriseEditionModule
 {
-    private final ClusteringIdentityModule clusteringIdentityModule;
+    private final ClusteringIdentityModule identityModule;
     private final SslPolicyLoader sslPolicyLoader;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
@@ -186,8 +187,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        clusteringIdentityModule = ClusteringIdentityModule.create( logProvider, fileSystem, dataDir, memoryTracker, storageFactory );
-        globalModule.getJobScheduler().setTopLevelGroupName( "Core " + clusteringIdentityModule.myself() );
+        identityModule = ClusteringIdentityModuleImpl.create( logProvider, fileSystem, dataDir, memoryTracker, storageFactory );
+        globalDependencies.satisfyDependency( identityModule );
+        globalModule.getJobScheduler().setTopLevelGroupName( "Core " + identityModule.myself() );
         this.discoveryServiceFactory = discoveryServiceFactory;
 
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
@@ -301,7 +303,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
         var globalLife = globalModule.getGlobalLife();
         var fileSystem = globalModule.getFileSystem();
-        var myIdentity = clusteringIdentityModule.memberId();
+        var myIdentity = identityModule.memberId();
 
         Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
@@ -316,14 +318,14 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependencies( databaseEventService );
         dependencies.satisfyDependency( reconciledTxTracker );
 
-        topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.databaseStateService() );
+        topologyService = createTopologyService( databaseManager, reconcilerModule.databaseStateService() );
         dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
         reconcilerModule.registerDatabaseStateChangedListener( topologyService );
 
         leaderService = new DefaultLeaderService( topologyService, logProvider );
         dependencies.satisfyDependencies( leaderService );
 
-        RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
+        RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, identityModule.memberId() );
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
@@ -332,9 +334,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferBackoff = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_member_backoff );
 
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
-                raftMessageDispatcher, myIdentity, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService );
+                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService );
 
-        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
+        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( identityModule, globalModule, clusterStateLayout, topologyService, storageFactory,
                 leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
@@ -343,10 +345,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         addThroughputMonitorService();
 
         this.coreDatabaseFactory = new CoreDatabaseFactory( globalModule, panicService, databaseManager, topologyService, storageFactory,
-                temporaryDatabaseFactory, myIdentity, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
+                temporaryDatabaseFactory, identityModule, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
                 recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter );
 
-        RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, clusteringIdentityModule, pipelineBuilders.server(), raftLogger,
+        RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
                 supportedRaftProtocols, supportedModifierProtocols, databaseManager.databaseIdRepository() );
 
         Server raftServer = raftServerFactory.createRaftServer( raftMessageDispatcher, serverInstalledProtocolHandler );
@@ -453,11 +455,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         return new ClientChannelInitializer( handshakeInitializer, pipelineBuilders.client(), handshakeTimeout, logProvider );
     }
 
-    private CoreTopologyService createTopologyService( MemberId myIdentity, DatabaseManager<ClusteredDatabaseContext> databaseManager,
-            DatabaseStateService databaseStateService )
+    private CoreTopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, DatabaseStateService databaseStateService )
     {
         DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
-        DiscoveryModule discoveryModule = new DiscoveryModule( myIdentity, discoveryServiceFactory, discoveryMemberFactory, globalModule,
+        DiscoveryModule discoveryModule = new DiscoveryModule( identityModule, discoveryServiceFactory, discoveryMemberFactory, globalModule,
                 sslPolicyLoader );
         return discoveryModule.topologyService();
     }

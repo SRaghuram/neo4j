@@ -7,9 +7,6 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.identity.MemberId;
-
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -24,26 +21,20 @@ public class ReadReplicaGraphDatabase
 
     public interface ReadReplicaEditionModuleFactory
     {
-        ClusteringEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
+        ClusteringEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory );
     }
 
     public ReadReplicaGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory,
             ReadReplicaEditionModuleFactory editionModuleFactory )
     {
-        this( config, dependencies, discoveryServiceFactory, new MemberId( UUID.randomUUID() ), editionModuleFactory );
-    }
-
-    public ReadReplicaGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId,
-            ReadReplicaEditionModuleFactory editionModuleFactory )
-    {
-        managementService = createManagementService( config, dependencies, discoveryServiceFactory, memberId, editionModuleFactory );
+        managementService = createManagementService( config, dependencies, discoveryServiceFactory, editionModuleFactory );
     }
 
     protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
-            DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId, ReadReplicaEditionModuleFactory editionModuleFactory )
+            DiscoveryServiceFactory discoveryServiceFactory, ReadReplicaEditionModuleFactory editionModuleFactory )
     {
         return new DatabaseManagementServiceFactory( DbmsInfo.READ_REPLICA,
-                globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId ) )
+                globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
                 .build( config, dependencies );
     }
 

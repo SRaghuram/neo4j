@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,6 @@ import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.FakeClock;
 
-import static java.util.UUID.randomUUID;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,8 +41,10 @@ class LeaderTransferServiceTest
     private JobScheduler jobScheduler;
 
     private final Config config = Config.newBuilder().build();
-    private final MemberId myself = new MemberId( randomUUID() );
-    private final MemberId core1 = new MemberId( randomUUID() );
+    private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
+    private final MemberId myself = identityModule.memberId();
+    private final ClusteringIdentityModule remoteIdentityModule = new StubClusteringIdentityModule();
+    private final MemberId core1 = remoteIdentityModule.memberId();
     private final Duration leaderTransferInterval = Duration.ofSeconds( 5 );
     private final Duration leaderMemberBackoff = Duration.ofSeconds( 15 );
 
@@ -75,7 +78,7 @@ class LeaderTransferServiceTest
         var messageHandler = new TransferLeaderTest.TrackingMessageHandler();
         var leaderService = new StubLeaderService( Map.of() );
         var leaderTransferService =
-                new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myself, leaderMemberBackoff,
+                new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
                                            NullLogProvider.nullLogProvider(), clock, leaderService );
 
         // when
@@ -101,7 +104,7 @@ class LeaderTransferServiceTest
         var leaderService = new StubLeaderService( Map.of( fooDb, myself ) );
 
         var leaderTransferService =
-                new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myself, leaderMemberBackoff,
+                new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
                                            NullLogProvider.nullLogProvider(), clock, leaderService );
 
         // when

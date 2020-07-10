@@ -43,6 +43,7 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
@@ -83,7 +84,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final ReplicatedDataMonitor replicatedDataMonitor;
     private final ClusterSizeMonitor clusterSizeMonitor;
     private final Config config;
-    private final MemberId myself;
+    private final ClusteringIdentityModule identityModule;
     private final Log log;
     private final Log userLog;
 
@@ -95,7 +96,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private volatile ActorRef databaseStateActorRef;
     private volatile GlobalTopologyState globalTopologyState;
 
-    public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+    public AkkaCoreTopologyService( Config config, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter,
             DiscoveryMemberFactory discoveryMemberFactory, Executor executor, Clock clock, Monitors monitors )
     {
@@ -107,7 +108,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         this.executor = executor;
         this.clock = clock;
         this.config = config;
-        this.myself = myself;
+        this.identityModule = identityModule;
         this.log = logProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
         this.replicatedDataMonitor = monitors.newMonitor( ReplicatedDataMonitor.class );
@@ -142,7 +143,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor )
     {
-        DiscoveryMember discoveryMember = discoveryMemberFactory.create( myself );
+        DiscoveryMember discoveryMember = discoveryMemberFactory.create( identityModule.memberId() );
         TopologyBuilder topologyBuilder = new TopologyBuilder();
         Props coreTopologyProps = CoreTopologyActor.props(
                 discoveryMember,
@@ -168,7 +169,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private ActorRef databaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateSink,
             ActorRef rrTopologyActor )
     {
-        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, replicatedDataMonitor, myself );
+        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, replicatedDataMonitor, identityModule.memberId() );
         return actorSystemLifecycle.applicationActorOf( stateProps, DatabaseStateActor.NAME );
     }
 
@@ -225,7 +226,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         if ( coreTopologyActor != null )
         {
             var timeout = config.get( CausalClusteringInternalSettings.raft_id_publish_timeout );
-            var request = new RaftIdSetRequest( raftId, myself, timeout );
+            var request = new RaftIdSetRequest( raftId, identityModule.memberId(), timeout );
             var idSetJob = Patterns.ask( coreTopologyActor, request, timeout )
                                    .thenApplyAsync( this::checkOutcome, executor )
                                    .toCompletableFuture();
@@ -415,7 +416,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public MemberId memberId()
     {
-        return myself;
+        return identityModule.memberId();
     }
 
     @Override

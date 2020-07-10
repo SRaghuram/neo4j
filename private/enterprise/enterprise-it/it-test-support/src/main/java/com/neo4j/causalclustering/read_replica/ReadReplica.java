@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.read_replica;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -18,7 +19,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.IntFunction;
 
 import org.neo4j.configuration.Config;
@@ -32,6 +32,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
@@ -47,7 +48,7 @@ public class ReadReplica implements ClusterMember
     public interface ReadReplicaGraphDatabaseFactory
     {
         ReadReplicaGraphDatabase create( Config memberConfig, GraphDatabaseDependencies databaseDependencies,
-                DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
+                DiscoveryServiceFactory discoveryServiceFactory );
     }
 
     private final DiscoveryServiceFactory discoveryServiceFactory;
@@ -55,7 +56,6 @@ public class ReadReplica implements ClusterMember
     private final Neo4jLayout neo4jLayout;
     private final DatabaseLayout defaultDatabaseLayout;
     private final int serverId;
-    private final MemberId memberId;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
     private final Config memberConfig;
@@ -64,6 +64,7 @@ public class ReadReplica implements ClusterMember
     private final ReadReplicaGraphDatabaseFactory dbFactory;
 
     private ReadReplicaGraphDatabase readReplicaGraphDatabase;
+    private GraphDatabaseFacade systemDatabase;
 
     public ReadReplica( Path parentDir, int serverId, int boltPort, int intraClusterBoltPort, int httpPort,
             int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
@@ -72,7 +73,6 @@ public class ReadReplica implements ClusterMember
             String advertisedAddress, String listenAddress, ReadReplicaGraphDatabaseFactory dbFactory )
     {
         this.serverId = serverId;
-        this.memberId = new MemberId( UUID.randomUUID() );
 
         boltSocketAddress = format( advertisedAddress, boltPort );
         intraClusterBoltSocketAddress = format( advertisedAddress, intraClusterBoltPort);
@@ -119,7 +119,6 @@ public class ReadReplica implements ClusterMember
         this.dbFactory = dbFactory;
         this.neo4jLayout = Neo4jLayout.of( memberConfig );
         this.defaultDatabaseLayout = neo4jLayout.databaseLayout( memberConfig.get( default_database ) );
-
     }
 
     @Override
@@ -137,14 +136,14 @@ public class ReadReplica implements ClusterMember
     @Override
     public MemberId id()
     {
-        return memberId;
+        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).memberId();
     }
 
     @Override
     public void start()
     {
-        readReplicaGraphDatabase = dbFactory.create( memberConfig, newDependencies().monitors( monitors ), discoveryServiceFactory,
-                memberId );
+        readReplicaGraphDatabase = dbFactory.create( memberConfig, newDependencies().monitors( monitors ), discoveryServiceFactory );
+        systemDatabase = (GraphDatabaseFacade) readReplicaGraphDatabase.getManagementService().database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
     }
 
     @Override
@@ -211,7 +210,7 @@ public class ReadReplica implements ClusterMember
     @Override
     public final String toString()
     {
-        return "ReadReplica{serverId=" + serverId + ", memberId=" + memberId + "}";
+        return "ReadReplica{serverId=" + serverId + ", memberId=" + (readReplicaGraphDatabase == null ? null : id()) + "}";
     }
 
     public String directURI()

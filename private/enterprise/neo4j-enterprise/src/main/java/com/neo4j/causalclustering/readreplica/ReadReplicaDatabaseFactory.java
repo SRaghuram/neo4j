@@ -61,8 +61,8 @@ class ReadReplicaDatabaseFactory
     private final DatabaseStartAborter databaseStartAborter;
     private final PageCacheTracer pageCacheTracer;
 
-    ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService, MemberId myIdentity,
-            CatchupComponentsRepository catchupComponentsRepository,
+    ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
+            MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository,
             CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
             PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer )
     {

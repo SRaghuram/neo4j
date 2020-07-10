@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingInbound;

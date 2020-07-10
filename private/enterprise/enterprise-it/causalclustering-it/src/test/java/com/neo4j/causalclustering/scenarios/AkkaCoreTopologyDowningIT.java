@@ -17,8 +17,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.helper.ErrorHandler;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.configuration.CausalClusteringInternalSettings;
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.CausalClusteringSettings;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
@@ -31,10 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -246,7 +243,7 @@ class AkkaCoreTopologyDowningIT
 
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
-                new MemberId( UUID.randomUUID() ),
+                new StubClusteringIdentityModule(),
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,

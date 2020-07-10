@@ -12,7 +12,9 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -58,7 +60,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 class AkkaCoreTopologyServiceTest
 {
     private Config config = Config.defaults();
-    private MemberId myself = new MemberId( UUID.randomUUID() );
+    private ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
     private LogProvider logProvider = NullLogProvider.getInstance();
     private LogProvider userLogProvider = NullLogProvider.getInstance();
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
@@ -71,7 +73,7 @@ class AkkaCoreTopologyServiceTest
 
     private AkkaCoreTopologyService service = new AkkaCoreTopologyService(
             config,
-            myself,
+            identityModule,
             system,
             logProvider,
             userLogProvider,

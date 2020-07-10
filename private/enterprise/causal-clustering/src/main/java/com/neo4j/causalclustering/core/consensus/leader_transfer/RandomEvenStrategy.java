@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 
@@ -12,9 +13,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -26,14 +25,14 @@ import static java.util.function.Function.identity;
 public class RandomEvenStrategy implements SelectionStrategy
 {
     private final Supplier<Set<NamedDatabaseId>> databasesSupplier;
-    private final MemberId myId;
+    private final ClusteringIdentityModule identityModule;
     private final LeaderService leaderService;
 
-    RandomEvenStrategy( Supplier<Set<NamedDatabaseId>> databasesSupplier, LeaderService leaderService, MemberId myId )
+    RandomEvenStrategy( Supplier<Set<NamedDatabaseId>> databasesSupplier, LeaderService leaderService, ClusteringIdentityModule identityModule )
     {
         this.leaderService = leaderService;
         this.databasesSupplier = databasesSupplier;
-        this.myId = myId;
+        this.identityModule = identityModule;
     }
 
     @Override
@@ -87,7 +86,7 @@ public class RandomEvenStrategy implements SelectionStrategy
 
         allMembers.forEach( member -> leadershipCounts.putIfAbsent( member, 0L ) );
 
-        var myLeadershipCount = leadershipCounts.getOrDefault( myId, 0L );
+        var myLeadershipCount = leadershipCounts.getOrDefault( identityModule.memberId(), 0L );
 
         return leadershipCounts.entrySet().stream()
                                .filter( e -> e.getValue() < ( myLeadershipCount - 1 ) )

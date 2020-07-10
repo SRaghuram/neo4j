@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
@@ -57,11 +56,11 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
-import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.RaftOutbound;
@@ -122,7 +121,6 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageEngineFactory;
-import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.TokenRegistry;
@@ -156,7 +154,7 @@ class CoreDatabaseFactory
 
     private final TemporaryDatabaseFactory temporaryDatabaseFactory;
 
-    private final MemberId myIdentity;
+    private final ClusteringIdentityModule identityModule;
     private final RaftGroupFactory raftGroupFactory;
     private final RaftMessageDispatcher raftMessageDispatcher;
     private final RaftMessageLogger<MemberId> raftLogger;
@@ -171,7 +169,7 @@ class CoreDatabaseFactory
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
                          CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
-                         MemberId myIdentity, RaftGroupFactory raftGroupFactory,
+                         ClusteringIdentityModule identityModule, RaftGroupFactory raftGroupFactory,
                          RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
                          RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> raftSender,
                          ReplicatedDatabaseEventService databaseEventService,
@@ -192,7 +190,7 @@ class CoreDatabaseFactory
         this.storageFactory = storageFactory;
         this.temporaryDatabaseFactory = temporaryDatabaseFactory;
 
-        this.myIdentity = myIdentity;
+        this.identityModule = identityModule;
         this.raftGroupFactory = raftGroupFactory;
         this.raftMessageDispatcher = raftMessageDispatcher;
         this.catchupComponentsProvider = catchupComponentsProvider;
@@ -210,29 +208,30 @@ class CoreDatabaseFactory
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
                                        BootstrapContext bootstrapContext, DatabaseLogService logService, MemoryTracker memoryTracker )
     {
-        DatabaseLogProvider debugLog = logService.getInternalLogProvider();
+        var myIdentity = identityModule.memberId( namedDatabaseId );
+        var debugLog = logService.getInternalLogProvider();
 
-        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( namedDatabaseId.name(), debugLog );
-        RaftBinder raftBinder = createRaftBinder( namedDatabaseId, config, monitors, raftIdStorage, bootstrapContext,
-                                                  temporaryDatabaseFactory, debugLog, dbmsModel, memoryTracker );
+        var raftIdStorage = storageFactory.createRaftIdStorage( namedDatabaseId.name(), debugLog );
+        var raftBinder = createRaftBinder( namedDatabaseId, config, monitors, raftIdStorage, bootstrapContext,
+                                           temporaryDatabaseFactory, debugLog, dbmsModel, memoryTracker, myIdentity );
 
-        CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
+        var commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life );
 
-        long logThresholdMillis = config.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
+        var logThresholdMillis = config.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
 
-        LoggingOutbound<MemberId,RaftMessage> raftOutbound = new LoggingOutbound<>(
+        var raftOutbound = new LoggingOutbound<>(
                 new RaftOutbound( topologyService, raftSender, raftMessageDispatcher, raftBinder, debugLog, logThresholdMillis, myIdentity, clock ),
                 namedDatabaseId, myIdentity, raftLogger );
 
-        RaftGroup raftGroup = raftGroupFactory.create( namedDatabaseId, raftOutbound, life, monitors, dependencies, logService );
+        var raftGroup = raftGroupFactory.create( namedDatabaseId, raftOutbound, life, monitors, dependencies, logService );
 
-        GlobalSession myGlobalSession = new GlobalSession( UUID.randomUUID(), myIdentity );
-        LocalSessionPool sessionPool = new LocalSessionPool( myGlobalSession );
+        var myGlobalSession = new GlobalSession( UUID.randomUUID(), myIdentity );
+        var sessionPool = new LocalSessionPool( myGlobalSession );
 
-        ProgressTracker progressTracker = new ProgressTrackerImpl( myGlobalSession );
-        RaftReplicator replicator =
-                createReplicator( namedDatabaseId, raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound, debugLog );
+        var progressTracker = new ProgressTrackerImpl( myGlobalSession );
+        var replicator =
+                createReplicator( namedDatabaseId, raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound, debugLog, myIdentity );
 
         return new CoreRaftContext( raftGroup, replicator, commandIndexTracker, progressTracker, raftBinder, raftIdStorage );
     }
@@ -296,7 +295,7 @@ class CoreDatabaseFactory
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
         ClusterLeaseCoordinator leaseCoordinator = new ClusterLeaseCoordinator(
-                myIdentity, replicator, raftGroup.raftMachine(), replicatedLeaseStateMachine, namedDatabaseId );
+                identityModule.memberId( namedDatabaseId ), replicator, raftGroup.raftMachine(), replicatedLeaseStateMachine, namedDatabaseId );
 
         CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( namedDatabaseId, replicator, stateMachines, leaseCoordinator );
 
@@ -311,55 +310,53 @@ class CoreDatabaseFactory
                                  CoreRaftContext raftContext,
                                  ClusterInternalDbmsOperator internalOperator )
     {
-        DatabasePanicker panicker = panicService.panickerFor( namedDatabaseId );
-        RaftGroup raftGroup = raftContext.raftGroup();
-        DatabaseLogProvider debugLog = kernelDatabase.getInternalLogProvider();
+        var myIdentity = identityModule.memberId();
+        var panicker = panicService.panickerFor( namedDatabaseId );
+        var raftGroup = raftContext.raftGroup();
+        var debugLog = kernelDatabase.getInternalLogProvider();
 
-        SessionTracker sessionTracker = createSessionTracker( namedDatabaseId, clusterComponents, debugLog );
+        var sessionTracker = createSessionTracker( namedDatabaseId, clusterComponents, debugLog );
 
-        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( namedDatabaseId.name(), clusterComponents, debugLog );
-        CoreState coreState = new CoreState( sessionTracker, lastFlushedStateStorage, kernelComponents.stateMachines() );
+        var lastFlushedStateStorage = storageFactory.createLastFlushedStorage( namedDatabaseId.name(), clusterComponents, debugLog );
+        var coreState = new CoreState( sessionTracker, lastFlushedStateStorage, kernelComponents.stateMachines() );
 
-        CommandApplicationProcess applicationProcess = createCommandApplicationProcess( raftGroup, panicker, config, clusterComponents, jobScheduler,
-                                                                                        dependencies, monitors, raftContext.progressTracker(), sessionTracker,
-                                                                                        coreState, debugLog );
+        var applicationProcess = createCommandApplicationProcess( raftGroup, panicker, config, clusterComponents, jobScheduler,
+                                                                  dependencies, monitors, raftContext.progressTracker(), sessionTracker,
+                                                                  coreState, debugLog );
 
-        CoreSnapshotService snapshotService = new CoreSnapshotService( applicationProcess, raftGroup.raftLog(), coreState,
-                                                                       raftGroup.raftMachine(), namedDatabaseId, kernelDatabase.getLogService(), clock );
+        var snapshotService = new CoreSnapshotService( applicationProcess, raftGroup.raftLog(), coreState,
+                                                       raftGroup.raftMachine(), namedDatabaseId, kernelDatabase.getLogService(), clock );
         dependencies.satisfyDependencies( snapshotService );
 
-        CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicker, jobScheduler, monitors, applicationProcess,
-                                                                  snapshotService, downloadContext, debugLog );
+        var downloadService = createDownloader( catchupComponentsProvider, panicker, jobScheduler, monitors, applicationProcess,
+                                                snapshotService, downloadContext, debugLog );
 
-        TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
+        var defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         defaultStrategy.inject( topologyService, config, debugLog, myIdentity );
 
-        UpstreamDatabaseStrategySelector catchupStrategySelector = createUpstreamDatabaseStrategySelector(
-                myIdentity, config, debugLog, topologyService, defaultStrategy );
+        var catchupStrategySelector = createUpstreamDatabaseStrategySelector( myIdentity, config, debugLog, topologyService, defaultStrategy );
 
-        LeaderProvider leaderProvider = new LeaderProvider( raftGroup.raftMachine(), topologyService );
+        var leaderProvider = new LeaderProvider( raftGroup.raftMachine(), topologyService );
 
-        CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider =
+        var catchupAddressProvider =
                 new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( leaderProvider, topologyService, catchupStrategySelector );
 
         dependencies.satisfyDependency( raftGroup.raftMachine() );
 
         raftGroup.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStateStorage::getInitialState );
 
-        RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( jobScheduler, clock, debugLog, monitors, config,
-                                                                                                            raftMessageDispatcher, catchupAddressProvider,
-                                                                                                            panicker );
+        var raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( jobScheduler, clock, debugLog, monitors, config,
+                                                                                 raftMessageDispatcher, catchupAddressProvider, panicker );
 
-        LifecycleMessageHandler<InboundRaftMessageContainer<?>> messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain(
-                raftGroup, downloadService, applicationProcess );
+        var messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain( raftGroup, downloadService, applicationProcess );
 
-        DatabaseTopologyNotifier topologyNotifier = new DatabaseTopologyNotifier( namedDatabaseId, topologyService );
+        var topologyNotifier = new DatabaseTopologyNotifier( namedDatabaseId, topologyService );
 
-        CorePanicHandlers panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
+        var panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
 
-        TempBootstrapDir tempBootstrapDir = new TempBootstrapDir( fileSystem, kernelDatabase.getDatabaseLayout() );
-        CoreBootstrap bootstrap = new CoreBootstrap( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService,
-                                                     internalOperator, databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver, tempBootstrapDir );
+        var tempBootstrapDir = new TempBootstrapDir( fileSystem, kernelDatabase.getDatabaseLayout() );
+        var bootstrap = new CoreBootstrap( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService,
+                                           internalOperator, databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver, tempBootstrapDir );
 
         return new CoreDatabase( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
                                  clusterComponents, panicHandler, bootstrap, topologyNotifier );
@@ -367,7 +364,8 @@ class CoreDatabaseFactory
 
     private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, SimpleStorage<RaftId> raftIdStorage,
                                          BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory,
-                                         DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker )
+                                         DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker,
+                                         MemberId myIdentity )
     {
         var pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY, namedDatabaseId.name() );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, pageCache, fileSystem, debugLog,
@@ -429,7 +427,7 @@ class CoreDatabaseFactory
 
     private RaftReplicator createReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, LocalSessionPool sessionPool,
                                              ProgressTracker progressTracker, Monitors monitors, Outbound<MemberId,RaftMessage> raftOutbound,
-                                             DatabaseLogProvider debugLog )
+                                             DatabaseLogProvider debugLog, MemberId myIdentity )
     {
         Duration initialBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_base );
         Duration upperBoundBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_limit );

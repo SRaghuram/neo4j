@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -26,8 +27,10 @@ class RaftLeadershipsResolverTest
     void shouldCorrectlyReturnCurrentLeadershipsForMember()
     {
         // given
-        var myself = new MemberId( UUID.randomUUID() );
-        var core1 = new MemberId( UUID.randomUUID() );
+        var identityModule = new StubClusteringIdentityModule();
+        var myself = identityModule.memberId();
+        var remoteIdentityModule = new StubClusteringIdentityModule();
+        var core1 = remoteIdentityModule.memberId();
 
         var databaseManager = new StubClusteredDatabaseManager();
 
@@ -35,8 +38,8 @@ class RaftLeadershipsResolverTest
         var db2 = databaseWithLeader( databaseManager, myself, "bar" );
         var db3 = databaseWithLeader( databaseManager, core1, "baz" );
 
-        var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myself );
-        var otherLeadershipResolver = new RaftLeadershipsResolver( databaseManager, core1 );
+        var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
+        var otherLeadershipResolver = new RaftLeadershipsResolver( databaseManager, remoteIdentityModule );
 
         // when
         var leaderships = leadershipsResolver.myLeaderships();
@@ -51,13 +54,14 @@ class RaftLeadershipsResolverTest
     void shouldHandleNoLeaderSituation()
     {
         // given
-        var myself = new MemberId( UUID.randomUUID() );
+        var identityModule = new StubClusteringIdentityModule();
+        var myself = identityModule.memberId();
 
         var databaseManager = new StubClusteredDatabaseManager();
 
         var db1 = databaseWithoutLeader( databaseManager, "foo" );
 
-        var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myself );
+        var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
 
         // when
         var leaderships = leadershipsResolver.myLeaderships();
@@ -69,7 +73,7 @@ class RaftLeadershipsResolverTest
         // when
         var db2 = databaseWithLeader( databaseManager, myself, "bar" );
 
-        leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myself );
+        leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
 
         leaderships = leadershipsResolver.myLeaderships();
 

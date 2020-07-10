@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -40,8 +40,8 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     private static final int RESTART_FAILURES_BEFORE_UNHEALTHY = 8;
 
     @Override
-    public final AkkaCoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
-            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
+    public final AkkaCoreTopologyService coreTopologyService( Config config, ClusteringIdentityModule identityModule, JobScheduler jobScheduler,
+            LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
             SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Monitors monitors, Clock clock )
     {
         CallableExecutor executor = jobScheduler.executor( Group.AKKA_HELPER );
@@ -50,7 +50,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 
         return new AkkaCoreTopologyService(
                 config,
-                myself,
+                identityModule,
                 actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
                 logProvider,
                 userLogProvider,
@@ -63,13 +63,14 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     }
 
     @Override
-    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
-            RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
+    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
+            ClusteringIdentityModule identityModule, RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
+            DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
     {
         return new AkkaTopologyClient(
                 config,
                 logProvider,
-                myself,
+                identityModule,
                 actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
                 discoveryMemberFactory,
                 clock );

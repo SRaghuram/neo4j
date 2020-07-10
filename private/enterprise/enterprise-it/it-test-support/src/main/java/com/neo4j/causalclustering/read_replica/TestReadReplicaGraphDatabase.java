@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.read_replica;
 
 import com.neo4j.causalclustering.common.TestClusterDatabaseManagementServiceFactory;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 
 import org.neo4j.configuration.Config;
@@ -17,18 +16,18 @@ import org.neo4j.kernel.impl.factory.DbmsInfo;
 
 public class TestReadReplicaGraphDatabase extends ReadReplicaGraphDatabase
 {
-    public TestReadReplicaGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId,
+    public TestReadReplicaGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory,
             ReadReplicaEditionModuleFactory editionModuleFactory )
     {
-        super( config, dependencies, discoveryServiceFactory, memberId, editionModuleFactory );
+        super( config, dependencies, discoveryServiceFactory, editionModuleFactory );
     }
 
     @Override
     protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
-            DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId, ReadReplicaEditionModuleFactory editionModuleFactory )
+            DiscoveryServiceFactory discoveryServiceFactory, ReadReplicaEditionModuleFactory editionModuleFactory )
     {
         return new TestClusterDatabaseManagementServiceFactory( DbmsInfo.READ_REPLICA,
-            globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId ) )
+            globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
             .build( config, dependencies );
     }
 }

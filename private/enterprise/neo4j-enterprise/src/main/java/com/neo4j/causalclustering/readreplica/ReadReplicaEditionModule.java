@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
@@ -43,6 +44,7 @@ import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 
 import java.io.File;
 import java.time.Duration;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
@@ -55,6 +57,7 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -70,6 +73,7 @@ import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.Group;
@@ -78,7 +82,6 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.configuration.CausalClusteringSettings.status_throughput_window;
-import static java.util.UUID.randomUUID;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
@@ -91,7 +94,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private final Config globalConfig;
     private final GlobalModule globalModule;
 
-    private final MemberId myIdentity;
+    private final ClusteringIdentityModule identityModule;
     private final JobScheduler jobScheduler;
     private final PanicService panicService;
     private final CatchupComponentsProvider catchupComponentsProvider;
@@ -108,23 +111,14 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
-        this( globalModule, discoveryServiceFactory, new MemberId( randomUUID() ) );
-    }
-
-    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, final MemberId myIdentity )
-    {
         super( globalModule );
 
         this.globalModule = globalModule;
         this.discoveryServiceFactory = discoveryServiceFactory;
-        this.myIdentity = myIdentity;
         LogService logService = globalModule.getLogService();
         this.globalConfig = globalModule.getGlobalConfig();
         logProvider = logService.getInternalLogProvider();
-        logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myIdentity ) );
-
         jobScheduler = globalModule.getJobScheduler();
-        jobScheduler.setTopLevelGroupName( "ReadReplica " + myIdentity );
 
         Dependencies globalDependencies = globalModule.getGlobalDependencies();
 
@@ -150,6 +144,11 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
                 globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
+        final MemoryTracker memoryTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
+        identityModule = ReadReplicaClusteringIdentityModule.create( logProvider );
+        globalDependencies.satisfyDependency( identityModule );
+        jobScheduler.setTopLevelGroupName( "ReadReplica " + identityModule.myself() );
+
         addThroughputMonitorService();
 
         satisfyEnterpriseOnlyDependencies( this.globalModule );
@@ -161,7 +160,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
     private void addThroughputMonitorService()
     {
-        var jobScheduler = globalModule.getJobScheduler();
         jobScheduler.setParallelism( Group.THROUGHPUT_MONITOR, 1 );
         Duration throughputWindow = globalModule.getGlobalConfig().get( status_throughput_window );
         var throughputMonitorService = new ThroughputMonitorService( globalModule.getGlobalClock(), jobScheduler, throughputWindow, logProvider );
@@ -258,8 +256,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
-                topologyService, myIdentity, catchupComponentsRepository, catchupClientFactory, databaseEventService, storageFactory, panicService,
-                databaseStartAborter, globalModule.getTracers().getPageCacheTracer() );
+                topologyService, identityModule.memberId(), catchupComponentsRepository, catchupClientFactory, databaseEventService, storageFactory,
+                panicService, databaseStartAborter, globalModule.getTracers().getPageCacheTracer() );
     }
 
     @Override
@@ -301,7 +299,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
-        return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, myIdentity, hostnameResolver,
+        return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, identityModule, hostnameResolver,
                 sslPolicyLoader, discoveryMemberFactory, globalModule.getGlobalClock() );
     }
 

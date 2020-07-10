@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 import com.neo4j.causalclustering.discovery.akka.Restarter;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -58,11 +58,11 @@ public class AkkaDiscoveryRestartIT
         int stablePort = PortAuthority.allocatePort();
         var discoServiceFactory = new TestAkkaCoreTopologyServiceFactory();
 
-        discoServices.add( (TestAkkaCoreTopologyService)coreTopologyService( stablePort, discoServiceFactory, stablePort ) );
+        discoServices.add( (TestAkkaCoreTopologyService) coreTopologyService( stablePort, discoServiceFactory, stablePort ) );
 
-        for ( int i = 0; i < CLUSTER_SIZE - 1; i ++ )
+        for ( int i = 0; i < CLUSTER_SIZE - 1; i++ )
         {
-            discoServices.add( (TestAkkaCoreTopologyService)coreTopologyService( stablePort, discoServiceFactory ) );
+            discoServices.add( (TestAkkaCoreTopologyService) coreTopologyService( stablePort, discoServiceFactory ) );
         }
 
         for ( var topologyService : discoServices )
@@ -106,8 +106,8 @@ public class AkkaDiscoveryRestartIT
         private static final int RESTART_FAILURES_BEFORE_UNHEALTHY = 8;
 
         @Override
-        public TestAkkaCoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
-                LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
+        public TestAkkaCoreTopologyService coreTopologyService( Config config, ClusteringIdentityModule identityModule, JobScheduler jobScheduler,
+                LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
                 SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Monitors monitors, Clock clock )
         {
             TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
@@ -115,7 +115,7 @@ public class AkkaDiscoveryRestartIT
 
             return new TestAkkaCoreTopologyService(
                     config,
-                    myself,
+                    identityModule,
                     actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
                     logProvider,
                     userLogProvider, catchupAddressRetryStrategy,
@@ -127,14 +127,15 @@ public class AkkaDiscoveryRestartIT
         }
 
         @Override
-        public AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
-                RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
+        public AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
+                ClusteringIdentityModule identityModule, RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
+                DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
         {
             return null;
         }
 
         protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,
-        SslPolicyLoader sslPolicyLoader )
+                SslPolicyLoader sslPolicyLoader )
         {
             return new ActorSystemLifecycle(
                     actorSystemFactory( sslPolicyLoader, config, logProvider ),
@@ -154,12 +155,12 @@ public class AkkaDiscoveryRestartIT
     {
         private final ActorSystemLifecycle actorSystemLifecycle;
 
-        TestAkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+        TestAkkaCoreTopologyService( Config config, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
                 LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter, DiscoveryMemberFactory discoveryMemberFactory,
                 Executor executor, Clock clock, Monitors monitors )
         {
-            super( config, myself, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, restarter, discoveryMemberFactory, executor,
-                    clock, monitors );
+            super( config, identityModule, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, restarter, discoveryMemberFactory,
+                    executor, clock, monitors );
             this.actorSystemLifecycle = actorSystemLifecycle;
         }
 

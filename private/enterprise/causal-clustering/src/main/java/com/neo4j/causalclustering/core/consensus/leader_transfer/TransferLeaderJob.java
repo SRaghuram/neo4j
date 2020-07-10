@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.ServerGroupName;
 
@@ -31,11 +31,11 @@ class TransferLeaderJob extends TransferLeader implements Runnable
     private static final RandomStrategy PRIORITISED_SELECTION_STRATEGY = new RandomStrategy();
     private final SelectionStrategy selectionStrategy;
 
-    TransferLeaderJob( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself,
-                       DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing, RaftMembershipResolver membershipResolver,
-                       Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
+    TransferLeaderJob( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
+                       ClusteringIdentityModule identityModule, DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing,
+                       RaftMembershipResolver membershipResolver, Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
     {
-        super( config, messageHandler, myself, databasePenalties, membershipResolver, leadershipsResolver, clock );
+        super( config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, clock );
         this.selectionStrategy = leaderLoadBalancing;
     }
 

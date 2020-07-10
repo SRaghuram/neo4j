@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.helper.ErrorHandler;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.read_replica.TestReadReplicaGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
@@ -689,8 +688,8 @@ public class Cluster
                 monitors,
                 advertisedAddress,
                 listenAddress,
-                ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId ) ->
-                        new TestReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, memberId, ReadReplicaEditionModule::new )
+                ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
+                        new TestReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, ReadReplicaEditionModule::new )
         );
     }
 

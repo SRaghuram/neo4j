@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -21,8 +22,8 @@ import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferTarget.NO_TARGET;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class RandomEvenStrategyTest
 {
@@ -30,9 +31,10 @@ public class RandomEvenStrategyTest
     void onlySelectMembersWithTwoFewerLeaderships()
     {
         // given
+        var identityModule = new StubClusteringIdentityModule();
         var member1 = new MemberId( UUID.randomUUID() );
         var member2 = new MemberId( UUID.randomUUID() );
-        var member3 = new MemberId( UUID.randomUUID() );
+        var member3 = identityModule.memberId();
         var member4 = new MemberId( UUID.randomUUID() );
 
         var memberLeaderMap = Map.of(
@@ -52,7 +54,7 @@ public class RandomEvenStrategyTest
 
         var leaderService = new StubLeaderService( dbToLeaderMap );
 
-        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, member3 );
+        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, identityModule );
         var validTopologies = allDatabases.stream()
                                           .map( db -> new TransferCandidates( db, Set.of( member1, member2, member3, member4 ) ) )
                                           .collect( Collectors.toList() );
@@ -68,9 +70,10 @@ public class RandomEvenStrategyTest
     void returnNoTargetIfTopologiesAndLowLeadershipMembersDontIntersect()
     {
         // given
+        var identityModule = new StubClusteringIdentityModule();
         var member1 = new MemberId( UUID.randomUUID() );
         var member2 = new MemberId( UUID.randomUUID() );
-        var member3 = new MemberId( UUID.randomUUID() );
+        var member3 = identityModule.memberId();
         var member4 = new MemberId( UUID.randomUUID() );
 
         var memberLeaderMap = Map.of(
@@ -90,7 +93,7 @@ public class RandomEvenStrategyTest
 
         var leaderService = new StubLeaderService( dbToLeaderMap );
 
-        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, member3 );
+        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, identityModule );
         var validTopologies = allDatabases.stream()
                                           .map( db -> new TransferCandidates( db, Set.of( member1, member3, member4 ) ) )
                                           .collect( Collectors.toList() );
