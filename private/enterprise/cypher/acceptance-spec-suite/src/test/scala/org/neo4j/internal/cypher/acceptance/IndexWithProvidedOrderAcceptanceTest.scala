@@ -878,19 +878,20 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           "n.prop1 = 42    AND n.prop2 <= 3",
           "n.prop1 IN [42] AND n.prop2 <= $a" // no auto-parametrization to list keeps type, with single value it is the same as =
         ).foreach { predicates =>
-          val query =
-            s"""MATCH (n:Label)
-               |WHERE $predicates
-               |RETURN n.prop1, n.prop2
-               |ORDER BY $orderByString""".stripMargin
-          // When
-          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> 3))
+          withClue(s"WHERE $predicates ORDER BY $orderByString:") {
+            val query = s"""MATCH (n:Label)
+                           |WHERE $predicates
+                           |RETURN n.prop1, n.prop2
+                           |ORDER BY $orderByString""".stripMargin
+            // When
+            val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> 3))
 
-          // Then
-          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+            // Then
+            result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+              includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-          result.toComparableResult should equal(expected)
+            result.toComparableResult should equal(expected)
+          }
         }
     }
   }
@@ -912,20 +913,21 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("n.prop1 DESC, n.prop2",      orderDescAsc, expected),
     ).foreach {
       case (orderByString, order, expected) =>
-        val query =
-          s"""MATCH (n:Label)
-             |WHERE n.prop1 = 42 AND n.prop2 = 3
-             |RETURN n.prop1, n.prop2
-             |ORDER BY $orderByString""".stripMargin
+        withClue(s"ORDER BY $orderByString:") {
+          val query = s"""MATCH (n:Label)
+                        |WHERE n.prop1 = 42 AND n.prop2 = 3
+                        |RETURN n.prop1, n.prop2
+                        |ORDER BY $orderByString""".stripMargin
 
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -963,18 +965,20 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("n.prop1 DESC, n.prop2, n.prop3", orderDescAscAsc, Seq(Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> 1.67))),
     ).foreach {
       case (orderByString, order, expected) =>
-        val query = s"""MATCH (n:Label)
-                       |WHERE n.prop1 = 41 AND n.prop2 = 2 AND n.prop3 = 1.67
-                       |RETURN n.prop1, n.prop2, n.prop3
-                       |ORDER BY $orderByString""".stripMargin
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+        withClue(s"ORDER BY $orderByString:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE n.prop1 = 41 AND n.prop2 = 2 AND n.prop3 = 1.67
+                         |RETURN n.prop1, n.prop2, n.prop3
+                         |ORDER BY $orderByString""".stripMargin
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1028,18 +1032,20 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("n.prop1 = 41 AND n.prop2 > 3 AND n.prop3 = 1.67", "n.prop1 DESC, n.prop2, n.prop3", orderDescAscAsc, expectedMoreThen3.reverse),
     ).foreach {
       case (predicates, orderByString, order, expected) =>
-        val query = s"""MATCH (n:Label)
-                       |WHERE $predicates
-                       |RETURN n.prop1, n.prop2, n.prop3
-                       |ORDER BY $orderByString""".stripMargin
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+        withClue(s"WHERE $predicates ORDER BY $orderByString:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE $predicates
+                         |RETURN n.prop1, n.prop2, n.prop3
+                         |ORDER BY $orderByString""".stripMargin
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1062,17 +1068,19 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("RETURN n.prop1 AS prop1, n.prop2 AS prop2 ORDER BY prop1 DESC, prop2 ASC", orderDescAsc, expectedNoN.reverse),
     ).foreach {
       case (returnAndOrderBy, order, expected) =>
-        val query = s"""MATCH (n:Label)
-                       |WHERE n.prop1 = 42 AND n.prop2 <= 3
-                       |$returnAndOrderBy""".stripMargin
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+        withClue(s"$returnAndOrderBy:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE n.prop1 = 42 AND n.prop2 <= 3
+                         |$returnAndOrderBy""".stripMargin
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1098,18 +1106,20 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("WITH n.prop1 AS prop1, n.prop2 AS prop2 ORDER BY prop1 DESC, prop2 ASC", orderDescAsc, expectedNoN.reverse),
     ).foreach {
       case (withAndOrderBy, order, expected) =>
-        val query = s"""MATCH (n:Label)
-                       |WHERE n.prop1 = 42 AND n.prop2 <= 3
-                       |$withAndOrderBy
-                       |RETURN *""".stripMargin
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+        withClue(s"ORDER BY $withAndOrderBy:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE n.prop1 = 42 AND n.prop2 <= 3
+                         |$withAndOrderBy
+                         |RETURN *""".stripMargin
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1128,18 +1138,20 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("WITH n.prop1 AS prop1, n.prop2 AS prop2, 1 AS ignored WITH prop1 AS prop1, prop2 AS prop2 RETURN prop1, prop2", expected),
     ).foreach {
       case (middle, expected) =>
-        val query = s"""MATCH (n:Label)
-                       |WHERE n.prop1 = 42 AND n.prop2 <= 3
-                       |$middle
-                       |ORDER BY prop1 DESC, prop2 ASC""".stripMargin
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+        withClue(s"ORDER BY $middle:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE n.prop1 = 42 AND n.prop2 <= 3
+                         |$middle
+                         |ORDER BY prop1 DESC, prop2 ASC""".stripMargin
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1160,20 +1172,21 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("n.prop2 DESC, n.prop3",      orderDescAsc, expected.reverse),
     ).foreach {
       case (orderByString, order, expected) =>
-        val query =
-          s"""MATCH (n:Label)
-             |WHERE n.prop2 < 3 AND n.prop3 = 'f'
-             |RETURN n.prop2, n.prop3
-             |ORDER BY $orderByString""".stripMargin
+        withClue(s"ORDER BY $orderByString:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE n.prop2 < 3 AND n.prop3 = 'f'
+                         |RETURN n.prop2, n.prop3
+                         |ORDER BY $orderByString""".stripMargin
 
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(order))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1214,20 +1227,21 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1 DESC, n.prop2",     orderDescAsc, expectedDescAsc),
     ).foreach {
       case (predicate, orderByString, order, expected) =>
-        val query =
-          s"""MATCH (n:Label)
-             |WHERE $predicate
-             |RETURN n.prop1, n.prop2
-             |ORDER BY $orderByString""".stripMargin
+        withClue(s"WHERE $predicate ORDER BY $orderByString:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE $predicate
+                         |RETURN n.prop1, n.prop2
+                         |ORDER BY $orderByString""".stripMargin
 
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(order) and
-          includeSomewhere.aPlan("NodeIndexSeek"))
+          // Then
+          result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(order) and
+            includeSomewhere.aPlan("NodeIndexSeek"))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1266,20 +1280,21 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       ("n.prop1 + 2 AS foo, n.prop3", "foo DESC,         n.prop3", indexOrderAscAsc, orderDescAsc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
     ).foreach {
       case (returnString, orderByString, orderIndex, orderSort, expected) =>
-        val query =
-          s"""MATCH (n:Label)
-             |WHERE n.prop1 = 40 AND n.prop3 = 'a'
-             |RETURN $returnString
-             |ORDER BY $orderByString""".stripMargin
+        withClue(s"RETURN $returnString ORDER BY $orderByString:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE n.prop1 = 40 AND n.prop3 = 'a'
+                         |RETURN $returnString
+                         |ORDER BY $orderByString""".stripMargin
 
-        // When
-        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-        // Then
-        result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(orderSort) and
-          includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
+          // Then
+          result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(orderSort) and
+            includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
 
-        result.toComparableResult should equal(expected)
+          result.toComparableResult should equal(expected)
+        }
     }
   }
 
@@ -1308,23 +1323,24 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           ("(n.prop2 = 2 OR n.prop2 = 2) AND n.prop3 > 'a'",  false, expectedOrder(expected)), // rewritten to only one equals
         ).foreach {
           case (predicates, shouldFilter, expected) =>
-            val query =
-              s"""MATCH (n:Label)
-                 |WHERE $predicates
-                 |RETURN n.prop2, n.prop3
-                 |ORDER BY $orderByString""".stripMargin
+            withClue(s"WHERE $predicates ORDER BY $orderByString:") {
+              val query = s"""MATCH (n:Label)
+                             |WHERE $predicates
+                             |RETURN n.prop2, n.prop3
+                             |ORDER BY $orderByString""".stripMargin
 
-            // When
-            val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+              // When
+              val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
-            // Then
-            result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
-              includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
+              // Then
+              result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
+                includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
 
-            if (shouldFilter) result.executionPlanDescription() should includeSomewhere.aPlan("Filter")
-            else result.executionPlanDescription() should not(includeSomewhere.aPlan("Filter"))
+              if (shouldFilter) result.executionPlanDescription() should includeSomewhere.aPlan("Filter")
+              else result.executionPlanDescription() should not(includeSomewhere.aPlan("Filter"))
 
-            result.toComparableResult should equal(expected)
+              result.toComparableResult should equal(expected)
+            }
         }
     }
   }
@@ -1352,20 +1368,21 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           "(n.prop2 = 1 OR n.prop2 = 2) AND n.prop3 > 'a'",
           "n.prop2 IN [1, 2] AND n.prop3 > $a",
         ).foreach { predicates =>
-          val query =
-            s"""MATCH (n:Label)
-               |WHERE $predicates
-               |RETURN n.prop2, n.prop3
-               |ORDER BY $orderByString""".stripMargin
+          withClue(s"WHERE $predicates ORDER BY $orderByString:") {
+            val query = s"""MATCH (n:Label)
+                           |WHERE $predicates
+                           |RETURN n.prop2, n.prop3
+                           |ORDER BY $orderByString""".stripMargin
 
-          // When
-          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> "a"))
+            // When
+            val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> "a"))
 
-          // Then
-          result.executionPlanDescription() should (includeSomewhere.aPlan("PartialSort").withOrder(sortOrder) and
-            includeSomewhere.aPlan("NodeIndexSeek").withOrder(indexOrder))
+            // Then
+            result.executionPlanDescription() should (includeSomewhere.aPlan("PartialSort").withOrder(sortOrder) and
+              includeSomewhere.aPlan("NodeIndexSeek").withOrder(indexOrder))
 
-          result.toComparableResult should equal(expected)
+            result.toComparableResult should equal(expected)
+          }
         }
     }
   }
