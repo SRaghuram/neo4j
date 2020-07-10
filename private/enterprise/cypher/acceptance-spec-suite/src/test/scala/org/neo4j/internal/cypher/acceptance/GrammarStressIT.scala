@@ -69,7 +69,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
     }
   }
 
-  test("optional match pattern") {
+  ignore("optional match pattern") {
     forAll(patterns, patterns) { (matchPattern, optionalPattern) =>
       val query = s"MATCH $matchPattern OPTIONAL MATCH $optionalPattern ${returnClause(matchPattern, optionalPattern)}"
       withClue(s"Failed on query: $query") {
@@ -303,10 +303,10 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
         // since with randomized patterns we cannot know at compile time, for which
         // of those we expect plans to be equal or not.
         val resultInterpreted = executeSingle(s"CYPHER runtime=interpreted $query", Map.empty)
-        val resultCompiled = executeSingle(s"CYPHER $query", Map.empty)
-        assertResultsSameDeprecated(resultCompiled, resultInterpreted, query,
+        val resultDefault = executeSingle(s"CYPHER $query", Map.empty)
+        assertResultsSameDeprecated(resultDefault, resultInterpreted, query,
           "Diverging results between interpreted and pipelined runtime")
-        resultCompiled
+        resultDefault
       } else None
     }
   }
