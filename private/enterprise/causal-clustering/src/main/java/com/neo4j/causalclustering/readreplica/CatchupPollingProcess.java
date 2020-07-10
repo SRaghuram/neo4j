@@ -31,6 +31,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;
@@ -44,7 +45,7 @@ import static org.neo4j.util.Preconditions.checkState;
  */
 public class CatchupPollingProcess extends LifecycleAdapter
 {
-    enum State
+    protected enum State
     {
         TX_PULLING,
         STORE_COPYING,
@@ -104,9 +105,15 @@ public class CatchupPollingProcess extends LifecycleAdapter
         state = CANCELLED;
     }
 
+    @VisibleForTesting
     public State state()
     {
         return state;
+    }
+
+    boolean isStoryCopy()
+    {
+        return state == STORE_COPYING;
     }
 
     /**

@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMemberFactory
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
+import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
@@ -181,6 +182,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ReadReplicaRoleProcedure( databaseManager ) );
+        globalProcedures.register( new ReadReplicaToggleProcedure( databaseManager ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
                 reconcilerModule.databaseStateService() ) );

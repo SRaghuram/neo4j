@@ -34,6 +34,9 @@ import org.neo4j.test.CallingThreadExecutor;
 import org.neo4j.test.FakeClockJobScheduler;
 
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -115,5 +118,44 @@ class CatchupProcessManagerTest
 
         // then
         verify( timer, never() ).reset();
+    }
+
+    @Test
+    void pauseCatchupProcessShouldBeIdempotent()
+    {
+        //given
+        CatchupPollingProcess catchupPollingProcess = mock( CatchupPollingProcess.class );
+        when( catchupPollingProcess.isStoryCopy() ).thenReturn( false );
+        catchupProcessManager.setCatchupProcess( catchupPollingProcess );
+
+        //when
+        assertTrue( catchupProcessManager.pauseCatchupProcess() );
+        assertFalse( catchupProcessManager.pauseCatchupProcess() );
+    }
+
+    @Test
+    void resumeCatchupProcessShouldBeIdempotent()
+    {
+        //given
+        CatchupPollingProcess catchupPollingProcess = mock( CatchupPollingProcess.class );
+        when( catchupPollingProcess.isStoryCopy() ).thenReturn( false );
+        catchupProcessManager.setCatchupProcess( catchupPollingProcess );
+
+        //when
+        assertTrue( catchupProcessManager.pauseCatchupProcess() );
+        assertTrue( catchupProcessManager.resumeCatchupProcess() );
+        assertFalse( catchupProcessManager.resumeCatchupProcess() );
+    }
+
+    @Test
+    void shouldFailToStopCatchupPollingIfCatchupPollingHasStoryCopyState()
+    {
+        //given
+        CatchupPollingProcess catchupPollingProcess = mock( CatchupPollingProcess.class );
+        when( catchupPollingProcess.isStoryCopy() ).thenReturn( true );
+        catchupProcessManager.setCatchupProcess( catchupPollingProcess );
+
+        //when
+        assertThrows( IllegalStateException.class, () -> catchupProcessManager.pauseCatchupProcess() );
     }
 }

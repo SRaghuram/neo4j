@@ -74,6 +74,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private CatchupPollingProcess catchupProcess;
     private LifeSupport txPulling;
     private volatile boolean isPanicked;
+    private volatile boolean txPullingPaused;
     private Timer timer;
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext,
@@ -107,6 +108,7 @@ public class CatchupProcessManager extends SafeLifecycle
         catchupProcess = createCatchupProcess( databaseContext );
         txPulling.start();
         initTimer();
+        txPullingPaused = false;
     }
 
     @Override
@@ -115,6 +117,32 @@ public class CatchupProcessManager extends SafeLifecycle
         log.info( "Shutting down " + this.getClass().getSimpleName() );
         timer.kill( Timer.CancelMode.SYNC_WAIT );
         txPulling.stop();
+        txPullingPaused = true;
+    }
+
+    public boolean pauseCatchupProcess()
+    {
+        if ( txPullingPaused )
+        {
+            return false;
+        }
+        if ( !isCatchupProcessAvailableForPausing() )
+        {
+            throw new IllegalStateException( "Catchup process can't be stopped" );
+        }
+
+        txPullingPaused = true;
+        return true;
+    }
+
+    public boolean resumeCatchupProcess()
+    {
+        if ( !txPullingPaused )
+        {
+            return false;
+        }
+        txPullingPaused = false;
+        return true;
     }
 
     public synchronized void panic( Throwable e )
@@ -154,12 +182,20 @@ public class CatchupProcessManager extends SafeLifecycle
      */
     private void onTimeout() throws Exception
     {
-        catchupProcess.tick().get();
+        if ( !txPullingPaused )
+        {
+            catchupProcess.tick().get();
+        }
 
         if ( !isPanicked )
         {
             timer.reset();
         }
+    }
+
+    private boolean isCatchupProcessAvailableForPausing()
+    {
+        return catchupProcess != null && !catchupProcess.isStoryCopy();
     }
 
     @VisibleForTesting

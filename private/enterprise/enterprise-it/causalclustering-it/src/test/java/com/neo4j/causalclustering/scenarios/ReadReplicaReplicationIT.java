@@ -378,6 +378,35 @@ class ReadReplicaReplicationIT
         transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) );
     }
 
+    @Test
+    void transactionsShouldNotAppearOnTheReadReplicaWhileCatchupPollingIsPaused() throws Throwable
+    {
+        // given
+        var cluster = startClusterWithDefaultConfig();
+
+        var readReplica = cluster.findAnyReadReplica();
+        var readReplicaGraphDatabase = readReplica.defaultDatabase();
+        var catchupProcessManager = readReplicaGraphDatabase.getDependencyResolver().resolveDependency( CatchupProcessManager.class );
+        catchupProcessManager.pauseCatchupProcess();
+
+        var leader = cluster.coreTx( ( coreGraphDatabase, transaction ) ->
+                                                              {
+                                                                  transaction.createNode();
+                                                                  transaction.commit();
+                                                              } );
+
+        var databaseId = defaultDatabaseId( leader );
+        var transactionVisibleOnLeader = transactionIdTracker( leader ).newestTransactionId( databaseId );
+
+        // when the poller is paused, transaction doesn't make it to the read replica
+        assertThrows( TransactionIdTrackerException.class,
+                      () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) ) );
+
+        // when the poller is resumed, it does make it to the read replica
+        catchupProcessManager.resumeCatchupProcess();
+        transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 30 ) );
+    }
+
     private static TransactionIdTracker transactionIdTracker( ClusterMember member )
     {
         var reconciledTxTracker = member.systemDatabase().getDependencyResolver().resolveDependency( ReconciledTransactionTracker.class );
