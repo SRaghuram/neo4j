@@ -12,6 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -44,6 +45,12 @@ public class ExportPlanCommand implements Runnable
              title = "Query name" )
     @Required
     private String queryName;
+
+    private static final String CMD_RUNTIME = "--runtime";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_RUNTIME},
+            title = "Cypher runtime" )
+    private Runtime runtime = Runtime.DEFAULT;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
@@ -94,7 +101,7 @@ public class ExportPlanCommand implements Runnable
               Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
-            Query query = workload.queryForName( queryName );
+            Query query = workload.queryForName( queryName ).copyWith( runtime );
 
             System.out.println( "Generating plan for : " + query.name() );
             Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile.toPath(), query );
@@ -131,7 +138,9 @@ public class ExportPlanCommand implements Runnable
                 CMD_OUTPUT,
                 forkDirectory.toAbsolutePath(),
                 CMD_WORK_DIR,
-                workDir.toAbsolutePath().toString() );
+                workDir.toAbsolutePath().toString(),
+                CMD_RUNTIME,
+                query.queryString().runtime().name() );
         if ( null != neo4jConfig )
         {
             args.add( CMD_NEO4J_CONFIG );
