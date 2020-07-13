@@ -34,9 +34,8 @@ class StoreCopyCommandTest
                 "%n" +
                 "USAGE%n" +
                 "%n" +
-                "copy (--from-database=<database> | --from-path=<path>) [--force] [--verbose]%n" +
-                "     [--from-pagecache=<size>] [--from-path-tx=<path>] --to-database=<database>%n" +
-                "     [--to-format=<format>] [--to-pagecache=<size>]%n" +
+                "copy [--force] [--verbose] [--from-pagecache=<size>] [--from-path-tx=<path>]%n" +
+                "     --to-database=<database> [--to-format=<format>] [--to-pagecache=<size>]%n" +
                 "     [--delete-nodes-with-labels=<label>[,<label>...]]...%n" +
                 "     [--keep-only-node-properties=<label.property>[,<label.property>...]]...%n" +
                 "     [--keep-only-nodes-with-labels=<label>[,<label>...]]...%n" +
@@ -46,7 +45,7 @@ class StoreCopyCommandTest
                 "     [--skip-properties=<property>[,<property>...]]...%n" +
                 "     [--skip-relationship-properties=<relationship.property>[,<relationship.%n" +
                 "     property>...]]... [--skip-relationships=<relationship>[,%n" +
-                "     <relationship>...]]...%n" +
+                "     <relationship>...]]... (--from-database=<database> | --from-path=<path>)%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +

@@ -46,7 +46,6 @@ import static org.neo4j.internal.kernel.api.security.AuthenticationResult.SUCCES
 
 class AuthTokenTest
 {
-
     private static final BoltGraphDatabaseManagementServiceSPI databaseManagementService = mock( BoltGraphDatabaseManagementServiceSPI.class );
     private static final BoltGraphDatabaseServiceSPI boltDatabaseService = mock( BoltGraphDatabaseServiceSPI.class );
     private static final EnterpriseAuthManager commercialAuthManager = mock( EnterpriseAuthManager.class );
