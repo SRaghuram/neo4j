@@ -53,8 +53,7 @@ class TxPuller
         this.addressProvider = new StateBasedAddressProvider( namedDatabaseId, catchupAddressProvider );
         this.log = logProvider.getLog( getClass() );
         this.resettableCondition = noProgressHandler;
-        this.connectionErrorLogger = new CappedLogger( log );
-        connectionErrorLogger.setTimeLimit( 1, TimeUnit.SECONDS, clock );
+        this.connectionErrorLogger = new CappedLogger( log, 1, TimeUnit.SECONDS, clock );
     }
 
     void pullTransactions( TxPullRequestContext context, TransactionLogCatchUpWriter writer, TxPullClient client ) throws StoreCopyFailedException

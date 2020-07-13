@@ -41,7 +41,8 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.extension.Inject;
@@ -125,7 +126,7 @@ class StoreCopyCheckpointMutexIT
                 databaseManager,
                 injectingFS,
                 32768,
-                FormattedLogProvider.toOutputStream( System.out ) );
+                new Log4jLogProvider( System.out ) );
 
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( regularCatchupServerHandler )
@@ -154,7 +155,7 @@ class StoreCopyCheckpointMutexIT
                 .withReportsDirectory( backupDir )
                 .build();
 
-        var logProvider = FormattedLogProvider.toOutputStream( System.out );
+        var logProvider = (LogProvider) new Log4jLogProvider( System.out );
 
         var backupExecutor = OnlineBackupExecutor.builder()
                                                  .withUserLogProvider( logProvider )

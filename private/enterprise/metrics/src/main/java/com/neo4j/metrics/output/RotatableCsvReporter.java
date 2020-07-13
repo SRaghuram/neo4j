@@ -30,7 +30,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.neo4j.io.IOUtils;
-import org.neo4j.logging.RotatingFileOutputStreamSupplier;
 
 public class RotatableCsvReporter extends ScheduledReporter
 {

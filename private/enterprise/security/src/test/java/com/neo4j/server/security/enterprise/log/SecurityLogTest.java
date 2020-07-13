@@ -6,11 +6,11 @@
 package com.neo4j.server.security.enterprise.log;
 
 import com.neo4j.configuration.SecuritySettings;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Scanner;
@@ -18,31 +18,40 @@ import java.util.TimeZone;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogTimeZone;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EphemeralTestDirectoryExtension
+
+@TestDirectoryExtension
 class SecurityLogTest
 {
     @Inject
-    private EphemeralFileSystemAbstraction fs;
+    private DefaultFileSystemAbstraction fs;
+    @Inject
+    private TestDirectory dir;
 
-    private final Config config = Config.newBuilder()
-            .set( SecuritySettings.store_security_log_rotation_threshold, 5L )
-            .set( SecuritySettings.store_security_log_rotation_delay, Duration.ofMillis( 1 ) ).build();
+    private Config config;
+
+    @BeforeEach
+    void setUp()
+    {
+        config = Config.newBuilder()
+                .set( SecuritySettings.store_security_log_rotation_threshold, 5L )
+                .set( GraphDatabaseSettings.neo4j_home, dir.homeDir().toPath() ).build();
+    }
 
     @Test
     void shouldRotateLog() throws Exception
     {
-        SecurityLog securityLog = new SecurityLog( config, fs, Runnable::run, NullLogProvider.nullLogProvider() );
+        SecurityLog securityLog = new SecurityLog( config );
         securityLog.init();
         securityLog.info( "line 1" );
         securityLog.info( "line 2" );
@@ -78,8 +87,10 @@ class SecurityLogTest
     private void checkLogTimeZone( int hoursShift, String timeZoneSuffix ) throws Exception
     {
         TimeZone.setDefault( TimeZone.getTimeZone( ZoneOffset.ofHours( hoursShift ) ) );
-        Config timeZoneConfig = Config.defaults( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM );
-        SecurityLog securityLog = new SecurityLog( timeZoneConfig, fs, Runnable::run, NullLogProvider.nullLogProvider() );
+        Config timeZoneConfig = Config.newBuilder()
+                .set( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
+                .set( GraphDatabaseSettings.neo4j_home, dir.homeDir().toPath() ).build();
+        SecurityLog securityLog = new SecurityLog( timeZoneConfig );
         securityLog.init();
         securityLog.info( "line 1" );
         securityLog.shutdown();
@@ -87,7 +98,7 @@ class SecurityLogTest
         File activeLogFile = timeZoneConfig.get( SecuritySettings.security_log_filename ).toFile();
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines ).allMatch( item -> item.contains( timeZoneSuffix ) );
-        fs.clear();
+        dir.cleanup();
     }
 
     @Test
@@ -108,7 +119,7 @@ class SecurityLogTest
         }
     }
 
-    private void writeAllLevelsAndShutdown( SecurityLog securityLog, String tag ) throws Throwable
+    private void writeAllLevelsAndShutdown( SecurityLog securityLog, String tag )
     {
         securityLog.init();
         securityLog.debug( format( "%s: debug line", tag ) );
@@ -121,10 +132,8 @@ class SecurityLogTest
     private SecurityLog withLogLevel( Level debug )
     {
         return new SecurityLog(
-                Config.defaults( SecuritySettings.security_log_level, debug ),
-                fs,
-                Runnable::run,
-                NullLogProvider.nullLogProvider()
+                Config.newBuilder().set( SecuritySettings.security_log_level, debug )
+                        .set( GraphDatabaseSettings.neo4j_home, dir.homeDir().toPath() ).build()
             );
     }
 

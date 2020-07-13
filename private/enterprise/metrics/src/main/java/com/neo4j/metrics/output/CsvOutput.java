@@ -19,7 +19,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.RotatingFileOutputStreamSupplier;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 

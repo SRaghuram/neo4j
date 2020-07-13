@@ -21,14 +21,10 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import org.apache.lucene.util.NamedThreadFactory;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.rmi.RemoteException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -60,11 +56,12 @@ import org.neo4j.kernel.impl.locking.DumpLocksVisitor;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.lock.AcquireLockTimeoutException;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
+import org.neo4j.logging.log4j.LogConfig;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.cc_robustness.CcInstance.NF_IN;
@@ -290,15 +287,9 @@ public class Orchestrator
         log.info( "Dumping locks to: " + outputFile );
         DependencyResolver resolver = db.getDependencyResolver();
 
-        try ( BufferedWriter writer = Files.newBufferedWriter( outputFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND ) )
-        {
-            FormattedLogProvider logProvider = FormattedLogProvider.toWriter( writer );
-            resolver.resolveDependency( Locks.class ).accept( new DumpLocksVisitor( logProvider.getLog( Locks.class ) ) );
-        }
-        catch ( IOException e )
-        {
-            e.printStackTrace();
-        }
+        Log4jLogProvider logProvider = new Log4jLogProvider( LogConfig.createBuilder( outputFile, Level.INFO ).build() );
+        resolver.resolveDependency( Locks.class ).accept( new DumpLocksVisitor( logProvider.getLog( Locks.class ) ) );
+        logProvider.close();
     }
 
     static boolean isAvailable( GraphDatabaseAPI db )

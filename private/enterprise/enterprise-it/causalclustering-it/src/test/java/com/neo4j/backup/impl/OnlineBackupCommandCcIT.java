@@ -45,8 +45,8 @@ import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.recovery.Recovery;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -435,7 +435,7 @@ class OnlineBackupCommandCcIT
     {
         Config config = Config.defaults();
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
-        LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
+        LogProvider logProvider = new Log4jLogProvider( System.out );
         boolean checkRelationshipTypeScanStore = config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store );
         ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, checkRelationshipTypeScanStore, true );
         ConsistencyCheckService service = new ConsistencyCheckService();

@@ -43,7 +43,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -98,10 +97,8 @@ class QueryLoggerIT
     {
         logsDirectory = new File( testDirectory.homeDir(), "logs" );
         logFilename = new File( logsDirectory, "query.log" );
-        AssertableLogProvider inMemoryLog = new AssertableLogProvider();
         databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
-                .setInternalLogProvider( inMemoryLog )
                 .impermanent();
     }
 

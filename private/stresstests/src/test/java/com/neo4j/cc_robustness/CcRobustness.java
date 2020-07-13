@@ -26,16 +26,17 @@ import java.util.function.Predicate;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.Args;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.LogTimeZone;
+import org.neo4j.logging.log4j.Log4jLogProvider;
+import org.neo4j.logging.log4j.LogConfig;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
 import static java.lang.System.exit;
-import static java.util.TimeZone.getTimeZone;
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.lock_manager;
-import static org.neo4j.configuration.GraphDatabaseInternalSettings.store_internal_debug_contexts;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 
 public class CcRobustness
@@ -104,7 +105,8 @@ public class CcRobustness
 
     public static void main( String[] argArray )
     {
-        LogProvider logProvider = FormattedLogProvider.withZoneId( getTimeZone( "UDC" ).toZoneId() ).toOutputStream( System.out );
+        LogProvider logProvider =
+                new Log4jLogProvider( LogConfig.createBuilder( System.out, Level.INFO ).withTimezone( LogTimeZone.valueOf( "UDC" ) ).build() );
         Log log = logProvider.getLog( CcRobustness.class );
 
         Args args = Args.parse( argArray );
@@ -219,7 +221,6 @@ public class CcRobustness
         int denseNodeThreshold = parseIntOrRandomInRange.apply( args.get( dense_node_threshold.name(), "10-50" ) );
         params.put( dense_node_threshold.name(), "" + denseNodeThreshold );
 
-        params.put( store_internal_debug_contexts.name(), store_internal_debug_contexts.defaultValue() + ",org.neo4j.coreedge" );
         return params;
     }
 

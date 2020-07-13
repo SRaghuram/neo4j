@@ -50,7 +50,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
@@ -171,16 +171,16 @@ class RaftMessageEncoderDecoderTest
         if ( ApplicationProtocols.RAFT_2_0.implementation().equals( raftProtocol ) )
         {
             new RaftProtocolClientInstallerV2( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    FormattedLogProvider.toOutputStream( System.out ) ).install( outbound );
+                    new Log4jLogProvider( System.out ) ).install( outbound );
             new RaftProtocolServerInstallerV2( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    FormattedLogProvider.toOutputStream( System.out ) ).install( inbound );
+                    new Log4jLogProvider( System.out ) ).install( inbound );
         }
         else if ( ApplicationProtocols.RAFT_3_0.implementation().equals( raftProtocol ) )
         {
             new RaftProtocolClientInstallerV3( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    FormattedLogProvider.toOutputStream( System.out ) ).install( outbound );
+                    new Log4jLogProvider( System.out ) ).install( outbound );
             new RaftProtocolServerInstallerV3( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    FormattedLogProvider.toOutputStream( System.out ) ).install( inbound );
+                    new Log4jLogProvider( System.out ) ).install( inbound );
         }
         else
         {

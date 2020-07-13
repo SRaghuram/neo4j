@@ -16,9 +16,9 @@ import java.util.Collection;
 
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
@@ -42,7 +42,8 @@ public class DumpProcessInformation
         boolean doHeapDump = arg.getBoolean( HEAP, false, true );
         String[] containing = arg.orphans().toArray( new String[0] );
         String dumpDir = arg.get( DIR, "data" );
-        new DumpProcessInformation( FormattedLogProvider.toOutputStream( System.out ), new File( dumpDir ) ).dumpRunningProcesses( doHeapDump, containing );
+        new DumpProcessInformation( new Log4jLogProvider( System.out ), new File( dumpDir ) )
+                .dumpRunningProcesses( doHeapDump, containing );
     }
 
     private static String fileName( String category, Pair<Long,String> pid )

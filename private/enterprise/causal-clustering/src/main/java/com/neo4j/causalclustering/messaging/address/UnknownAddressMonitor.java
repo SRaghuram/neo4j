@@ -21,7 +21,7 @@ public class UnknownAddressMonitor
     private final Log log;
     private final Clock clock;
     private final long timeLimitMs;
-    private Map<MemberId,CappedLogger> loggers = new ConcurrentHashMap<>();
+    private final Map<MemberId,CappedLogger> loggers = new ConcurrentHashMap<>();
 
     public UnknownAddressMonitor( Log log, Clock clock, long timeLimitMs )
     {
@@ -35,8 +35,7 @@ public class UnknownAddressMonitor
         CappedLogger cappedLogger = loggers.get( to );
         if ( cappedLogger == null )
         {
-            cappedLogger = new CappedLogger( log );
-            cappedLogger.setTimeLimit( timeLimitMs, MILLISECONDS, clock );
+            cappedLogger = new CappedLogger( log, timeLimitMs, MILLISECONDS, clock );
             loggers.put( to, cappedLogger );
         }
         cappedLogger.info( "No address found for %s, probably because the member has been shut down.", to );

@@ -33,10 +33,9 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.logging.PrintStreamLogger;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
 
@@ -179,12 +178,13 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
 
     private static void dumpMetaDataStore( NeoStores neoStores )
     {
-        neoStores.getMetaDataStore().logRecords( new PrintStreamLogger( System.out ) );
+        neoStores.getMetaDataStore().logRecords( System.out::println );
     }
 
     private static LogProvider logProvider()
     {
-        return Boolean.getBoolean( "logger" ) ? FormattedLogProvider.toOutputStream( System.out ) : NullLogProvider.getInstance();
+        return Boolean.getBoolean( "logger" ) ? new Log4jLogProvider( System.out )
+                                              : NullLogProvider.getInstance();
     }
 
     private static <R extends AbstractBaseRecord, S extends RecordStore<R>> void dump(

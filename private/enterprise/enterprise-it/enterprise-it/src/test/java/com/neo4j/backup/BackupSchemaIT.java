@@ -31,8 +31,8 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -157,7 +157,7 @@ class BackupSchemaIT
                 .withBackupDirectory( backupsDir )
                 .build();
 
-        LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
+        LogProvider logProvider = new Log4jLogProvider( System.out );
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
                                                             .withUserLogProvider( logProvider )
                                                             .withInternalLogProvider( logProvider )

@@ -53,9 +53,9 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -106,7 +106,7 @@ class BackupRetriesIT
     @BeforeEach
     void setUp()
     {
-        logProvider = FormattedLogProvider.toOutputStream( System.out );
+        logProvider = new Log4jLogProvider( System.out );
         backupsDir = testDirectory.directory( "backups" ).toPath();
     }
 

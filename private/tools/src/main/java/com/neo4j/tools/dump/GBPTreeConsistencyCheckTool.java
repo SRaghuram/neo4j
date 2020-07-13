@@ -22,8 +22,9 @@ import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.index.schema.SchemaLayouts;
-import org.neo4j.logging.FormattedLog;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
@@ -73,8 +74,8 @@ public class GBPTreeConsistencyCheckTool
 
     private GBPTreeConsistencyCheckVisitor loggingInconsistencyVisitor()
     {
-        final FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
-        final FormattedLog log = logProvider.getLog( GBPTreeConsistencyCheckTool.class );
+        final LogProvider logProvider = new Log4jLogProvider( System.out );
+        final Log log = logProvider.getLog( GBPTreeConsistencyCheckTool.class );
         InconsistencyReport report = new InconsistencyReport( new InconsistencyMessageLogger( log ), new ConsistencySummaryStatistics() );
         ConsistencyReporter.FormattingDocumentedHandler handler = ConsistencyReporter.formattingHandler( report, RecordType.INDEX );
         return new ReporterFactory( handler ).getClass( GBPTreeConsistencyCheckVisitor.class );

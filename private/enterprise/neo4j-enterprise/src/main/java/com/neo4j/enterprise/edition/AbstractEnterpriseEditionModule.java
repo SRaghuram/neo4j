@@ -24,7 +24,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.CallableExecutor;
 import org.neo4j.scheduler.Group;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 
@@ -75,8 +74,7 @@ public interface AbstractEnterpriseEditionModule
     {
         Config config = globalModule.getGlobalConfig();
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
-        CallableExecutor executor = globalModule.getJobScheduler().executor( Group.LOG_ROTATION );
-        SecurityLog securityLog = new SecurityLog( config, globalModule.getFileSystem(), executor, userLogProvider );
+        SecurityLog securityLog = new SecurityLog( config );
         CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( globalModule.getJobScheduler().executor( Group.AUTH_CACHE ) );
         globalModule.getGlobalLife().add( securityLog );
         SecurityProvider securityProvider;

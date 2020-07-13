@@ -5,19 +5,19 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
 import com.neo4j.bench.micro.benchmarks.cluster.LocalNetworkPlatform;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Neo4jConfig;
 
 import org.neo4j.io.ByteUnit;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 abstract class AbstractBareBenchmark extends BaseRegularBenchmark
 {
@@ -30,7 +30,7 @@ abstract class AbstractBareBenchmark extends BaseRegularBenchmark
 
     static LogProvider logProvider()
     {
-        return DEBUG ? FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ) : NullLogProvider.getInstance();
+        return DEBUG ? new Log4jLogProvider( System.out, Level.DEBUG ) : NullLogProvider.getInstance();
     }
 
     static int nbrOfBytes( String size )

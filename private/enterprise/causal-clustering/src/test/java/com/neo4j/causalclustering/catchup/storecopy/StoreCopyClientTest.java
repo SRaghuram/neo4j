@@ -49,10 +49,10 @@ import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -92,7 +92,7 @@ class StoreCopyClientTest
     }
 
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
-    private final LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
+    private final LogProvider logProvider = new Log4jLogProvider( System.out, Level.DEBUG );
     private final Monitors monitors = new Monitors();
 
     private StoreCopyClient subject;

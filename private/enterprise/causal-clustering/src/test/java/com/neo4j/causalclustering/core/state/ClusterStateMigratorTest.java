@@ -22,8 +22,8 @@ import java.io.UncheckedIOException;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -57,7 +57,7 @@ class ClusterStateMigratorTest
     @BeforeEach
     void beforeEach() throws Exception
     {
-        logProvider = FormattedLogProvider.toOutputStream( System.out );
+        logProvider = new Log4jLogProvider( System.out );
 
         clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( "data" ) );
         writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );

@@ -14,8 +14,8 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 import static java.lang.System.getProperty;
 import static java.lang.System.getenv;
@@ -55,7 +55,7 @@ public class Config
 
     public Config()
     {
-        logProvider = FormattedLogProvider.toOutputStream( System.out );
+        logProvider = new Log4jLogProvider( System.out );
         workingDir = envOrDefault( "WORKING_DIR", new File( getProperty( "java.io.tmpdir" ) ).getPath() );
 
         numberOfCores = envOrDefault( "NUMBER_OF_CORES", 3 );

@@ -14,7 +14,6 @@ import org.neo4j.logging.AbstractLog;
 import org.neo4j.logging.AbstractLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.AbstractLogService;
 import org.neo4j.logging.internal.LogService;
 
@@ -106,70 +105,91 @@ public class LogServiceWithControllableIOWaits extends AbstractLogService
         }
 
         @Override
-        public Logger debugLogger()
+        public void debug( String message )
         {
-            return new WrappedLogger( actual.debugLogger(), waiter );
+            waiter.receive( message );
+            actual.debug( message );
         }
 
         @Override
-        public Logger infoLogger()
+        public void debug( String message, Throwable throwable )
         {
-            return new WrappedLogger( actual.infoLogger(), waiter );
+            waiter.receive( message + ": " + throwable );
+            actual.debug( message, throwable );
         }
 
         @Override
-        public Logger warnLogger()
+        public void debug( String format, Object... arguments )
         {
-            return new WrappedLogger( actual.warnLogger(), waiter );
+            waiter.receive( format( format, arguments ) );
+            actual.debug( format, arguments );
         }
 
         @Override
-        public Logger errorLogger()
+        public void info( String message )
         {
-            return new WrappedLogger( actual.errorLogger(), waiter );
+            waiter.receive( message );
+            actual.info( message );
+        }
+
+        @Override
+        public void info( String message, Throwable throwable )
+        {
+            waiter.receive( message + ": " + throwable );
+            actual.info( message, throwable );
+        }
+
+        @Override
+        public void info( String format, Object... arguments )
+        {
+            waiter.receive( format( format, arguments ) );
+            actual.info( format, arguments );
+        }
+
+        @Override
+        public void warn( String message )
+        {
+            waiter.receive( message );
+            actual.warn( message );
+        }
+
+        @Override
+        public void warn( String message, Throwable throwable )
+        {
+            waiter.receive( message + ": " + throwable );
+            actual.warn( message, throwable );
+        }
+
+        @Override
+        public void warn( String format, Object... arguments )
+        {
+            waiter.receive( format( format, arguments ) );
+            actual.warn( format, arguments );
+        }
+
+        @Override
+        public void error( String message )
+        {
+            waiter.receive( message );
+            actual.error( message );
+        }
+
+        @Override
+        public void error( String message, Throwable throwable )
+        {
+            waiter.receive( message + ": " + throwable );
+            actual.error( message, throwable );
+        }
+
+        @Override
+        public void error( String format, Object... arguments )
+        {
+            waiter.receive( format( format, arguments ) );
+            actual.error( format, arguments );
         }
 
         @Override
         public void bulk( Consumer<Log> consumer )
-        {
-            consumer.accept( this );
-        }
-    }
-
-    private static class WrappedLogger implements Logger
-    {
-        private final Logger actual;
-        private final Listener<String> waiter;
-
-        WrappedLogger( Logger actual, Listener<String> waiter )
-        {
-            this.actual = actual;
-            this.waiter = waiter;
-        }
-
-        @Override
-        public void log( String message )
-        {
-            waiter.receive( message );
-            actual.log( message );
-        }
-
-        @Override
-        public void log( String message, Throwable throwable )
-        {
-            waiter.receive( message + ": " + throwable );
-            actual.log( message, throwable );
-        }
-
-        @Override
-        public void log( String format, Object... arguments )
-        {
-            waiter.receive( format( format, arguments ) );
-            actual.log( format, arguments );
-        }
-
-        @Override
-        public void bulk( Consumer<Logger> consumer )
         {
             waiter.receive( "bulk" );
             actual.bulk( consumer );

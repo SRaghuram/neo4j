@@ -46,9 +46,9 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.DuplicatingLogProvider;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
@@ -112,7 +112,7 @@ class StoreCopyClientIT
     void setup()
     {
         scheduler = life.add( new ThreadPoolJobScheduler() );
-        logProvider = new DuplicatingLogProvider( assertableLogProvider, FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ) );
+        logProvider = new DuplicatingLogProvider( assertableLogProvider, new Log4jLogProvider( System.out, Level.DEBUG ) );
         serverHandler = new FakeCatchupServer( logProvider, testDirectory, fs );
         serverHandler.addFile( fileA );
         serverHandler.addFile( fileB );

@@ -77,11 +77,13 @@ import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.logging.DuplicatingLogProvider;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
+import org.neo4j.logging.log4j.LogConfig;
+import org.neo4j.logging.log4j.Neo4jLoggerContext;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.procedure.builtin.SchemaStatementProcedure;
 import org.neo4j.scheduler.JobScheduler;
@@ -432,10 +434,9 @@ public class StoreCopy
 
     private LogProvider getLog( OutputStream out )
     {
-        return FormattedLogProvider
-                .withZoneId( config.get( GraphDatabaseSettings.db_timezone ).getZoneId() )
-                .withDefaultLogLevel( verbose ? DEBUG : INFO )
-                .toOutputStream( out );
+        Neo4jLoggerContext context =
+                LogConfig.createBuilder( out, verbose ? DEBUG : INFO ).withTimezone( config.get( GraphDatabaseSettings.db_timezone ) ).build();
+        return new Log4jLogProvider( context );
     }
 
     private static Path getLogFilePath( Config config )

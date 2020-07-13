@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableE
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
-import org.neo4j.logging.BufferingLog
+import org.neo4j.logging.AssertableLogProvider
 
 class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructionTestSupport {
 
@@ -44,16 +44,16 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
       ParameterMapping.empty)
 
 
-    val logByteCode = new BufferingLog
-    val converterByteCode = new CompiledExpressionConverter(logByteCode,
+    val logByteCode = new AssertableLogProvider(true)
+    val converterByteCode = new CompiledExpressionConverter(logByteCode.getLog("test"),
       physicalPlan,
       TokenContext.EMPTY,
       readOnly = false,
       codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)),
       neverFail = true,
       compiledExpressionsContext = compiledExpressionsContext)
-    val logSourceCode = new BufferingLog
-    val converterSourceCode = new CompiledExpressionConverter(logSourceCode,
+    val logSourceCode = new AssertableLogProvider(true)
+    val converterSourceCode = new CompiledExpressionConverter(logSourceCode.getLog("test"),
       physicalPlan,
       TokenContext.EMPTY,
       readOnly = false,
@@ -68,8 +68,8 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
 
     // Then
     converterByteCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
-    logByteCode.toString should include(s"Failed to compile expression: $e")
+    logByteCode.serialize should include(s"Failed to compile expression: $e")
     converterSourceCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
-    logSourceCode.toString should include(s"Failed to compile expression: $e")
+    logSourceCode.serialize should include(s"Failed to compile expression: $e")
   }
 }

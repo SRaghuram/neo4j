@@ -19,8 +19,8 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.net.ServerAddressResolver;
-import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.io.IOUtils.closeAll;
@@ -37,14 +37,14 @@ public class DriverFactory implements Closeable
         this.testDirectory = testDirectory;
     }
 
-    private FormattedLog createNewLogFile() throws IOException
+    private Log createNewLogFile() throws IOException
     {
         var fs = testDirectory.getFileSystem();
         var logDir = new File( testDirectory.absolutePath(), LOGS_DIR );
         fs.mkdir( logDir );
         var outputStream = fs.openAsOutputStream( new File( logDir, "driver-" + driverCounter.incrementAndGet() + ".log" ), false );
         closeableCollection.add( outputStream );
-        return FormattedLog.toOutputStream( outputStream );
+        return new Log4jLogProvider( outputStream ).getLog( getClass() );
     }
 
     private Logging createLogger( Log log )

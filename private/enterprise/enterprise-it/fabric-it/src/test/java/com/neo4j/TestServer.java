@@ -6,7 +6,6 @@
 package com.neo4j;
 
 import com.neo4j.configuration.FabricEnterpriseSettings;
-import com.neo4j.utils.StdoutLogProvider;
 
 import java.io.IOException;
 import java.net.URI;
@@ -28,7 +27,6 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.logging.internal.SimpleLogService;
 
 public class TestServer implements AutoCloseable
 {
@@ -77,11 +75,6 @@ public class TestServer implements AutoCloseable
     {
         this.logService = logService;
         addMocks( logService );
-    }
-
-    public void setStdOutLogService()
-    {
-        this.setLogService( new SimpleLogService( new StdoutLogProvider() ) );
     }
 
     public void start()

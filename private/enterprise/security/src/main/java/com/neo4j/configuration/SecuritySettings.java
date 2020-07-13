@@ -256,6 +256,7 @@ public class SecuritySettings implements SettingsDeclaration
     public static final Setting<Long> store_security_log_rotation_threshold =
             newBuilder( "dbms.logs.security.rotation.size", BYTES, ByteUnit.mebiBytes( 20 ) ).addConstraint( range( 0L, Long.MAX_VALUE ) ).build();
 
+    @Deprecated( since = "4.2.0", forRemoval = true )
     @Description( "Minimum time interval after last rotation of the security log before it may be rotated again." )
     public static final Setting<Duration> store_security_log_rotation_delay =
             newBuilder( "dbms.logs.security.rotation.delay", DURATION, ofSeconds( 300 ) ).build();

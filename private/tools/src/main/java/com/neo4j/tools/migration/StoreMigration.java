@@ -37,10 +37,13 @@ import org.neo4j.kernel.impl.transaction.state.DefaultIndexProviderMap;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.LogTailScanner;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.StoreLogService;
+import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
+import org.neo4j.logging.log4j.LogConfig;
+import org.neo4j.logging.log4j.Neo4jLoggerContext;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -73,7 +76,7 @@ public final class StoreMigration
         }
         File storeDir = parseDir( arguments );
 
-        FormattedLogProvider userLogProvider = FormattedLogProvider.toOutputStream( System.out );
+        LogProvider userLogProvider = new Log4jLogProvider( System.out );
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
             StoreMigration.run( fileSystem, storeDir, getMigrationConfig( storeDir ), userLogProvider );
@@ -90,8 +93,9 @@ public final class StoreMigration
 
     public static void run( final FileSystemAbstraction fs, final File storeDirectory, Config config, LogProvider userLogProvider ) throws Exception
     {
-        StoreLogService logService = StoreLogService.withUserLogProvider( userLogProvider )
-                .withInternalLog( config.get( store_internal_log_path ).toFile() ).build( fs );
+        Neo4jLoggerContext ctx = LogConfig.createBuilder(config.get( store_internal_log_path ), Level.INFO).build();
+
+        SimpleLogService logService = new SimpleLogService( userLogProvider, new Log4jLogProvider( ctx ) );
 
         LifeSupport life = new LifeSupport();
 

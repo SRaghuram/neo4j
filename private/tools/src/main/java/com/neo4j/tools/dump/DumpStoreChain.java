@@ -30,9 +30,9 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
@@ -101,7 +101,8 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
 
     private static LogProvider logProvider()
     {
-        return Boolean.getBoolean( "logger" ) ? FormattedLogProvider.toOutputStream( System.out ) : NullLogProvider.getInstance();
+        return Boolean.getBoolean( "logger" ) ? new Log4jLogProvider( System.out )
+                                              : NullLogProvider.getInstance();
     }
 
     void dump( DatabaseLayout databaseLayout ) throws IOException

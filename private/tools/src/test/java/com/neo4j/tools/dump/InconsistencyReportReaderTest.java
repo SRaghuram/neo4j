@@ -24,7 +24,8 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.logging.FormattedLog;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.InMemoryTokens;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,7 +40,7 @@ class InconsistencyReportReaderTest
     {
         // GIVEN
         ByteArrayOutputStream out = new ByteArrayOutputStream( 1_000 );
-        FormattedLog log = FormattedLog.toOutputStream( out );
+        Log log = new Log4jLogProvider( out ).getLog( "test" );
         InconsistencyMessageLogger logger = new InconsistencyMessageLogger( log );
         InMemoryTokens tokens = new InMemoryTokens().label( 1, "label" ).propertyKey( 1, "prop" );
         long nodeId = 1;

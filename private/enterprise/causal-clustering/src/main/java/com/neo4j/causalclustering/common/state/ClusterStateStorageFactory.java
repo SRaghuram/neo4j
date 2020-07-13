@@ -21,20 +21,13 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Objects;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.FileSystemUtils;
-import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.DatabaseLog;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.memory.MemoryTracker;
-
-import static java.lang.String.format;
 
 public class ClusterStateStorageFactory
 {
@@ -109,37 +102,6 @@ public class ClusterStateStorageFactory
         DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider, memoryTracker );
         life.add( storage );
         return storage;
-    }
-
-    /**
-     * Check that the cluster state directory does not contain cluster state for a previous database of the same name.
-     * If it does, then do our best to delete all said cluster state.
-     * @param id the id of the new database to be created
-     * @param logProvider the logger for this new database
-     */
-    public void clearFor( NamedDatabaseId id, DatabaseLogProvider logProvider ) throws IOException
-    {
-        File clusterStateForDb = layout.raftGroupDir( id.name() );
-        if ( !fs.fileExists( clusterStateForDb ) )
-        {
-            return;
-        }
-
-        var idStateFile = layout.raftIdStateFile( id.name() );
-        if ( idStateFile.exists() )
-        {
-            var raftIdSimpleStorage = createSimpleStorage( layout.raftIdStateFile( id.name() ), CoreStateFiles.RAFT_ID, logProvider );
-            RaftId raftId = raftIdSimpleStorage.readState();
-
-            if ( !Objects.equals( id.databaseId().uuid(), raftId.uuid() ) )
-            {
-                DatabaseLog log = logProvider.getLog( getClass() );
-                log.warn( format( "There was orphan cluster state belonging to a previous database %s with a different id {Old:%s New:%s} " +
-                        "This likely means a previous DROP did not complete successfully.",
-                        id.name(), raftId.uuid(), id.databaseId().uuid() ) );
-                FileSystemUtils.deleteFile( fs, clusterStateForDb );
-            }
-        }
     }
 
     public ClusterStateLayout layout()

@@ -73,9 +73,10 @@ import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
@@ -719,7 +720,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 INSTANCE
         );
 
-        FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
+        LogProvider systemOutLogProvider = new Log4jLogProvider( System.out );
         LogService logService = new SimpleLogService( systemOutLogProvider, systemOutLogProvider );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         LifeSupport lifeSupport = new LifeSupport();

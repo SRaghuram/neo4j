@@ -35,7 +35,7 @@ import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.util.Listener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
@@ -218,7 +218,7 @@ public class DatabaseRebuildTool
                 {
                     Result result =
                             new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(), ProgressMonitorFactory.textual( out ),
-                                    FormattedLogProvider.toOutputStream( System.out ), false );
+                                    new Log4jLogProvider( System.out ), false );
                     out.println( result.isSuccessful() ? "consistent" : "INCONSISTENT" );
                 }
                 finally

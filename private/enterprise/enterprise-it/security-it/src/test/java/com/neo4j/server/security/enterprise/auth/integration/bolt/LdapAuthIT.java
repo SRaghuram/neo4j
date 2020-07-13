@@ -37,6 +37,7 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +66,6 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.diagnostics.providers.ConfigDiagnostics;
-import org.neo4j.logging.Logger;
 import org.neo4j.string.SecureString;
 import org.neo4j.test.DoubleLatch;
 
@@ -79,6 +79,7 @@ import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverA
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.clearAuthCacheFromDifferentConnection;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriver;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriverWithParameters;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -87,9 +88,6 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @RunWith( FrameworkRunner.class )
@@ -660,9 +658,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         String password = config.get( SecuritySettings.ldap_authorization_system_password ).getString();
         assertThat( "Normal access should not be obfuscated", password, not( containsString( value ) ) );
 
-        Logger log = mock( Logger.class );
-        new ConfigDiagnostics( config ).dump( log );
-        verify( log, atLeastOnce() ).log( "%s=%s", "dbms.security.ldap.authorization.system_password", value );
+        List<String> log = new ArrayList<>();
+        new ConfigDiagnostics( config ).dump( log::add );
+        assertThat( log ).contains( "dbms.security.ldap.authorization.system_password=" + value );
     }
 
     @Test

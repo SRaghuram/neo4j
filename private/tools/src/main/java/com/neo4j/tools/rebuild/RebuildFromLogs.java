@@ -67,7 +67,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
-import org.neo4j.logging.FormattedLog;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -289,7 +289,8 @@ class RebuildFromLogs
                     NodeBasedMemoryLimiter.DEFAULT );
 
             ConsistencySummaryStatistics summaryStatistics = fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(),
-                    pageCacheTracer, EmptyMemoryTracker.INSTANCE, FormattedLog.toOutputStream( System.err ) );
+                    pageCacheTracer, EmptyMemoryTracker.INSTANCE,
+                    new Log4jLogProvider( System.err ).getLog( getClass() ) );
             if ( !summaryStatistics.isConsistent() )
             {
                 throw new InconsistentStoreException( summaryStatistics );

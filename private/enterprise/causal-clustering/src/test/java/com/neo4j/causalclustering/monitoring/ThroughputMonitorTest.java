@@ -11,8 +11,6 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 

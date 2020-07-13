@@ -31,11 +31,11 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
 
@@ -51,7 +51,7 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
 
     static LogProvider logProvider()
     {
-        return DEBUG ? FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ) : NullLogProvider.getInstance();
+        return DEBUG ? new Log4jLogProvider( System.out, Level.DEBUG ) : NullLogProvider.getInstance();
     }
 
     static int nbrOfBytes( String size )

@@ -26,11 +26,11 @@ import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.internal.locker.FileLockException;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
 public class RobustnessConsistencyCheck
 {
@@ -52,7 +52,8 @@ public class RobustnessConsistencyCheck
             Map<String,String> params = stringMap( "--check-property-owners", "true" ); //what kind of settings are these?
 
             ConsistencyCheckService.Result result = new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout,
-                    Config.newBuilder().setRaw( params ).build(), ProgressMonitorFactory.NONE, toOutputStream( System.out ), false, ConsistencyFlags.DEFAULT );
+                    Config.newBuilder().setRaw( params ).build(), ProgressMonitorFactory.NONE,
+                    new Log4jLogProvider( System.out ), false, ConsistencyFlags.DEFAULT );
 
             if ( !result.isSuccessful() )
             {

@@ -56,12 +56,12 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     {
         this.debug = logService.getInternalLogProvider().getLog( getClass() );
         this.user = logService.getUserLogProvider().getLog( getClass() );
-        coreMemberWaitLog = new CappedLogger( user ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
-        bootstrapWaitLog = new CappedLogger( user ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+        coreMemberWaitLog = new CappedLogger( user, 10, TimeUnit.SECONDS, clock );
+        bootstrapWaitLog = new CappedLogger( user, 10, TimeUnit.SECONDS, clock );
 
-        publishRaftIdLog = new CappedLogger( debug ).setTimeLimit( 5, TimeUnit.SECONDS, clock );
-        discoveryServiceAttemptLog = new CappedLogger( debug ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
-        initialMembersAttempLog = new CappedLogger( debug ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+        publishRaftIdLog = new CappedLogger( debug, 5, TimeUnit.SECONDS, clock );
+        discoveryServiceAttemptLog = new CappedLogger( debug, 10, TimeUnit.SECONDS, clock );
+        initialMembersAttempLog = new CappedLogger( debug, 10, TimeUnit.SECONDS, clock );
     }
 
     @Override

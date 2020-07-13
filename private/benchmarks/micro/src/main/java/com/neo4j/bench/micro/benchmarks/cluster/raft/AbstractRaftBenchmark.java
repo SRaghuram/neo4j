@@ -19,11 +19,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.neo4j.io.ByteUnit;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractBenchmark
 {
@@ -43,7 +43,7 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
 
     static LogProvider logProvider()
     {
-        return DEBUG ? FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ) : NullLogProvider.getInstance();
+        return DEBUG ? new Log4jLogProvider( System.out, Level.DEBUG ) : NullLogProvider.getInstance();
     }
 
     @Override

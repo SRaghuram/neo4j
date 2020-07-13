@@ -40,7 +40,7 @@ public class CoreSnapshotService
         this.raftLog = raftLog;
         this.raftMachine = raftMachine;
         this.namedDatabaseId = namedDatabaseId;
-        this.logger = new CappedLogger( logService.getInternalLog( getClass() ) ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+        this.logger = new CappedLogger( logService.getInternalLog( getClass() ), 10, TimeUnit.SECONDS, clock );
     }
 
     public synchronized CoreSnapshot snapshot() throws Exception

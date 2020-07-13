@@ -20,8 +20,8 @@ import java.util.Map;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.DbRepresentation;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -59,7 +59,7 @@ public class CcProcess extends SubProcess<CcInstance,Map<String,String>> impleme
             homeDir = Path.of( parameters.get( "dbdir" ) );
 
             ccStartupTimeoutMonitor = new CcStartupTimeoutMonitor();
-            log = FormattedLogProvider.toOutputStream( System.out ).getLog( getClass() );
+            log = new Log4jLogProvider( System.out ).getLog( getClass() );
             consistencyCheck = new RobustnessConsistencyCheck( log );
             serverId = Integer.parseInt( parameters.get( SERVER_ID_KEY ) );
             boolean grabReadLocks = Boolean.parseBoolean( parameters.get( "acquireReadLocks" ) );

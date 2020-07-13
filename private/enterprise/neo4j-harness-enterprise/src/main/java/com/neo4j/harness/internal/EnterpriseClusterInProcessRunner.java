@@ -12,8 +12,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-
-import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 public class EnterpriseClusterInProcessRunner
 {
@@ -29,7 +28,7 @@ public class EnterpriseClusterInProcessRunner
                             .withBuilder( EnterpriseInProcessNeo4jBuilder::new )
                             .withCores( 3 )
                             .withReplicas( 3 )
-                            .withLogger( toOutputStream( System.out ) )
+                            .withLogger( new Log4jLogProvider( System.out ) )
                             .atPath( clusterPath )
                             .withConfig( GraphDatabaseSettings.auth_enabled, true )
                             .withConfig( SecuritySettings.authentication_providers,  List.of( SecuritySettings.NATIVE_REALM_NAME ) )

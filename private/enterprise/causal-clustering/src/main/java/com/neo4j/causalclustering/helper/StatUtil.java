@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.helper;
 
 import org.neo4j.logging.Log;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.time.Stopwatch;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
 @SuppressWarnings( "unused" ) // for easy debugging, leave it
 public class StatUtil
@@ -105,7 +105,7 @@ public class StatUtil
 
     public static synchronized StatContext create( String name, long printEvery, boolean clearAfterPrint )
     {
-        return create( name, toOutputStream( System.out ).getLog( name ), printEvery, clearAfterPrint );
+        return create( name, new Log4jLogProvider( System.out ).getLog( name ), printEvery, clearAfterPrint );
     }
 
     public static synchronized StatContext create( String name, Log log, long printEvery, boolean clearAfterPrint )

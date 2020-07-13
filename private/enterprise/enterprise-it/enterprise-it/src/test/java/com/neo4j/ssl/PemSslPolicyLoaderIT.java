@@ -7,27 +7,18 @@ package com.neo4j.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.hamcrest.core.IsIterableContaining;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -41,7 +32,7 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.TESTING;
 @TestDirectoryExtension
 class PemSslPolicyLoaderIT
 {
-    private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.ERROR ).toOutputStream( System.out );
+    private static final LogProvider LOG_PROVIDER = new Log4jLogProvider( System.out, Level.ERROR );
     @Inject
     private TestDirectory testDirectory;
 

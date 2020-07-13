@@ -90,7 +90,8 @@ import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.internal.locker.FileLockException;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -1008,7 +1009,7 @@ class BackupIT
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
 
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
-        FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
+        LogProvider logProvider = new Log4jLogProvider( System.out );
         ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true, true, true );
 
         return consistencyCheckService.runFullConsistencyCheck( layout, config, progressMonitorFactory, logProvider, true, consistencyFlags );
@@ -1192,7 +1193,7 @@ class BackupIT
 
     private static void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
+        LogProvider logProvider = new Log4jLogProvider( System.out );
 
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
                                                             .withUserLogProvider( logProvider )

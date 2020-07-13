@@ -7,70 +7,31 @@ package com.neo4j.server.security.enterprise.log;
 
 import com.neo4j.configuration.SecuritySettings;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.ZoneId;
-import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.logging.FormattedLog;
+import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.logging.AbstractLog;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.Logger;
-import org.neo4j.logging.RotatingFileOutputStreamSupplier;
+import org.neo4j.logging.log4j.Log4jLogProvider;
+import org.neo4j.logging.log4j.LogConfig;
+import org.neo4j.logging.log4j.Neo4jLoggerContext;
 
 import static org.neo4j.internal.helpers.Strings.escape;
 
-public class SecurityLog extends LifecycleAdapter implements Log
+public class SecurityLog extends AbstractLog implements Lifecycle
 {
-    private RotatingFileOutputStreamSupplier rotatingSupplier;
     private Log inner;
+    private Neo4jLoggerContext ctx;
     private Config config;
-    private FileSystemAbstraction fileSystem;
-    private Executor executor;
-    private LogProvider logProvider;
 
-    public SecurityLog( Config config, FileSystemAbstraction fileSystem, Executor executor, LogProvider logProvider )
+    public SecurityLog( Config config )
     {
         this.config = config;
-        this.fileSystem = fileSystem;
-        this.executor = executor;
-        this.logProvider = logProvider;
-    }
-
-    @Override
-    public void init()
-    {
-        try
-        {
-            ZoneId logTimeZoneId = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
-            File logFile = config.get( SecuritySettings.security_log_filename ).toFile();
-
-            FormattedLog.Builder builder = FormattedLog.withZoneId( logTimeZoneId );
-
-            rotatingSupplier = new RotatingFileOutputStreamSupplier( fileSystem, logFile,
-                    config.get( SecuritySettings.store_security_log_rotation_threshold ),
-                    config.get( SecuritySettings.store_security_log_rotation_delay ).toMillis(),
-                    config.get( SecuritySettings.store_security_log_max_archives ), executor );
-
-            builder.withFormat( config.get( GraphDatabaseInternalSettings.log_format ) );
-            FormattedLog formattedLog = builder.toOutputStream( rotatingSupplier );
-            formattedLog.setLevel( config.get( SecuritySettings.security_log_level ) );
-
-            this.inner = formattedLog;
-        }
-        catch ( SecurityException | IOException e )
-        {
-            String message = "Unable to create security log: " + e.toString();
-            logProvider.getLog( SecurityLog.class ).error( message, e );
-            throw new RuntimeException( message );
-        }
     }
 
     /* Only used for tests */
@@ -79,21 +40,40 @@ public class SecurityLog extends LifecycleAdapter implements Log
         inner = log;
     }
 
-    private static String withSubject( AuthSubject subject, String msg )
+    @Override
+    public void init()
     {
-        return "[" + escape( subject.username() ) + "]: " + msg;
+        ctx = LogConfig.createBuilder( config.get( SecuritySettings.security_log_filename ), config.get( SecuritySettings.security_log_level ) )
+                .withCategory( true )
+                .withFormat( config.get( GraphDatabaseInternalSettings.log_format ) )
+                .withTimezone( config.get( GraphDatabaseSettings.db_timezone ) )
+                .withRotation( config.get( SecuritySettings.store_security_log_rotation_threshold ),
+                        config.get( SecuritySettings.store_security_log_max_archives ) )
+                .build();
+        LogProvider logProvider = new Log4jLogProvider( ctx );
+        this.inner = logProvider.getLog( "" );
+    }
+
+    @Override
+    public void start()
+    {
+    }
+
+    @Override
+    public void stop()
+    {
+    }
+
+    @Override
+    public void shutdown()
+    {
+        ctx.close();
     }
 
     @Override
     public boolean isDebugEnabled()
     {
         return inner.isDebugEnabled();
-    }
-
-    @Override
-    public Logger debugLogger()
-    {
-        return inner.debugLogger();
     }
 
     @Override
@@ -117,12 +97,6 @@ public class SecurityLog extends LifecycleAdapter implements Log
     public void debug( AuthSubject subject, String format, Object... arguments )
     {
         inner.debug( withSubject( subject, format ), arguments );
-    }
-
-    @Override
-    public Logger infoLogger()
-    {
-        return inner.infoLogger();
     }
 
     @Override
@@ -154,12 +128,6 @@ public class SecurityLog extends LifecycleAdapter implements Log
     }
 
     @Override
-    public Logger warnLogger()
-    {
-        return inner.warnLogger();
-    }
-
-    @Override
     public void warn( String message )
     {
         inner.warn( message );
@@ -180,12 +148,6 @@ public class SecurityLog extends LifecycleAdapter implements Log
     public void warn( AuthSubject subject, String format, Object... arguments )
     {
         inner.warn( withSubject( subject, format ), arguments );
-    }
-
-    @Override
-    public Logger errorLogger()
-    {
-        return inner.errorLogger();
     }
 
     @Override
@@ -212,19 +174,14 @@ public class SecurityLog extends LifecycleAdapter implements Log
     }
 
     @Override
+    @Deprecated
     public void bulk( Consumer<Log> consumer )
     {
         inner.bulk( consumer );
     }
 
-    @Override
-    public void shutdown() throws Exception
+    private static String withSubject( AuthSubject subject, String msg )
     {
-        if ( this.rotatingSupplier != null )
-        {
-            this.rotatingSupplier.close();
-            this.rotatingSupplier = null;
-            this.inner = null;
-        }
+        return "[" + escape( subject.username() ) + "]: " + msg;
     }
 }

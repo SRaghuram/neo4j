@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.FakeClockJobScheduler;
@@ -264,7 +264,7 @@ class TimerServiceTest
         JobScheduler scheduler = createInitialisedScheduler();
         scheduler.start();
 
-        TimerService timerService = new TimerService( scheduler, FormattedLogProvider.toOutputStream( System.out ) );
+        TimerService timerService = new TimerService( scheduler, new Log4jLogProvider( System.out ) );
 
         CountDownLatch started = new CountDownLatch( 1 );
         CountDownLatch finished = new CountDownLatch( 1 );
@@ -302,7 +302,7 @@ class TimerServiceTest
         JobScheduler scheduler = createInitialisedScheduler();
         scheduler.start();
 
-        TimerService timerService = new TimerService( scheduler, FormattedLogProvider.toOutputStream( System.out ) );
+        TimerService timerService = new TimerService( scheduler, new Log4jLogProvider( System.out ) );
 
         TimeoutHandler handlerA = timer ->
         {};

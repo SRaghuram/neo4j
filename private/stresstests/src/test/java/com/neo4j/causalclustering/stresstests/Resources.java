@@ -20,8 +20,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static java.util.Collections.emptyMap;
@@ -37,7 +37,7 @@ class Resources
 
     Resources( FileSystemAbstraction fileSystem, PageCache pageCache, Config config ) throws IOException
     {
-        this( fileSystem, pageCache, FormattedLogProvider.toOutputStream( System.out ), config );
+        this( fileSystem, pageCache, new Log4jLogProvider( System.out ), config );
     }
 
     private Resources( FileSystemAbstraction fileSystem, PageCache pageCache, LogProvider logProvider, Config config ) throws IOException

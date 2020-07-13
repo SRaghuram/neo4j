@@ -23,7 +23,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.internal.helpers.collection.MapUtil;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 
 import static org.neo4j.graphdb.Label.label;
 
@@ -36,8 +36,9 @@ public class UniquenessRobustness
 
     public static void main( String[] args ) throws Exception
     {
-        final Orchestrator orchestrator = new Orchestrator( FormattedLogProvider.toOutputStream( System.out ), 3, Orchestrator.JvmMode.same, null, true,
-                ReferenceNodeStrategy.mixed, false, MapUtil.stringMap(), CcRobustness.DEFAULT_ACQUIRE_READ_LOCKS );
+        final Orchestrator orchestrator =
+                new Orchestrator( new Log4jLogProvider( System.out ), 3, Orchestrator.JvmMode.same, null, true,
+                        ReferenceNodeStrategy.mixed, false, MapUtil.stringMap(), CcRobustness.DEFAULT_ACQUIRE_READ_LOCKS );
 
         orchestrator.getLeaderInstance().doWorkOnDatabase( (Work) db ->
         {

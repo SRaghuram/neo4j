@@ -26,7 +26,7 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -91,7 +91,7 @@ class ConsistencyCheckServiceRecordFormatIT
     {
         ConsistencyCheckService service = new ConsistencyCheckService();
         ConsistencyCheckService.Result result = service.runFullConsistencyCheck( databaseLayout, Config.defaults(),
-                ProgressMonitorFactory.textual( System.out ), FormattedLogProvider.toOutputStream( System.out ), true );
+                ProgressMonitorFactory.textual( System.out ), new Log4jLogProvider( System.out ), true );
         assertTrue( result.isSuccessful(), "Store is inconsistent" );
     }
 }

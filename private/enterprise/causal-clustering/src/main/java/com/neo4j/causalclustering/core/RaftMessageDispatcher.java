@@ -58,8 +58,6 @@ public class RaftMessageDispatcher implements MessageHandler<InboundRaftMessageC
 
     private CappedLogger createCappedLogger( LogProvider logProvider, Clock clock )
     {
-        CappedLogger logger = new CappedLogger( logProvider.getLog( getClass() ) );
-        logger.setTimeLimit( 5, TimeUnit.SECONDS, clock );
-        return logger;
+        return new CappedLogger( logProvider.getLog( getClass() ), 5, TimeUnit.SECONDS, clock );
     }
 }

@@ -45,7 +45,7 @@ class CreateNodesWithProperties extends Workload
         this.enableIndexes = config.enableIndexes();
         this.cluster = resources.cluster();
         Log log = resources.logProvider().getLog( getClass() );
-        this.txLogger = new CappedLogger( log ).setTimeLimit( 5, TimeUnit.SECONDS, resources.clock() );
+        this.txLogger = new CappedLogger( log, 5, TimeUnit.SECONDS, resources.clock() );
     }
 
     @Override
