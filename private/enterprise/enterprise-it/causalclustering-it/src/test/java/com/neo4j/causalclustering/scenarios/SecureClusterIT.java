@@ -12,6 +12,8 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -36,6 +38,7 @@ import static org.neo4j.graphdb.Label.label;
 @ExtendWith( {SuppressOutputExtension.class, DefaultFileSystemExtension.class} )
 @ClusterExtension
 @TestInstance( PER_METHOD )
+@ResourceLock( Resources.SYSTEM_OUT )
 class SecureClusterIT
 {
     private static final String CERTIFICATES_DIR = "certificates/cluster";

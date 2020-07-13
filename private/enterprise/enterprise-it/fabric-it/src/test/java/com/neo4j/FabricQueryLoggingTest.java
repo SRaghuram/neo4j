@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -78,6 +80,7 @@ import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
 @ExtendWith( {FabricEverywhereExtension.class, SuppressOutputExtension.class} )
+@ResourceLock( Resources.SYSTEM_OUT )
 class FabricQueryLoggingTest
 {
     @Inject
