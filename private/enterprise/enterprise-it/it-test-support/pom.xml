@@ -36,6 +36,32 @@
         </license>
     </licenses>
 
+    <profiles>
+        <profile>
+            <id>reduce-fork-count-on-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <!-- ITs typically do not use all that much CPU, so a high fork count should be fine. -->
+                            <forkCount>6</forkCount>
+                            <!-- When issues happen, we want as much information as possible. -->
+                            <trimStackTrace>false</trimStackTrace>
+                            <!-- Fork creation should have a relatively minor impact compared to test run times. Robustness is thus preferred. -->
+                            <reuseForks>false</reuseForks>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <dependencies>
         <dependency>
             <groupId>org.neo4j</groupId>
