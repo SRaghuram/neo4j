@@ -15,6 +15,8 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
+//noinspection RedundantDefaultArgument
+// Disable warnings for redundant default argument since its used for clarification of the `assertStats` when nothing should have happened
 class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
   // Create index
@@ -113,6 +115,221 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val (label, properties) = graph.getIndexSchemaByName("my_index")
     label should be("Person")
     properties should be(Seq("name", "age"))
+  }
+
+  test("should create or replace index") {
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE INDEX myindex FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 1, indexesRemoved = 0)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("myindex")
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("myindex")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace existing index") {
+    // GIVEN
+    executeSingle("CREATE INDEX myindex FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE INDEX myindex FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 1, indexesRemoved = 1)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("myindex")
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("myindex")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace existing index with new schema") {
+    // GIVEN
+    executeSingle("CREATE INDEX myindex FOR (n:Person) ON (n.name)")
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE INDEX myindex FOR (n:Person) ON (n.age)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 1, indexesRemoved = 1)
+
+    // get by schema
+    graph.getIndex("Person", Seq("age")).getName should be("myindex")
+    graph.getMaybeIndex("Person", Seq("name")) should be(None)
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("myindex")
+    label should be("Person")
+    properties should be(Seq("age"))
+  }
+
+  test("should create or replace existing composite index") {
+    // GIVEN
+    executeSingle("CREATE INDEX myindex FOR (n:Person) ON (n.name, n.age)")
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE INDEX myindex FOR (n:Person) ON (n.age, n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 1, indexesRemoved = 1)
+
+    // get by schema
+    graph.getIndex("Person", Seq("age", "name")).getName should be("myindex")
+    graph.getMaybeIndex("Person", Seq("name", "age")) should be(None)
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("myindex")
+    label should be("Person")
+    properties should be(Seq("age", "name"))
+  }
+
+  test("should fail to create or replace existing index with new name") {
+    // GIVEN
+    executeSingle("CREATE INDEX yourindex FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE INDEX myindex FOR (n:Person) ON (n.name)")
+      // THEN
+    } should have message "There already exists an index (:Person {name})."
+  }
+
+  test("should not create an unnamed index if it already exists") {
+    // GIVEN
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE INDEX IF NOT EXISTS FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 0)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
+  }
+
+  test("should not create a named index if it already exists") {
+    // GIVEN
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE INDEX myindex IF NOT EXISTS FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 0)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
+  }
+
+  test("should not create a named composite index if it already exists") {
+    // GIVEN
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name, n.age)")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE INDEX myindex IF NOT EXISTS FOR (n:Person) ON (n.name, n.age)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 0)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name", "age")).getName should be("index_c641c20c")
+  }
+
+  test("should create an unnamed index if doesn't exist") {
+    // WHEN
+    val result = executeSingle("CREATE INDEX IF NOT EXISTS FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 1)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("index_5c0607ad")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create an named index if doesn't exist") {
+    // WHEN
+    val result = executeSingle("CREATE INDEX myindex IF NOT EXISTS FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 1)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("myindex")
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("myindex")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should not create an named index if a different named index exists with the same name") {
+    // GIVEN
+    executeSingle("CREATE INDEX myindex FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE INDEX myindex IF NOT EXISTS FOR (n:Badger) ON (n.mushroom)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, indexesAdded = 0)
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("myindex")
+    graph.getMaybeIndex("Badger", Seq("mushroom")) should be(None)
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("myindex")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should fail to create or replace unnamed index") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE INDEX FOR (n:Person) ON (n.name)")
+    }
+    error.getMessage should startWith ("Failed to create index: a name is required to `REPLACE` an existing index.")
+  }
+
+  test("should fail to create index with both OR REPLACE and IF NOT EXISTS") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE INDEX myindex IF NOT EXISTS FOR (n:Person) ON (n.name)")
+    }
+    error.getMessage should startWith ("Failed to create index: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE INDEX IF NOT EXISTS FOR (n:Person) ON (n.name)")
+    }
+    error2.getMessage should startWith ("Failed to create index: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
   test("should fail to create multiple indexes with same schema (old syntax)") {
@@ -245,6 +462,27 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // THEN
     graph.getMaybeIndex("Person", Seq("name")) should be(None)
+  }
+
+  test("should drop index by name if exists") {
+    // GIVEN
+    graph.createIndex("Person", "name")
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
+
+    // WHEN
+    val result = executeSingle("DROP INDEX `index_5c0607ad` IF EXISTS")
+
+    // THEN
+    graph.getMaybeIndex("Person", Seq("name")) should be(None)
+    assertStats(result, indexesRemoved = 1)
+  }
+
+  test("should drop non-existent index by name if exists") {
+    // WHEN
+    val result = executeSingle("DROP INDEX `notexistint` IF EXISTS")
+
+    // THEN
+    assertStats(result, indexesRemoved = 0)
   }
 
   test("should get error when trying to drop the same index twice") {

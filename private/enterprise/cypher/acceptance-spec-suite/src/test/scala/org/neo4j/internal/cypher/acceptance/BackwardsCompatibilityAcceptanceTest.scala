@@ -336,5 +336,69 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     }
     exception.getMessage should include("Default graph is not supported in this Cypher version.")
   }
+
+  test("create index with OR REPLACE and/or IF NOT EXISTS syntax should not work with CYPHER 3.5-4.1") {
+    // CREATE OR REPLACE INDEX name FOR ...
+    // WHEN
+    val replace35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
+    }
+    replace35.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
+
+    // WHEN
+    val replace41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
+    }
+    replace41.getMessage should include("Creating index using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+
+    // CREATE OR REPLACE INDEX name IF NOT EXISTS FOR ...
+    // WHEN
+    val invalid35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE OR REPLACE INDEX my_index IF NOT EXISTS FOR (n:Label) ON (n.prop)")
+    }
+    invalid35.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
+
+    // WHEN
+    val invalid41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE OR REPLACE INDEX my_index IF NOT EXISTS FOR (n:Label) ON (n.prop)")
+    }
+    invalid41.getMessage should include("Creating index using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+
+    // CREATE INDEX name IF NOT EXISTS FOR ...
+    // WHEN
+    val notExists35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
+    }
+    notExists35.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
+
+    // WHEN
+    val notExists41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
+    }
+    notExists41.getMessage should include("Creating index using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("drop index syntax with IF EXISTS should not work with CYPHER 3.5-4.1") {
+    // GIVEN
+    graph.createIndexWithName("my_index", "Label", "prop")
+
+    // WHEN
+    val exception35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 DROP INDEX my_index IF EXISTS")
+    }
+    exception35.getMessage should include("Dropping index by name is not supported in this Cypher version.")
+
+    // WHEN
+    val exception41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 DROP INDEX my_index IF EXISTS")
+    }
+    exception41.getMessage should include("Dropping index using `IF EXISTS` is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
+  }
 }
 

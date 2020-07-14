@@ -97,6 +97,16 @@ class CommandsRoutingTest
         {
             var query = joinAsLines(
                     "USE mega.myGraph",
+                    "CREATE INDEX myIndex IF NOT EXISTS FOR (n:Person) ON (n.age)"
+            );
+            return tx.run( query ).consume();
+        } );
+        assertThat( r.counters().indexesAdded() ).isEqualTo( 0 );
+
+        r = inMegaTx( tx ->
+        {
+            var query = joinAsLines(
+                    "USE mega.myGraph",
                     "DROP INDEX myIndex"
             );
             return tx.run( query ).consume();
