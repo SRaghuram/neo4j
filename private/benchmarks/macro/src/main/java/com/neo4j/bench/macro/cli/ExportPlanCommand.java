@@ -50,7 +50,8 @@ public class ExportPlanCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_RUNTIME},
             title = "Cypher runtime" )
-    private Runtime runtime = Runtime.DEFAULT;
+    @Required
+    private Runtime runtime;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
