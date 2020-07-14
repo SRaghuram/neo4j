@@ -67,6 +67,20 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
       }
 
+      test(s"should $grantOrDeny write privilege for default graph") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand WRITE ON DEFAULT GRAPH TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(write).role("custom").graph(DEFAULT).node("*").map,
+          grantedOrDenied(write).role("custom").graph(DEFAULT).relationship("*").map
+        ))
+      }
+
       test(s"should $grantOrDeny write privilege for multiple graphs using parameter") {
         // GIVEN
         execute("CREATE ROLE custom")

@@ -55,6 +55,20 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     ))
   }
 
+  test("should grant merge privilege to custom role for the default graph and all properties") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT MERGE {*} ON DEFAULT GRAPH TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(merge).role("custom").graph(DEFAULT).node("*").map,
+      granted(merge).role("custom").graph(DEFAULT).relationship("*").map,
+    ))
+  }
+
   test("should grant merge privilege to custom role for specific nodes and relationships") {
     // GIVEN
     execute("CREATE ROLE custom")
@@ -219,6 +233,28 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     execute("REVOKE GRANT MERGE { prop } ON GRAPH * FROM custom")
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
+  }
+
+  test("revoke grant on default database should revoke grant") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT MERGE { prop } ON DEFAULT GRAPH TO custom")
+
+    // WHEN
+    execute("REVOKE GRANT MERGE { prop } ON DEFAULT GRAPH FROM custom")
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
+  }
+
+  test("revoke something not granted on default database should do nothing") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("REVOKE GRANT MERGE { prop } ON DEFAULT GRAPH FROM custom")
+
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
   }

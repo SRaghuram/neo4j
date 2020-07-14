@@ -174,6 +174,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH * TO custom")
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH foo TO custom")
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH bar TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON DEFAULT GRAPH TO custom")
 
         // WHEN
         execute(s"REVOKE $revokeType READ {*} ON GRAPH foo FROM custom")
@@ -182,8 +183,10 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(read).role("custom").node("*").map,
           grantedOrDenied(read).role("custom").node("*").graph("bar").map,
+          grantedOrDenied(read).role("custom").node("*").graph(DEFAULT).map,
           grantedOrDenied(read).role("custom").relationship("*").map,
-          grantedOrDenied(read).role("custom").relationship("*").graph("bar").map
+          grantedOrDenied(read).role("custom").relationship("*").graph("bar").map,
+          grantedOrDenied(read).role("custom").relationship("*").graph(DEFAULT).map,
         ))
 
         // WHEN
@@ -191,6 +194,8 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(read).role("custom").node("*").graph(DEFAULT).map,
+          grantedOrDenied(read).role("custom").relationship("*").graph(DEFAULT).map,
           grantedOrDenied(read).role("custom").node("*").graph("bar").map,
           grantedOrDenied(read).role("custom").relationship("*").graph("bar").map
         ))

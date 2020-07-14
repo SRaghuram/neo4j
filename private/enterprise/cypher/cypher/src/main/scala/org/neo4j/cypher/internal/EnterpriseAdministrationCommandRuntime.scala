@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.ast.AllPropertyResource
 import org.neo4j.cypher.internal.ast.AllQualifier
 import org.neo4j.cypher.internal.ast.DatabaseResource
 import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
+import org.neo4j.cypher.internal.ast.DefaultGraphScope
 import org.neo4j.cypher.internal.ast.DumpData
 import org.neo4j.cypher.internal.ast.GraphOrDatabaseScope
 import org.neo4j.cypher.internal.ast.LabelAllQualifier
@@ -863,8 +864,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       case NamedDatabaseScope(name) =>
         val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
         (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
+      // Currently graph and database is considered same internally
       case AllGraphsScope() | AllDatabasesScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL) // The name is just for later printout of results
-      case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT) // The name is just for later printout of results
+      case DefaultGraphScope() | DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT) // The name is just for later printout of results
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
       s"""
@@ -931,7 +933,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         val nameFields = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
         (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, s"MATCH (d:Database {name: $$`${nameFields.nameKey}`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
       case AllGraphsScope() | AllDatabasesScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL)
-      case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT)
+      case DefaultGraphScope() | DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT)
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
       s"""

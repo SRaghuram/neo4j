@@ -137,6 +137,20 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
+  test("read privilege for node should not imply traverse privilege on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a'})")
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {name} ON DEFAULT GRAPH NODES A (*) TO custom")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+  }
+
   test("read privilege for relationship should not imply traverse privilege") {
     // GIVEN
     setupUserWithCustomRole()
@@ -146,6 +160,20 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ {name} ON GRAPH * RELATIONSHIPS REL (*) TO custom")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
+  }
+
+  test("traverse privilege on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:REL {name:'a'}]->()")
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON DEFAULT GRAPH RELATIONSHIPS REL TO custom")
 
     // WHEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
@@ -173,6 +201,80 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
     execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO role3")
     execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO role3")
+
+    // WHEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+    }
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT ROLE role1 TO joe")
+
+    val expected1 = List(
+      (":A", 1, 2),
+      (":B", 3, 4),
+      (":A:B", 5, 6),
+      ("", 7, 8)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role1 FROM joe")
+    execute("GRANT ROLE role2 TO joe")
+
+    val expected2 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6),
+      (":B", null, 4),
+      ("", null, null)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(4)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role2 FROM joe")
+    execute("GRANT ROLE role3 TO joe")
+
+    val expected3 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+      }) should be(2)
+  }
+
+  test("should see properties and nodes on default graph depending on granted traverse and read privileges for role") {
+    // GIVEN
+    setupMultiLabelData
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE ROLE role3")
+
+    execute("GRANT ACCESS ON DATABASE * TO role1")
+    execute("GRANT TRAVERSE ON DEFAULT GRAPH NODES * (*) TO role1")
+    execute("GRANT READ {*} ON DEFAULT GRAPH NODES * (*) TO role1")
+
+    execute("GRANT ACCESS ON DATABASE * TO role2")
+    execute("GRANT TRAVERSE ON DEFAULT GRAPH NODES * (*) TO role2")
+    execute("GRANT READ {foo} ON DEFAULT GRAPH NODES A (*) TO role2")
+    execute("GRANT READ {bar} ON DEFAULT GRAPH NODES B (*) TO role2")
+
+    execute("GRANT ACCESS ON DATABASE * TO role3")
+    execute("GRANT TRAVERSE ON DEFAULT GRAPH NODES A (*) TO role3")
+    execute("GRANT READ {foo} ON DEFAULT GRAPH NODES A (*) TO role3")
+    execute("GRANT READ {bar} ON DEFAULT GRAPH NODES B (*) TO role3")
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {

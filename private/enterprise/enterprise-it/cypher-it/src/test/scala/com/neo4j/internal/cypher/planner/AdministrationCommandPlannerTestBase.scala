@@ -89,15 +89,19 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
     planDescription(name, Seq(Details(graphPrivilegeArg(graph).info ++ qualifier.info ++ rolePrivilegeArg(roleName).info)), SingleChild(source))
   def graphPrivilegePlan(name: String, graph: Details, qualifier: Details, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(details((graph.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString)) :+ s"ROLE $parameterRoleName")), SingleChild(source))
-  def graphPrivilegePlanForAllGraphs(name: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(details("ALL GRAPHS" +: (qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
+  def graphPrivilegePlan(name: String, allGraphs: Boolean, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = {
+    val graphArg = if (allGraphs) "ALL GRAPHS" else "DEFAULT GRAPH"
+    planDescription(name, Seq(details(graphArg +: (qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
+  }
 
   def graphPrivilegePlan(name: String, graph: String, resource: Details, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(Details(graphPrivilegeArg(graph).info ++ resource.info ++ qualifier.info ++ rolePrivilegeArg(roleName).info)), SingleChild(source))
   def graphPrivilegePlan(name: String, graph: Details, resource: Details, qualifier: Details, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(details((graph.info.map(_.prettifiedString) ++ resource.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString)) :+ s"ROLE $parameterRoleName")), SingleChild(source))
-  def graphPrivilegePlanForAllGraphs(name: String, resource: Details, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(details("ALL GRAPHS" +: (resource.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
+  def graphPrivilegePlan(name: String, allGraphs: Boolean, resource: Details, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = {
+    val graphArg = if (allGraphs) "ALL GRAPHS" else "DEFAULT GRAPH"
+    planDescription(name, Seq(details(graphArg +: (resource.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
+  }
 
   def helperPlan(name: String, arguments: Seq[Argument], source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, arguments, SingleChild(source))
   def helperPlan(name: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, children = SingleChild(source))

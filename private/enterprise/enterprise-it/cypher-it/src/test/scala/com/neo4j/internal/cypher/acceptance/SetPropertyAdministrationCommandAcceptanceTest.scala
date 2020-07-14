@@ -5,6 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
@@ -59,6 +60,21 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
           grantedOrDenied(setProperty).role("custom").graph("foo").relationship("*").map,
         ))
       }
+
+      test(s"should $grantOrDeny set property privilege to custom role for the default graph and all properties") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(setProperty).role("custom").graph(DEFAULT).node("*").map,
+          grantedOrDenied(setProperty).role("custom").graph(DEFAULT).relationship("*").map,
+        ))
+      }
+
 
       test(s"should $grantOrDeny set property privilege to custom role for specific nodes and relationships") {
         // GIVEN
@@ -298,7 +314,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = null")
 
       // THEN
-      execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size 0
+      execute("match (n{prop:'value'}) return n").toSet should have size 0
     }
 
     test("set property on a node should allow specific property only") {
@@ -378,7 +394,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = null")
 
       // THEN
-      val c = execute("MATCH (:A)-[r:R{prop:'value'}]->(:B) RETURN r.prop").toSet should be(empty)
+      execute("MATCH (:A)-[r:R{prop:'value'}]->(:B) RETURN r.prop").toSet should be(empty)
     }
 
     test("deny set property should not allow setting a specific property on a node") {
@@ -462,6 +478,109 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       // THEN
       execute("MATCH (n{prop:'value'}) RETURN n").toSet should be(empty)
+    }
+
+    test("grant set property on default graph") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CALL db.createProperty('prop')")
+      execute("CREATE (:A)")
+
+      // WHEN
+      executeOnDefault( "joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
+
+      //THEN
+      execute("MATCH(n) RETURN n.prop").toSet should be(Set(Map("n.prop" -> "newVal")))
+    }
+
+    test("grant set property to null on default graph") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (:A)")
+      execute("CREATE ({prop:'value'})")
+
+      // WHEN
+      executeOnDefault( "joe", "soap", "MATCH (n) SET n.prop = null")
+
+      // THEN
+      execute("match (n{prop:'value'}) return n").toSet should have size 0
+    }
+
+    test("grant set property on default graph, should not allow on other graph") {
+      // GIVEN
+      execute("CREATE DATABASE foo")
+      setupUserWithCustomRole()
+      execute("GRANT SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+      selectDatabase("foo")
+      execute("CALL db.createProperty('prop')")
+      execute("CREATE (:A)")
+      // WHEN, THEN
+      the[AuthorizationViolationException] thrownBy {
+        executeOn("foo", "joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
+      } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+    }
+
+    test("deny set property on default graph") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT SET PROPERTY {*} ON GRAPH * TO custom")
+      execute("DENY SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CALL db.createProperty('prop')")
+      execute("CREATE (:A)")
+
+      // WHEN, THEN
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
+      } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+    }
+
+    test("deny set property to null on default graph") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT SET PROPERTY {*} ON GRAPH * TO custom")
+      execute("DENY SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (:A)")
+      execute("CREATE ({prop:'value'})")
+
+      // WHEN, THEN
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = null")
+      } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+    }
+
+    test("deny set property on default graph, but still allow on other graphs") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("CREATE DATABASE foo")
+      execute("GRANT SET PROPERTY {*} ON GRAPH * TO custom")
+      execute("DENY SET PROPERTY {*} ON DEFAULT GRAPH TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+      selectDatabase("foo")
+      execute("CALL db.createProperty('prop')")
+      execute("CREATE (:A)")
+
+      // WHEN
+      executeOn("foo", "joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
+
+      // THEN
+      execute("MATCH(n) RETURN n.prop").toSet should be(Set(Map("n.prop" -> "newVal")))
     }
   }
 }

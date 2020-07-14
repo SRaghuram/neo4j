@@ -316,5 +316,18 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     }
     exception.getMessage should include("Multiple users in SHOW USER PRIVILEGE command is not supported in this Cypher version.")
   }
+
+  test("DEFAULT GRAPH should not work with CYPHER 4.1") {
+    // GIVE
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON DEFAULT GRAPH TO custom")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 GRANT CREATE ON DEFAULT GRAPH ELEMENTS * TO custom")
+    }
+    exception.getMessage should include("Default graph is not supported in this Cypher version.")
+  }
 }
 

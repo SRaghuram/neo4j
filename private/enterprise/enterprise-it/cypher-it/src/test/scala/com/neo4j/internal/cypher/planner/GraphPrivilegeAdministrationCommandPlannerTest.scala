@@ -21,11 +21,61 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("GrantTraverse", details("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlanForAllGraphs("GrantTraverse", details("NODES *"), "editor",
-            graphPrivilegePlanForAllGraphs("GrantTraverse", details("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlanForAllGraphs("GrantTraverse", details("NODES *"), "reader",
+        graphPrivilegePlan("GrantTraverse", allGraphs = true, details("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantTraverse", allGraphs = true, details("NODES *"), "editor",
+            graphPrivilegePlan("GrantTraverse", allGraphs = true, details("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantTraverse", allGraphs = true, details("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant traverse on default graph") {
+    // When
+    val plan = execute(s"EXPLAIN GRANT TRAVERSE ON DEFAULT GRAPH TO editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantTraverse", allGraphs = false, details("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantTraverse", allGraphs = false, details("NODES *"), "editor",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny traverse on default graph") {
+    // When
+    val plan = execute(s"EXPLAIN DENY TRAVERSE ON DEFAULT GRAPH NODE A TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyTraverse", allGraphs = false, qualifierArg("NODE", "A"), "reader",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke traverse on default graph") {
+    // When
+    val plan = execute(s"EXPLAIN REVOKE TRAVERSE ON DEFAULT GRAPH RELATIONSHIPS A, B FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeTraverse(DENIED)", allGraphs = false, qualifierArg("RELATIONSHIP", "B"), "reader",
+          graphPrivilegePlan("RevokeTraverse(GRANTED)", allGraphs = false, qualifierArg("RELATIONSHIP", "B"), "reader",
+            graphPrivilegePlan("RevokeTraverse(DENIED)", allGraphs = false, qualifierArg("RELATIONSHIP", "A"), "reader",
+              graphPrivilegePlan("RevokeTraverse(GRANTED)", allGraphs = false, qualifierArg("RELATIONSHIP", "A"), "reader",
+                assertDbmsAdminPlan("REMOVE PRIVILEGE")
               )
             )
           )
@@ -153,10 +203,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("prop"), details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("foo"), details("RELATIONSHIPS *"), "reader",
-            graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("prop"), details("NODES *"), "reader",
-              graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("foo"), details("NODES *"), "reader",
+        graphPrivilegePlan("DenyRead", allGraphs = true, resourceArg("prop"), details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyRead", allGraphs = true, resourceArg("foo"), details("RELATIONSHIPS *"), "reader",
+            graphPrivilegePlan("DenyRead", allGraphs = true, resourceArg("prop"), details("NODES *"), "reader",
+              graphPrivilegePlan("DenyRead", allGraphs = true, resourceArg("foo"), details("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -247,8 +297,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("DenyMatch", resourceArg("prop"), details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlanForAllGraphs("DenyMatch", resourceArg("prop"), details("NODES *"), "reader",
+        graphPrivilegePlan("DenyMatch", allGraphs = true, resourceArg("prop"), details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyMatch", allGraphs = true, resourceArg("prop"), details("NODES *"), "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -321,10 +371,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("GrantWrite", details("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlanForAllGraphs("GrantWrite", details("NODES *"), "editor",
-            graphPrivilegePlanForAllGraphs("GrantWrite", details("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlanForAllGraphs("GrantWrite", details("NODES *"), "reader",
+        graphPrivilegePlan("GrantWrite", allGraphs = true, details("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantWrite", allGraphs = true, details("NODES *"), "editor",
+            graphPrivilegePlan("GrantWrite", allGraphs = true, details("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantWrite", allGraphs = true, details("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -463,8 +513,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("GrantCreateElement", details("RELATIONSHIPS *"), "role",
-          graphPrivilegePlanForAllGraphs("GrantCreateElement", details("NODES *"), "role",
+        graphPrivilegePlan("GrantCreateElement", allGraphs = true, details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("GrantCreateElement", allGraphs = true, details("NODES *"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -479,8 +529,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("DenyCreateElement", details("NODE bar"), "role",
-          graphPrivilegePlanForAllGraphs("DenyCreateElement", details("NODE foo"), "role",
+        graphPrivilegePlan("DenyCreateElement", allGraphs = true, details("NODE bar"), "role",
+          graphPrivilegePlan("DenyCreateElement", allGraphs = true, details("NODE foo"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -495,8 +545,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("RevokeDeleteElement(DENIED)", details("RELATIONSHIPS *"), "role",
-          graphPrivilegePlanForAllGraphs("RevokeDeleteElement(GRANTED)", details("RELATIONSHIPS *"), "role",
+        graphPrivilegePlan("RevokeDeleteElement(DENIED)", allGraphs = true, details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("RevokeDeleteElement(GRANTED)", allGraphs = true, details("RELATIONSHIPS *"), "role",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -511,8 +561,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), details("RELATIONSHIPS *"), "role",
-          graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), details("NODES *"), "role",
+        graphPrivilegePlan("GrantSetProperty", allGraphs = true, allResourceArg(), details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("GrantSetProperty", allGraphs = true, allResourceArg(), details("NODES *"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -543,8 +593,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("bar"), details("RELATIONSHIP baz"), "role",
-          graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("foo"), details("RELATIONSHIP baz"), "role",
+        graphPrivilegePlan("RevokeSetProperty(GRANTED)", allGraphs = true, resourceArg("bar"), details("RELATIONSHIP baz"), "role",
+          graphPrivilegePlan("RevokeSetProperty(GRANTED)", allGraphs = true, resourceArg("foo"), details("RELATIONSHIP baz"), "role",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -559,7 +609,7 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-          graphPrivilegePlanForAllGraphs("GrantAllGraphPrivileges", Details(Seq.empty), "role",
+          graphPrivilegePlan("GrantAllGraphPrivileges", allGraphs = true, Details(Seq.empty), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
       ).toString
@@ -607,8 +657,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("GrantMerge", allResourceArg(), details("RELATIONSHIPS *"), "role",
-          graphPrivilegePlanForAllGraphs("GrantMerge", allResourceArg(), details("NODES *"), "role",
+        graphPrivilegePlan("GrantMerge", allGraphs = true, allResourceArg(), details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("GrantMerge", allGraphs = true, allResourceArg(), details("NODES *"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -623,8 +673,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("RevokeMerge(GRANTED)", resourceArg("bar"), details("RELATIONSHIP baz"), "role",
-          graphPrivilegePlanForAllGraphs("RevokeMerge(GRANTED)", resourceArg("foo"), details("RELATIONSHIP baz"), "role",
+        graphPrivilegePlan("RevokeMerge(GRANTED)", allGraphs = true, resourceArg("bar"), details("RELATIONSHIP baz"), "role",
+          graphPrivilegePlan("RevokeMerge(GRANTED)", allGraphs = true, resourceArg("foo"), details("RELATIONSHIP baz"), "role",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )

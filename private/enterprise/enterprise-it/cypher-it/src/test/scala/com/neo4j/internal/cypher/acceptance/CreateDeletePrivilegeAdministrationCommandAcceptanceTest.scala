@@ -64,6 +64,61 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
             ))
           }
 
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and all elements") {
+            // GIVEN
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH ELEMENTS * TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+              grantedOrDenied(privilege).role("custom").graph(DEFAULT).node("*").map,
+              grantedOrDenied(privilege).role("custom").graph(DEFAULT).relationship("*").map
+            ))
+          }
+
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and named elements") {
+            // GIVEN
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH ELEMENTS A TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+              grantedOrDenied(privilege).role("custom").graph(DEFAULT).node("A").map,
+              grantedOrDenied(privilege).role("custom").graph(DEFAULT).relationship("A").map
+            ))
+          }
+
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and named relationship") {
+            // GIVEN
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH RELATIONSHIPS Rel1, Rel2 TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+              grantedOrDenied(privilege).role("custom").graph(DEFAULT).relationship("Rel1").map,
+                grantedOrDenied(privilege).role("custom").graph(DEFAULT).relationship("Rel2").map
+            ))
+          }
+
+          test(s"should $grantOrDeny $createOrDelete privilege to custom role for a default graph and named node") {
+            // GIVEN
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $createOrDelete ON DEFAULT GRAPH NODE A TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+              grantedOrDenied(privilege).role("custom").graph(DEFAULT).node("A").map,
+            ))
+          }
+
           test(s"should $grantOrDeny $createOrDelete privilege to custom role for a specific graph and all elements") {
             // GIVEN
             execute("CREATE ROLE custom")
@@ -739,4 +794,87 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     // THEN
     execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
   }
+
+  test("grant create on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON DEFAULT GRAPH TO custom")
+
+    // WHEN
+    executeOnDefault( "joe", "soap", "CREATE (n)")
+
+    //THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
+  }
+
+  test("grant create on default graph, should not allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON DEFAULT GRAPH TO custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "CREATE (n)")
+    } should have message "Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("grant delete on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("GRANT DELETE ON DEFAULT GRAPH TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n)")
+
+    // WHEN
+    executeOnDefault( "joe", "soap", "MATCH (n) DELETE n")
+
+    //THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
+  }
+
+  test("grant delete on default graph, should not allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("GRANT CREATE ON DEFAULT GRAPH TO custom")
+    execute("CREATE DATABASE foo")
+    selectDatabase("foo")
+    execute("CREATE (n)")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "MATCH (n) DELETE n")
+    } should have message "Delete node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("deny create on default graph, should allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON GRAPH * TO custom")
+    execute("DENY CREATE ON DEFAULT GRAPH TO custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    executeOn("foo", "joe", "soap", "CREATE (n)")
+
+    // THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
+  }
+
+  test("deny delete on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("DENY DELETE ON DEFAULT GRAPH TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n)")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault( "joe", "soap", "MATCH (n) DELETE n")
+    } should have message "Delete node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
 }

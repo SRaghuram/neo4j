@@ -29,6 +29,17 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantedOrDenied(allGraphPrivileges).role("custom").map))
       }
 
+      test(s"should $grantOrDeny all graph privileges for default graph") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand ALL GRAPH PRIVILEGES ON DEFAULT GRAPH TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantedOrDenied(allGraphPrivileges).role("custom").graph(DEFAULT).map))
+      }
+
       test(s"should $grantOrDeny all graph privileges for specific graph") {
         // GIVEN
         execute("CREATE ROLE custom")
