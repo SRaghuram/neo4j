@@ -106,7 +106,7 @@ public class CcRobustness
     public static void main( String[] argArray )
     {
         LogProvider logProvider =
-                new Log4jLogProvider( LogConfig.createBuilder( System.out, Level.INFO ).withTimezone( LogTimeZone.valueOf( "UDC" ) ).build() );
+                new Log4jLogProvider( LogConfig.createBuilder( System.out, Level.INFO ).withTimezone( LogTimeZone.UTC ).build() );
         Log log = logProvider.getLog( CcRobustness.class );
 
         Args args = Args.parse( argArray );
