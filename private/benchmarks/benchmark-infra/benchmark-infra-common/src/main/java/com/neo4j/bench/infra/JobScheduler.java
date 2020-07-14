@@ -5,9 +5,12 @@
  */
 package com.neo4j.bench.infra;
 
+import com.amazonaws.services.batch.model.SubmitJobRequest;
+
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * Scheduler of benchmark runs
@@ -32,9 +35,16 @@ public interface JobScheduler
      * @param baseArtifactUri URI to workspace base
      * @param jobName human readable job name
      * @param jobParameters name of the job parameters json file
+     * @param jobRequestConsumer consumer that allows for further augmentation of the SubmitJobRequest
      * @return ID of scheduled job
      */
-    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, String jobParameters );
+    JobId schedule(
+            URI workerArtifactUri,
+            URI baseArtifactUri,
+            String jobName,
+            String jobParameters,
+            Optional<JobRequestConsumer> jobRequestConsumer
+    );
 
     /**
      * Fetches status of scheduled job
@@ -43,4 +53,8 @@ public interface JobScheduler
      * @return job status
      */
     List<JobStatus> jobsStatuses( List<JobId> jobIds );
+
+    public interface JobRequestConsumer extends Consumer<SubmitJobRequest>
+    {
+    }
 }

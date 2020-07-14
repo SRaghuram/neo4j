@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -166,16 +167,28 @@ public class AWSBatchJobScheduler implements JobScheduler
     @Override
     public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName )
     {
-        return schedule( workerArtifactUri, baseArtifactUri, jobName, Collections.emptyMap() );
+        return schedule( workerArtifactUri, baseArtifactUri, jobName, Collections.emptyMap(), Optional.empty() );
     }
 
     @Override
-    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, String jobParameters )
+    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, String jobParameters, Optional<JobRequestConsumer> jobRequestConsumer )
     {
-        return schedule( workerArtifactUri, baseArtifactUri, jobName, Collections.singletonMap( RunMacroWorkloadParams.CMD_JOB_PARAMETERS, jobParameters ) );
+        return schedule(
+                workerArtifactUri,
+                baseArtifactUri,
+                jobName,
+                Collections.singletonMap( RunMacroWorkloadParams.CMD_JOB_PARAMETERS, jobParameters ),
+                jobRequestConsumer
+        );
     }
 
-    private JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, Map<String,String> additionalParameters )
+    private JobId schedule(
+            URI workerArtifactUri,
+            URI baseArtifactUri,
+            String jobName,
+            Map<String,String> additionalParameters,
+            Optional<JobRequestConsumer> transformer
+    )
     {
         LOG.info( "scheduling batch job with worker artifact URI {} and base artifact URI {} and additional parameters {}",
                   workerArtifactUri,
@@ -193,6 +206,8 @@ public class AWSBatchJobScheduler implements JobScheduler
                 .withJobQueue( jobQueue )
                 .withJobName( jobName )
                 .withParameters( paramsMap );
+
+        transformer.ifPresent( jobRequestConsumer -> jobRequestConsumer.accept( submitJobRequest ) );
 
         SubmitJobResult submitJobResult = awsBatch.submitJob( submitJobRequest );
         return new JobId( submitJobResult.getJobId() );
