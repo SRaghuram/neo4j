@@ -6,7 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.bolt;
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -20,8 +23,6 @@ import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -83,19 +84,19 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 
     static class PackedOutputArray implements PackOutput
     {
-        ByteArrayOutputStream raw;
-        DataOutputStream data;
+        ByteBuf raw;
+        ByteBufOutputStream data;
 
         PackedOutputArray()
         {
-            raw = new ByteArrayOutputStream();
-            data = new DataOutputStream( raw );
+            raw = Unpooled.buffer();
+            data = new ByteBufOutputStream( raw );
         }
 
         public void reset()
         {
-            raw = new ByteArrayOutputStream();
-            data = new DataOutputStream( raw );
+            raw = Unpooled.buffer();
+            data = new ByteBufOutputStream( raw );
         }
 
         @Override
@@ -183,7 +184,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 
         byte[] bytes()
         {
-            return raw.toByteArray();
+            return raw.array();
         }
 
         @Override
