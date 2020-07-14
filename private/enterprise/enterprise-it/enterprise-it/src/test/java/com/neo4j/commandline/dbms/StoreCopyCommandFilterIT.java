@@ -8,6 +8,9 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.dbms.commandline.StoreCopyCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import picocli.CommandLine;
 
 import java.util.Comparator;
@@ -15,7 +18,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -23,12 +25,15 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.commandline.dbms.StoreCopyCommandIT.getCopyName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+@ExtendWith( SuppressOutputExtension.class ) //Some tests use BatchImporter, printing to System.out
+@ResourceLock( Resources.SYSTEM_OUT )
 public class StoreCopyCommandFilterIT extends AbstractCommandIT
 {
     private static final Label PERSON_LABEL = Label.label( "Person" );
@@ -349,8 +354,7 @@ public class StoreCopyCommandFilterIT extends AbstractCommandIT
 
     private void copyDatabase( String... args ) throws Exception
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
-        var command = new StoreCopyCommand( context );
+        var command = new StoreCopyCommand( getExtensionContext() );
 
         CommandLine.populateCommand( command, args );
         command.execute();

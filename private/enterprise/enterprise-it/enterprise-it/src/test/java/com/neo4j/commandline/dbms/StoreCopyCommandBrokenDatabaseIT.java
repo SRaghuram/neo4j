@@ -9,7 +9,6 @@ import com.neo4j.dbms.commandline.StoreCopyCommand;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -94,7 +93,7 @@ class StoreCopyCommandBrokenDatabaseIT extends AbstractCommandIT
 
     private void copyDatabase( String... args ) throws Exception
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
+        var context = getExtensionContext();
         var command = new StoreCopyCommand( context );
 
         CommandLine.populateCommand( command, args );

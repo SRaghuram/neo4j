@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
 import org.neo4j.cli.CommandFailedException;
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.consistency.CheckConsistencyCommand;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,8 +60,7 @@ class CheckConsistencyCommandIT extends AbstractCommandIT
 
     private void checkConsistency( String database )
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
-        var command = new CheckConsistencyCommand( context );
+        var command = new CheckConsistencyCommand( getExtensionContext() );
 
         String[] args = {"--database=" + database};
         CommandLine.populateCommand( command, args );

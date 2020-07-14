@@ -11,7 +11,6 @@ import picocli.CommandLine;
 import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.DumpCommand;
 import org.neo4j.dbms.archive.Dumper;
 
@@ -75,7 +74,7 @@ class DumpCommandIT extends AbstractCommandIT
 
     private void dumpDatabase( String database, Path to )
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
+        var context = getExtensionContext();
         var command = new DumpCommand( context, new Dumper( context.err() ) );
 
         String[] args = {"--database=" + database, "--to=" + to.toAbsolutePath()};

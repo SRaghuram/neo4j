@@ -8,6 +8,7 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.dbms.commandline.StoreCopyCommand;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 import picocli.CommandLine;
@@ -22,7 +23,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.neo4j.cli.CommandFailedException;
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -47,7 +47,7 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.internal.locker.FileLockException;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.token.TokenHolders;
 
 import static java.lang.Math.min;
@@ -60,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
+@ExtendWith( SuppressOutputExtension.class ) //Some tests use BatchImporter, printing to System.out
 @ResourceLock( Resources.SYSTEM_OUT )
 class StoreCopyCommandIT extends AbstractCommandIT
 {
@@ -67,8 +68,6 @@ class StoreCopyCommandIT extends AbstractCommandIT
     private FileSystemAbstraction fs;
     @Inject
     private PageCache pageCache;
-    @Inject
-    private SuppressOutput suppressOutput;
     private static final Label NUMBER_LABEL = Label.label( "Number" );
     private static final Label CHARACTER_LABEL = Label.label( "Character" );
     private static final Label ERROR_LABEL = Label.label( "Error" );
@@ -842,7 +841,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
         copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName );
 
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( "CALL db.createIndex('myIndex'" ) );
+        assertTrue( out.containsMessage( "CALL db.createIndex('myIndex'" ) );
     }
 
     @Test
@@ -885,7 +884,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertThat( properties.remove( "a" ) ).isEqualTo( 1 );
             assertThat( single( properties.values() ) ).isEqualTo( 2 );
         }
-        String output = suppressOutput.getOutputVoice().toString();
+        String output = out.toString();
         assertTrue( output.contains( "tokens were recreated" ) );
         // One occurrence reporting the broken token. Then another reporting its invented replacement:
         assertThat( countOccurrences( output, "PropertyKey(" + idB + ")" ) ).isEqualTo( 2 );
@@ -928,8 +927,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
                 "--from-pagecache=6m",
                 "--to-pagecache=7m" );
 
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( "(page cache 6m)" ) );
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( "(page cache 7m)" ) );
+        assertTrue( out.containsMessage( "(page cache 6m)" ) );
+        assertTrue( out.containsMessage( "(page cache 7m)" ) );
     }
 
     private void copyDatabase( String... args ) throws Exception
@@ -939,8 +938,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
     private void copyDatabase( PageCacheTracer pageCacheTracer,  String... args ) throws Exception
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
-        var command = new StoreCopyCommand( context );
+        var command = new StoreCopyCommand( getExtensionContext() );
 
         CommandLine.populateCommand( command, args );
         command.setPageCacheTracer( pageCacheTracer );

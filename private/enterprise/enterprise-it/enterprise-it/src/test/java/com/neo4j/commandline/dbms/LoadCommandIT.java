@@ -8,14 +8,12 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LoadCommand;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -25,7 +23,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.io.layout.Neo4jLayout;
-import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -36,7 +33,6 @@ import static org.neo4j.dbms.archive.CompressionFormat.ZSTD;
 import static org.neo4j.function.Predicates.alwaysFalse;
 import static org.neo4j.function.Predicates.alwaysTrue;
 
-@ExtendWith( {SuppressOutputExtension.class} )
 @EnterpriseDbmsExtension
 class LoadCommandIT extends AbstractCommandIT
 {
@@ -227,7 +223,7 @@ class LoadCommandIT extends AbstractCommandIT
 
     private void load( String database, Path dump, boolean force, boolean enterprise )
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
+        var context = getExtensionContext();
         var loader = new Loader( System.out );
         var command = enterprise ? new EnterpriseLoadCommand( context, loader ) : new LoadCommand( context, loader );
 

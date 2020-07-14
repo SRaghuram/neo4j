@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.io.fs.FileUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,8 +46,7 @@ class RestoreCommandIT extends AbstractCommandIT
 
     private void restoreDatabase( String database, Path from ) throws IOException
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
-        var command = new RestoreDatabaseCli( context );
+        var command = new RestoreDatabaseCli( getExtensionContext() );
 
         String[] args = {"--database=" + database, "--from=" + from.toAbsolutePath(), "--force"};
         CommandLine.populateCommand( command, args );

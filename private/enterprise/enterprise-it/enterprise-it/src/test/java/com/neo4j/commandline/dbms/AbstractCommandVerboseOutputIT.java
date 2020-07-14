@@ -5,40 +5,32 @@
  */
 package com.neo4j.commandline.dbms;
 
+import com.neo4j.commandline.dbms.AbstractCommandIT.Output;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.ResourceLock;
-import org.junit.jupiter.api.parallel.Resources;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.ExecutionContext;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( SuppressOutputExtension.class )
-@ResourceLock( Resources.SYSTEM_OUT )
 class AbstractCommandVerboseOutputIT
 {
-    @Inject
-    SuppressOutput suppressOutput;
-
     @Test
     void printVerboseInfo() throws Exception
     {
-        var context = new ExecutionContext( Path.of( "." ), Path.of( "." ) );
+        Output output = new Output();
+        var context = new ExecutionContext( Path.of( "." ), Path.of( "." ), output.printStream, output.printStream, new DefaultFileSystemAbstraction() );
         var command = new DummyCommand( context );
 
         String[] args = {"--verbose"};
         CommandLine.populateCommand( command, args );
 
         command.call();
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( "VM Vendor" ) );
+        assertTrue( output.containsMessage( "VM Vendor" ) );
     }
 
     private static class DummyCommand extends AbstractCommand

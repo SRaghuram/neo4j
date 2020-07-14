@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.cli.ExecutionContext;
 import org.neo4j.collection.PrimitiveLongResourceIterator;
 import org.neo4j.counts.CountsStore;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -188,8 +187,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
 
     private void copyDatabase( String... args ) throws Exception
     {
-        var context = new ExecutionContext( neo4jHome, configDir );
-        var command = new StoreCopyCommand( context );
+        var command = new StoreCopyCommand( getExtensionContext() );
 
         CommandLine.populateCommand( command, args );
         command.setPageCacheTracer( NULL );
