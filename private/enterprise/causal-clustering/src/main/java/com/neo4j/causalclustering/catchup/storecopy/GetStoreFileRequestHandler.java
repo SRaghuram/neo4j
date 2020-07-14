@@ -31,7 +31,6 @@ import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
-import static org.neo4j.common.Subject.SYSTEM;
 
 public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetStoreFileRequest>
 {
@@ -122,7 +121,7 @@ public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetS
 
     private void tryAsyncCheckpoint( Database db, CheckPointer checkPointer )
     {
-        var monitoringParams = new JobMonitoringParams( SYSTEM, db.getNamedDatabaseId().name(), "Checkpoint triggered by store file copy" );
+        var monitoringParams = JobMonitoringParams.systemJob( db.getNamedDatabaseId().name(), "Checkpoint triggered by store file copy" );
         db.getScheduler().schedule( Group.CHECKPOINT, monitoringParams, () ->
         {
             try

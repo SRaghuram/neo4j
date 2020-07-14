@@ -583,7 +583,7 @@ class PageCacheWarmerTest
 
     private PageCacheWarmer createPageCacheWarmer( PageCache pageCache, Config defaults, Log log )
     {
-        return new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.homePath(), defaults, log, tracers );
+        return new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.homePath(), "test database", defaults, log, tracers );
     }
 
     private void assertFilesExists( List<StoreFileMetadata> fileListing )

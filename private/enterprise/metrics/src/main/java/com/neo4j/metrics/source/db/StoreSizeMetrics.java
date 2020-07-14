@@ -15,11 +15,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.common.Subject;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
@@ -67,7 +65,7 @@ public class StoreSizeMetrics extends LifecycleAdapter
     {
         if ( updateValuesHandle == null )
         {
-            var monitoringParams = new JobMonitoringParams( Subject.SYSTEM, databaseLayout.getDatabaseName(), "Update of database store metrics" );
+            var monitoringParams = JobMonitoringParams.systemJob( databaseLayout.getDatabaseName(), "Update of database store metrics" );
             updateValuesHandle =
                     scheduler.scheduleRecurring( FILE_IO_HELPER, monitoringParams, this::updateCachedValues, UPDATE_INTERVAL.toMillis(), MILLISECONDS );
         }

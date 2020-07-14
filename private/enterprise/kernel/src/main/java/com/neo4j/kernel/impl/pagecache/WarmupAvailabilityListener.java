@@ -16,10 +16,9 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
-import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.common.Subject.SYSTEM;
+import static org.neo4j.scheduler.JobMonitoringParams.systemJob;
 
 class WarmupAvailabilityListener implements AvailabilityListener
 {
@@ -53,8 +52,7 @@ class WarmupAvailabilityListener implements AvailabilityListener
     public synchronized void available()
     {
         available = true;
-        var monitoringParams = new JobMonitoringParams( SYSTEM, null, "Page cache warm up" );
-        jobHandle = scheduler.schedule( Group.FILE_IO_HELPER, monitoringParams, this::startWarmup );
+        jobHandle = scheduler.schedule( Group.FILE_IO_HELPER, systemJob( namedDatabaseId.name(), "Page cache warm up" ), this::startWarmup );
     }
 
     private void startWarmup()
@@ -83,7 +81,7 @@ class WarmupAvailabilityListener implements AvailabilityListener
         {
             return;
         }
-        var monitoringParams = new JobMonitoringParams( SYSTEM, null, "Profiling of page cache" );
+        var monitoringParams = systemJob( namedDatabaseId.name(), "Profiling of page cache" );
         long frequencyMillis = config.get( GraphDatabaseSettings.pagecache_warmup_profiling_interval ).toMillis();
         jobHandle = scheduler.scheduleRecurring( Group.FILE_IO_HELPER, monitoringParams, this::doProfile, frequencyMillis, TimeUnit.MILLISECONDS );
     }

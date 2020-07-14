@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.common.Subject;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.io.fs.FileHandle;
@@ -45,7 +44,6 @@ import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
-import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
@@ -55,6 +53,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_pre
 import static org.neo4j.io.pagecache.PagedFile.PF_NO_FAULT;
 import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
+import static org.neo4j.scheduler.JobMonitoringParams.systemJob;
 
 /**
  * The page cache warmer profiles the page cache to figure out what data is in memory and what is not, and uses those
@@ -83,6 +82,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private final PageCache pageCache;
     private final JobScheduler scheduler;
     private final Path databaseDirectory;
+    private final String databaseName;
     private final Path profilesDirectory;
     private final Log log;
     private final ProfileRefCounts refCounts;
@@ -92,13 +92,14 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private ExecutorService executor;
     private PageLoaderFactory pageLoaderFactory;
 
-    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, Path databaseDirectory, Config config, Log log,
-            Tracers tracers )
+    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, Path databaseDirectory, String databaseName,
+            Config config, Log log, Tracers tracers )
     {
         this.fs = fs;
         this.pageCache = pageCache;
         this.scheduler = scheduler;
         this.databaseDirectory = databaseDirectory;
+        this.databaseName = databaseName;
         this.profilesDirectory = databaseDirectory.resolve( Profile.PROFILE_DIR );
         this.log = log;
         this.pageCacheTracer = tracers.getPageCacheTracer();
@@ -185,7 +186,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 if ( whitelist.matcher( pagedFile.path().toString() ).find() )
                 {
                     var fileName = pagedFile.path().getFileName();
-                    var monitoringParams = new JobMonitoringParams( Subject.SYSTEM, null, "Pre-fetching file '" + fileName + "' into the page cache" );
+                    var monitoringParams = systemJob( databaseName, "Pre-fetching file '" + fileName + "' into the page cache" );
                     handles.add( scheduler.schedule( Group.FILE_IO_HELPER, monitoringParams, () -> totalPageCounter.add( touchAllPages( pagedFile ) ) ) );
                 }
             }

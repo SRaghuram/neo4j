@@ -27,10 +27,9 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 
-import static org.neo4j.common.Subject.SYSTEM;
+import static org.neo4j.scheduler.JobMonitoringParams.systemJob;
 
 public interface AbstractEnterpriseEditionModule
 {
@@ -114,6 +113,6 @@ public interface AbstractEnterpriseEditionModule
     private Executor getAuthCacheExecutor( GlobalModule globalModule )
     {
         var monitoredJobExecutor = globalModule.getJobScheduler().monitoredJobExecutor( Group.AUTH_CACHE );
-        return job -> monitoredJobExecutor.execute( new JobMonitoringParams( SYSTEM, null, "Authentication cache maintenance" ), job );
+        return job -> monitoredJobExecutor.execute( systemJob( "Authentication cache maintenance" ), job );
     }
 }

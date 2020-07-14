@@ -104,7 +104,7 @@ class SchedulerProceduresTest
                 jobLatch.await();
             } );
             scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 2" ), "db 2", "job 103" ), () -> 1 );
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( Subject.SYSTEM, null, "job 104" ), () -> { } ).cancel();
+            scheduler.schedule( RAFT_SERVER, JobMonitoringParams.systemJob( "job 104" ), () -> { } ).cancel();
 
             scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( Subject.SYSTEM, null, "job 105" ), () -> { } ).get();
 

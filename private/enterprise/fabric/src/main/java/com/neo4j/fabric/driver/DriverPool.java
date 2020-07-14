@@ -28,13 +28,12 @@ import org.neo4j.driver.internal.retry.RetrySettings;
 import org.neo4j.driver.internal.shaded.io.netty.channel.EventLoopGroup;
 import org.neo4j.fabric.executor.Location;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
 
 import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
 import static org.apache.commons.lang3.builder.HashCodeBuilder.reflectionHashCode;
-import static org.neo4j.common.Subject.SYSTEM;
 import static org.neo4j.scheduler.Group.FABRIC_IDLE_DRIVER_MONITOR;
+import static org.neo4j.scheduler.JobMonitoringParams.systemJob;
 
 public class DriverPool extends LifecycleAdapter
 {
@@ -118,8 +117,7 @@ public class DriverPool extends LifecycleAdapter
     {
         long checkInterval = fabricConfig.getGlobalDriverConfig().getDriverIdleCheckInterval().toSeconds();
         Duration idleTimeout = fabricConfig.getGlobalDriverConfig().getIdleTimeout();
-        var monitoringParams = new JobMonitoringParams( SYSTEM, null, "Clean up of idle drivers" );
-        jobScheduler.schedule( FABRIC_IDLE_DRIVER_MONITOR, monitoringParams, () ->
+        jobScheduler.schedule( FABRIC_IDLE_DRIVER_MONITOR, systemJob( "Clean up of idle drivers" ), () ->
         {
             List<Key> timeoutCandidates = idleDrivers.entrySet().stream()
                     .filter( entry -> Duration.between( entry.getValue().getLastUsedTimestamp(), clock.instant() ).compareTo( idleTimeout ) > 0 )
