@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +47,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
+import org.neo4j.dbms.database.TestSystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
@@ -2472,68 +2472,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     ==================================================================================
      */
 
-    private static class TestSystemGraphComponent implements SystemGraphComponent
-    {
-        final String component;
-        SystemGraphComponent.Status status;
-        Exception onInit;
-        Exception onMigrate;
-
-        TestSystemGraphComponent( String component, SystemGraphComponent.Status status, Exception onInit, Exception onMigrate )
-        {
-            this.component = component;
-            this.status = status;
-            this.onInit = onInit;
-            this.onMigrate = onMigrate;
-        }
-
-        @Override
-        public String component()
-        {
-            return component;
-        }
-
-        @Override
-        public Status detect( Transaction tx )
-        {
-            return status;
-        }
-
-        @Override
-        public Optional<Exception> initializeSystemGraph( GraphDatabaseService system )
-        {
-            if ( status == Status.UNINITIALIZED )
-            {
-                if ( onInit == null )
-                {
-                    status = Status.CURRENT;
-                }
-                else
-                {
-                    return Optional.of( onInit );
-                }
-            }
-            return Optional.empty();
-        }
-
-        @Override
-        public Optional<Exception> upgradeToCurrent( GraphDatabaseService system )
-        {
-            if ( status == Status.REQUIRES_UPGRADE )
-            {
-                if ( onMigrate == null )
-                {
-                    status = Status.CURRENT;
-                }
-                else
-                {
-                    return Optional.of( onMigrate );
-                }
-            }
-            return Optional.empty();
-        }
-    }
-
     private int getLabelId( String labelName )
     {
         try ( InternalTransaction tx = neo.getLocalGraph().beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
@@ -2557,7 +2495,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private SystemGraphComponent makeSystemComponentUpgradeFails( String component )
     {
         return new TestSystemGraphComponent( component, SystemGraphComponent.Status.REQUIRES_UPGRADE, null,
-                new RuntimeException( "Upgrade failed because this is a test" ) );
+                                             new RuntimeException( "Upgrade failed because this is a test" ) );
     }
 
     private void setupFakeSystemComponents()

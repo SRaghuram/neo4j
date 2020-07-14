@@ -747,20 +747,6 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @Admin
-    @SystemProcedure
-    @Description( "Report the current status of the system database sub-graph schema." )
-    @Procedure( name = "dbms.upgradeStatus", mode = READ )
-    public Stream<SystemGraphComponentStatusResult> systemSchemaVersion() throws ProcedureException
-    {
-        if ( !callContext.isSystemDatabase() )
-        {
-            throw new ProcedureException( ProcedureCallFailed,
-                    "This is an administration command and it should be executed against the system database: dbms.upgradeStatus" );
-        }
-        return Stream.of( new SystemGraphComponentStatusResult( systemGraphComponents.detect( transaction ) ) );
-    }
-
-    @Admin
     @Internal
     @SystemProcedure
     @Description( "Upgrade the system database schema if it is not the current schema, providing upgrade status results for each sub-graph component." )
@@ -812,40 +798,6 @@ public class EnterpriseBuiltInDbmsProcedures
                     version -> results.add( new SystemGraphComponentUpgradeResultDetails( version.component(), version.detect( transaction ).name(), "" ) ) );
             return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), "" ) ),
                     results.stream() );
-        }
-    }
-
-    @Admin
-    @SystemProcedure
-    @Description( "Upgrade the system database schema if it is not the current schema." )
-    @Procedure( name = "dbms.upgrade", mode = WRITE )
-    public Stream<SystemGraphComponentUpgradeResult> upgradeSystemSchema() throws ProcedureException
-    {
-        if ( !callContext.isSystemDatabase() )
-        {
-            throw new ProcedureException( ProcedureCallFailed,
-                    "This is an administration command and it should be executed against the system database: dbms.upgrade" );
-        }
-        SystemGraphComponents versions = systemGraphComponents;
-        SystemGraphComponent.Status status = versions.detect( transaction );
-        if ( status == REQUIRES_UPGRADE )
-        {
-            ArrayList<String> failed = new ArrayList<>();
-            versions.forEach( component ->
-            {
-                SystemGraphComponent.Status initialStatus = component.detect( transaction );
-                if ( initialStatus == REQUIRES_UPGRADE )
-                {
-                    Optional<Exception> error = component.upgradeToCurrent( graph );
-                    error.ifPresent( e -> failed.add( String.format( "[%s] %s", component.component(), e.getMessage() ) ) );
-                }
-            } );
-            String upgradeResult = failed.isEmpty() ? "Success" : "Failed: " + String.join( ", ", failed );
-            return Stream.of( new SystemGraphComponentUpgradeResult( versions.detect( transaction ).name(), upgradeResult ) );
-        }
-        else
-        {
-            return Stream.of( new SystemGraphComponentUpgradeResult( status.name(), status.resolution() ) );
         }
     }
 
@@ -1011,20 +963,6 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
-    public static class SystemGraphComponentStatusResult
-    {
-        public final String status;
-        public final String description;
-        public final String resolution;
-
-        SystemGraphComponentStatusResult( SystemGraphComponent.Status status )
-        {
-            this.status = status.name();
-            this.description = status.description();
-            this.resolution = status.resolution();
-        }
-    }
-
     public static class SystemGraphComponentUpgradeResultDetails
     {
         public final String component;
@@ -1034,18 +972,6 @@ public class EnterpriseBuiltInDbmsProcedures
         SystemGraphComponentUpgradeResultDetails( String component, String status, String upgradeResult )
         {
             this.component = component;
-            this.status = status;
-            this.upgradeResult = upgradeResult;
-        }
-    }
-
-    public static class SystemGraphComponentUpgradeResult
-    {
-        public final String status;
-        public final String upgradeResult;
-
-        SystemGraphComponentUpgradeResult( String status, String upgradeResult )
-        {
             this.status = status;
             this.upgradeResult = upgradeResult;
         }
