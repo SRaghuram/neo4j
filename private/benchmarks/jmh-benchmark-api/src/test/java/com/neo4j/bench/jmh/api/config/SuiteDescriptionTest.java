@@ -124,4 +124,20 @@ class SuiteDescriptionTest extends BenchmarksFinderFixture
                 new HashSet<>( partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( toList() ) )
         );
     }
+
+    @Test
+    public void shouldCreateFewerPartitionsIfConucurrencyIsTooHigh()
+    {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getValidBenchmarksFinder(), new Validation() );
+        int maxPartitions = suiteDescription.explodeEnabledBenchmarks().size();
+
+        List<SuiteDescription> partitions = suiteDescription.partition( maxPartitions * 10 );
+
+        assertEquals( maxPartitions, partitions.size() );
+
+        assertEquals(
+                new HashSet<>( suiteDescription.explodeEnabledBenchmarks() ),
+                new HashSet<>( partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( toList() ) )
+        );
+    }
 }

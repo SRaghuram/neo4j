@@ -173,12 +173,13 @@ public class SuiteDescription
     public List<SuiteDescription> partition( int numberOfPartitions )
     {
         List<BenchmarkDescription> enabledExplodedBenchmarks = explodeEnabledBenchmarks();
+        int maxPartitions = Math.min( numberOfPartitions, enabledExplodedBenchmarks.size() );
 
-        int benchmarksPerPartition = (int) Math.ceil( enabledExplodedBenchmarks.size() / (double) numberOfPartitions );
+        int benchmarksPerPartition = (int) Math.ceil( enabledExplodedBenchmarks.size() / (double) maxPartitions );
 
-        List<SuiteDescription> partitions = new ArrayList<>( numberOfPartitions );
+        List<SuiteDescription> partitions = new ArrayList<>( maxPartitions );
 
-        for ( int partition = 0; partition < numberOfPartitions; partition++ )
+        for ( int partition = 0; partition < maxPartitions; partition++ )
         {
             int startIndex = partition * benchmarksPerPartition;
             int endIndex = Math.min( startIndex + benchmarksPerPartition, enabledExplodedBenchmarks.size() );
