@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.messaging.Inbound;
+import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.time.Clock;
 import java.util.List;
@@ -26,11 +27,12 @@ class TransferLeaderOnShutdown extends TransferLeader
     private static final RandomStrategy DRAIN_SELECTION_STRATEGY = new RandomStrategy();
     private final Log log;
 
-    TransferLeaderOnShutdown( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-                              ClusteringIdentityModule identityModule, DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver,
-                              Supplier<List<NamedDatabaseId>> leadershipsResolver, LogProvider logProvider, Clock clock )
+    TransferLeaderOnShutdown( ServerGroupsSupplier serverGroupsSupplier, Config config,
+            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
+            ClusteringIdentityModule identityModule,DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver,
+            Supplier<List<NamedDatabaseId>> leadershipsResolver, LogProvider logProvider, Clock clock )
     {
-        super( config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, clock );
+        super( serverGroupsSupplier, config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, clock );
         this.log = logProvider.getLog( this.getClass() );
     }
 

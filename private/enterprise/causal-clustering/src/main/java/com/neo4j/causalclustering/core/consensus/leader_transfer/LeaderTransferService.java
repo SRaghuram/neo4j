@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.configuration.ServerGroupsSupplier;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Clock;
@@ -40,10 +41,10 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     private JobHandle<?> jobHandle;
 
     public LeaderTransferService( JobScheduler jobScheduler, Config config, Duration leaderTransferInterval,
-                                  DatabaseManager<ClusteredDatabaseContext> databaseManager,
-                                  Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-                                  ClusteringIdentityModule identityModule, Duration leaderMemberBackoff, LogProvider logProvider, Clock clock,
-                                  LeaderService leaderService )
+            DatabaseManager<ClusteredDatabaseContext> databaseManager,
+            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
+            ClusteringIdentityModule identityModule, Duration leaderMemberBackoff, LogProvider logProvider, Clock clock,
+            LeaderService leaderService, ServerGroupsSupplier serverGroupsSupplier )
     {
         this.databasePenalties = new DatabasePenalties( leaderMemberBackoff, clock );
         this.jobScheduler = jobScheduler;
@@ -58,9 +59,9 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
 
         var nonPriorityStrategy = pickSelectionStrategy( config, databaseManager, leaderService, identityModule );
 
-        this.transferLeaderJob = new TransferLeaderJob( config, messageHandler, identityModule,
+        this.transferLeaderJob = new TransferLeaderJob( serverGroupsSupplier, config, messageHandler, identityModule,
                                                         databasePenalties, nonPriorityStrategy, membershipResolver, leadershipsResolver, clock );
-        this.transferLeaderOnShutdown = new TransferLeaderOnShutdown(
+        this.transferLeaderOnShutdown = new TransferLeaderOnShutdown( serverGroupsSupplier,
                 config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, logProvider, clock );
     }
 

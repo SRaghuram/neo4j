@@ -56,6 +56,7 @@ import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.ServerGroupsSupplier;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -113,6 +114,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.configuration.CausalClusteringSettings.status_throughput_window;
+import static com.neo4j.configuration.ServerGroupsSupplier.listen;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
@@ -144,6 +146,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private final RaftSender raftSender;
 
     private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
+    private final ServerGroupsSupplier serverGroupsSupplier;
 
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
@@ -165,6 +168,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalConfig );
         globalDependencies.satisfyDependency( settingsWhiteList );
+        serverGroupsSupplier = listen( globalConfig );
 
         RaftMonitor.register( logService, globalModule.getGlobalMonitors(), globalModule.getGlobalClock() );
 
@@ -334,10 +338,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferBackoff = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_member_backoff );
 
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
-                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService );
+                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier );
 
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( identityModule, globalModule, clusterStateLayout, topologyService, storageFactory,
-                leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker );
+                leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker,
+                serverGroupsSupplier );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
                 globalModule.getStorageEngineFactory(), globalOtherTracker );

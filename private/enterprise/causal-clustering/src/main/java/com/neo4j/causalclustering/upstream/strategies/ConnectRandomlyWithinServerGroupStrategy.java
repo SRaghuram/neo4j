@@ -7,12 +7,10 @@ package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
-import com.neo4j.configuration.CausalClusteringSettings;
-import com.neo4j.configuration.ServerGroupName;
+import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.util.Collection;
 import java.util.Optional;
-import java.util.Set;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -32,8 +30,8 @@ public class ConnectRandomlyWithinServerGroupStrategy extends UpstreamDatabaseSe
     @Override
     public void init()
     {
-        Set<ServerGroupName> groups = Set.copyOf( config.get( CausalClusteringSettings.server_groups ) );
-        strategyImpl = new ConnectRandomlyToServerGroupImpl( groups, topologyService, myself );
+        var serverGroupsProvider = ServerGroupsSupplier.listen( config );
+        strategyImpl = new ConnectRandomlyToServerGroupImpl( serverGroupsProvider, topologyService, myself );
         log.warn( "Upstream selection strategy " + name + " is deprecated. Consider using " + IDENTITY + " instead." );
     }
 

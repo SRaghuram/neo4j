@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound;
-import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
+import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.time.Clock;
 import java.util.Collection;
@@ -31,26 +31,26 @@ import static java.util.stream.Collectors.toSet;
 
 public abstract class TransferLeader
 {
+    protected final ServerGroupsSupplier myGroupsProvider;
     protected final Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler;
     protected final ClusteringIdentityModule identityModule;
     protected final DatabasePenalties databasePenalties;
     protected final RaftMembershipResolver membershipResolver;
-    protected final Set<ServerGroupName> myGroups;
     protected final Supplier<List<NamedDatabaseId>> leadershipsResolver;
     protected final Config config;
     private final Clock clock;
 
-    public TransferLeader( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-                           ClusteringIdentityModule identityModule, DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver,
-                           Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
+    public TransferLeader( ServerGroupsSupplier myGroupsProvider, Config config,
+            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
+            ClusteringIdentityModule identityModule,DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Supplier<List<NamedDatabaseId>> leadershipsResolver,
+            Clock clock )
     {
+        this.myGroupsProvider = myGroupsProvider;
         this.messageHandler = messageHandler;
         this.identityModule = identityModule;
         this.databasePenalties = databasePenalties;
         this.membershipResolver = membershipResolver;
         this.leadershipsResolver = leadershipsResolver;
-
-        this.myGroups = myGroups( config );
         this.config = config;
         this.clock = clock;
     }
@@ -94,10 +94,5 @@ public abstract class TransferLeader
                 new RaftMessages.LeadershipTransfer.Proposal( identityModule.memberId( transferTarget.databaseId() ), transferTarget.to(), prioritisedGroups );
         var message = RaftMessages.InboundRaftMessageContainer.of( clock.instant(), raftId, proposal );
         messageHandler.handle( message );
-    }
-
-    private static Set<ServerGroupName> myGroups( Config config )
-    {
-        return Set.copyOf( config.get( CausalClusteringSettings.server_groups ) );
     }
 }

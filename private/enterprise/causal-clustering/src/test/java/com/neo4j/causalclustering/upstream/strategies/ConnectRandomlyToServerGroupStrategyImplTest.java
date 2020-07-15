@@ -47,7 +47,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         var topologyService =
                 getTopologyService( myServerGroup, myGroupMemberIds, ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
 
-        ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, memberId( 0 ) );
+        var strategy = new ConnectRandomlyToServerGroupImpl( () -> myServerGroup, topologyService, memberId( 0 ) );
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
@@ -67,7 +67,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         Set<MemberId> myGroupMemberIds = FakeTopologyService.memberIds( 0, 10 );
         var topologyService = getTopologyService( myServerGroups, myGroupMemberIds, ServerGroupName.setOf( "x", "y", "z" ), Set.of( DATABASE_ID ) );
 
-        ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroups, topologyService, memberId( 0 ) );
+        var strategy = new ConnectRandomlyToServerGroupImpl( () -> myServerGroups, topologyService, memberId( 0 ) );
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
@@ -86,7 +86,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         var topologyService =
                 getTopologyService( ServerGroupName.setOf( "my_server_group" ), myGroupMemberIds, ServerGroupName.setOf( "x", "y", "z" ),
                         Set.of( DATABASE_ID ) );
-        ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( Collections.emptySet(), topologyService, null );
+        var strategy = new ConnectRandomlyToServerGroupImpl( Set::of, topologyService, null );
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
@@ -106,7 +106,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         var myGroupMemberIds = singleton( memberId( 0 ) );
         var topologyService = getTopologyService( myServerGroup, myGroupMemberIds, ServerGroupName.setOf( "x", "y", "z" ), Set.of( DATABASE_ID ) );
 
-        ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, memberId( 0 ) );
+        var strategy = new ConnectRandomlyToServerGroupImpl( () -> myServerGroup, topologyService, memberId( 0 ) );
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );

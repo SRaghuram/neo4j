@@ -11,6 +11,7 @@ import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -25,6 +26,7 @@ import static co.unruly.matchers.OptionalMatchers.contains;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
@@ -58,6 +60,38 @@ class ConnectRandomlyToServerGroupStrategyTest
         // then
         assertThat( results, everyItem( is( in( targetGroupMemberIds ) ) ) );
         assertThat( result, contains( is( in( targetGroupMemberIds ) ) ) );
+    }
+
+    @Test
+    void shouldReactToConfigChanges()
+    {
+        // given
+        var targetServerGroup = ServerGroupName.listOf( "target_server_group" );
+        Config configWithTargetServerGroup = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, targetServerGroup );
+        Set<MemberId> targetGroupMemberIds = memberIds( 0, 10 );
+        var topologyService =
+                ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( targetServerGroup ), targetGroupMemberIds,
+                        ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
+
+        ConnectRandomlyToServerGroupStrategy strategy = new ConnectRandomlyToServerGroupStrategy();
+        strategy.inject( topologyService, configWithTargetServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );
+
+        // when
+        Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> results = strategy.upstreamMembersForDatabase( DATABASE_ID );
+
+        // then
+        assertThat( results, everyItem( is( in( targetGroupMemberIds ) ) ) );
+        assertThat( result, contains( is( in( targetGroupMemberIds ) ) ) );
+
+        // when
+        configWithTargetServerGroup.set( CausalClusteringSettings.connect_randomly_to_server_group_strategy, List.of() );
+        result = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        results = strategy.upstreamMembersForDatabase( DATABASE_ID );
+
+        // then
+        assertThat( results, empty() );
+        assertTrue( result.isEmpty() );
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
+import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.util.function.Function;
 
@@ -33,10 +34,12 @@ public class RaftGroupFactory
     private final LeaderTransferService leaderTransferService;
     private final Function<NamedDatabaseId,LeaderListener> listenerFactory;
     private final MemoryTracker memoryTracker;
+    private final ServerGroupsSupplier serverGroupsSupplier;
 
     public RaftGroupFactory( ClusteringIdentityModule identityModule, GlobalModule globalModule, ClusterStateLayout clusterState,
             CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, LeaderTransferService leaderTransferService,
-            Function<NamedDatabaseId,LeaderListener> listenerFactory, MemoryTracker memoryTracker )
+            Function<NamedDatabaseId,LeaderListener> listenerFactory, MemoryTracker memoryTracker,
+            ServerGroupsSupplier serverGroupsSupplier )
     {
         this.identityModule = identityModule;
         this.globalModule = globalModule;
@@ -46,6 +49,7 @@ public class RaftGroupFactory
         this.leaderTransferService = leaderTransferService;
         this.listenerFactory = listenerFactory;
         this.memoryTracker = memoryTracker;
+        this.serverGroupsSupplier = serverGroupsSupplier;
     }
 
     public RaftGroup create( NamedDatabaseId namedDatabaseId, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
@@ -54,6 +58,7 @@ public class RaftGroupFactory
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
                 globalModule.getGlobalClock(), identityModule.memberId( namedDatabaseId ), life, monitors, dependencies, outbound, clusterState,
-                topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker );
+                topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker,
+                serverGroupsSupplier );
     }
 }

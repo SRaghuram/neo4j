@@ -18,20 +18,22 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import java.util.function.Supplier;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 
+import static java.util.stream.Collectors.toList;
+
 public class ConnectRandomlyToServerGroupImpl
 {
-    private final Set<ServerGroupName> groups;
+    private final Supplier<Set<ServerGroupName>> groupsProvider;
     private final TopologyService topologyService;
     private final MemberId myself;
     private final Random random = new Random();
 
-    ConnectRandomlyToServerGroupImpl( Set<ServerGroupName> groups, TopologyService topologyService, MemberId myself )
+    ConnectRandomlyToServerGroupImpl( Supplier<Set<ServerGroupName>> groupsProvider, TopologyService topologyService, MemberId myself )
     {
-        this.groups = groups;
+        this.groupsProvider = groupsProvider;
         this.topologyService = topologyService;
         this.myself = myself;
     }
@@ -61,8 +63,11 @@ public class ConnectRandomlyToServerGroupImpl
     {
         Map<MemberId,ReadReplicaInfo> replicas = topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).members();
 
-        return groups.stream().flatMap( group -> replicas.entrySet().stream().filter( isMyGroupAndNotMe( group ) ) ).map( Map.Entry::getKey ).collect(
-                        Collectors.toList() );
+        return groupsProvider.get()
+                .stream()
+                .flatMap( group -> replicas.entrySet().stream().filter( isMyGroupAndNotMe( group ) ) )
+                .map( Map.Entry::getKey )
+                .collect( toList() );
     }
 
     private Predicate<Map.Entry<MemberId,ReadReplicaInfo>> isMyGroupAndNotMe( ServerGroupName group )

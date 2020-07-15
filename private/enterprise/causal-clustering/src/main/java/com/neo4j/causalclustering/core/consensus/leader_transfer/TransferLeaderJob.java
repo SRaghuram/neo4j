@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.ServerGroupName;
+import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.time.Clock;
 import java.util.List;
@@ -31,11 +32,12 @@ class TransferLeaderJob extends TransferLeader implements Runnable
     private static final RandomStrategy PRIORITISED_SELECTION_STRATEGY = new RandomStrategy();
     private final SelectionStrategy selectionStrategy;
 
-    TransferLeaderJob( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-                       ClusteringIdentityModule identityModule, DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing,
-                       RaftMembershipResolver membershipResolver, Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
+    TransferLeaderJob( ServerGroupsSupplier serverGroupsSupplier, Config config,
+            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
+            ClusteringIdentityModule identityModule,DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing, RaftMembershipResolver membershipResolver,
+            Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
     {
-        super( config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, clock );
+        super( serverGroupsSupplier, config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, clock );
         this.selectionStrategy = leaderLoadBalancing;
     }
 
@@ -86,18 +88,19 @@ class TransferLeaderJob extends TransferLeader implements Runnable
 
     private Map<NamedDatabaseId,ServerGroupName> undesiredLeaderships( List<NamedDatabaseId> myLeaderships )
     {
+        var myCurrentGroups = myGroupsProvider.get();
         var prioritisedGroups = prioritisedGroups( config, myLeaderships );
 
         if ( prioritisedGroups.isEmpty() )
         {
             return Map.of();
         }
-        if ( myGroups.isEmpty() )
+        if ( myCurrentGroups.isEmpty() )
         {
             return prioritisedGroups;
         }
 
-        prioritisedGroups.entrySet().removeIf( entry -> myGroups.contains( entry.getValue() ) );
+        prioritisedGroups.entrySet().removeIf( entry -> myCurrentGroups.contains( entry.getValue() ) );
 
         return prioritisedGroups;
     }

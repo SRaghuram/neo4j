@@ -25,6 +25,7 @@ import static co.unruly.matchers.OptionalMatchers.contains;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
@@ -44,8 +45,8 @@ class ConnectRandomlyWithinServerGroupStrategyTest
         var myServerGroup = ServerGroupName.listOf( "my_server_group" );
         Config configWithMyServerGroup = Config.defaults( CausalClusteringSettings.server_groups, myServerGroup );
         Set<MemberId> myGroupMemberIds = memberIds( 0, 10 );
-        var topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf(myServerGroup), myGroupMemberIds,
-                        ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
+        var topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( myServerGroup ), myGroupMemberIds,
+                ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
 
         ConnectRandomlyWithinServerGroupStrategy strategy = new ConnectRandomlyWithinServerGroupStrategy();
         strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );
@@ -57,6 +58,37 @@ class ConnectRandomlyWithinServerGroupStrategyTest
         // then
         assertThat( results, everyItem( is( in( myGroupMemberIds ) ) ) );
         assertThat( result, contains( is( in( myGroupMemberIds ) ) ) );
+    }
+
+    @Test
+    void shouldAdaptToChangesInConfig()
+    {
+        // given
+        var myServerGroup = ServerGroupName.listOf( "my_server_group" );
+        Config configWithMyServerGroup = Config.defaults( CausalClusteringSettings.server_groups, myServerGroup );
+        Set<MemberId> myGroupMemberIds = memberIds( 0, 10 );
+        var topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( myServerGroup ), myGroupMemberIds,
+                ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
+
+        ConnectRandomlyWithinServerGroupStrategy strategy = new ConnectRandomlyWithinServerGroupStrategy();
+        strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );
+
+        // when
+        Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> results = strategy.upstreamMembersForDatabase( DATABASE_ID );
+
+        // then
+        assertThat( results, everyItem( is( in( myGroupMemberIds ) ) ) );
+        assertThat( result, contains( is( in( myGroupMemberIds ) ) ) );
+
+        // when
+        configWithMyServerGroup.set( CausalClusteringSettings.server_groups, List.of() );
+        result = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        results = strategy.upstreamMembersForDatabase( DATABASE_ID );
+
+        // then
+        assertThat( results, empty() );
+        assertTrue( result.isEmpty() );
     }
 
     @Test

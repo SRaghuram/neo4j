@@ -37,6 +37,7 @@ import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMar
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.InFlightCacheFactory;
+import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.io.File;
 import java.util.Map;
@@ -61,6 +62,7 @@ import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_max
 import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_timeout;
 import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_max_lag;
 import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_retry_timeout;
+import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
 
 public class RaftGroup
 {
@@ -71,9 +73,10 @@ public class RaftGroup
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
-               MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-               ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
-               LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker )
+            MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
+            LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
+            ServerGroupsSupplier serverGroupsSupplier )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
@@ -108,6 +111,8 @@ public class RaftGroup
                                             config.get( log_shipping_retry_timeout ).toMillis(), config.get( catchup_batch_size ),
                                             config.get( log_shipping_max_lag ),
                                             inFlightCache );
+
+        boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
 
         var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
 
