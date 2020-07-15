@@ -7,13 +7,13 @@ package com.neo4j.security;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
-import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.NullLog;
 
 public class NullSecurityLog extends SecurityLog
 {
     public NullSecurityLog()
     {
-        super( NullLogProvider.getInstance().getLog( "" ) );
+        super( NullLog.getInstance() );
     }
 
     @Override

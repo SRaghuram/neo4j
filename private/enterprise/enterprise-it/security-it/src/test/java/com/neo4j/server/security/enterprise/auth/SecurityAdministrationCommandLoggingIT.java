@@ -64,7 +64,6 @@ class SecurityAdministrationCommandLoggingIT
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( inMemoryLog )
                 .setFileSystem( testDirectory.getFileSystem() )
-                .impermanent()
                 .setConfig( auth_enabled, true )
                 .build();
         database = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
