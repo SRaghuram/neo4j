@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,14 +84,7 @@ abstract class AbstractCommandIT
         @Override
         public String toString()
         {
-            try
-            {
-                return buffer.toString( StandardCharsets.UTF_8.name() );
-            }
-            catch ( UnsupportedEncodingException e )
-            {
-                throw new RuntimeException( e );
-            }
+            return buffer.toString( StandardCharsets.UTF_8 );
         }
     }
     protected ExecutionContext getExtensionContext()
