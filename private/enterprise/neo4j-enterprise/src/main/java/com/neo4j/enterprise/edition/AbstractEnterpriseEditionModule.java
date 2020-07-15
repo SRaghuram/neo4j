@@ -74,7 +74,7 @@ public interface AbstractEnterpriseEditionModule
     {
         Config config = globalModule.getGlobalConfig();
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
-        SecurityLog securityLog = new SecurityLog( config );
+        SecurityLog securityLog = makeSecurityLog( config );
         CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( globalModule.getJobScheduler().executor( Group.AUTH_CACHE ) );
         globalModule.getGlobalLife().add( securityLog );
         SecurityProvider securityProvider;
@@ -98,5 +98,10 @@ public interface AbstractEnterpriseEditionModule
             securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
         }
         return securityProvider;
+    }
+
+    default SecurityLog makeSecurityLog( Config config )
+    {
+        return new SecurityLog( config );
     }
 }

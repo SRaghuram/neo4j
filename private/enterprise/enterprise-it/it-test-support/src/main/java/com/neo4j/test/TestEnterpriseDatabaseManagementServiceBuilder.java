@@ -6,7 +6,6 @@
 package com.neo4j.test;
 
 import com.neo4j.configuration.OnlineBackupSettings;
-import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -71,7 +70,7 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     @Override
     protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
     {
-        return EnterpriseEditionModule::new;
+        return globalModule -> new TestEnterpriseEditionModule( globalModule, impermanent );
     }
 
     @Override

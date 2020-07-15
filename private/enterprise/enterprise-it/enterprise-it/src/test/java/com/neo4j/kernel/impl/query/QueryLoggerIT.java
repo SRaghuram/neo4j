@@ -98,8 +98,7 @@ class QueryLoggerIT
         logsDirectory = new File( testDirectory.homeDir(), "logs" );
         logFilename = new File( logsDirectory, "query.log" );
         databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
-                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
-                .impermanent();
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) );
     }
 
     @AfterEach
