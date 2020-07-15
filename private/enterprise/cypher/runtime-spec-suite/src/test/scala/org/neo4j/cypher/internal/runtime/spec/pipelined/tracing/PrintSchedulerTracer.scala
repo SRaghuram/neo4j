@@ -3,8 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.pipelined.tracing
+package org.neo4j.cypher.internal.runtime.spec.pipelined.tracing
 
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.ScheduledWorkUnitEvent
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 /**

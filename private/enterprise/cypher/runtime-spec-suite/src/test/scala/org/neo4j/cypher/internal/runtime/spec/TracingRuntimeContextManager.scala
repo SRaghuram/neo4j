@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
-import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.logging.Log
@@ -63,7 +62,7 @@ class TestCachingExpressionCompilerTracer() extends CachingExpressionCompilerTra
 
   private var _numberOfCompilationEvents = 0
 
-  def numberOfCompilationEvents = _numberOfCompilationEvents
+  def numberOfCompilationEvents: Int = _numberOfCompilationEvents
 
   override def onCompileExpression(): Unit = _numberOfCompilationEvents += 1
 
