@@ -571,7 +571,8 @@ class ReadReplicaReplicationIT
         return clusterConfig()
                 .withNumberOfCoreMembers( NR_CORE_MEMBERS )
                 .withNumberOfReadReplicas( NR_READ_REPLICAS )
-                .withSharedCoreParam( cluster_topology_refresh, "5s" );
+                .withSharedCoreParam( cluster_topology_refresh, "5s" )
+                .withSharedReadReplicaParam( cluster_topology_refresh, "5s" );
     }
 
     private static void assertReadReplicasEventuallyUpToDateWithLeader( Cluster cluster )
