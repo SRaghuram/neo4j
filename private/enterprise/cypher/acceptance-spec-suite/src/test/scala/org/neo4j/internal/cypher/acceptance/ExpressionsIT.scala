@@ -230,6 +230,97 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(function("round", nullLiteral))) should equal(NO_VALUE)
   }
 
+  test("randomized round function") {
+    val arg = random.nextDouble(500)
+    withClue(s"Rounding $arg to 0 decimal places") {
+      evaluate(compile(function("round", literalFloat(arg)))) should equal(doubleValue(Math.round(arg)))
+    }
+  }
+
+  test("round function should accept int argument") {
+    evaluate(compile(function("round", literalInt(2)))) should equal(doubleValue(2))
+  }
+
+  test("round function should not accept string argument") {
+    the[CypherTypeException] thrownBy {
+      evaluate(compile(function("round", literalString("1.5"))))
+    } should have message "round() requires numbers"
+  }
+
+  test("round function with precision") {
+    evaluate(compile(function("round", literalFloat(1.49), literalInt(0)))) should equal(doubleValue(1.0))
+    evaluate(compile(function("round", literalFloat(1.49), literalInt(1)))) should equal(doubleValue(1.5))
+    evaluate(compile(function("round", literalFloat(1.49), literalInt(2)))) should equal(doubleValue(1.49))
+    evaluate(compile(function("round", literalFloat(1.49), literalInt(3)))) should equal(doubleValue(1.49))
+
+    evaluate(compile(function("round", nullLiteral, literalInt(2)))) should equal(NO_VALUE)
+    evaluate(compile(function("round", literalFloat(1.49), nullLiteral))) should equal(NO_VALUE)
+  }
+
+  test("round function with precision should not pad with zeros") {
+    evaluate(compile(function("round", literalFloat(1.9951), literalInt(0)))) should equal(doubleValue(2.0))
+    evaluate(compile(function("round", literalFloat(1.9951), literalInt(1)))) should equal(doubleValue(2.0))
+    evaluate(compile(function("round", literalFloat(1.9951), literalInt(2)))) should equal(doubleValue(2.0))
+    evaluate(compile(function("round", literalFloat(1.9951), literalInt(3)))) should equal(doubleValue(1.995))
+  }
+
+  test("round function with high precision") {
+    evaluate(compile(function("round", literalFloat(PI), literalInt(500)))) should equal(doubleValue(3.141592653589793))
+  }
+
+  test("round function with precision - edge case") {
+    // With the method Math.round(265.335 * 100.0) / 100.0, this will produce 265.33 due to inexact representations of Java doubles
+    evaluate(compile(function("round", literalFloat(265.335), literalInt(2)))) should equal(doubleValue(265.34))
+  }
+
+  test("round function should accept float precision") {
+     evaluate(compile(function("round", literalFloat(PI), literalFloat(-0.02)))) should equal(doubleValue(3.0))
+     evaluate(compile(function("round", literalFloat(PI), literalFloat(0.5)))) should equal(doubleValue(3.0))
+     evaluate(compile(function("round", literalFloat(PI), literalFloat(1.49)))) should equal(doubleValue(3.1))
+     evaluate(compile(function("round", literalFloat(PI), literalFloat(1.99)))) should equal(doubleValue(3.1))
+     evaluate(compile(function("round", literalFloat(PI), literalFloat(2.01)))) should equal(doubleValue(3.14))
+  }
+
+  test("round function should not accept negative precision") {
+    the[InvalidArgumentException] thrownBy {
+      evaluate(compile(function("round", literalFloat(1.49), literalInt(-1))))
+    } should have message "precision argument to round() cannot be negative"
+  }
+
+  test("round function should not accept string precision") {
+    the[CypherTypeException] thrownBy {
+      evaluate(compile(function("round", literalFloat(1.49), literalString("2"))))
+    } should have message "round() requires numbers"
+  }
+
+  test("round function with precision should accept int argument") {
+    evaluate(compile(function("round", literalInt(2), literalInt(2)))) should equal(doubleValue(2))
+  }
+
+  test("round function with precision should not accept string argument") {
+    the[CypherTypeException] thrownBy {
+      evaluate(compile(function("round", literalString("1.5"), literalInt(2))))
+    } should have message "round() requires numbers"
+  }
+
+  test("round function with precision and not default mode") {
+    evaluate(compile(function("round", literalFloat(13.37), literalInt(0), literalString("UP")))) should equal(doubleValue(14.0))
+
+    evaluate(compile(function("round", literalFloat(13.37), literalInt(0), nullLiteral))) should equal(NO_VALUE)
+  }
+
+  test("round function should not accept invalid mode") {
+    the[InvalidArgumentException] thrownBy {
+      evaluate(compile(function("round", literalFloat(1.49), literalInt(1), literalString("MY_OWN_MODE"))))
+    } should have message "Unknown rounding mode. Valid values are: CEILING, FLOOR, UP, DOWN, HALF_EVEN, HALF_UP, HALF_DOWN, UNNECESSARY."
+  }
+
+  test("round function should not accept number mode") {
+    the[CypherTypeException] thrownBy {
+      evaluate(compile(function("round", literalFloat(1.49), literalInt(1), literalInt(0))))
+    } should have message "Expected a string value for `round`, but got: Long(0)."
+  }
+
   test("rand function") {
     // Given
     val expression = function("rand")

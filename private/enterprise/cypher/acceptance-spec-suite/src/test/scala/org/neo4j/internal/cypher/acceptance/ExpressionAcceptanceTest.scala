@@ -352,4 +352,19 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     val result = executeSingle(query)
     result.toList should be(List(Map("value" -> List())))
   }
+
+  test("should support round function with one argument") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN round(1.49) as value")
+    result.toList should be(List(Map("value" -> 1.0)))
+  }
+
+  test("should support round function with two arguments") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN round(1.49, 1) as value")
+    result.toList should be(List(Map("value" -> 1.5)))
+  }
+
+  test("should support round function with three arguments") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN round(1.49, 1, 'FLOOR') as value")
+    result.toList should be(List(Map("value" -> 1.4)))
+  }
 }

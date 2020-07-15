@@ -1735,9 +1735,31 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.Tan =>
       compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("tan"), in.ir), in.fields, in.variables, in.nullChecks))
-    case functions.Round =>
+
+    case functions.Round if c.args.length == 1 =>
       compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("round"), in.ir), in.fields, in.variables, in.nullChecks))
+
+    case functions.Round if c.args.length == 2 =>
+      for {value <- compileExpression(c.args(0))
+           precision <- compileExpression(c.args(1))
+      } yield {
+        IntermediateExpression(
+          invokeStatic(method[CypherFunctions, DoubleValue, AnyValue, AnyValue]("round"), value.ir, precision.ir),
+          value.fields ++ precision.fields, value.variables ++ precision.variables, value.nullChecks ++ precision.nullChecks)
+      }
+
+    case functions.Round if c.args.length == 3 =>
+      for {value <- compileExpression(c.args(0))
+           precision <- compileExpression(c.args(1))
+           mode <- compileExpression(c.args(2))
+      } yield {
+        IntermediateExpression(
+          invokeStatic(method[CypherFunctions, DoubleValue, AnyValue, AnyValue, AnyValue]("round"), value.ir, precision.ir, mode.ir),
+          value.fields ++ precision.fields ++ mode.fields, value.variables ++ precision.variables ++ mode.variables,
+          value.nullChecks ++ precision.nullChecks ++ mode.nullChecks)
+      }
+
     case functions.Rand =>
       Some(IntermediateExpression(invokeStatic(method[CypherFunctions, DoubleValue]("rand")),
                                   Seq.empty, Seq.empty, Set.empty))
