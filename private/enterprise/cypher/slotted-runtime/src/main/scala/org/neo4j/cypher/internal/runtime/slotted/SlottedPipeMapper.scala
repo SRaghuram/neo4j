@@ -56,6 +56,7 @@ import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.Prober
+import org.neo4j.cypher.internal.logical.plans.OrderedUnion
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.RemoveLabels
@@ -172,6 +173,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.OptionalSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedPrimitivePipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedSinglePrimitivePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedUnionSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ProduceResultSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.RollUpApplySlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.SelectOrSemiApplySlottedPipe
@@ -613,6 +615,16 @@ class SlottedPipeMapper(fallback: PipeMapper,
           slots,
           SlottedPipeMapper.computeUnionRowMapping(lhsSlots, slots),
           SlottedPipeMapper.computeUnionRowMapping(rhsSlots, slots))(id = id)
+
+      case OrderedUnion(_, _, sortedColumns) =>
+        val lhsSlots = slotConfigs(lhs.id)
+        val rhsSlots = slotConfigs(rhs.id)
+        OrderedUnionSlottedPipe(lhs,
+          rhs,
+          slots,
+          SlottedPipeMapper.computeUnionRowMapping(lhsSlots, slots),
+          SlottedPipeMapper.computeUnionRowMapping(rhsSlots, slots),
+          SlottedExecutionContextOrdering.asComparator(sortedColumns.map(translateColumnOrder(slots, _))))(id = id)
 
       case _: AssertSameNode =>
         fallback.onTwoChildPlan(plan, lhs, rhs)

@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.RowMapping
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
+import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.mapRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class UnionSlottedPipe(lhs: Pipe,
@@ -22,29 +23,17 @@ case class UnionSlottedPipe(lhs: Pipe,
                            (val id: Id = Id.INVALID_ID) extends Pipe {
 
   protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] = {
-    val left = lhs.createResults(state)
-    val right = rhs.createResults(state)
+    val left = lhs.createResults(state).map(mapRow(slots, lhsMapping, _, state))
+    val right = rhs.createResults(state).map(mapRow(slots, rhsMapping, _, state))
+    left ++ right
 
-    new ClosingIterator[CypherRow] {
-      override def innerHasNext: Boolean = left.hasNext || right.hasNext
+  }
+}
 
-      override def next(): CypherRow = {
-        val outgoing = SlottedRow(slots)
-        if (left.hasNext) {
-          val incoming =  left.next()
-          lhsMapping.mapRows(incoming, outgoing, state)
-        } else {
-          val incoming = right.next()
-          rhsMapping.mapRows(incoming, outgoing, state)
-        }
-        outgoing
-      }
-
-      override def closeMore(): Unit = {
-        left.close()
-        right.close()
-      }
-
-    }
+object UnionSlottedPipe {
+  def mapRow(slots: SlotConfiguration, mapping: RowMapping, input: CypherRow, state: QueryState): CypherRow = {
+    val outgoing = SlottedRow(slots)
+    mapping.mapRows(input, outgoing, state)
+    outgoing
   }
 }
