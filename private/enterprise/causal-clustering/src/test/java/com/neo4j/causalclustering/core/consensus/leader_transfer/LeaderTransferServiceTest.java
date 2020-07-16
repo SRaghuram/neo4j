@@ -78,7 +78,7 @@ class LeaderTransferServiceTest
         var clock = new FakeClock();
         var life = new LifeSupport();
         var databaseManager = new StubClusteredDatabaseManager();
-        var messageHandler = new TransferLeaderTest.TrackingMessageHandler();
+        var messageHandler = new TransferLeaderJobTest.TrackingMessageHandler();
         var leaderService = new StubLeaderService( Map.of() );
         var leaderTransferService =
                 new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
@@ -101,9 +101,9 @@ class LeaderTransferServiceTest
         var clock = new FakeClock();
         var life = new LifeSupport();
         var databaseManager = new StubClusteredDatabaseManager();
-        var raftMembership = new TransferLeaderTest.StubRaftMembershipResolver( myself, core1 );
+        var raftMembership = new StubRaftMembershipResolver( myself, core1 );
         var fooDb = databaseWithLeader( databaseManager, myself, "foo", raftMembership );
-        var messageHandler = new TransferLeaderTest.TrackingMessageHandler();
+        var messageHandler = new TransferLeaderJobTest.TrackingMessageHandler();
         var leaderService = new StubLeaderService( Map.of( fooDb, myself ) );
 
         var leaderTransferService =
@@ -123,7 +123,7 @@ class LeaderTransferServiceTest
     }
 
     private NamedDatabaseId databaseWithLeader( StubClusteredDatabaseManager databaseManager, MemberId member, String databaseName,
-                                                TransferLeaderTest.StubRaftMembershipResolver raftMembershipResolver )
+                                                StubRaftMembershipResolver raftMembershipResolver )
     {
         NamedDatabaseId dbId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
 

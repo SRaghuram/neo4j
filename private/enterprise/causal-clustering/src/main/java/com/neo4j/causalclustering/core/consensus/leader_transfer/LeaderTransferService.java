@@ -15,6 +15,7 @@ import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -23,6 +24,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
@@ -33,12 +35,16 @@ import static com.neo4j.configuration.CausalClusteringSettings.leader_balancing;
 
 public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferHandler
 {
+    private static final RandomStrategy DRAIN_SELECTION_STRATEGY = new RandomStrategy();
+
     private final TransferLeaderJob transferLeaderJob;
     private final JobScheduler jobScheduler;
     private final Duration leaderTransferInterval;
     private final DatabasePenalties databasePenalties;
-    private final TransferLeaderOnShutdown transferLeaderOnShutdown;
+    private final Log log;
     private JobHandle<?> jobHandle;
+    private final RaftLeadershipsResolver leadershipsResolver;
+    private final LeadershipTransferor leadershipTransferor;
 
     public LeaderTransferService( JobScheduler jobScheduler, Config config, Duration leaderTransferInterval,
             DatabaseManager<ClusteredDatabaseContext> databaseManager,
@@ -49,20 +55,18 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         this.databasePenalties = new DatabasePenalties( leaderMemberBackoff, clock );
         this.jobScheduler = jobScheduler;
         this.leaderTransferInterval = leaderTransferInterval;
+        this.log = logProvider.getLog( getClass() );
 
         RaftMembershipResolver membershipResolver = id ->
                 databaseManager.getDatabaseContext( id )
-                               .map( ctx -> ctx.dependencies().resolveDependency( RaftMembership.class ) )
-                               .orElse( RaftMembership.EMPTY );
+                        .map( ctx -> ctx.dependencies().resolveDependency( RaftMembership.class ) )
+                        .orElse( RaftMembership.EMPTY );
 
-        var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
+        this.leadershipTransferor = new LeadershipTransferor( messageHandler, identityModule, databasePenalties, membershipResolver, clock );
+        this.leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
 
-        var nonPriorityStrategy = pickSelectionStrategy( config, databaseManager, leaderService, identityModule );
-
-        this.transferLeaderJob = new TransferLeaderJob( serverGroupsSupplier, config, messageHandler, identityModule,
-                                                        databasePenalties, nonPriorityStrategy, membershipResolver, leadershipsResolver, clock );
-        this.transferLeaderOnShutdown = new TransferLeaderOnShutdown( serverGroupsSupplier,
-                config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, logProvider, clock );
+        this.transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config,
+                pickSelectionStrategy( config, databaseManager, leaderService, identityModule ), leadershipsResolver );
     }
 
     @Override
@@ -79,7 +83,20 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         {
             jobHandle.cancel();
         }
-        transferLeaderOnShutdown.drainAllLeaderships();
+        drainAllLeaderships();
+    }
+
+    private void drainAllLeaderships()
+    {
+        var myLeaderships = leadershipsResolver.get();
+
+        for ( var leadership : myLeaderships )
+        {
+            if ( !leadershipTransferor.balanceLeadership( List.of( leadership ), DRAIN_SELECTION_STRATEGY ) )
+            {
+                log.info( "Unable to attempt leadership transfer, no suitable member found for database: %s", leadership.name() );
+            }
+        }
     }
 
     @Override

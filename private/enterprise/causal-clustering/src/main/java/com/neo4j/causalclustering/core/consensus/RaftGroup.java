@@ -112,8 +112,6 @@ public class RaftGroup
                                             config.get( log_shipping_max_lag ),
                                             inFlightCache );
 
-        boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
-
         var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
 
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache, logProvider, leaderTransfers );

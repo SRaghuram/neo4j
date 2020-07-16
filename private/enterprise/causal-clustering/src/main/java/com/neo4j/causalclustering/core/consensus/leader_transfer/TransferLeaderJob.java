@@ -5,13 +5,9 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.ServerGroupName;
 import com.neo4j.configuration.ServerGroupsSupplier;
 
-import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,23 +17,27 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferTarget.NO_TARGET;
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeadershipPriorityGroupSetting.READER;
 import static java.util.function.Function.identity;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toMap;
 
-class TransferLeaderJob extends TransferLeader implements Runnable
+class TransferLeaderJob implements Runnable
 {
     private static final RandomStrategy PRIORITISED_SELECTION_STRATEGY = new RandomStrategy();
+    private final LeadershipTransferor leadershipTransferor;
     private final SelectionStrategy selectionStrategy;
+    private final ServerGroupsSupplier myServerGroups;
+    private final Config config;
+    private final Supplier<List<NamedDatabaseId>> leadershipsResolver;
 
-    TransferLeaderJob( ServerGroupsSupplier serverGroupsSupplier, Config config,
-            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-            ClusteringIdentityModule identityModule,DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing, RaftMembershipResolver membershipResolver,
-            Supplier<List<NamedDatabaseId>> leadershipsResolver, Clock clock )
+    TransferLeaderJob( LeadershipTransferor leadershipTransferor, ServerGroupsSupplier myServerGroups, Config config,
+            SelectionStrategy leaderLoadBalancing, Supplier<List<NamedDatabaseId>> leadershipsResolver )
     {
-        super( serverGroupsSupplier, config, messageHandler, identityModule, databasePenalties, membershipResolver, leadershipsResolver, clock );
+        this.myServerGroups = myServerGroups;
+        this.config = config;
+        this.leadershipsResolver = leadershipsResolver;
+        this.leadershipTransferor = leadershipTransferor;
         this.selectionStrategy = leaderLoadBalancing;
     }
 
@@ -60,15 +60,8 @@ class TransferLeaderJob extends TransferLeader implements Runnable
     private boolean doPrioritisedBalancing( List<NamedDatabaseId> leaderships )
     {
         var undesiredLeaderships = undesiredLeaderships( leaderships );
-        var leaderTransferTarget = createTarget( undesiredLeaderships.keySet(), PRIORITISED_SELECTION_STRATEGY );
-
-        if ( leaderTransferTarget == NO_TARGET )
-        {
-            return false;
-        }
-
-        handleProposal( leaderTransferTarget, Set.of( undesiredLeaderships.get( leaderTransferTarget.databaseId() ) ) );
-        return true;
+        return leadershipTransferor.toPrioritisedGroup( undesiredLeaderships.keySet(), PRIORITISED_SELECTION_STRATEGY,
+                databaseId -> Set.of( undesiredLeaderships.get( databaseId ) ) );
     }
 
     private void doBalancing( List<NamedDatabaseId> leaderships )
@@ -78,17 +71,12 @@ class TransferLeaderJob extends TransferLeader implements Runnable
                                                            .filter( not( dbsWithPriorityGroups::contains ) )
                                                            .filter( not( NamedDatabaseId::isSystemDatabase ) )
                                                            .collect( Collectors.toList() );
-        var leaderTransferTarget = createTarget( unPrioritisedNonSystemLeaderships, selectionStrategy );
-
-        if ( leaderTransferTarget != NO_TARGET )
-        {
-            handleProposal( leaderTransferTarget, Set.of() );
-        }
+        leadershipTransferor.balanceLeadership( unPrioritisedNonSystemLeaderships, selectionStrategy );
     }
 
     private Map<NamedDatabaseId,ServerGroupName> undesiredLeaderships( List<NamedDatabaseId> myLeaderships )
     {
-        var myCurrentGroups = myGroupsProvider.get();
+        var myCurrentGroups = myServerGroups.get();
         var prioritisedGroups = prioritisedGroups( config, myLeaderships );
 
         if ( prioritisedGroups.isEmpty() )
