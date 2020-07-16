@@ -14,6 +14,7 @@ import static org.apache.commons.lang3.StringUtils.defaultString;
 
 public class FailedJobRunResult
 {
+    public final String jobId;
     public final String group;
     public final String database;
     public final String submitter;
@@ -26,6 +27,7 @@ public class FailedJobRunResult
 
     FailedJobRunResult( FailedJobRun failedJobRun, ZoneId zoneId )
     {
+        jobId = JobStatusResult.ID_PREFIX + failedJobRun.getJobId();
         group = failedJobRun.getGroup().groupName();
         submitter = failedJobRun.getSubmitter().describe();
         database = defaultString( failedJobRun.getTargetDatabaseName() );

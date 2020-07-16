@@ -16,6 +16,9 @@ import static org.neo4j.procedure.builtin.ProceduresTimeFormatHelper.formatTime;
 
 public class JobStatusResult
 {
+    static final String ID_PREFIX = "job-";
+
+    public final String jobId;
     public final String group;
     public final String submitted;
     public final String database;
@@ -25,9 +28,11 @@ public class JobStatusResult
     public final String scheduledAt;
     public final String period;
     public final String state;
+    public final String currentStateDescription;
 
     JobStatusResult( MonitoredJobInfo job, ZoneId zoneId )
     {
+        jobId = ID_PREFIX + job.getId();
         group = job.getGroup().groupName();
         submitted = formatTime( job.getSubmitted(), zoneId );
         submitter = job.getSubmitter().describe();
@@ -37,5 +42,6 @@ public class JobStatusResult
         state = job.getState().name();
         scheduledAt = job.getNextDeadline() != null ? formatTime( job.getNextDeadline(), zoneId ) : EMPTY;
         period = job.getPeriod() != null ? ProceduresTimeFormatHelper.formatInterval( job.getPeriod().toMillis() ) : EMPTY;
+        currentStateDescription = job.getCurrentStateDescription() != null ? job.getCurrentStateDescription() : EMPTY;
     }
 }

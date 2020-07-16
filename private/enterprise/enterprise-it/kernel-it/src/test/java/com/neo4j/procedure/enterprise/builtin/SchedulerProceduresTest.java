@@ -9,6 +9,7 @@ import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -97,7 +98,8 @@ class SchedulerProceduresTest
                 }
             } );
 
-            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 1" ), "db 1", "job 101" ), () -> { } );
+            scheduler.schedule( RAFT_SERVER, new JobMonitoringParams( new Subject( "user 1" ), "db 1", "job 101",
+                    () -> "Pretty impressive progress" ), () -> {} );
             scheduler.schedule( RAFT_CLIENT, new JobMonitoringParams( Subject.AUTH_DISABLED, null, "job 102" ), () ->
             {
                 jobStartLatch.countDown();
@@ -127,17 +129,19 @@ class SchedulerProceduresTest
                 var result = tx.execute( "CALL dbms.scheduler.jobs" );
                 var jobs = mapJobStatus( result );
 
-                assertJob( jobs, "RaftServer", "user 1", "db 1", "job 101", "IMMEDIATE", "SCHEDULED", false, false );
-                assertJob( jobs, "RaftClient", "", "", "job 102", "IMMEDIATE", "EXECUTING", false, false );
-                assertJob( jobs, "RaftServer", "user 2", "db 2", "job 103", "IMMEDIATE", "SCHEDULED", false, false );
+                assertJob( jobs, "RaftServer", "user 1", "db 1", "job 101", "IMMEDIATE", "SCHEDULED", "Pretty impressive progress", false, false );
+                assertJob( jobs, "RaftClient", "", "", "job 102", "IMMEDIATE", "EXECUTING", "", false, false );
+                assertJob( jobs, "RaftServer", "user 2", "db 2", "job 103", "IMMEDIATE", "SCHEDULED", "", false, false );
                 assertFalse( jobs.containsKey( "job 104" ) );
                 assertFalse( jobs.containsKey( "job 105" ) );
-                assertJob( jobs, "RaftServer", "user 3", "db 3", "job 106", "DELAYED", "SCHEDULED", true, false );
-                assertJob( jobs, "RaftServer", "", "", "job 107", "DELAYED", "SCHEDULED", true, false );
-                assertJob( jobs, "RaftClient", "", "", "job 108", "DELAYED", "EXECUTING", true, false );
+                assertJob( jobs, "RaftServer", "user 3", "db 3", "job 106", "DELAYED", "SCHEDULED", "", true, false );
+                assertJob( jobs, "RaftServer", "", "", "job 107", "DELAYED", "SCHEDULED", "", true, false );
+                assertJob( jobs, "RaftClient", "", "", "job 108", "DELAYED", "EXECUTING", "", true, false );
                 assertFalse( jobs.containsKey( "job 9" ) );
-                assertJob( jobs, "RaftServer", "", "", "job 110", "PERIODIC", "SCHEDULED", true, true );
-                assertJob( jobs, "RaftServer", "", "", "job 111", "PERIODIC", "SCHEDULED", true, true );
+                assertJob( jobs, "RaftServer", "", "", "job 110", "PERIODIC", "SCHEDULED", "", true, true );
+                assertJob( jobs, "RaftServer", "", "", "job 111", "PERIODIC", "SCHEDULED", "", true, true );
+
+                assertJobIdsAreUnique( jobs );
             }
         }
         finally
@@ -219,8 +223,8 @@ class SchedulerProceduresTest
                 var result = tx.execute( "CALL dbms.scheduler.jobs" );
                 var jobs = mapJobStatus( result );
 
-                assertJob( jobs, "IndexPopulationMain", "John Doe", db.databaseName(), "Population of Index 'myIndex'", "IMMEDIATE", "EXECUTING", false,
-                        false );
+                assertJob( jobs, "IndexPopulationMain", "John Doe", db.databaseName(), "Population of index 'myIndex'", "IMMEDIATE", "EXECUTING",
+                        "Total progress: 0.0%", false, false );
             }
         }
         finally
@@ -243,6 +247,7 @@ class SchedulerProceduresTest
 
         result.accept( (Result.ResultVisitor<Exception>) row ->
         {
+            var id = row.getString( "jobId" );
             var group = row.getString( "group" );
             var database = row.getString( "database" );
             var submitter = row.getString( "submitter" );
@@ -251,10 +256,12 @@ class SchedulerProceduresTest
             var scheduledAt = !row.getString( "scheduledAt" ).isEmpty();
             var period = !row.getString( "period" ).isEmpty();
             var status = row.getString( "state" );
+            var currentStateDescription = row.getString( "currentStateDescription" );
 
             assertFalse( row.getString( "submitted" ).isEmpty() );
 
-            jobRecords.put( description, new JobStatusRecord( group, submitter, database, description, type, status, scheduledAt, period ) );
+            jobRecords.put( description,
+                    new JobStatusRecord( id, group, submitter, database, description, type, status, currentStateDescription, scheduledAt, period ) );
 
             return true;
         } );
@@ -286,8 +293,15 @@ class SchedulerProceduresTest
         return runFailures;
     }
 
+    private void assertJobIdsAreUnique( Map<String,JobStatusRecord> jobRecords )
+    {
+        var ids = new HashSet<>();
+
+        jobRecords.values().forEach( job -> assertTrue( ids.add( job.id ) ) );
+    }
+
     private void assertJob( Map<String,JobStatusRecord> jobRecords, String group, String submitter, String database, String description, String type,
-            String status, boolean scheduledAtPresent, boolean periodPresent )
+            String status, String currentStateDescription, boolean scheduledAtPresent, boolean periodPresent )
     {
         var job = jobRecords.get( description );
         assertNotNull( job );
@@ -299,6 +313,7 @@ class SchedulerProceduresTest
         assertEquals( scheduledAtPresent, job.scheduledAtPresent );
         assertEquals( periodPresent, job.periodPresent );
         assertEquals( status, job.status );
+        assertEquals( currentStateDescription, job.currentStateDescription );
     }
 
     private void assertFailure( Map<String,JobRunFailureRecord> jobRecords, String group, String submitter, String database, String description, String type,
@@ -316,24 +331,28 @@ class SchedulerProceduresTest
 
     private static class JobStatusRecord
     {
+        private final String id;
         private final String group;
         private final String database;
         private final String submitter;
         private final String description;
         private final String type;
         private final String status;
+        private final String currentStateDescription;
         private final boolean scheduledAtPresent;
         private final boolean periodPresent;
 
-        JobStatusRecord( String group, String submitter, String database, String description, String type, String status, boolean scheduledAtPresent,
-                boolean periodPresent )
+        JobStatusRecord( String id, String group, String submitter, String database, String description, String type, String status,
+                String currentStateDescription, boolean scheduledAtPresent, boolean periodPresent )
         {
+            this.id = id;
             this.group = group;
             this.database = database;
             this.submitter = submitter;
             this.description = description;
             this.type = type;
             this.scheduledAtPresent = scheduledAtPresent;
+            this.currentStateDescription = currentStateDescription;
             this.periodPresent = periodPresent;
             this.status = status;
         }

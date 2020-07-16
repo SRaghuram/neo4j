@@ -22,7 +22,8 @@ class FailedJobRunResultTest
     @Test
     void testFailedJobRun()
     {
-        var jobRun = new FailedJobRun( Group.INDEX_POPULATION,
+        var jobRun = new FailedJobRun( 99,
+                Group.INDEX_POPULATION,
                 new Subject( "user 1" ),
                 "db 1",
                 "a very useful job",
@@ -33,13 +34,13 @@ class FailedJobRunResultTest
                 new IllegalStateException( "Something went terribly wrong" ) );
         var jobRunResult = new FailedJobRunResult( jobRun, ZoneOffset.UTC );
 
-        assertEquals( "IndexPopulationMain user 1 db 1 a very useful job IMMEDIATE 2020-06-24T18:00:00Z 2020-06-24T18:10:00Z 2020-06-24T18:20:00Z " +
+        assertEquals( "job-99 IndexPopulationMain user 1 db 1 a very useful job IMMEDIATE 2020-06-24T18:00:00Z 2020-06-24T18:10:00Z 2020-06-24T18:20:00Z " +
                         "IllegalStateException: Something went terribly wrong", resultToString( jobRunResult ) );
     }
 
     String resultToString( FailedJobRunResult jobRun )
     {
-        return jobRun.group + " " + jobRun.submitter + " " + jobRun.database + " " + jobRun.description + " " + jobRun.type + " "
-                + jobRun.submitted + " " + jobRun.executionStart + " " + jobRun.failureTime + " "  + jobRun.failureDescription;
+        return jobRun.jobId + " " + jobRun.group + " " + jobRun.submitter + " " + jobRun.database + " " + jobRun.description + " " + jobRun.type + " "
+                + jobRun.submitted + " " + jobRun.executionStart + " " + jobRun.failureTime + " " + jobRun.failureDescription;
     }
 }
