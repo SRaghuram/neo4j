@@ -44,10 +44,10 @@ import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.storageengine.api.MetadataProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
-import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -284,10 +284,10 @@ public class RaftBootstrapper
                 channel.prepareForFlush().flush();
             }
 
-            try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( fs, layout, config, databasePageCache,
+            try ( MetadataProvider metadataProvider = storageEngineFactory.transactionMetaDataStore( fs, layout, config, databasePageCache,
                     NULL ) )
             {
-                transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
+                metadataProvider.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
                         logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion(), cursorTracer );
             }
         }

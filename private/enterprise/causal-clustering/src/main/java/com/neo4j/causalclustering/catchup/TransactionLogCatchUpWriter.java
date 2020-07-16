@@ -34,9 +34,9 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.storageengine.api.MetadataProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionId;
-import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
@@ -58,7 +58,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private final FlushablePositionAwareChecksumChannel logChannel;
     private final LogPositionMarker logPositionMarker = new LogPositionMarker();
 
-    private final TransactionMetaDataStore metaDataStore;
+    private final MetadataProvider metaDataStore;
     private final DatabasePageCache databasePageCache;
     private final PageCacheTracer pageCacheTracer;
 
@@ -95,7 +95,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     private static LogFiles getLogFiles( DatabaseLayout databaseLayout, FileSystemAbstraction fs, Config customConfig,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, Config configWithoutSpecificStoreFormat,
-            TransactionMetaDataStore metaDataStore, MemoryTracker memoryTracker ) throws IOException
+            MetadataProvider metaDataStore, MemoryTracker memoryTracker ) throws IOException
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( databaseLayout, fs, configWithoutSpecificStoreFormat );
@@ -115,7 +115,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         return logFilesBuilder.build();
     }
 
-    private static LogPosition getLastClosedTransactionPosition( DatabaseLayout databaseLayout, TransactionMetaDataStore metaDataStore,
+    private static LogPosition getLastClosedTransactionPosition( DatabaseLayout databaseLayout, MetadataProvider metaDataStore,
             FileSystemAbstraction fs, MemoryTracker memoryTracker ) throws IOException
     {
         var logFilesHelper = new TransactionLogFilesHelper( fs, databaseLayout.getTransactionLogsDirectory().toFile() );
