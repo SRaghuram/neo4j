@@ -189,7 +189,10 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 NO_HEADER_READER,
                 NO_HEADER_WRITER,
                 RecoveryCleanupWorkCollector.immediate(),
-                false, PageCacheTracer.NULL, immutable.empty() );
+                false,
+                PageCacheTracer.NULL,
+                immutable.empty(),
+                "benchmark database" );
     }
 
     @Override
