@@ -563,6 +563,156 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name", "age"))
   }
 
+  test("should create or replace node key constraint") {
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 1, namedConstraintsRemoved = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  ignore("should create or replace existing node key constraint") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline() //TODO: hangs on kernel bug
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace existing node key constraint with new schema") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.age) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("age")).getName should be("myconstraint")
+    graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("age"))
+  }
+
+  test("should fail to create or replace existing node key constraint with new name") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT yourconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+      // THEN
+    } should have message "Constraint already exists: Constraint( id=2, name='yourconstraint', type='NODE KEY', schema=(:Person {name}), ownedIndex=1 )"
+  }
+
+  test("should create node key constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_9b73711d")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_9b73711d")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create named node key constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should not create node key constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("existingConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("existingConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should not create named node key constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.age) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 0)
+    assertStats(result2, nodekeyConstraintsAdded = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("existingConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("existingConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
   test("should create unique property constraint") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
@@ -575,6 +725,156 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // get by name
     val (label, properties) = graph.getConstraintSchemaByName("constraint_e26b1a8b")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace unique property constraint") {
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 1, namedConstraintsRemoved = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  ignore("should create or replace existing unique property constraint") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline() //TODO: hangs on kernel bug
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace existing unique property constraint with new schema") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.age) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("age")).getName should be("myconstraint")
+    graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("age"))
+  }
+
+  test("should fail to create or replace existing unique property constraint with new name") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT yourconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+      // THEN
+    } should have message "Constraint already exists: Constraint( id=2, name='yourconstraint', type='UNIQUENESS', schema=(:Person {name}), ownedIndex=1 )"
+  }
+
+  test("should create unique property constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_e26b1a8b")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_e26b1a8b")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create named unique property constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should not create unique property constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("existingConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("existingConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should not create named unique property constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.age) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 0)
+    assertStats(result2, uniqueConstraintsAdded = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("existingConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("existingConstraint")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -603,6 +903,145 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should create or replace node property existence constraint") {
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1, namedConstraintsRemoved = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace existing node property existence constraint") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace existing node property existence constraint with new schema") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT EXISTS (n.age)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("age")).getName should be("myconstraint")
+    graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("age"))
+  }
+
+  test("should fail to create or replace existing node property existence constraint with new name") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT yourconstraint ON (n:Person) ASSERT exists(n.name)")
+    graph.awaitIndexesOnline()
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT exists(n.name)")
+      // THEN
+    } should have message "Constraint already exists: Constraint( id=1, name='yourconstraint', type='NODE PROPERTY EXISTENCE', schema=(:Person {name}) )"
+  }
+
+  test("should create node property existence constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_6ced8351")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_6ced8351")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create named node property existence constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should not create node property existence constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("existingConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("existingConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should not create named node property existence constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
+    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.age)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 0)
+    assertStats(result2, existenceConstraintsAdded = 0)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("existingConstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("existingConstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
   test("should create relationship property existence constraint") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
@@ -614,6 +1053,145 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // get by name
     val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should create or replace relationship property existence constraint") {
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1, namedConstraintsRemoved = 0)
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("myconstraint")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("myconstraint")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should create or replace existing relationship property existence constraint") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("myconstraint")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("myconstraint")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should create or replace existing relationship property existence constraint with new schema") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.age)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "age").getName should be("myconstraint")
+    graph.getMaybeRelationshipConstraint("HasPet", "since") should be(None)
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("myconstraint")
+    relType should be("HasPet")
+    properties should be(Seq("age"))
+  }
+
+  test("should fail to create or replace existing relationship property existence constraint with new name") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT yourconstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    graph.awaitIndexesOnline()
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+      // THEN
+    } should have message "Constraint already exists: Constraint( id=1, name='yourconstraint', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:HasPet {since}]- )"
+  }
+
+  test("should create relationship property existence constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1)
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should create named relationship property existence constraint if not existing") {
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 1)
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("myConstraint")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("myConstraint")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should not create relationship property existence constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 0)
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("existingConstraint")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("existingConstraint")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should not create named relationship property existence constraint if already existing") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // WHEN
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.age)")
+
+    // THEN
+    assertStats(result, existenceConstraintsAdded = 0)
+    assertStats(result2, existenceConstraintsAdded = 0)
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("existingConstraint")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("existingConstraint")
     relType should be("HasPet")
     properties should be(Seq("since"))
   }
@@ -703,6 +1281,124 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val (relType, properties) = graph.getConstraintSchemaByName("my_constraint")
     relType should be("HasPet")
     properties should be(Seq("since"))
+  }
+
+  test("should fail to create or replace unnamed node key constraint") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    }
+    error.getMessage should startWith ("Failed to create node key constraint: a name is required to `REPLACE` an existing constraint.")
+  }
+
+  test("should fail to create or replace unnamed unique property constraint") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    }
+    error.getMessage should startWith ("Failed to create uniqueness constraint: a name is required to `REPLACE` an existing constraint.")
+  }
+
+  test("should fail to create or replace unnamed node property existence constraint") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT exists(n.name)")
+    }
+    error.getMessage should startWith ("Failed to create node property existence constraint: a name is required to `REPLACE` an existing constraint.")
+  }
+
+  test("should fail to create or replace unnamed relationship property existence constraint") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    }
+    error.getMessage should startWith ("Failed to create relationship property existence constraint: a name is required to `REPLACE` an existing constraint.")
+  }
+
+  test("should fail to create node key constraint with both OR REPLACE and IF NOT EXISTS") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    }
+    error.getMessage should startWith ("Failed to create node key constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    }
+    error2.getMessage should startWith ("Failed to create node key constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+  }
+
+  test("should fail to create unique property constraint with both OR REPLACE and IF NOT EXISTS") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    }
+    error.getMessage should startWith ("Failed to create uniqueness constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    }
+    error2.getMessage should startWith ("Failed to create uniqueness constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+  }
+
+  test("should fail to create node property existence constraint with both OR REPLACE and IF NOT EXISTS") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
+    }
+    error.getMessage should startWith ("Failed to create node property existence constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
+    }
+    error2.getMessage should startWith ("Failed to create node property existence constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+  }
+
+  test("should fail to create relationship property existence constraint with both OR REPLACE and IF NOT EXISTS") {
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    }
+    error.getMessage should startWith ("Failed to create relationship property existence constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    }
+    error2.getMessage should startWith ("Failed to create relationship property existence constraint: cannot supply both `OR REPLACE` and `IF NOT EXISTS`.")
+  }
+
+  test("should create or replace existing unique property constraint with node key constraint") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, nodekeyConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create or replace existing node key constraint with unique property constraint") {
+    // GIVEN
+    executeSingle("CREATE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("CREATE OR REPLACE CONSTRAINT myconstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    assertStats(result, uniqueConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("myconstraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("myconstraint")
+    label should be("Person")
+    properties should be(Seq("name"))
   }
 
   test("should fail to create multiple constraints with same schema") {
@@ -881,6 +1577,58 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "There already exists a constraint called 'constraint'."
   }
 
+  test("should not create constraints when existing node key constraint (same name and schema)") {
+    // Given
+    graph.createNodeKeyConstraintWithName("constraint", "Label", "prop")
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 0)
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 0)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 0)
+  }
+
+  test("should sometimes create constraints when existing node key constraint (diff name and same schema)") {
+    // Given
+    graph.createNodeKeyConstraintWithName("constraint", "Label", "prop")
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT constraint2 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    } should have message "Constraint already exists: Constraint( id=2, name='constraint', type='NODE KEY', schema=(:Label {prop}), ownedIndex=1 )"
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("should not create constraints when existing node key constraint (same name and diff schema)") {
+    // Given
+    graph.createNodeKeyConstraintWithName("constraint", "Label", "prop1")
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop2) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 0)
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop3)")
+    assertStats(resN, existenceConstraintsAdded = 0)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+    assertStats(resR, existenceConstraintsAdded = 0)
+  }
+
   test("creating constraints on same schema as existing uniqueness constraint") {
     // Given
     graph.createUniqueConstraint("Label", "prop")
@@ -953,6 +1701,58 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "There already exists a constraint called 'constraint'."
   }
 
+  test("should not create constraints when existing uniqueness constraint (same name and schema)") {
+    // Given
+    graph.createUniqueConstraintWithName("constraint", "Label", "prop")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 0)
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 0)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 0)
+  }
+
+  test("should sometimes create constraints when existing uniqueness constraint (diff name and same schema)") {
+    // Given
+    graph.createUniqueConstraintWithName("constraint", "Label", "prop")
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT constraint2 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    } should have message "Constraint already exists: Constraint( id=2, name='constraint', type='UNIQUENESS', schema=(:Label {prop}), ownedIndex=1 )"
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("should not create constraints when existing uniqueness constraint (same name and diff schema)") {
+    // Given
+    graph.createUniqueConstraintWithName("constraint", "Label", "prop")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop2) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 0)
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop3)")
+    assertStats(resN, existenceConstraintsAdded = 0)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+    assertStats(resR, existenceConstraintsAdded = 0)
+  }
+
   test("creating constraints on same schema as existing node property existence constraint") {
     // Given
     graph.createNodeExistenceConstraint("Label", "prop")
@@ -1023,6 +1823,58 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "There already exists a constraint called 'constraint'."
   }
 
+  test("should not create constraints when existing node property existence constraint (same name and schema)") {
+    // Given
+    graph.createNodeExistenceConstraintWithName("constraint", "Label", "prop")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 0)
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 0)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 0)
+  }
+
+  test("should sometimes create constraints when existing node property existence constraint (diff name and same schema)") {
+    // Given
+    graph.createNodeExistenceConstraintWithName("constraint", "Label", "prop")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint2 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 1)
+    executeSingle("DROP CONSTRAINT constraint2") // needed to test the uniqueness constraint
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 1)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("should not create constraints when existing node property existence constraint (same name and diff schema)") {
+    // Given
+    graph.createNodeExistenceConstraintWithName("constraint", "Label", "prop1")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop2) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 0)
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop3) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 0)
+
+    // Relationship property existence constraint
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+    assertStats(resR, existenceConstraintsAdded = 0)
+  }
+
   test("creating constraints on same schema as existing relationship property existence constraint") {
     // Given (close as can get to same schema)
     graph.createRelationshipExistenceConstraint("Label", "prop")
@@ -1091,6 +1943,75 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop4)")
     } should have message "There already exists a constraint called 'constraint'."
+  }
+
+  test("should not create constraints when existing relationship property existence constraint (same name and schema)") {
+    // Given
+    graph.createRelationshipExistenceConstraintWithName("constraint", "Label", "prop")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 0)
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 0)
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 0)
+  }
+
+  test("should sometimes create constraints when existing relationship property existence constraint (diff name and 'same' schema)") {
+    // Given
+    graph.createRelationshipExistenceConstraintWithName("constraint", "Label", "prop")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint2 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 1)
+    executeSingle("DROP CONSTRAINT constraint2") // needed to test the uniqueness constraint
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 1)
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 1)
+  }
+
+  test("should not create constraints when existing relationship property existence constraint (same name and diff schema)") {
+    // Given
+    graph.createRelationshipExistenceConstraintWithName("constraint", "Label", "prop1")
+
+    // Node key constraint
+    val resK = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop2) IS NODE KEY")
+    assertStats(resK, nodekeyConstraintsAdded = 0)
+
+    // Uniqueness constraint
+    val resU = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop3) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 0)
+
+    // Node property existence constraint
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop4)")
+    assertStats(resN, existenceConstraintsAdded = 0)
+  }
+
+  test("should replace constraint with same name") {
+    // Given
+    graph.createNodeKeyConstraintWithName("constraint", "Label", "prop")
+
+    // Uniqueness constraint (replaces node key)
+    val resU = executeSingle("CREATE OR REPLACE CONSTRAINT constraint ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    assertStats(resU, uniqueConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // Node property existence constraint (replaces uniqueness)
+    val resN = executeSingle("CREATE OR REPLACE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 1, namedConstraintsRemoved = 1)
+
+    // Relationship property existence constraint (replaces node property existence)
+    val resR = executeSingle("CREATE OR REPLACE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 1, namedConstraintsRemoved = 1)
   }
 
   // Drop constraint
@@ -1167,6 +2088,19 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
   }
 
+  test("should drop node key constraint by name if exists") {
+    // GIVEN
+    graph.createNodeKeyConstraint("Person", "name")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_9b73711d")
+
+    // WHEN
+    val result = executeSingle("DROP CONSTRAINT `constraint_9b73711d` IF EXISTS")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
+    assertStats(result, namedConstraintsRemoved = 1)
+  }
+
   test("should drop composite node key constraint by name") {
     // GIVEN
     graph.createNodeKeyConstraint("Person", "name", "age")
@@ -1191,6 +2125,19 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
   }
 
+  test("should drop unique property constraint by name if exists") {
+    // GIVEN
+    graph.createUniqueConstraint("Person", "name")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_e26b1a8b")
+
+    // WHEN
+    val result = executeSingle("DROP CONSTRAINT `constraint_e26b1a8b` IF EXISTS")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
+    assertStats(result, namedConstraintsRemoved = 1)
+  }
+
   test("should drop node property existence constraint by name") {
     // GIVEN
     graph.createNodeExistenceConstraint("Person", "name")
@@ -1203,6 +2150,19 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
   }
 
+  test("should drop node property existence constraint by name if exists") {
+    // GIVEN
+    graph.createNodeExistenceConstraint("Person", "name")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_6ced8351")
+
+    // WHEN
+    val result = executeSingle("DROP CONSTRAINT `constraint_6ced8351` IF EXISTS")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
+    assertStats(result, namedConstraintsRemoved = 1)
+  }
+
   test("should drop relationship property existence constraint by name") {
     // GIVEN
     graph.createRelationshipExistenceConstraint("HasPet", "since")
@@ -1213,6 +2173,19 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // THEN
     graph.getMaybeRelationshipConstraint("HasPet", "since") should be(None)
+  }
+
+  test("should drop relationship property existence constraint by name if exists") {
+    // GIVEN
+    graph.createRelationshipExistenceConstraint("HasPet", "since")
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
+
+    // WHEN
+    val result = executeSingle("DROP CONSTRAINT `constraint_6c4e7adb` IF EXISTS")
+
+    // THEN
+    graph.getMaybeRelationshipConstraint("HasPet", "since") should be(None)
+    assertStats(result, namedConstraintsRemoved = 1)
   }
 
   test("should drop named node key constraint by schema") {
@@ -1263,6 +2236,14 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.getMaybeRelationshipConstraint("HasPet", "since") should be(None)
   }
 
+  test("should do nothing when trying to drop non-existing constraint by name") {
+    // WHEN
+    val result = executeSingle("DROP CONSTRAINT myNonExistingConstraint IF EXISTS")
+
+    // THEN
+    assertStats(result, namedConstraintsRemoved = 0)
+  }
+
   test("should get error when trying to drop the same constraint twice") {
     // GIVEN
     graph.createNodeKeyConstraint("Person", "name")
@@ -1289,6 +2270,9 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("DROP CONSTRAINT my_constraint")
       // THEN
     } should have message "Unable to drop constraint `my_constraint`: No such constraint my_constraint."
+
+    // THEN no error
+    executeSingle("DROP CONSTRAINT my_constraint IF EXISTS")
   }
 
   test("should get error when trying to drop non-existing constraint") {
@@ -1478,11 +2462,43 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     // THEN
-    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 1)
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("creating constraint on same schema as existing index with IF NOT EXISTS") {
+    // GIVEN
+    graph.createIndex("Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Node property existence constraint
+    // THEN
+    val resN = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 1)
+
+    // Relationship property existence constraint (close as can get to same schema)
+    // THEN
+    val resR = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 1)
   }
 
   test("creating named constraint on same schema as existing named index") {
@@ -1506,11 +2522,49 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     // THEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+    assertStats(resN, existenceConstraintsAdded = 1)
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    executeSingle("CREATE CONSTRAINT my_rel_constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT my_rel_constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    assertStats(resR, existenceConstraintsAdded = 1)
+  }
+
+  test("creating named constraint on same schema as existing named index with OR REPLACE") {
+    // GIVEN
+    graph.createIndexWithName("my_index", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Node property existence constraint
+    // WHEN
+    val resN = executeSingle("CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+    // THEN
+    assertStats(resN, existenceConstraintsAdded = 1)
+    graph.getIndexSchemaByName("my_index") should be(("Label", Seq("prop")))
+    graph.getConstraintSchemaByName("my_constraint") should be(("Label", Seq("prop")))
+
+    // Relationship property existence constraint (close as can get to same schema)
+    // WHEN
+    val resR = executeSingle("CREATE OR REPLACE CONSTRAINT my_rel_constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    // THEN
+    assertStats(resR, existenceConstraintsAdded = 1)
+    graph.getIndexSchemaByName("my_index") should be(("Label", Seq("prop")))
+    graph.getConstraintSchemaByName("my_rel_constraint") should be(("Label", Seq("prop")))
   }
 
   test("should fail when creating constraint with same name as existing index") {
@@ -1543,6 +2597,40 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
+  test("should fail when creating constraint with same name as existing index with IF NOT EXISTS") {
+    // GIVEN
+    graph.createIndexWithName("mine", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT EXISTS (n.prop)")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
       // THEN
     } should have message "There already exists an index called 'mine'."
   }
@@ -1581,6 +2669,40 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "There already exists an index called 'mine'."
   }
 
+  test("should fail when creating constraint with same name and schema as existing index with OR REPLACE") {
+    // GIVEN
+    graph.createIndexWithName("mine", "Label", "prop")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT mine ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT mine ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT mine ON (n:Label) ASSERT EXISTS (n.prop)")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE CONSTRAINT mine ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+      // THEN
+    } should have message "There already exists an index called 'mine'."
+  }
+
   test("creating index on same schema as existing constraint") {
     // GIVEN
     graph.createNodeKeyConstraint("Label", "prop1")
@@ -1605,11 +2727,42 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     // THEN
-    executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop3)")
+    val resN = executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop3)")
+    assertStats(resN, indexesAdded = 1)
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop4)")
+    val resR = executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop4)")
+    assertStats(resR, indexesAdded = 1)
+  }
+
+  test("creating index on same schema as existing constraint with IF NOT EXISTS") {
+    // GIVEN
+    graph.createNodeKeyConstraint("Label", "prop1")
+    graph.createUniqueConstraint("Label", "prop2")
+    graph.createNodeExistenceConstraint("Label", "prop3")
+    graph.createRelationshipExistenceConstraint("Label", "prop4")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    // THEN no error, identical index already exists
+    val resK = executeSingle("CREATE INDEX IF NOT EXISTS FOR (n:Label) ON (n.prop1)")
+    assertStats(resK, indexesAdded = 0)
+
+    // Uniqueness constraint
+    // THEN no error, identical index already exists
+    val resU = executeSingle("CREATE INDEX IF NOT EXISTS FOR (n:Label) ON (n.prop2)")
+    assertStats(resU, indexesAdded = 0)
+
+    // Node property existence constraint
+    // THEN
+    val resN = executeSingle("CREATE INDEX IF NOT EXISTS FOR (n:Label) ON (n.prop3)")
+    assertStats(resN, indexesAdded = 1)
+
+    // Relationship property existence constraint (close as can get to same schema)
+    // THEN
+    val resR = executeSingle("CREATE INDEX IF NOT EXISTS FOR (n:Label) ON (n.prop4)")
+    assertStats(resR, indexesAdded = 1)
   }
 
   test("creating named index on same schema as existing named constraint") {
@@ -1636,11 +2789,52 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     // THEN
-    executeSingle("CREATE INDEX my_index3 FOR (n:Label) ON (n.prop3)")
+    val resN = executeSingle("CREATE INDEX my_index3 FOR (n:Label) ON (n.prop3)")
+    assertStats(resN, indexesAdded = 1)
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    executeSingle("CREATE INDEX my_index4 FOR (n:Label) ON (n.prop4)")
+    val resR = executeSingle("CREATE INDEX my_index4 FOR (n:Label) ON (n.prop4)")
+    assertStats(resR, indexesAdded = 1)
+  }
+
+  test("creating named index on same schema as existing named constraint with OR REPLACE") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("my_constraint1", "Label", "prop1")
+    graph.createUniqueConstraintWithName("my_constraint2", "Label", "prop2")
+    graph.createNodeExistenceConstraintWithName("my_constraint3", "Label", "prop3")
+    graph.createRelationshipExistenceConstraintWithName("my_constraint4", "Label", "prop4")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE INDEX my_index1 FOR (n:Label) ON (n.prop1)")
+      // THEN
+    } should have message "There is a uniqueness constraint on (:Label {prop1}), so an index is already created that matches this."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE INDEX my_index2 FOR (n:Label) ON (n.prop2)")
+      // THEN
+    } should have message "There is a uniqueness constraint on (:Label {prop2}), so an index is already created that matches this."
+
+    // Node property existence constraint
+    // WHEN
+    val resN = executeSingle("CREATE OR REPLACE INDEX my_index3 FOR (n:Label) ON (n.prop3)")
+    // THEN
+    assertStats(resN, indexesAdded = 1)
+    graph.getIndexSchemaByName("my_index3") should be(("Label", Seq("prop3")))
+    graph.getConstraintSchemaByName("my_constraint3") should be(("Label", Seq("prop3")))
+
+    // Relationship property existence constraint (close as can get to same schema)
+    // WHEN
+    val resR = executeSingle("CREATE OR REPLACE INDEX my_index4 FOR (n:Label) ON (n.prop4)")
+    // THEN
+    assertStats(resR, indexesAdded = 1)
+    graph.getIndexSchemaByName("my_index4") should be(("Label", Seq("prop4")))
+    graph.getConstraintSchemaByName("my_constraint4") should be(("Label", Seq("prop4")))
   }
 
   test("should fail when creating index with same name as existing constraint") {
@@ -1680,6 +2874,43 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "There already exists a constraint called 'mine4'."
   }
 
+  test("should fail when creating index with same name as existing constraint with OR REPLACE") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("mine1", "Label", "prop1")
+    graph.createUniqueConstraintWithName("mine2", "Label", "prop2")
+    graph.createNodeExistenceConstraintWithName("mine3", "Label", "prop3")
+    graph.createRelationshipExistenceConstraintWithName("mine4", "Label", "prop4")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE INDEX mine1 FOR (n:Label) ON (n.prop5)")
+      // THEN
+    } should have message "Unable to drop index: Index belongs to constraint: `mine1`"
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE INDEX mine2 FOR (n:Label) ON (n.prop6)")
+      // THEN
+    } should have message "Unable to drop index: Index belongs to constraint: `mine2`"
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE INDEX mine3 FOR (n:Label) ON (n.prop7)")
+      // THEN
+    } should have message "There already exists a constraint called 'mine3'."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE OR REPLACE INDEX mine4 FOR (n:Label) ON (n.prop8)")
+      // THEN
+    } should have message "There already exists a constraint called 'mine4'."
+  }
+
   test("should fail when creating index with same name and schema as existing constraint") {
     // GIVEN
     graph.createNodeKeyConstraintWithName("mine1", "Label", "prop1")
@@ -1713,6 +2944,39 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("CREATE INDEX mine4 FOR (n:Label) ON (n.prop4)")
+      // THEN
+    } should have message "There already exists a constraint called 'mine4'."
+  }
+
+  test("should fail when creating index with same name and schema as existing constraint with IF NOT EXISTS") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("mine1", "Label", "prop1")
+    graph.createUniqueConstraintWithName("mine2", "Label", "prop2")
+    graph.createNodeExistenceConstraintWithName("mine3", "Label", "prop3")
+    graph.createRelationshipExistenceConstraintWithName("mine4", "Label", "prop4")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    // THEN no error, index with same name already exists
+    val resK = executeSingle("CREATE INDEX mine1 IF NOT EXISTS FOR (n:Label) ON (n.prop1)")
+    assertStats(resK, indexesAdded = 0)
+
+    // Uniqueness constraint
+    // THEN no error, index with same name already exists
+    val resU = executeSingle("CREATE INDEX mine2 IF NOT EXISTS FOR (n:Label) ON (n.prop2)")
+    assertStats(resU, indexesAdded = 0)
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE INDEX mine3 IF NOT EXISTS FOR (n:Label) ON (n.prop3)")
+      // THEN
+    } should have message "There already exists a constraint called 'mine3'."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE INDEX mine4 IF NOT EXISTS FOR (n:Label) ON (n.prop4)")
       // THEN
     } should have message "There already exists a constraint called 'mine4'."
   }
@@ -1756,6 +3020,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("DROP CONSTRAINT my_index")
       // THEN
     } should have message "Unable to drop constraint `my_index`: No such constraint my_index."
+
+    // Drop by name IF EXISTS
+    // THEN no error
+    val res = executeSingle("DROP CONSTRAINT my_index IF EXISTS")
+    assertStats(res, namedConstraintsRemoved = 0)
   }
 
   test("should fail when dropping index when only constraint exists") {
@@ -1779,6 +3048,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // THEN
     } should have message "Unable to drop index: Index belongs to constraint: `mine1`"
 
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX mine1 IF EXISTS")
+      // THEN
+    } should have message "Unable to drop index: Index belongs to constraint: `mine1`"
+
     // Uniqueness constraint (backed by index)
     the[CypherExecutionException] thrownBy {
       // WHEN
@@ -1789,6 +3064,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX mine2")
+      // THEN
+    } should have message "Unable to drop index: Index belongs to constraint: `mine2`"
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX mine2 IF EXISTS")
       // THEN
     } should have message "Unable to drop index: Index belongs to constraint: `mine2`"
 
@@ -1805,6 +3086,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // THEN
     } should have message "Unable to drop index called `mine3`. There is no such index."
 
+    // THEN no error
+    val resN = executeSingle("DROP INDEX mine3 IF EXISTS")
+    assertStats(resN, indexesRemoved = 0)
+
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
       // WHEN
@@ -1817,5 +3102,9 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("DROP INDEX mine4")
       // THEN
     } should have message "Unable to drop index called `mine4`. There is no such index."
+
+    // THEN no error
+    val resR = executeSingle("DROP INDEX mine4 IF EXISTS")
+    assertStats(resR, indexesRemoved = 0)
   }
 }

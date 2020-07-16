@@ -157,6 +157,7 @@ class CommandsRoutingTest
         } );
 
         assertThat( r.counters().constraintsRemoved() ).isEqualTo( 1 );
+
         names = inNeo4jTx( tx ->
         {
             var query = joinAsLines(
@@ -166,6 +167,17 @@ class CommandsRoutingTest
             return tx.run( query ).list();
         } );
         assertThat( names ).isEmpty();
+
+        r = inNeo4jTx( tx ->
+        {
+            var query = joinAsLines(
+                    "USE `my-db`",
+                    "DROP CONSTRAINT myConstraint IF EXISTS"
+            );
+            return tx.run( query ).consume();
+        } );
+
+        assertThat( r.counters().constraintsRemoved() ).isEqualTo( 0 );
     }
 
     @Test
