@@ -37,11 +37,11 @@ import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
-@BenchmarkEnabled(true)
+@BenchmarkEnabled(false)
 class SemiApplyVsGetDegree extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
-    base = Array())
+    base = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
