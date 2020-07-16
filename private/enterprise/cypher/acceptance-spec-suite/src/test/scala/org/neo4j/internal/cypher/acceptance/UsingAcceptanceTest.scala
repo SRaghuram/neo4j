@@ -848,7 +848,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     executeWith(Configs.VarExpand, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t"))
+          .and(includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t")))
+          .or(includeSomewhere.aPlan("MultiNodeIndexSeek").containingVariables("k", "t"))
         planDescription.toString should not include "AllNodesScan"
       }))
   }
@@ -869,8 +870,10 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     executeWith(Configs.VarExpand, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t"))
+        planDescription should
+          includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
+            .and(includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t")))
+            .or(includeSomewhere.aPlan("MultiNodeIndexSeek").containingVariables("k", "t"))
         planDescription.toString should not include "AllNodesScan"
       }))
   }
@@ -901,7 +904,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val result = executeWith(Configs.All, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
+          .and(includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b")))
+          .or(includeSomewhere.aPlan("MultiNodeIndexSeek").containingVariables("a", "b"))
       }))
 
     result.toList should equal(List(Map("a" -> startNode, "b" -> endNode)))

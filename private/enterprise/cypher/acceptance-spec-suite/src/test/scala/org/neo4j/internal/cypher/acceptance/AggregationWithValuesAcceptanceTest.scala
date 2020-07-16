@@ -382,6 +382,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
+        .or(includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("m"))
 
     result.toList should equal(List(Map("count" -> 4, "avg" -> 3.5)))
   }

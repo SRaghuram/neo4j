@@ -1034,7 +1034,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         // Then
         plan should includeSomewhere.aPlan("Filter")
           .containingArgument(
-            "cache[person.highScore] < $autoint_0 AND cache[person.highScore] > $autoint_1"
+            "cache[person.highScore] > $autoint_0 AND cache[person.highScore] < $autoint_1"
           )
           .withRows(4)
           .onTopOf(aPlan(s"NodeIndexScan")
