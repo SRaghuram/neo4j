@@ -29,8 +29,8 @@ class JobStatusResultTest
         var jobInfo = new MonitoredJobInfo( 99, INDEX_POPULATION, Instant.parse( "2020-06-24T18:00:00Z" ), new Subject( "user 1" ), "db 1",
                 "something very useful", null, null, SCHEDULED, IMMEDIATE, "Pretty impressive progress" );
         var jobStatusResult = new JobStatusResult( jobInfo, UTC );
-        assertEquals( "job-99 IndexPopulationMain 2020-06-24T18:00:00Z db 1 user 1 something very useful IMMEDIATE   SCHEDULED Pretty impressive progress",
-                resultToString( jobStatusResult ) );
+        assertJob( jobStatusResult, "job-99", "IndexPopulationMain", "2020-06-24T18:00:00Z", "db 1", "user 1", "something very useful", "IMMEDIATE", "", "",
+                "SCHEDULED", "Pretty impressive progress" );
     }
 
     @Test
@@ -39,17 +39,18 @@ class JobStatusResultTest
         var jobInfo = new MonitoredJobInfo( 11, INDEX_POPULATION, Instant.parse( "2020-06-24T18:00:00Z" ), SYSTEM, null, "something very useful", null, null,
                 MonitoredJobInfo.State.EXECUTING, IMMEDIATE, null );
         var jobStatusResult = new JobStatusResult( jobInfo, UTC );
-        assertEquals( "job-11 IndexPopulationMain 2020-06-24T18:00:00Z   something very useful IMMEDIATE   EXECUTING ", resultToString( jobStatusResult ) );
+        assertJob( jobStatusResult, "job-11", "IndexPopulationMain", "2020-06-24T18:00:00Z", "", "", "something very useful", "IMMEDIATE", "", "",
+                "EXECUTING", "" );
     }
 
     @Test
     void testDelayed()
     {
         var jobInfo = new MonitoredJobInfo( 22, INDEX_POPULATION, Instant.parse( "2020-06-24T18:00:00Z" ), new Subject( "user 1" ), "db 1",
-                "something very useful", Instant.parse( "2020-06-24T18:10:00Z" ), null, SCHEDULED, JobType.DELAYED, null  );
+                "something very useful", Instant.parse( "2020-06-24T18:10:00Z" ), null, SCHEDULED, JobType.DELAYED, null );
         var jobStatusResult = new JobStatusResult( jobInfo, UTC );
-        assertEquals( "job-22 IndexPopulationMain 2020-06-24T18:00:00Z db 1 user 1 something very useful DELAYED 2020-06-24T18:10:00Z  SCHEDULED ",
-                resultToString( jobStatusResult ) );
+        assertJob( jobStatusResult, "job-22", "IndexPopulationMain", "2020-06-24T18:00:00Z", "db 1", "user 1", "something very useful", "DELAYED",
+                "2020-06-24T18:10:00Z", "", "SCHEDULED", "" );
     }
 
     @Test
@@ -58,13 +59,23 @@ class JobStatusResultTest
         var jobInfo = new MonitoredJobInfo( 33, INDEX_POPULATION, Instant.parse( "2020-06-24T18:00:00Z" ), new Subject( "user 1" ), "db 1",
                 "something very useful", Instant.parse( "2020-06-24T18:10:00Z" ), Duration.ofMillis( 182_001 ), SCHEDULED, JobType.PERIODIC, null );
         var jobStatusResult = new JobStatusResult( jobInfo, UTC );
-        assertEquals( "job-33 IndexPopulationMain 2020-06-24T18:00:00Z db 1 user 1 something very useful PERIODIC 2020-06-24T18:10:00Z 00:03:02.001 SCHEDULED ",
-                resultToString( jobStatusResult ) );
+        assertJob( jobStatusResult, "job-33", "IndexPopulationMain", "2020-06-24T18:00:00Z", "db 1", "user 1", "something very useful", "PERIODIC",
+                "2020-06-24T18:10:00Z", "00:03:02.001", "SCHEDULED", "" );
     }
 
-    String resultToString( JobStatusResult job )
+    void assertJob( JobStatusResult job, String id, String group, String submitted, String database, String submitter, String description, String type,
+            String scheduledAt, String period, String state, String currentStateDescription )
     {
-        return job.jobId + " " + job.group + " " + job.submitted + " " + job.database + " " + job.submitter + " " + job.description + " "
-                + job.type + " " + job.scheduledAt + " " + job.period + " " + job.state + " " + job.currentStateDescription;
+        assertEquals( id, job.jobId );
+        assertEquals( group, job.group );
+        assertEquals( submitted, job.submitted );
+        assertEquals( database, job.database );
+        assertEquals( submitter, job.submitter );
+        assertEquals( description, job.description );
+        assertEquals( type, job.type );
+        assertEquals( scheduledAt, job.scheduledAt );
+        assertEquals( period, job.period );
+        assertEquals( state, job.state );
+        assertEquals( currentStateDescription, job.currentStateDescription );
     }
 }

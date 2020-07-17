@@ -295,9 +295,7 @@ class SchedulerProceduresTest
 
     private void assertJobIdsAreUnique( Map<String,JobStatusRecord> jobRecords )
     {
-        var ids = new HashSet<>();
-
-        jobRecords.values().forEach( job -> assertTrue( ids.add( job.id ) ) );
+        assertEquals( jobRecords.size(), jobRecords.values().stream().distinct().count() );
     }
 
     private void assertJob( Map<String,JobStatusRecord> jobRecords, String group, String submitter, String database, String description, String type,

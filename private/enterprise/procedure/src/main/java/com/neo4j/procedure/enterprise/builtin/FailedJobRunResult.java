@@ -27,7 +27,7 @@ public class FailedJobRunResult
 
     FailedJobRunResult( FailedJobRun failedJobRun, ZoneId zoneId )
     {
-        jobId = JobStatusResult.ID_PREFIX + failedJobRun.getJobId();
+        jobId = JobStatusResult.serialiseJobId( failedJobRun.getJobId() );
         group = failedJobRun.getGroup().groupName();
         submitter = failedJobRun.getSubmitter().describe();
         database = defaultString( failedJobRun.getTargetDatabaseName() );

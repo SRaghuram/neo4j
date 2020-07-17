@@ -34,13 +34,15 @@ class FailedJobRunResultTest
                 new IllegalStateException( "Something went terribly wrong" ) );
         var jobRunResult = new FailedJobRunResult( jobRun, ZoneOffset.UTC );
 
-        assertEquals( "job-99 IndexPopulationMain user 1 db 1 a very useful job IMMEDIATE 2020-06-24T18:00:00Z 2020-06-24T18:10:00Z 2020-06-24T18:20:00Z " +
-                        "IllegalStateException: Something went terribly wrong", resultToString( jobRunResult ) );
-    }
-
-    String resultToString( FailedJobRunResult jobRun )
-    {
-        return jobRun.jobId + " " + jobRun.group + " " + jobRun.submitter + " " + jobRun.database + " " + jobRun.description + " " + jobRun.type + " "
-                + jobRun.submitted + " " + jobRun.executionStart + " " + jobRun.failureTime + " " + jobRun.failureDescription;
+        assertEquals( "job-99", jobRunResult.jobId );
+        assertEquals( "IndexPopulationMain", jobRunResult.group );
+        assertEquals( "user 1", jobRunResult.submitter );
+        assertEquals( "db 1", jobRunResult.database );
+        assertEquals( "a very useful job", jobRunResult.description );
+        assertEquals( "IMMEDIATE", jobRunResult.type );
+        assertEquals( "2020-06-24T18:00:00Z", jobRunResult.submitted );
+        assertEquals( "2020-06-24T18:10:00Z", jobRunResult.executionStart );
+        assertEquals( "2020-06-24T18:20:00Z", jobRunResult.failureTime );
+        assertEquals( "IllegalStateException: Something went terribly wrong", jobRunResult.failureDescription );
     }
 }
