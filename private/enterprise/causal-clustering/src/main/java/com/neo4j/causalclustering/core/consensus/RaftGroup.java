@@ -47,6 +47,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.state.StateStorage;
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -62,7 +63,6 @@ import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_max
 import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_timeout;
 import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_max_lag;
 import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_retry_timeout;
-import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
 
 public class RaftGroup
 {
@@ -76,7 +76,7 @@ public class RaftGroup
             MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
             ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
             LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
-            ServerGroupsSupplier serverGroupsSupplier )
+            ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
@@ -115,7 +115,7 @@ public class RaftGroup
         var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
 
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache, logProvider, leaderTransfers );
-        var messageHandlingContext = new RaftMessageHandlingContext( state, config );
+        var messageHandlingContext = new RaftMessageHandlingContext( state, config, serverGroupsSupplier, globalAvailabilityGuard::isShutdown );
 
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,

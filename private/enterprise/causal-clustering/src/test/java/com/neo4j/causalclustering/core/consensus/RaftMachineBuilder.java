@@ -26,6 +26,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -37,6 +38,8 @@ import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+
+import static com.neo4j.configuration.ServerGroupsSupplier.listen;
 
 public class RaftMachineBuilder
 {
@@ -113,7 +116,7 @@ public class RaftMachineBuilder
 
         var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider,
                                        new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
-        var raftMessageHandlingContext = new RaftMessageHandlingContext( raftState, config );
+        var raftMessageHandlingContext = new RaftMessageHandlingContext( raftState, config, listen( config ), () -> false );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var outcomeApplier = new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                                                      membershipManager, logProvider, rejection ->

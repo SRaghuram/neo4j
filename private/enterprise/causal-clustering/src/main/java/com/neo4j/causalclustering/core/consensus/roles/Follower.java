@@ -78,10 +78,10 @@ class Follower implements RaftMessageHandler
         var upToDate = localAppendIndex >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
-        var doesNotRefuseToBeLeader = !ctx.refusesToBeLeader();
+        var mayBecomeLeaderAtAll = !ctx.refusesToBeLeader() && !ctx.isProcessShutdownInProgress();
         var satisfiesRequestPriorities = noRequestedPriority( request ) || iAmInPriority( myGroups, request );
 
-        if ( doesNotRefuseToBeLeader && sameTerm && upToDate && satisfiesRequestPriorities )
+        if ( mayBecomeLeaderAtAll && sameTerm && upToDate && satisfiesRequestPriorities )
         {
             if ( Election.startRealElection( state, outcomeBuilder, log, state.term() ) )
             {
@@ -268,34 +268,42 @@ class Follower implements RaftMessageHandler
 
     private static OutcomeBuilder handleElectionTimeout( OutcomeBuilder outcomeBuilder, RaftMessageHandlingContext ctx, Log log ) throws IOException
     {
-        if ( ctx.supportPreVoting() && !ctx.refusesToBeLeader() )
+        var state = ctx.state();
+        var mayBecomeLeaderAtAll = !ctx.refusesToBeLeader() && !ctx.isProcessShutdownInProgress();
+        if ( ctx.supportPreVoting() )
         {
-            log.info( "Election timeout triggered" );
-            if ( Election.startPreElection( ctx.state(), outcomeBuilder, log ) )
+            if ( mayBecomeLeaderAtAll )
             {
-                outcomeBuilder.setPreElection( true );
+                log.info( "Election timeout triggered" );
+                if ( Election.startPreElection( state, outcomeBuilder, log ) )
+                {
+                    outcomeBuilder.setPreElection( true );
+                }
             }
-        }
-        else if ( ctx.supportPreVoting() && ctx.refusesToBeLeader() )
-        {
-            log.info( "Election timeout triggered but refusing to be leader" );
-            Set<MemberId> memberIds = ctx.state().votingMembers();
-            if ( memberIds != null && memberIds.contains( ctx.state().myself() ) )
+            else
             {
-                outcomeBuilder.setPreElection( true );
+                log.info( "Election timeout triggered but refusing to be leader or instance is shutting down" );
+                Set<MemberId> memberIds = state.votingMembers();
+                if ( memberIds != null && memberIds.contains( state.myself() ) )
+                {
+                    outcomeBuilder.setPreElection( true );
+                }
             }
-        }
-        else if ( !ctx.supportPreVoting() && ctx.refusesToBeLeader() )
-        {
-            log.info( "Election timeout triggered but refusing to be leader" );
         }
         else
         {
-            log.info( "Election timeout triggered" );
-            if ( Election.startRealElection( ctx.state(), outcomeBuilder, log, ctx.state().term() ) )
+            if ( mayBecomeLeaderAtAll )
             {
-                outcomeBuilder.setRole( CANDIDATE );
-                log.info( "Moving to CANDIDATE state after successfully starting election" );
+                log.info( "Election timeout triggered" );
+                if ( Election.startRealElection( state, outcomeBuilder, log, state.term() ) )
+                {
+                    outcomeBuilder.setRole( CANDIDATE );
+                    log.info( "Moving to CANDIDATE state after successfully starting election" );
+                }
+            }
+            else
+            {
+                log.info( "Election timeout triggered but refusing to be leader or instance is shutting down" );
             }
         }
 

@@ -59,6 +59,6 @@ public class RaftGroupFactory
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
                 globalModule.getGlobalClock(), identityModule.memberId( namedDatabaseId ), life, monitors, dependencies, outbound, clusterState,
                 topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker,
-                serverGroupsSupplier );
+                serverGroupsSupplier, globalModule.getGlobalAvailabilityGuard() );
     }
 }
