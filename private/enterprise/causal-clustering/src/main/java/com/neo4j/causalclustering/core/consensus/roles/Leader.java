@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.ShipCommand;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
+import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -27,60 +28,62 @@ import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
 public class Leader implements RaftMessageHandler
 {
-    private static Iterable<MemberId> replicationTargets( final ReadableRaftState ctx )
+    private static Iterable<MemberId> replicationTargets( final ReadableRaftState state )
     {
-        return new FilteringIterable<>( ctx.replicationMembers(), member -> !member.equals( ctx.myself() ) );
+        return new FilteringIterable<>( state.replicationMembers(), member -> !member.equals( state.myself() ) );
     }
 
-    static void sendHeartbeats( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder ) throws IOException
+    static void sendHeartbeats( ReadableRaftState state, OutcomeBuilder outcomeBuilder ) throws IOException
     {
-        long commitIndex = ctx.commitIndex();
-        long commitIndexTerm = ctx.entryLog().readEntryTerm( commitIndex );
-        RaftMessages.Heartbeat heartbeat = new RaftMessages.Heartbeat( ctx.myself(), ctx.term(), commitIndex, commitIndexTerm );
-        for ( MemberId to : replicationTargets( ctx ) )
+        long commitIndex = state.commitIndex();
+        long commitIndexTerm = state.entryLog().readEntryTerm( commitIndex );
+        RaftMessages.Heartbeat heartbeat = new RaftMessages.Heartbeat( state.myself(), state.term(), commitIndex, commitIndexTerm );
+        for ( MemberId to : replicationTargets( state ) )
         {
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( to, heartbeat ) );
         }
     }
 
     @Override
-    public Outcome handle( RaftMessages.RaftMessage message, ReadableRaftState ctx, Log log ) throws IOException
+    public Outcome handle( RaftMessages.RaftMessage message, RaftMessageHandlingContext ctx, Log log ) throws IOException
     {
         return message.dispatch( new Handler( ctx, log ) ).build();
     }
 
     private static class Handler implements RaftMessages.Handler<OutcomeBuilder,IOException>
     {
-        private final ReadableRaftState ctx;
+        private final RaftMessageHandlingContext ctx;
+        private final ReadableRaftState state;
         private final Log log;
         private final OutcomeBuilder outcomeBuilder;
 
-        Handler( ReadableRaftState ctx, Log log )
+        Handler( RaftMessageHandlingContext ctx, Log log )
         {
             this.ctx = ctx;
+            this.state = ctx.state();
             this.log = log;
-            this.outcomeBuilder = OutcomeBuilder.builder( Role.LEADER, ctx );
+            this.outcomeBuilder = OutcomeBuilder.builder( Role.LEADER, ctx.state() );
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.Heartbeat heartbeat ) throws IOException
         {
-            if ( heartbeat.leaderTerm() < ctx.term() )
+            if ( heartbeat.leaderTerm() < state.term() )
             {
                 return outcomeBuilder;
             }
 
-            stepDownToFollower( outcomeBuilder, ctx );
+            stepDownToFollower( outcomeBuilder, state );
             log.info( "Moving to FOLLOWER state after receiving heartbeat at term %d (my term is " + "%d) from %s",
-                    heartbeat.leaderTerm(), ctx.term(), heartbeat.from() );
-            Heart.beat( ctx, outcomeBuilder, heartbeat, log );
+                    heartbeat.leaderTerm(), state.term(), heartbeat.from() );
+            Heart.beat( state, outcomeBuilder, heartbeat, log );
             return outcomeBuilder;
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.Timeout.Heartbeat heartbeat ) throws IOException
         {
-            sendHeartbeats( ctx, outcomeBuilder );
+            sendHeartbeats( state, outcomeBuilder );
             return outcomeBuilder;
         }
 
@@ -94,11 +97,11 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.Timeout.Election election )
         {
-            if ( !MajorityIncludingSelfQuorum.isQuorum( ctx.votingMembers().size(), ctx.heartbeatResponses().size() ) )
+            if ( !MajorityIncludingSelfQuorum.isQuorum( state.votingMembers().size(), state.heartbeatResponses().size() ) )
             {
-                stepDownToFollower( outcomeBuilder, ctx );
+                stepDownToFollower( outcomeBuilder, state );
                 log.info( "Moving to FOLLOWER state after not receiving heartbeat responses in this election timeout " +
-                          "period. Heartbeats received: %s", ctx.heartbeatResponses() );
+                          "period. Heartbeats received: %s", state.heartbeatResponses() );
             }
 
             outcomeBuilder.clearHeartbeatResponses();
@@ -109,26 +112,26 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.AppendEntries.Request req ) throws IOException
         {
-            if ( req.leaderTerm() < ctx.term() )
+            if ( req.leaderTerm() < state.term() )
             {
                 RaftMessages.AppendEntries.Response appendResponse =
-                        new RaftMessages.AppendEntries.Response( ctx.myself(), ctx.term(), false, -1,
-                                ctx.entryLog().appendIndex() );
+                        new RaftMessages.AppendEntries.Response( state.myself(), state.term(), false, -1,
+                                state.entryLog().appendIndex() );
 
                 outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( req.from(), appendResponse ) );
                 return outcomeBuilder;
             }
-            else if ( req.leaderTerm() == ctx.term() )
+            else if ( req.leaderTerm() == state.term() )
             {
                 throw new IllegalStateException( "Two leaders in the same term." );
             }
             else
             {
                 // There is a new leader in a later term, we should revert to follower. (§5.1)
-                stepDownToFollower( outcomeBuilder, ctx );
+                stepDownToFollower( outcomeBuilder, state );
                 log.info( "Moving to FOLLOWER state after receiving append request at term %d (my term is " +
-                        "%d) from %s", req.leaderTerm(), ctx.term(), req.from() );
-                Appending.handleAppendEntriesRequest( ctx, outcomeBuilder, req );
+                        "%d) from %s", req.leaderTerm(), state.term(), req.from() );
+                Appending.handleAppendEntriesRequest( state, outcomeBuilder, req );
                 return outcomeBuilder;
             }
 
@@ -137,28 +140,28 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.AppendEntries.Response response ) throws IOException
         {
-            var followerStates = ctx.followerStates();
-            if ( response.term() < ctx.term() )
+            var followerStates = state.followerStates();
+            if ( response.term() < state.term() )
             {
                 /* Ignore responses from old terms! */
                 return outcomeBuilder;
             }
-            else if ( response.term() > ctx.term() )
+            else if ( response.term() > state.term() )
             {
                 outcomeBuilder.setTerm( response.term() );
-                stepDownToFollower( outcomeBuilder, ctx );
+                stepDownToFollower( outcomeBuilder, state );
                 log.info( "Moving to FOLLOWER state after receiving append response at term %d (my term is " +
-                          "%d) from %s", response.term(), ctx.term(), response.from() );
+                          "%d) from %s", response.term(), state.term(), response.from() );
                 followerStates = new FollowerStates<>();
                 outcomeBuilder.replaceFollowerStates( followerStates );
                 return outcomeBuilder;
             }
 
-            FollowerState follower = ctx.followerStates().get( response.from() );
+            FollowerState follower = state.followerStates().get( response.from() );
 
             if ( response.success() )
             {
-                assert response.matchIndex() <= ctx.entryLog().appendIndex();
+                assert response.matchIndex() <= state.entryLog().appendIndex();
 
                 boolean followerProgressed = response.matchIndex() > follower.getMatchIndex();
 
@@ -174,7 +177,7 @@ public class Leader implements RaftMessageHandler
                  * and are ready for commit.
                  * This is explained nicely in Figure 3.7 of the thesis
                  */
-                boolean matchInCurrentTerm = ctx.entryLog().readEntryTerm( response.matchIndex() ) == ctx.term();
+                boolean matchInCurrentTerm = state.entryLog().readEntryTerm( response.matchIndex() ) == state.term();
 
                 /*
                  * The quorum situation may have changed only if the follower actually progressed.
@@ -183,8 +186,8 @@ public class Leader implements RaftMessageHandler
                 {
                     // TODO: Test that mismatch between voting and participating members affects commit outcome
 
-                    long quorumAppendIndex = Followers.quorumAppendIndex( ctx.votingMembers(), followerStates );
-                    if ( quorumAppendIndex > ctx.commitIndex() )
+                    long quorumAppendIndex = Followers.quorumAppendIndex( state.votingMembers(), followerStates );
+                    if ( quorumAppendIndex > state.commitIndex() )
                     {
                         outcomeBuilder.setLeaderCommit( quorumAppendIndex )
                                 .setCommitIndex( quorumAppendIndex )
@@ -194,7 +197,7 @@ public class Leader implements RaftMessageHandler
             }
             else // Response indicated failure.
             {
-                if ( response.appendIndex() > -1 && response.appendIndex() >= ctx.entryLog().prevIndex() )
+                if ( response.appendIndex() > -1 && response.appendIndex() >= state.entryLog().prevIndex() )
                 {
                     // Signal a mismatch to the log shipper, which will serve an earlier entry.
                     outcomeBuilder.addShipCommand( new ShipCommand.Mismatch( response.appendIndex(), response.from() ) );
@@ -204,7 +207,7 @@ public class Leader implements RaftMessageHandler
                     // There are no earlier entries, message the follower that we have compacted so that
                     // it can take appropriate action.
                     RaftMessages.LogCompactionInfo compactionInfo =
-                            new RaftMessages.LogCompactionInfo( ctx.myself(), ctx.term(), ctx.entryLog().prevIndex() );
+                            new RaftMessages.LogCompactionInfo( state.myself(), state.term(), state.entryLog().prevIndex() );
                     RaftMessages.Directed directedCompactionInfo =
                             new RaftMessages.Directed( response.from(), compactionInfo );
 
@@ -217,31 +220,31 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.Vote.Request req ) throws IOException
         {
-            if ( req.term() > ctx.term() )
+            if ( req.term() > state.term() )
             {
                 outcomeBuilder.setTerm( req.term() );
-                stepDownToFollower( outcomeBuilder, ctx );
+                stepDownToFollower( outcomeBuilder, state );
                 log.info(
                         "Moving to FOLLOWER state after receiving vote request at term %d (my term is " + "%d) from %s",
-                        req.term(), ctx.term(), req.from() );
+                        req.term(), state.term(), req.from() );
 
                 MemberId votedFor = null;
-                Voting.handleVoteVerdict( ctx, outcomeBuilder, req.term(), req, log, votedFor );
+                Voting.handleVoteVerdict( state, outcomeBuilder, req.term(), req, log, votedFor );
                 return outcomeBuilder;
             }
 
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( req.from(),
-                    new RaftMessages.Vote.Response( ctx.myself(), ctx.term(), false ) ) );
+                    new RaftMessages.Vote.Response( state.myself(), state.term(), false ) ) );
             return outcomeBuilder;
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.NewEntry.Request req ) throws IOException
         {
-            if ( !ctx.areTransferringLeadership() )
+            if ( !state.areTransferringLeadership() )
             {
                 var content = req.content();
-                Appending.appendNewEntry( ctx, outcomeBuilder, content );
+                Appending.appendNewEntry( state, outcomeBuilder, content );
             }
             return outcomeBuilder;
         }
@@ -249,10 +252,10 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.NewEntry.BatchRequest req ) throws IOException
         {
-            if ( !ctx.areTransferringLeadership() )
+            if ( !state.areTransferringLeadership() )
             {
                 var contents = req.contents();
-                Appending.appendNewEntries( ctx, outcomeBuilder, contents );
+                Appending.appendNewEntries( state, outcomeBuilder, contents );
             }
             return outcomeBuilder;
         }
@@ -275,18 +278,18 @@ public class Leader implements RaftMessageHandler
         {
             if ( ctx.supportPreVoting() )
             {
-                if ( req.term() > ctx.term() )
+                if ( req.term() > state.term() )
                 {
-                    stepDownToFollower( outcomeBuilder, ctx );
+                    stepDownToFollower( outcomeBuilder, state );
                     log.info( "Moving to FOLLOWER state after receiving pre vote request from %s at term %d (I am at %d)",
-                            req.from(), req.term(), ctx.term() );
+                            req.from(), req.term(), state.term() );
                 }
-                var term = Long.max( req.term(), ctx.term() );
-                if ( term > ctx.term() )
+                var term = Long.max( req.term(), state.term() );
+                if ( term > state.term() )
                 {
                     outcomeBuilder.setTerm( term );
                 }
-                Voting.declinePreVoteRequest( ctx, outcomeBuilder, req, term );
+                Voting.declinePreVoteRequest( state, outcomeBuilder, req, term );
             }
             return outcomeBuilder;
         }
@@ -306,13 +309,13 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request request ) throws IOException
         {
-            if ( request.term() > ctx.term() )
+            if ( request.term() > state.term() )
             {
-                stepDownToFollower( outcomeBuilder, ctx );
+                stepDownToFollower( outcomeBuilder, state );
                 log.info( "Moving to FOLLOWER state after receiving leadership transfer request from %s at term %d (I am at %d)",
-                          request.from(), request.term(), ctx.term() );
+                          request.from(), request.term(), state.term() );
             }
-            var rejection = new RaftMessages.LeadershipTransfer.Rejection( request.from(), ctx.commitIndex(), ctx.term() );
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( request.from(), state.commitIndex(), state.term() );
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(), rejection ) );
             return outcomeBuilder;
         }
@@ -320,11 +323,11 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal proposal ) throws IOException
         {
-            long appendIndex = ctx.entryLog().appendIndex();
-            long appendIndexTerm = ctx.entryLog().readEntryTerm( appendIndex );
+            long appendIndex = state.entryLog().appendIndex();
+            long appendIndexTerm = state.entryLog().readEntryTerm( appendIndex );
             var proposed = proposal.proposed();
 
-            var proposedKnown = stream( replicationTargets( ctx ) )
+            var proposedKnown = stream( replicationTargets( state ) )
                     .anyMatch( member -> member.equals( proposed ) );
 
             if ( !proposedKnown )
@@ -332,7 +335,7 @@ public class Leader implements RaftMessageHandler
                 return handle( new RaftMessages.LeadershipTransfer.Rejection( proposed, appendIndex, appendIndexTerm ) );
             }
 
-            var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), appendIndex, appendIndexTerm, proposal.priorityGroups() );
+            var request = new RaftMessages.LeadershipTransfer.Request( state.myself(), appendIndex, appendIndexTerm, proposal.priorityGroups() );
             outcomeBuilder.startTransferringLeadership( proposed );
             log.info( "Attempt to transfer leadership to follower %s with request %s. Will stop accepting writes for a short period.",
                       proposal.proposed(), request );

@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManage
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
+import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.consensus.term.MonitoredTermStateStorage;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
@@ -36,12 +37,9 @@ import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMar
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.InFlightCacheFactory;
-import com.neo4j.configuration.ServerGroupName;
 
 import java.io.File;
 import java.util.Map;
-import java.util.Set;
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -63,9 +61,6 @@ import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_max
 import static com.neo4j.configuration.CausalClusteringSettings.join_catch_up_timeout;
 import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_max_lag;
 import static com.neo4j.configuration.CausalClusteringSettings.log_shipping_retry_timeout;
-import static com.neo4j.configuration.CausalClusteringSettings.refuse_to_be_leader;
-import static java.util.Set.copyOf;
-import static org.neo4j.time.Clocks.systemClock;
 
 public class RaftGroup
 {
@@ -114,21 +109,18 @@ public class RaftGroup
                                             config.get( log_shipping_max_lag ),
                                             inFlightCache );
 
-        boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
-
-        Supplier<Set<ServerGroupName>> serverGroupsSupplier = () -> copyOf( config.get( CausalClusteringSettings.server_groups ) );
-
         var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
 
-        var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache,
-                                   logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier, leaderTransfers );
+        var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache, logProvider, leaderTransfers );
+        var messageHandlingContext = new RaftMessageHandlingContext( state, config );
 
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                                                          raftMembershipManager, logProvider,
                                                          rejection -> leaderTransferService.handleRejection( rejection, namedDatabaseId ) );
 
-        raftMachine = new RaftMachine( myself, leaderAvailabilityTimers, logProvider, raftMembershipManager, inFlightCache, raftOutcomeApplier, state );
+        raftMachine = new RaftMachine( myself, leaderAvailabilityTimers, logProvider, raftMembershipManager, inFlightCache, raftOutcomeApplier,
+                                       state, messageHandlingContext );
 
         raftMachine.registerListener( leaderListener );
 

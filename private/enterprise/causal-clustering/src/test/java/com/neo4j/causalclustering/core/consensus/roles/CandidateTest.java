@@ -10,13 +10,11 @@ import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
-import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -36,6 +34,8 @@ import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.vote
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithStateWithPreVote;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,19 +52,18 @@ class CandidateTest
     void shouldImmediatelyHandleRejectionMessageOnLeadershipTransferProposal() throws Exception
     {
         // given
-        var state = RaftStateBuilder.builder()
+        var state = builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
                         .setCommitIndex( 2 )
                         .setTerm( 1 ).build() )
                 .votingMembers( myself, member1, member2 )
-                .supportsPreVoting( true )
                 .build();
 
         var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1, Set.of() );
 
         // when
-        Outcome outcome = new Follower().handle( message, state, log() );
+        Outcome outcome = new Follower().handle( message, contextWithStateWithPreVote( state ), log() );
 
         // then
         var leaderTransferRejection = outcome.getLeaderTransferRejection();
@@ -75,19 +74,18 @@ class CandidateTest
     void shouldRespondWithRejectionOnLeaderTransferRequest() throws Exception
     {
         // given
-        var state = RaftStateBuilder.builder()
+        var state = builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
                         .setCommitIndex( 3 )
                         .setTerm( 1 ).build() )
                 .votingMembers( myself, member1, member2 )
-                .supportsPreVoting( true )
                 .build();
 
         var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
 
         // when
-        Outcome outcome = new Candidate().handle( message, state, log() );
+        Outcome outcome = new Candidate().handle( message, contextWithStateWithPreVote( state ), log() );
 
         // then
         assertThat( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION ).isEqualTo( messageFor( outcome, member2 ).type() );
@@ -97,7 +95,7 @@ class CandidateTest
     void shouldBeElectedLeaderOnReceivingGrantedVoteResponseWithCurrentTerm() throws Exception
     {
         // given
-        RaftState state = RaftStateBuilder.builder()
+        RaftState state = builder()
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
                 .myself( myself )
                 .votingMembers( member1, member2 )
@@ -108,7 +106,7 @@ class CandidateTest
                 .term( state.term() )
                 .from( member1 )
                 .grant()
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         Assertions.assertEquals( LEADER, outcome.getRole() );
@@ -132,7 +130,7 @@ class CandidateTest
                 .term( state.term() )
                 .from( member1 )
                 .deny()
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         Assertions.assertEquals( CANDIDATE, outcome.getRole() );
@@ -151,7 +149,7 @@ class CandidateTest
                 .term( voterTerm )
                 .from( member1 )
                 .grant()
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         Assertions.assertEquals( FOLLOWER, outcome.getRole() );
@@ -171,7 +169,7 @@ class CandidateTest
                 .term( voterTerm )
                 .from( member1 )
                 .grant()
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         Assertions.assertEquals( CANDIDATE, outcome.getRole() );
@@ -181,19 +179,19 @@ class CandidateTest
     void shouldDeclineVoteRequestsIfFromSameTerm() throws Throwable
     {
         // given
-        RaftState raftState = newState();
+        RaftState state = newState();
 
         // when
         Outcome outcome = CANDIDATE.handler.handle( voteRequest()
                 .candidate( member1 )
                 .from( member1 )
-                .term( raftState.term() )
-                .build(), raftState, log() );
+                .term( state.term() )
+                .build(), contextWithState( state ), log() );
 
         // then
         assertThat(
                 outcome.getOutgoingMessages() )
-                .contains( new RaftMessages.Directed( member1, voteResponse().term( raftState.term() ).from( myself ).deny().build() ) );
+                .contains( new RaftMessages.Directed( member1, voteResponse().term( state.term() ).from( myself ).deny().build() ) );
         Assertions.assertEquals( Role.CANDIDATE, outcome.getRole() );
     }
 
@@ -201,15 +199,15 @@ class CandidateTest
     void shouldBecomeFollowerIfReceiveVoteRequestFromLaterTerm() throws Throwable
     {
         // given
-        RaftState raftState = newState();
+        RaftState state = newState();
 
         // when
-        long newTerm = raftState.term() + 1;
+        long newTerm = state.term() + 1;
         Outcome outcome = CANDIDATE.handler.handle( voteRequest()
                 .candidate( member1 )
                 .from( member1 )
                 .term( newTerm )
-                .build(), raftState, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         Assertions.assertEquals( newTerm, outcome.getTerm() );
@@ -224,50 +222,48 @@ class CandidateTest
     void shouldGrantPreVoteFromSameTermAndSameLog() throws Throwable
     {
         // given
-        RaftState raftState = builder()
+        var state = builder()
                 .myself( myself )
-                .supportsPreVoting( true )
                 .build();
 
         // when
-        Outcome outcome = CANDIDATE.handler.handle( preVoteRequest()
+        var outcome = CANDIDATE.handler.handle( preVoteRequest()
                 .candidate( member1 )
                 .from( member1 )
-                .term( raftState.term() )
-                .build(), raftState, log() );
+                .term( state.term() )
+                .build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         assertThat(
                 outcome.getOutgoingMessages() )
-                .contains( new RaftMessages.Directed( member1, preVoteResponse().term( raftState.term() ).from( myself ).grant().build() ) );
+                .contains( new RaftMessages.Directed( member1, preVoteResponse().term( state.term() ).from( myself ).grant().build() ) );
         Assertions.assertEquals( Role.CANDIDATE, outcome.getRole() );
     }
 
     @Test
     void shouldDeclinePreVoteFromSameTermButNewerLog() throws Throwable
     {
-        RaftLog entryLog = new InMemoryRaftLog();
+        var entryLog = new InMemoryRaftLog();
         entryLog.append( new RaftLogEntry( 0, ReplicatedInteger.valueOf( 0 ) ) );
         entryLog.append( new RaftLogEntry( 0, ReplicatedInteger.valueOf( 1 ) ) );
 
         // given
-        RaftState raftState = builder()
+        var state = builder()
                 .myself( myself )
-                .supportsPreVoting( true )
                 .entryLog( entryLog )
                 .build();
 
         // when
-        Outcome outcome = CANDIDATE.handler.handle( preVoteRequest()
+        var outcome = CANDIDATE.handler.handle( preVoteRequest()
                 .candidate( member1 )
                 .from( member1 )
-                .term( raftState.term() )
-                .build(), raftState, log() );
+                .term( state.term() )
+                .build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         assertThat(
                 outcome.getOutgoingMessages() )
-                .contains( new RaftMessages.Directed( member1, preVoteResponse().term( raftState.term() ).from( myself ).deny().build() ) );
+                .contains( new RaftMessages.Directed( member1, preVoteResponse().term( state.term() ).from( myself ).deny().build() ) );
         Assertions.assertEquals( Role.CANDIDATE, outcome.getRole() );
     }
 
@@ -275,18 +271,17 @@ class CandidateTest
     void shouldBecomeFollowerIfReceivePreVoteRequestFromLaterTermAndGrantPreVote() throws Throwable
     {
         // given
-        RaftState raftState = builder()
+        var state = builder()
                 .myself( myself )
-                .supportsPreVoting( true )
                 .build();
-        long newTerm = raftState.term() + 1;
+        long newTerm = state.term() + 1;
 
         // when
-        Outcome outcome = CANDIDATE.handler.handle( preVoteRequest()
+        var outcome = CANDIDATE.handler.handle( preVoteRequest()
                 .candidate( member1 )
                 .from( member1 )
                 .term( newTerm )
-                .build(), raftState, log() );
+                .build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         Assertions.assertEquals( newTerm, outcome.getTerm() );

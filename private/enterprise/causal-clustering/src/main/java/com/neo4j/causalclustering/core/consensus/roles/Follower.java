@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessageHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
+import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
@@ -28,7 +29,7 @@ import static java.lang.Long.min;
 
 class Follower implements RaftMessageHandler
 {
-    static boolean logHistoryMatches( ReadableRaftState ctx, long leaderSegmentPrevIndex, long leaderSegmentPrevTerm ) throws IOException
+    static boolean logHistoryMatches( ReadableRaftState state, long leaderSegmentPrevIndex, long leaderSegmentPrevTerm ) throws IOException
     {
         // NOTE: A prevLogIndex before or at our log's prevIndex means that we
         //       already have all history (in a compacted form), so we report that history matches
@@ -36,30 +37,30 @@ class Follower implements RaftMessageHandler
         // NOTE: The entry term for a non existing log index is defined as -1,
         //       so the history for a non existing log entry never matches.
 
-        long localLogPrevIndex = ctx.entryLog().prevIndex();
-        long localSegmentPrevTerm = ctx.entryLog().readEntryTerm( leaderSegmentPrevIndex );
+        long localLogPrevIndex = state.entryLog().prevIndex();
+        long localSegmentPrevTerm = state.entryLog().readEntryTerm( leaderSegmentPrevIndex );
 
         return leaderSegmentPrevIndex > -1 && (leaderSegmentPrevIndex <= localLogPrevIndex || localSegmentPrevTerm == leaderSegmentPrevTerm);
     }
 
-    static void commitToLogOnUpdate( ReadableRaftState ctx, long indexOfLastNewEntry, long leaderCommit, OutcomeBuilder outcomeBuilder )
+    static void commitToLogOnUpdate( ReadableRaftState state, long indexOfLastNewEntry, long leaderCommit, OutcomeBuilder outcomeBuilder )
     {
         long newCommitIndex = min( leaderCommit, indexOfLastNewEntry );
 
-        if ( newCommitIndex > ctx.commitIndex() )
+        if ( newCommitIndex > state.commitIndex() )
         {
             outcomeBuilder.setCommitIndex( newCommitIndex );
         }
     }
 
-    private static void handleLeaderLogCompaction( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder, RaftMessages.LogCompactionInfo compactionInfo )
+    private static void handleLeaderLogCompaction( ReadableRaftState state, OutcomeBuilder outcomeBuilder, RaftMessages.LogCompactionInfo compactionInfo )
     {
-        if ( compactionInfo.leaderTerm() < ctx.term() )
+        if ( compactionInfo.leaderTerm() < state.term() )
         {
             return;
         }
 
-        long localAppendIndex = ctx.entryLog().appendIndex();
+        long localAppendIndex = state.entryLog().appendIndex();
         long leaderPrevIndex = compactionInfo.prevIndex();
 
         if ( localAppendIndex <= -1 || leaderPrevIndex > localAppendIndex )
@@ -68,11 +69,12 @@ class Follower implements RaftMessageHandler
         }
     }
 
-    private static void handleLeadershipTransfer( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder, RaftMessages.LeadershipTransfer.Request request,
-            Log log ) throws IOException
+    private static void handleLeadershipTransfer( RaftMessageHandlingContext ctx, OutcomeBuilder outcomeBuilder,
+            RaftMessages.LeadershipTransfer.Request request, Log log ) throws IOException
     {
-        var sameTerm = ctx.term() == request.term();
-        var localAppendIndex = ctx.entryLog().appendIndex();
+        var state = ctx.state();
+        var sameTerm = state.term() == request.term();
+        var localAppendIndex = state.entryLog().appendIndex();
         var upToDate = localAppendIndex >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
@@ -81,7 +83,7 @@ class Follower implements RaftMessageHandler
 
         if ( doesNotRefuseToBeLeader && sameTerm && upToDate && satisfiesRequestPriorities )
         {
-            if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
+            if ( Election.startRealElection( state, outcomeBuilder, log, state.term() ) )
             {
                 outcomeBuilder.setRole( CANDIDATE );
                 log.info( "Moving to CANDIDATE state after receiving %s", request );
@@ -90,7 +92,7 @@ class Follower implements RaftMessageHandler
         else
         {
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(),
-                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), localAppendIndex, ctx.term() ) ) );
+                            new RaftMessages.LeadershipTransfer.Rejection( state.myself(), localAppendIndex, state.term() ) ) );
         }
     }
 
@@ -112,24 +114,26 @@ class Follower implements RaftMessageHandler
     }
 
     @Override
-    public Outcome handle( RaftMessages.RaftMessage message, ReadableRaftState ctx, Log log ) throws IOException
+    public Outcome handle( RaftMessages.RaftMessage message, RaftMessageHandlingContext ctx, Log log ) throws IOException
     {
         return message.dispatch( visitor( ctx, log ) ).build();
     }
 
     private static class Handler implements RaftMessages.Handler<OutcomeBuilder,IOException>
     {
-        protected final ReadableRaftState ctx;
+        protected final RaftMessageHandlingContext ctx;
+        protected final ReadableRaftState state;
         protected final Log log;
         protected final OutcomeBuilder outcomeBuilder;
         private final PreVoteRequestHandler preVoteRequestHandler;
         private final PreVoteResponseHandler preVoteResponseHandler;
 
-        Handler( PreVoteRequestHandler preVoteRequestHandler, PreVoteResponseHandler preVoteResponseHandler, ReadableRaftState ctx, Log log )
+        Handler( PreVoteRequestHandler preVoteRequestHandler, PreVoteResponseHandler preVoteResponseHandler, RaftMessageHandlingContext ctx, Log log )
         {
             this.ctx = ctx;
+            this.state = ctx.state();
             this.log = log;
-            this.outcomeBuilder = OutcomeBuilder.builder( FOLLOWER, ctx );
+            this.outcomeBuilder = OutcomeBuilder.builder( FOLLOWER, ctx.state() );
             this.preVoteRequestHandler = preVoteRequestHandler;
             this.preVoteResponseHandler = preVoteResponseHandler;
         }
@@ -137,35 +141,35 @@ class Follower implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.Heartbeat heartbeat ) throws IOException
         {
-            Heart.beat( ctx, outcomeBuilder, heartbeat, log );
+            Heart.beat( state, outcomeBuilder, heartbeat, log );
             return outcomeBuilder;
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.AppendEntries.Request request ) throws IOException
         {
-            Appending.handleAppendEntriesRequest( ctx, outcomeBuilder, request );
+            Appending.handleAppendEntriesRequest( state, outcomeBuilder, request );
             return outcomeBuilder;
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.Vote.Request request ) throws IOException
         {
-            var term = max( request.term(), ctx.term() );
-            var votedFor = ctx.votedFor();
-            if ( term > ctx.term() )
+            var term = max( request.term(), state.term() );
+            var votedFor = state.votedFor();
+            if ( term > state.term() )
             {
                 outcomeBuilder.setTerm( term );
                 votedFor = null;
             }
-            Voting.handleVoteVerdict( ctx, outcomeBuilder, term, request, log, votedFor );
+            Voting.handleVoteVerdict( state, outcomeBuilder, term, request, log, votedFor );
             return outcomeBuilder;
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.LogCompactionInfo logCompactionInfo )
         {
-            handleLeaderLogCompaction( ctx, outcomeBuilder, logCompactionInfo );
+            handleLeaderLogCompaction( state, outcomeBuilder, logCompactionInfo );
             return outcomeBuilder;
         }
 
@@ -179,13 +183,13 @@ class Follower implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.PreVote.Request request ) throws IOException
         {
-            return preVoteRequestHandler.handle( request, outcomeBuilder, ctx, log );
+            return preVoteRequestHandler.handle( request, outcomeBuilder, state, log );
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.PreVote.Response response ) throws IOException
         {
-            return preVoteResponseHandler.handle( response, outcomeBuilder, ctx, log );
+            return preVoteResponseHandler.handle( response, outcomeBuilder, state, log );
         }
 
         @Override
@@ -241,7 +245,7 @@ class Follower implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws IOException
         {
-            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) );
+            return handle( new RaftMessages.LeadershipTransfer.Rejection( state.myself(), state.commitIndex(), state.term() ) );
         }
 
         @Override
@@ -254,20 +258,20 @@ class Follower implements RaftMessageHandler
 
     private interface PreVoteRequestHandler
     {
-        OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException;
+        OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState state, Log log ) throws IOException;
 
     }
     private interface PreVoteResponseHandler
     {
-        OutcomeBuilder handle( RaftMessages.PreVote.Response response, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException;
+        OutcomeBuilder handle( RaftMessages.PreVote.Response response, OutcomeBuilder outcomeBuilder, ReadableRaftState state, Log log ) throws IOException;
     }
 
-    private static OutcomeBuilder handleElectionTimeout( OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException
+    private static OutcomeBuilder handleElectionTimeout( OutcomeBuilder outcomeBuilder, RaftMessageHandlingContext ctx, Log log ) throws IOException
     {
         if ( ctx.supportPreVoting() && !ctx.refusesToBeLeader() )
         {
             log.info( "Election timeout triggered" );
-            if ( Election.startPreElection( ctx, outcomeBuilder, log ) )
+            if ( Election.startPreElection( ctx.state(), outcomeBuilder, log ) )
             {
                 outcomeBuilder.setPreElection( true );
             }
@@ -275,8 +279,8 @@ class Follower implements RaftMessageHandler
         else if ( ctx.supportPreVoting() && ctx.refusesToBeLeader() )
         {
             log.info( "Election timeout triggered but refusing to be leader" );
-            Set<MemberId> memberIds = ctx.votingMembers();
-            if ( memberIds != null && memberIds.contains( ctx.myself() ) )
+            Set<MemberId> memberIds = ctx.state().votingMembers();
+            if ( memberIds != null && memberIds.contains( ctx.state().myself() ) )
             {
                 outcomeBuilder.setPreElection( true );
             }
@@ -288,7 +292,7 @@ class Follower implements RaftMessageHandler
         else
         {
             log.info( "Election timeout triggered" );
-            if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
+            if ( Election.startRealElection( ctx.state(), outcomeBuilder, log, ctx.state().term() ) )
             {
                 outcomeBuilder.setRole( CANDIDATE );
                 log.info( "Moving to CANDIDATE state after successfully starting election" );
@@ -301,11 +305,11 @@ class Follower implements RaftMessageHandler
     private static class PreVoteRequestVotingHandler implements PreVoteRequestHandler
     {
         @Override
-        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcome, ReadableRaftState ctx, Log log ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcome, ReadableRaftState state, Log log ) throws IOException
         {
-            var term = max( ctx.term(), request.term() );
+            var term = max( state.term(), request.term() );
             outcome.setTerm( term );
-            Voting.handlePreVoteVerdict( ctx, outcome, request, log, term );
+            Voting.handlePreVoteVerdict( state, outcome, request, log, term );
             return outcome;
         }
 
@@ -315,14 +319,14 @@ class Follower implements RaftMessageHandler
     private static class PreVoteRequestDecliningHandler implements PreVoteRequestHandler
     {
         @Override
-        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState state, Log log ) throws IOException
         {
-            var term = max( request.term(), ctx.term() );
-            if ( term > ctx.term() )
+            var term = max( request.term(), state.term() );
+            if ( term > state.term() )
             {
                 outcomeBuilder.setTerm( term );
             }
-            Voting.declinePreVoteRequest( ctx, outcomeBuilder, request, term );
+            Voting.declinePreVoteRequest( state, outcomeBuilder, request, term );
             return outcomeBuilder;
         }
 
@@ -332,7 +336,7 @@ class Follower implements RaftMessageHandler
     private static class PreVoteRequestNoOpHandler implements PreVoteRequestHandler
     {
         @Override
-        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log )
+        public OutcomeBuilder handle( RaftMessages.PreVote.Request request, OutcomeBuilder outcomeBuilder, ReadableRaftState state, Log log )
         {
             return outcomeBuilder;
         }
@@ -343,34 +347,34 @@ class Follower implements RaftMessageHandler
     private static class PreVoteResponseSolicitingHandler implements PreVoteResponseHandler
     {
         @Override
-        public OutcomeBuilder handle( RaftMessages.PreVote.Response res, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.PreVote.Response res, OutcomeBuilder outcomeBuilder, ReadableRaftState state, Log log ) throws IOException
         {
-            long term = max( res.term(), ctx.term() );
-            if ( term > ctx.term() )
+            long term = max( res.term(), state.term() );
+            if ( term > state.term() )
             {
                 outcomeBuilder.setTerm( res.term() )
                         .setPreElection( false );
-                log.info( "Aborting pre-election after receiving pre-vote response from %s at term %d (I am at %d)", res.from(), res.term(), ctx.term() );
+                log.info( "Aborting pre-election after receiving pre-vote response from %s at term %d (I am at %d)", res.from(), res.term(), state.term() );
                 return outcomeBuilder;
             }
-            else if ( res.term() < ctx.term() || !res.voteGranted() )
+            else if ( res.term() < state.term() || !res.voteGranted() )
             {
                 return outcomeBuilder;
             }
 
-            var preVotesForMe = new HashSet<>( ctx.preVotesForMe() );
+            var preVotesForMe = new HashSet<>( state.preVotesForMe() );
 
-            if ( !res.from().equals( ctx.myself() ) )
+            if ( !res.from().equals( state.myself() ) )
             {
                 preVotesForMe.add( res.from() );
                 outcomeBuilder.setPreVotesForMe( preVotesForMe );
             }
 
-            if ( isQuorum( ctx.votingMembers(), preVotesForMe ) )
+            if ( isQuorum( state.votingMembers(), preVotesForMe ) )
             {
                 outcomeBuilder.renewElectionTimer( ACTIVE_ELECTION )
                         .setPreElection( false );
-                if ( Election.startRealElection( ctx, outcomeBuilder, log, term ) )
+                if ( Election.startRealElection( state, outcomeBuilder, log, term ) )
                 {
                     outcomeBuilder.setRole( CANDIDATE );
                     log.info( "Moving to CANDIDATE state after successful pre-election stage" );
@@ -384,7 +388,7 @@ class Follower implements RaftMessageHandler
     private static class PreVoteResponseNoOpHandler implements PreVoteResponseHandler
     {
         @Override
-        public OutcomeBuilder handle( RaftMessages.PreVote.Response response, OutcomeBuilder outcomeBuilder, ReadableRaftState ctx, Log log )
+        public OutcomeBuilder handle( RaftMessages.PreVote.Response response, OutcomeBuilder outcomeBuilder, ReadableRaftState state, Log log )
         {
             return outcomeBuilder;
         }
@@ -392,8 +396,9 @@ class Follower implements RaftMessageHandler
         private static final PreVoteResponseHandler INSTANCE = new PreVoteResponseNoOpHandler();
     }
 
-    private static Handler visitor( ReadableRaftState ctx, Log log )
+    private static Handler visitor( RaftMessageHandlingContext ctx, Log log )
     {
+        final var state = ctx.state();
         final PreVoteRequestHandler preVoteRequestHandler;
         final PreVoteResponseHandler preVoteResponseHandler;
 
@@ -402,7 +407,7 @@ class Follower implements RaftMessageHandler
             preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
             if ( ctx.supportPreVoting() )
             {
-                preVoteRequestHandler = ( ctx.isPreElection() || !ctx.areTimersStarted() ) ?
+                preVoteRequestHandler = ( state.isPreElection() || !state.areTimersStarted() ) ?
                         PreVoteRequestVotingHandler.INSTANCE : PreVoteRequestDecliningHandler.INSTANCE;
             }
             else
@@ -414,9 +419,9 @@ class Follower implements RaftMessageHandler
         {
             if ( ctx.supportPreVoting() )
             {
-                preVoteRequestHandler = (ctx.isPreElection() || !ctx.areTimersStarted()) ?
+                preVoteRequestHandler = (state.isPreElection() || !state.areTimersStarted()) ?
                         PreVoteRequestVotingHandler.INSTANCE : PreVoteRequestDecliningHandler.INSTANCE;
-                preVoteResponseHandler = (ctx.isPreElection()) ?
+                preVoteResponseHandler = (state.isPreElection()) ?
                         PreVoteResponseSolicitingHandler.INSTANCE : PreVoteResponseNoOpHandler.INSTANCE;
             }
             else

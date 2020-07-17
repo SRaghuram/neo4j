@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.consensus.state.ExposedRaftState;
+import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
@@ -39,6 +40,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     private final RaftOutcomeApplier outcomeApplier;
 
     private final RaftState state;
+    private final RaftMessageHandlingContext messageHandlingContext;
     private final MemberId myself;
 
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
@@ -48,7 +50,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     private volatile Role currentRole = Role.FOLLOWER;
 
     public RaftMachine( MemberId myself, LeaderAvailabilityTimers leaderAvailabilityTimers, LogProvider logProvider, RaftMembershipManager membershipManager,
-            InFlightCache inFlightCache, RaftOutcomeApplier outcomeApplier, RaftState state )
+            InFlightCache inFlightCache, RaftOutcomeApplier outcomeApplier, RaftState state, RaftMessageHandlingContext messageHandlingContext )
     {
         this.myself = myself;
         this.leaderAvailabilityTimers = leaderAvailabilityTimers;
@@ -60,6 +62,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
         this.inFlightCache = inFlightCache;
         this.outcomeApplier = outcomeApplier;
         this.state = state;
+        this.messageHandlingContext = messageHandlingContext;
     }
 
     @Override
@@ -157,7 +160,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
 
     public synchronized ConsensusOutcome handle( RaftMessages.RaftMessage incomingMessage ) throws IOException
     {
-        Outcome outcome = currentRole.handler.handle( incomingMessage, state, log );
+        Outcome outcome = currentRole.handler.handle( incomingMessage, messageHandlingContext, log );
 
         currentRole = outcomeApplier.handle( outcome );
 

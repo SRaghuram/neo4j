@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +39,7 @@ class PruningTest
 
         // when
         RaftMessages.PruneRequest pruneRequest = new RaftMessages.PruneRequest( 1000 );
-        Outcome outcome = role.handler.handle( pruneRequest, state, log() );
+        Outcome outcome = role.handler.handle( pruneRequest, contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getLogCommands() ).contains( new PruneLogCommand( 1000 ) );

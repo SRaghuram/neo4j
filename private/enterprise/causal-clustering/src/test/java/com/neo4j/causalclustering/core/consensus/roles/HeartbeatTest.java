@@ -21,6 +21,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.heartbeat;
 import static com.neo4j.causalclustering.core.consensus.roles.AppendEntriesRequestTest.ContentGenerator.content;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,7 +58,7 @@ class HeartbeatTest
                 .leaderTerm( leaderTerm )
                 .build();
 
-        Outcome outcome = role.handler.handle( heartbeat, state, log() );
+        Outcome outcome = role.handler.handle( heartbeat, contextWithState( state ), log() );
 
         assertThat( outcome.getLogCommands() ).isEmpty();
     }
@@ -82,7 +83,7 @@ class HeartbeatTest
                 .leaderTerm( leaderTerm )
                 .build();
 
-        Outcome outcome = role.handler.handle( heartbeat, state, log() );
+        Outcome outcome = role.handler.handle( heartbeat, contextWithState( state ), log() );
 
         assertThat( outcome.getCommitIndex() ).isEqualTo( 0L );
     }
@@ -107,7 +108,7 @@ class HeartbeatTest
                 .leaderTerm( leaderTerm )
                 .build();
 
-        Outcome outcome = role.handler.handle( heartbeat, state, log() );
+        Outcome outcome = role.handler.handle( heartbeat, contextWithState( state ), log() );
 
         assertThat( outcome.getLogCommands() ).isEmpty();
 

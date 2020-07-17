@@ -19,6 +19,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteRequest;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +47,7 @@ class VoteRequestTest
 
         Outcome outcome = role.handler.handle( voteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithState( state ), log() );
 
         // then
         assertTrue( ((RaftMessages.Vote.Response) messageFor( outcome, member1 )).voteGranted() );
@@ -64,7 +65,7 @@ class VoteRequestTest
 
         Outcome outcome = role.handler.handle( voteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithState( state ), log() );
 
         // then
         assertFalse( ((RaftMessages.Vote.Response) messageFor( outcome, member1 )).voteGranted() );
@@ -83,13 +84,13 @@ class VoteRequestTest
 
         Outcome outcome1 = role.handler.handle( voteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithState( state ), log() );
 
         state.update( outcome1 );
 
         Outcome outcome2 = role.handler.handle( voteRequest().from( member2 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithState( state ), log() );
 
         // then
         assertFalse( ((RaftMessages.Vote.Response) messageFor( outcome2, member2 )).voteGranted() );
@@ -107,7 +108,7 @@ class VoteRequestTest
 
         Outcome outcome = role.handler.handle( voteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithState( state ), log() );
 
         // then
         assertEquals( role, outcome.getRole() );
@@ -125,7 +126,7 @@ class VoteRequestTest
 
         Outcome outcome = role.handler.handle( voteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithState( state ), log() );
 
         // then
         assertEquals( Role.FOLLOWER, outcome.getRole() );
@@ -143,7 +144,7 @@ class VoteRequestTest
 
         Outcome outcome = role.handler.handle( voteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithState( state ), log() );
 
         // then
         assertEquals( candidateTerm, outcome.getTerm() );

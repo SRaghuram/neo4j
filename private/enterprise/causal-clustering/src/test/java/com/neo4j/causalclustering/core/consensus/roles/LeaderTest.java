@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.ShipCommand;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
+import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
@@ -40,6 +41,8 @@ import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueO
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesResponse;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithStateWithPreVote;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Arrays.asList;
@@ -70,16 +73,16 @@ class LeaderTest
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
                 .votingMembers( myself, member1, member2 )
-                .supportsPreVoting( true )
                 .build();
+        var ctx = contextWithStateWithPreVote( state );
 
         var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1, Set.of() );
         var leader = new Leader();
 
-        appendSomeEntriesToLog( state, leader, 3, 1  );
+        appendSomeEntriesToLog( state, ctx, leader, 3, 1  );
 
         // when
-        Outcome outcome = leader.handle( message, state, log() );
+        Outcome outcome = leader.handle( message, ctx, log() );
 
         // then
         var request = messageFor( outcome, member1 );
@@ -97,13 +100,12 @@ class LeaderTest
                 .addInitialOutcome( OutcomeTestBuilder.builder()
                         .setTerm( 1 ).build() )
                 .votingMembers( myself, member2 )
-                .supportsPreVoting( true )
                 .build();
 
         var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1 , Set.of() );
 
         // when
-        Outcome outcome = new Leader().handle( message, state, log() );
+        Outcome outcome = new Leader().handle( message, contextWithStateWithPreVote( state ), log() );
 
         // then
         var leaderTransferRejection = outcome.getLeaderTransferRejection();
@@ -120,13 +122,12 @@ class LeaderTest
                         .setCommitIndex( 3 )
                         .setTerm( 1 ).build() )
                 .votingMembers( myself, member1, member2 )
-                .supportsPreVoting( true )
                 .build();
 
         var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
 
         // when
-        Outcome outcome = new Leader().handle( message, state, log() );
+        Outcome outcome = new Leader().handle( message, contextWithStateWithPreVote( state ), log() );
 
         // then
         assertThat( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION ).isEqualTo( messageFor( outcome, member2 ).type() );
@@ -142,13 +143,12 @@ class LeaderTest
                         .setCommitIndex( 3 )
                         .setTerm( 1 ).build() )
                 .votingMembers( myself, member1, member2 )
-                .supportsPreVoting( true )
                 .build();
 
         var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 2, Set.of() );
 
         // when
-        Outcome outcome = new Leader().handle( message, state, log() );
+        Outcome outcome = new Leader().handle( message, contextWithStateWithPreVote( state ), log() );
 
         // then
         assertThat( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION ).isEqualTo( messageFor( outcome, member2 ).type() );
@@ -190,7 +190,7 @@ class LeaderTest
         RaftMessages.AppendEntries.Response response =
                 appendEntriesResponse().success().matchIndex( 90 ).term( 4 ).from( instance2 ).build();
 
-        Outcome outcome = leader.handle( response, state, mock( Log.class ) );
+        Outcome outcome = leader.handle( response, contextWithState( state ), mock( Log.class ) );
 
         // then
         // The leader should not be trying to send any messages to that instance
@@ -232,7 +232,7 @@ class LeaderTest
         RaftMessages.AppendEntries.Response response =
                 appendEntriesResponse().success().matchIndex( 100 ).term( 4 ).from( instance2 ).build();
 
-        Outcome outcome = leader.handle( response, state, mock( Log.class ) );
+        Outcome outcome = leader.handle( response, contextWithState( state ), mock( Log.class ) );
 
         // then
         // The leader should not be trying to send any messages to that instance
@@ -279,7 +279,7 @@ class LeaderTest
                 .term( 231 )
                 .from( instance2 ).build();
 
-        Outcome outcome = leader.handle( response, state, mock( Log.class ) );
+        Outcome outcome = leader.handle( response, contextWithState( state ), mock( Log.class ) );
 
         // then
         int matchCount = 0;
@@ -332,7 +332,7 @@ class LeaderTest
                 .term( 4 )
                 .from( instance2 ).build();
 
-        Outcome outcome = leader.handle( response, state, mock( Log.class ) );
+        Outcome outcome = leader.handle( response, contextWithState( state ), mock( Log.class ) );
 
         // then the leader should not send anything, since this is a delayed, out of order response to a previous append
         // request
@@ -388,7 +388,7 @@ class LeaderTest
                 .term( 4 )
                 .from( instance2 ).build();
 
-        Outcome outcome = leader.handle( response, state, mock( Log.class ) );
+        Outcome outcome = leader.handle( response, contextWithState( state ), mock( Log.class ) );
 
         // then
         int mismatchCount = 0;
@@ -427,7 +427,7 @@ class LeaderTest
                 .from( member1 ).build();
 
         // when
-        Outcome outcome = leader.handle( incomingResponse, state, log() );
+        Outcome outcome = leader.handle( incomingResponse, contextWithState( state ), log() );
 
         // then
         RaftMessages.RaftMessage outgoingMessage = messageFor( outcome, member1 );
@@ -455,7 +455,7 @@ class LeaderTest
                 .from( member1 ).build();
 
         // when
-        Outcome outcome = leader.handle( incomingResponse, state, log() );
+        Outcome outcome = leader.handle( incomingResponse, contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getTerm() ).isEqualTo( leaderTerm );
@@ -478,7 +478,7 @@ class LeaderTest
                 .from( member1 )
                 .term( state.term() + 1 )
                 .build();
-        Outcome outcome = leader.handle( message, state, log() );
+        Outcome outcome = leader.handle( message, contextWithState( state ), log() );
 
         // then
         Assertions.assertEquals( 0, count( outcome.getOutgoingMessages() ) );
@@ -499,10 +499,10 @@ class LeaderTest
                 .build();
 
         Leader leader = new Leader();
-        leader.handle( new RaftMessages.HeartbeatResponse( member1 ), state, log() ); // make sure it has quorum.
+        leader.handle( new RaftMessages.HeartbeatResponse( member1 ), contextWithState( state ), log() ); // make sure it has quorum.
 
         // when
-        Outcome outcome = leader.handle( new Heartbeat( myself ), state, log() );
+        Outcome outcome = leader.handle( new Heartbeat( myself ), contextWithState( state ), log() );
 
         // then
         Assertions.assertTrue( messageFor( outcome, member1 ) instanceof RaftMessages.Heartbeat );
@@ -519,10 +519,10 @@ class LeaderTest
                 .build();
 
         Leader leader = new Leader();
-        leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
+        leader.handle( new RaftMessages.Timeout.Election( myself ), contextWithState( state ), log() );
 
         // when
-        Outcome outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isNotEqualTo( LEADER );
@@ -540,11 +540,11 @@ class LeaderTest
         Leader leader = new Leader();
 
         // when
-        Outcome outcome = leader.handle( new RaftMessages.HeartbeatResponse( member1 ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.HeartbeatResponse( member1 ), contextWithState( state ), log() );
         state.update( outcome );
 
         // we now have quorum and should not step down
-        outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
+        outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( LEADER );
@@ -560,16 +560,16 @@ class LeaderTest
 
         Leader leader = new Leader();
 
-        Outcome outcome = leader.handle( new RaftMessages.HeartbeatResponse( member1 ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.HeartbeatResponse( member1 ), contextWithState( state ), log() );
         state.update( outcome );
 
-        outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
+        outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), contextWithState( state ), log() );
         state.update( outcome );
 
         assertThat( outcome.getRole() ).isEqualTo( LEADER );
 
         // when
-        outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
+        outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
@@ -589,7 +589,7 @@ class LeaderTest
         RaftMessages.NewEntry.Request newEntryRequest = new RaftMessages.NewEntry.Request( member( 9 ), CONTENT );
 
         // when
-        Outcome outcome = leader.handle( newEntryRequest, state, log() );
+        Outcome outcome = leader.handle( newEntryRequest, contextWithState( state ), log() );
         //state.update( outcome );
 
         // then
@@ -618,7 +618,7 @@ class LeaderTest
                 asList( valueOf( 0 ), valueOf( 1 ), valueOf( 2 ) ) );
 
         // when
-        Outcome outcome = leader.handle( batchRequest, state, log() );
+        Outcome outcome = leader.handle( batchRequest, contextWithState( state ), log() );
 
         // then
         BatchAppendLogEntries logCommand = (BatchAppendLogEntries) single( outcome.getLogCommands() );
@@ -658,7 +658,7 @@ class LeaderTest
 
         // when a single instance responds (plus self == 2 out of 3 instances)
         Outcome outcome =
-                leader.handle( new RaftMessages.AppendEntries.Response( member1, 0, true, 0, 0 ), state, log() );
+                leader.handle( new RaftMessages.AppendEntries.Response( member1, 0, true, 0, 0 ), contextWithState( state ), log() );
 
         // then
         Assertions.assertEquals( 0L, outcome.getCommitIndex() );
@@ -685,7 +685,7 @@ class LeaderTest
         Leader leader = new Leader();
 
         // when
-        Outcome outcome = leader.handle( new AppendEntries.Response( member1, 0, true, 2, 2 ), state, log() );
+        Outcome outcome = leader.handle( new AppendEntries.Response( member1, 0, true, 2, 2 ), contextWithState( state ), log() );
 
         state.update( outcome );
 
@@ -707,7 +707,8 @@ class LeaderTest
                 .build();
 
         // when
-        Outcome outcome = leader.handle( new RaftMessages.Vote.Request( member1, rivalTerm, member1, leaderCommitIndex, leaderTerm ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.Vote.Request( member1, rivalTerm, member1, leaderCommitIndex, leaderTerm ),
+                contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( LEADER );
@@ -733,7 +734,8 @@ class LeaderTest
                 .build();
 
         // when
-        Outcome outcome = leader.handle( new RaftMessages.Vote.Request( member1, rivalTerm, member1, leaderCommitIndex, leaderTerm ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.Vote.Request( member1, rivalTerm, member1, leaderCommitIndex, leaderTerm ),
+                contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
@@ -760,7 +762,7 @@ class LeaderTest
                 .build();
 
         // when
-        Outcome outcome = leader.handle( new RaftMessages.Heartbeat( member1, rivalTerm, leaderCommitIndex, leaderTerm ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.Heartbeat( member1, rivalTerm, leaderCommitIndex, leaderTerm ), contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( LEADER );
@@ -781,7 +783,7 @@ class LeaderTest
                 .build();
 
         // when
-        Outcome outcome = leader.handle( new RaftMessages.Heartbeat( member1, rivalTerm, leaderCommitIndex, leaderTerm ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.Heartbeat( member1, rivalTerm, leaderCommitIndex, leaderTerm ), contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
@@ -805,8 +807,8 @@ class LeaderTest
                 .build();
 
         // when
-        Outcome outcome =
-                leader.handle( new RaftMessages.AppendEntries.Request( member1, rivalTerm, logIndex, leaderTerm, entries, leaderCommitIndex ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.AppendEntries.Request( member1, rivalTerm, logIndex, leaderTerm, entries, leaderCommitIndex ),
+                contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( LEADER );
@@ -835,8 +837,8 @@ class LeaderTest
                 .build();
 
         // when
-        Outcome outcome =
-                leader.handle( new RaftMessages.AppendEntries.Request( member1, rivalTerm, logIndex, leaderTerm, entries, leaderCommitIndex ), state, log() );
+        Outcome outcome = leader.handle( new RaftMessages.AppendEntries.Request( member1, rivalTerm, logIndex, leaderTerm, entries, leaderCommitIndex ),
+                contextWithState( state ), log() );
 
         // then
         assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
@@ -855,13 +857,14 @@ class LeaderTest
         return logProvider.getLog( getClass() );
     }
 
-    private void appendSomeEntriesToLog( RaftState raft, Leader leader, int numberOfEntriesToAppend, int firstIndex ) throws IOException
+    private void appendSomeEntriesToLog( RaftState state, RaftMessageHandlingContext ctx, Leader leader,
+            int numberOfEntriesToAppend, int firstIndex ) throws IOException
     {
         for ( int i = 0; i < numberOfEntriesToAppend; i++ )
         {
             int prevLogIndex = (firstIndex + i) - 1;
             var content = new ReplicatedString( String.format( "content#%d", prevLogIndex ) );
-            raft.update( leader.handle( new RaftMessages.NewEntry.Request( myself, content ), raft, log() ) );
+            state.update( leader.handle( new RaftMessages.NewEntry.Request( myself, content ), ctx, log() ) );
         }
     }
 }

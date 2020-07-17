@@ -48,10 +48,9 @@ public class ComparableRaftState implements ReadableRaftState
     private final InFlightCache inFlightCache;
     private long commitIndex = -1;
     private boolean isPreElection;
-    private final boolean refusesToBeLeader;
     private boolean timersStarted;
 
-    ComparableRaftState( MemberId myself, Set<MemberId> votingMembers, Set<MemberId> replicationMembers, boolean refusesToBeLeader, boolean timersStarted,
+    ComparableRaftState( MemberId myself, Set<MemberId> votingMembers, Set<MemberId> replicationMembers, boolean timersStarted,
                          RaftLog entryLog, InFlightCache inFlightCache, LogProvider logProvider )
     {
         this.myself = myself;
@@ -60,13 +59,12 @@ public class ComparableRaftState implements ReadableRaftState
         this.entryLog = entryLog;
         this.inFlightCache = inFlightCache;
         this.log = logProvider.getLog( getClass() );
-        this.refusesToBeLeader = refusesToBeLeader;
         this.timersStarted = timersStarted;
     }
 
     ComparableRaftState( ReadableRaftState original ) throws IOException
     {
-        this( original.myself(), original.votingMembers(), original.replicationMembers(), original.refusesToBeLeader(), original.areTimersStarted(),
+        this( original.myself(), original.votingMembers(), original.replicationMembers(), original.areTimersStarted(),
                 new ComparableRaftLog( original.entryLog() ), new ConsecutiveInFlightCache(), NullLogProvider.getInstance() );
     }
 
@@ -155,12 +153,6 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public boolean supportPreVoting()
-    {
-        return false;
-    }
-
-    @Override
     public boolean isPreElection()
     {
         return isPreElection;
@@ -173,21 +165,9 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public boolean refusesToBeLeader()
-    {
-        return refusesToBeLeader;
-    }
-
-    @Override
     public boolean areTimersStarted()
     {
         return timersStarted;
-    }
-
-    @Override
-    public Set<ServerGroupName> serverGroups()
-    {
-        return Set.of();
     }
 
     @Override

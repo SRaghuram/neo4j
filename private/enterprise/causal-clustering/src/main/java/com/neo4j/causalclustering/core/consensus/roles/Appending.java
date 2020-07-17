@@ -103,30 +103,30 @@ class Appending
         outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(), appendResponse ) );
     }
 
-    static void appendNewEntry( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder, ReplicatedContent content ) throws IOException
+    static void appendNewEntry( ReadableRaftState state, OutcomeBuilder outcomeBuilder, ReplicatedContent content ) throws IOException
     {
-        long prevLogIndex = ctx.entryLog().appendIndex();
+        long prevLogIndex = state.entryLog().appendIndex();
         long prevLogTerm = prevLogIndex == -1 ? -1 :
-                           prevLogIndex > ctx.lastLogIndexBeforeWeBecameLeader() ?
-                           ctx.term() :
-                           ctx.entryLog().readEntryTerm( prevLogIndex );
+                           prevLogIndex > state.lastLogIndexBeforeWeBecameLeader() ?
+                           state.term() :
+                           state.entryLog().readEntryTerm( prevLogIndex );
 
-        RaftLogEntry newLogEntry = new RaftLogEntry( ctx.term(), content );
+        RaftLogEntry newLogEntry = new RaftLogEntry( state.term(), content );
 
         outcomeBuilder.addShipCommand( new ShipCommand.NewEntries( prevLogIndex, prevLogTerm, new RaftLogEntry[]{newLogEntry} ) )
                 .addLogCommand( new AppendLogEntry( prevLogIndex + 1, newLogEntry ) );
     }
 
-    static void appendNewEntries( ReadableRaftState ctx, OutcomeBuilder outcomeBuilder,
+    static void appendNewEntries( ReadableRaftState state, OutcomeBuilder outcomeBuilder,
             Collection<ReplicatedContent> contents ) throws IOException
     {
-        long prevLogIndex = ctx.entryLog().appendIndex();
+        long prevLogIndex = state.entryLog().appendIndex();
         long prevLogTerm = prevLogIndex == -1 ? -1 :
-                           prevLogIndex > ctx.lastLogIndexBeforeWeBecameLeader() ?
-                           ctx.term() :
-                           ctx.entryLog().readEntryTerm( prevLogIndex );
+                           prevLogIndex > state.lastLogIndexBeforeWeBecameLeader() ?
+                           state.term() :
+                           state.entryLog().readEntryTerm( prevLogIndex );
 
-        RaftLogEntry[] raftLogEntries = contents.stream().map( content -> new RaftLogEntry( ctx.term(), content ) )
+        RaftLogEntry[] raftLogEntries = contents.stream().map( content -> new RaftLogEntry( state.term(), content ) )
                 .toArray( RaftLogEntry[]::new );
 
         outcomeBuilder.addShipCommand( new ShipCommand.NewEntries( prevLogIndex, prevLogTerm, raftLogEntries ) )

@@ -19,6 +19,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.preVoteRequest;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithStateWithPreVote;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +45,7 @@ class PreVoteRequestTest
 
         Outcome outcome = role.handler.handle( preVoteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         // Candidate grants preVote if requestor is up to date
@@ -63,7 +64,7 @@ class PreVoteRequestTest
 
         Outcome outcome = role.handler.handle( preVoteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         assertFalse( ((RaftMessages.PreVote.Response) messageFor( outcome, member1 )).voteGranted() );
@@ -82,7 +83,7 @@ class PreVoteRequestTest
 
         Outcome outcome = role.handler.handle( preVoteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         assertEquals( role, outcome.getRole() );
@@ -100,7 +101,7 @@ class PreVoteRequestTest
 
         Outcome outcome = role.handler.handle( preVoteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         assertEquals( Role.FOLLOWER, outcome.getRole() );
@@ -118,7 +119,7 @@ class PreVoteRequestTest
 
         Outcome outcome = role.handler.handle( preVoteRequest().from( member1 ).term( candidateTerm )
                 .lastLogIndex( 0 )
-                .lastLogTerm( -1 ).build(), state, log() );
+                .lastLogTerm( -1 ).build(), contextWithStateWithPreVote( state ), log() );
 
         // then
         assertEquals( candidateTerm, outcome.getTerm() );
@@ -128,7 +129,6 @@ class PreVoteRequestTest
     {
         return builder()
                 .myself( myself )
-                .supportsPreVoting( true )
                 .build();
     }
 

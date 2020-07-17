@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
+import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
@@ -29,7 +30,6 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.DurationRange;
@@ -95,9 +95,12 @@ public class RaftMachineBuilder
     {
         termState.update( term );
         var config = Config.newBuilder()
+                           .set( CausalClusteringSettings.enable_pre_voting, false )
+                           .set( CausalClusteringSettings.refuse_to_be_leader, false )
                            .set( CausalClusteringSettings.leader_failure_detection_window, detectionWindow )
-                           .set( CausalClusteringSettings.election_failure_detection_window, detectionWindow );
-        var raftTimersConfig = new RaftTimersConfig( config.build() );
+                           .set( CausalClusteringSettings.election_failure_detection_window, detectionWindow )
+                           .build();
+        var raftTimersConfig = new RaftTimersConfig( config );
         LeaderAvailabilityTimers leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, clock, timerService, logProvider );
         SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );
         RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator, member,
@@ -108,15 +111,16 @@ public class RaftMachineBuilder
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, clock, member, membershipManager,
                                             retryTimeMillis, catchupBatchSize, maxAllowedShippingLag, inFlightCache );
 
-        var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider, false, false,
-                                       Set::of, new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
+        var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider,
+                                       new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
+        var raftMessageHandlingContext = new RaftMessageHandlingContext( raftState, config );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var outcomeApplier = new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                                                      membershipManager, logProvider, rejection ->
                                                      {
                                                      } );
         RaftMachine raft = new RaftMachine( member, leaderAvailabilityTimers, logProvider,
-                                            membershipManager, inFlightCache, outcomeApplier, raftState );
+                                            membershipManager, inFlightCache, outcomeApplier, raftState, raftMessageHandlingContext );
         inbound.registerHandler( incomingMessage ->
                                  {
                                      try

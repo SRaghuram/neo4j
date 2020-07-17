@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
-import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
+import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 
 import java.io.IOException;
 
@@ -14,5 +14,5 @@ import org.neo4j.logging.Log;
 
 public interface RaftMessageHandler
 {
-    Outcome handle( RaftMessages.RaftMessage message, ReadableRaftState context, Log log ) throws IOException;
+    Outcome handle( RaftMessages.RaftMessage message, RaftMessageHandlingContext context, Log log ) throws IOException;
 }

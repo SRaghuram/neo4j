@@ -61,8 +61,8 @@ class RaftStateTest
         InFlightCache cache = new ConsecutiveInFlightCache();
         RaftState raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
-                new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(), false, false,
-                Set::of, new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
+                new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(),
+                new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
 
         List<RaftLogCommand> logCommands = new LinkedList<>()
         {{
@@ -101,7 +101,6 @@ class RaftStateTest
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
-                false, false, Set::of,
                 new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
 
         raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( initialFollowerStates() ).renewElectionTimer( ACTIVE_ELECTION ).build() );
@@ -125,7 +124,6 @@ class RaftStateTest
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
-                false, false, Set::of,
                 leadershipTransfers );
 
         // when
@@ -150,8 +148,7 @@ class RaftStateTest
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
-                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
-                false, false, Set::of, timer );
+                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), timer );
 
         var outcomeA = OutcomeBuilder.builder( LEADER, raftState );
         outcomeA.startTransferringLeadership( member( 1 ) );
@@ -183,8 +180,7 @@ class RaftStateTest
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
-                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
-                false, false, Set::of, timer );
+                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), timer );
 
         assertFalse( raftState.areTransferringLeadership() );
 

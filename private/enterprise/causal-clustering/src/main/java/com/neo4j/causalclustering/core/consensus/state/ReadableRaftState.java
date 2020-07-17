@@ -43,17 +43,11 @@ public interface ReadableRaftState
 
     long commitIndex();
 
-    boolean supportPreVoting();
-
     boolean isPreElection();
 
     Set<MemberId> preVotesForMe();
 
-    boolean refusesToBeLeader();
-
     boolean areTimersStarted();
-
-    Set<ServerGroupName> serverGroups();
 
     boolean areTransferringLeadership();
 }

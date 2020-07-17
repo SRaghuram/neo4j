@@ -28,6 +28,7 @@ import org.neo4j.logging.NullLogProvider;
 import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesRequest;
 import static com.neo4j.causalclustering.core.consensus.roles.AppendEntriesRequestTest.ContentGenerator.content;
+import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,7 +69,7 @@ public class AppendEntriesRequestTest
                 .prevLogIndex( 0 )
                 .prevLogTerm( 0 )
                 .logEntry( logEntry )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
@@ -97,7 +98,7 @@ public class AppendEntriesRequestTest
                 .prevLogTerm( 0 )
                 .logEntry( logEntry1 )
                 .logEntry( logEntry2 )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
@@ -129,7 +130,7 @@ public class AppendEntriesRequestTest
                 .prevLogIndex( state.entryLog().appendIndex() + 1 )
                 .prevLogTerm( leaderTerm )
                 .logEntry( new RaftLogEntry( leaderTerm, content() ) )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         Response response = (Response) messageFor( outcome, leader );
@@ -157,7 +158,7 @@ public class AppendEntriesRequestTest
                 .prevLogIndex( raftLog.appendIndex() )
                 .prevLogTerm( leaderTerm )
                 .logEntry( new RaftLogEntry( leaderTerm, content() ) )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
@@ -187,7 +188,7 @@ public class AppendEntriesRequestTest
                 .prevLogIndex( previousIndex )
                 .prevLogTerm( raftLog.readEntryTerm( previousIndex ) )
                 .logEntry( new RaftLogEntry( leaderTerm, content() ) )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
@@ -215,7 +216,7 @@ public class AppendEntriesRequestTest
                 .prevLogIndex( raftLog.appendIndex() )
                 .prevLogTerm( leaderTerm )
                 .leaderCommit( 0 )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
@@ -246,7 +247,7 @@ public class AppendEntriesRequestTest
                 .prevLogTerm( leaderTerm )
                 .logEntry( newLogEntry )
                 .leaderCommit( 0 )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
@@ -277,7 +278,7 @@ public class AppendEntriesRequestTest
                 .prevLogIndex( raftLog.appendIndex() + 1 )
                 .prevLogTerm( leaderTerm )
                 .leaderCommit( 0 )
-                .build(), state, log() );
+                .build(), contextWithState( state ), log() );
 
         // then
         assertFalse( ((Response) messageFor( outcome, leader )).success() );

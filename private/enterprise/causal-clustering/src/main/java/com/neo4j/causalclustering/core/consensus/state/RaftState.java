@@ -38,7 +38,6 @@ public class RaftState implements ReadableRaftState
     private final Log log;
     private final RaftLog entryLog;
     private final InFlightCache inFlightCache;
-    private final boolean supportPreVoting;
     private final ExpiringSet<MemberId> leadershipTransfers;
 
     private TermState termState;
@@ -54,18 +53,14 @@ public class RaftState implements ReadableRaftState
     private long commitIndex = -1;
     private long lastLogIndexBeforeWeBecameLeader = -1;
     private boolean isPreElection;
-    private final boolean refuseToBeLeader;
     private boolean timersStarted;
-    private final Supplier<Set<ServerGroupName>> serverGroupsSupplier;
 
     public RaftState( MemberId myself,
                       StateStorage<TermState> termStorage,
                       RaftMembership membership,
                       RaftLog entryLog,
                       StateStorage<VoteState> voteStorage,
-                      InFlightCache inFlightCache, LogProvider logProvider, boolean supportPreVoting,
-                      boolean refuseToBeLeader,
-                      Supplier<Set<ServerGroupName>> serverGroupsSupplier,
+                      InFlightCache inFlightCache, LogProvider logProvider,
                       ExpiringSet<MemberId> leadershipTransfers )
     {
         this.myself = myself;
@@ -74,12 +69,9 @@ public class RaftState implements ReadableRaftState
         this.membership = membership;
         this.entryLog = entryLog;
         this.inFlightCache = inFlightCache;
-        this.supportPreVoting = supportPreVoting;
         this.log = logProvider.getLog( getClass() );
 
         // Initial state
-        this.refuseToBeLeader = refuseToBeLeader;
-        this.serverGroupsSupplier = serverGroupsSupplier;
         this.leadershipTransfers = leadershipTransfers;
     }
 
@@ -186,12 +178,6 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public boolean supportPreVoting()
-    {
-        return supportPreVoting;
-    }
-
-    @Override
     public boolean isPreElection()
     {
         return isPreElection;
@@ -204,21 +190,9 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public boolean refusesToBeLeader()
-    {
-        return refuseToBeLeader;
-    }
-
-    @Override
     public boolean areTimersStarted()
     {
         return timersStarted;
-    }
-
-    @Override
-    public Set<ServerGroupName> serverGroups()
-    {
-        return serverGroupsSupplier.get();
     }
 
     @Override

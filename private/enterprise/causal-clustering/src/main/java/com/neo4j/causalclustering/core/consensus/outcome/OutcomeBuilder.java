@@ -82,16 +82,16 @@ public class OutcomeBuilder
         this.commitIndex = commitIndex;
     }
 
-    public static OutcomeBuilder builder( Role currentRole, ReadableRaftState ctx )
+    public static OutcomeBuilder builder( Role currentRole, ReadableRaftState state )
     {
-        var isPreElection = (currentRole == Role.FOLLOWER) && ctx.isPreElection();
-        Set<MemberId> preVotesForMe = isPreElection ? new HashSet<>( ctx.preVotesForMe() ) : emptySet();
-        Set<MemberId> votesForMe = (currentRole == Role.CANDIDATE) ? new HashSet<>( ctx.votesForMe() ) : emptySet();
-        Set<MemberId> heartbeatResponses = (currentRole == Role.LEADER) ? new HashSet<>( ctx.heartbeatResponses() ) : emptySet();
-        var lastLogIndexBeforeWeBecameLeader = (currentRole == Role.LEADER) ? ctx.lastLogIndexBeforeWeBecameLeader() : -1;
-        FollowerStates<MemberId> followerStates = (currentRole == Role.LEADER) ? ctx.followerStates() : new FollowerStates<>();
-        return new OutcomeBuilder( currentRole, ctx.term(), ctx.leader(), ctx.leaderCommit(), ctx.votedFor(), null, isPreElection, -1,
-                preVotesForMe, votesForMe, heartbeatResponses, lastLogIndexBeforeWeBecameLeader, followerStates, ctx.commitIndex() );
+        var isPreElection = (currentRole == Role.FOLLOWER) && state.isPreElection();
+        Set<MemberId> preVotesForMe = isPreElection ? new HashSet<>( state.preVotesForMe() ) : emptySet();
+        Set<MemberId> votesForMe = (currentRole == Role.CANDIDATE) ? new HashSet<>( state.votesForMe() ) : emptySet();
+        Set<MemberId> heartbeatResponses = (currentRole == Role.LEADER) ? new HashSet<>( state.heartbeatResponses() ) : emptySet();
+        var lastLogIndexBeforeWeBecameLeader = (currentRole == Role.LEADER) ? state.lastLogIndexBeforeWeBecameLeader() : -1;
+        FollowerStates<MemberId> followerStates = (currentRole == Role.LEADER) ? state.followerStates() : new FollowerStates<>();
+        return new OutcomeBuilder( currentRole, state.term(), state.leader(), state.leaderCommit(), state.votedFor(), null, isPreElection, -1,
+                preVotesForMe, votesForMe, heartbeatResponses, lastLogIndexBeforeWeBecameLeader, followerStates, state.commitIndex() );
     }
 
     public OutcomeBuilder setRole( Role role )

@@ -45,8 +45,6 @@ public class RaftStateBuilder
     private Set<MemberId> votingMembers = emptySet();
     private Set<MemberId> replicationMembers = emptySet();
     private RaftLog entryLog = new InMemoryRaftLog();
-    private boolean supportPreVoting;
-    private boolean refusesToBeLeader;
     private boolean beforeTimersStarted;
     private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() );
 
@@ -59,12 +57,6 @@ public class RaftStateBuilder
     public RaftStateBuilder addInitialOutcome( Outcome outcome )
     {
         this.outcome = outcome;
-        return this;
-    }
-
-    public RaftStateBuilder supportsPreVoting( boolean supportPreVoting )
-    {
-        this.supportPreVoting = supportPreVoting;
         return this;
     }
 
@@ -86,12 +78,6 @@ public class RaftStateBuilder
         return this;
     }
 
-    public RaftStateBuilder setRefusesToBeLeader( boolean refusesToBeLeader )
-    {
-        this.refusesToBeLeader = refusesToBeLeader;
-        return this;
-    }
-
     public RaftStateBuilder setBeforeTimersStarted( boolean beforeTimersStarted )
     {
         this.beforeTimersStarted = beforeTimersStarted;
@@ -105,8 +91,7 @@ public class RaftStateBuilder
         StubMembership membership = new StubMembership( votingMembers, replicationMembers );
 
         RaftState state = new RaftState( myself, termStore, membership, entryLog,
-                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader,
-                Set::of, leadershipTransfers );
+                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), leadershipTransfers );
 
         state.update( outcome );
         if ( !beforeTimersStarted )
