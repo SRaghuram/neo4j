@@ -7,18 +7,12 @@ package com.neo4j.dbms.procedures;
 
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.dbms.DatabaseStateService;
-import org.neo4j.dbms.OperatorState;
 import org.neo4j.dbms.procedures.DatabaseStateProcedure;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.ResourceTracker;
@@ -30,15 +24,11 @@ import org.neo4j.values.AnyValue;
 public class ClusteredDatabaseStateProcedure extends DatabaseStateProcedure
 {
     private final TopologyService topologyService;
-    private final MemberId myself;
-    private final DatabaseStateService stateService;
 
-    public ClusteredDatabaseStateProcedure( DatabaseIdRepository idRepository, TopologyService topologyService, DatabaseStateService stateService )
+    public ClusteredDatabaseStateProcedure( DatabaseIdRepository idRepository, TopologyService topologyService )
     {
         super( idRepository );
         this.topologyService = topologyService;
-        this.myself = topologyService.memberId();
-        this.stateService = stateService;
     }
 
     @Override
@@ -64,41 +54,19 @@ public class ClusteredDatabaseStateProcedure extends DatabaseStateProcedure
             MemberId memberId, NamedDatabaseId namedDatabaseId )
     {
         return Stream.ofNullable( serverInfos.get( memberId ) )
-                .map( discoveryInfo -> resultRowFactory( namedDatabaseId, topologyService, memberId, discoveryInfo ) );
+                .map( discoveryInfo -> resultRowFactory( namedDatabaseId, memberId, discoveryInfo ) );
     }
 
-    private AnyValue[] resultRowFactory( NamedDatabaseId namedDatabaseId, TopologyService topologyService, MemberId memberId,
-            DiscoveryServerInfo serverInfo )
+    private AnyValue[] resultRowFactory( NamedDatabaseId namedDatabaseId, MemberId memberId, DiscoveryServerInfo serverInfo )
     {
         var role = topologyService.lookupRole( namedDatabaseId, memberId );
         var roleString = role.name().toLowerCase();
         var address = serverInfo.boltAddress().toString();
-        var isMe = Objects.equals( memberId, myself );
-        var stateService = isMe ? this.stateService : new RemoteDatabaseStateService( id -> topologyService.lookupDatabaseState( id, memberId ) );
+        var status = topologyService.lookupDatabaseState( namedDatabaseId, memberId ).operatorState();
+        var error = topologyService.lookupDatabaseState( namedDatabaseId, memberId ).failure().map( Throwable::getMessage );
 
-        return resultRowFactory( namedDatabaseId, roleString, address, stateService );
+        return resultRowFactory( status, error, roleString, address );
     }
 
-    private static class RemoteDatabaseStateService implements DatabaseStateService
-    {
-        private final Function<NamedDatabaseId,DiscoveryDatabaseState> stateLookup;
-
-        RemoteDatabaseStateService( Function<NamedDatabaseId,DiscoveryDatabaseState> stateLookup )
-        {
-            this.stateLookup = stateLookup;
-        }
-
-        @Override
-        public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
-        {
-            return stateLookup.apply( namedDatabaseId ).operatorState();
-        }
-
-        @Override
-        public Optional<Throwable> causeOfFailure( NamedDatabaseId namedDatabaseId )
-        {
-            return stateLookup.apply( namedDatabaseId ).failure();
-        }
-    }
 }
 

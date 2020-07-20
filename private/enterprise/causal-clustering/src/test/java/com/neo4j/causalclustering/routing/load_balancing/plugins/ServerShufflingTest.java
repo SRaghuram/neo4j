@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
@@ -30,6 +31,7 @@ import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -124,6 +126,8 @@ class ServerShufflingTest
         when( coreTopologyService.coreTopologyForDatabase( namedDatabaseId ) ).thenReturn( coreTopology );
         when( coreTopologyService.readReplicaTopologyForDatabase( namedDatabaseId ) )
                 .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), emptyMap() ) );
+        when( coreTopologyService.lookupDatabaseState( any(), any() ) )
+                .thenReturn( new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED ) );
 
         var serverPoliciesPlugin = new ServerPoliciesPlugin();
         assertTrue( serverPoliciesPlugin.isShufflingPlugin() );

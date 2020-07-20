@@ -235,6 +235,18 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
                         .findFirst().orElse( null );
     }
 
+    public void removeLeader()
+    {
+        Map.Entry<MemberId,RoleInfo> leader = coreRoles.entrySet()
+                                                       .stream()
+                                                       .filter( entry -> entry.getValue() == RoleInfo.LEADER )
+                                                       .findFirst().orElse( null );
+        if ( leader != null )
+        {
+            coreRoles.remove( leader.getKey() );
+        }
+    }
+
     @Override
     public MemberId memberId()
     {

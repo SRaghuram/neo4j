@@ -60,9 +60,7 @@ class ClusteredDatabaseStateProcedureTest
         topologyService.setState( replicas, successfulState );
         topologyService.setState( Set.of( memberId( 2 ) ), failedState );
 
-        var localStateService = alwaysHealthyLocalStateService();
-
-        var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
+        var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService );
         // when
         var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( namedDatabaseId.name() )}, mock( ResourceTracker.class ) );
 
@@ -93,9 +91,7 @@ class ClusteredDatabaseStateProcedureTest
         topologyService.setState( cores, successfulState );
         topologyService.setState( replicas, successfulState );
 
-        var localStateService = alwaysHealthyLocalStateService();
-
-        var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
+        var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService );
 
         // when
         var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( namedDatabaseId.name() )}, mock( ResourceTracker.class ) );
@@ -129,10 +125,7 @@ class ClusteredDatabaseStateProcedureTest
         topologyService.setState( replicas, defaultDatabaseState );
         topologyService.setState( cores, coreOnlyDatabaseState );
 
-        var localStateService = alwaysHealthyLocalStateService();
-
-        var localServerInfo = topologyService.allCoreServers().get( memberId( 0 ) );
-        var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
+        var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService );
 
         // when
         var defaultResult = procedure.apply( mock( Context.class ),
@@ -152,13 +145,5 @@ class ClusteredDatabaseStateProcedureTest
                 .map( columns -> columns[0] )
                 .filter( role -> Objects.equals( role, stringValue( "read_replica" ) ) )
                 .count();
-    }
-
-    private DatabaseStateService alwaysHealthyLocalStateService()
-    {
-        var localStateService = mock( DatabaseStateService.class );
-        when( localStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( STARTED );
-        when( localStateService.causeOfFailure( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.empty() );
-        return localStateService;
     }
 }

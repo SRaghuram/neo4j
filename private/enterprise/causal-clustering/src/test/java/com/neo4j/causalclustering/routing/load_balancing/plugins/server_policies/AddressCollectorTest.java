@@ -5,15 +5,20 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.discovery.CoreTopologyService;
-import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.discovery.FakeTopologyService;
+import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMember;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
+import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -27,8 +32,11 @@ import org.neo4j.logging.Log;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
+import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.configuration.CausalClusteringSettings.load_balancing_shuffle;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.contains;
@@ -36,16 +44,11 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
 class AddressCollectorTest
 {
     private NamedDatabaseId namedDatabaseId = DatabaseIdFactory.from( "testDb", UUID.randomUUID() );
-    private RaftId raftId = RaftId.from( namedDatabaseId.databaseId() );
-    private TopologyService topologyService = mock( CoreTopologyService.class );
-    private DefaultLeaderService leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
     private Log log = nullLogProvider().getLog( "ignore" );
 
     @Test
@@ -210,28 +213,129 @@ class AddressCollectorTest
         assertThat( routingResultNotShuffledFirst.readEndpoints(), equalTo( routingResultNotShuffledSecond.readEndpoints() ) );
     }
 
+    @Test
+    void shouldReturnOnlyCoresThatAreOnline()
+    {
+        // given that one of the cores is offline
+        var cores = createCores( 1 );
+        var readReplicas = createReadReplicas( 1, 1 );
+
+        var config = getConfig( true, true );
+
+        var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), member( 0 ), Set.of( namedDatabaseId ) );
+        var leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
+
+        topologyService.setState( cores.keySet(), new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STOPPED ) );
+        topologyService.setState( readReplicas.keySet(), new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED ) );
+
+        var addressCollector = new AddressCollector( topologyService, leaderService, config, log );
+        var address0 = addressesForCore( 0, false ).boltAddress();
+        var address1 = addressesForReadReplica( 1 ).boltAddress();
+
+        // when
+        var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
+
+        // then
+        assertThat( routingResult.routeEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.routeEndpoints(), containsInAnyOrder( address0 ) );
+        assertThat( routingResult.writeEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.writeEndpoints(), contains( address0 ) );
+        assertThat( routingResult.readEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.readEndpoints(), contains( address1 ) );
+    }
+
+    @Test
+    void shouldReturnOnlyReadReplicasThatAreOnline()
+    {
+        // given that all cores are online and one of the two read replicas is online
+        var cores = createCores( 1 );
+        var readReplicas = createReadReplicas( 1, 2 );
+        var readMembers = new ArrayList<>( readReplicas.keySet() );
+
+        var config = getConfig( false, true );
+
+        var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), member( 0 ), Set.of( namedDatabaseId ) );
+        var leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
+        leaderService.onLeaderSwitch( namedDatabaseId, leader( 0, 1 ) );
+
+        topologyService.setState( cores.keySet(), new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED ) );
+        topologyService.setState( Set.of( readMembers.get( 0 ) ), new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED ) );
+        topologyService.setState( Set.of( readMembers.get( 1 ) ), new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STOPPED ) );
+
+        var addressCollector = new AddressCollector( topologyService, leaderService, config, log );
+        var address0 = addressesForCore( 0, false ).boltAddress();
+        var address1 = addressesForReadReplica( 1 ).boltAddress();
+
+        // when
+        var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
+
+        // then
+        assertThat( routingResult.routeEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.routeEndpoints(), containsInAnyOrder( address0 ) );
+        assertThat( routingResult.writeEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.writeEndpoints(), contains( address0 ) );
+        assertThat( routingResult.readEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.readEndpoints(), contains( address1 ) );
+    }
+
     private AddressCollector setup( boolean allowReads, boolean shuffle, int numberOfCores, int numberOnReplicas, int leaderIndex )
     {
-        var cores = IntStream.range( 0, numberOfCores ).boxed()
-                             .collect( Collectors.toMap( RaftTestMember::member, i -> addressesForCore( i, false ) ) );
-        var readReplicas = IntStream.range( numberOfCores, numberOfCores + numberOnReplicas ).boxed()
-                                    .collect( Collectors.toMap( RaftTestMember::member, i -> addressesForReadReplica( i ) ) );
-        when( topologyService.allCoreServers() ).thenReturn( cores );
-        when( topologyService.allReadReplicas() ).thenReturn( readReplicas );
-        when( topologyService.coreTopologyForDatabase( namedDatabaseId ) )
-                .thenReturn( new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftId, cores ) );
-        when( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ) )
-                .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), readReplicas ) );
+        var cores = createCores( numberOfCores );
+        var readReplicas = createReadReplicas( numberOfCores, numberOnReplicas );
+
+        return setup( allowReads, shuffle, leaderIndex, cores, readReplicas );
+    }
+
+    private AddressCollector setup( boolean allowReads,
+                                    boolean shuffle,
+                                    int leaderIndex,
+                                    Map<MemberId,CoreServerInfo> cores,
+                                    Map<MemberId,ReadReplicaInfo> readReplicas )
+    {
+        Set<MemberId> sortedCores =
+                cores.keySet().stream().sorted( Comparator.comparingInt( m -> cores.get( m ).getRaftServer().getPort() ) ).collect(
+                        Collectors.toCollection( LinkedHashSet::new ) );
+        Set<MemberId> sortedRead =
+                readReplicas.keySet().stream().sorted( Comparator.comparingInt( m -> readReplicas.get( m ).catchupServer().getPort() ) ).collect(
+                        Collectors.toCollection( LinkedHashSet::new ) );
+
+        FakeTopologyService topologyService = new FakeTopologyService( sortedCores, sortedRead, member( 1 ), Set.of( namedDatabaseId ) );
+        topologyService.setState( sortedCores, new DiscoveryDatabaseState( namedDatabaseId.databaseId(), EnterpriseOperatorState.STARTED ) );
+        topologyService.setState( sortedRead, new DiscoveryDatabaseState( namedDatabaseId.databaseId(), EnterpriseOperatorState.STARTED ) );
+
+        DefaultLeaderService leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
 
         if ( leaderIndex >= 0 )
         {
             leaderService.onLeaderSwitch( namedDatabaseId, leader( leaderIndex, 1 ) );
         }
+        else
+        {
+            topologyService.removeLeader();
+        }
 
+        Config config = getConfig( allowReads, shuffle );
+
+        return new AddressCollector( topologyService, leaderService, config, log );
+    }
+
+    private Config getConfig( boolean allowReads, boolean shuffle )
+    {
         var config = Config.defaults();
         config.set( cluster_allow_reads_on_followers, allowReads );
         config.set( load_balancing_shuffle, shuffle );
+        return config;
+    }
 
-        return new AddressCollector( topologyService, leaderService, config, log );
+    private Map<MemberId,ReadReplicaInfo> createReadReplicas( int numberOfCores, int numberOnReplicas )
+    {
+        return IntStream.range( numberOfCores, numberOfCores + numberOnReplicas ).boxed()
+                        .collect( Collectors.toMap( RaftTestMember::member, i -> addressesForReadReplica( i ) ) );
+    }
+
+    private Map<MemberId,CoreServerInfo> createCores( int numberOfCores )
+    {
+        return IntStream.range( 0, numberOfCores ).boxed()
+                        .collect( Collectors.toMap( RaftTestMember::member, i -> addressesForCore( i, false ) ) );
     }
 }

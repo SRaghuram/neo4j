@@ -182,8 +182,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.register( new ReadReplicaRoleProcedure( databaseManager ) );
         globalProcedures.register( new ReadReplicaToggleProcedure( databaseManager ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
-        globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
-                reconcilerModule.databaseStateService() ) );
+        globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService ) );
     }
 
     @Override

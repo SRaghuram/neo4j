@@ -28,6 +28,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -62,7 +63,7 @@ public class AddressCollector
 
         return new RoutingResult( routeEndpoints( coreTopology, policy, shouldShuffle ),
                                   writeEndpoints( namedDatabaseId ),
-                                  readEndpoints( coreTopology, rrTopology, optionalLeaderId, policy, shouldShuffle ),
+                                  readEndpoints( coreTopology, rrTopology, optionalLeaderId, policy, shouldShuffle, namedDatabaseId ),
                                   timeToLive );
     }
 
@@ -104,8 +105,12 @@ public class AddressCollector
         return optionalLeaderAddress.stream().collect( toList() );
     }
 
-    private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology rrTopology,
-                                               Optional<MemberId> optionalLeaderId, Policy policy, boolean shouldShuffle )
+    private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology,
+                                               DatabaseReadReplicaTopology rrTopology,
+                                               Optional<MemberId> optionalLeaderId,
+                                               Policy policy,
+                                               boolean shouldShuffle,
+                                               NamedDatabaseId dbId )
     {
         var possibleReaders = rrTopology.members().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
 
@@ -132,7 +137,14 @@ public class AddressCollector
         {
             Collections.shuffle( readers );
         }
-        return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
+        return readers.stream()
+                      .filter( r -> isMemberOnline( r.memberId(), dbId ) )
+                      .map( ServerInfo::boltAddress ).collect( toList() );
+    }
+
+    private boolean isMemberOnline( MemberId memberId, NamedDatabaseId dbId )
+    {
+        return topologyService.lookupDatabaseState( dbId, memberId ).operatorState() == STARTED;
     }
 
     private static ServerInfo newServerInfo( Map.Entry<MemberId,? extends DiscoveryServerInfo> entry )

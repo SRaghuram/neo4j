@@ -11,10 +11,12 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -69,6 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
@@ -123,6 +126,10 @@ class GetRoutingTableProcedureForSingleDCTest
         databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
         this.databaseManager = databaseManager;
         coreTopologyService = mock( CoreTopologyService.class );
+        var discoveryDatabaseState = mock( DiscoveryDatabaseState.class );
+        when( discoveryDatabaseState.operatorState() ).thenReturn( EnterpriseOperatorState.STARTED );
+        when( coreTopologyService.lookupDatabaseState( any(), any() ) ).thenReturn( discoveryDatabaseState );
+
         leaderService = new MutableLeaderService( namedDatabaseId, coreTopologyService );
     }
 
