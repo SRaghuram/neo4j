@@ -424,4 +424,23 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should be(List(Map("x" -> List(10))))
   }
+
+  test("should handle ANY (...) AND ANY (..)") {
+    //given
+    executeSingle(
+      """create (n:Test {id: 1, ne: ["TIT", "O"]})
+        |create (n2:Test {id: 2, ne: ["PER"]})
+        |create (n)-[:NEXT]->(n2)
+        |""".stripMargin)
+
+    //when
+    val result =
+      executeWith(Configs.InterpretedAndSlottedAndPipelined,
+        """MATCH path=(src:Test)-[r1:NEXT]->(dst:Test)
+          |WHERE ANY(ne IN src.ne WHERE ne IN ["TIT"]) AND ANY(ne IN dst.ne WHERE ne IN ["PER"])
+          |RETURN path""".stripMargin)
+
+    //then
+    result shouldNot be(empty)
+  }
 }
