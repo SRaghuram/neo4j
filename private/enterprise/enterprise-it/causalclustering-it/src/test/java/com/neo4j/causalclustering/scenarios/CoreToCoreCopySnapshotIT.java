@@ -70,7 +70,7 @@ class CoreToCoreCopySnapshotIT
         // shutdown the follower, remove the store, restart
         follower.shutdown();
         fs.deleteRecursively( follower.databaseLayout().databaseDirectory().toFile() );
-        fs.deleteRecursively( follower.clusterStateDirectory() );
+        follower.unbind( fs );
         follower.start();
 
         // then
@@ -97,7 +97,7 @@ class CoreToCoreCopySnapshotIT
         // shutdown the follower, remove the store, restart
         follower.shutdown();
         fs.deleteRecursively( follower.databaseLayout().databaseDirectory().toFile() );
-        fs.deleteRecursively( follower.clusterStateDirectory() );
+        follower.unbind( fs );
         follower.start();
 
         // then

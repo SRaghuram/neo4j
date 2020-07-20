@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -35,6 +36,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -160,7 +162,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     {
         for ( CoreClusterMember member : cluster.coreMembers() )
         {
-            fs.deleteRecursively( member.clusterStateDirectory() );
+            member.unbind( fs );
         }
     }
 

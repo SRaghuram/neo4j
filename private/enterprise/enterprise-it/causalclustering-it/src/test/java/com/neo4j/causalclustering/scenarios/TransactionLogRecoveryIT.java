@@ -100,7 +100,7 @@ class TransactionLogRecoveryIT
 
         // and deleting the cluster state, making sure a snapshot is required during startup
         // effectively a seeding scenario -- representing the use of the unbind command on a crashed store
-        fs.deleteRecursively( core.clusterStateDirectory() );
+        core.unbind( fs );
 
         // then: we should still be able to start
         core.start();

@@ -36,9 +36,11 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.database.Database;
@@ -51,10 +53,12 @@ import org.neo4j.monitoring.Monitors;
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
 import static com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies.NO_BALANCING;
 import static java.lang.Boolean.TRUE;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
+import static org.neo4j.dbms.identity.IdentityModule.SERVER_ID_FILENAME;
 
 public class CoreClusterMember implements ClusterMember
 {
@@ -342,5 +346,11 @@ public class CoreClusterMember implements ClusterMember
             databaseIdRepository = databaseManager.databaseIdRepository();
         }
         return databaseIdRepository.getByName( databaseName ).orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
+    }
+
+    public void unbind( FileSystemAbstraction fs ) throws IOException
+    {
+        fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
+        fs.deleteFile( config().get( data_directory ).resolve( SERVER_ID_FILENAME ).toFile() );
     }
 }
