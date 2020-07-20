@@ -220,13 +220,13 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public PublishRaftIdOutcome publishRaftId( RaftId raftId ) throws TimeoutException
+    public PublishRaftIdOutcome publishRaftId( RaftId raftId, MemberId memberId ) throws TimeoutException
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
             var timeout = config.get( CausalClusteringInternalSettings.raft_id_publish_timeout );
-            var request = new RaftIdSetRequest( raftId, identityModule.memberId(), timeout );
+            var request = new RaftIdSetRequest( raftId, memberId, timeout );
             var idSetJob = Patterns.ask( coreTopologyActor, request, timeout )
                                    .thenApplyAsync( this::checkOutcome, executor )
                                    .toCompletableFuture();

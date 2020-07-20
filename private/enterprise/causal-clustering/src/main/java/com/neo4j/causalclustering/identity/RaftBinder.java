@@ -322,7 +322,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         {
             try
             {
-                outcome = topologyService.publishRaftId( localRaftId );
+                outcome = topologyService.publishRaftId( localRaftId, myIdentity );
             }
             catch ( TimeoutException e )
             {
