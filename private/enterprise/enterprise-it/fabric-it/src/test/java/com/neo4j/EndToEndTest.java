@@ -28,6 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.bolt.v41.messaging.RoutingContext;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
@@ -35,12 +36,21 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.types.Node;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
+import org.neo4j.fabric.executor.FabricExecutor;
+import org.neo4j.fabric.transaction.FabricTransactionInfo;
+import org.neo4j.fabric.transaction.TransactionManager;
+import org.neo4j.values.virtual.MapValue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.internal.helpers.collection.Iterables.stream;
+import static org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo.EMBEDDED_CONNECTION;
+import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
 
 class EndToEndTest
 {
@@ -924,6 +934,43 @@ class EndToEndTest
         } ) );
 
         assertThat( ex.getMessage() ).contains( "Writing in read access mode not allowed" );
+    }
+
+    @Test
+    void testRollbackOnStatementFailure()
+    {
+        // this is intentionally not using the driver, because the driver closes transactions on any failure
+        // and this test verifies that the server does the same (we should not rely on the drivers with this behaviour
+        // as all the drivers might not come from us)
+
+        var dependencies = testFabric.getTestServer().getDependencies();
+        var transactionManager = dependencies.resolveDependency( TransactionManager.class );
+        var fabricExecutor = dependencies.resolveDependency( FabricExecutor.class );
+        var transactionInfo = new FabricTransactionInfo( org.neo4j.bolt.runtime.AccessMode.READ, AUTH_DISABLED,
+                EMBEDDED_CONNECTION, "mega", false, Duration.ZERO, Map.of(), new RoutingContext( false, Map.of() ) );
+        var bookmarkManager = mock( TransactionBookmarkManager.class );
+
+        var tx1 = transactionManager.begin( transactionInfo, bookmarkManager );
+        var tx2 = transactionManager.begin( transactionInfo, bookmarkManager );
+
+        assertEquals( 2, transactionManager.getOpenTransactions().size() );
+
+        var query1 = joinAsLines(
+                "USE neo4j",
+                "RETURN 1/0 AS res"
+        );
+
+        assertThrows( org.neo4j.exceptions.ArithmeticException.class, () -> fabricExecutor.run( tx1, query1, MapValue.EMPTY ).records().collectList().block() );
+
+        var query2 = joinAsLines(
+                "USE neo4j",
+                "UNWIND [1, 0] AS a",
+                "RETURN 1/a AS res"
+        );
+
+        assertThrows( org.neo4j.exceptions.ArithmeticException.class, () -> fabricExecutor.run( tx2, query2, MapValue.EMPTY ).records().collectList().block() );
+
+        assertTrue( transactionManager.getOpenTransactions().isEmpty() );
     }
 
     private <T> T inMegaTx( Function<Transaction, T> workload )
