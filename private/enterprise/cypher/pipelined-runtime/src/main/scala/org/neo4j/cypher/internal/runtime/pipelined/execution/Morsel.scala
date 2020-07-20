@@ -192,6 +192,17 @@ class Morsel(private[execution] final val longs: Array[Long],
       slots.setter(key2)(this, value2)
     }
 
+    override def set(key1: String,
+                     value1: AnyValue,
+                     key2: String,
+                     value2: AnyValue,
+                     key3: String,
+                     value3: AnyValue): Unit = {
+      slots.setter(key1)(this, value1)
+      slots.setter(key2)(this, value2)
+      slots.setter(key3)(this, value3)
+    }
+
     override def copyAllFrom(from: ReadableRow): Unit = from match {
       case other: MorselDerivedRow =>
         copyFromMorselRow(other, 0, 0, 0, 0, other.morsel.longsPerRow, other.morsel.refsPerRow)
