@@ -5,10 +5,12 @@
  */
 package com.neo4j.bolt;
 
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,9 +24,9 @@ import org.neo4j.driver.Value;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.driver.summary.SummaryCounters;
-import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.test.rule.CleanupRule;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.harness.Neo4j;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,27 +35,27 @@ import static org.assertj.core.api.Assertions.assertThat;
  * We need to ensure that failures that come out of our read-committed isolation level, are turned into "transient" exceptions from the driver,
  * such that clients are instructed to retry their transactions when such conflicts arise.
  */
+@ExtendWith( SuppressOutputExtension.class )
+@ExtendWith( Neo4jExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 public class ReadAndDeleteTransactionConflictIT
 {
-    private static final SuppressOutput suppressOutput = SuppressOutput.suppress();
-    private static final Neo4jRule graphDb = new Neo4jRule()
-            .dumpLogsOnFailure( () -> System.err ); // Late-bind to System.err to work better with SuppressOutput rule.
-    private static final CleanupRule cleanupRule = new CleanupRule();
+    private Driver driver;
 
-    private static Driver driver;
-
-    @ClassRule
-    public static final RuleChain rules = RuleChain.outerRule( suppressOutput ).around( graphDb ).around( cleanupRule );
-
-    @BeforeClass
-    public static void setUp()
+    @BeforeEach
+    public void setUp( Neo4j neo4j )
     {
-        driver = graphDatabaseDriver( graphDb.boltURI() );
-        cleanupRule.add( driver );
+        driver = graphDatabaseDriver( neo4j.boltURI() );
+    }
+
+    @AfterEach
+    public void tearDown()
+    {
+        driver.close();
     }
 
     @Test
-    public void returningNodesDeletedInSameTransactionMustReturnEmptyNodes()
+    void returningNodesDeletedInSameTransactionMustReturnEmptyNodes()
     {
         // It is weird that we are returning these empty nodes, but this test is just codifying the current behaviour.
         // In the future, deleted entities will behave as if they are NULLs.
@@ -68,7 +70,7 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
-    public void returningRelationshipsDeletedInSameTransactionMustEmptyRelationships()
+    void returningRelationshipsDeletedInSameTransactionMustEmptyRelationships()
     {
         try ( Session session = driver.session() )
         {
@@ -82,7 +84,7 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
-    public void returningRelationshipPropertiesOfRelationshipDeletedInSameTransactionMustNotThrow()
+    void returningRelationshipPropertiesOfRelationshipDeletedInSameTransactionMustNotThrow()
     {
         try ( Session session = driver.session() )
         {
@@ -99,7 +101,7 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
-    public void relationshipsThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
+    void relationshipsThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
@@ -139,7 +141,7 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
-    public void relationshipsWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
+    void relationshipsWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
@@ -179,7 +181,7 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
-    public void nodesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
+    void nodesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
@@ -219,7 +221,7 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
-    public void nodesWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
+    void nodesWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )

@@ -8,7 +8,6 @@ package com.neo4j.server.enterprise;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.apache.commons.lang3.ArrayUtils;
-import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
@@ -25,7 +24,6 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.BaseBootstrapperIT;
 import org.neo4j.server.NeoBootstrapper;
-import org.neo4j.test.rule.CleanupRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -42,9 +40,6 @@ import static org.neo4j.test.conditions.Conditions.TRUE;
 
 public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
 {
-    @Rule
-    public final CleanupRule cleanupRule = new CleanupRule();
-
     @Override
     protected NeoBootstrapper newBootstrapper()
     {
@@ -92,16 +87,16 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         store( properties, configFile );
 
         // When
-        UncoveredEnterpriseBootstrapper uncoveredEnterpriseBootstrapper = new UncoveredEnterpriseBootstrapper();
-        cleanupRule.add( uncoveredEnterpriseBootstrapper );
-        NeoBootstrapper.start( uncoveredEnterpriseBootstrapper,
-                "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
-                "--config-dir", configFile.getParentFile().getAbsolutePath() );
+        try ( var bootstrapper = new UncoveredEnterpriseBootstrapper() )
+        {
+            NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(), "--config-dir",
+                    configFile.getParentFile().getAbsolutePath() );
 
-        // Then
-        assertEventually( "Server was started", uncoveredEnterpriseBootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
-        LogProvider userLogProvider = uncoveredEnterpriseBootstrapper.getUserLogProvider();
-        assertFalse( "Debug logging is disabled by default", userLogProvider.getLog( getClass() ).isDebugEnabled() );
+            // Then
+            assertEventually( "Server was started", bootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
+            LogProvider userLogProvider = bootstrapper.getUserLogProvider();
+            assertFalse( "Debug logging is disabled by default", userLogProvider.getLog( getClass() ).isDebugEnabled() );
+        }
     }
 
     @Test
@@ -116,19 +111,19 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         store( properties, configFile );
 
         // When
-        UncoveredEnterpriseBootstrapper uncoveredEnterpriseBootstrapper = new UncoveredEnterpriseBootstrapper();
-        cleanupRule.add( uncoveredEnterpriseBootstrapper );
-        NeoBootstrapper.start( uncoveredEnterpriseBootstrapper,
-                "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
-                "--config-dir", configFile.getParentFile().getAbsolutePath() );
+        try ( var bootstrapper = new UncoveredEnterpriseBootstrapper() )
+        {
+            NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(), "--config-dir",
+                    configFile.getParentFile().getAbsolutePath() );
 
-        // Then
-        assertEventually( "Server was started", uncoveredEnterpriseBootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
-        LogProvider userLogProvider = uncoveredEnterpriseBootstrapper.getUserLogProvider();
-        assertTrue( "Debug logging enabled by setting value.", userLogProvider.getLog( getClass() ).isDebugEnabled() );
+            // Then
+            assertEventually( "Server was started", bootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
+            LogProvider userLogProvider = bootstrapper.getUserLogProvider();
+            assertTrue( "Debug logging enabled by setting value.", userLogProvider.getLog( getClass() ).isDebugEnabled() );
+        }
     }
 
-    private static class UncoveredEnterpriseBootstrapper extends EnterpriseBootstrapper
+    private static class UncoveredEnterpriseBootstrapper extends EnterpriseBootstrapper implements AutoCloseable
     {
         private LogProvider userLogProvider;
 
@@ -152,6 +147,12 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
                     .set( OnlineBackupSettings.online_backup_enabled, false )
                     .set( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.kibiBytes( 128 ) )
                     .build();
+        }
+
+        @Override
+        public void close()
+        {
+            stop();
         }
     }
 }
