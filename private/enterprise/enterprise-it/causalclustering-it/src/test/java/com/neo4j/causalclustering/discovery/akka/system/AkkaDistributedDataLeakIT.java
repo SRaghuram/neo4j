@@ -20,10 +20,9 @@ import com.neo4j.causalclustering.discovery.AkkaUncleanShutdownDiscoveryServiceF
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Optional;
@@ -49,7 +48,6 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 class AkkaDistributedDataLeakIT
 {
     private static final int TIMEOUT = 60;
-    private static final int WAIT_FOR_RESTART = 3_500;
 
     /** Part of Akka cluster. Bootstraps cluster. Listens to changes in distributed data, exposes for assertions */
     private Harness harness;
@@ -60,9 +58,9 @@ class AkkaDistributedDataLeakIT
     /** Should clean up for other members when they leave the cluster.*/
     private CoreTopologyService repairer;
 
-    private int metadataCount = 2;
+    private final int metadataCount = 2;
 
-    @BeforeAll
+    @BeforeEach
     void setUp() throws Throwable
     {
         harness = new Harness();
@@ -78,7 +76,7 @@ class AkkaDistributedDataLeakIT
         repairer.start();
     }
 
-    @AfterAll
+    @AfterEach
     void tearDown() throws Throwable
     {
         harness.shutdown();
@@ -102,7 +100,7 @@ class AkkaDistributedDataLeakIT
     }
 
     @RepeatedTest( 10 )
-    void shouldNotLeakMetadataOnUncleanLeave( RepetitionInfo repetitionInfo ) throws Throwable
+    void shouldNotLeakMetadataOnUncleanLeave() throws Throwable
     {
         uncleanRestarter.start();
 
@@ -111,14 +109,6 @@ class AkkaDistributedDataLeakIT
         uncleanRestarter.stop();
 
         assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount - 1 ), TIMEOUT, SECONDS );
-
-        /* There seems to be a race condition in Akka where if a member restarts too soon after being Downed it cannot receive a Welcome message,
-           so the cluster does not correctly form. This leaves the cluster in a state where all subsequent runs (including the other, otherwise stable test)
-           will fail. */
-        if ( repetitionInfo.getCurrentRepetition() < repetitionInfo.getTotalRepetitions() )
-        {
-            Thread.sleep( WAIT_FOR_RESTART );
-        }
     }
 
     private static class Harness

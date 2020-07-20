@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka;
 import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -29,7 +30,7 @@ class RestarterTest
     @Test
     void shouldStartHealthy()
     {
-        Restarter restarter = new Restarter( constantTimeout, 0 );
+        var restarter = new Restarter( constantTimeout, 0 );
 
         assertThat( restarter.isHealthy(), is( true ) );
     }
@@ -37,7 +38,7 @@ class RestarterTest
     @Test
     void shouldBeHealthyIfFirstRestartSucceeds()
     {
-        Restarter restarter = new Restarter( constantTimeout, 0 );
+        var restarter = new Restarter( constantTimeout, 0 );
 
         restarter.restart( alwaysSucceed );
 
@@ -47,7 +48,7 @@ class RestarterTest
     @Test
     void shouldBeHealthyIfSucceedsBeforeTooManyRestarts()
     {
-        Restarter restarter = new Restarter( constantTimeout, 5 );
+        var restarter = new Restarter( constantTimeout, 5 );
 
         restarter.restart( succeedAfterN( 3 ) );
 
@@ -55,30 +56,38 @@ class RestarterTest
     }
 
     @Test
-    void shouldNotBeHealthyIfStillFailsAfterTooManyRestarts() throws InterruptedException
-    {
-        Restarter restarter = new Restarter( constantTimeout, 5 );
-
-        runAsync( () -> restarter.restart( succeedAfterN( 8 ) ) );
-
-        assertEventually( restarter::isHealthy, new HamcrestCondition<>( is( false ) ), 20, TimeUnit.SECONDS );
-    }
-
-    @Test
     void shouldBeUnhealthyAndThenHealthyAgainIfFailsAfterTooFewRestartsButThenSucceeds() throws InterruptedException
     {
-        Restarter restarter = new Restarter( constantTimeout, 5 );
+        var restarter = new Restarter( constantTimeout, 5 );
+        int failures = 8;
+        var semaphore = new Semaphore( failures ); // Initialised with enough permits for restarter to get to unhealthy state, but no more
 
-        runAsync( () -> restarter.restart( succeedAfterN( 8 ) ) );
+        runAsync( () -> restarter.restart( succeedAfterN( failures, semaphore ) ) );
 
         assertEventually( restarter::isHealthy, new HamcrestCondition<>( is( false ) ), 20, TimeUnit.SECONDS );
+        semaphore.release(); // Ensure restarter doesn't become unhealthy too briefly for test to detect state change
         assertEventually( restarter::isHealthy, new HamcrestCondition<>( is( true ) ), 20, TimeUnit.SECONDS );
     }
 
     private Supplier<Boolean> succeedAfterN( int n )
     {
+        return succeedAfterN( n, new Semaphore( n + 1 ) );
+    }
+
+    private Supplier<Boolean> succeedAfterN( int n, Semaphore semaphore )
+    {
         AtomicInteger atomicInteger = new AtomicInteger( n );
 
-        return () -> atomicInteger.decrementAndGet() < 0;
+        return () -> {
+            try
+            {
+                semaphore.acquire();
+                return atomicInteger.decrementAndGet() < 0;
+            }
+            catch ( InterruptedException e )
+            {
+                throw new RuntimeException( e );
+            }
+        };
     }
 }

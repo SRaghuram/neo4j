@@ -27,3 +27,4 @@ packaging/standalone/src/main/distribution/cypher-shell
 /.profiler/
 dependency-reduced-pom.xml
 .attach_pid*
+/private/stresstests/logs/
