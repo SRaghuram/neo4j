@@ -15,6 +15,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.fs.WritableChecksumChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
@@ -46,7 +47,7 @@ public class ReplicatedTransactionMarshalV2
     public static void marshal( WritableChannel writableChannel, TransactionRepresentationReplicatedTransaction replicatedTransaction ) throws IOException
     {
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
-        if ( writableChannel instanceof ByteBufBacked )
+        if ( (writableChannel instanceof ByteBufBacked) && (writableChannel instanceof WritableChecksumChannel) )
         {
             /*
              * Marshals more efficiently if Channel is going over the network. In practice, this means maintaining support for
@@ -57,7 +58,7 @@ public class ReplicatedTransactionMarshalV2
             int txStartIndex = metaDataIndex + Integer.BYTES;
             // leave room for length to be set later.
             buffer.writerIndex( txStartIndex );
-            writeTx( writableChannel, replicatedTransaction.tx() );
+            writeTx( (WritableChecksumChannel) writableChannel, replicatedTransaction.tx() );
             int txLength = buffer.writerIndex() - txStartIndex;
             buffer.setInt( metaDataIndex, txLength );
         }
@@ -76,7 +77,7 @@ public class ReplicatedTransactionMarshalV2
         }
     }
 
-    private static void writeTx( WritableChannel writableChannel, TransactionRepresentation tx ) throws IOException
+    private static void writeTx( WritableChecksumChannel writableChannel, TransactionRepresentation tx ) throws IOException
     {
         ReplicatedTransactionFactory.TransactionRepresentationWriter txWriter = ReplicatedTransactionFactory.transactionalRepresentationWriter( tx );
         while ( txWriter.canWrite() )

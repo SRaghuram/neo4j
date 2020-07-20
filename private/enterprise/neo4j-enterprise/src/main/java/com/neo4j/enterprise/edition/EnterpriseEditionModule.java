@@ -68,7 +68,6 @@ import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -82,6 +81,7 @@ import org.neo4j.token.TokenHolders;
 import static java.lang.String.format;
 import static org.neo4j.function.Predicates.any;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper.DEFAULT_FILENAME_PREDICATE;
 import static org.neo4j.token.api.TokenHolder.TYPE_LABEL;
 import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
 import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
@@ -129,7 +129,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     @Override
     protected Predicate<String> fileWatcherFileNameFilter()
     {
-        return any( fileName -> fileName.startsWith( TransactionLogFilesHelper.DEFAULT_NAME ),
+        return any( DEFAULT_FILENAME_PREDICATE,
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 

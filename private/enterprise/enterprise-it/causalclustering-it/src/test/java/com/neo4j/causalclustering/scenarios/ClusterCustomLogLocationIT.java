@@ -64,7 +64,7 @@ class ClusterCustomLogLocationIT
             DependencyResolver dependencyResolver = coreClusterMember.defaultDatabase().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
             assertEquals( logFiles.logFilesDirectory().getFileName().toString(), coreClusterMember.defaultDatabase().databaseName() );
-            assertTrue( logFiles.hasAnyEntries( 0 ) );
+            assertTrue( logFiles.getLogFile().hasAnyEntries( 0 ) );
 
             logFileInStoreDirectoryDoesNotExist( coreClusterMember.databaseLayout(), dependencyResolver );
         }
@@ -77,7 +77,7 @@ class ClusterCustomLogLocationIT
             DependencyResolver dependencyResolver = readReplica.defaultDatabase().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
             assertEquals( logFiles.logFilesDirectory().getFileName().toString(), readReplica.defaultDatabase().databaseName() );
-            assertTrue( logFiles.hasAnyEntries( 0 ) );
+            assertTrue( logFiles.getLogFile().hasAnyEntries( 0 ) );
 
             logFileInStoreDirectoryDoesNotExist( readReplica.databaseLayout(), dependencyResolver );
         }
@@ -89,6 +89,6 @@ class ClusterCustomLogLocationIT
         LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem )
                 .withCommandReaderFactory( dependencyResolver.resolveDependency( StorageEngineFactory.class ).commandReaderFactory() )
                 .build();
-        assertFalse( storeLogFiles.versionExists( 0 ) );
+        assertFalse( storeLogFiles.getLogFile().versionExists( 0 ) );
     }
 }

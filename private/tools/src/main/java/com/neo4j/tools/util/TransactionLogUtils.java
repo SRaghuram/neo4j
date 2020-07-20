@@ -20,6 +20,7 @@ import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 
@@ -27,6 +28,7 @@ import static java.util.Objects.requireNonNull;
 import static org.neo4j.io.memory.ByteBuffers.allocate;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
+import static org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor.EMPTY_ACCESSOR;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class TransactionLogUtils
@@ -40,8 +42,9 @@ public class TransactionLogUtils
     public static LogEntryCursor openLogs( final FileSystemAbstraction fs, LogFiles logFiles, CommandReaderFactory commandReaderFactory )
             throws IOException
     {
-        Path firstFile = logFiles.getLogFileForVersion( logFiles.getLowestLogVersion() );
-        return openLogEntryCursor( fs, firstFile, new ReaderLogVersionBridge( logFiles ), logFiles.getChannelNativeAccessor(), commandReaderFactory );
+        LogFile logFile = logFiles.getLogFile();
+        Path firstFile = logFile.getLogFileForVersion( logFile.getLowestLogVersion() );
+        return openLogEntryCursor( fs, firstFile, new ReaderLogVersionBridge( logFile ), EMPTY_ACCESSOR, commandReaderFactory );
     }
 
     /**

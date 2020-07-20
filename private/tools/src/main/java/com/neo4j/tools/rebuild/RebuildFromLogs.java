@@ -62,6 +62,7 @@ import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
@@ -159,7 +160,7 @@ class RebuildFromLogs
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs )
                     .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                     .build();
-            long highestVersion = logFiles.getHighestLogVersion();
+            long highestVersion = logFiles.getLogFile().getHighestLogVersion();
             if ( highestVersion < 0 )
             {
                 printUsage( "Inconsistent number of log files found in " + transactionLogsDirectory );
@@ -220,8 +221,9 @@ class RebuildFromLogs
                     .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                     .build();
             int startVersion = 0;
-            ReaderLogVersionBridge versionBridge = new ReaderLogVersionBridge( logFiles );
-            PhysicalLogVersionedStoreChannel startingChannel = logFiles.openForVersion( startVersion );
+            LogFile logFile = logFiles.getLogFile();
+            ReaderLogVersionBridge versionBridge = new ReaderLogVersionBridge( logFile );
+            PhysicalLogVersionedStoreChannel startingChannel = logFile.openForVersion( startVersion );
             ReadableLogChannel channel = new ReadAheadLogChannel( startingChannel, versionBridge, EmptyMemoryTracker.INSTANCE );
             long txId = BASE_TX_ID;
             TransactionQueue queue = new TransactionQueue( 10_000,

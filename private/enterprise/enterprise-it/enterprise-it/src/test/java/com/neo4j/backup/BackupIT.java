@@ -705,7 +705,7 @@ class BackupIT
             createNode( db );
         }
 
-        Path oldLog = dependencyResolver( db ).resolveDependency( LogFiles.class ).getHighestLogFile();
+        Path oldLog = dependencyResolver( db ).resolveDependency( LogFiles.class ).getLogFile().getHighestLogFile();
         rotateAndCheckPoint( db );
 
         for ( int i = 0; i < 1; i++ )
@@ -1333,7 +1333,7 @@ class BackupIT
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
-        LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ), INSTANCE );
+        LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFile().getLogFileForVersion( logVersion ), INSTANCE );
         assertEquals( txId, logHeader.getLastCommittedTxId() );
     }
 

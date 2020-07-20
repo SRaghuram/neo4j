@@ -80,10 +80,12 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PositionAwarePhysicalFlushableChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetV4_0;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogVersions;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesSpan;
@@ -531,9 +533,10 @@ public class StoreUpgradeIT
                  PageCache pageCache = StandalonePageCacheFactory.createPageCache( testDir.getFileSystem(), scheduler ) )
             {
                 LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fileSystem ).build();
+                LogFile logFile = logFiles.getLogFile();
                 assertEquals( "This test only anticipates a single log file. " +
                                 "Please update if a test database has more than one log file.",
-                        logFiles.getLowestLogVersion(), logFiles.getHighestLogVersion() );
+                        logFile.getLowestLogVersion(), logFile.getHighestLogVersion() );
                 LongSupplier lastCommittedTxId = () ->
                 {
                     try
@@ -546,8 +549,8 @@ public class StoreUpgradeIT
                         throw new UncheckedIOException( e );
                     }
                 };
-                long version = logFiles.getHighestLogVersion();
-                try ( PhysicalLogVersionedStoreChannel channel = logFiles.createLogChannelForVersion( version, lastCommittedTxId ) )
+                long version = logFile.getHighestLogVersion();
+                try ( PhysicalLogVersionedStoreChannel channel = logFile.createLogChannelForVersion( version, lastCommittedTxId ) )
                 {
                     byte logFormatVersion = channel.getLogFormatVersion();
                     switch ( logFormatVersion )
@@ -564,8 +567,8 @@ public class StoreUpgradeIT
                     try ( NativeScopedBuffer buffer = new NativeScopedBuffer( 100, EmptyMemoryTracker.INSTANCE ) )
                     {
                         var writableChannel = new PositionAwarePhysicalFlushableChecksumChannel( channel, buffer );
-                        var entryWriter = new LogEntryWriter( writableChannel );
-                        entryWriter.writeCheckPointEntry( new LogPosition( version, channel.position() ) );
+                        var entryWriter = new LogEntryWriter( writableChannel, LogEntryParserSetV4_0.V4_0 );
+                        entryWriter.writeLegacyCheckPointEntry( new LogPosition( version, channel.position() ) );
                         writableChannel.prepareForFlush().flush();
                     }
                 }
@@ -585,11 +588,12 @@ public class StoreUpgradeIT
             try ( LogFilesSpan span = getAccessibleLogFiles( layout ) )
             {
                 LogFiles logFiles = span.getLogFiles();
-                LogPosition startPosition = logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition();
+                LogFile logFile = logFiles.getLogFile();
+                LogPosition startPosition = logFile.extractHeader( logFile.getHighestLogVersion() ).getStartPosition();
                 boolean foundStartEntry = false;
                 boolean foundCommitEntry = false;
                 List<LogEntry> entries = new ArrayList<>();
-                try ( ReadableLogChannel channel = logFiles.getLogFile().getReader( startPosition ) )
+                try ( ReadableLogChannel channel = logFile.getReader( startPosition ) )
                 {
                     VersionAwareLogEntryReader reader = new VersionAwareLogEntryReader(
                             StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
@@ -618,7 +622,7 @@ public class StoreUpgradeIT
 
             // Remove all log files.
             TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir );
-            Path[] logs = helper.getLogFiles();
+            Path[] logs = helper.getMatchedFiles();
             assertNotNull( "Expected some log files to exist.", logs );
             for ( Path logFile : logs )
             {
@@ -650,11 +654,12 @@ public class StoreUpgradeIT
             try ( LogFilesSpan span = getAccessibleLogFiles( layout ) )
             {
                 LogFiles logFiles = span.getLogFiles();
-                LogPosition startPosition = logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition();
+                LogFile logFile = logFiles.getLogFile();
+                LogPosition startPosition = logFile.extractHeader( logFile.getHighestLogVersion() ).getStartPosition();
                 boolean foundStartEntry = false;
                 boolean foundCommitEntry = false;
                 List<LogEntry> entries = new ArrayList<>();
-                try ( ReadableLogChannel channel = logFiles.getLogFile().getReader( startPosition ) )
+                try ( ReadableLogChannel channel = logFile.getReader( startPosition ) )
                 {
                     VersionAwareLogEntryReader reader = new VersionAwareLogEntryReader(
                             StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
@@ -683,7 +688,7 @@ public class StoreUpgradeIT
 
             // Remove all log files.
             TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir );
-            Path[] logs = helper.getLogFiles();
+            Path[] logs = helper.getMatchedFiles();
             assertNotNull( "Expected some log files to exist.", logs );
             for ( Path logFile : logs )
             {

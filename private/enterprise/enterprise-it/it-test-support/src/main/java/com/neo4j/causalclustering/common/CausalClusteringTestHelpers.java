@@ -61,18 +61,15 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
-import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.checkpoint.CheckpointInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
 
@@ -98,13 +95,11 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.function.Predicates.await;
-import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
@@ -282,12 +277,7 @@ public final class CausalClusteringTestHelpers
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
 
-        var checkPointsRemoved = 0;
-        while ( removeCheckPointFromTxLog( logFiles, fs, storageEngineFactory.commandReaderFactory() ) )
-        {
-            checkPointsRemoved++;
-        }
-
+        var checkPointsRemoved = removeCheckPointsFromTxLog( logFiles, fs );
         assertThat( checkPointsRemoved, greaterThan( 0 ) );
     }
 
@@ -342,11 +332,6 @@ public final class CausalClusteringTestHelpers
             tx.execute( String.format( "STOP DATABASE `%s`", databaseName ) );
             tx.commit();
         } );
-    }
-
-    public static void dropDatabaseDumpData( String databaseName, Cluster cluster ) throws Exception
-    {
-        dropDatabase( databaseName, cluster, true );
     }
 
     public static void dropDatabase( String databaseName, Cluster cluster ) throws Exception
@@ -552,26 +537,16 @@ public final class CausalClusteringTestHelpers
         dependencyResolver.resolveDependency( CheckPointer.class ).forceCheckPoint( info );
     }
 
-    private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs,
-            CommandReaderFactory commandReaderFactory ) throws IOException
+    private static int removeCheckPointsFromTxLog( LogFiles logFiles, FileSystemAbstraction fs ) throws IOException
     {
-        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader( commandReaderFactory ), new Monitors(), INSTANCE );
-        var logTailInformation = logTailScanner.getTailInformation();
-
-        if ( logTailInformation.commitsAfterLastCheckpoint() )
+        List<CheckpointInfo> checkpointInfos = logFiles.getCheckpointFile().reachableCheckpoints();
+        if ( checkpointInfos.isEmpty() )
         {
-            assertThat( logTailInformation.isRecoveryRequired(), is( true ) );
-            return false;
+            return 0;
         }
-        else
-        {
-            assertThat( logTailInformation.lastCheckPoint, is( notNullValue() ) );
-            var logPosition = logTailInformation.lastCheckPoint.getLogPosition();
-            var logFile = logFiles.getLogFileForVersion( logPosition.getLogVersion() );
-            var byteOffset = logPosition.getByteOffset();
-            fs.truncate( logFile.toFile(), byteOffset );
-            return true;
-        }
+        var entryPosition = checkpointInfos.get( 0 ).getEntryPosition();
+        fs.truncate( logFiles.getCheckpointFile().getCurrentFile().toFile(), entryPosition.getByteOffset() );
+        return checkpointInfos.size();
     }
 
     private static CoreClusterMember randomClusterMember( Cluster cluster, CoreClusterMember except )

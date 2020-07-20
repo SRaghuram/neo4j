@@ -15,12 +15,12 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.fs.WritableChecksumChannel;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.entry.StorageCommandSerializer;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.storageengine.api.StorageCommand;
 
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
@@ -115,7 +115,7 @@ public class ReplicatedTransactionFactory
     static class TransactionRepresentationWriter
     {
         private final Iterator<StorageCommand> commands;
-        private ThrowingConsumer<WritableChannel,IOException> nextJob;
+        private ThrowingConsumer<WritableChecksumChannel,IOException> nextJob;
 
         private TransactionRepresentationWriter( TransactionRepresentation tx )
         {
@@ -140,13 +140,13 @@ public class ReplicatedTransactionFactory
             commands = tx.iterator();
         }
 
-        void write( WritableChannel channel ) throws IOException
+        void write( WritableChecksumChannel channel ) throws IOException
         {
             nextJob.accept( channel );
             if ( commands.hasNext() )
             {
                 StorageCommand storageCommand = commands.next();
-                nextJob = c -> new StorageCommandSerializer( c ).visit( storageCommand );
+                nextJob = c -> new LogEntryWriter( c ).serialize( storageCommand );
             }
             else
             {

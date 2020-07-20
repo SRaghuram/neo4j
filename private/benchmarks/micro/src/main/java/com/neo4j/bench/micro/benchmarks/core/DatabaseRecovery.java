@@ -36,8 +36,8 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
-import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryInlinedCheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -152,22 +152,22 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
 
         LogFile logFile = logFiles.getLogFile();
         VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
-        ReadableLogChannel reader = logFile.getReader( logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition() );
+        ReadableLogChannel reader = logFile.getReader( logFile.extractHeader( logFile.getHighestLogVersion() ).getStartPosition() );
         LogEntry logEntry;
-        Deque<CheckPoint> checkPoints = new ArrayDeque<>();
+        Deque<LogEntryInlinedCheckPoint> checkPoints = new ArrayDeque<>();
         do
         {
             logEntry = entryReader.readLogEntry( reader );
-            if ( logEntry instanceof CheckPoint )
+            if ( logEntry instanceof LogEntryInlinedCheckPoint )
             {
-                checkPoints.add( (CheckPoint) logEntry );
+                checkPoints.add( (LogEntryInlinedCheckPoint) logEntry );
             }
         }
         while ( logEntry != null );
-        Path highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
+        Path highestLogFile = logFile.getLogFileForVersion( logFile.getHighestLogVersion() );
         while ( !checkPoints.isEmpty() )
         {
-            CheckPoint checkPoint = checkPoints.pollLast();
+            LogEntryInlinedCheckPoint checkPoint = checkPoints.pollLast();
             try ( StoreChannel storeChannel = fileSystem.write( highestLogFile.toFile() ) )
             {
                 storeChannel.truncate( checkPoint.getLogPosition().getByteOffset() );

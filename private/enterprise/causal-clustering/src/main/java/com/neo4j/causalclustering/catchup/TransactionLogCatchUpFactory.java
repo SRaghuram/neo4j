@@ -15,15 +15,16 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
 public class TransactionLogCatchUpFactory
 {
     public TransactionLogCatchUpWriter create( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config,
             LogProvider logProvider, StorageEngineFactory storageEngineFactory, LongRange validInitialTx, boolean fullStoreCopy,
-            boolean keepTxLogsInStoreDir, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
+            boolean keepTxLogsInStoreDir, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, DatabaseHealth databaseHealth ) throws IOException
     {
         return new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory, validInitialTx,
-                fullStoreCopy, keepTxLogsInStoreDir, pageCacheTracer, memoryTracker );
+                fullStoreCopy, keepTxLogsInStoreDir, pageCacheTracer, memoryTracker, databaseHealth );
     }
 }

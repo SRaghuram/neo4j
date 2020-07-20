@@ -25,6 +25,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
@@ -57,11 +58,12 @@ public class RemoteStore
     private final MemoryTracker memoryTracker;
     private final CompositeDatabaseAvailabilityGuard availabilityGuard;
     private final SystemNanoClock clock;
+    private final DatabaseHealth databaseHealth;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
             TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
             NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, SystemNanoClock clock,
-            CompositeDatabaseAvailabilityGuard availabilityGuard )
+            CompositeDatabaseAvailabilityGuard availabilityGuard, DatabaseHealth databaseHealth )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -78,6 +80,7 @@ public class RemoteStore
         this.pageCacheTracer = pageCacheTracer;
         this.memoryTracker = memoryTracker;
         this.availabilityGuard = availabilityGuard;
+        this.databaseHealth = databaseHealth;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
         this.clock = clock;
     }
@@ -129,7 +132,7 @@ public class RemoteStore
     {
         storeCopyClientMonitor.startReceivingTransactions( context.startTxIdExclusive() );
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
-                validInitialTxRange( context ), fullStoreCopy, keepTxLogsInStoreDir, pageCacheTracer, memoryTracker ) )
+                validInitialTxRange( context ), fullStoreCopy, keepTxLogsInStoreDir, pageCacheTracer, memoryTracker, databaseHealth ) )
         {
             TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, namedDatabaseId );
 

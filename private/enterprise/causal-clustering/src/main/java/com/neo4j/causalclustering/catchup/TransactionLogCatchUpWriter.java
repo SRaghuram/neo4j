@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponseListener;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Instant;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -22,18 +23,20 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.kernel.impl.transaction.log.files.checkpoint.CheckpointFile;
+import org.neo4j.kernel.impl.transaction.tracing.LogCheckPointEvent;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.storageengine.api.MetadataProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionId;
@@ -49,13 +52,13 @@ import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FO
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
 {
     private static final String TRANSACTION_LOG_CATCHUP_TAG = "transactionLogCatchup";
+    private static final String FULL_STORE_COPY_CHECKPOINT = "Full store copy checkpoint.";
 
     private final Log log;
 
     private final Lifespan life = new Lifespan();
     private final LogFiles logFiles;
     private final TransactionLogWriter writer;
-    private final FlushablePositionAwareChecksumChannel logChannel;
     private final LogPositionMarker logPositionMarker = new LogPositionMarker();
 
     private final MetadataProvider metaDataStore;
@@ -70,7 +73,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config, LogProvider logProvider,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, boolean fullStoreCopy, boolean keepTxLogsInStoreDir,
-            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
+            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, DatabaseHealth databaseHealth ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
         this.fullStoreCopy = fullStoreCopy;
@@ -83,22 +86,21 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
         Config customConfig = customisedConfig( config, keepTxLogsInStoreDir, fullStoreCopy );
         this.logFiles = getLogFiles( databaseLayout, fs, customConfig, storageEngineFactory, validInitialTxId,
-                configWithoutSpecificStoreFormat, metaDataStore, memoryTracker );
+                configWithoutSpecificStoreFormat, metaDataStore, memoryTracker, databaseHealth );
 
         this.life.add( logFiles );
 
-        this.logChannel = logFiles.getLogFile().getWriter();
-        this.writer = new TransactionLogWriter( new LogEntryWriter( logChannel ) );
+        this.writer = logFiles.getLogFile().getTransactionLogWriter();
 
         this.validInitialTxId = validInitialTxId;
     }
 
     private static LogFiles getLogFiles( DatabaseLayout databaseLayout, FileSystemAbstraction fs, Config customConfig,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, Config configWithoutSpecificStoreFormat,
-            MetadataProvider metaDataStore, MemoryTracker memoryTracker ) throws IOException
+            MetadataProvider metaDataStore, MemoryTracker memoryTracker, DatabaseHealth databaseHealth ) throws IOException
     {
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( databaseLayout, fs, configWithoutSpecificStoreFormat );
+        dependencies.satisfyDependencies( databaseLayout, fs, configWithoutSpecificStoreFormat, databaseHealth );
 
         LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs, memoryTracker );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
@@ -172,7 +174,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
         try
         {
-            logChannel.getCurrentPosition( logPositionMarker );
+            writer.getCurrentPosition( logPositionMarker );
             writer.append( tx.getTransactionRepresentation(), lastTxId, tx.getStartEntry().getPreviousChecksum() );
         }
         catch ( IOException e )
@@ -220,11 +222,14 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         {
             /* A checkpoint which points to the beginning of all the log files, meaning that
             all the streamed transactions will be applied as part of recovery. */
-            long logVersion = logFiles.getLowestLogVersion();
-            LogPosition checkPointPosition = logFiles.extractHeader( logVersion ).getStartPosition();
+            LogFile logFile = logFiles.getLogFile();
+            long logVersion = logFile.getLowestLogVersion();
+            LogPosition checkPointPosition = logFile.extractHeader( logVersion ).getStartPosition();
 
             log.info( "Writing checkpoint as part of full store copy: " + checkPointPosition );
-            writer.checkPoint( checkPointPosition );
+            CheckpointFile checkpointFile = logFiles.getCheckpointFile();
+            var appender = checkpointFile.getCheckpointAppender();
+            appender.checkPoint( LogCheckPointEvent.NULL, checkPointPosition, Instant.now(), FULL_STORE_COPY_CHECKPOINT );
 
             // * comment copied from old StoreCopyClient *
             // since we just create new log and put checkpoint into it with offset equals to

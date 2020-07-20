@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.messaging;
 
 import java.io.IOException;
 
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChecksumChannel;
 
@@ -26,6 +27,13 @@ public class ReadableNetworkChannelDelegator implements ReadableClosablePosition
     {
         assertAssigned();
         return delegate.getCurrentPosition( positionMarker );
+    }
+
+    @Override
+    public LogPosition getCurrentPosition() throws IOException
+    {
+        assertAssigned();
+        return delegate.getCurrentPosition();
     }
 
     @Override

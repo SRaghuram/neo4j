@@ -16,15 +16,14 @@ import java.nio.file.Path;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
 import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
-import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryInlinedCheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
@@ -35,6 +34,7 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
+import static org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor.EMPTY_ACCESSOR;
 
 /**
  * Merely a utility which, given a store directory or log file, reads the transaction log(s) as a stream of transactions
@@ -72,12 +72,12 @@ public class TransactionLogAnalyzer
         }
 
         /**
-         * {@link CheckPoint} log entry in between transactions.
+         * {@link LogEntryInlinedCheckPoint} log entry in between transactions.
          *
-         * @param checkpoint the {@link CheckPoint} log entry.
+         * @param checkpoint the {@link LogEntryInlinedCheckPoint} log entry.
          * @param checkpointEntryPosition {@link LogPosition} of the checkpoint entry itself.
          */
-        default void checkpoint( CheckPoint checkpoint, LogPosition checkpointEntryPosition )
+        default void checkpoint( LogEntryInlinedCheckPoint checkpoint, LogPosition checkpointEntryPosition )
         {   // no-op by default
         }
     }
@@ -95,7 +95,7 @@ public class TransactionLogAnalyzer
      * @param storeDirOrLogFile {@link File} pointing either to a directory containing transaction log files, or directly
      * pointing to a single transaction log file to analyze.
      * @param monitor {@link Monitor} receiving call-backs for all {@link Monitor#transaction(LogEntry[]) transactions},
-     * {@link Monitor#checkpoint(CheckPoint, LogPosition) checkpoints} and {@link Monitor#logFile(Path, long) log file transitions}
+     * {@link Monitor#checkpoint(LogEntryInlinedCheckPoint, LogPosition) checkpoints} and {@link Monitor#logFile(Path, long) log file transitions}
      * encountered during the analysis.
      * @throws IOException on I/O error.
      */
@@ -105,7 +105,6 @@ public class TransactionLogAnalyzer
         LogVersionBridge bridge;
         ReadAheadLogChannel channel;
         LogEntryReader entryReader;
-        LogPositionMarker positionMarker;
         LogFiles logFiles;
         if ( Files.isDirectory( storeDirOrLogFile ) )
         {
@@ -113,7 +112,8 @@ public class TransactionLogAnalyzer
             logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem )
                     .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                     .build();
-            bridge = new ReaderLogVersionBridge( logFiles )
+            var logFile = logFiles.getLogFile();
+            bridge = new ReaderLogVersionBridge( logFile )
             {
                 @Override
                 public LogVersionedStoreChannel next( LogVersionedStoreChannel channel ) throws IOException
@@ -122,17 +122,17 @@ public class TransactionLogAnalyzer
                     if ( next != channel )
                     {
                         monitor.endLogFile();
-                        monitor.logFile( logFiles.getLogFileForVersion( next.getVersion() ), next.getVersion() );
+                        monitor.logFile( logFile.getLogFileForVersion( next.getVersion() ), next.getVersion() );
                     }
                     return next;
                 }
             };
-            long lowestLogVersion = logFiles.getLowestLogVersion();
+            long lowestLogVersion = logFile.getLowestLogVersion();
             if ( lowestLogVersion < 0 )
             {
                 throw new IllegalStateException( format( "Transaction logs at '%s' not found.", storeDirOrLogFile ) );
             }
-            firstFile = logFiles.getLogFileForVersion( lowestLogVersion );
+            firstFile = logFile.getLogFileForVersion( lowestLogVersion );
             monitor.logFile( firstFile, lowestLogVersion );
         }
         else
@@ -142,24 +142,23 @@ public class TransactionLogAnalyzer
             logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile.getParent(), fileSystem )
                     .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                     .build();
-            monitor.logFile( firstFile, logFiles.getLogVersion( firstFile ) );
+            monitor.logFile( firstFile, logFiles.getLogFile().getLogVersion( firstFile ) );
             bridge = NO_MORE_CHANNELS;
         }
 
-        channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile, logFiles.getChannelNativeAccessor() ), bridge,
+        channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile, EMPTY_ACCESSOR ), bridge,
                 EmptyMemoryTracker.INSTANCE );
         StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
         entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
-        positionMarker = new LogPositionMarker();
         try ( TransactionLogEntryCursor cursor = new TransactionLogEntryCursor( new LogEntryCursor( entryReader, channel ) ) )
         {
-            channel.getCurrentPosition( positionMarker );
+            var currentPosition = channel.getCurrentPosition();
             while ( cursor.next() )
             {
                 LogEntry[] tx = cursor.get();
-                if ( tx.length == 1 && tx[0] instanceof CheckPoint )
+                if ( tx.length == 1 && tx[0] instanceof LogEntryInlinedCheckPoint )
                 {
-                    monitor.checkpoint( (CheckPoint) tx[0], positionMarker.newPosition() );
+                    monitor.checkpoint( (LogEntryInlinedCheckPoint) tx[0], currentPosition );
                 }
                 else
                 {
@@ -198,7 +197,7 @@ public class TransactionLogAnalyzer
         }
 
         @Override
-        public void checkpoint( CheckPoint checkpoint, LogPosition checkpointEntryPosition )
+        public void checkpoint( LogEntryInlinedCheckPoint checkpoint, LogPosition checkpointEntryPosition )
         {
             for ( Monitor monitor : monitors )
             {

@@ -32,11 +32,10 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
-import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.Lifespan;
@@ -267,11 +266,11 @@ public class RaftBootstrapper
                     .build();
 
             long dummyTransactionId;
-            LogPositionMarker logPositionMarker = new LogPositionMarker();
+            LogPosition currentPosition;
             try ( Lifespan ignored = new Lifespan( logFiles ) )
             {
-                FlushablePositionAwareChecksumChannel channel = logFiles.getLogFile().getWriter();
-                TransactionLogWriter writer = new TransactionLogWriter( new LogEntryWriter( channel ) );
+                LogFile logFile = logFiles.getLogFile();
+                TransactionLogWriter writer = logFile.getTransactionLogWriter();
 
                 long lastCommittedTransactionId = readOnlyTransactionIdStore.getLastCommittedTransactionId();
                 PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.emptyList() );
@@ -279,16 +278,16 @@ public class RaftBootstrapper
                 tx.setHeader( txHeaderBytes, -1, lastCommittedTransactionId, -1, -1, AUTH_DISABLED );
 
                 dummyTransactionId = lastCommittedTransactionId + 1;
-                channel.getCurrentPosition( logPositionMarker );
+                currentPosition = writer.getCurrentPosition();
                 writer.append( tx, dummyTransactionId, BASE_TX_CHECKSUM );
-                channel.prepareForFlush().flush();
+                logFile.flush();
             }
 
             try ( MetadataProvider metadataProvider = storageEngineFactory.transactionMetaDataStore( fs, layout, config, databasePageCache,
                     NULL ) )
             {
                 metadataProvider.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
-                        logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion(), cursorTracer );
+                        currentPosition.getByteOffset(), currentPosition.getLogVersion(), cursorTracer );
             }
         }
     }

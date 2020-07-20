@@ -60,6 +60,12 @@ public class TimerTransactionTracer implements DatabaseTracer
     private static final LogCheckPointEvent LOG_CHECK_POINT_EVENT = new LogCheckPointEvent()
     {
         @Override
+        public LogRotateEvent beginLogRotate()
+        {
+            return LogRotateEvent.NULL;
+        }
+
+        @Override
         public LogForceWaitEvent beginLogForceWait()
         {
             return LogForceWaitEvent.NULL;

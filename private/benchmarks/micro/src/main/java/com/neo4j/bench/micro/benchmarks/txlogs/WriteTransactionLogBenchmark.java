@@ -73,9 +73,9 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
     {
         for ( int i = 0; i < batch_size; i++ )
         {
-            writer.putLong( state.longs[i] );
+            channel.putLong( state.longs[i] );
         }
-        writer.prepareForFlush().flush();
+        logFile.flush();
     }
 
     @Benchmark
@@ -85,9 +85,9 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
     {
         for ( int i = 0; i < batch_size; i++ )
         {
-            writer.put( state.bytes[i] );
+            channel.put( state.bytes[i] );
         }
-        writer.prepareForFlush().flush();
+        logFile.flush();
     }
 
     @Benchmark
@@ -95,8 +95,8 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
     @BenchmarkMode( value = Mode.Throughput )
     public void appendByteArray( ThreadState state ) throws IOException
     {
-        writer.put( state.bytes, batch_size );
-        writer.prepareForFlush().flush();
+        channel.put( state.bytes, batch_size );
+        logFile.flush();
     }
 
     @TearDown( Level.Invocation )

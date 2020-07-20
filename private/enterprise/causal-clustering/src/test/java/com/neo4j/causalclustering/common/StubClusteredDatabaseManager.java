@@ -29,17 +29,15 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.Health;
-import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.storageengine.api.StoreId;
-import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class StubClusteredDatabaseManager extends LifecycleAdapter implements DatabaseManager<ClusteredDatabaseContext>
 {
-    private SortedMap<NamedDatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
+    private final SortedMap<NamedDatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
     private final TestDatabaseIdRepository databaseIdRepository;
 
     public StubClusteredDatabaseManager( TestDatabaseIdRepository databaseIdRepository )
@@ -135,11 +133,10 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.CatchupComponents.class );
         private StoreId storeId;
         private Dependencies dependencies;
-        private JobScheduler jobScheduler = new CallingThreadJobScheduler();
         private StoreFiles storeFiles = mock( StoreFiles.class );
         private LogFiles logFiles = mock( LogFiles.class );
         private DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );
-        private Health health;
+        private DatabaseHealth health;
         private LeaderLocator leaderLocator;
         private boolean databaseStarted = true;
 
@@ -168,12 +165,6 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         public DatabaseContextConfig withCatchupComponentsFactory( CatchupComponentsFactory catchupComponentsFactory )
         {
             this.catchupComponentsFactory = catchupComponentsFactory;
-            return this;
-        }
-
-        public DatabaseContextConfig withJobScheduler( JobScheduler jobScheduler )
-        {
-            this.jobScheduler = jobScheduler;
             return this;
         }
 
@@ -207,7 +198,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
             return this;
         }
 
-        public DatabaseContextConfig withDatabaseHealth( Health health )
+        public DatabaseContextConfig withDatabaseHealth( DatabaseHealth health )
         {
             this.health = health;
             return this;

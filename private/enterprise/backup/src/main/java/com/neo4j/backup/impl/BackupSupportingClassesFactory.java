@@ -33,6 +33,7 @@ import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
@@ -42,6 +43,7 @@ import org.neo4j.time.SystemNanoClock;
 import org.neo4j.util.VisibleForTesting;
 
 import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
+import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 
 /**
  * The dependencies for the backup strategies require a valid configuration for initialisation.
@@ -104,7 +106,8 @@ public class BackupSupportingClassesFactory
         Function<NamedDatabaseId,RemoteStore> remoteStore = databaseId ->
                 new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient.apply( databaseId ),
                                  txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
-                                 databaseId, pageCacheTracer, memoryTracker, clock, null );
+                                 databaseId, pageCacheTracer, memoryTracker, clock, null,
+                        new DatabaseHealth( NO_OP, logProvider.getLog( RemoteStore.class ) ) );
 
         return backupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }

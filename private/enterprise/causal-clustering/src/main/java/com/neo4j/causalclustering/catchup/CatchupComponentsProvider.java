@@ -36,6 +36,7 @@ import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
@@ -43,6 +44,7 @@ import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
+import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 
 /**
  * Contains a number of factories (or factories of factories) for machinery relating to the Catchup protocol.
@@ -175,7 +177,7 @@ public final class CatchupComponentsProvider
 
         var remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache, storeCopyClient, txPullClient, transactionLogFactory, config,
                                            monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer(),
-                                           otherMemoryGlobalTracker, clock, availabilityGuard );
+                otherMemoryGlobalTracker, clock, availabilityGuard, new DatabaseHealth( NO_OP, logProvider.getLog( RemoteStore.class ) ) );
 
         var storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext, copiedStoreRecovery, remoteStore, databaseLogProvider );
 

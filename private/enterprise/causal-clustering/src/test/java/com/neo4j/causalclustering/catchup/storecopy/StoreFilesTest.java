@@ -20,6 +20,7 @@ import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.storageengine.api.StoreId;
@@ -111,9 +112,8 @@ class StoreFilesTest
     void shouldDeleteTransactionLogs() throws Exception
     {
         StoreFiles storeFiles = newStoreFiles();
-
-        Path[] txLogFiles =
-                {logFiles.getLogFileForVersion( 1 ), logFiles.getLogFileForVersion( 2 ), logFiles.getLogFileForVersion( 42 )};
+        var logFile = logFiles.getLogFile();
+        Path[] txLogFiles = {logFile.getLogFileForVersion( 1 ), logFile.getLogFileForVersion( 2 ), logFile.getLogFileForVersion( 42 )};
         for ( Path txLogFile : txLogFiles )
         {
             createFile( txLogFile );
@@ -213,9 +213,8 @@ class StoreFilesTest
     void shouldMoveTransactionLogs() throws Exception
     {
         StoreFiles storeFiles = newStoreFiles();
-
-        Path[] txLogFiles =
-                {logFiles.getLogFileForVersion( 99 ), logFiles.getLogFileForVersion( 100 ), logFiles.getLogFileForVersion( 101 )};
+        LogFile logFile = logFiles.getLogFile();
+        Path[] txLogFiles = {logFile.getLogFileForVersion( 99 ), logFile.getLogFileForVersion( 100 ), logFile.getLogFileForVersion( 101 )};
         for ( Path txLogFile : txLogFiles )
         {
             createFile( txLogFile );

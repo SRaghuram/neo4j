@@ -27,10 +27,10 @@ import org.neo4j.internal.recordstorage.Command.SchemaRuleCommand;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryInlinedCheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -103,7 +103,7 @@ public class DumpLogicalLog
             }
 
             @Override
-            public void checkpoint( CheckPoint checkpoint, LogPosition checkpointEntryPosition )
+            public void checkpoint( LogEntryInlinedCheckPoint checkpoint, LogPosition checkpointEntryPosition )
             {
                 if ( filter == null || filter.test( new LogEntry[] {checkpoint} ) )
                 {

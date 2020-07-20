@@ -66,6 +66,7 @@ class CoreEditionModuleIT
         assertFalse( filter.test( metadataStoreName ) );
         assertFalse( filter.test( layout.nodeStore().getFileName().toString() ) );
         assertTrue( filter.test( TransactionLogFilesHelper.DEFAULT_NAME + ".1" ) );
+        assertTrue( filter.test( TransactionLogFilesHelper.CHECKPOINT_FILE_PREFIX + ".1" ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 }

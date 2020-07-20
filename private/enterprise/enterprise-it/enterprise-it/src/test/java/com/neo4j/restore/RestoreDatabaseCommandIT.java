@@ -23,6 +23,7 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.internal.locker.DatabaseLocker;
@@ -256,9 +257,9 @@ class RestoreDatabaseCommandIT
                 .build();
         assertThat( toStoreLogFiles.logFiles() ).isEmpty();
         assertThat( customLogLocationLogFiles.logFiles() ).hasSize( 1 );
-        assertThat( Files.size( fromStoreLogFiles.getLogFileForVersion( 0 ) ) ).isGreaterThan( 0L );
-        assertEquals( Files.size( fromStoreLogFiles.getLogFileForVersion( 0 ) ),
-                Files.size( customLogLocationLogFiles.getLogFileForVersion( 0 ) ) );
+        LogFile logFile = fromStoreLogFiles.getLogFile();
+        assertThat( Files.size( logFile.getLogFileForVersion( 0 ) ) ).isGreaterThan( 0L );
+        assertEquals( Files.size( logFile.getLogFileForVersion( 0 ) ), Files.size( customLogLocationLogFiles.getLogFile().getLogFileForVersion( 0 ) ) );
     }
 
     @Test

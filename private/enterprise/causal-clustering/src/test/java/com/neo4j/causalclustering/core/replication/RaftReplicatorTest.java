@@ -36,11 +36,9 @@ import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
@@ -56,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( LifeExtension.class )
@@ -72,7 +71,7 @@ class RaftReplicatorTest
     private final LocalSessionPool sessionPool = new LocalSessionPool( session );
     private final TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
     private final Duration leaderAwaitDuration = Duration.ofMillis( 500 );
-    private final Health health = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), NullLog.getInstance() );
+    private final DatabaseHealth health = new DatabaseHealth( NO_OP, NullLog.getInstance() );
     private DatabaseAvailabilityGuard availabilityGuard;
     private StubClusteredDatabaseManager databaseManager;
 

@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes.CHECK_POINT;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes.COMMAND;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes.LEGACY_CHECK_POINT;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes.TX_COMMIT;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes.TX_START;
 
@@ -79,15 +79,15 @@ class TransactionLogEntryCursorTest
     @Test
     void readNonTransactionalEntries() throws IOException
     {
-        List<LogEntry> recordSet1 = makeTransaction( CHECK_POINT, CHECK_POINT, CHECK_POINT );
-        List<LogEntry> recordSet2 = makeTransaction( CHECK_POINT );
+        List<LogEntry> recordSet1 = makeTransaction( LEGACY_CHECK_POINT, LEGACY_CHECK_POINT, LEGACY_CHECK_POINT );
+        List<LogEntry> recordSet2 = makeTransaction( LEGACY_CHECK_POINT );
         TransactionLogEntryCursor transactionCursor = getTransactionLogEntryCursor( recordSet1, recordSet2 );
 
         for ( int i = 0; i < 4; i++ )
         {
             assertTrue( transactionCursor.next() );
             assertThat( transactionCursor.get() ).hasSize( 1 );
-            assertThat( transactionCursor.get()[0].getType() ).isEqualTo( CHECK_POINT );
+            assertThat( transactionCursor.get()[0].getType() ).isEqualTo( LEGACY_CHECK_POINT );
         }
     }
 

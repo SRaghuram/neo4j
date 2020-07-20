@@ -7,14 +7,14 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
-import org.apache.commons.lang3.SystemUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.LongStream;
 
@@ -42,13 +42,14 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.LogTailInformation;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.recovery.LogTailScanner;
-import org.neo4j.kernel.recovery.LogTailScanner.LogTailInformation;
+import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.Monitors;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -65,7 +66,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
@@ -74,6 +74,7 @@ import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
@@ -113,8 +114,9 @@ class TransactionLogCatchUpWriterIT
 
     private void deleteTransactionLogs() throws IOException
     {
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fs ).build();
-        logFiles.accept( ( file, version ) -> deleteFileOrThrow( file ) );
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fs )
+                .withLogEntryReader( logEntryReader() ).build();
+        fs.deleteRecursively( logFiles.logFilesDirectory().toFile() );
     }
 
     @ValueSource( booleans = {false, true} )
@@ -146,7 +148,8 @@ class TransactionLogCatchUpWriterIT
         {
             LongRange validInitialTxId = LongRange.range( nextTxId, nextTxId );
             TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, nullLogProvider(),
-                    storageEngineFactory, validInitialTxId, fullStoreCopy, false, PageCacheTracer.NULL, INSTANCE );
+                    storageEngineFactory, validInitialTxId, fullStoreCopy, false, PageCacheTracer.NULL, INSTANCE,
+                    new DatabaseHealth( NO_OP, NullLog.getInstance() ) );
 
             // when a bunch of transactions received
             LongStream.range( nextTxId, nextTxId + MANY_TRANSACTIONS )
@@ -158,9 +161,12 @@ class TransactionLogCatchUpWriterIT
             writer.close();
 
             // then there was a rotation
-            LogFilesBuilder logFilesBuilder = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache );
-            LogFiles logFiles = logFilesBuilder.build();
-            assertNotEquals( logFiles.getLowestLogVersion(), logFiles.getHighestLogVersion() );
+            LogFiles logFiles = LogFilesBuilder
+                    .activeFilesBuilder( databaseLayout, fs, pageCache )
+                    .withLogEntryReader( logEntryReader() )
+                    .build();
+            LogFile logFile = logFiles.getLogFile();
+            assertNotEquals( logFile.getLowestLogVersion(), logFile.getHighestLogVersion() );
 
             verifyTransactionsInLog( logFiles, BASE_TX_ID, nextTxId - 1 );
             verifyCheckpointInLog( logFiles, fullStoreCopy );
@@ -169,16 +175,17 @@ class TransactionLogCatchUpWriterIT
 
     @ValueSource( booleans = {false, true} )
     @ParameterizedTest( name = "fullStoreCopy: {0}" )
+    @EnabledOnOs( OS.LINUX )
     void doNotPreallocateTxLogsDuringStoreCopy( boolean fullStoreCopy ) throws IOException
     {
-        assumeTrue( SystemUtils.IS_OS_LINUX );
         Config config = defaults();
         TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE );
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE,
+                new DatabaseHealth( NO_OP, NullLog.getInstance() ) );
         writer.close();
         if ( fullStoreCopy )
         {
-            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 100L ) );
+            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 400L ) );
         }
         else
         {
@@ -189,14 +196,15 @@ class TransactionLogCatchUpWriterIT
 
     @ValueSource( booleans = {false, true} )
     @ParameterizedTest( name = "fullStoreCopy: {0}" )
+    @DisabledOnOs( OS.LINUX )
     void noPreallocateTxLogsDuringStoreCopy( boolean fullStoreCopy ) throws IOException
     {
-        assumeTrue( !SystemUtils.IS_OS_LINUX );
         Config config = defaults();
         TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE );
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE,
+                new DatabaseHealth( NO_OP, NullLog.getInstance() ) );
         writer.close();
-        assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 100L ) );
+        assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 400L ) );
     }
 
     @ValueSource( booleans = {false, true} )
@@ -209,7 +217,8 @@ class TransactionLogCatchUpWriterIT
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
         var pageCacheTracer = new DefaultPageCacheTracer();
         try ( TransactionLogCatchUpWriter subject = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, validRange, fullStoreCopy, false, pageCacheTracer, INSTANCE ) )
+                storageEngineFactory, validRange, fullStoreCopy, false, pageCacheTracer, INSTANCE,
+                new DatabaseHealth( NO_OP, NullLog.getInstance() ) ) )
         {
             LongStream.range( fromTxId, MANY_TRANSACTIONS )
                     .mapToObj( TransactionLogCatchUpWriterIT::tx )
@@ -241,7 +250,7 @@ class TransactionLogCatchUpWriterIT
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
 
         TransactionLogCatchUpWriter catchUpWriter = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, validRange, fullStoreCopy, logsInStoreDir, NULL, INSTANCE );
+                storageEngineFactory, validRange, fullStoreCopy, logsInStoreDir, NULL, INSTANCE, new DatabaseHealth( NO_OP, NullLog.getInstance() ) );
 
         // when
         for ( int i = fromTxId; i <= endTxId; i++ )
@@ -257,6 +266,7 @@ class TransactionLogCatchUpWriterIT
         {
             logFilesBuilder.withConfig( config );
         }
+        logFilesBuilder.withLogEntryReader( logEntryReader() );
         LogFiles logFiles = logFilesBuilder.build();
 
         verifyTransactionsInLog( logFiles, fromTxId, endTxId );
@@ -265,9 +275,7 @@ class TransactionLogCatchUpWriterIT
 
     private void verifyCheckpointInLog( LogFiles logFiles, boolean shouldExist )
     {
-        final LogTailScanner logTailScanner = new LogTailScanner( logFiles, logEntryReader(), new Monitors(), INSTANCE );
-
-        LogTailInformation tailInformation = logTailScanner.getTailInformation();
+        LogTailInformation tailInformation = logFiles.getTailInformation();
 
         if ( !shouldExist )
         {
@@ -285,7 +293,7 @@ class TransactionLogCatchUpWriterIT
             IOException
     {
         long expectedTxId = fromTxId;
-        LogVersionedStoreChannel versionedStoreChannel = logFiles.openForVersion( 0 );
+        LogVersionedStoreChannel versionedStoreChannel = logFiles.getLogFile().openForVersion( 0 );
         try ( ReadableLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, INSTANCE ) )
         {
             try ( PhysicalTransactionCursor txCursor = new PhysicalTransactionCursor( channel, logEntryReader() ) )
@@ -306,18 +314,6 @@ class TransactionLogCatchUpWriterIT
     private LogEntryReader logEntryReader()
     {
         return new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
-    }
-
-    private void deleteFileOrThrow( Path file )
-    {
-        try
-        {
-            fs.deleteFileOrThrow( file.toFile() );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
     }
 
     private static CommittedTransactionRepresentation tx( long txId )

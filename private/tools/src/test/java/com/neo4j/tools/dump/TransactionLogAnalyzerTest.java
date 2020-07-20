@@ -28,17 +28,14 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryInlinedCheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
@@ -77,7 +74,6 @@ class TransactionLogAnalyzerTest
     @Inject
     private RandomRule random;
     private LogFile logFile;
-    private FlushablePositionAwareChecksumChannel writer;
     private TransactionLogWriter transactionLogWriter;
     private AtomicLong lastCommittedTxId;
     private VerifyingMonitor monitor;
@@ -98,8 +94,7 @@ class TransactionLogAnalyzerTest
                 .build();
         life.add( logFiles );
         logFile = logFiles.getLogFile();
-        writer = logFile.getWriter();
-        transactionLogWriter = new TransactionLogWriter( new LogEntryWriter( writer ) );
+        transactionLogWriter = logFile.getTransactionLogWriter();
         monitor = new VerifyingMonitor();
     }
 
@@ -124,7 +119,7 @@ class TransactionLogAnalyzerTest
     }
 
     @Test
-    void throwExceptionWithErrorMessageIfLogFilesNotFound() throws Exception
+    void throwExceptionWithErrorMessageIfLogFilesNotFound()
     {
         Path emptyDirectory = testDirectory.directoryPath( "empty" );
         assertThrows( IllegalStateException.class, () -> TransactionLogAnalyzer.analyze( fs, emptyDirectory, monitor ) );
@@ -195,7 +190,7 @@ class TransactionLogAnalyzerTest
                 expectedLogFiles++;
             }
         }
-        writer.prepareForFlush().flush();
+        logFile.flush();
 
         // when
         analyzeAllTransactionLogs();
@@ -221,7 +216,7 @@ class TransactionLogAnalyzerTest
         // when
         monitor.nextExpectedTxId = 4;
         monitor.nextExpectedLogVersion = version;
-        TransactionLogAnalyzer.analyze( fs, logFiles.getLogFileForVersion( version ), monitor );
+        TransactionLogAnalyzer.analyze( fs, logFiles.getLogFile().getLogFileForVersion( version ), monitor );
 
         // then
         assertEquals( 1, monitor.logFiles );
@@ -253,7 +248,7 @@ class TransactionLogAnalyzerTest
 
     private void writeCheckpoint() throws IOException
     {
-        transactionLogWriter.checkPoint( writer.getCurrentPosition( new LogPositionMarker() ).newPosition() );
+        transactionLogWriter.legacyCheckPoint( transactionLogWriter.getCurrentPosition() );
         monitor.expectCheckpointAfter( lastCommittedTxId.get() );
     }
 
@@ -265,7 +260,7 @@ class TransactionLogAnalyzerTest
             long id = lastCommittedTxId.incrementAndGet();
             previousChecksum = transactionLogWriter.append( tx( id ), id, previousChecksum );
         }
-        writer.prepareForFlush().flush();
+        logFile.flush();
     }
 
     private TransactionRepresentation tx( long nodeId )
@@ -307,7 +302,7 @@ class TransactionLogAnalyzerTest
         }
 
         @Override
-        public void checkpoint( CheckPoint checkpoint, LogPosition checkpointEntryPosition )
+        public void checkpoint( LogEntryInlinedCheckPoint checkpoint, LogPosition checkpointEntryPosition )
         {
             checkpoints++;
             Long expected = expectedCheckpointsAt.dequeue();

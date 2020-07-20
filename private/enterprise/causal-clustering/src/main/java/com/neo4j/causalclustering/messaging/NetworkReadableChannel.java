@@ -10,6 +10,7 @@ import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadPastEndException;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChecksumChannel;
 
@@ -84,6 +85,12 @@ public class NetworkReadableChannel implements ReadableClosablePositionAwareChec
     {
         positionMarker.unspecified();
         return positionMarker;
+    }
+
+    @Override
+    public LogPosition getCurrentPosition()
+    {
+        return LogPosition.UNSPECIFIED;
     }
 
     @Override

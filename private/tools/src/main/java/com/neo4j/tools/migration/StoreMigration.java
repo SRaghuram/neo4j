@@ -7,6 +7,7 @@ package com.neo4j.tools.migration;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -25,18 +26,15 @@ import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.storemigration.DatabaseMigrator;
-import org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
-import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.LogTailInformation;
 import org.neo4j.kernel.impl.transaction.state.DefaultIndexProviderMap;
+import org.neo4j.kernel.impl.transaction.tracing.LogCheckPointEvent;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifespan;
-import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -45,9 +43,11 @@ import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.logging.log4j.LogConfig;
 import org.neo4j.logging.log4j.Neo4jLoggerContext;
 import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.time.Stopwatch;
 
 import static java.lang.String.format;
@@ -55,6 +55,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.kernel.extension.ExtensionFailureStrategies.ignore;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
+import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 
 /**
  * Stand alone tool for migrating/upgrading a neo4j database from one version to the next.
@@ -114,16 +115,16 @@ public final class StoreMigration
                     RecoveryCleanupWorkCollector.immediate() );
 
             DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory.toPath() );
-            LegacyTransactionLogsLocator legacyLogsLocator = new LegacyTransactionLogsLocator( config, databaseLayout );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
             StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
 
             final LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
-                    .withConfig( config ).build();
-            LogTailScanner tailScanner =
-                    new LogTailScanner( logFiles, new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() ), monitors, memoryTracker );
+                    .withConfig( config )
+                    .withMemoryTracker( memoryTracker )
+                    .withStoreId( StoreId.UNKNOWN )
+                    .build();
 
             deps.satisfyDependency( life.add( new DefaultIndexProviderMap( databaseExtensions, config ) ) );
 
@@ -132,11 +133,11 @@ public final class StoreMigration
 
             Stopwatch startTime = Stopwatch.start();
             DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService, deps, pageCache,  jobScheduler, databaseLayout,
-                    storageEngineFactory, pageCacheTracer, memoryTracker );
+                    storageEngineFactory, pageCacheTracer, memoryTracker, new DatabaseHealth( NO_OP, log ) );
             migrator.migrate( true );
 
             // Append checkpoint so the last log entry will have the latest version
-            appendCheckpoint( logFiles, tailScanner );
+            appendCheckpoint( logFiles );
 
             log.info( format( "Migration completed in %d s%n", startTime.elapsed().getSeconds() ) );
         }
@@ -151,14 +152,14 @@ public final class StoreMigration
         }
     }
 
-    private static void appendCheckpoint( LogFiles logFiles, LogTailScanner tailScanner ) throws IOException
+    private static void appendCheckpoint( LogFiles logFiles ) throws IOException
     {
         try ( Lifespan lifespan = new Lifespan( logFiles ) )
         {
-            FlushablePositionAwareChecksumChannel writer = logFiles.getLogFile().getWriter();
-            TransactionLogWriter transactionLogWriter = new TransactionLogWriter( new LogEntryWriter( writer ) );
-            transactionLogWriter.checkPoint( tailScanner.getTailInformation().lastCheckPoint.getLogPosition() );
-            writer.prepareForFlush().flush();
+            var checkpointAppender = logFiles.getCheckpointFile().getCheckpointAppender();
+            LogTailInformation tailInformation = logFiles.getTailInformation();
+            LogPosition logPosition = tailInformation.lastCheckPoint.getLogPosition();
+            checkpointAppender.checkPoint( LogCheckPointEvent.NULL, logPosition, Instant.now(), "Store migration tool." );
         }
     }
 

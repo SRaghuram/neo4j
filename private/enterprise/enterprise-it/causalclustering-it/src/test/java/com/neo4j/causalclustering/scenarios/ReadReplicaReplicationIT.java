@@ -287,7 +287,7 @@ class ReadReplicaReplicationIT
         assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         var readReplica = cluster.getReadReplicaById( 0 );
-        var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
+        var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getLogFile().getHighestLogVersion();
 
         // when
         readReplica.shutdown();
@@ -297,7 +297,7 @@ class ReadReplicaReplicationIT
         {
             core = createDataInOneTransaction( cluster, 1_000 );
         }
-        while ( physicalLogFiles( core ).getLowestLogVersion() <= highestReadReplicaLogVersion );
+        while ( physicalLogFiles( core ).getLogFile().getLowestLogVersion() <= highestReadReplicaLogVersion );
 
         readReplica.start();
 
@@ -324,7 +324,7 @@ class ReadReplicaReplicationIT
         assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         var readReplica = cluster.getReadReplicaById( 0 );
-        var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
+        var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getLogFile().getHighestLogVersion();
 
         readReplica.shutdown();
 
@@ -333,7 +333,7 @@ class ReadReplicaReplicationIT
         {
             core = createDataInOneTransaction( cluster, 1_000 );
         }
-        while ( physicalLogFiles( core ).getLowestLogVersion() <= highestReadReplicaLogVersion );
+        while ( physicalLogFiles( core ).getLogFile().getLowestLogVersion() <= highestReadReplicaLogVersion );
 
         readReplica.start();
 

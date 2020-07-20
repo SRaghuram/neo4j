@@ -26,7 +26,7 @@ public class TxPullClient
     private final Supplier<Monitors> monitors;
     private final Log log;
 
-    private PullRequestMonitor pullRequestMonitor = new PullRequestMonitor();
+    private final PullRequestMonitor pullRequestMonitor = new PullRequestMonitor();
 
     public TxPullClient( CatchupClientFactory catchUpClient, NamedDatabaseId namedDatabaseId, Supplier<Monitors> monitors, LogProvider logProvider )
     {

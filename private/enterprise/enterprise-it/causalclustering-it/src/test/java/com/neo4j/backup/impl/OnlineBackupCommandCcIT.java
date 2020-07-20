@@ -43,6 +43,7 @@ import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.LogProvider;
@@ -277,8 +278,9 @@ class OnlineBackupCommandCcIT
                 "--database=" + DEFAULT_DATABASE_NAME ) );
 
         LogFiles backupLogFiles = logFilesFromBackup( backupDir, DEFAULT_DATABASE_NAME );
-        assertEquals( 0, backupLogFiles.getHighestLogVersion() );
-        assertEquals( 0, backupLogFiles.getLowestLogVersion() );
+        LogFile backupLogFile = backupLogFiles.getLogFile();
+        assertEquals( 0, backupLogFile.getHighestLogVersion() );
+        assertEquals( 0, backupLogFile.getLowestLogVersion() );
 
         // and the database contains a few more transactions that cause backup to perform a rotation
         insert20MbOfData( cluster );
@@ -293,9 +295,9 @@ class OnlineBackupCommandCcIT
                 "--fallback-to-full=false" ) );
 
         // then there has been a rotation
-        assertThat( backupLogFiles.getHighestLogVersion() ).isGreaterThan( 0L );
+        assertThat( backupLogFile.getHighestLogVersion() ).isGreaterThan( 0L );
         // and the original log has not been removed since the transactions are applied at start
-        assertEquals( 0, backupLogFiles.getLowestLogVersion() );
+        assertEquals( 0, backupLogFile.getLowestLogVersion() );
     }
 
     @TestWithRecordFormats

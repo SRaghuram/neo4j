@@ -21,17 +21,16 @@ import java.io.IOException;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.Lifespan;
-import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static java.util.Collections.singletonList;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
 /**
  * Recovery scenarios where the transaction log was only partially written.
@@ -138,8 +137,9 @@ class TransactionLogRecoveryIT
         LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache ).build();
         try ( Lifespan ignored = new Lifespan( logFiles ) )
         {
-            LogEntryWriter writer = new LogEntryWriter( logFiles.getLogFile().getWriter() );
-            writer.writeStartEntry( 0x123456789ABCDEFL, logFiles.getLogFileInformation().getLastEntryId() + 1, TransactionIdStore.BASE_TX_CHECKSUM,
+            var logFile = logFiles.getLogFile();
+            var writer = logFile.getTransactionLogWriter().getWriter();
+            writer.writeStartEntry( 0x123456789ABCDEFL, logFile.getLogFileInformation().getLastEntryId() + 1, BASE_TX_CHECKSUM,
                     new byte[]{0} );
         }
     }

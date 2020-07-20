@@ -9,11 +9,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,9 +34,9 @@ import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
+import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
+import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
@@ -45,6 +45,8 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.kernel.impl.transaction.tracing.LogCheckPointEvent;
+import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.EphemeralNeo4jLayoutExtension;
 import org.neo4j.test.extension.Inject;
@@ -59,10 +61,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verify;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetV4_0.V4_0;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
+import static org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor.EMPTY_ACCESSOR;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
@@ -122,8 +125,11 @@ class CheckTxLogsTest
     private LogFiles getLogFiles() throws IOException
     {
         return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs )
-                .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
-                .build();
+                              .withLogVersionRepository( new SimpleLogVersionRepository() )
+                              .withTransactionIdStore( new SimpleTransactionIdStore() )
+                              .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                              .withStoreId( StoreId.UNKNOWN )
+                              .build();
     }
 
     @Test
@@ -678,8 +684,14 @@ class CheckTxLogsTest
     void shouldDetectAnInconsistentCheckPointPointingToALogFileGreaterThanMaxLogVersion() throws Exception
     {
         // given
-        Path log = logFile( 1 );
-        writeCheckPoint( log, 2, CURRENT_FORMAT_LOG_HEADER_SIZE );
+        LogFiles logFiles = getLogFiles();
+        LogPosition logPosition = new LogPosition( 2, CURRENT_FORMAT_LOG_HEADER_SIZE );
+        try ( Lifespan lifespan = new Lifespan( logFiles ) )
+        {
+            var checkpointFile = logFiles.getCheckpointFile();
+            var checkpointAppender = checkpointFile.getCheckpointAppender();
+            checkpointAppender.checkPoint( LogCheckPointEvent.NULL, logPosition, Instant.now(), "test" );
+        }
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
@@ -690,8 +702,8 @@ class CheckTxLogsTest
         // then
         assertEquals( 1, handler.checkPointInconsistencies.size() );
 
-        assertEquals( 1, handler.checkPointInconsistencies.get( 0 ).logVersion );
-        assertEquals( new LogPosition( 2, CURRENT_FORMAT_LOG_HEADER_SIZE ), handler.checkPointInconsistencies.get( 0 ).logPosition );
+        assertEquals( 0, handler.checkPointInconsistencies.get( 0 ).logVersion );
+        assertEquals( logPosition, handler.checkPointInconsistencies.get( 0 ).logPosition );
         assertThat( handler.checkPointInconsistencies.get( 0 ).size ).isLessThan( 0L );
     }
 
@@ -699,8 +711,14 @@ class CheckTxLogsTest
     void shouldDetectAnInconsistentCheckPointPointingToAByteOffsetNotInTheFile() throws Exception
     {
         // given
-        ensureLogExists( logFile( 1 ) );
-        writeCheckPoint( logFile( 2 ), 1, CURRENT_FORMAT_LOG_HEADER_SIZE + 42 );
+        LogFiles logFiles = getLogFiles();
+        LogPosition logPosition = new LogPosition( 0, CURRENT_FORMAT_LOG_HEADER_SIZE + 42 );
+        try ( Lifespan lifespan = new Lifespan( logFiles ) )
+        {
+            var checkpointFile = logFiles.getCheckpointFile();
+            var checkpointAppender = checkpointFile.getCheckpointAppender();
+            checkpointAppender.checkPoint( LogCheckPointEvent.NULL, logPosition, Instant.now(), "test" );
+        }
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
@@ -711,9 +729,9 @@ class CheckTxLogsTest
         // then
         assertEquals( 1, handler.checkPointInconsistencies.size() );
 
-        assertEquals( 2, handler.checkPointInconsistencies.get( 0 ).logVersion );
-        assertEquals( new LogPosition( 1, CURRENT_FORMAT_LOG_HEADER_SIZE + 42 ), handler.checkPointInconsistencies.get( 0 ).logPosition );
-        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE, handler.checkPointInconsistencies.get( 0 ).size );
+        assertEquals( 0, handler.checkPointInconsistencies.get( 0 ).logVersion );
+        assertEquals( logPosition, handler.checkPointInconsistencies.get( 0 ).logPosition );
+        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE + 22, handler.checkPointInconsistencies.get( 0 ).size );
     }
 
     @Test
@@ -809,23 +827,6 @@ class CheckTxLogsTest
         assertTrue( handler.txIdSequenceInconsistencies.isEmpty() );
     }
 
-    @Test
-    void closeLogEntryCursorAfterValidation() throws IOException
-    {
-        ensureLogExists( logFile( 1 ) );
-        writeCheckPoint( logFile( 2 ), 1, 42 );
-        LogEntryCursor entryCursor = Mockito.mock( LogEntryCursor.class );
-
-        CheckTxLogsWithCustomLogEntryCursor checkTxLogs =
-                new CheckTxLogsWithCustomLogEntryCursor( System.out, fs, entryCursor );
-        CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        LogFiles logFiles = getLogFiles();
-        boolean logsValidity = checkTxLogs.validateCheckPoints( logFiles, handler );
-
-        assertTrue( logsValidity, "empty logs should be valid" );
-        verify( entryCursor ).close();
-    }
-
     private static RelationshipRecord createRelationshipRecord( long id, boolean inUse, long firstNode, long secondNode, int type, long firstPrevRel,
             long firstNextRel, long secondPrevRel, long secondNextRel, boolean firstInFirstChain, boolean firstInSecondChain )
     {
@@ -878,7 +879,7 @@ class CheckTxLogsTest
     private void writeCheckPoint( Path log, long logVersion, long byteOffset ) throws IOException
     {
         LogPosition logPosition = new LogPosition( logVersion, byteOffset );
-        writeContent( log, txWriter -> txWriter.checkPoint( logPosition ) );
+        writeContent( log, txWriter -> txWriter.legacyCheckPoint( logPosition ) );
     }
 
     private void writeContent( Path log, ThrowingConsumer<TransactionLogWriter,IOException> consumer )
@@ -886,15 +887,13 @@ class CheckTxLogsTest
     {
         ensureLogExists( log );
         try ( StoreChannel channel = fs.write( log.toFile() );
-                LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log,
-                        getLogFiles().getChannelNativeAccessor() );
-                PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel,
-                        new HeapScopedBuffer( 100, INSTANCE ) ) )
+              var versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log, EMPTY_ACCESSOR );
+              var writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel, new HeapScopedBuffer( 100, INSTANCE ) ) )
         {
             long offset = channel.size();
             channel.position( offset );
 
-            consumer.accept( new TransactionLogWriter( new LogEntryWriter( writableLogChannel ) ) );
+            consumer.accept( new TransactionLogWriter( new LogEntryWriter( writableLogChannel, V4_0 ) ) );
         }
     }
 
@@ -904,26 +903,8 @@ class CheckTxLogsTest
         {
             try ( StoreChannel channel = fs.write( logFile.toFile() ) )
             {
-                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.UNKNOWN ), INSTANCE );
+                writeLogHeader( channel, new LogHeader( getLogFiles().getLogFile().getLogVersion( logFile ), 0, StoreId.UNKNOWN ), INSTANCE );
             }
-        }
-    }
-
-    private static class CheckTxLogsWithCustomLogEntryCursor extends CheckTxLogs
-    {
-
-        private final LogEntryCursor logEntryCursor;
-
-        CheckTxLogsWithCustomLogEntryCursor( PrintStream out, FileSystemAbstraction fs, LogEntryCursor logEntryCursor )
-        {
-            super( out, fs );
-            this.logEntryCursor = logEntryCursor;
-        }
-
-        @Override
-        LogEntryCursor openLogEntryCursor( LogFiles logFiles )
-        {
-            return logEntryCursor;
         }
     }
 

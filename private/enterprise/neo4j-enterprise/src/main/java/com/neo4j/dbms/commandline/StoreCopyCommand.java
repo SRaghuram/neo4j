@@ -275,7 +275,7 @@ public class StoreCopyCommand extends AbstractCommand
             {
                 throw new CommandFailedException( "The path doesn't exist or not a directory: " + source.path );
             }
-            if ( new TransactionLogFilesHelper( ctx.fs(), source.path ).getLogFiles().length > 0 )
+            if ( new TransactionLogFilesHelper( ctx.fs(), source.path ).getMatchedFiles().length > 0 )
             {
                 // Transaction logs are in the same directory
                 return DatabaseLayout.ofFlat( source.path );

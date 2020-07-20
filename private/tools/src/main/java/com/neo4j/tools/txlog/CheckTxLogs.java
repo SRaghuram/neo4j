@@ -27,12 +27,13 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
+import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.checkpoint.CheckpointInfo;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
@@ -84,7 +85,8 @@ public class CheckTxLogs
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( dir, fs )
                     .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                     .build();
-            int numberOfLogFilesFound = (int) (logFiles.getHighestLogVersion() - logFiles.getLowestLogVersion() + 1);
+            LogFile logFile = logFiles.getLogFile();
+            int numberOfLogFilesFound = (int) (logFile.getHighestLogVersion() - logFile.getLowestLogVersion() + 1);
             out.println( "Found " + numberOfLogFilesFound + " log files to verify in " + dir.toAbsolutePath().normalize() );
 
             CheckTxLogs tool = new CheckTxLogs( out, fs );
@@ -117,36 +119,29 @@ public class CheckTxLogs
 
     boolean validateCheckPoints( LogFiles logFiles, InconsistenciesHandler handler ) throws IOException
     {
-        final long lowestLogVersion = logFiles.getLowestLogVersion();
-        final long highestLogVersion = logFiles.getHighestLogVersion();
+        var logFile = logFiles.getLogFile();
+        final long lowestLogVersion = logFile.getLowestLogVersion();
+        final long highestLogVersion = logFile.getHighestLogVersion();
         boolean success = true;
         final MutableLongLongMap logFileSizes = new LongLongHashMap();
         for ( long i = lowestLogVersion; i <= highestLogVersion; i++ )
         {
-            logFileSizes.put( i, fs.getFileSize( logFiles.getLogFileForVersion( i ).toFile() ) );
+            logFileSizes.put( i, fs.getFileSize( logFile.getLogFileForVersion( i ).toFile() ) );
         }
 
-        try ( LogEntryCursor logEntryCursor = openLogEntryCursor( logFiles ) )
+        List<CheckpointInfo> checkpointInfos = logFiles.getCheckpointFile().reachableCheckpoints();
+        for ( CheckpointInfo checkpointInfo : checkpointInfos )
         {
-            while ( logEntryCursor.next() )
+            LogPosition logPosition = checkpointInfo.getLogPosition();
+            if ( logPosition.getLogVersion() < lowestLogVersion )
             {
-                LogEntry logEntry = logEntryCursor.get();
-                if ( logEntry instanceof CheckPoint )
-                {
-                    LogPosition logPosition = ((CheckPoint) logEntry).getLogPosition();
-                    // if the file has been pruned we cannot validate the check point
-                    if ( logPosition.getLogVersion() >= lowestLogVersion )
-                    {
-                        long size = logFileSizes.getIfAbsent( logPosition.getLogVersion(), -1 );
-                        if ( logPosition.getByteOffset() < 0 || size < 0 || logPosition.getByteOffset() > size )
-                        {
-                            long currentLogVersion = logEntryCursor.getCurrentLogVersion();
-                            handler.reportInconsistentCheckPoint( currentLogVersion, logPosition, size );
-                            success = false;
-                        }
-
-                    }
-                }
+                continue;
+            }
+            long size = logFileSizes.getIfAbsent( logPosition.getLogVersion(), -1 );
+            if ( logPosition.getByteOffset() < 0 || size < 0 || logPosition.getByteOffset() > size )
+            {
+                handler.reportInconsistentCheckPoint( checkpointInfo.getEntryPosition().getLogVersion(), logPosition, size );
+                success = false;
             }
         }
         return success;

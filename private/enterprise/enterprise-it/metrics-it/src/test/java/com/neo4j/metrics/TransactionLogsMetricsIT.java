@@ -8,6 +8,7 @@ package com.neo4j.metrics;
 import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -74,10 +75,10 @@ class TransactionLogsMetricsIT
         addNodes( 100, db );
         Path metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
 
-        long fileLength = Files.size( logFiles.getHighestLogFile() );
+        long fileLength = Files.size( logFiles.getLogFile().getHighestLogFile() );
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes.", () -> readLongCounterValue( metricsFile ),
-                equalityCondition( fileLength ), 1, MINUTES );
+                greaterOrEqual( fileLength ), 1, MINUTES );
     }
 
     @Test
@@ -88,22 +89,22 @@ class TransactionLogsMetricsIT
         GraphDatabaseAPI secondDb = (GraphDatabaseAPI) managementService.database( secondDbName );
 
         addNodes( 100, db );
-        long fileLength = Files.size( logFiles.getHighestLogFile() );
+        long fileLength = Files.size( logFiles.getLogFile().getHighestLogFile() );
 
         Path metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
         Path secondMetricsFile = metricsCsv( outputPath, "neo4j." + secondDbName + ".log.appended_bytes" );
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes for default db.",
-                () -> readLongCounterValue( metricsFile ), equalityCondition( fileLength ), 1, MINUTES );
+                () -> readLongCounterValue( metricsFile ), greaterOrEqual( fileLength ), 1, MINUTES );
         assertEventually( "Metrics report should include correct number of written transaction log bytes for second database.",
-                () -> readLongCounterValue( secondMetricsFile ), equalityCondition( (long) CURRENT_FORMAT_LOG_HEADER_SIZE ), 1, MINUTES );
+                () -> readLongCounterValue( secondMetricsFile ), greaterOrEqual( CURRENT_FORMAT_LOG_HEADER_SIZE ), 1, MINUTES );
 
         addNodes( 100, secondDb );
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes for default db.",
-                () -> readLongCounterValue( metricsFile ), equalityCondition( fileLength ), 1, MINUTES );
+                () -> readLongCounterValue( metricsFile ), greaterOrEqual( fileLength ), 1, MINUTES );
         assertEventually( "Metrics report should include correct number of written transaction log bytes for second database.",
-                () -> readLongCounterValue( secondMetricsFile ), equalityCondition( fileLength ), 1, MINUTES );
+                () -> readLongCounterValue( secondMetricsFile ), greaterOrEqual( fileLength ), 1, MINUTES );
     }
 
     @Test
@@ -129,7 +130,7 @@ class TransactionLogsMetricsIT
         assertEventually( "Metrics report should include correct number of reported rotations.",
                 () -> readLongCounterValue( rotationEvents ), equalityCondition( 2L ), 1, MINUTES );
         assertEventually( "Metrics report should include correct number of reported bytes written even for header.",
-                () -> readLongCounterValue( bytesFile ), equalityCondition( CURRENT_FORMAT_LOG_HEADER_SIZE * 3L ), 1, MINUTES );
+                () -> readLongCounterValue( bytesFile ), greaterOrEqual( CURRENT_FORMAT_LOG_HEADER_SIZE * 3L ), 1, MINUTES );
 
         long rotationTotalTimeValue = readLongCounterAndAssert( rotationTime, ( newValue, currentValue ) -> newValue >= currentValue );
         assertThat( rotationTotalTimeValue ).isGreaterThanOrEqualTo( 0 );
@@ -148,5 +149,10 @@ class TransactionLogsMetricsIT
                 tx.commit();
             }
         }
+    }
+
+    private static Condition<Long> greaterOrEqual( long fileLength )
+    {
+        return new Condition<>( v -> v >= fileLength, "Should be greater or equal to " + fileLength );
     }
 }

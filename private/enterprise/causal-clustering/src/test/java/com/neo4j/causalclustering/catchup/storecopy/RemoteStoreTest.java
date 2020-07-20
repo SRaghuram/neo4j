@@ -30,7 +30,9 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.time.Clocks;
@@ -50,6 +52,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 class RemoteStoreTest
@@ -234,7 +237,7 @@ class RemoteStoreTest
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
                                                    storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID,
                                                    PageCacheTracer.NULL, INSTANCE,
-                                                   Clocks.fakeClock(), null );
+                                                   Clocks.fakeClock(), null, new DatabaseHealth( NO_OP, NullLog.getInstance() ) );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout );
     }
@@ -254,7 +257,7 @@ class RemoteStoreTest
     {
         TransactionLogCatchUpFactory factory = mock( TransactionLogCatchUpFactory.class );
         when( factory.create( any(), any( FileSystemAbstraction.class ), isNull(), any( Config.class ), any( LogProvider.class ), any(),
-                any(), anyBoolean(), anyBoolean(), any(), any() ) ).thenReturn( writer );
+                any(), anyBoolean(), anyBoolean(), any(), any(), any() ) ).thenReturn( writer );
         return factory;
     }
 }

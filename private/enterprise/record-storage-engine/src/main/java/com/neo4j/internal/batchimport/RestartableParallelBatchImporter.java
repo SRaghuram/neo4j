@@ -61,6 +61,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
 {
     static final String FILE_NAME_STATE = "state";
     private static final String FILE_NAME_RELATIONSHIP_DISTRIBUTION = "relationship-type-distribution";
+    private static final String BATCH_IMPORTER_CHECKPOINT = "Parallel batch importer checkpoint.";
 
     private static final String STATE_NEW_IMPORT = StateStorage.NO_STATE;
     private static final String STATE_INIT = StateStorage.INIT;
@@ -188,7 +189,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
             void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.buildCountsStore();
-                logFilesInitializer.initializeLogFiles( databaseLayout, store.getNeoStores().getMetaDataStore(), fileSystem );
+                logFilesInitializer.initializeLogFiles( databaseLayout, store.getNeoStores().getMetaDataStore(), fileSystem, BATCH_IMPORTER_CHECKPOINT );
             }
         } );
 
