@@ -5,10 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery.member;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.dbms.identity.ServerId;
 
 @FunctionalInterface
 public interface DiscoveryMemberFactory
 {
-    DiscoveryMember create( MemberId id );
+    DiscoveryMember create( ServerId id );
 }

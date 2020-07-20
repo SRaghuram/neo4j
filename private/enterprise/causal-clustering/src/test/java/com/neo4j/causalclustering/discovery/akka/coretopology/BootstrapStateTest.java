@@ -11,7 +11,6 @@ import akka.cluster.MemberStatus;
 import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -171,10 +171,10 @@ class BootstrapStateTest
         return member;
     }
 
-    private static CoreServerInfoForMemberId newCoreInfoForMember( NamedDatabaseId namedDatabaseId, boolean refuseToBeLeader )
+    private static CoreServerInfoForServerId newCoreInfoForMember( NamedDatabaseId namedDatabaseId, boolean refuseToBeLeader )
     {
         var info = newCoreInfo( namedDatabaseId, refuseToBeLeader );
-        return new CoreServerInfoForMemberId( new MemberId( UUID.randomUUID() ), info );
+        return new CoreServerInfoForServerId( new ServerId( UUID.randomUUID() ), info );
     }
 
     private static CoreServerInfo newCoreInfo( NamedDatabaseId namedDatabaseId, boolean refuseToBeLeader )

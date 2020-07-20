@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery.member;
 
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -15,6 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -34,7 +34,7 @@ class DefaultDiscoveryMemberFactoryTest
     private final DatabaseStateService databaseStateService = mock( DatabaseStateService.class );
     private final DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
 
-    private final MemberId id = new MemberId( UUID.randomUUID() );
+    private final ServerId id = new ServerId( UUID.randomUUID() );
 
     private final NamedDatabaseId namedDatabaseId1 = databaseIdRepository.getRaw( "one" );
     private final NamedDatabaseId namedDatabaseId2 = databaseIdRepository.getRaw( "two" );

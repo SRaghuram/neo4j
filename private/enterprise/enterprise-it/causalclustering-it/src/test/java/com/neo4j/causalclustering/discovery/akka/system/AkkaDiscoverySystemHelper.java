@@ -12,13 +12,11 @@ import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
-
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Level;
@@ -64,7 +62,7 @@ public class AkkaDiscoverySystemHelper
         var monitors = new Monitors();
         var retryStrategy = new RetryStrategy( 100, 3 );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
-        DiscoveryMemberFactory discoveryMemberFactory = ( MemberId mbr ) -> new TestDiscoveryMember( mbr, asSet( NAMED_DATABASE_ID ) );
+        DiscoveryMemberFactory discoveryMemberFactory = ( ServerId serverId ) -> new TestDiscoveryMember( serverId, asSet( NAMED_DATABASE_ID ) );
 
         return discoveryServiceFactory.coreTopologyService( config, indentityModule, createInitialisedScheduler(), logProvider,
                 logProvider, membersResolver, retryStrategy, sslPolicyLoader, discoveryMemberFactory, monitors, Clocks.systemClock() );

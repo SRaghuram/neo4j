@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology
 
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import akka.Done
 import akka.cluster.client.ClusterClientReceptionist
@@ -22,7 +22,7 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick
-import com.neo4j.causalclustering.identity.MemberId
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
@@ -117,12 +117,12 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
     val rrInfo1 = TestTopology.addressesForReadReplica(1)
     val rrInfo2 = TestTopology.addressesForReadReplica(2)
     
-    val memberId1,memberId2 = new MemberId(UUID.randomUUID())
-    
+    val serverId1,serverId2 = new ServerId(UUID.randomUUID())
+
     val clusterClient1, clusterClient2, topologyClient1, topologyClient2 = TestProbe().ref
 
-    val rrMessage1 = new ReadReplicaRefreshMessage(rrInfo1, memberId1, clusterClient1, topologyClient1, Collections.emptyMap())
-    val rrMessage2 = new ReadReplicaRefreshMessage(rrInfo2, memberId2, clusterClient2, topologyClient2, Collections.emptyMap())
+    val rrMessage1 = new ReadReplicaRefreshMessage(rrInfo1, serverId1, clusterClient1, topologyClient1, Collections.emptyMap())
+    val rrMessage2 = new ReadReplicaRefreshMessage(rrInfo2, serverId2, clusterClient2, topologyClient2, Collections.emptyMap())
 
     val props = ReadReplicaViewActor.props(parent.ref, receptionist, clock, refresh)
     val actorRef = system.actorOf(props)

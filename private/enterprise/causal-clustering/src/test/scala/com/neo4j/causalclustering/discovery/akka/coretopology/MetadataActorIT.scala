@@ -13,18 +13,18 @@ import akka.cluster.ddata.LWWMap
 import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember
-import com.neo4j.causalclustering.discovery.TestTopology
-import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
 import scala.collection.JavaConverters.setAsJavaSetConverter
 
@@ -40,13 +40,13 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     "send metadata to core topology actor on update" in new Fixture {
       Given("new member metadata")
       val member1Address = UniqueAddress(Address("udp", system.name, "1.2.3.4", 8213), 1L)
-      val member1Info = new CoreServerInfoForMemberId(
-        new MemberId(UUID.randomUUID()),
+      val member1Info = new CoreServerInfoForServerId(
+        new ServerId(UUID.randomUUID()),
         TestTopology.addressesForCore(0, false)
       )
       val member2Address = UniqueAddress(Address("udp", system.name, "1.2.3.5", 8214), 2L)
-      val member2Info = new CoreServerInfoForMemberId(
-        new MemberId(UUID.randomUUID()),
+      val member2Info = new CoreServerInfoForServerId(
+        new ServerId(UUID.randomUUID()),
         TestTopology.addressesForCore(1, false)
       )
 
@@ -116,11 +116,11 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     }
   }
 
-  class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForMemberId]] {
+  class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForServerId]] {
     val coreTopologyProbe = TestProbe("topology")
-    val myself = new MemberId(UUID.randomUUID())
-    val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](ReplicatedDataIdentifier.METADATA.keyName())
-    val data = LWWMap.empty[UniqueAddress, CoreServerInfoForMemberId]
+    val myself = new ServerId(UUID.randomUUID())
+    val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForServerId](ReplicatedDataIdentifier.METADATA.keyName())
+    val data = LWWMap.empty[UniqueAddress, CoreServerInfoForServerId]
 
     val databaseIdRepository = new TestDatabaseIdRepository()
     val namedDatabaseIds = Set("system", "not_system").map(databaseIdRepository.getRaw)
@@ -140,7 +140,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       val update = expectReplicatorUpdates(replicator, dataKey)
       val data = update.modify.apply(Some(LWWMap.create()))
       val infoForMemberId = data.entries(cluster.selfUniqueAddress)
-      infoForMemberId.memberId() should equal(discoveryMember.id())
+      infoForMemberId.serverId() should equal(discoveryMember.id())
       val serverInfo = infoForMemberId.coreServerInfo()
       serverInfo.startedDatabaseIds should contain theSameElementsAs namedDatabaseIds.map(_.databaseId())
     }

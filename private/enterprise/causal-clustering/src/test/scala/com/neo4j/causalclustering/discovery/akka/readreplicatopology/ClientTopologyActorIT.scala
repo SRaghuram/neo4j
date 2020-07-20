@@ -10,7 +10,6 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.cluster.client.ClusterClient
-import akka.cluster.client.ClusterClientSettings
 import akka.stream.ActorMaterializer
 import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source
@@ -33,6 +32,7 @@ import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.causalclustering.identity.RaftId
 import com.neo4j.configuration.CausalClusteringSettings
 import org.neo4j.configuration.Config
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
@@ -48,7 +48,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
   "ClientTopologyActor" when {
     "starting" should {
       "send read replica info to cluster client" in new Fixture {
-        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Collections.emptyMap())
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, serverId, clusterClientProbe.ref, topologyActorRef, Collections.emptyMap())
 
         expectMsg(msg)
       }
@@ -119,7 +119,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "periodically send read replica info" in new Fixture {
         Given("Info to send")
-        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Collections.emptyMap())
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, serverId, clusterClientProbe.ref, topologyActorRef, Collections.emptyMap())
         val send = ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
 
         And("all databases are stated")
@@ -196,7 +196,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       .to(Sink.foreach(updateSink.onDbStateUpdate))
       .run(materializer)
 
-    val memberId = new MemberId(UUID.randomUUID())
+    val serverId = new ServerId(UUID.randomUUID())
 
     val databaseIds = Set(randomNamedDatabaseId(), randomNamedDatabaseId(), randomNamedDatabaseId())
 
@@ -214,7 +214,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     }
 
     val clusterClientProbe = TestProbe()
-    val props = ClientTopologyActor.props(new TestDiscoveryMember(memberId, databaseIds.asJava), coreTopologySink, readReplicaTopologySink, discoverySink,
+    val props = ClientTopologyActor.props(new TestDiscoveryMember(serverId, databaseIds.asJava), coreTopologySink, readReplicaTopologySink, discoverySink,
       databaseStateSink, clusterClientProbe.ref, config, NullLogProvider.getInstance(), Clocks.systemClock() )
 
     val topologyActorRef = system.actorOf(props)

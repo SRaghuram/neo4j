@@ -6,39 +6,39 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 public class TestDiscoveryMember implements DiscoveryMember
 {
-    private final MemberId id;
+    private final ServerId id;
     private final Set<NamedDatabaseId> startedDatabases;
 
     public TestDiscoveryMember()
     {
-        this( new MemberId( UUID.randomUUID() ) );
+        this( new ServerId( UUID.randomUUID() ) );
     }
 
-    public TestDiscoveryMember( MemberId memberId )
+    public TestDiscoveryMember( ServerId memberId )
     {
         this( memberId, Set.of( new TestDatabaseIdRepository().defaultDatabase() ) );
     }
 
-    public TestDiscoveryMember( MemberId id, Set<NamedDatabaseId> startedDatabases )
+    public TestDiscoveryMember( ServerId id, Set<NamedDatabaseId> startedDatabases )
     {
         this.id = id;
         this.startedDatabases = startedDatabases;
     }
 
     @Override
-    public MemberId id()
+    public ServerId id()
     {
         return id;
     }

@@ -22,9 +22,9 @@ public class MetadataMessage
 {
     public static final MetadataMessage EMPTY = new MetadataMessage( Collections.emptyMap() );
 
-    private final Map<UniqueAddress,CoreServerInfoForMemberId> metadata;
+    private final Map<UniqueAddress,CoreServerInfoForServerId> metadata;
 
-    public MetadataMessage( LWWMap<UniqueAddress,CoreServerInfoForMemberId> metadata )
+    public MetadataMessage( LWWMap<UniqueAddress,CoreServerInfoForServerId> metadata )
     {
         this( metadata.getEntries() );
     }
@@ -33,22 +33,22 @@ public class MetadataMessage
      * Warning: doesn't ensure inner map is immutable
      */
     @VisibleForTesting
-    public MetadataMessage( Map<UniqueAddress,CoreServerInfoForMemberId> metadata )
+    public MetadataMessage( Map<UniqueAddress,CoreServerInfoForServerId> metadata )
     {
         this.metadata = unmodifiableMap( metadata );
     }
 
-    public Optional<CoreServerInfoForMemberId> getOpt( UniqueAddress address )
+    public Optional<CoreServerInfoForServerId> getOpt( UniqueAddress address )
     {
         return Optional.ofNullable( metadata.get( address ) );
     }
 
-    public Stream<CoreServerInfoForMemberId> getStream()
+    public Stream<CoreServerInfoForServerId> getStream()
     {
         return metadata.values().stream();
     }
 
-    public Stream<CoreServerInfoForMemberId> getStream( UniqueAddress address )
+    public Stream<CoreServerInfoForServerId> getStream( UniqueAddress address )
     {
         return Stream.ofNullable( metadata.get( address ) );
     }

@@ -27,7 +27,7 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA;
 
-public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForMemberId>>
+public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForServerId>>
 {
     static Props props( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
     {
@@ -85,7 +85,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<UniqueAddress,CoreServerInfoForMemberId> newData )
+    protected void handleIncomingData( LWWMap<UniqueAddress,CoreServerInfoForServerId> newData )
     {
         data = newData;
         topologyActor.tell( new MetadataMessage( data ), getSelf() );
@@ -107,7 +107,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     {
         var startedDatabases = Set.copyOf( this.startedDatabases );
         var info = CoreServerInfo.from( config, startedDatabases );
-        var metadata = new CoreServerInfoForMemberId( myself.id(), info );
+        var metadata = new CoreServerInfoForServerId( myself.id(), info );
         modifyReplicatedData( key, map -> map.put( cluster, cluster.selfUniqueAddress(), metadata ) );
     }
 }

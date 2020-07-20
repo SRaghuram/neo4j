@@ -19,7 +19,7 @@ import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.AkkaUncleanShutdownDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
@@ -114,7 +114,7 @@ class AkkaDistributedDataLeakIT
     private static class Harness
     {
         final int port = PortAuthority.allocatePort();
-        static final Key<LWWMap<UniqueAddress,CoreServerInfoForMemberId>> KEY = LWWMapKey.create( "member-data" );
+        static final Key<LWWMap<UniqueAddress,CoreServerInfoForServerId>> KEY = LWWMapKey.create( "member-data" );
         LWWMap<?,?> replicatedData = LWWMap.empty();
         private final ActorSystemComponents actorSystemComponents;
 

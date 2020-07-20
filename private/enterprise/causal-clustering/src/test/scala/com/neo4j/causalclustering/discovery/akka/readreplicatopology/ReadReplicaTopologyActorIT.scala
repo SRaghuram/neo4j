@@ -9,23 +9,24 @@ import java.time.Instant
 import java.util.UUID
 
 import akka.cluster.client.ClusterClientReceptionist
-import akka.stream.javadsl.Source
-import akka.stream.scaladsl.Sink
 import akka.stream.ActorMaterializer
 import akka.stream.OverflowStrategy
+import akka.stream.javadsl.Source
+import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
-import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.TestTopology
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.dbms.EnterpriseOperatorState.STARTED
 import org.neo4j.configuration.Config
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
@@ -109,7 +110,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         .map(_.databaseId)
         .map(id => (id, new DiscoveryDatabaseState(id, STARTED)) )
         .toMap
-      new ReadReplicaViewRecord(readReplicaInfo, topologyClient, new MemberId(UUID.randomUUID()), Instant.now(), states.asJava )
+      new ReadReplicaViewRecord(readReplicaInfo, topologyClient, new ServerId(UUID.randomUUID()), Instant.now(), states.asJava )
     }
   }
 

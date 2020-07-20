@@ -35,6 +35,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito.verify
 import org.neo4j.configuration.Config
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
@@ -210,7 +211,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
     val replicatorProbe = TestProbe("replicator")
 
-    val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForMemberId](ReplicatedDataIdentifier.METADATA.keyName())
+    val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForServerId](ReplicatedDataIdentifier.METADATA.keyName())
     val raftIdKey = LWWMapKey[String, RaftId](ReplicatedDataIdentifier.RAFT_ID.keyName())
 
     val topologyBuilder = mock[TopologyBuilder]
@@ -254,7 +255,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     def newMetadataMessage(databaseId: DatabaseId = databaseId): MetadataMessage = {
-      val info = new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), coreServerInfo(1, databaseId))
+      val info = new CoreServerInfoForServerId(new ServerId(UUID.randomUUID()), coreServerInfo(1, databaseId))
       val metadata = Map(UniqueAddress(Address("protocol", "system"), 1L) -> info).asJava
       new MetadataMessage(metadata)
     }

@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
@@ -35,6 +35,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,11 +70,11 @@ class BaseAkkaSerializerTest
                 new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ), new UniqueAddressSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system", "host", 79 ), 398L ),
                              new UniqueAddressSerializer()},
-                new Object[]{new CoreServerInfoForMemberId( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ),
-                             new CoreServerInfoForMemberIdSerializer()},
+                new Object[]{new CoreServerInfoForServerId( new ServerId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ),
+                             new CoreServerInfoForServerIdSerializer()},
                 new Object[]{new ReadReplicaRefreshMessage(
                         TestTopology.addressesForReadReplica( 432 ),
-                        new MemberId( UUID.randomUUID() ),
+                        new ServerId( UUID.randomUUID() ),
                         system.provider().resolveActorRef( actorPath + 1 ),
                         system.provider().resolveActorRef( actorPath + 2 ),
                         Collections.emptyMap() ),

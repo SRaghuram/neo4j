@@ -8,13 +8,13 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 import akka.actor.ActorRef;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaViewRecord
@@ -22,22 +22,22 @@ public class ReadReplicaViewRecord
     private final ReadReplicaInfo readReplicaInfo;
     private final Instant timestamp;
     private final ActorRef topologyClientActorRef;
-    private final MemberId memberId;
+    private final ServerId serverId;
     private final Map<DatabaseId,DiscoveryDatabaseState> databaseStates;
 
-    ReadReplicaViewRecord( ReadReplicaInfo readReplicaInfo, ActorRef topologyClientActorRef, MemberId memberId, Instant timestamp,
+    ReadReplicaViewRecord( ReadReplicaInfo readReplicaInfo, ActorRef topologyClientActorRef, ServerId serverId, Instant timestamp,
             Map<DatabaseId,DiscoveryDatabaseState> databaseStates )
     {
         this.readReplicaInfo = readReplicaInfo;
         this.timestamp = timestamp;
         this.topologyClientActorRef = topologyClientActorRef;
-        this.memberId = memberId;
+        this.serverId = serverId;
         this.databaseStates = databaseStates;
     }
 
     ReadReplicaViewRecord( ReadReplicaRefreshMessage message, Clock clock )
     {
-        this( message.readReplicaInfo(), message.topologyClientActorRef(), message.memberId(), Instant.now( clock ), message.databaseStates() );
+        this( message.readReplicaInfo(), message.topologyClientActorRef(), message.serverId(), Instant.now( clock ), message.databaseStates() );
     }
 
     public ReadReplicaInfo readReplicaInfo()
@@ -55,9 +55,9 @@ public class ReadReplicaViewRecord
         return topologyClientActorRef;
     }
 
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return memberId;
+        return serverId;
     }
 
     Map<DatabaseId,DiscoveryDatabaseState> databaseStates()
@@ -69,7 +69,7 @@ public class ReadReplicaViewRecord
     public String toString()
     {
         return "ReadReplicaViewRecord{" + "readReplicaInfo=" + readReplicaInfo + ", timestamp=" + timestamp + ", topologyClientActorRef=" +
-                topologyClientActorRef + ", memberId=" + memberId + ", databaseState=" + databaseStates + '}';
+                topologyClientActorRef + ", serverId=" + serverId + ", databaseState=" + databaseStates + '}';
     }
 
     @Override
@@ -85,13 +85,13 @@ public class ReadReplicaViewRecord
         }
         ReadReplicaViewRecord that = (ReadReplicaViewRecord) o;
         return Objects.equals( readReplicaInfo, that.readReplicaInfo ) && Objects.equals( timestamp, that.timestamp ) &&
-                Objects.equals( topologyClientActorRef, that.topologyClientActorRef ) && Objects.equals( memberId, that.memberId ) &&
+                Objects.equals( topologyClientActorRef, that.topologyClientActorRef ) && Objects.equals( serverId, that.serverId ) &&
                 Objects.equals( databaseStates, that.databaseStates );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( readReplicaInfo, timestamp, topologyClientActorRef, memberId, databaseStates );
+        return Objects.hash( readReplicaInfo, timestamp, topologyClientActorRef, serverId, databaseStates );
     }
 }

@@ -143,7 +143,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor )
     {
-        DiscoveryMember discoveryMember = discoveryMemberFactory.create( identityModule.memberId() );
+        DiscoveryMember discoveryMember = discoveryMemberFactory.create( identityModule.myself() );
         TopologyBuilder topologyBuilder = new TopologyBuilder();
         Props coreTopologyProps = CoreTopologyActor.props(
                 discoveryMember,
@@ -345,7 +345,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var currentLeaderInfo = getLocalLeader( namedDatabaseId );
 
         var wasLeaderForTerm =
-                Objects.equals( memberId(), currentLeaderInfo.memberId() ) &&
+                Objects.equals( identityModule.memberId( namedDatabaseId ), currentLeaderInfo.memberId() ) &&
                 term == currentLeaderInfo.term();
 
         if ( wasLeaderForTerm )

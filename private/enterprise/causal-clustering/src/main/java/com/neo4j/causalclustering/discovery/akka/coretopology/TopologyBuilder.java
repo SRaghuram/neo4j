@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModuleImpl;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
@@ -24,7 +25,8 @@ public class TopologyBuilder
         Map<MemberId,CoreServerInfo> coreMembers = cluster.availableMembers()
                 .flatMap( memberData::getStream )
                 .filter( member -> member.coreServerInfo().startedDatabaseIds().contains( databaseId ) )
-                .collect( toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
+                .collect( toMap( coreServerInfoForServerId -> ClusteringIdentityModuleImpl.fromServerId( coreServerInfoForServerId.serverId() ),
+                        CoreServerInfoForServerId::coreServerInfo ) );
 
         return new DatabaseCoreTopology( databaseId, raftId, coreMembers );
     }

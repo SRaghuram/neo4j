@@ -84,7 +84,7 @@ public class BootstrapState
                 .orElse( false );
     }
 
-    private static boolean isPotentialLeader( CoreServerInfoForMemberId infoForMember, NamedDatabaseId namedDatabaseId )
+    private static boolean isPotentialLeader( CoreServerInfoForServerId infoForMember, NamedDatabaseId namedDatabaseId )
     {
         CoreServerInfo info = infoForMember.coreServerInfo();
         return !info.refusesToBeLeader() && info.startedDatabaseIds().contains( namedDatabaseId.databaseId() );

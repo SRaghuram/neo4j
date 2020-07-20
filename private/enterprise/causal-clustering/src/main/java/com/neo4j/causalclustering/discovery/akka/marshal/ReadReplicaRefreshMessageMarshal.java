@@ -10,12 +10,12 @@ import akka.actor.ExtendedActorSystem;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.ChannelMarshal;
@@ -26,7 +26,7 @@ import org.neo4j.kernel.database.DatabaseId;
 public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadReplicaRefreshMessage>
 {
     private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal;
-    private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
+    private final ChannelMarshal<ServerId> serverIdMarshal = new ServerId.Marshal();
     private final ChannelMarshal<ActorRef> actorRefMarshal;
 
     public ReadReplicaRefreshMessageMarshal( ExtendedActorSystem system )
@@ -39,7 +39,7 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
     protected ReadReplicaRefreshMessage unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         var rrInfo = readReplicaInfoMarshal.unmarshal( channel );
-        var memberId = memberIdMarshal.unmarshal( channel );
+        var serverId = serverIdMarshal.unmarshal( channel );
         var clusterClient = actorRefMarshal.unmarshal( channel );
         var topologyClient = actorRefMarshal.unmarshal( channel );
 
@@ -52,14 +52,14 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
             databaseStates.put( id, state );
         }
 
-        return new ReadReplicaRefreshMessage( rrInfo, memberId, clusterClient, topologyClient, databaseStates );
+        return new ReadReplicaRefreshMessage( rrInfo, serverId, clusterClient, topologyClient, databaseStates );
     }
 
     @Override
     public void marshal( ReadReplicaRefreshMessage readReplicaRefreshMessage, WritableChannel channel ) throws IOException
     {
         readReplicaInfoMarshal.marshal( readReplicaRefreshMessage.readReplicaInfo(), channel );
-        memberIdMarshal.marshal( readReplicaRefreshMessage.memberId(), channel );
+        serverIdMarshal.marshal( readReplicaRefreshMessage.serverId(), channel );
         actorRefMarshal.marshal( readReplicaRefreshMessage.clusterClientManager(), channel );
         actorRefMarshal.marshal( readReplicaRefreshMessage.topologyClientActorRef(), channel );
 

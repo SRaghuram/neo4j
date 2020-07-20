@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.ClusteringIdentityModuleImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -43,10 +44,10 @@ class ReadReplicaViewMessageTest extends TestKit
     private final TestProbe clientManager = TestProbe.apply( getSystem() );
     private final ActorRef clusterClient = clientManager.childActorOf( Props.create( FakeClusterClient.class ) );
     private final ReadReplicaInfo readReplicaInfo = TestTopology.addressesForReadReplica( 0 );
-    private final MemberId memberId = new MemberId( UUID.randomUUID() );
+    private final ServerId serverId = new ServerId( UUID.randomUUID() );
     private final Instant now = Instant.now();
 
-    private final ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, clientManager.ref(), memberId, now, emptyMap() );
+    private final ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, clientManager.ref(), serverId, now, emptyMap() );
 
     private final ReadReplicaViewMessage readReplicaViewMessage = new ReadReplicaViewMessage( Map.of( clientManager.ref().path(), record ) );
 
@@ -85,7 +86,8 @@ class ReadReplicaViewMessageTest extends TestKit
     void shouldReturnReadReplicaTopology()
     {
         DatabaseId databaseId = Iterables.single( readReplicaInfo.startedDatabaseIds() );
-        DatabaseReadReplicaTopology expected = new DatabaseReadReplicaTopology( databaseId, Map.of( memberId, readReplicaInfo ) );
+        DatabaseReadReplicaTopology expected = new DatabaseReadReplicaTopology( databaseId,
+                Map.of( ClusteringIdentityModuleImpl.fromServerId( serverId ), readReplicaInfo ) );
 
         assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseId ), equalTo( expected ) );
     }
@@ -105,9 +107,9 @@ class ReadReplicaViewMessageTest extends TestKit
         var info2 = TestTopology.addressesForReadReplica( 1, Set.of( dbId3, dbId1 ) );
         var info3 = TestTopology.addressesForReadReplica( 2, Set.of( dbId2, dbId3 ) );
 
-        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), memberId, now, emptyMap() );
-        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), memberId, now, emptyMap() );
-        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), memberId, now, emptyMap() );
+        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), serverId, now, emptyMap() );
+        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), serverId, now, emptyMap() );
+        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), serverId, now, emptyMap() );
 
         var clusterClientReadReplicas = Map.of(
                 clusterClient1.path(), record1,
@@ -132,9 +134,9 @@ class ReadReplicaViewMessageTest extends TestKit
         var dbId2 = randomDatabaseId();
         var dbId3 = randomDatabaseId();
 
-        var memberId1 = new MemberId( UUID.randomUUID() );
-        var memberId2 = new MemberId( UUID.randomUUID() );
-        var memberId3 = new MemberId( UUID.randomUUID() );
+        var serverId1 = new ServerId( UUID.randomUUID() );
+        var serverId2 = new ServerId( UUID.randomUUID() );
+        var serverId3 = new ServerId( UUID.randomUUID() );
 
         var info1 = TestTopology.addressesForReadReplica( 0, Set.of( dbId1, dbId2 ) );
         var info2 = TestTopology.addressesForReadReplica( 1, Set.of( dbId3, dbId1 ) );
@@ -150,15 +152,19 @@ class ReadReplicaViewMessageTest extends TestKit
                 dbId2, new DiscoveryDatabaseState( dbId2, STARTED ),
                 dbId3, new DiscoveryDatabaseState( dbId3, STARTED ) );
 
-        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), memberId1, now, states1 );
-        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), memberId2, now, states2 );
-        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), memberId3, now, states3 );
+        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), serverId1, now, states1 );
+        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), serverId2, now, states2 );
+        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), serverId3, now, states3 );
 
         var clusterClientReadReplicas = Map.of(
                 clusterClient1.path(), record1,
                 clusterClient2.path(), record2,
                 clusterClient3.path(), record3 );
         var readReplicaViewMessage = new ReadReplicaViewMessage( clusterClientReadReplicas );
+
+        var memberId1 = ClusteringIdentityModuleImpl.fromServerId( serverId1 );
+        var memberId2 = ClusteringIdentityModuleImpl.fromServerId( serverId2 );
+        var memberId3 = ClusteringIdentityModuleImpl.fromServerId( serverId3 );
 
         var expectedState1 = ReplicatedDatabaseState.ofReadReplicas( dbId1,
                 Map.of( memberId1, new DiscoveryDatabaseState( dbId1, STARTED ),

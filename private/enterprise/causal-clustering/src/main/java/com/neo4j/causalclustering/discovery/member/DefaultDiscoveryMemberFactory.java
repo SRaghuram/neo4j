@@ -5,13 +5,12 @@
  */
 package com.neo4j.causalclustering.discovery.member;
 
-import com.neo4j.causalclustering.identity.MemberId;
-
 import java.util.Set;
 
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -30,7 +29,7 @@ public class DefaultDiscoveryMemberFactory implements DiscoveryMemberFactory
     }
 
     @Override
-    public DiscoveryMember create( MemberId id )
+    public DiscoveryMember create( ServerId id )
     {
         var startedDatabases = startedDatabases();
         return new DefaultDiscoveryMember( id, startedDatabases );

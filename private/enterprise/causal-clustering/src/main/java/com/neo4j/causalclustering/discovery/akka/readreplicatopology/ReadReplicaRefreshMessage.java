@@ -6,30 +6,29 @@
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.ActorRef;
-import akka.cluster.client.ClusterClient;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaRefreshMessage
 {
     private final ReadReplicaInfo readReplicaInfo;
-    private final MemberId memberId;
+    private final ServerId serverId;
     private final ActorRef clusterClientManager;
     private final ActorRef topologyClient;
     private final Map<DatabaseId,DiscoveryDatabaseState> databaseStates;
 
-    public ReadReplicaRefreshMessage( ReadReplicaInfo readReplicaInfo, MemberId memberId, ActorRef clusterClientManager, ActorRef topologyClient,
+    public ReadReplicaRefreshMessage( ReadReplicaInfo readReplicaInfo, ServerId serverId, ActorRef clusterClientManager, ActorRef topologyClient,
             Map<DatabaseId,DiscoveryDatabaseState> databaseStates )
     {
         this.readReplicaInfo = readReplicaInfo;
-        this.memberId = memberId;
+        this.serverId = serverId;
         this.clusterClientManager = clusterClientManager;
         this.topologyClient = topologyClient;
         this.databaseStates = databaseStates;
@@ -40,9 +39,9 @@ public class ReadReplicaRefreshMessage
         return readReplicaInfo;
     }
 
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return memberId;
+        return serverId;
     }
 
     public Map<DatabaseId,DiscoveryDatabaseState> databaseStates()
@@ -69,7 +68,7 @@ public class ReadReplicaRefreshMessage
     @Override
     public String toString()
     {
-        return "ReadReplicaRefreshMessage{" + "readReplicaInfo=" + readReplicaInfo + ", memberId=" + memberId + ", clusterClient=" + clusterClientManager +
+        return "ReadReplicaRefreshMessage{" + "readReplicaInfo=" + readReplicaInfo + ", serverId=" + serverId + ", clusterClient=" + clusterClientManager +
                ", topologyClient=" + topologyClient + ", databaseStates=" + databaseStates + '}';
     }
 
@@ -85,7 +84,7 @@ public class ReadReplicaRefreshMessage
             return false;
         }
         ReadReplicaRefreshMessage that = (ReadReplicaRefreshMessage) o;
-        return Objects.equals( readReplicaInfo, that.readReplicaInfo ) && Objects.equals( memberId, that.memberId ) &&
+        return Objects.equals( readReplicaInfo, that.readReplicaInfo ) && Objects.equals( serverId, that.serverId ) &&
                Objects.equals( clusterClientManager, that.clusterClientManager ) && Objects.equals( topologyClient, that.topologyClient ) &&
                Objects.equals( databaseStates, that.databaseStates );
     }
@@ -94,6 +93,6 @@ public class ReadReplicaRefreshMessage
     public int hashCode()
     {
 
-        return Objects.hash( readReplicaInfo, memberId, clusterClientManager, topologyClient, databaseStates );
+        return Objects.hash( readReplicaInfo, serverId, clusterClientManager, topologyClient, databaseStates );
     }
 }

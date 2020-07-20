@@ -6,24 +6,25 @@
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Objects;
 
-public class CoreServerInfoForMemberId
+import org.neo4j.dbms.identity.ServerId;
+
+public class CoreServerInfoForServerId
 {
-    private final MemberId memberId;
+    private final ServerId serverId;
     private final CoreServerInfo coreServerInfo;
 
-    public CoreServerInfoForMemberId( MemberId memberId, CoreServerInfo coreServerInfo )
+    public CoreServerInfoForServerId( ServerId serverId, CoreServerInfo coreServerInfo )
     {
-        this.memberId = memberId;
+        this.serverId = serverId;
         this.coreServerInfo = coreServerInfo;
     }
 
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return memberId;
+        return serverId;
     }
 
     public CoreServerInfo coreServerInfo()
@@ -34,8 +35,8 @@ public class CoreServerInfoForMemberId
     @Override
     public String toString()
     {
-        return "CoreServerInfoForMemberId{" +
-                "memberId=" + memberId +
+        return "CoreServerInfoForServerId{" +
+                "serverId=" + serverId +
                 ", coreServerInfo=" + coreServerInfo +
                 '}';
     }
@@ -51,14 +52,14 @@ public class CoreServerInfoForMemberId
         {
             return false;
         }
-        CoreServerInfoForMemberId that = (CoreServerInfoForMemberId) o;
-        return Objects.equals( memberId, that.memberId ) && Objects.equals( coreServerInfo, that.coreServerInfo );
+        CoreServerInfoForServerId that = (CoreServerInfoForServerId) o;
+        return Objects.equals( serverId, that.serverId ) && Objects.equals( coreServerInfo, that.coreServerInfo );
     }
 
     @Override
     public int hashCode()
     {
 
-        return Objects.hash( memberId, coreServerInfo );
+        return Objects.hash( serverId, coreServerInfo );
     }
 }

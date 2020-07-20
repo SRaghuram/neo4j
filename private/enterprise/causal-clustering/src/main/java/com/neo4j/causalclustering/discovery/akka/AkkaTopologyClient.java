@@ -85,7 +85,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink =
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
 
-        var discoveryMember = discoveryMemberFactory.create( identityModule.memberId() );
+        var discoveryMember = discoveryMemberFactory.create( identityModule.myself() );
         var clientTopologyProps = ClientTopologyActor.props(
                 discoveryMember,
                 coreTopologySink,

@@ -306,7 +306,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
         var globalLife = globalModule.getGlobalLife();
         var fileSystem = globalModule.getFileSystem();
-        var myIdentity = identityModule.memberId();
 
         Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );

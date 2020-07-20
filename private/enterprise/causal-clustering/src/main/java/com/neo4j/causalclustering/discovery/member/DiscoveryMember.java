@@ -5,15 +5,14 @@
  */
 package com.neo4j.causalclustering.discovery.member;
 
-import com.neo4j.causalclustering.identity.MemberId;
-
 import java.util.Set;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 public interface DiscoveryMember
 {
-    MemberId id();
+    ServerId id();
 
     Set<DatabaseId> startedDatabases();
 }
