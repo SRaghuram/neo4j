@@ -1137,6 +1137,43 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   }
 
+  test("WHERE NOT EXISTS with horizons") {
+    val q =
+      """WITH 1 AS x
+        |WHERE NOT EXISTS {
+        |  MATCH (:Badger)
+        |}
+        |RETURN x""".stripMargin
+
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE NOT EXISTS with horizons 2") {
+    val q =
+      """WITH 1 AS x
+        |WITH x, 2 as y
+        |WHERE NOT EXISTS {
+        |  MATCH (:Badger)
+        |}
+        |RETURN x""".stripMargin
+
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE NOT EXISTS with horizons 3") {
+    val q =
+      """WITH 1 AS x
+        |WHERE NOT NOT EXISTS {
+        |  MATCH ()
+        |}
+        |RETURN x""".stripMargin
+
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
   test("NOT EXISTS with single node should work") {
 
     val query =
