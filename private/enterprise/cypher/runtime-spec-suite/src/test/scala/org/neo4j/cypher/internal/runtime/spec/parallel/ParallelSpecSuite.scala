@@ -56,6 +56,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DropResultTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
@@ -163,9 +164,11 @@ class ParallelRuntimeLabelScanNoFusingStressTest extends LabelScanStressTestBase
 class ParallelRuntimeNodeIndexSeekTest extends NodeIndexSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
                                        with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                        with ArrayIndexSupport[EnterpriseRuntimeContext]
+                                       with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
                                                with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                                with ArrayIndexSupport[EnterpriseRuntimeContext]
+                                               with EnterpriseNodeIndexSeekTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeNodeIndexPointDistanceSeekTest extends NodeIndexPointDistanceSeekTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeIndexPointDistanceSeekNoFusingTest extends NodeIndexPointDistanceSeekTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 

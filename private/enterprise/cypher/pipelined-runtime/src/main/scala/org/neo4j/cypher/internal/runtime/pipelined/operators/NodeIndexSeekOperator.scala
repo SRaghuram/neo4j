@@ -137,6 +137,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
         cursorsToClose = Array(nodeCursor)
         seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQueries.head)
       } else {
+        // If we should use ValuedNodeIndexCursors here at some point, remember to not free them into the same pool
         cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
           val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
           read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, needsValues || indexOrder != IndexOrder.NONE), query: _*)
@@ -432,6 +433,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
   private val nodeCursorsToCloseField = field[Array[NodeValueIndexCursor]](codeGen.namer.nextVariableName("cursorsToClose"))
 
   def createCursorArray: IntermediateRepresentation
+  def getCursorToFree(cursor: IntermediateRepresentation): IntermediateRepresentation
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, nodeCursorsToCloseField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
@@ -498,7 +500,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
     /**
      * {{{
      *   if (cursorsToClose != null) {
-     *      cursorsToClose.foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
+     *      cursorsToClose.map(getCursorToFree).foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
      *      cursorsToClose = null
      *   }
      *   nodeIndexCursor = null
@@ -510,7 +512,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
           declareAndAssign(typeRefOf[Int], i, constant(0)),
           loop(IntermediateRepresentation.lessThan(load(i), arrayLength(loadField(nodeCursorsToCloseField)))) {
             block(
-              freeCursor[NodeValueIndexCursor](arrayLoad(loadField(nodeCursorsToCloseField), load(i)), NodeValueIndexCursorPool),
+              freeCursor[NodeValueIndexCursor](getCursorToFree(arrayLoad(loadField(nodeCursorsToCloseField), load(i))), NodeValueIndexCursorPool),
               assign(i, add(load(i), constant(1)))
             )
           },
@@ -560,6 +562,8 @@ class ManyQueriesNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
   extends BaseManyQueriesNodeIndexSeekTaskTemplate(inner, id, innermost, offset, Seq(property), order, argumentSize, codeGen) {
   private var seekValues: Seq[IntermediateExpression] = _
 
+  override def getCursorToFree(cursor: IntermediateRepresentation): IntermediateRepresentation = cursor
+
   override def createCursorArray: IntermediateRepresentation = {
     if (seekValues == null) {
       seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
@@ -587,6 +591,9 @@ class CompositeNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                         (codeGen: OperatorExpressionCompiler)
   extends BaseManyQueriesNodeIndexSeekTaskTemplate(inner, id, innermost, offset, properties, order, argumentSize, codeGen) {
   private var seekValues: Seq[Seq[IntermediateExpression]] = _
+
+  override def getCursorToFree(cursor: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(ManyQueriesNodeIndexSeekTaskTemplate.compositeCursorToFreeMethod, cursor)
+
   override def createCursorArray: IntermediateRepresentation = {
     if (seekValues == null) {
       seekValues = seekExpressions.map(_.generateSeekValues).map(compile).map(nullCheck)
@@ -626,12 +633,19 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     cursors
   }
 
+  def compositeCursorToFree(cursor: NodeValueIndexCursor): NodeValueIndexCursor = {
+    cursor match {
+      case cursor: ValuedNodeIndexCursor => cursor.inner
+      case x => x
+    }
+  }
+
   def compositeCreateCursors(predicates: Array[Array[IndexQuery]],
-                    index: IndexReadSession,
-                    order: IndexOrder,
-                    needsValues: Boolean,
-                    read: Read,
-                    cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+                             index: IndexReadSession,
+                             order: IndexOrder,
+                             needsValues: Boolean,
+                             read: Read,
+                             cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
     val combinedPredicates = combine(predicates)
     val cursors = new Array[NodeValueIndexCursor](combinedPredicates.length)
     val pool = cursorPools.nodeValueIndexCursorPool
@@ -699,6 +713,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
       NodeValueIndexCursor,
       Int]("getPropertyValue")
   val compositeQueryIteratorMethod: Method = method[ManyQueriesNodeIndexSeekTaskTemplate, CompositePredicateIterator, Array[Array[IndexQuery]]]("compositeQueryIterator")
+  val compositeCursorToFreeMethod: Method = method[ManyQueriesNodeIndexSeekTaskTemplate, NodeValueIndexCursor, NodeValueIndexCursor]("compositeCursorToFree")
 }
 
 case class SeekExpression(generateSeekValues: Seq[() => IntermediateExpression],
