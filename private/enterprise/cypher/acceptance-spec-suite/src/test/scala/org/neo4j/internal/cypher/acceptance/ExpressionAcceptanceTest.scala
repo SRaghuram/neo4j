@@ -158,6 +158,20 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.toList should equal(List(Map("n" -> null)))
   }
 
+  test("should project * and map projection") {
+    //given
+    val s = createLabeledNode(Map("a" -> 1, "b" -> 2, "c" -> 3), "Sport")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (s:Sport)
+        |WITH *, s { .* } AS s_compare
+        |RETURN *""".stripMargin)
+
+    //then
+    result.toList should equal(List(Map("s" -> s, "s_compare" -> Map("a" -> 1, "b" -> 2, "c" -> 3))))
+  }
+
   test("projecting with distinct should not drop results") {
     // it turns out that if there is a node with Id=8, then the node with Id=14 will not be seen as distinct if there are other keys in the map (bug in MapValue.equals)
     graph.withTx { tx =>
