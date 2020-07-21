@@ -12,7 +12,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,9 +29,6 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
-import org.neo4j.fabric.executor.FabricStatementLifecycles;
-import org.neo4j.fabric.transaction.FabricTransaction;
-import org.neo4j.fabric.transaction.TransactionManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
@@ -42,23 +38,17 @@ import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
-import org.neo4j.internal.kernel.api.security.AdminActionOnResource.DatabaseScope;
-import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
-import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.query.ExecutingQuery;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.KernelTransactions;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.query.FunctionInformation;
@@ -336,115 +326,6 @@ public class EnterpriseBuiltInDbmsProcedures
     /*
     ==================================================================================
      */
-
-    @SystemProcedure
-    @Description( "List all queries currently executing at this instance that are visible to the user." )
-    @Procedure( name = "dbms.listQueries", mode = DBMS )
-    public Stream<QueryStatusResult> listQueries() throws InvalidArgumentsException
-    {
-        securityContext.assertCredentialsNotExpired();
-
-        ZoneId zoneId = getConfiguredTimeZone();
-        List<QueryStatusResult> result = new ArrayList<>();
-
-        for ( FabricTransaction tx : getFabricTransactions() )
-        {
-            for ( ExecutingQuery query : getActiveFabricQueries( tx ) )
-            {
-                String username = query.username();
-                var action = new AdminActionOnResource( PrivilegeAction.SHOW_TRANSACTION, DatabaseScope.ALL, new UserSegment( username ) );
-                if ( isSelfOrAllows( username, action ) )
-                {
-                    result.add( new QueryStatusResult( query, (InternalTransaction) transaction, zoneId, "none" ) );
-                }
-            }
-        }
-
-        for ( DatabaseContext databaseContext : getDatabaseManager().registeredDatabases().values() )
-        {
-            DatabaseScope dbScope = new DatabaseScope( databaseContext.database().getNamedDatabaseId().name() );
-            for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
-            {
-                if ( tx.executingQuery().isPresent() )
-                {
-                    ExecutingQuery query = tx.executingQuery().get();
-                    String username = query.username();
-                    var action = new AdminActionOnResource( PrivilegeAction.SHOW_TRANSACTION, dbScope, new UserSegment( username ) );
-                    if ( isSelfOrAllows( username, action ) )
-                    {
-                        result.add(
-                                new QueryStatusResult( query, (InternalTransaction) transaction, zoneId, databaseContext.databaseFacade().databaseName() ) );
-                    }
-                }
-            }
-        }
-        return result.stream();
-    }
-
-    @SystemProcedure
-    @Description( "Kill all transactions executing the query with the given query id." )
-    @Procedure( name = "dbms.killQuery", mode = DBMS )
-    public Stream<QueryTerminationResult> killQuery( @Name( "id" ) String idText ) throws InvalidArgumentsException
-    {
-        return killQueries( singletonList( idText ) );
-    }
-
-    @SystemProcedure
-    @Description( "Kill all transactions executing a query with any of the given query ids." )
-    @Procedure( name = "dbms.killQueries", mode = DBMS )
-    public Stream<QueryTerminationResult> killQueries( @Name( "ids" ) List<String> idTexts ) throws InvalidArgumentsException
-    {
-        securityContext.assertCredentialsNotExpired();
-
-        DatabaseManager<DatabaseContext> databaseManager = getDatabaseManager();
-        DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
-
-        Map<Long,QueryId> queryIds = new HashMap<>( idTexts.size() );
-        for ( String idText : idTexts )
-        {
-            QueryId id = QueryId.parse( idText );
-            queryIds.put( id.internalId(), id );
-        }
-
-        List<QueryTerminationResult> result = new ArrayList<>( queryIds.size() );
-
-        for ( FabricTransaction tx : getFabricTransactions() )
-        {
-            for ( ExecutingQuery query : getActiveFabricQueries( tx ) )
-            {
-                QueryId givenQueryId = queryIds.remove( query.internalQueryId() );
-                if ( givenQueryId != null )
-                {
-                    result.add( killFabricQueryTransaction( givenQueryId, tx, query ) );
-                }
-            }
-        }
-
-        for ( Map.Entry<NamedDatabaseId,DatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
-        {
-            NamedDatabaseId databaseId = databaseEntry.getKey();
-            DatabaseContext databaseContext = databaseEntry.getValue();
-            for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
-            {
-                if ( tx.executingQuery().isPresent() )
-                {
-                    QueryId givenQueryId = queryIds.remove( tx.executingQuery().get().internalQueryId() );
-                    if ( givenQueryId != null )
-                    {
-                        result.add( killQueryTransaction( givenQueryId, tx, databaseId ) );
-                    }
-                }
-            }
-        }
-
-        // Add error about the rest
-        for ( QueryId queryId : queryIds.values() )
-        {
-            result.add( new QueryFailedTerminationResult( queryId, "n/a", "No Query found with this id" ) );
-        }
-
-        return result.stream();
-    }
 
     @SystemProcedure
     @Description( "List all memory pools, including sub pools, currently registered at this instance that are visible to the user." )
@@ -727,63 +608,9 @@ public class EnterpriseBuiltInDbmsProcedures
         return (DatabaseManager<DatabaseContext>) resolver.resolveDependency( DatabaseManager.class );
     }
 
-    private TransactionManager getFabricTransactionManager()
-    {
-        return resolver.resolveDependency( TransactionManager.class );
-    }
-
-    private Set<FabricTransaction> getFabricTransactions()
-    {
-        return getFabricTransactionManager().getOpenTransactions();
-    }
-
-    private List<ExecutingQuery> getActiveFabricQueries( FabricTransaction tx )
-    {
-        return tx.getLastSubmittedStatement().stream()
-                                            .filter( FabricStatementLifecycles.StatementLifecycle::inFabricPhase )
-                                            .map( FabricStatementLifecycles.StatementLifecycle::getMonitoredQuery )
-                                            .collect( toList() );
-    }
-
     private static Set<KernelTransactionHandle> getExecutingTransactions( DatabaseContext databaseContext )
     {
         return databaseContext.dependencies().resolveDependency( KernelTransactions.class ).executingTransactions();
-    }
-
-    private QueryTerminationResult killQueryTransaction( QueryId queryId, KernelTransactionHandle handle, NamedDatabaseId databaseId )
-    {
-        Optional<ExecutingQuery> query = handle.executingQuery();
-        ExecutingQuery executingQuery = query.orElseThrow( () -> new IllegalStateException( "Query should exist since we filtered based on query ids" ) );
-        String username = executingQuery.username();
-        var action = new AdminActionOnResource( PrivilegeAction.TERMINATE_TRANSACTION, new DatabaseScope( databaseId.name() ), new UserSegment( username ) );
-        if ( isSelfOrAllows( username, action ) )
-        {
-            if ( handle.isClosing() )
-            {
-                return new QueryFailedTerminationResult( queryId, username, "Unable to kill queries when underlying transaction is closing." );
-            }
-            handle.markForTermination( Status.Transaction.Terminated );
-            return new QueryTerminationResult( queryId, username, "Query found" );
-        }
-        else
-        {
-            throw new AuthorizationViolationException( PERMISSION_DENIED );
-        }
-    }
-
-    private QueryTerminationResult killFabricQueryTransaction( QueryId queryId, FabricTransaction tx, ExecutingQuery query )
-    {
-        String username = query.username();
-        var action = new AdminActionOnResource( PrivilegeAction.TERMINATE_TRANSACTION, DatabaseScope.ALL, new UserSegment( username ) );
-        if ( isSelfOrAllows( username, action ) )
-        {
-            tx.markForTermination( Status.Transaction.Terminated );
-            return new QueryTerminationResult( queryId, username, "Query found" );
-        }
-        else
-        {
-            throw new AuthorizationViolationException( PERMISSION_DENIED );
-        }
     }
 
     private ZoneId getConfiguredTimeZone()
@@ -800,28 +627,6 @@ public class EnterpriseBuiltInDbmsProcedures
     private boolean isAdminOrSelf( String username )
     {
         return securityContext.allowExecuteAdminProcedure() || securityContext.subject().hasUsername( username );
-    }
-
-    public static class QueryTerminationResult
-    {
-        public final String queryId;
-        public final String username;
-        public final String message;
-
-        public QueryTerminationResult( QueryId queryId, String username, String message )
-        {
-            this.queryId = queryId.toString();
-            this.username = username;
-            this.message = message;
-        }
-    }
-
-    public static class QueryFailedTerminationResult extends QueryTerminationResult
-    {
-        public QueryFailedTerminationResult( QueryId queryId, String username, String message )
-        {
-            super( queryId, username, message );
-        }
     }
 
     public static class ActiveSchedulingGroup
