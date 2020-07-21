@@ -37,13 +37,10 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
-import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.net.NetworkConnectionTracker;
-import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.query.ExecutingQuery;
@@ -72,7 +69,6 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.valueOf;
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
@@ -112,62 +108,6 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Context
     public ProcedureCallContext callContext;
-
-    @SystemProcedure
-    @Description( "List all accepted network connections at this instance that are visible to the user." )
-    @Procedure( name = "dbms.listConnections", mode = DBMS )
-    public Stream<ListConnectionResult> listConnections()
-    {
-        securityContext.assertCredentialsNotExpired();
-
-        NetworkConnectionTracker connectionTracker = getConnectionTracker();
-        ZoneId timeZone = getConfiguredTimeZone();
-
-        return connectionTracker.activeConnections()
-                .stream()
-                .filter( connection -> isAdminOrSelf( connection.username() ) )
-                .map( connection -> new ListConnectionResult( connection, timeZone ) );
-    }
-
-    @SystemProcedure
-    @Description( "Kill network connection with the given connection id." )
-    @Procedure( name = "dbms.killConnection", mode = DBMS )
-    public Stream<ConnectionTerminationResult> killConnection( @Name( "id" ) String id )
-    {
-        return killConnections( singletonList( id ) );
-    }
-
-    @SystemProcedure
-    @Description( "Kill all network connections with the given connection ids." )
-    @Procedure( name = "dbms.killConnections", mode = DBMS )
-    public Stream<ConnectionTerminationResult> killConnections( @Name( "ids" ) List<String> ids )
-    {
-        securityContext.assertCredentialsNotExpired();
-
-        NetworkConnectionTracker connectionTracker = getConnectionTracker();
-
-        return ids.stream().map( id -> killConnection( id, connectionTracker ) );
-    }
-
-    private NetworkConnectionTracker getConnectionTracker()
-    {
-        return resolver.resolveDependency( NetworkConnectionTracker.class );
-    }
-
-    private ConnectionTerminationResult killConnection( String id, NetworkConnectionTracker connectionTracker )
-    {
-        TrackedNetworkConnection connection = connectionTracker.get( id );
-        if ( connection != null )
-        {
-            if ( isAdminOrSelf( connection.username() ) )
-            {
-                connection.close();
-                return new ConnectionTerminationResult( id, connection.username() );
-            }
-            throw new AuthorizationViolationException( PERMISSION_DENIED );
-        }
-        return new ConnectionTerminationFailedResult( id );
-    }
 
     @SystemProcedure
     @Description( "List all functions in the DBMS." )
@@ -617,11 +557,6 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         Config config = resolver.resolveDependency( Config.class );
         return config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
-    }
-
-    private boolean isSelfOrAllows( String username, AdminActionOnResource actionOnResource )
-    {
-        return securityContext.subject().hasUsername( username ) || securityContext.allowsAdminAction( actionOnResource );
     }
 
     private boolean isAdminOrSelf( String username )
