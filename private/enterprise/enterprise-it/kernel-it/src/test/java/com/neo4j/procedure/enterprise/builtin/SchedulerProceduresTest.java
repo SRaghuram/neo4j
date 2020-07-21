@@ -206,7 +206,7 @@ class SchedulerProceduresTest
 
         try
         {
-            scheduler.schedule( Group.TESTING, () ->
+            scheduler.schedule( Group.TESTING, JobMonitoringParams.NOT_MONITORED, () ->
             {
                 var logicContext = new BasicLoginContext( new User.Builder( "John Doe", null ).build(), SUCCESS );
                 try ( Transaction tx = db.beginTransaction( EXPLICIT, logicContext ) )

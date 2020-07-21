@@ -63,6 +63,7 @@ import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.scheduler.MonitoredJobExecutor;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.time.SystemNanoClock;
 
@@ -95,6 +96,7 @@ class TransactionTest
     private static final JobScheduler jobScheduler = mock( JobScheduler.class );
     private static final ExecutorService fabricWorkerExecutorService = Executors.newCachedThreadPool();
     private static final CallableExecutorService callableFabricWorkerExecutorService = new CallableExecutorService( fabricWorkerExecutorService );
+    private static final MonitoredJobExecutor monitoredJobExecutor = ( monitoringParams, job ) -> fabricWorkerExecutorService.submit( job );
     private static final DatabaseManagementService databaseManagementService = mock( DatabaseManagementService.class );
     private static final FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
     private static DriverUtils driverUtils;
@@ -120,10 +122,8 @@ class TransactionTest
                 "dbms.transaction.timeout", "120s"
         );
 
-        JobHandle timeoutHandle = mock( JobHandle.class );
-        when( jobScheduler.schedule( any(), any(), anyLong(), any() ) ).thenReturn( timeoutHandle );
         when( jobScheduler.executor( Group.FABRIC_WORKER ) ).thenReturn( callableFabricWorkerExecutorService );
-        when( jobScheduler.executor( Group.CYPHER_CACHE ) ).thenReturn( callableFabricWorkerExecutorService );
+        when( jobScheduler.monitoredJobExecutor( Group.CYPHER_CACHE ) ).thenReturn( monitoredJobExecutor );
 
         when( clock.nanos() ).thenReturn( System.nanoTime() );
         when( jobScheduler.scheduleRecurring( any(), any(), timeoutCallback.capture(), anyLong(), any() ) ).thenReturn( mock( JobHandle.class ) );

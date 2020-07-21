@@ -24,6 +24,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.scheduler.Group
+import org.neo4j.scheduler.JobMonitoringParams.systemJob
 import org.neo4j.scheduler.JobScheduler
 
 /**
@@ -51,7 +52,9 @@ object RuntimeEnvironment {
   }
 
   private def createCache(jobScheduler: JobScheduler) = {
-    new CachingExpressionCompilerCache(new ExecutorBasedCaffeineCacheFactory(jobScheduler.executor(Group.CYPHER_CACHE)))
+    val monitoredExecutor = jobScheduler.monitoredJobExecutor(Group.CYPHER_CACHE)
+    val cacheFactory = new ExecutorBasedCaffeineCacheFactory((job: Runnable) => monitoredExecutor.execute(systemJob("Compiled expressions cache maintenance"), job));
+    new CachingExpressionCompilerCache(cacheFactory)
   }
 
   private def createParallelQueryExecutor(cursors: CursorFactory,

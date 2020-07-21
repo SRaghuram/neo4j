@@ -30,6 +30,7 @@ import org.neo4j.kernel.database.DatabaseMemoryTrackers
 import org.neo4j.kernel.impl.query.QueryEngineProvider.SPI
 import org.neo4j.logging.Log
 import org.neo4j.scheduler.Group
+import org.neo4j.scheduler.JobMonitoringParams.systemJob
 
 class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
                                 spi: SPI,
@@ -64,13 +65,15 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
       case CypherVersion.v4_2 => Compatibility4_2
     }
 
+    val monitoredExecutor = spi.jobScheduler.monitoredJobExecutor(Group.CYPHER_CACHE)
+
     val planner =
       CypherPlanner(
         plannerConfig,
         MasterCompiler.CLOCK,
         spi.monitors(),
         log,
-        new ExecutorBasedCaffeineCacheFactory(spi.jobScheduler.executor(Group.CYPHER_CACHE)),
+        new ExecutorBasedCaffeineCacheFactory((job: Runnable) => monitoredExecutor.execute(systemJob("Query plan cache maintenance"), job)),
         cypherPlanner,
         cypherUpdateStrategy,
         LastCommittedTxIdProvider(graph),

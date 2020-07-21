@@ -45,6 +45,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
+import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.test.extension.Inject;
@@ -562,7 +563,7 @@ class PageCacheWarmerTest
             PageCacheWarmer warmer = createPageCacheWarmer( pageCache, config, log );
 
             warmer.start();
-            JobHandle handle = scheduler.schedule( Group.FILE_IO_HELPER, () ->
+            JobHandle handle = scheduler.schedule( Group.FILE_IO_HELPER, JobMonitoringParams.NOT_MONITORED, () ->
             {
                 try
                 {
