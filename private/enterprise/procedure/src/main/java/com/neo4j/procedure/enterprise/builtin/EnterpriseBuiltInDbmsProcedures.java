@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,7 +55,6 @@ import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.query.ExecutingQuery;
-import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.KernelTransactions;
@@ -76,6 +74,8 @@ import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Internal;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.procedure.builtin.QueryId;
+import org.neo4j.procedure.builtin.TransactionId;
 import org.neo4j.resources.Profiler;
 import org.neo4j.scheduler.ActiveGroup;
 import org.neo4j.scheduler.Group;
@@ -83,7 +83,6 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.valueOf;
 import static java.util.Collections.singletonList;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
@@ -383,6 +382,71 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @SystemProcedure
+    @Description( "Kill all transactions executing the query with the given query id." )
+    @Procedure( name = "dbms.killQuery", mode = DBMS )
+    public Stream<QueryTerminationResult> killQuery( @Name( "id" ) String idText ) throws InvalidArgumentsException
+    {
+        return killQueries( singletonList( idText ) );
+    }
+
+    @SystemProcedure
+    @Description( "Kill all transactions executing a query with any of the given query ids." )
+    @Procedure( name = "dbms.killQueries", mode = DBMS )
+    public Stream<QueryTerminationResult> killQueries( @Name( "ids" ) List<String> idTexts ) throws InvalidArgumentsException
+    {
+        securityContext.assertCredentialsNotExpired();
+
+        DatabaseManager<DatabaseContext> databaseManager = getDatabaseManager();
+        DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
+
+        Map<Long,QueryId> queryIds = new HashMap<>( idTexts.size() );
+        for ( String idText : idTexts )
+        {
+            QueryId id = QueryId.parse( idText );
+            queryIds.put( id.internalId(), id );
+        }
+
+        List<QueryTerminationResult> result = new ArrayList<>( queryIds.size() );
+
+        for ( FabricTransaction tx : getFabricTransactions() )
+        {
+            for ( ExecutingQuery query : getActiveFabricQueries( tx ) )
+            {
+                QueryId givenQueryId = queryIds.remove( query.internalQueryId() );
+                if ( givenQueryId != null )
+                {
+                    result.add( killFabricQueryTransaction( givenQueryId, tx, query ) );
+                }
+            }
+        }
+
+        for ( Map.Entry<NamedDatabaseId,DatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
+        {
+            NamedDatabaseId databaseId = databaseEntry.getKey();
+            DatabaseContext databaseContext = databaseEntry.getValue();
+            for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
+            {
+                if ( tx.executingQuery().isPresent() )
+                {
+                    QueryId givenQueryId = queryIds.remove( tx.executingQuery().get().internalQueryId() );
+                    if ( givenQueryId != null )
+                    {
+                        result.add( killQueryTransaction( givenQueryId, tx, databaseId ) );
+                    }
+                }
+            }
+        }
+
+        // Add error about the rest
+        for ( QueryId queryId : queryIds.values() )
+        {
+            result.add( new QueryFailedTerminationResult( queryId, "n/a", "No Query found with this id" ) );
+        }
+
+        return result.stream();
+    }
+
+    @SystemProcedure
     @Description( "List all memory pools, including sub pools, currently registered at this instance that are visible to the user." )
     @Procedure( name = "dbms.listPools", mode = DBMS )
     public Stream<MemoryPoolResult> listMemoryPools()
@@ -397,116 +461,6 @@ public class EnterpriseBuiltInDbmsProcedures
         allPools.sort( Comparator.comparing( ScopedMemoryPool::group )
                 .thenComparing( ScopedMemoryPool::databaseName ) );
         return allPools.stream().map( MemoryPoolResult::new );
-    }
-
-    @SystemProcedure
-    @Description( "List all transactions currently executing at this instance that are visible to the user." )
-    @Procedure( name = "dbms.listTransactions", mode = DBMS )
-    public Stream<TransactionStatusResult> listTransactions() throws InvalidArgumentsException
-    {
-        securityContext.assertCredentialsNotExpired();
-
-        ZoneId zoneId = getConfiguredTimeZone();
-        List<TransactionStatusResult> result = new ArrayList<>();
-        for ( DatabaseContext databaseContext : getDatabaseManager().registeredDatabases().values() )
-        {
-            DatabaseScope dbScope = new DatabaseScope( databaseContext.database().getNamedDatabaseId().name() );
-            Map<KernelTransactionHandle,Optional<QuerySnapshot>> handleQuerySnapshotsMap = new HashMap<>();
-            for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
-            {
-                String username = tx.subject().username();
-                var action = new AdminActionOnResource( PrivilegeAction.SHOW_TRANSACTION, dbScope, new UserSegment( username ) );
-                if ( isSelfOrAllows( username, action ) )
-                {
-                    handleQuerySnapshotsMap.put( tx, tx.executingQuery().map( ExecutingQuery::snapshot ) );
-                }
-            }
-            TransactionDependenciesResolver transactionBlockerResolvers = new TransactionDependenciesResolver( handleQuerySnapshotsMap );
-
-            for ( KernelTransactionHandle tx : handleQuerySnapshotsMap.keySet() )
-            {
-                result.add( new TransactionStatusResult( databaseContext.databaseFacade().databaseName(), tx, transactionBlockerResolvers,
-                        handleQuerySnapshotsMap, zoneId ) );
-            }
-        }
-
-        return result.stream();
-    }
-
-    @SystemProcedure
-    @Description( "Kill transaction with provided id." )
-    @Procedure( name = "dbms.killTransaction", mode = DBMS )
-    public Stream<TransactionMarkForTerminationResult> killTransaction( @Name( "id" ) String transactionId ) throws InvalidArgumentsException
-    {
-        requireNonNull( transactionId );
-        return killTransactions( singletonList( transactionId ) );
-    }
-
-    @SystemProcedure
-    @Description( "Kill transactions with provided ids." )
-    @Procedure( name = "dbms.killTransactions", mode = DBMS )
-    public Stream<TransactionMarkForTerminationResult> killTransactions( @Name( "ids" ) List<String> transactionIds ) throws InvalidArgumentsException
-    {
-        requireNonNull( transactionIds );
-        securityContext.assertCredentialsNotExpired();
-        log.warn( "User %s trying to kill transactions: %s.", securityContext.subject().username(), transactionIds.toString() );
-
-        DatabaseManager<DatabaseContext> databaseManager = getDatabaseManager();
-        DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
-
-        Map<NamedDatabaseId,Set<TransactionId>> byDatabase = new HashMap<>();
-        for ( String idText : transactionIds )
-        {
-            TransactionId id = TransactionId.parse( idText );
-            Optional<NamedDatabaseId> namedDatabaseId = databaseIdRepository.getByName( id.database() );
-            namedDatabaseId.ifPresent( databaseId -> byDatabase.computeIfAbsent( databaseId, ignore -> new HashSet<>() ).add( id ) );
-        }
-
-        Map<String,KernelTransactionHandle> handles = new HashMap<>( transactionIds.size() );
-        for ( Map.Entry<NamedDatabaseId,Set<TransactionId>> entry : byDatabase.entrySet() )
-        {
-            NamedDatabaseId databaseId = entry.getKey();
-            var dbScope = new DatabaseScope( databaseId.name() );
-            Optional<DatabaseContext> maybeDatabaseContext = databaseManager.getDatabaseContext( databaseId );
-            if ( maybeDatabaseContext.isPresent() )
-            {
-                Set<TransactionId> txIds = entry.getValue();
-                DatabaseContext databaseContext = maybeDatabaseContext.get();
-                for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
-                {
-                    String username = tx.subject().username();
-                    var action = new AdminActionOnResource( PrivilegeAction.TERMINATE_TRANSACTION, dbScope, new UserSegment( username ) );
-                    if ( !isSelfOrAllows( username, action ) )
-                    {
-                        continue;
-                    }
-                    TransactionId txIdRepresentation = new TransactionId( databaseId.name(), tx.getUserTransactionId() );
-                    if ( txIds.contains( txIdRepresentation ) )
-                    {
-                        handles.put( txIdRepresentation.toString(), tx );
-                    }
-                }
-            }
-        }
-
-        return transactionIds.stream().map( id -> terminateTransaction( handles, id ) );
-    }
-
-    private TransactionMarkForTerminationResult terminateTransaction( Map<String,KernelTransactionHandle> handles, String transactionId )
-    {
-        KernelTransactionHandle handle = handles.get( transactionId );
-        String currentUser = securityContext.subject().username();
-        if ( handle == null )
-        {
-            return new TransactionMarkForTerminationFailedResult( transactionId, currentUser );
-        }
-        if ( handle.isClosing() )
-        {
-            return new TransactionMarkForTerminationFailedResult( transactionId, currentUser, "Unable to kill closing transactions." );
-        }
-        log.debug( "User %s terminated transaction %d.", currentUser, transactionId );
-        handle.markForTermination( Status.Transaction.Terminated );
-        return new TransactionMarkForTerminationResult( transactionId, handle.subject().username() );
     }
 
     @SystemProcedure
@@ -559,71 +513,6 @@ public class EnterpriseBuiltInDbmsProcedures
         locks.accept( ( lockType, resourceType, txId, resourceId, description, estimatedWaitTime, lockIdentityHashCode ) ->
                 locksList.add( new LockResult( lockType.getDescription(), resourceType.name(), resourceId, getTransactionId( txId ) ) ) );
         return locksList.stream();
-    }
-
-    @SystemProcedure
-    @Description( "Kill all transactions executing the query with the given query id." )
-    @Procedure( name = "dbms.killQuery", mode = DBMS )
-    public Stream<QueryTerminationResult> killQuery( @Name( "id" ) String idText ) throws InvalidArgumentsException
-    {
-        return killQueries( singletonList( idText ) );
-    }
-
-    @SystemProcedure
-    @Description( "Kill all transactions executing a query with any of the given query ids." )
-    @Procedure( name = "dbms.killQueries", mode = DBMS )
-    public Stream<QueryTerminationResult> killQueries( @Name( "ids" ) List<String> idTexts ) throws InvalidArgumentsException
-    {
-        securityContext.assertCredentialsNotExpired();
-
-        DatabaseManager<DatabaseContext> databaseManager = getDatabaseManager();
-        DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
-
-        Map<Long,QueryId> queryIds = new HashMap<>( idTexts.size() );
-        for ( String idText : idTexts )
-        {
-            QueryId id = QueryId.parse( idText );
-            queryIds.put( id.internalId(), id );
-        }
-
-        List<QueryTerminationResult> result = new ArrayList<>( queryIds.size() );
-
-        for ( FabricTransaction tx : getFabricTransactions() )
-        {
-            for ( ExecutingQuery query : getActiveFabricQueries( tx ) )
-            {
-                    QueryId givenQueryId = queryIds.remove( query.internalQueryId() );
-                    if ( givenQueryId != null )
-                    {
-                        result.add( killFabricQueryTransaction( givenQueryId, tx, query ) );
-                    }
-            }
-        }
-
-        for ( Map.Entry<NamedDatabaseId,DatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
-        {
-            NamedDatabaseId databaseId = databaseEntry.getKey();
-            DatabaseContext databaseContext = databaseEntry.getValue();
-            for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
-            {
-                if ( tx.executingQuery().isPresent() )
-                {
-                    QueryId givenQueryId = queryIds.remove( tx.executingQuery().get().internalQueryId() );
-                    if ( givenQueryId != null )
-                    {
-                        result.add( killQueryTransaction( givenQueryId, tx, databaseId ) );
-                    }
-                }
-            }
-        }
-
-        // Add error about the rest
-        for ( QueryId queryId : queryIds.values() )
-        {
-            result.add( new QueryFailedTerminationResult( queryId, "n/a", "No Query found with this id" ) );
-        }
-
-        return result.stream();
     }
 
     @Admin
