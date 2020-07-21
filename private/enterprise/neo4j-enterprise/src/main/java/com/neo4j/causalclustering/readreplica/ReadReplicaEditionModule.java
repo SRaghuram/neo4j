@@ -22,7 +22,6 @@ import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -36,7 +35,6 @@ import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
-import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
@@ -44,7 +42,6 @@ import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 
 import java.io.File;
 import java.time.Duration;
-import java.util.UUID;
 import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
@@ -57,14 +54,12 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -285,12 +280,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
             LogProvider userLogProvider, DbmsInfo dbmsInfo )
     {
         return new EnterpriseNeoWebServer( managementService, globalDependencies, config, userLogProvider, dbmsInfo );
-    }
-
-    @Override
-    protected NetworkConnectionTracker createConnectionTracker()
-    {
-        return new DefaultNetworkConnectionTracker();
     }
 
     private TopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, DatabaseStateService databaseStateService,

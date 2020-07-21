@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
-import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 
 import java.util.Set;
@@ -26,7 +25,6 @@ import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
@@ -54,12 +52,6 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
         constraintSemantics = new EnterpriseConstraintSemantics();
 
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
-    }
-
-    @Override
-    protected NetworkConnectionTracker createConnectionTracker()
-    {
-        return new DefaultNetworkConnectionTracker();
     }
 
     public static Predicate<String> fileWatcherFileNameFilter()

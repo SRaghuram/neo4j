@@ -25,7 +25,6 @@ import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
-import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
@@ -59,7 +58,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.Kernel;
-import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.database.DatabaseStartupController;
@@ -139,12 +137,6 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     protected ConstraintSemantics createSchemaRuleVerifier()
     {
         return new EnterpriseConstraintSemantics();
-    }
-
-    @Override
-    protected NetworkConnectionTracker createConnectionTracker()
-    {
-        return new DefaultNetworkConnectionTracker();
     }
 
     @Override
