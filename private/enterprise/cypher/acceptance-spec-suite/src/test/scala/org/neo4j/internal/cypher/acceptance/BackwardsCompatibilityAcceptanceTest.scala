@@ -167,6 +167,13 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions in 4.0 and 4.1
+  test("The USE clause should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 USE neo4j RETURN 1 + 1")
+    }
+    exception.getMessage should include("The USE clause is not supported in this Cypher version.")
+  }
 
   test("community administration commands should not work with CYPHER 3.5") {
     // GIVEN
