@@ -77,10 +77,10 @@ workloads=("accesscontrol M5DLargeJobQueue accesscontrol"
   "socialnetwork M5DLargeJobQueue socialnetwork"
   "osmnodes M5D2XLargeJobQueue osmnodes"
   "offshore_leaks M5D2XLargeJobQueue offshore_leaks"
-  "alacrity M5D2XLargeJobQueue alacrity")
-  "offshore_leaks M5D2XLargeJobQueue offshore_leaks"
+  "alacrity M5D2XLargeJobQueue alacrity"
   "fraud-poc-credit M5D2XLargeJobQueue fraud-poc"
-  "fraud-poc-aml M5D2XLargeJobQueue fraud-poc-aml")
+  "fraud-poc-aml M5D2XLargeJobQueue fraud-poc-aml"
+  "ciena M5D2XLargeJobQueue ciena")
 
 for i in "${workloads[@]}"; do
   workload=($(echo ${i}))

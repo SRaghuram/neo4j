@@ -1,0 +1,92 @@
+{
+  "name": "ciena",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Simplified Q1 ORDER BY drniId",
+      "description": "Own simplification of Q1, ordering by drniId",
+      "queryFile": "queries/simplified_Q1_drniId.cypher"
+    },
+    {
+      "name": "Simplified Q1 ORDER BY lastModifiedDate",
+      "description": "Own simplification of Q1, ordering by lastModifiedDate",
+      "queryFile": "queries/simplified_Q1_lastModifiedDate.cypher"
+    },
+    {
+      "name": "Simplified Q1 ORDER BY name",
+      "description": "Own simplification of Q1, ordering by name",
+      "queryFile": "queries/simplified_Q1_name.cypher"
+    },
+    {
+      "name": "Q1 ORDER BY drniId",
+      "description": "Q1, ordering by drniId",
+      "queryFile": "queries/Q1_drniId.cypher"
+    },
+    {
+      "name": "Q1 ORDER BY lastModifiedDate",
+      "description": "Q1, ordering by lastModifiedDate",
+      "queryFile": "queries/Q1_lastModifiedDate.cypher"
+    },
+    {
+      "name": "Q1 ORDER BY name",
+      "description": "Q1, ordering by name",
+      "queryFile": "queries/Q1_name.cypher"
+    },
+    {
+      "name": "Q1 ORDER BY card.name",
+      "description": "Q1, ordering by card.name",
+      "queryFile": "queries/Q1_cardname.cypher"
+    },
+    {
+      "name": "Q1 ORDER BY pluggable.name",
+      "description": "Q1, ordering by pluggable.name",
+      "queryFile": "queries/Q1_pluggablename.cypher"
+    },
+    {
+      "name": "Q1 ORDER BY otherEndParentLocation.name",
+      "description": "Q1, ordering by otherEndParentLocation.name",
+      "queryFile": "queries/Q1_otherEndParentLocationName.cypher"
+    },
+    {
+      "name": "Q2 ORDER BY device.name",
+      "description": "Q2, ordering by device.name",
+      "queryFile": "queries/Q2_devicename.cypher",
+      "comment": "parameters were obtained with: MATCH (device:Device) WHERE NOT (device:Model) UNWIND device.latest AS l WITH l, count(device) AS c WHERE c > 10000 RETURN l, c",
+      "parameters": {
+        "file": "parameters/device_latest.txt"
+      }
+    },
+    {
+      "name": "Q2 ORDER BY network.drniId",
+      "description": "Q2, ordering by network.drniId",
+      "queryFile": "queries/Q2_networkdrni.cypher",
+      "comment": "parameters were obtained with: MATCH (device:Device) WHERE NOT (device:Model) UNWIND device.latest AS l WITH l, count(device) AS c WHERE c > 10000 RETURN l, c",
+      "parameters": {
+        "file": "parameters/device_latest.txt"
+      }
+    },
+    {
+      "name": "Q2 ORDER BY network2.drniId",
+      "description": "Q2, ordering by network2.drniId",
+      "queryFile": "queries/Q2_network2drni.cypher",
+      "comment": "parameters were obtained with: MATCH (device:Device) WHERE NOT (device:Model) UNWIND device.latest AS l WITH l, count(device) AS c WHERE c > 10000 RETURN l, c",
+      "parameters": {
+        "file": "parameters/device_latest.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "Similar to Q2, but instead of retrieving 100 sorted results, this counts the amount of rows.",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "Similar to Q2, but someone clicked the button to see almost the last page",
+      "queryFile": "queries/Q4.cypher",
+      "comment": "parameters were obtained with: MATCH (port:PhysicalPort) WHERE NOT (port:Model) UNWIND port.latest AS l WITH l, count(port) AS c WHERE c > 100000 RETURN l, c",
+      "parameters": {
+        "file": "parameters/port_latest.txt"
+      }
+    }
+  ]
+}

@@ -1,0 +1,293 @@
+CONSTRAINT ON ( customchartquery:CustomChartQuery ) ASSERT exists(customchartquery.id)
+CONSTRAINT ON ( enumerationdefinition:EnumerationDefinition ) ASSERT exists(enumerationdefinition.id)
+CONSTRAINT ON ( contact:Contact ) ASSERT exists(contact.drniId)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT (savedlayout.to_plan, savedlayout.diagram_id, savedlayout.to_launch_object_class, savedlayout.to_launch_object) IS NODE KEY
+CONSTRAINT ON ( customchartdatasetprop:CustomChartDataSetProp ) ASSERT exists(customchartdatasetprop.id)
+CONSTRAINT ON ( collectiontype:CollectionType ) ASSERT exists(collectiontype.name)
+CONSTRAINT ON ( svgdefinition:SVGDefinition ) ASSERT (svgdefinition.id) IS UNIQUE
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.created_date)
+CONSTRAINT ON ( dashboardtoguiuser:DashboardToGuiUser ) ASSERT (dashboardtoguiuser.id) IS UNIQUE
+CONSTRAINT ON ( dashboard:Dashboard ) ASSERT exists(dashboard.name)
+CONSTRAINT ON ( enumerationvalue:EnumerationValue ) ASSERT exists(enumerationvalue.value)
+CONSTRAINT ON ( customchartsource:CustomChartSource ) ASSERT (customchartsource.id) IS UNIQUE
+CONSTRAINT ON ( rack:Rack ) ASSERT exists(rack.drniId)
+CONSTRAINT ON ( userpreference:UserPreference ) ASSERT (userpreference.id) IS UNIQUE
+CONSTRAINT ON ( metadata:Metadata ) ASSERT exists(metadata.drniId)
+CONSTRAINT ON ( searchconfigattriboverride:SearchConfigAttribOverride ) ASSERT exists(searchconfigattriboverride.id)
+CONSTRAINT ON ( physicalport:PhysicalPort ) ASSERT (physicalport.drniId) IS UNIQUE
+CONSTRAINT ON ( guirole:GuiRole ) ASSERT exists(guirole.description)
+CONSTRAINT ON ( widget:Widget ) ASSERT exists(widget.id)
+CONSTRAINT ON ( order:Order ) ASSERT (order.drniId) IS UNIQUE
+CONSTRAINT ON ()-[ has_logical:HAS_LOGICAL ]-() ASSERT exists(has_logical.drniId)
+CONSTRAINT ON ( userdefaultgridtemplate:UserDefaultGridTemplate ) ASSERT exists(userdefaultgridtemplate.base_class)
+CONSTRAINT ON ( searchconfigcolumns:SearchConfigColumns ) ASSERT (searchconfigcolumns.id) IS UNIQUE
+CONSTRAINT ON ( customchartsourcefield:CustomChartSourceField ) ASSERT exists(customchartsourcefield.name)
+CONSTRAINT ON ( searchconfigcolumns:SearchConfigColumns ) ASSERT exists(searchconfigcolumns.key)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.id)
+CONSTRAINT ON ( location:Location ) ASSERT (location.clliCode) IS UNIQUE
+CONSTRAINT ON ( datasource:DataSource ) ASSERT exists(datasource.key)
+CONSTRAINT ON ( preferencetype:PreferenceType ) ASSERT exists(preferencetype.id)
+CONSTRAINT ON ( fastsearchparam:FastSearchParam ) ASSERT (fastsearchparam.id) IS UNIQUE
+CONSTRAINT ON ( shelf:Shelf ) ASSERT (shelf.drniId) IS UNIQUE
+CONSTRAINT ON ( activecustomchartsource:ActiveCustomChartSource ) ASSERT (activecustomchartsource.source_xml_id) IS UNIQUE
+CONSTRAINT ON ( dashboardtowidget:DashboardToWidget ) ASSERT exists(dashboardtowidget.id)
+CONSTRAINT ON ( enumerationdefinition:EnumerationDefinition ) ASSERT (enumerationdefinition.id) IS UNIQUE
+CONSTRAINT ON ( userdefaultgridtemplate:UserDefaultGridTemplate ) ASSERT exists(userdefaultgridtemplate.id)
+CONSTRAINT ON ( guirole:GuiRole ) ASSERT exists(guirole.name)
+CONSTRAINT ON ( rackposition:RackPosition ) ASSERT (rackposition.drniId) IS UNIQUE
+CONSTRAINT ON ( customchartyaxis:CustomChartYAxis ) ASSERT exists(customchartyaxis.aggregation_function)
+CONSTRAINT ON ( network:Network ) ASSERT (network.drniId) IS UNIQUE
+CONSTRAINT ON ( widgetparameter:WidgetParameter ) ASSERT exists(widgetparameter.metadata)
+CONSTRAINT ON ( dashboardtoguiuser:DashboardToGuiUser ) ASSERT exists(dashboardtoguiuser.id)
+CONSTRAINT ON ( customchartqueryparam:CustomChartQueryParam ) ASSERT (customchartqueryparam.id) IS UNIQUE
+CONSTRAINT ON ( dashboard:Dashboard ) ASSERT exists(dashboard.is_global)
+CONSTRAINT ON ( fastsearchparam:FastSearchParam ) ASSERT exists(fastsearchparam.sqlParameterName)
+CONSTRAINT ON ( widgetparameter:WidgetParameter ) ASSERT (widgetparameter.id) IS UNIQUE
+CONSTRAINT ON ()-[ has_connection_component:HAS_CONNECTION_COMPONENT ]-() ASSERT exists(has_connection_component.drniId)
+CONSTRAINT ON ( logicalcrossconnection:LogicalCrossConnection ) ASSERT exists(logicalcrossconnection.drniId)
+CONSTRAINT ON ( enumerationvalue:EnumerationValue ) ASSERT exists(enumerationvalue.key)
+CONSTRAINT ON ( slotposition:SlotPosition ) ASSERT exists(slotposition.drniId)
+CONSTRAINT ON ( location:Location ) ASSERT exists(location.drniId)
+CONSTRAINT ON ( contact:Contact ) ASSERT (contact.drniId) IS UNIQUE
+CONSTRAINT ON ( guiuser:GuiUser ) ASSERT exists(guiuser.name)
+CONSTRAINT ON ( shelfposition:ShelfPosition ) ASSERT exists(shelfposition.drniId)
+CONSTRAINT ON ( guisystem:GuiSystem ) ASSERT (guisystem.id) IS UNIQUE
+CONSTRAINT ON ( service:Service ) ASSERT (service.drniId) IS UNIQUE
+CONSTRAINT ON ( archetypeinstancegroup:ArchetypeInstanceGroup ) ASSERT (archetypeinstancegroup.drniId) IS UNIQUE
+CONSTRAINT ON ( customchartqueryparam:CustomChartQueryParam ) ASSERT exists(customchartqueryparam.name)
+CONSTRAINT ON ( datasource:DataSource ) ASSERT exists(datasource.type)
+CONSTRAINT ON ( svgdefinition:SVGDefinition ) ASSERT exists(svgdefinition.id)
+CONSTRAINT ON ( namingsequence:NamingSequence ) ASSERT (namingsequence.name) IS UNIQUE
+CONSTRAINT ON ( dashboardtoguiuser:DashboardToGuiUser ) ASSERT exists(dashboardtoguiuser.is_default)
+CONSTRAINT ON ( logicalcrossconnection:LogicalCrossConnection ) ASSERT (logicalcrossconnection.drniId) IS UNIQUE
+CONSTRAINT ON ( customchartsource:CustomChartSource ) ASSERT exists(customchartsource.name)
+CONSTRAINT ON ( activecustomchartsource:ActiveCustomChartSource ) ASSERT (activecustomchartsource.id) IS UNIQUE
+CONSTRAINT ON ( auditlog:AuditLog ) ASSERT exists(auditlog.created_date)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.to_launch_object)
+CONSTRAINT ON ( process:Process ) ASSERT exists(process.drniId)
+CONSTRAINT ON ( fastsearchparam:FastSearchParam ) ASSERT exists(fastsearchparam.id)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.name)
+CONSTRAINT ON ( customchartyaxiscondition:CustomChartYAxisCondition ) ASSERT exists(customchartyaxiscondition.operator)
+CONSTRAINT ON ( systempreference:SystemPreference ) ASSERT (systempreference.id) IS UNIQUE
+CONSTRAINT ON ( userdefaultgridtemplate:UserDefaultGridTemplate ) ASSERT exists(userdefaultgridtemplate.template_type)
+CONSTRAINT ON ( enumerationdefinition:EnumerationDefinition ) ASSERT (enumerationdefinition.objectClassId, enumerationdefinition.label, enumerationdefinition.property) IS NODE KEY
+CONSTRAINT ON ( model:Model ) ASSERT exists(model.drniId)
+CONSTRAINT ON ( physicalterminationposition:PhysicalTerminationPosition ) ASSERT exists(physicalterminationposition.drniId)
+CONSTRAINT ON ( equipmenttype:EquipmentType ) ASSERT exists(equipmenttype.id)
+CONSTRAINT ON ( datasource:DataSource ) ASSERT exists(datasource.id)
+CONSTRAINT ON ( systemparameter:SystemParameter ) ASSERT (systemparameter.name) IS UNIQUE
+CONSTRAINT ON ( savedlayoutcoordinate:SavedLayoutCoordinate ) ASSERT exists(savedlayoutcoordinate.x_coordinate)
+CONSTRAINT ON ( guisystem:GuiSystem ) ASSERT exists(guisystem.name)
+CONSTRAINT ON ( task:Task ) ASSERT (task.drniId) IS UNIQUE
+CONSTRAINT ON ( activecustomchartsource:ActiveCustomChartSource ) ASSERT exists(activecustomchartsource.id)
+CONSTRAINT ON ( widget:Widget ) ASSERT (widget.id) IS UNIQUE
+CONSTRAINT ON ( guirole:GuiRole ) ASSERT (guirole.id) IS UNIQUE
+CONSTRAINT ON ( card:Card ) ASSERT exists(card.drniId)
+CONSTRAINT ON ( customchartyaxis:CustomChartYAxis ) ASSERT exists(customchartyaxis.aggregation_field)
+CONSTRAINT ON ( customchartdatasetprop:CustomChartDataSetProp ) ASSERT exists(customchartdatasetprop.name)
+CONSTRAINT ON ( customchartyaxiscondition:CustomChartYAxisCondition ) ASSERT exists(customchartyaxiscondition.id)
+CONSTRAINT ON ( archetypeinstance:ArchetypeInstance ) ASSERT exists(archetypeinstance.drniId)
+CONSTRAINT ON ( dashboardtowidget:DashboardToWidget ) ASSERT (dashboardtowidget.id) IS UNIQUE
+CONSTRAINT ON ( logicalconnection:LogicalConnection ) ASSERT (logicalconnection.drniId) IS UNIQUE
+CONSTRAINT ON ( activity:Activity ) ASSERT exists(activity.drniId)
+CONSTRAINT ON ( guirole:GuiRole ) ASSERT exists(guirole.id)
+CONSTRAINT ON ( customchartsource:CustomChartSource ) ASSERT exists(customchartsource.query_type)
+CONSTRAINT ON ( customchartqueryparam:CustomChartQueryParam ) ASSERT exists(customchartqueryparam.id)
+CONSTRAINT ON ( searchconfigattriboverride:SearchConfigAttribOverride ) ASSERT (searchconfigattriboverride.id) IS UNIQUE
+CONSTRAINT ON ( federationreconconfig:FederationReconConfig ) ASSERT (federationreconconfig.id) IS UNIQUE
+CONSTRAINT ON ( dashwidgettowidgetparam:DashWidgetToWidgetParam ) ASSERT (dashwidgettowidgetparam.id) IS UNIQUE
+CONSTRAINT ON ( searchconfig:SearchConfig ) ASSERT exists(searchconfig.id)
+CONSTRAINT ON ( fastsearch:FastSearch ) ASSERT exists(fastsearch.name)
+CONSTRAINT ON ( customchartyaxis:CustomChartYAxis ) ASSERT (customchartyaxis.id) IS UNIQUE
+CONSTRAINT ON ( searchconfigattriboverride:SearchConfigAttribOverride ) ASSERT exists(searchconfigattriboverride.object_class)
+CONSTRAINT ON ( device:Device ) ASSERT exists(device.drniId)
+CONSTRAINT ON ( customchart:CustomChart ) ASSERT exists(customchart.name)
+CONSTRAINT ON ( gridtab:GridTab ) ASSERT exists(gridtab.name)
+CONSTRAINT ON ( guiuser:GuiUser ) ASSERT exists(guiuser.id)
+CONSTRAINT ON ( rack:Rack ) ASSERT (rack.drniId) IS UNIQUE
+CONSTRAINT ON ( archetype:Archetype ) ASSERT (archetype.drniId) IS UNIQUE
+CONSTRAINT ON ( dashboard:Dashboard ) ASSERT exists(dashboard.key)
+CONSTRAINT ON ( activity:Activity ) ASSERT (activity.drniId) IS UNIQUE
+CONSTRAINT ON ( customchartyaxiscondition:CustomChartYAxisCondition ) ASSERT (customchartyaxiscondition.id) IS UNIQUE
+CONSTRAINT ON ( physicalconnection:PhysicalConnection ) ASSERT (physicalconnection.drniId) IS UNIQUE
+CONSTRAINT ON ( activitytype:ActivityType ) ASSERT exists(activitytype.id)
+CONSTRAINT ON ( preferencetype:PreferenceType ) ASSERT exists(preferencetype.behaviour)
+CONSTRAINT ON ( savedlayoutparameter:SavedLayoutParameter ) ASSERT exists(savedlayoutparameter.parameter_value)
+CONSTRAINT ON ( customchartdatasetprop:CustomChartDataSetProp ) ASSERT exists(customchartdatasetprop.type)
+CONSTRAINT ON ( network:Network ) ASSERT exists(network.drniId)
+CONSTRAINT ON ( archetypeinstancegroup:ArchetypeInstanceGroup ) ASSERT exists(archetypeinstancegroup.drniId)
+CONSTRAINT ON ( metadata:Metadata ) ASSERT (metadata.drniId) IS UNIQUE
+CONSTRAINT ON ( card:Card ) ASSERT (card.drniId) IS UNIQUE
+CONSTRAINT ON ( customchartsource:CustomChartSource ) ASSERT exists(customchartsource.id)
+CONSTRAINT ON ( enumerationvalue:EnumerationValue ) ASSERT (enumerationvalue.id) IS UNIQUE
+CONSTRAINT ON ( customchartsourcefield:CustomChartSourceField ) ASSERT (customchartsourcefield.id) IS UNIQUE
+CONSTRAINT ON ( organization:Organization ) ASSERT exists(organization.drniId)
+CONSTRAINT ON ( service:Service ) ASSERT exists(service.drniId)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.to_launch_object_class)
+CONSTRAINT ON ( dashboard:Dashboard ) ASSERT (dashboard.key) IS UNIQUE
+CONSTRAINT ON ( dashboard:Dashboard ) ASSERT exists(dashboard.id)
+CONSTRAINT ON ( searchconfig:SearchConfig ) ASSERT (searchconfig.id) IS UNIQUE
+CONSTRAINT ON ( location:Location ) ASSERT (location.drniId) IS UNIQUE
+CONSTRAINT ON ( slotposition:SlotPosition ) ASSERT (slotposition.drniId) IS UNIQUE
+CONSTRAINT ON ()-[ has_network_component:HAS_NETWORK_COMPONENT ]-() ASSERT exists(has_network_component.drniId)
+CONSTRAINT ON ( preferencetype:PreferenceType ) ASSERT (preferencetype.id) IS UNIQUE
+CONSTRAINT ON ( customchartqueryparam:CustomChartQueryParam ) ASSERT exists(customchartqueryparam.type)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT (savedlayout.id, savedlayout.to_plan) IS NODE KEY
+CONSTRAINT ON ( guiuser:GuiUser ) ASSERT (guiuser.name) IS UNIQUE
+CONSTRAINT ON ( customchartquery:CustomChartQuery ) ASSERT (customchartquery.id) IS UNIQUE
+CONSTRAINT ON ( widgetparameter:WidgetParameter ) ASSERT exists(widgetparameter.id)
+CONSTRAINT ON ( fastsearch:FastSearch ) ASSERT exists(fastsearch.key)
+CONSTRAINT ON ( fastsearchparam:FastSearchParam ) ASSERT exists(fastsearchparam.displayName)
+CONSTRAINT ON ( customchart:CustomChart ) ASSERT exists(customchart.type)
+CONSTRAINT ON ( dashwidgettowidgetparam:DashWidgetToWidgetParam ) ASSERT exists(dashwidgettowidgetparam.id)
+CONSTRAINT ON ( gridtemplate:GridTemplate ) ASSERT exists(gridtemplate.id)
+CONSTRAINT ON ( organization:Organization ) ASSERT (organization.drniId) IS UNIQUE
+CONSTRAINT ON ( widget:Widget ) ASSERT exists(widget.name)
+CONSTRAINT ON ( systemparameter:SystemParameter ) ASSERT (systemparameter.id) IS UNIQUE
+CONSTRAINT ON ( savedlayoutcoordinate:SavedLayoutCoordinate ) ASSERT exists(savedlayoutcoordinate.to_object_class)
+CONSTRAINT ON ( guiuser:GuiUser ) ASSERT exists(guiuser.password)
+CONSTRAINT ON ( enumerationvalue:EnumerationValue ) ASSERT exists(enumerationvalue.id)
+CONSTRAINT ON ( logicalconnection:LogicalConnection ) ASSERT exists(logicalconnection.drniId)
+CONSTRAINT ON ( guiuser:GuiUser ) ASSERT exists(guiuser.first_name)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.diagram_id)
+CONSTRAINT ON ( physicalconnection:PhysicalConnection ) ASSERT exists(physicalconnection.drniId)
+CONSTRAINT ON ( customchart:CustomChart ) ASSERT (customchart.id) IS UNIQUE
+CONSTRAINT ON ( activitytype:ActivityType ) ASSERT (activitytype.id) IS UNIQUE
+CONSTRAINT ON ( customchartyaxiscondition:CustomChartYAxisCondition ) ASSERT exists(customchartyaxiscondition.field)
+CONSTRAINT ON ( fastsearchparam:FastSearchParam ) ASSERT exists(fastsearchparam.parameterType)
+CONSTRAINT ON ( systemparameter:SystemParameter ) ASSERT exists(systemparameter.id)
+CONSTRAINT ON ( guiuser:GuiUser ) ASSERT (guiuser.id) IS UNIQUE
+CONSTRAINT ON ( fastsearchparam:FastSearchParam ) ASSERT exists(fastsearchparam.displaySequence)
+CONSTRAINT ON ( pluggable:Pluggable ) ASSERT (pluggable.drniId) IS UNIQUE
+CONSTRAINT ON ( systempreference:SystemPreference ) ASSERT exists(systempreference.id)
+CONSTRAINT ON ( gridtemplate:GridTemplate ) ASSERT (gridtemplate.id) IS UNIQUE
+CONSTRAINT ON ( userdefaultgridtemplate:UserDefaultGridTemplate ) ASSERT (userdefaultgridtemplate.id) IS UNIQUE
+CONSTRAINT ON ( systemparameter:SystemParameter ) ASSERT exists(systemparameter.name)
+CONSTRAINT ON ( datasource:DataSource ) ASSERT (datasource.id) IS UNIQUE
+CONSTRAINT ON ( widgetparameter:WidgetParameter ) ASSERT exists(widgetparameter.parameter_name)
+CONSTRAINT ON ( auditlog:AuditLog ) ASSERT (auditlog.id) IS UNIQUE
+CONSTRAINT ON ( task:Task ) ASSERT exists(task.drniId)
+CONSTRAINT ON ( physicalterminationposition:PhysicalTerminationPosition ) ASSERT (physicalterminationposition.drniId) IS UNIQUE
+CONSTRAINT ON ( datasource:DataSource ) ASSERT exists(datasource.name)
+CONSTRAINT ON ( pluggable:Pluggable ) ASSERT exists(pluggable.drniId)
+CONSTRAINT ON ( preferencetype:PreferenceType ) ASSERT exists(preferencetype.name)
+CONSTRAINT ON ( shelfposition:ShelfPosition ) ASSERT (shelfposition.drniId) IS UNIQUE
+CONSTRAINT ON ( searchconfigcolumns:SearchConfigColumns ) ASSERT exists(searchconfigcolumns.base_class)
+CONSTRAINT ON ( guiuser:GuiUser ) ASSERT exists(guiuser.last_name)
+CONSTRAINT ON ( widgettype:WidgetType ) ASSERT (widgettype.id) IS UNIQUE
+CONSTRAINT ON ( guisystem:GuiSystem ) ASSERT exists(guisystem.id)
+CONSTRAINT ON ( gridtemplate:GridTemplate ) ASSERT exists(gridtemplate.template_type)
+CONSTRAINT ON ( process:Process ) ASSERT (process.drniId) IS UNIQUE
+CONSTRAINT ON ( collectiontype:CollectionType ) ASSERT exists(collectiontype.id)
+CONSTRAINT ON ( device:Device ) ASSERT (device.drniId) IS UNIQUE
+CONSTRAINT ON ( userpreference:UserPreference ) ASSERT exists(userpreference.id)
+CONSTRAINT ON ( archetypeinstance:ArchetypeInstance ) ASSERT (archetypeinstance.drniId) IS UNIQUE
+CONSTRAINT ON ( order:Order ) ASSERT exists(order.drniId)
+CONSTRAINT ON ( savedlayoutcoordinate:SavedLayoutCoordinate ) ASSERT exists(savedlayoutcoordinate.y_coordinate)
+CONSTRAINT ON ( auditlog:AuditLog ) ASSERT exists(auditlog.operation)
+CONSTRAINT ON ( shelf:Shelf ) ASSERT exists(shelf.drniId)
+CONSTRAINT ON ( customchartsourcefield:CustomChartSourceField ) ASSERT exists(customchartsourcefield.id)
+CONSTRAINT ON ()-[ has:HAS ]-() ASSERT exists(has.drniId)
+CONSTRAINT ON ( customchartquery:CustomChartQuery ) ASSERT exists(customchartquery.type)
+CONSTRAINT ON ( searchconfigcolumns:SearchConfigColumns ) ASSERT exists(searchconfigcolumns.id)
+CONSTRAINT ON ( activitytype:ActivityType ) ASSERT exists(activitytype.behaviour)
+CONSTRAINT ON ( widgettype:WidgetType ) ASSERT exists(widgettype.id)
+CONSTRAINT ON ( logicalinterface:LogicalInterface ) ASSERT (logicalinterface.drniId) IS UNIQUE
+CONSTRAINT ON ( physicalport:PhysicalPort ) ASSERT exists(physicalport.drniId)
+CONSTRAINT ON ( collectiontype:CollectionType ) ASSERT (collectiontype.id) IS UNIQUE
+CONSTRAINT ON ( gridconfig:GridConfig ) ASSERT exists(gridconfig.user_name)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.to_plan)
+CONSTRAINT ON ( logicalinterface:LogicalInterface ) ASSERT exists(logicalinterface.drniId)
+CONSTRAINT ON ( dashboardtoguiuser:DashboardToGuiUser ) ASSERT exists(dashboardtoguiuser.is_pinned)
+CONSTRAINT ON ( customchart:CustomChart ) ASSERT exists(customchart.id)
+CONSTRAINT ON ( activitytype:ActivityType ) ASSERT exists(activitytype.name)
+CONSTRAINT ON ( datasource:DataSource ) ASSERT exists(datasource.status)
+CONSTRAINT ON ( location:Location ) ASSERT exists(location.name)
+CONSTRAINT ON ( collectiontype:CollectionType ) ASSERT exists(collectiontype.behaviour)
+CONSTRAINT ON ( searchconfigattriboverride:SearchConfigAttribOverride ) ASSERT exists(searchconfigattriboverride.key)
+CONSTRAINT ON ( dashboardtowidget:DashboardToWidget ) ASSERT exists(dashboardtowidget.name)
+CONSTRAINT ON ( customchartyaxis:CustomChartYAxis ) ASSERT exists(customchartyaxis.id)
+CONSTRAINT ON ( savedlayout:SavedLayout ) ASSERT exists(savedlayout.is_default)
+CONSTRAINT ON ( archetype:Archetype ) ASSERT exists(archetype.drniId)
+CONSTRAINT ON ( savedlayoutcoordinate:SavedLayoutCoordinate ) ASSERT exists(savedlayoutcoordinate.to_object)
+CONSTRAINT ON ( savedlayoutparameter:SavedLayoutParameter ) ASSERT exists(savedlayoutparameter.parameter_name)
+CONSTRAINT ON ( customchartdatasetprop:CustomChartDataSetProp ) ASSERT (customchartdatasetprop.id) IS UNIQUE
+CONSTRAINT ON ( dashboard:Dashboard ) ASSERT (dashboard.id) IS UNIQUE
+CONSTRAINT ON ( dashboard:Dashboard ) ASSERT exists(dashboard.layout)
+CONSTRAINT ON ( gridconfig:GridConfig ) ASSERT exists(gridconfig.page_name)
+CONSTRAINT ON ( rackposition:RackPosition ) ASSERT exists(rackposition.drniId)
+CONSTRAINT ON ( equipmenttype:EquipmentType ) ASSERT (equipmenttype.id) IS UNIQUE
+CONSTRAINT ON ( svgdefinition:SVGDefinition ) ASSERT exists(svgdefinition.name)
+INDEX ON :Location(archetypeInstanceId)
+INDEX ON :RackPosition(positionSequence)
+INDEX ON :Device(ipAddress)
+INDEX ON :PhysicalPort(porttypeName)
+INDEX ON :Location(latitude)
+INDEX ON :AddressGroupInstance(metamodel)
+INDEX ON :SearchConfigColumns(user_name)
+INDEX ON :Model(BPIUId)
+INDEX ON :Difference(differenceLive)
+INDEX ON :Location(telephoneNumber)
+INDEX ON :Device(equipmentClli)
+INDEX ON :Device(precomputedtypename)
+INDEX ON :Archetype(positionsUsed)
+INDEX ON :Pluggable(equipmentId)
+INDEX ON :Location(addressLine1)
+INDEX ON :PhysicalPort(porttypeName)
+INDEX ON :ArchetypeInstance(name)
+INDEX ON :UserDefaultGridTemplate(user_name)
+INDEX ON :Device(equipmentId)
+INDEX ON :Location(floorPlan)
+INDEX ON :Network(archetypeId)
+INDEX ON :LogicalInterface(parentMetamodel)
+INDEX ON :Process(camundaProcessId)
+INDEX ON :Device(fqdn)
+INDEX ON :Device(modelNumber)
+INDEX ON :Pluggable(name)
+INDEX ON :Activity(name)
+INDEX ON :Task(processInstanceId)
+INDEX ON :GridTemplate(global)
+INDEX ON :PhysicalPort(porttypeName)
+INDEX ON :PhysicalPort(precomputedtypename)
+INDEX ON :Card(name)
+INDEX ON :Location(archetypeId)
+INDEX ON :Shelf(equipmentId)
+INDEX ON :Device(name)
+INDEX ON :LogicalConnection(status)
+INDEX ON :LogicalConnection(precomputedtypename)
+INDEX ON :SearchConfigColumns(key)
+INDEX ON :Organization(archetypeId)
+INDEX ON :AddressGroup(equipmentArchetypeInstanceId)
+INDEX ON :PhysicalConnection(precomputedtypename)
+INDEX ON :PhysicalPort(status)
+INDEX ON :Device(role)
+INDEX ON :PhysicalPort(circuitDesignId)
+INDEX ON :SearchConfigColumns(base_class)
+INDEX ON :ArchetypeInstance(archetypeId)
+INDEX ON :Location(postalCode)
+INDEX ON :LogicalConnection(name)
+INDEX ON :LogicalInterface(status)
+INDEX ON :Archetype(archetypeId)
+INDEX ON :PhysicalPort(name)
+INDEX ON :AddressGroupInstance(positionType)
+INDEX ON :PhysicalPort(equipmentId)
+INDEX ON :AddressGroup(positionType)
+INDEX ON :Location(longitude)
+INDEX ON :LogicalInterface(name)
+INDEX ON :ArchetypeInstance(positionSequence)
+INDEX ON :Device(status)
+INDEX ON :LogicalInterface(precomputedtypename)
+INDEX ON :PhysicalConnection(status)
+INDEX ON :ArchetypeInstance(name)
+INDEX ON :Rack(equipmentId)
+INDEX ON :Archetype(name)
+INDEX ON :PhysicalConnection(name)
+INDEX ON :Device(archetypeId)
+INDEX ON :RackPosition(positionType)
+INDEX ON :GridTemplate(id)
+INDEX ON :PhysicalPort(porttypeName)
+INDEX ON :Location(name)
+INDEX ON :TEMPXMetadataRelation(xMetadataRelId)
+INDEX ON :Service(archetypeId)
+INDEX ON :TEMP_LIBRARY(xMetadataNodeId)
+INDEX ON :Card(equipmentId)

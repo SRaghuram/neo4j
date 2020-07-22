@@ -200,3 +200,14 @@ The dataset is a snapshot of the results store from 2020-6-8:
  * Nodes: ~37,000,000
  * Relationships: ~53,000,000
 Queries are taken from both the UI (read queries used to create reports) and the "result client" (various updates) which reports results.
+
+---
+
+#### ciena
+
+Obfuscated data from one of our customers.
+Used to provide a web service where tables are populated with dynamically generated Cypher queries.
+This is one of their test datasets, which is smaller than the real one, but contains real data, except that many properties in the data have been obfuscated using apoc.util.sha1. 
+Private do not share.
+
+This dataset is especially interesting with respect to how it challenges the planner to choose a plan that does not require a full Sort/Top.
