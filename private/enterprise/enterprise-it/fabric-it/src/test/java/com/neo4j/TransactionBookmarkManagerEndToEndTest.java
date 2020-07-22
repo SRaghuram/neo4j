@@ -5,7 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.TestFabric;
 import com.neo4j.utils.TestFabricFactory;
 import org.assertj.core.api.Assertions;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -44,7 +42,6 @@ import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.graphdb.QueryStatistics;
-import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 
@@ -59,7 +56,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-@ExtendWith( FabricEverywhereExtension.class )
 class TransactionBookmarkManagerEndToEndTest
 {
     private static Driver clientDriver;

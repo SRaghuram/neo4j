@@ -5,14 +5,12 @@
  */
 package com.neo4j;
 
-import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.TestFabric;
 import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,7 +20,6 @@ import org.neo4j.driver.Driver;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-@ExtendWith( FabricEverywhereExtension.class )
 class CatalogManagementTest
 {
     private Driver clientDriver;

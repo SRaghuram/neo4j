@@ -5,7 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.TestFabric;
 import com.neo4j.utils.TestFabricFactory;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -29,7 +27,6 @@ import static org.neo4j.driver.summary.QueryType.SCHEMA_WRITE;
 import static org.neo4j.driver.summary.QueryType.WRITE_ONLY;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
-@ExtendWith( FabricEverywhereExtension.class )
 class QueryExecutionTypeTest
 {
 

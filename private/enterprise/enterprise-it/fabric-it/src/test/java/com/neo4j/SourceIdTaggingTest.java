@@ -5,7 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.TestFabric;
 import com.neo4j.utils.TestFabricFactory;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -29,7 +27,6 @@ import org.neo4j.fabric.stream.SourceTagging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
-@ExtendWith( FabricEverywhereExtension.class )
 class SourceIdTaggingTest
 {
 

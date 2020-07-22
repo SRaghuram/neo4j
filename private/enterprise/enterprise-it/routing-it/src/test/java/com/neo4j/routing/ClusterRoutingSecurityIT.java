@@ -11,7 +11,6 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import com.neo4j.test.routing.FabricEverywhereExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,7 +68,6 @@ import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 @TestDirectoryExtension
 @ExtendWith( {
-        FabricEverywhereExtension.class,
         DefaultFileSystemExtension.class,
         SuppressOutputExtension.class,
         MockedRoutingContextExtension.class} )

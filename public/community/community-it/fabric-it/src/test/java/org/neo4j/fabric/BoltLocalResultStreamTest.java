@@ -1,55 +1,71 @@
 /*
  * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j;
+package org.neo4j.fabric;
 
-import com.neo4j.utils.TestFabric;
-import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Flux;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxTransaction;
+import org.neo4j.test.extension.DbmsExtension;
+import org.neo4j.test.extension.Inject;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@DbmsExtension
+@TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class BoltLocalResultStreamTest
 {
-    private static Driver clientDriver;
-    private static TestFabric testFabric;
+
+    @Inject
+    private static ConnectorPortRegister connectorPortRegister;
+
+    private static Driver driver;
 
     @BeforeAll
-    static void setUp()
+    static void beforeAll()
     {
-        testFabric = new TestFabricFactory()
-                .withFabricDatabase( "mega" )
-                .build();
-
-        clientDriver = testFabric.routingClientDriver();
+        driver = DriverUtils.createDriver( connectorPortRegister );
     }
 
     @AfterAll
     static void tearDown()
     {
-        testFabric.close();
+        driver.close();
     }
 
     @Test
     void testBasicResultStream()
     {
-        List<String> result = inMegaTx( tx ->
+        List<String> result = inTx( tx ->
                 tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" ).stream()
                         .map( r -> r.get( "A" ).asString() )
                         .collect( Collectors.toList() )
@@ -61,7 +77,7 @@ class BoltLocalResultStreamTest
     @Test
     void testRxResultStream()
     {
-        List<String> result = inMegaRxTx( tx ->
+        List<String> result = inRxTx( tx ->
         {
             RxResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
             return Flux.from( statementResult.records() )
@@ -79,7 +95,7 @@ class BoltLocalResultStreamTest
     @Test
     void testPartialStream()
     {
-        List<String> result  = inMegaRxTx( tx ->
+        List<String> result  = inRxTx( tx ->
         {
             RxResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
 
@@ -95,17 +111,17 @@ class BoltLocalResultStreamTest
         assertThat( result ).isEqualTo( List.of( "r0", "r1" ) );
     }
 
-    private <T> T inMegaTx( Function<Transaction,T> workload )
+    private <T> T inTx( Function<Transaction,T> workload )
     {
-        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = driver.session() )
         {
             return session.writeTransaction( workload::apply );
         }
     }
 
-    private <T> T inMegaRxTx( Function<RxTransaction,T> workload )
+    private <T> T inRxTx( Function<RxTransaction,T> workload )
     {
-        var session = clientDriver.rxSession( SessionConfig.builder().withDatabase( "mega" ).build() );
+        var session = driver.rxSession();
         try
         {
             RxTransaction tx = Mono.from( session.beginTransaction() ).block();

@@ -5,7 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
 import com.neo4j.utils.TestFabric;
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,7 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
-@ExtendWith( FabricEverywhereExtension.class )
 class FabricByDefaultTest
 {
 

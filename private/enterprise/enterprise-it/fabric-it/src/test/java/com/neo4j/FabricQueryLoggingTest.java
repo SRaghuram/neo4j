@@ -9,7 +9,6 @@ import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
-import com.neo4j.test.routing.FabricEverywhereExtension;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.TestFabric;
 import com.neo4j.utils.TestFabricFactory;
@@ -79,7 +78,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
-@ExtendWith( {FabricEverywhereExtension.class, SuppressOutputExtension.class} )
+@ExtendWith( {SuppressOutputExtension.class} )
 @ResourceLock( Resources.SYSTEM_OUT )
 class FabricQueryLoggingTest
 {
