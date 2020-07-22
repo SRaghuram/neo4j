@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 
 /**
@@ -54,6 +53,4 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
     sb += ')'
     sb.result()
   }
-
-  override def iterator: java.util.Iterator[T] = data.iterator()
 }

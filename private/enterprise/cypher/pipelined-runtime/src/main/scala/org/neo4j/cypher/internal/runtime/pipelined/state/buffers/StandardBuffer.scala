@@ -11,44 +11,38 @@ import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.memory.MemoryTracker
 
-import scala.collection.JavaConverters.asJavaIteratorConverter
-import scala.collection.mutable.ArrayBuffer
-
 /**
  * Implementation of a standard non-Thread-safe buffer of elements of type T.
  */
 class StandardBuffer[T <: AnyRef] extends Buffer[T] {
-  private val data = new ArrayBuffer[T]
+  private val data: util.Queue[T] = new util.ArrayDeque[T]()
 
   override def put(t: T, resources: QueryResources): Unit = {
-    data.append(t)
+    data.add(t)
   }
 
   override def canPut: Boolean = data.size < Buffer.MAX_SIZE_HINT
 
-  override def hasData: Boolean = data.nonEmpty
+  override def hasData: Boolean = !data.isEmpty
 
   override def take(): T = {
-    if (data.isEmpty) null.asInstanceOf[T]
-    else data.remove(0)
+    data.poll()
   }
 
   override def foreach(f: T => Unit): Unit = {
-    data.foreach(f)
+    data.forEach(t => f(t))
   }
 
   override def toString: String = {
     val sb = new StringBuilder()
     sb ++= s"${getClass.getSimpleName}("
-    data.foreach(t => {
+    data.forEach(t => {
       sb ++= t.toString
       sb += ','
     })
     sb += ')'
     sb.result()
   }
-
-  override def iterator: util.Iterator[T] = data.iterator.asJava
 }
 
 class MemoryTrackingStandardBuffer[T <: MemoizingMeasurable](memoryTracker: MemoryTracker) extends StandardBuffer[T] {

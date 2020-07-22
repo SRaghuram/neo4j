@@ -35,10 +35,6 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   override def take(): Morsel = inner.take()
   override def foreach(f: Morsel => Unit): Unit = inner.foreach(f)
 
-  override def iterator: java.util.Iterator[Morsel] = {
-    inner.iterator
-  }
-
   override def close(): Unit = {
     inner.close()
   }

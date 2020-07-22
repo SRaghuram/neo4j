@@ -23,8 +23,6 @@ trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] with AutoCloseable {
   /**
    * @return an iterator of the contents of the buffer. Does not modify the buffer.
    */
-  def iterator: java.util.Iterator[T]
-
   override def close(): Unit = {}
 }
 

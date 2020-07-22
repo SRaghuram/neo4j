@@ -5,12 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import java.util
 import java.util.concurrent.atomic.AtomicReference
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.internal.helpers.collection.Iterators
 
 /**
  * Implementation of a concurrent singleton [[Buffer]] of elements of type `T`.
@@ -53,6 +50,4 @@ class ConcurrentSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
     sb += ')'
     sb.result()
   }
-
-  override def iterator: util.Iterator[T] = Iterators.iterator[T](datum.get())
 }

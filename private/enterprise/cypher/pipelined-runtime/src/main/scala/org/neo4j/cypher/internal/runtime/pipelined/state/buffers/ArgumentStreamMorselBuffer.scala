@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import java.util
-
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
@@ -14,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -219,8 +216,6 @@ class StandardArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer
 
   override def canPut: Boolean = inner.canPut
 
-  override def iterator: util.Iterator[T] = inner.iterator
-
   override def toString: String = s"${getClass.getSimpleName}(didReceiveData=${_didReceiveData}, inner=$inner)"
 }
 
@@ -242,8 +237,6 @@ class ConcurrentArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buff
   override def take(): T = inner.take()
 
   override def canPut: Boolean = inner.canPut
-
-  override def iterator: util.Iterator[T] = inner.iterator
 
   override def toString: String = s"${getClass.getSimpleName}(didReceiveData=${_didReceiveData}, inner=$inner)"
 }
