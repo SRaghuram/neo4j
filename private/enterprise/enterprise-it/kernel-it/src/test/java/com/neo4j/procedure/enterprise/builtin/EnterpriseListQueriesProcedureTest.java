@@ -156,7 +156,7 @@ public class EnterpriseListQueriesProcedureTest
             assertSame( node, test.resource() );
         }
     }
-    
+
     @Test
     void shouldListActiveLocks() throws Exception
     {
