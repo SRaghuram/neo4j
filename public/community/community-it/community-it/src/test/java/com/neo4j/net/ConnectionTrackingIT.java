@@ -1,11 +1,24 @@
 /*
  * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.neo4j.net;
 
-import com.neo4j.harness.internal.EnterpriseInProcessNeo4jBuilder;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;
@@ -47,6 +60,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.internal.InProcessNeo4j;
+import org.neo4j.harness.internal.InProcessNeo4jBuilder;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
@@ -57,7 +71,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.configuration.OnlineBackupSettings.online_backup_enabled;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.BOLT;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.HTTP;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.HTTPS;
@@ -116,13 +129,12 @@ class ConnectionTrackingIT
     @BeforeAll
     void beforeAll()
     {
-        neo4j = (InProcessNeo4j) new EnterpriseInProcessNeo4jBuilder( dir.homePath() )
+        neo4j = (InProcessNeo4j) new InProcessNeo4jBuilder( dir.homePath() )
                 .withConfig( neo4j_home, dir.homePath().toAbsolutePath() )
                 .withConfig( auth_enabled, true )
                 .withConfig( HttpConnector.enabled, true )
                 .withConfig( HttpsConnector.enabled, true )
                 .withConfig( webserver_max_threads, 50 ) /* higher than the amount of concurrent requests tests execute*/
-                .withConfig( online_backup_enabled, false )
                 .build();
         neo4j.start();
         db = (GraphDatabaseAPI) neo4j.defaultDatabaseService();
