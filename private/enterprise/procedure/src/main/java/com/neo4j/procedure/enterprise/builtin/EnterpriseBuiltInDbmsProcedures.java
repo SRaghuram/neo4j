@@ -188,7 +188,6 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String name;
         public final String signature;
         public final String description;
-        public final String category;
         public final String mode;
         public final List<String> defaultBuiltInRoles;
         public final boolean worksOnSystem;
@@ -198,7 +197,6 @@ public class EnterpriseBuiltInDbmsProcedures
             this.name = signature.name().toString();
             this.signature = signature.toString();
             this.description = signature.description().orElse( "" );
-            this.category = signature.category().orElse( "" );
             this.mode = signature.mode().toString();
             this.worksOnSystem = signature.systemProcedure();
             defaultBuiltInRoles = new ArrayList<>();

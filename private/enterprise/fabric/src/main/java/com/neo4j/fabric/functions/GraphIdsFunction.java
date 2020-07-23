@@ -23,6 +23,7 @@ public class GraphIdsFunction implements CallableUserFunction
 {
     private static final String NAME = "graphIds";
     private static final String DESCRIPTION = "List all fabric graph ids";
+    private static final String CATEGORY = "List";
     private static final List<FieldSignature> ARGUMENT_TYPES = Collections.emptyList();
     private static final Neo4jTypes.ListType RESULT_TYPE = Neo4jTypes.NTList( Neo4jTypes.NTInteger );
 
@@ -36,7 +37,7 @@ public class GraphIdsFunction implements CallableUserFunction
         this.signature = new UserFunctionSignature(
                 new QualifiedName( new String[]{namespace}, NAME ),
                 ARGUMENT_TYPES, RESULT_TYPE, null, new String[0],
-                DESCRIPTION, true );
+                DESCRIPTION, CATEGORY, true );
     }
 
     @Override
