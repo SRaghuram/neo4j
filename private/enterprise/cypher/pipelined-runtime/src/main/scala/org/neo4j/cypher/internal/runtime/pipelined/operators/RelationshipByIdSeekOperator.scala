@@ -425,17 +425,16 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
      * {{{
      *   while (hasDemand && this.canContinue) {
      *     ...
-     *     setLongAt(relOffset, id)
+     *     setLongAt(relOffset, cursor.relationshipReference)
      *     if (this.forwardDirection) {
      *       setLongAt(fromOffset, cursor.sourceNodeReference)
      *       setLongAt(toOffset, cursor.targetNodeReference)
-     *       this.forwardDirection = false
      *     } else {
      *       setLongAt(fromOffset, cursor.targetNodeReference)
      *       setLongAt(toOffset, cursor.sourceNodeReference)
-     *       this.forwardDirection = true
      *     }
      *     << inner.genOperate >>
+     *     this.forwardDirection = !this.forwardDirection
      *     this.canContinue = !forwardDirection
      *   }
      * }}}
@@ -443,26 +442,32 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-        codeGen.setLongAt(relationshipOffset, load(idVariable)),
+        codeGen.setLongAt(relationshipOffset,
+          invoke(loadField(cursor), method[RelationshipScanCursor, Long]("relationshipReference"))),
         ifElse(loadField(forwardDirection)) {
           //this is the on true block of if {} else {}
           block(
             codeGen.setLongAt(fromOffset,
               invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(toOffset,
-              invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
-            setField(forwardDirection, constant(false)))
+              invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference")))
+          )
         } {
           //else block of if {} else {}
           block(
             codeGen.setLongAt(fromOffset,
               invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
             codeGen.setLongAt(toOffset,
-              invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
-            setField(forwardDirection, constant(true)))
+              invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference")))
+          )
         },
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(profileRow(id)),
+        doIfInnerCantContinue(
+          block(
+            profileRow(id),
+            setField(forwardDirection, not(loadField(forwardDirection)))
+          )
+        ),
         innermost.setUnlessPastLimit(canContinue, not(loadField(forwardDirection)))))
   }
 }
@@ -603,13 +608,12 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
      *       if (this.forwardDirection) {
      *         setLongAt(fromOffset, cursor.sourceNodeReference)
      *         setLongAt(toOffset, cursor.targetNodeReference)
-     *         this.forwardDirection = false
      *       } else {
      *         setLongAt(fromOffset, cursor.targetNodeReference)
      *         setLongAt(toOffset, cursor.sourceNodeReference)
-     *         this.forwardDirection = true
      *       }
      *       << inner.genOperate >>
+     *       this.forwardDirection = !this.forwardDirection
      *      }
      *      this.canContinue = !this.forwardDirection || idIterator.hasNext()
      *   }
@@ -626,7 +630,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
         condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
           singleRelationship(load(idVariable), loadField(cursor)) },
         condition(and(greaterThanOrEqual(load(idVariable), constant(0L)),
-          or(not(loadField(forwardDirection)), cursorNext[RelationshipScanCursor](loadField(cursor)))))(
+         cursorNext[RelationshipScanCursor](loadField(cursor))))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(relationshipOffset, load(idVariable)),
@@ -635,18 +639,25 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
                 invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
               codeGen.setLongAt(toOffset,
                 invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
-              setField(forwardDirection, constant(false))))(block(
+            ))(block(
               codeGen.setLongAt(fromOffset,
                 invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
               codeGen.setLongAt(toOffset,
                 invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
-              setField(forwardDirection, constant(true)))),
+            )),
             inner.genOperateWithExpressions,
-            doIfInnerCantContinue(profileRow(id))
+            doIfInnerCantContinue(
+              block(
+                profileRow(id),
+                setField(forwardDirection, not(loadField(forwardDirection))),
+              )
+            )
           )),
         doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue,
-            or(not(loadField(forwardDirection)), cursorNext[IteratorCursor](loadField(idCursor))))))
+          block(
+            innermost.setUnlessPastLimit(canContinue,
+            or(not(loadField(forwardDirection)), cursorNext[IteratorCursor](loadField(idCursor)))))),
+        )
     )
   }
 }
