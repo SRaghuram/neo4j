@@ -87,6 +87,15 @@
       "parameters": {
         "file": "parameters/port_latest.txt"
       }
+    },
+    {
+      "name": "Q5",
+      "description": "Similar to Q3. I think This kind of query is used to calculate how many pages a table has.",
+      "queryFile": "queries/Q5.cypher",
+      "comment": "parameters were obtained with: MATCH (logicalInterface:LogicalInterface) WHERE NOT (logicalInterface:Model) UNWIND logicalInterface.latest AS latest WITH latest AS l, count(logicalInterface) AS c WHERE c > 100000 RETURN l, c",
+      "parameters": {
+        "file": "parameters/logicalInterface_latest.txt"
+      }
     }
   ]
 }
