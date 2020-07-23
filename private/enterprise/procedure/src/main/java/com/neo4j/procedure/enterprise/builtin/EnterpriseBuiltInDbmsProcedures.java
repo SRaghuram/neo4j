@@ -138,6 +138,7 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         public final String name;
         public final String signature;
+        public final String category;
         public final String description;
         public final boolean aggregating;
         public final List<String> defaultBuiltInRoles;
@@ -146,6 +147,7 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             this.name = signature.name().toString();
             this.signature = signature.toString();
+            this.category = signature.category().orElse( "" );
             this.description = signature.description().orElse( "" );
             defaultBuiltInRoles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
             defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
@@ -156,6 +158,7 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             this.name = info.getFunctionName();
             this.signature = info.getSignature();
+            this.category = info.getCategory();
             this.description = info.getDescription();
             this.aggregating = info.isAggregationFunction();
             defaultBuiltInRoles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
@@ -185,6 +188,7 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String name;
         public final String signature;
         public final String description;
+        public final String category;
         public final String mode;
         public final List<String> defaultBuiltInRoles;
         public final boolean worksOnSystem;
@@ -194,6 +198,7 @@ public class EnterpriseBuiltInDbmsProcedures
             this.name = signature.name().toString();
             this.signature = signature.toString();
             this.description = signature.description().orElse( "" );
+            this.category = signature.category().orElse( "" );
             this.mode = signature.mode().toString();
             this.worksOnSystem = signature.systemProcedure();
             defaultBuiltInRoles = new ArrayList<>();
