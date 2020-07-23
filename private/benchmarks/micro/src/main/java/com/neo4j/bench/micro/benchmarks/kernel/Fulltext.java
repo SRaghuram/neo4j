@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;
 
@@ -136,7 +137,7 @@ public class Fulltext extends AbstractKernelBenchmark
 
             index = kernelTx.schemaRead.indexGetForName( "ftsNodes" );
             indexReadSession = kernelTx.read.indexReadSession( index );
-            node = kernelTx.cursors.allocateNodeValueIndexCursor( NULL );
+            node = kernelTx.cursors.allocateNodeValueIndexCursor( NULL, EmptyMemoryTracker.INSTANCE);
             read = kernelTx.read;
         }
 

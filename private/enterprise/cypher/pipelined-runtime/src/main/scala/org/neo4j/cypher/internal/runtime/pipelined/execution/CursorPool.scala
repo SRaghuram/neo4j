@@ -24,7 +24,7 @@ import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.memory.MemoryTracker
 
-class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTracer) extends CursorFactory with AutoCloseable {
+class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTracer, memoryTracker: MemoryTracker) extends CursorFactory with AutoCloseable {
 
   val nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
     () => cursorFactory.allocateNodeCursor(pageCursorTracer))
@@ -33,7 +33,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   val relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
     () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer))
   val nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
-    () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer))
+    () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer, memoryTracker))
   val nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
     () => cursorFactory.allocateNodeLabelIndexCursor(pageCursorTracer))
 
@@ -75,7 +75,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): PropertyCursor = fail("FullAccessPropertyCursor")
 
-  override def allocateNodeValueIndexCursor(cursorTracer: PageCursorTracer): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
+  override def allocateNodeValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 
   override def allocateNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
 

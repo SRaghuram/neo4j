@@ -26,7 +26,7 @@ class QueryResources(cursorFactory: CursorFactory,
                      val nWorkers: Int) extends AutoCloseable {
 
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory, cursorTracer, tracker)
-  val cursorPools: CursorPools = new CursorPools(cursorFactory, cursorTracer)
+  val cursorPools: CursorPools = new CursorPools(cursorFactory, cursorTracer, tracker)
   private var _expressionVariables = new Array[AnyValue](8)
   private var _memoryTracker: MemoryTracker = EmptyMemoryTracker.INSTANCE
 

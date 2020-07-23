@@ -344,7 +344,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         List<Long> ids = new ArrayList<>();
         IndexDescriptor index = schemaRead.indexGetForName( "barIndex" );
         IndexReadSession indexSession = read.indexReadSession( index );
-        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor( NULL ) )
+        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor( NULL, tx.memoryTracker() ) )
         {
             read.nodeIndexSeek( indexSession, cursor, IndexQueryConstraints.unconstrained(), IndexQuery.exact( prop1Key, 1 ) );
             while ( cursor.next() )
@@ -364,8 +364,8 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         changeUser( getLoginContext() );
         List<Long> ids = new ArrayList<>();
         IndexDescriptor index = schemaRead.indexGetForName( "distinctBarIndex" );
-        try ( NodeValueIndexCursor cursor1 = cursors.allocateNodeValueIndexCursor( NULL );
-              NodeValueIndexCursor cursor2 = cursors.allocateNodeValueIndexCursor( NULL ) )
+        try ( NodeValueIndexCursor cursor1 = cursors.allocateNodeValueIndexCursor( NULL, tx.memoryTracker() );
+              NodeValueIndexCursor cursor2 = cursors.allocateNodeValueIndexCursor( NULL, tx.memoryTracker() ) )
         {
             ids.add( read.lockingNodeUniqueIndexSeek( index, cursor1, IndexQuery.exact( prop2Key, 3 ) ) );
             ids.add( read.lockingNodeUniqueIndexSeek( index, cursor2, IndexQuery.exact( prop2Key, 4 ) ) );
@@ -383,7 +383,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         List<Long> ids = new ArrayList<>();
         IndexDescriptor index = schemaRead.indexGetForName( "barIndex" );
         IndexReadSession indexSession = read.indexReadSession( index );
-        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor( NULL ) )
+        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor( NULL, tx.memoryTracker() ) )
         {
             read.nodeIndexScan( indexSession, cursor, IndexQueryConstraints.unconstrained() );
             while ( cursor.next() )

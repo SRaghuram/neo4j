@@ -34,6 +34,7 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
+import org.neo4j.memory.EmptyMemoryTracker;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.LABEL;
@@ -153,7 +154,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
             valueFun = propertyDefinition.value().create();
             index = single( kernelTx.schemaRead.index( SchemaDescriptor.forLabel( labelId, propertyKey ) ) );
             indexReadSession = kernelTx.read.indexReadSession( index );
-            node = kernelTx.cursors.allocateNodeValueIndexCursor( NULL );
+            node = kernelTx.cursors.allocateNodeValueIndexCursor( NULL, EmptyMemoryTracker.INSTANCE);
             read = kernelTx.read;
         }
 
