@@ -26,6 +26,11 @@
       "name": "Q9",
       "description": "Count all named nodes in range from 'name' string index (11.6% of nodes)",
       "queryFile": "queries/Q9.cypher"
+    },
+    {
+      "name": "Q10",
+      "description": "Find all nodes with a location and sort them in the natural oder",
+      "queryFile": "queries/Q10.cypher"
     }
   ]
 }
