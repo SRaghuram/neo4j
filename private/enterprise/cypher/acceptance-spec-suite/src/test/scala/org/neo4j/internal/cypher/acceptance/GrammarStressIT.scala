@@ -69,7 +69,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
     }
   }
 
-  ignore("optional match pattern") {
+  test("optional match pattern") {
     forAll(patterns, patterns) { (matchPattern, optionalPattern) =>
       val query = s"MATCH $matchPattern OPTIONAL MATCH $optionalPattern ${returnClause(matchPattern, optionalPattern)}"
       withClue(s"Failed on query: $query") {
