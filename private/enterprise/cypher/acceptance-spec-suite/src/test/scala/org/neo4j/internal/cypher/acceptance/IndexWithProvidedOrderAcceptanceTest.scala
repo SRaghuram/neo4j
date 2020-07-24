@@ -14,6 +14,8 @@ import org.neo4j.cypher.internal.ir.ordering.ProvidedOrder
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian
+import org.neo4j.values.storable.Values.pointValue
 
 //noinspection RegExpRedundantEscape
 class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
@@ -31,6 +33,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     graph.createIndex("Awesome", "prop1")
     graph.createIndex("Awesome", "prop2")
     graph.createIndex("Awesome", "prop1", "prop2")
+    graph.createIndex("Awesome", "prop2", "prop2Copy")
     graph.createIndex("Awesome", "prop3")
     graph.createIndex("Awesome", "prop4")
     graph.createIndex("DateString", "ds")
@@ -40,15 +43,15 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   // Invoked once before the Tx and once in the same Tx
   def createSomeNodes(tx: InternalTransaction): Unit = {
     tx.execute(
-      """CREATE (:Awesome {prop1: 40, prop2: 5})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 41, prop2: 2})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 42, prop2: 3})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 43, prop2: 1})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 44, prop2: 3})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 7})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 9})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 8})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 7})-[:R]->(:B)
+      """CREATE (:Awesome {prop1: 40, prop2: 5, prop2Copy: 5})-[:R]->(:B)
+        |CREATE (:Awesome {prop1: 41, prop2: 2, prop2Copy: 2})-[:R]->(:B)
+        |CREATE (:Awesome {prop1: 42, prop2: 3, prop2Copy: 3})-[:R]->(:B)
+        |CREATE (:Awesome {prop1: 43, prop2: 1, prop2Copy: 1})-[:R]->(:B)
+        |CREATE (:Awesome {prop1: 44, prop2: 3, prop2Copy: 3})-[:R]->(:B)
+        |CREATE (:Awesome {prop2: 7, prop2Copy: 7})-[:R]->(:B)
+        |CREATE (:Awesome {prop2: 9, prop2Copy: 9})-[:R]->(:B)
+        |CREATE (:Awesome {prop2: 8, prop2Copy: 8})-[:R]->(:B)
+        |CREATE (:Awesome {prop2: 7, prop2Copy: 7})-[:R]->(:B)
         |CREATE (:Awesome {prop3: 'footurama', prop4:'bar'})-[:R]->(:B {foo:1, bar:1})
         |CREATE (:Awesome {prop3: 'fooism', prop4:'rab'})-[:R]->(:B {foo:1, bar:1})
         |CREATE (:Awesome {prop3: 'aismfama', prop4:'rab'})-[:R]->(:B {foo:1, bar:1})
@@ -62,10 +65,81 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         |
         |CREATE (:DateDate {d: date('2018-02-10')})
         |CREATE (:DateDate {d: date('2018-01-10')})
+        |
+        |CREATE (:Awesome {prop2: point({x:-500000, y:-500000}), prop2Copy: point({x:-500000, y:-500000})})
+        |CREATE (:Awesome {prop2: point({x:-500000, y:500000}), prop2Copy: point({x:-500000, y:500000})})
+        |CREATE (:Awesome {prop2: point({x:500000, y:-500000}), prop2Copy: point({x:500000, y:-500000})})
+        |CREATE (:Awesome {prop2: point({x:500000, y:500000}),  prop2Copy: point({x:500000, y:500000})})
       """.stripMargin)
   }
 
   for (TestOrder(cypherToken, expectedOrder, providedOrder) <- List(ASCENDING, DESCENDING)) {
+
+    test(s"$cypherToken: should use index order for exists predicate when returning that property") {
+      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE exists(n.prop2) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)),
+        Map("n.prop2" -> 1), Map("n.prop2" -> 1),
+        Map("n.prop2" -> 2), Map("n.prop2" -> 2),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 5), Map("n.prop2" -> 5),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 8), Map("n.prop2" -> 8),
+        Map("n.prop2" -> 9), Map("n.prop2" -> 9)
+      )))
+    }
+
+    test(s"$cypherToken: should use index order for exists predicate when not returning that property") {
+      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE exists(n.prop2) RETURN n.prop2Copy ORDER BY n.prop2 $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop2Copy" -> pointValue(Cartesian, -500000, -500000)), Map("n.prop2Copy" -> pointValue(Cartesian, -500000, -500000)),
+        Map("n.prop2Copy" -> pointValue(Cartesian, -500000, 500000)), Map("n.prop2Copy" -> pointValue(Cartesian, -500000, 500000)),
+        Map("n.prop2Copy" -> pointValue(Cartesian, 500000, -500000)), Map("n.prop2Copy" -> pointValue(Cartesian, 500000, -500000)),
+        Map("n.prop2Copy" -> pointValue(Cartesian, 500000, 500000)), Map("n.prop2Copy" -> pointValue(Cartesian, 500000, 500000)),
+        Map("n.prop2Copy" -> 1), Map("n.prop2Copy" -> 1),
+        Map("n.prop2Copy" -> 2), Map("n.prop2Copy" -> 2),
+        Map("n.prop2Copy" -> 3), Map("n.prop2Copy" -> 3),
+        Map("n.prop2Copy" -> 3), Map("n.prop2Copy" -> 3),
+        Map("n.prop2Copy" -> 5), Map("n.prop2Copy" -> 5),
+        Map("n.prop2Copy" -> 7), Map("n.prop2Copy" -> 7),
+        Map("n.prop2Copy" -> 7), Map("n.prop2Copy" -> 7),
+        Map("n.prop2Copy" -> 8), Map("n.prop2Copy" -> 8),
+        Map("n.prop2Copy" -> 9), Map("n.prop2Copy" -> 9)
+      )))
+    }
+
+    test(s"$cypherToken: should use index for exists predicate on composite index ") {
+      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE exists(n.prop2) AND exists(n.prop2Copy) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)),
+        Map("n.prop2" -> 1), Map("n.prop2" -> 1),
+        Map("n.prop2" -> 2), Map("n.prop2" -> 2),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 5), Map("n.prop2" -> 5),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 8), Map("n.prop2" -> 8),
+        Map("n.prop2" -> 9), Map("n.prop2" -> 9)
+      )))
+    }
 
     test(s"$cypherToken: should use index order for range predicate when returning that property") {
       val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop2 > 1 RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
@@ -425,69 +499,77 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
   }
 
-  test("Order by not indexed backed for composite index on exists") {
-    // Since exists does not give type we can't get order from the index
-
+  test("should handle exists and ORDER BY on two columns of composite index") {
     // Given
     graph.createIndex("Label", "prop1", "prop2")
     createNodesForComposite()
 
-    val expectedAscAsc = List(
+    val expectedResult = List(
       Map("n.prop1" -> 42, "n.prop2" -> 0), Map("n.prop1" -> 42, "n.prop2" -> 1), Map("n.prop1" -> 42, "n.prop2" -> 3),
       Map("n.prop1" -> 43, "n.prop2" -> 1), Map("n.prop1" -> 43, "n.prop2" -> 2),
       Map("n.prop1" -> 44, "n.prop2" -> 3), Map("n.prop1" -> 45, "n.prop2" -> 2), Map("n.prop1" -> 45, "n.prop2" -> 5)
     )
-
-    val expectedAscDesc = List(
-      Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 1), Map("n.prop1" -> 42, "n.prop2" -> 0),
-      Map("n.prop1" -> 43, "n.prop2" -> 2), Map("n.prop1" -> 43, "n.prop2" -> 1),
-      Map("n.prop1" -> 44, "n.prop2" -> 3), Map("n.prop1" -> 45, "n.prop2" -> 5), Map("n.prop1" -> 45, "n.prop2" -> 2)
-    )
-
-    val expectedDescAsc = List(
-      Map("n.prop1" -> 45, "n.prop2" -> 2), Map("n.prop1" -> 45, "n.prop2" -> 5), Map("n.prop1" -> 44, "n.prop2" -> 3),
-      Map("n.prop1" -> 43, "n.prop2" -> 1), Map("n.prop1" -> 43, "n.prop2" -> 2),
-      Map("n.prop1" -> 42, "n.prop2" -> 0), Map("n.prop1" -> 42, "n.prop2" -> 1), Map("n.prop1" -> 42, "n.prop2" -> 3)
-    )
-
-    val expectedDescDesc = List(
-      Map("n.prop1" -> 45, "n.prop2" -> 5), Map("n.prop1" -> 45, "n.prop2" -> 2), Map("n.prop1" -> 44, "n.prop2" -> 3),
-      Map("n.prop1" -> 43, "n.prop2" -> 2), Map("n.prop1" -> 43, "n.prop2" -> 1),
-      Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 1), Map("n.prop1" -> 42, "n.prop2" -> 0)
-    )
-
-    val var1 = varFor("n.prop1")
-    val var2 = varFor("n.prop2")
-
     Seq(
-      (Configs.CachedProperty, "n.prop1 ASC", ProvidedOrder.asc(var1), expectedAscAsc),
-      (Configs.InterpretedAndSlotted, "n.prop1 DESC", ProvidedOrder.desc(var1), expectedDescAsc),
-      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 ASC", ProvidedOrder.asc(var1).asc(var2), expectedAscAsc),
-      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 DESC", ProvidedOrder.asc(var1).desc(var2), expectedAscDesc),
-      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 ASC", ProvidedOrder.desc(var1).asc(var2), expectedDescAsc),
-      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 DESC", ProvidedOrder.desc(var1).desc(var2), expectedDescDesc)
+      ("n.prop1 ASC, n.prop2 ASC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")))))),
+      ("n.prop1 ASC, n.prop2 DESC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")).reverse)))),
+      ("n.prop1 DESC, n.prop2 ASC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).reverse.thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")))))),
+      ("n.prop1 DESC, n.prop2 DESC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).reverse.thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")).reverse))))
     ).foreach {
-      case (configs, orderByString, sortOrder, expected) =>
+      case (orderByString,  expected) =>
         // When
         val query =
           s"""MATCH (n:Label)
              |WHERE n.prop1 >= 42 AND exists(n.prop2)
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        // For 'n.prop1 DESC': Pipelined gives different order on n.prop2
-        val result = executeWith(configs, query, executeExpectedFailures = false)
+        val result = executeWith(Configs.CachedProperty, query)
 
         // Then
-        result.executionPlanDescription() should includeSomewhere
-          .aPlan("Sort")
-          .withOrder(sortOrder)
-          .onTopOf(aPlan("Projection")
-            .onTopOf(aPlan("NodeIndexSeek")
-              .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND exists\\(prop2\\), cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
-            )
-          )
+        withClue(orderByString) {
+          result.executionPlanDescription() should (includeSomewhere
+            .aPlan("NodeIndexSeek")
+            .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND exists\\(prop2\\), cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+            and not(includeSomewhere.aPlan("Sort")))
 
-        result.toList should equal(expected)
+          result.toList should equal(expected)
+        }
+    }
+  }
+
+  test("should handle exists and ORDER BY on one column of composite index") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    createNodesForComposite()
+
+    val expectedResult = List(
+      Map("n.prop1" -> 42, "n.prop2" -> 0), Map("n.prop1" -> 42, "n.prop2" -> 1), Map("n.prop1" -> 42, "n.prop2" -> 3),
+      Map("n.prop1" -> 43, "n.prop2" -> 1), Map("n.prop1" -> 43, "n.prop2" -> 2),
+      Map("n.prop1" -> 44, "n.prop2" -> 3), Map("n.prop1" -> 45, "n.prop2" -> 2), Map("n.prop1" -> 45, "n.prop2" -> 5)
+    )
+    Seq(
+      ("n.prop1 ASC",  expectedResult.map(_("n.prop1")).sorted),
+      ("n.prop1 DESC", expectedResult.map(_("n.prop1")).sorted.reverse)
+    ).foreach {
+      case (orderByString,  expected) =>
+        // When
+        val query =
+          s"""MATCH (n:Label)
+             |WHERE n.prop1 >= 42 AND exists(n.prop2)
+             |RETURN n.prop1, n.prop2
+             |ORDER BY $orderByString""".stripMargin
+        val result = executeWith(Configs.CachedProperty, query)
+
+        // Then
+        withClue(orderByString) {
+          result.executionPlanDescription() should (includeSomewhere
+            .aPlan("NodeIndexSeek")
+            .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND exists\\(prop2\\), cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+            and not(includeSomewhere.aPlan("Sort")))
+
+
+          result.toList should contain theSameElementsAs expectedResult
+          result.toList.map(_("n.prop1")) should equal(expected)
+        }
     }
   }
 
@@ -1190,7 +1272,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
   }
 
-  test("can't ignore order for property with in list predicate, index don't return order") {
+  test("should use partial sort when there is a list in predicate") {
     // Given
     graph.createIndex("Label", "prop1", "prop2")
     createNodesForComposite()
@@ -1201,27 +1283,23 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     val orderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2")).fromLeft
     val orderDescAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2")).fromLeft
 
-    Seq( // Index can't give order due to auto-parameterized list of type Any
-      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1, n.prop2 DESC",     orderAscDesc, expectedEquals),
+    Seq(
       ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1, n.prop2 DESC",     orderAscDesc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1, n.prop2 DESC",     orderAscDesc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1, n.prop2 DESC",     orderAscDesc, expectedAscDesc),
       ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1, n.prop2 DESC",     orderAscDesc, expectedAscDesc),
 
-      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedAscDesc),
       ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedAscDesc),
 
-      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
-      ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3]",          "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedDescAsc),
       ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedDescAsc),
 
-      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
-      ("n.prop1 in [43, 44] AND n.prop2 in [3]",       "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 in [3]",          "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [3, 3]",    "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
       ("n.prop1 in [43, 44] AND n.prop2 in [1, 2, 3]", "n.prop1 DESC, n.prop2",     orderDescAsc, expectedDescAsc),
       ("n.prop1 in [43, 44] AND n.prop2 <= 3",         "n.prop1 DESC, n.prop2",     orderDescAsc, expectedDescAsc),
@@ -1237,7 +1315,41 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
           // Then
-          result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(order) and
+          result.executionPlanDescription() should (includeSomewhere.aPlan("PartialSort").withOrder(order) and
+            includeSomewhere.aPlan("NodeIndexSeek"))
+
+          result.toComparableResult should equal(expected)
+        }
+    }
+  }
+
+  test("should use index order when we have one list predicate and one exact predicate") {
+    // Given
+    graph.createIndex("Label", "prop1", "prop2")
+    createNodesForComposite()
+
+    val expectedEquals = Seq(Map("n.prop1" -> 44, "n.prop2" -> 3))
+    val orderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop2")).fromLeft
+    val orderDescAsc = ProvidedOrder.desc(varFor("n.prop1")).asc(varFor("n.prop2")).fromLeft
+
+    Seq(
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1, n.prop2 DESC",     orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 ASC, n.prop2 DESC", orderAscDesc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 DESC, n.prop2 ASC", orderDescAsc, expectedEquals),
+      ("n.prop1 in [43, 44] AND n.prop2 = 3",          "n.prop1 DESC, n.prop2",     orderDescAsc, expectedEquals),
+    ).foreach {
+      case (predicate, orderByString, order, expected) =>
+        withClue(s"WHERE $predicate ORDER BY $orderByString:") {
+          val query = s"""MATCH (n:Label)
+                         |WHERE $predicate
+                         |RETURN n.prop1, n.prop2
+                         |ORDER BY $orderByString""".stripMargin
+
+          // When
+          val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+          // Then
+          result.executionPlanDescription() should (not(includeSomewhere.aPlan("Sort")) and not(includeSomewhere.aPlan("PartialSort")) and
             includeSomewhere.aPlan("NodeIndexSeek"))
 
           result.toComparableResult should equal(expected)
@@ -1336,8 +1448,11 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
               result.executionPlanDescription() should (not(includeSomewhere.aPlan("PartialSort")) and
                 includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
 
-              if (shouldFilter) result.executionPlanDescription() should includeSomewhere.aPlan("Filter")
-              else result.executionPlanDescription() should not(includeSomewhere.aPlan("Filter"))
+              if (shouldFilter) {
+                result.executionPlanDescription() should includeSomewhere.aPlan("Filter")
+              } else {
+                result.executionPlanDescription() should not(includeSomewhere.aPlan("Filter"))
+              }
 
               result.toComparableResult should equal(expected)
             }
@@ -1701,11 +1816,13 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     test(s"$cypherToken-$functionName: should plan aggregation for index scan") {
       val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
-
-      // index scan provide values but not order, since we don't know the property type
       result.executionPlanDescription() should
-        includeSomewhere.aPlan("EagerAggregation")
-          .onTopOf(aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1").withOrder(providedOrder(prop("n", "prop1"))))
+            )
+          )
 
       val expected = expectedOrder(List(
         Map("min(n.prop1)" -> 40),
