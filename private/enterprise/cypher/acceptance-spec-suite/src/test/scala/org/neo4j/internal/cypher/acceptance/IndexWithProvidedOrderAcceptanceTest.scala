@@ -97,6 +97,28 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       )))
     }
 
+    test(s"$cypherToken: should use index order for IS NOT NULL predicate when returning that property") {
+      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop IS NOT NULL RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)),
+        Map("n.prop2" -> 1), Map("n.prop2" -> 1),
+        Map("n.prop2" -> 2), Map("n.prop2" -> 2),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 5), Map("n.prop2" -> 5),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 8), Map("n.prop2" -> 8),
+        Map("n.prop2" -> 9), Map("n.prop2" -> 9)
+      )))
+    }
+
     test(s"$cypherToken: should use index order for exists predicate when not returning that property") {
       val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE exists(n.prop2) RETURN n.prop2Copy ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
