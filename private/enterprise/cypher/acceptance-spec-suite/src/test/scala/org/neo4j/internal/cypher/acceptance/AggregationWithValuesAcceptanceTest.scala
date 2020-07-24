@@ -100,7 +100,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     test(s"$i-$func: should use index provided values with grouping expression with exists") {
       //Compiled does not support exists
-      val config = if(supportsPipelined) Configs.CachedProperty else Configs.InterpretedAndSlotted
+      val config =  Configs.CachedProperty
       val query = s"MATCH (n:Awesome) WHERE exists($property) RETURN $property as res1, $func($funcBody) as res2"
       val result = executeWith(config, query, executeBefore = createSomeNodes)
 
