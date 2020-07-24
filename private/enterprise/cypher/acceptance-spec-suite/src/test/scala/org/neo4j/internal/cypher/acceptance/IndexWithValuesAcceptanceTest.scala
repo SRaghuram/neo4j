@@ -148,10 +148,10 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       )
     )
 
-    result.toList should equal(List(
+    result.toList should contain theSameElementsAs List(
       Map("n.prop2" -> 5), Map("n.prop2" -> 5),
       Map("n.prop2" -> 3), Map("n.prop2" -> 3)
-    ))
+    )
   }
 
   test("should plan projection and index seek with DoNotGetValue when the property is only used in ORDER BY") {
@@ -231,7 +231,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should plan projection and index seek with GetValue when the property is used in key column of an aggregation") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop2), n.prop1 AS nums", executeBefore = createSomeNodes,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("OrderedAggregation")
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("EagerAggregation")
         // just for n.prop2, not for n.prop1
         .withDBHitsBetween(6, 12)
         .onTopOf(aPlan("NodeIndexSeekByRange")
