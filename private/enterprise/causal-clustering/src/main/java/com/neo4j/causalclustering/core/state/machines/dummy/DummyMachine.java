@@ -3,24 +3,24 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines;
+package com.neo4j.causalclustering.core.state.machines.dummy;
 
 import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.StateMachine;
 
 import java.util.function.Consumer;
 
-public class NoOperationStateMachine<T extends NoOperationRequest> implements StateMachine<T>
+public class DummyMachine implements StateMachine<DummyRequest>
 {
     @Override
-    public void applyCommand( T noOperationRequest, long commandIndex, Consumer<StateMachineResult> callback )
+    public void applyCommand( DummyRequest dummyRequest, long commandIndex, Consumer<StateMachineResult> callback )
     {
-        callback.accept( StateMachineResult.of( noOperationRequest ) );
+        callback.accept( StateMachineResult.of( dummyRequest ) );
     }
 
     @Override
     public void flush()
     {
-
     }
 
     @Override

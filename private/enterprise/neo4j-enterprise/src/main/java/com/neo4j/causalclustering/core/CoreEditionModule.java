@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolClientInstallerV4;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
@@ -43,7 +42,6 @@ import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
-import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
@@ -77,10 +75,8 @@ import java.io.File;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
@@ -117,7 +113,6 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
-import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_raft_protocol;
 import static com.neo4j.configuration.CausalClusteringSettings.status_throughput_window;
 import static com.neo4j.configuration.ServerGroupsSupplier.listen;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -449,10 +444,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         var applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedRaftProtocols );
         var modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
-        var maximumRaftVersion = globalModule.getGlobalConfig().get( experimental_raft_protocol ) ? ApplicationProtocols.RAFT_4_0
-                                                                                                  : ApplicationProtocols.RAFT_3_0;
+
         var protocolInstallerRepository = new ProtocolInstallerRepository<>(
-                createProtocolList( maximumRaftVersion ),
+                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ),
+                        new RaftProtocolClientInstallerV3.Factory( pipelineBuilders.client(), logProvider ) ),
                 ModifierProtocolInstaller.allClientInstallers );
 
         var handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );
@@ -479,26 +474,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     @Override
     public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
-                                                                                              DatabaseManagementService managementService, Monitors monitors,
-                                                                                              SystemNanoClock clock, LogService logService )
+            DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
     {
-        var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider( dependencies, managementService, monitors, clock, logService );
+        var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
-    }
-
-    private List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolList( ApplicationProtocols maximumProtocol )
-    {
-        return createProtocolMap().entrySet()
-                           .stream()
-                           .filter( p -> p.getKey().lessOrEquals( maximumProtocol ) )
-                           .map( Map.Entry::getValue )
-                           .collect( Collectors.toList() );
-    }
-
-    private Map<ApplicationProtocols,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolMap()
-    {
-        return Map.of( ApplicationProtocols.RAFT_2_0, new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ),
-                       ApplicationProtocols.RAFT_3_0, new RaftProtocolClientInstallerV3.Factory( pipelineBuilders.client(), logProvider ),
-                       ApplicationProtocols.RAFT_4_0, new RaftProtocolClientInstallerV4.Factory( pipelineBuilders.client(), logProvider ) );
     }
 }

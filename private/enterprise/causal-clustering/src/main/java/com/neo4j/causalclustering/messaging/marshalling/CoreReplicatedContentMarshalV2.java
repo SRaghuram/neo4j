@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
-import com.neo4j.causalclustering.core.state.machines.status.StatusRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -111,13 +110,6 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
             writableChannel.put( ContentCodes.DUMMY_REQUEST );
             DummyRequest.Marshal.INSTANCE.marshal( dummyRequest, writableChannel );
         }
-
-        @Override
-        public void handle( StatusRequest statusRequest ) throws IOException
-        {
-            writableChannel.put( ContentCodes.STATUS_REQUEST );
-            new StatusRequest.Marshal().marshal( statusRequest, writableChannel );
-        }
     }
 
     public static ContentBuilder<ReplicatedContent> unmarshal( byte contentType, ReadableChannel channel )
@@ -139,8 +131,6 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
             return DistributedOperation.deserialize( channel );
         case ContentCodes.DUMMY_REQUEST:
             return ContentBuilder.finished( DummyRequest.Marshal.INSTANCE.unmarshal( channel ) );
-        case ContentCodes.STATUS_REQUEST:
-            return ContentBuilder.finished( StatusRequest.Marshal.INSTANCE.unmarshal( channel ) );
         default:
             throw new IllegalStateException( "Not a recognized content type: " + contentType );
         }

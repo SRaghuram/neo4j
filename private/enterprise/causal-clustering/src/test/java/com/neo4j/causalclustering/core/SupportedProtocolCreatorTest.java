@@ -66,9 +66,7 @@ class SupportedProtocolCreatorTest
         var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ),
-                                                                new ApplicationProtocolVersion( 3, 0 ),
-                                                                new ApplicationProtocolVersion( 4, 0 ) ) );
+        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 3, 0 ) ) );
     }
 
     @Test

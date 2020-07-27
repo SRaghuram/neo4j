@@ -246,12 +246,5 @@ class Candidate implements RaftMessageHandler
             outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
             return outcomeBuilder;
         }
-
-        @Override
-        public OutcomeBuilder handle( RaftMessages.StatusResponse statusResponse ) throws IOException
-        {
-            outcomeBuilder.setStatusResponse( statusResponse );
-            return outcomeBuilder;
-        }
     }
 }

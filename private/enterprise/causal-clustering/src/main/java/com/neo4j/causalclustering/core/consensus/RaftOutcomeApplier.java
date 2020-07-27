@@ -30,8 +30,7 @@ class RaftOutcomeApplier
 {
     private final RaftState state;
     private final Log log;
-    private final Consumer<RaftMessages.StatusResponse> statusResponseConsumer;
-    private final Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer;
+    private Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer;
     private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
     private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
@@ -42,9 +41,8 @@ class RaftOutcomeApplier
     private final Collection<LeaderListener> leaderListeners = new ArrayList<>();
 
     RaftOutcomeApplier( RaftState state, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LeaderAvailabilityTimers leaderAvailabilityTimers,
-                        RaftMessageTimerResetMonitor raftMessageTimerResetMonitor, RaftLogShippingManager logShipping, RaftMembershipManager membershipManager,
-                        LogProvider logProvider, Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer,
-                        Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
+            RaftMessageTimerResetMonitor raftMessageTimerResetMonitor, RaftLogShippingManager logShipping, RaftMembershipManager membershipManager,
+            LogProvider logProvider, Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer )
     {
         this.state = state;
         this.outbound = outbound;
@@ -54,7 +52,6 @@ class RaftOutcomeApplier
         this.membershipManager = membershipManager;
         this.log = logProvider.getLog( getClass() );
         this.rejectionConsumer = rejectionConsumer;
-        this.statusResponseConsumer = statusResponseConsumer;
     }
 
     synchronized Role handle( Outcome outcome ) throws IOException
@@ -77,7 +74,6 @@ class RaftOutcomeApplier
 
         outcome.getLeaderTransferRejection().ifPresent( rejection -> rejectionConsumer.accept( rejection ) );
 
-        handleStatusResponse( outcome );
         return outcome.getRole();
     }
 
@@ -99,11 +95,6 @@ class RaftOutcomeApplier
                 log.warn( format( "Failed to send message %s.", outgoingMessage ), e );
             }
         }
-    }
-
-    private void handleStatusResponse( Outcome outcome )
-    {
-        outcome.getStatusResponse().ifPresent( statusResponseConsumer );
     }
 
     private void handleTimers( Outcome outcome )

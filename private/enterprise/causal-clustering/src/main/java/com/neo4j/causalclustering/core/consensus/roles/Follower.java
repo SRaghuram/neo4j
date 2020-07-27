@@ -251,13 +251,8 @@ class Follower implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws IOException
         {
-            return outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
-        }
-
-        @Override
-        public OutcomeBuilder handle( RaftMessages.StatusResponse statusResponse ) throws IOException
-        {
-            return outcomeBuilder.setStatusResponse( statusResponse );
+            outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
+            return outcomeBuilder;
         }
     }
 

@@ -17,8 +17,6 @@ import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
-import com.neo4j.causalclustering.core.replication.ClusterStatusResponseCollector;
-import com.neo4j.causalclustering.core.replication.ClusterStatusService;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.replication.ProgressTrackerImpl;
 import com.neo4j.causalclustering.core.replication.RaftReplicator;
@@ -36,8 +34,8 @@ import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
-import com.neo4j.causalclustering.core.state.machines.NoOperationStateMachine;
 import com.neo4j.causalclustering.core.state.machines.StateMachineCommitHelper;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 import com.neo4j.causalclustering.core.state.machines.lease.LeaderOnlyLockManager;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
@@ -128,7 +126,6 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.token.TokenRegistry;
 import org.neo4j.token.api.TokenHolder;
 
-import static com.neo4j.configuration.CausalClusteringInternalSettings.cluster_status_request_maximum_wait;
 import static com.neo4j.configuration.CausalClusteringSettings.raft_log_pruning_frequency;
 import static com.neo4j.configuration.CausalClusteringSettings.state_machine_apply_max_batch_size;
 import static com.neo4j.configuration.CausalClusteringSettings.state_machine_flush_window_size;
@@ -136,7 +133,6 @@ import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 import static org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder.defaultIdGeneratorFactoryProvider;
-import static org.neo4j.scheduler.Group.CLUSTER_STATUS_CHECK_SERVICE;
 
 class CoreDatabaseFactory
 {
@@ -228,9 +224,7 @@ class CoreDatabaseFactory
                 new RaftOutbound( topologyService, raftSender, raftMessageDispatcher, raftBinder, debugLog, logThresholdMillis, myIdentity, clock ),
                 namedDatabaseId, myIdentity, raftLogger );
 
-        var statusResponseCollector = new ClusterStatusResponseCollector();
-
-        var raftGroup = raftGroupFactory.create( namedDatabaseId, raftOutbound, life, monitors, dependencies, logService, statusResponseCollector );
+        var raftGroup = raftGroupFactory.create( namedDatabaseId, raftOutbound, life, monitors, dependencies, logService );
 
         var myGlobalSession = new GlobalSession( UUID.randomUUID(), myIdentity );
         var sessionPool = new LocalSessionPool( myGlobalSession );
@@ -238,12 +232,6 @@ class CoreDatabaseFactory
         var progressTracker = new ProgressTrackerImpl( myGlobalSession );
         var replicator =
                 createReplicator( namedDatabaseId, raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound, debugLog, myIdentity );
-
-        var clusterStatusService = new ClusterStatusService( namedDatabaseId, myIdentity, raftGroup.raftMachine(),
-                                                             replicator, logService, statusResponseCollector,
-                                                             jobScheduler.executor( CLUSTER_STATUS_CHECK_SERVICE ),
-                                                             config.get( cluster_status_request_maximum_wait ) );
-        dependencies.satisfyDependency( clusterStatusService ); // Used in ClusterStatusRequestIT
 
         return new CoreRaftContext( raftGroup, replicator, commandIndexTracker, progressTracker, raftBinder, raftIdStorage );
     }
@@ -301,8 +289,8 @@ class CoreDatabaseFactory
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
         CoreStateMachines stateMachines = new CoreStateMachines( replicatedTxStateMachine, labelTokenStateMachine, relTypeTokenStateMachine,
-                                                                 propertyKeyTokenStateMachine, replicatedLeaseStateMachine,
-                                                                 consensusLogIndexRecovery, new NoOperationStateMachine<>() );
+                                                                 propertyKeyTokenStateMachine, replicatedLeaseStateMachine, new DummyMachine(),
+                                                                 consensusLogIndexRecovery );
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 

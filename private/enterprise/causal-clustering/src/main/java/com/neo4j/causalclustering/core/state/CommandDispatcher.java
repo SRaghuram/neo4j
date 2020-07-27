@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseReque
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.core.state.machines.status.StatusRequest;
 
 public interface CommandDispatcher extends AutoCloseable
 {
@@ -22,8 +21,6 @@ public interface CommandDispatcher extends AutoCloseable
     void dispatch( ReplicatedLeaseRequest leaseRequest, long commandIndex, Consumer<StateMachineResult> callback );
 
     void dispatch( DummyRequest dummyRequest, long commandIndex, Consumer<StateMachineResult> callback );
-
-    void dispatch( StatusRequest statusRequest, long commandIndex, Consumer<StateMachineResult> callback );
 
     @Override
     void close();

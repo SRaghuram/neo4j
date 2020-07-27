@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.configuration.ServerGroupsSupplier;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.neo4j.collection.Dependencies;
@@ -54,12 +53,12 @@ public class RaftGroupFactory
     }
 
     public RaftGroup create( NamedDatabaseId namedDatabaseId, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
-                             Dependencies dependencies, DatabaseLogService logService, Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
+            Dependencies dependencies, DatabaseLogService logService )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
                 globalModule.getGlobalClock(), identityModule.memberId( namedDatabaseId ), life, monitors, dependencies, outbound, clusterState,
                 topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker,
-                serverGroupsSupplier, globalModule.getGlobalAvailabilityGuard(), statusResponseConsumer );
+                serverGroupsSupplier, globalModule.getGlobalAvailabilityGuard() );
     }
 }

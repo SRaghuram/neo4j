@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 
 import static java.lang.String.format;
 
@@ -101,7 +100,6 @@ class Appending
         long endMatchIndex = request.prevLogIndex() + request.entries().length; // this is the index of the last incoming entry
         RaftMessages.AppendEntries.Response appendResponse = new RaftMessages.AppendEntries.Response(
                 state.myself(), request.leaderTerm(), true, endMatchIndex, endMatchIndex );
-        StatusAppender.statusResponse( state, outcomeBuilder, request );
         outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(), appendResponse ) );
     }
 
@@ -114,8 +112,6 @@ class Appending
                            state.entryLog().readEntryTerm( prevLogIndex );
 
         RaftLogEntry newLogEntry = new RaftLogEntry( state.term(), content );
-
-        StatusAppender.statusResponse( state, outcomeBuilder, List.of( content ) );
 
         outcomeBuilder.addShipCommand( new ShipCommand.NewEntries( prevLogIndex, prevLogTerm, new RaftLogEntry[]{newLogEntry} ) )
                 .addLogCommand( new AppendLogEntry( prevLogIndex + 1, newLogEntry ) );
@@ -132,8 +128,6 @@ class Appending
 
         RaftLogEntry[] raftLogEntries = contents.stream().map( content -> new RaftLogEntry( state.term(), content ) )
                 .toArray( RaftLogEntry[]::new );
-
-        StatusAppender.statusResponse( state, outcomeBuilder, contents);
 
         outcomeBuilder.addShipCommand( new ShipCommand.NewEntries( prevLogIndex, prevLogTerm, raftLogEntries ) )
                 .addLogCommand( new BatchAppendLogEntries( prevLogIndex + 1, 0, raftLogEntries ) );

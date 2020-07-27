@@ -12,22 +12,18 @@ import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientI
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
 import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolClientInstallerV4;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolServerInstallerV4;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
-import com.neo4j.causalclustering.core.state.machines.status.StatusRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
-import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
@@ -55,7 +51,6 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.log4j.Log4jLogProvider;
-import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
@@ -89,7 +84,6 @@ class RaftMessageEncoderDecoderTest
         var databaseId = namedDatabaseId.databaseId();
         return setUpParams( new RaftMessage[]{new RaftMessages.Heartbeat( MEMBER_ID, 1, 2, 3 ),
                 new RaftMessages.HeartbeatResponse( MEMBER_ID ),
-                new RaftMessages.NewEntry.Request( MEMBER_ID, new StatusRequest( UUID.randomUUID(), databaseId, MEMBER_ID ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID, new DummyRequest( new byte[]{1, 2, 3, 4, 5, 6, 7, 8} ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID, ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6, 7, 8}, databaseId ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID,
@@ -163,15 +157,11 @@ class RaftMessageEncoderDecoderTest
     {
         if ( ApplicationProtocols.RAFT_3_0.implementation().equals( raftProtocol ) )
         {
-            return raftMessage.dispatch( new SupportedMessagesV3() );
+            return raftMessage.dispatch( SUPPORT_ALL );
         }
         else if ( ApplicationProtocols.RAFT_2_0.implementation().equals( raftProtocol ) )
         {
             return raftMessage.dispatch( new SupportedMessagesV2() );
-        }
-        else if ( ApplicationProtocols.RAFT_4_0.implementation().equals( raftProtocol ) )
-        {
-            return raftMessage.dispatch( SUPPORT_ALL );
         }
         throw new IllegalArgumentException( "Unknown raft protocol " + raftProtocol );
     }
@@ -191,13 +181,6 @@ class RaftMessageEncoderDecoderTest
                     new Log4jLogProvider( System.out ) ).install( outbound );
             new RaftProtocolServerInstallerV3( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
                     new Log4jLogProvider( System.out ) ).install( inbound );
-        }
-        else if ( ApplicationProtocols.RAFT_4_0.implementation().equals( raftProtocol ) )
-        {
-            new RaftProtocolClientInstallerV4( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                                               new Log4jLogProvider( System.out ) ).install( outbound );
-            new RaftProtocolServerInstallerV4( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                                               new Log4jLogProvider( System.out ), Clocks.systemClock() ).install( inbound );
         }
         else
         {

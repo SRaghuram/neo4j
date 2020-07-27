@@ -41,7 +41,6 @@ import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.io.File;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -74,12 +73,10 @@ public class RaftGroup
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
-               MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-               ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
-               LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
-               ServerGroupsSupplier serverGroupsSupplier,
-               AvailabilityGuard globalAvailabilityGuard,
-               Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
+            MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
+            LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
+            ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
@@ -123,8 +120,7 @@ public class RaftGroup
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                                                          raftMembershipManager, logProvider,
-                                                         rejection -> leaderTransferService.handleRejection( rejection, namedDatabaseId ),
-                                                         statusResponseConsumer );
+                                                         rejection -> leaderTransferService.handleRejection( rejection, namedDatabaseId ) );
 
         raftMachine = new RaftMachine( myself, leaderAvailabilityTimers, logProvider, raftMembershipManager, inFlightCache, raftOutcomeApplier,
                                        state, messageHandlingContext );

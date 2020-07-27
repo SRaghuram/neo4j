@@ -59,15 +59,14 @@ public class Outcome implements ConsensusOutcome
     private final Set<MemberId> heartbeatResponses;
     private final RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection;
     private final MemberId transferringLeadershipTo;
-    private final RaftMessages.StatusResponse statusResponse;
 
     Outcome( Role role, long term, MemberId leader, long leaderCommit, MemberId votedFor,
-             Set<MemberId> votesForMe, Set<MemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
-             FollowerStates<MemberId> followerStates, ElectionTimerMode electionTimerMode,
-             Collection<RaftLogCommand> logCommands, Collection<RaftMessages.Directed> outgoingMessages,
-             Collection<ShipCommand> shipCommands, long commitIndex, Set<MemberId> heartbeatResponses, boolean isPreElection, boolean electedLeader,
-             long steppingDownInTerm, SnapshotRequirement snapshotRequirement, RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection,
-             MemberId transferringLeadershipTo, RaftMessages.StatusResponse statusResponse )
+            Set<MemberId> votesForMe, Set<MemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
+            FollowerStates<MemberId> followerStates, ElectionTimerMode electionTimerMode,
+            Collection<RaftLogCommand> logCommands, Collection<RaftMessages.Directed> outgoingMessages,
+            Collection<ShipCommand> shipCommands, long commitIndex, Set<MemberId> heartbeatResponses, boolean isPreElection, boolean electedLeader,
+            long steppingDownInTerm, SnapshotRequirement snapshotRequirement, RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection,
+            MemberId transferringLeadershipTo )
     {
         this.role = role;
         this.term = term;
@@ -90,7 +89,6 @@ public class Outcome implements ConsensusOutcome
         this.snapshotRequirement = snapshotRequirement;
         this.leadershipTransferRejection = leadershipTransferRejection;
         this.transferringLeadershipTo = transferringLeadershipTo;
-        this.statusResponse = statusResponse;
     }
 
     @Override
@@ -116,7 +114,6 @@ public class Outcome implements ConsensusOutcome
                ", steppingDownInTerm=" + steppingDownInTerm +
                ", leaderTransferRejection=" + leadershipTransferRejection +
                ", transferringLeadershipTo=" + (transferringLeadershipTo != null ? transferringLeadershipTo : "Nobody")  +
-               ", statusResponse=" + statusResponse  +
                '}';
     }
 
@@ -232,11 +229,6 @@ public class Outcome implements ConsensusOutcome
         return Optional.ofNullable( transferringLeadershipTo );
     }
 
-    public Optional<RaftMessages.StatusResponse> getStatusResponse()
-    {
-        return Optional.ofNullable( statusResponse );
-    }
-
     @Override
     public boolean equals( Object object )
     {
@@ -269,8 +261,7 @@ public class Outcome implements ConsensusOutcome
                Objects.equals( shipCommands, outcome.shipCommands ) &&
                Objects.equals( leadershipTransferRejection, outcome.leadershipTransferRejection ) &&
                Objects.equals( heartbeatResponses, outcome.heartbeatResponses ) &&
-               Objects.equals( transferringLeadershipTo, outcome.transferringLeadershipTo ) &&
-               Objects.equals( statusResponse, outcome.statusResponse );
+               Objects.equals( transferringLeadershipTo, outcome.transferringLeadershipTo );
     }
 
     @Override
@@ -278,6 +269,6 @@ public class Outcome implements ConsensusOutcome
     {
         return Objects.hash( role, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, electionTimerMode, snapshotRequirement,
                 isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader, steppingDownInTerm,
-                heartbeatResponses, leadershipTransferRejection, transferringLeadershipTo, statusResponse );
+                heartbeatResponses, leadershipTransferRejection, transferringLeadershipTo );
     }
 }

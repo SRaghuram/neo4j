@@ -11,8 +11,6 @@ import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientI
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
 import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolClientInstallerV4;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolServerInstallerV4;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
@@ -44,7 +42,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
@@ -283,12 +280,6 @@ class RaftSenderIT
                     new RaftProtocolServerInstallerV3.Factory( nettyHandler, pipelineFactory, logProvider );
             installer = new ProtocolInstallerRepository<>( List.of( factoryV3 ), ModifierProtocolInstaller.allServerInstallers );
         }
-        else if ( protocols == ApplicationProtocols.RAFT_4_0 )
-        {
-            var factoryV4 =
-                    new RaftProtocolServerInstallerV4.Factory( nettyHandler, pipelineFactory, logProvider, Clock.systemUTC() );
-            installer = new ProtocolInstallerRepository<>( List.of( factoryV4 ), ModifierProtocolInstaller.allServerInstallers );
-        }
         else
         {
             throw new IllegalArgumentException( "Unknown protocol " + protocols );
@@ -318,13 +309,8 @@ class RaftSenderIT
         }
         else if ( clientProtocol == ApplicationProtocols.RAFT_3_0 )
         {
-            RaftProtocolClientInstallerV3.Factory factoryV3 = new RaftProtocolClientInstallerV3.Factory( pipelineFactory, logProvider );
-            protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV3 ), ModifierProtocolInstaller.allClientInstallers );
-        }
-        else if ( clientProtocol == ApplicationProtocols.RAFT_4_0 )
-        {
-            RaftProtocolClientInstallerV4.Factory factoryV4 = new RaftProtocolClientInstallerV4.Factory( pipelineFactory, logProvider );
-            protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV4 ), ModifierProtocolInstaller.allClientInstallers );
+            RaftProtocolClientInstallerV3.Factory factoryV2 = new RaftProtocolClientInstallerV3.Factory( pipelineFactory, logProvider );
+            protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV2 ), ModifierProtocolInstaller.allClientInstallers );
         }
         else
         {

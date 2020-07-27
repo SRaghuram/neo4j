@@ -193,13 +193,4 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
     @Internal
     public static final Setting<Boolean> inbound_connection_initialization_logging_enabled =
             newBuilder( "unsupported.causal_clustering.inbound_connection_initialization_logging_enabled", BOOL, true ).dynamic().build();
-
-    @Internal
-    public static final Setting<Boolean> experimental_raft_protocol =
-            newBuilder( "unsupported.causal_clustering.experimental_raft_protocol_enabled", BOOL, false ).build();
-
-    @Internal
-    @Description( "Maximum timeout for cluster status request execution" )
-    public static final Setting<Duration> cluster_status_request_maximum_wait =
-            newBuilder( "unsupported.causal_clustering.cluster_status_request_maximum_wait", DURATION, ofSeconds( 5 ) ).build();
 }
