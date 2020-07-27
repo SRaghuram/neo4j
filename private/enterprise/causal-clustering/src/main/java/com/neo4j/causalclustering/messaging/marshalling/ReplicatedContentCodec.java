@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
+import com.neo4j.causalclustering.core.state.machines.status.StatusRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -102,6 +103,13 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
         public void handle( DummyRequest dummyRequest )
         {
             output.add( ChunkedReplicatedContent.chunked( ContentCodes.DUMMY_REQUEST, dummyRequest.encoder() ) );
+        }
+
+        @Override
+        public void handle( StatusRequest statusRequest ) throws IOException
+        {
+            output.add(
+                    ChunkedReplicatedContent.single( ContentCodes.STATUS_REQUEST, channel -> new StatusRequest.Marshal().marshal( statusRequest, channel ) ) );
         }
     }
 

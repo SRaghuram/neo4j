@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.dummy;
 
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.NoOperationRequest;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.messaging.marshalling.ByteArrayChunkedEncoder;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
@@ -23,7 +24,7 @@ import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.SafeChannelMarshal;
 import org.neo4j.kernel.database.DatabaseId;
 
-public class DummyRequest implements CoreReplicatedContent
+public class DummyRequest implements CoreReplicatedContent, NoOperationRequest
 {
     private final byte[] data;
 

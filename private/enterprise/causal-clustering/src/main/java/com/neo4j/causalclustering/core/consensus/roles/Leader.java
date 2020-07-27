@@ -351,6 +351,12 @@ public class Leader implements RaftMessageHandler
             return outcomeBuilder;
         }
 
+        @Override
+        public OutcomeBuilder handle( RaftMessages.StatusResponse statusResponse ) throws IOException
+        {
+            return outcomeBuilder.setStatusResponse( statusResponse );
+        }
+
         private void stepDownToFollower( OutcomeBuilder outcomeBuilder, ReadableRaftState raftState )
         {
             outcomeBuilder.steppingDown( raftState.term() )

@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
@@ -36,7 +35,6 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -53,7 +51,6 @@ import org.neo4j.monitoring.Monitors;
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
 import static com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies.NO_BALANCING;
 import static java.lang.Boolean.TRUE;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
@@ -145,6 +142,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
         config.set( GraphDatabaseInternalSettings.auth_store, parentDir.resolve( "auth" ).toAbsolutePath() );
         config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
+        config.set( CausalClusteringInternalSettings.experimental_raft_protocol, true );
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();

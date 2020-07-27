@@ -60,6 +60,7 @@ public class OutcomeBuilder
     private Set<MemberId> heartbeatResponses;
     private RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection;
     private MemberId transferringTo;
+    private RaftMessages.StatusResponse statusResponse;
 
     @VisibleForTesting
     OutcomeBuilder( Role currentRole, long term, MemberId leader, long leaderCommit, MemberId votedFor, ElectionTimerMode electionTimerMode,
@@ -180,32 +181,6 @@ public class OutcomeBuilder
         return this;
     }
 
-    @Override
-    public String toString()
-    {
-        return "Outcome{" +
-               "nextRole=" + role +
-               ", term=" + term +
-               ", leader=" + leader +
-               ", leaderCommit=" + leaderCommit +
-               ", logCommands=" + logCommands +
-               ", outgoingMessages=" + outgoingMessages +
-               ", commitIndex=" + commitIndex +
-               ", votedFor=" + votedFor +
-               ", renewElectionTimeout=" + electionTimerMode +
-               ", snapshotRequirement=" + snapshotRequirement +
-               ", votesForMe=" + votesForMe +
-               ", preVotesForMe=" + preVotesForMe +
-               ", lastLogIndexBeforeWeBecameLeader=" + lastLogIndexBeforeWeBecameLeader +
-               ", followerStates=" + followerStates +
-               ", shipCommands=" + shipCommands +
-               ", electedLeader=" + electedLeader +
-               ", steppingDownInTerm=" + steppingDownInTerm +
-               ", leadershipTransferRejection=" + leadershipTransferRejection +
-               ", transferringTo=" + transferringTo +
-               '}';
-    }
-
     public OutcomeBuilder setCommitIndex( long commitIndex )
     {
         this.commitIndex = commitIndex;
@@ -254,6 +229,12 @@ public class OutcomeBuilder
         return this;
     }
 
+    public OutcomeBuilder setStatusResponse( RaftMessages.StatusResponse statusResponse )
+    {
+        this.statusResponse = statusResponse;
+        return this;
+    }
+
     @Override
     public boolean equals( Object o )
     {
@@ -275,7 +256,8 @@ public class OutcomeBuilder
                Objects.equals( votedFor, outcome.votedFor ) && Objects.equals( preVotesForMe, outcome.preVotesForMe ) &&
                Objects.equals( votesForMe, outcome.votesForMe ) && Objects.equals( followerStates, outcome.followerStates ) &&
                Objects.equals( shipCommands, outcome.shipCommands ) && Objects.equals( heartbeatResponses, outcome.heartbeatResponses ) &&
-               Objects.equals( transferringTo, outcome.transferringTo ) && Objects.equals( leadershipTransferRejection, outcome.leadershipTransferRejection );
+               Objects.equals( transferringTo, outcome.transferringTo ) && Objects.equals( leadershipTransferRejection, outcome.leadershipTransferRejection ) &&
+               Objects.equals( statusResponse, outcome.statusResponse );
     }
 
     @Override
@@ -283,7 +265,34 @@ public class OutcomeBuilder
     {
         return Objects.hash( role, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, electionTimerMode,
                              snapshotRequirement, isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands,
-                             electedLeader, steppingDownInTerm, heartbeatResponses, transferringTo, leadershipTransferRejection );
+                             electedLeader, steppingDownInTerm, heartbeatResponses, transferringTo, leadershipTransferRejection, statusResponse );
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Outcome{" +
+               "nextRole=" + role +
+               ", term=" + term +
+               ", leader=" + leader +
+               ", leaderCommit=" + leaderCommit +
+               ", logCommands=" + logCommands +
+               ", outgoingMessages=" + outgoingMessages +
+               ", commitIndex=" + commitIndex +
+               ", votedFor=" + votedFor +
+               ", renewElectionTimeout=" + electionTimerMode +
+               ", snapshotRequirement=" + snapshotRequirement +
+               ", votesForMe=" + votesForMe +
+               ", preVotesForMe=" + preVotesForMe +
+               ", lastLogIndexBeforeWeBecameLeader=" + lastLogIndexBeforeWeBecameLeader +
+               ", followerStates=" + followerStates +
+               ", shipCommands=" + shipCommands +
+               ", electedLeader=" + electedLeader +
+               ", steppingDownInTerm=" + steppingDownInTerm +
+               ", leadershipTransferRejection=" + leadershipTransferRejection +
+               ", transferringTo=" + transferringTo +
+               ", status=" + statusResponse +
+               '}';
     }
 
     public Outcome build()
@@ -291,6 +300,6 @@ public class OutcomeBuilder
 
         return new Outcome( role, term, leader, leaderCommit, votedFor, votesForMe, preVotesForMe, lastLogIndexBeforeWeBecameLeader, followerStates,
                             electionTimerMode, logCommands, outgoingMessages, shipCommands, commitIndex, heartbeatResponses, isPreElection, electedLeader,
-                            steppingDownInTerm, snapshotRequirement, leadershipTransferRejection, transferringTo );
+                            steppingDownInTerm, snapshotRequirement, leadershipTransferRejection, transferringTo, statusResponse );
     }
 }

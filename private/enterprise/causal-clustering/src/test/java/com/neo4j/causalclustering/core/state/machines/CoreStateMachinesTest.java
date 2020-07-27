@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state.machines;
 
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
@@ -131,11 +130,15 @@ class CoreStateMachinesTest
     private final ReplicatedTokenStateMachine relationshipTypeTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedTokenStateMachine propertyKeyTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedLeaseStateMachine leaseSM = mock( ReplicatedLeaseStateMachine.class );
-    private final DummyMachine dummySM = mock( DummyMachine.class );
+    private final NoOperationStateMachine noOperationStateMachine = mock( NoOperationStateMachine.class );
     private final RecoverConsensusLogIndex recoverConsensusLogIndex = mock( RecoverConsensusLogIndex.class );
 
     private final CoreStateMachines coreStateMachines = new CoreStateMachines( txSM, labelTokenSM,
-            relationshipTypeTokenSM, propertyKeyTokenSM, leaseSM, dummySM, recoverConsensusLogIndex );
+                                                                               relationshipTypeTokenSM,
+                                                                               propertyKeyTokenSM,
+                                                                               leaseSM,
+                                                                               recoverConsensusLogIndex,
+                                                                               noOperationStateMachine );
 
     private final ReplicatedTransaction replicatedTransaction = mock( ReplicatedTransaction.class );
     private final ReplicatedTokenRequest relationshipTypeTokenRequest = mock( ReplicatedTokenRequest.class );

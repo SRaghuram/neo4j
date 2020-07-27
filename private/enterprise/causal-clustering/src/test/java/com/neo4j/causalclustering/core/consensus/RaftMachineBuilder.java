@@ -119,9 +119,7 @@ public class RaftMachineBuilder
         var raftMessageHandlingContext = new RaftMessageHandlingContext( raftState, config, listen( config ), () -> false );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var outcomeApplier = new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
-                                                     membershipManager, logProvider, rejection ->
-                                                     {
-                                                     } );
+                                                     membershipManager, logProvider, rejection -> {}, c -> {} );
         RaftMachine raft = new RaftMachine( member, leaderAvailabilityTimers, logProvider,
                                             membershipManager, inFlightCache, outcomeApplier, raftState, raftMessageHandlingContext );
         inbound.registerHandler( incomingMessage ->

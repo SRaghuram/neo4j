@@ -5,22 +5,22 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
-import java.io.IOException;
-import java.util.function.Consumer;
-
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
+import com.neo4j.causalclustering.core.state.machines.status.StatusRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogIndex;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+
+import java.io.IOException;
+import java.util.function.Consumer;
 
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 
@@ -32,7 +32,7 @@ public class CoreStateMachines
     private final ReplicatedTokenStateMachine relationshipTypeTokenStateMachine;
     private final ReplicatedTokenStateMachine propertyKeyTokenStateMachine;
     private final ReplicatedLeaseStateMachine replicatedLeaseStateMachine;
-    private final DummyMachine benchmarkMachine;
+    private final NoOperationStateMachine<NoOperationRequest> noOperationStateMachine;
 
     private final RecoverConsensusLogIndex consensusLogIndexRecovery;
 
@@ -44,15 +44,15 @@ public class CoreStateMachines
             ReplicatedTokenStateMachine relationshipTypeTokenStateMachine,
             ReplicatedTokenStateMachine propertyKeyTokenStateMachine,
             ReplicatedLeaseStateMachine replicatedLeaseStateMachine,
-            DummyMachine benchmarkMachine,
-            RecoverConsensusLogIndex consensusLogIndexRecovery )
+            RecoverConsensusLogIndex consensusLogIndexRecovery,
+            NoOperationStateMachine<NoOperationRequest> noOperationStateMachine )
     {
         this.replicatedTxStateMachine = replicatedTxStateMachine;
         this.labelTokenStateMachine = labelTokenStateMachine;
         this.relationshipTypeTokenStateMachine = relationshipTypeTokenStateMachine;
         this.propertyKeyTokenStateMachine = propertyKeyTokenStateMachine;
         this.replicatedLeaseStateMachine = replicatedLeaseStateMachine;
-        this.benchmarkMachine = benchmarkMachine;
+        this.noOperationStateMachine = noOperationStateMachine;
         this.consensusLogIndexRecovery = consensusLogIndexRecovery;
         this.dispatcher = new StateMachineCommandDispatcher();
     }
@@ -139,7 +139,13 @@ public class CoreStateMachines
         @Override
         public void dispatch( DummyRequest dummyRequest, long commandIndex, Consumer<StateMachineResult> callback )
         {
-            benchmarkMachine.applyCommand( dummyRequest, commandIndex, callback );
+            noOperationStateMachine.applyCommand( dummyRequest, commandIndex, callback );
+        }
+
+        @Override
+        public void dispatch( StatusRequest statusRequest, long commandIndex, Consumer<StateMachineResult> callback )
+        {
+            noOperationStateMachine.applyCommand( statusRequest, commandIndex, callback );
         }
 
         @Override

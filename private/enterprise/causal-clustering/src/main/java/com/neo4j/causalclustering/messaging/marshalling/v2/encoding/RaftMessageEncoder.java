@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.UUIDMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -181,6 +182,12 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
         {
             throw new UnsupportedOperationException( "Leadership Transfer extension is not supported with Raft protocol v2!" );
+        }
+
+        @Override
+        public Void handle( RaftMessages.StatusResponse statusResponse ) throws Exception
+        {
+            throw new UnsupportedOperationException( "Status request is not supported with Raft protocol v2!" );
         }
     }
 }

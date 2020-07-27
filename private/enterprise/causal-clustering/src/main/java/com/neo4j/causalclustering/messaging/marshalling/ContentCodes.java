@@ -14,4 +14,5 @@ class ContentCodes
     static final byte LEASE_REQUEST = 6;
     static final byte DISTRIBUTED_OPERATION = 7;
     static final byte DUMMY_REQUEST = 8;
+    static final byte STATUS_REQUEST = 9;
 }

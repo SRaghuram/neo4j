@@ -3,14 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.consensus.protocol.v3;
+package com.neo4j.causalclustering.core.consensus.protocol.v4;
 
 import com.neo4j.causalclustering.core.consensus.protocol.SupportedMessageHandler;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentCodec;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.ContentTypeEncoder;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageContentEncoder;
-import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
-import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v4.encoding.RaftMessageEncoder;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -27,15 +26,17 @@ import java.util.stream.Collectors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class RaftProtocolClientInstallerV3 implements ProtocolInstaller<ProtocolInstaller.Orientation.Client>
-{
-    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.RAFT_3_0;
+import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 
-    public static class Factory extends ProtocolInstaller.Factory<Orientation.Client,RaftProtocolClientInstallerV3>
+public class RaftProtocolClientInstallerV4 implements ProtocolInstaller<ProtocolInstaller.Orientation.Client>
+{
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.RAFT_4_0;
+
+    public static class Factory extends ProtocolInstaller.Factory<Orientation.Client,RaftProtocolClientInstallerV4>
     {
         public Factory( NettyPipelineBuilderFactory clientPipelineBuilderFactory, LogProvider logProvider )
         {
-            super( APPLICATION_PROTOCOL, mods -> new RaftProtocolClientInstallerV3( clientPipelineBuilderFactory, mods, logProvider ) );
+            super( APPLICATION_PROTOCOL, mods -> new RaftProtocolClientInstallerV4( clientPipelineBuilderFactory, mods, logProvider ) );
         }
     }
 
@@ -43,8 +44,8 @@ public class RaftProtocolClientInstallerV3 implements ProtocolInstaller<Protocol
     private final Log log;
     private final NettyPipelineBuilderFactory clientPipelineBuilderFactory;
 
-    public RaftProtocolClientInstallerV3( NettyPipelineBuilderFactory clientPipelineBuilderFactory,
-            List<ModifierProtocolInstaller<Orientation.Client>> modifiers, LogProvider logProvider )
+    public RaftProtocolClientInstallerV4( NettyPipelineBuilderFactory clientPipelineBuilderFactory,
+                                          List<ModifierProtocolInstaller<Orientation.Client>> modifiers, LogProvider logProvider )
     {
         this.modifiers = modifiers;
         this.log = logProvider.getLog( getClass() );
@@ -65,7 +66,7 @@ public class RaftProtocolClientInstallerV3 implements ProtocolInstaller<Protocol
                 .add( "raft_content_type_encoder", new ContentTypeEncoder() )
                 .add( "raft_chunked_writer", new ChunkedWriteHandler() )
                 .add( "raft_message_content_encoder", new RaftMessageContentEncoder( new ReplicatedContentCodec() ) )
-                .add( "message_validator", new SupportedMessageHandler( new SupportedMessagesV3() ) )
+                .add( "message_validator", new SupportedMessageHandler( SUPPORT_ALL ) )
                 .install();
     }
 

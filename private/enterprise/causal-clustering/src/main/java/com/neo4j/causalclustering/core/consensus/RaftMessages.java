@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.core.state.machines.status.Status;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.configuration.ServerGroupName;
@@ -17,9 +18,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.Type.HEARTBEAT_RESPONSE;
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.Type.PRUNE_REQUEST;
+import static com.neo4j.causalclustering.core.consensus.RaftMessages.Type.STATUS_RESPONSE;
 import static java.lang.String.format;
 
 public interface RaftMessages
@@ -59,6 +62,8 @@ public interface RaftMessages
         T handle( LeadershipTransfer.Request leadershipTransferRequest ) throws E;
 
         T handle( LeadershipTransfer.Rejection leadershipTransferRejection ) throws E;
+
+        T handle( StatusResponse statusResponse ) throws E;
     }
 
     abstract class HandlerAdaptor<T, E extends Exception> implements Handler<T,E>
@@ -164,6 +169,12 @@ public interface RaftMessages
         {
             return null;
         }
+
+        @Override
+        public T handle( StatusResponse statusResponse ) throws E
+        {
+            return null;
+        }
     }
 
     // Position is used to identify messages. Changing order will break upgrade paths.
@@ -195,7 +206,9 @@ public interface RaftMessages
 
         LEADERSHIP_TRANSFER_REQUEST,
         LEADERSHIP_TRANSFER_PROPOSAL,
-        LEADERSHIP_TRANSFER_REJECTION
+        LEADERSHIP_TRANSFER_REJECTION,
+
+        STATUS_RESPONSE
     }
 
     class Directed
@@ -1147,6 +1160,72 @@ public interface RaftMessages
         public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
         {
             return handler.handle( this );
+        }
+    }
+
+    class StatusResponse extends RaftMessage
+    {
+
+        private final Status status;
+        private final UUID requestId;
+
+        public StatusResponse( MemberId from, Status status, UUID requestId )
+        {
+            super( from, STATUS_RESPONSE );
+            this.status = status;
+            this.requestId = requestId;
+        }
+
+        public UUID getRequestId()
+        {
+            return requestId;
+        }
+
+        public Status getStatus()
+        {
+            return status;
+        }
+
+        @Override
+        public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+        {
+            return handler.handle( this );
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            if ( !super.equals( o ) )
+            {
+                return false;
+            }
+            StatusResponse that = (StatusResponse) o;
+            return Objects.equals( status, that.status ) &&
+                   Objects.equals( requestId, that.requestId );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( super.hashCode(), status, requestId );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "StatusResponse{" +
+                   "status=" + status +
+                   ", messageId=" + requestId +
+                   ", from=" + from +
+                   '}';
         }
     }
 
