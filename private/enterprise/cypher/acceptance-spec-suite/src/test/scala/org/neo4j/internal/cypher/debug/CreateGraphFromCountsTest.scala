@@ -140,6 +140,17 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("MATCH (n:Foo) RETURN n").toList should not be empty
   }
 
+  test("should create relationships") {
+    val json = data(nodeCount = Seq(NodeCount(10, Some("A")), NodeCount(20,Some("B")), NodeCount(10,Some( "C"))),
+      relationshipCount = Seq(RelationshipCount(12, Some("R1"), Some("B"), None),
+        RelationshipCount(8, Some("R1"), None, Some("A")), RelationshipCount(4, Some("R1"), None, Some("C"))))
+
+    createGraph(json)
+
+    executeSingle("MATCH (b:B)-[r:R1]->(a:A) RETURN count(r)").toList should be (List(Map("count(r)"-> 10)))
+    executeSingle("MATCH (b:B)-[r:R1]->(c:C) RETURN count(r)").toList should be (List(Map("count(r)"-> 10)))
+  }
+
   private def data(constraint: Seq[Constraint] = Seq.empty,
                    index: Seq[Index] = Seq.empty,
                    nodeCount: Seq[NodeCount] = Seq.empty,

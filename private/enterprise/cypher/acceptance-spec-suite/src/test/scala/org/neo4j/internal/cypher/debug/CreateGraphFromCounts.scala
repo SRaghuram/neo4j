@@ -88,14 +88,14 @@ trait CreateGraphFromCounts {
         }
       }
 
-      for(relType <- graphCountData.relationships) {
-        val startNodes = relType.startLabel.map(nodeMap).getOrElse(nodeMap("")).take(10)
-        val endNodes = relType.endLabel.map(nodeMap).getOrElse(nodeMap("")).take(10)
-        val relTypeName = relType.relationshipType.getOrElse("__REL")
+      val groupedRelations = graphCountData.relationships.groupBy(_.relationshipType.getOrElse("__REL"))
+      for ((relType, counts) <- groupedRelations) {
+        val startNodes = counts.collect { case RelationshipCount(count, _, Some(startLabel), _) => nodeMap(startLabel).take(10) }
+        val endNodes = counts.collect { case RelationshipCount(count, _, _, Some(endLabel)) => nodeMap(endLabel).take(10) }
 
-        for ((start, end) <- startNodes.zip(endNodes)) {
-          start.createRelationshipTo(end, RelationshipType.withName(relTypeName))
-        }
+        for {start <- startNodes
+             end <- endNodes
+             } yield start.zip(end).foreach{ case(s,e) => s.createRelationshipTo(e, RelationshipType.withName(relType))}
       }
     }
   }
