@@ -7,4 +7,5 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.exceptions.CypherExecutionException
 
-class ReferenceCountingException(msg: String) extends CypherExecutionException(msg)
+class ReferenceCountingException(msg: String, cause: Throwable = null) extends CypherExecutionException(msg, cause)
+

@@ -139,7 +139,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     count -= 1
     debug("Decremented to %d", count)
     if (count < 0) {
-      throw new IllegalStateException(s"Should not decrement below zero: $count")
+      throw new IllegalStateException(s"Should not decrement below zero: $count", throwable)
     }
     postDecrement()
   }
@@ -155,7 +155,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(): Unit = {
     if (count <= 0) {
       if (count < 0) {
-        error(new ReferenceCountingException("Cannot count below 0, but got count " + count))
+        error(new ReferenceCountingException("Cannot count below 0, but got count " + count, throwable))
       }
       if (!_hasEnded) {
         try {
@@ -276,7 +276,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def increment(): Unit = {
     if (_hasEnded) {
-      throw new ReferenceCountingException(s"Increment called even though query has ended. That should not happen. Current count: ${count.get()}")
+      throw new ReferenceCountingException(s"Increment called even though query has ended. That should not happen. Current count: ${count.get()}", allErrors())
     }
     val newCount = count.incrementAndGet()
     debug("Increment to %d", newCount)
@@ -306,7 +306,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(newCount: Long): Unit = {
     if (newCount <= 0) {
       if (newCount < 0) {
-        error(new ReferenceCountingException("Cannot count below 0, but got count " + newCount))
+        error(new ReferenceCountingException("Cannot count below 0, but got count " + newCount, allErrors()))
       }
       if (!_hasEnded) {
         reportQueryEndToSubscriber()
