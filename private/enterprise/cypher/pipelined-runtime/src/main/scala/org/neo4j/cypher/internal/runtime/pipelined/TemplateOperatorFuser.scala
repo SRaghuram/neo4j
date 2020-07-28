@@ -112,7 +112,13 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
     }
     val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
     val operatorTaskWithMorselTemplate = currentTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
-    ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity, argumentStates, codeGenerationMode)
+    try {
+      ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity, argumentStates, codeGenerationMode)
+    } catch {
+      // In the case of a StackOverflowError we cannot recover correctly and abort fusing altogether.
+      case e: StackOverflowError =>
+        throw new CantCompileQueryException("Stack overflow caused operator compilation to fail", e)
+    }
   }
 
   def fuseIn(plan: LogicalPlan): Boolean = {
