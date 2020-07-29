@@ -155,7 +155,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(): Unit = {
     if (count <= 0) {
       if (count < 0) {
-        error(new ReferenceCountingException("Cannot count below 0, but got count " + count, throwable))
+        error(new ReferenceCountingException("Cannot count below 0, but got count " + count))
       }
       if (!_hasEnded) {
         try {
@@ -306,7 +306,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(newCount: Long): Unit = {
     if (newCount <= 0) {
       if (newCount < 0) {
-        error(new ReferenceCountingException("Cannot count below 0, but got count " + newCount, allErrors()))
+        error(new ReferenceCountingException("Cannot count below 0, but got count " + newCount))
       }
       if (!_hasEnded) {
         reportQueryEndToSubscriber()
