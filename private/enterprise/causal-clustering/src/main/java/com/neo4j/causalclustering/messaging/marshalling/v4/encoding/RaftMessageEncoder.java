@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging.marshalling.v3.encoding;
+package com.neo4j.causalclustering.messaging.marshalling.v4.encoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -15,9 +15,6 @@ import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-
-import java.io.IOException;
-import java.util.Set;
 
 public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.OutboundRaftMessageContainer>
 {
@@ -197,7 +194,10 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.StatusResponse statusResponse ) throws Exception
         {
-            throw new UnsupportedOperationException( "Status request is not supported with Raft protocol v3!" );
+            UUIDMarshal.INSTANCE.marshal( statusResponse.getRequestId(), channel );
+            StringMarshal.marshal( channel, statusResponse.getStatus().message.name() );
+
+            return null;
         }
     }
 }

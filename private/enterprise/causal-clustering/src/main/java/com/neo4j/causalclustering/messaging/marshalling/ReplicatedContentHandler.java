@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
+import com.neo4j.causalclustering.core.state.machines.status.StatusRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
@@ -33,4 +34,6 @@ public interface ReplicatedContentHandler
     void handle( DistributedOperation distributedOperation ) throws IOException;
 
     void handle( DummyRequest dummyRequest ) throws IOException;
+
+    void handle( StatusRequest statusRequest ) throws IOException;
 }

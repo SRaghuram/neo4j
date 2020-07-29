@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCatego
 import com.neo4j.causalclustering.protocol.handshake.SupportedProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
 import com.neo4j.configuration.ApplicationProtocolVersion;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
@@ -18,11 +19,14 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_3_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SupportedProtocolCreatorTest
@@ -43,7 +47,7 @@ class SupportedProtocolCreatorTest
     }
 
     @Test
-    void shouldReturnEmptyVersionSupportedRaftProtocolIfNoVersionsConfigured()
+    void shouldReturnAllVersionExpect4_0IfNoVersionsConfiguredAndExperimentalVersionIsTurnOff()
     {
         // given
         var config = Config.defaults();
@@ -52,6 +56,20 @@ class SupportedProtocolCreatorTest
         var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
+        assertEquals( List.of( RAFT_2_0.implementation(), RAFT_3_0.implementation() ), supportedRaftProtocol.versions() );
+    }
+
+    @Test
+    void shouldReturnEmptyVersionSupportedRaftProtocolIfNoVersionsConfiguredAndExperimentalVersionIsTurnOn()
+    {
+        // given
+        var config = Config.defaults();
+        config.set( CausalClusteringInternalSettings.experimental_raft_protocol, true );
+
+        // when
+        var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
+
+        //then
         assertThat( supportedRaftProtocol.versions(), empty() );
     }
 
@@ -60,13 +78,15 @@ class SupportedProtocolCreatorTest
     {
         // given
         var config = Config.defaults( CausalClusteringSettings.raft_implementations,
-                List.of( appProtocolVer( 1, 0 ), appProtocolVer( 2, 0 ), appProtocolVer( 3, 0 ), appProtocolVer( 4, 0 ) ) );
+                                      List.of( appProtocolVer( 1, 0 ), appProtocolVer( 2, 0 ), appProtocolVer( 3, 0 ), appProtocolVer( 4, 0 ) ) );
 
         // when
         var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ), new ApplicationProtocolVersion( 3, 0 ) ) );
+        assertThat( supportedRaftProtocol.versions(), contains( new ApplicationProtocolVersion( 2, 0 ),
+                                                                new ApplicationProtocolVersion( 3, 0 ),
+                                                                new ApplicationProtocolVersion( 4, 0 ) ) );
     }
 
     @Test

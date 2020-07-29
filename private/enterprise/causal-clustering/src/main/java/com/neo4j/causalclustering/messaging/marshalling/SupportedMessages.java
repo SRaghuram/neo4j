@@ -119,4 +119,10 @@ public abstract class SupportedMessages implements RaftMessages.Handler<Boolean,
     {
         return defaultToTrue();
     }
+
+    @Override
+    public Boolean handle( RaftMessages.StatusResponse statusResponse ) throws Exception
+    {
+        return defaultToTrue();
+    }
 }

@@ -51,7 +51,7 @@ class RaftOutcomeApplierTest
 
     private RaftOutcomeApplier raftOutcomeApplier =
             new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping, membershipManager, logProvider,
-                                    rejection -> {} );
+                                    rejection -> {}, c -> {} );
 
     private OutcomeBuilder outcomeTestBuilder = OutcomeTestBuilder.builder();
 

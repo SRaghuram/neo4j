@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.configuration.ApplicationProtocolVersion;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collections;
@@ -47,11 +48,26 @@ public class SupportedProtocolCreator
 
     public ApplicationSupportedProtocols getSupportedRaftProtocolsFromConfiguration()
     {
-        return getApplicationSupportedProtocols( config.get( CausalClusteringSettings.raft_implementations ), ApplicationProtocolCategory.RAFT );
+        return getApplicationSupportedProtocols( getRaftProtocols(), ApplicationProtocolCategory.RAFT );
+    }
+
+    private List<ApplicationProtocolVersion> getRaftProtocols()
+    {
+        final var raftImplementationList = config.get( CausalClusteringSettings.raft_implementations );
+        final var useExperimentalRaft = config.get( CausalClusteringInternalSettings.experimental_raft_protocol );
+        if ( raftImplementationList.isEmpty() && !useExperimentalRaft )
+        {
+            return List.of( ApplicationProtocols.values() ).stream()
+                       .filter( p -> p.isSameCategory( ApplicationProtocols.RAFT_4_0 ) )
+                       .filter( p -> !p.equals( ApplicationProtocols.RAFT_4_0 ) )
+                       .map( ApplicationProtocols::implementation )
+                       .collect( Collectors.toList() );
+        }
+        return raftImplementationList;
     }
 
     private ApplicationSupportedProtocols getApplicationSupportedProtocols( List<ApplicationProtocolVersion> configVersions,
-            ApplicationProtocolCategory category )
+                                                                            ApplicationProtocolCategory category )
     {
         if ( configVersions.isEmpty() )
         {
@@ -77,33 +93,33 @@ public class SupportedProtocolCreator
         ModifierSupportedProtocols supportedCompression = compressionProtocolVersions();
 
         return Stream.of( supportedCompression )
-                .filter( supportedProtocols -> !supportedProtocols.versions().isEmpty() )
-                .collect( Collectors.toList() );
+                     .filter( supportedProtocols -> !supportedProtocols.versions().isEmpty() )
+                     .collect( Collectors.toList() );
     }
 
     private ModifierSupportedProtocols compressionProtocolVersions()
     {
         List<String> implementations = protocolsForConfig( ModifierProtocolCategory.COMPRESSION,
-                config.get( CausalClusteringSettings.compression_implementations ),
-                implementation -> ModifierProtocols.find( ModifierProtocolCategory.COMPRESSION, implementation ) );
+                                                           config.get( CausalClusteringSettings.compression_implementations ),
+                                                           implementation -> ModifierProtocols.find( ModifierProtocolCategory.COMPRESSION, implementation ) );
 
         return new ModifierSupportedProtocols( ModifierProtocolCategory.COMPRESSION, implementations );
     }
 
     private <IMPL extends Comparable<IMPL>, T extends Protocol<IMPL>> List<IMPL> protocolsForConfig( Protocol.Category<T> category, List<IMPL> implementations,
-            Function<IMPL,Optional<T>> finder )
+                                                                                                     Function<IMPL,Optional<T>> finder )
     {
         return implementations.stream()
-                .map( impl -> Pair.of( impl, finder.apply( impl ) ) )
-                .peek( protocolWithImplementation -> logUnknownProtocol( category, protocolWithImplementation ) )
-                .map( Pair::other )
-                .flatMap( Optional::stream )
-                .map( Protocol::implementation )
-                .collect( Collectors.toList() );
+                              .map( impl -> Pair.of( impl, finder.apply( impl ) ) )
+                              .peek( protocolWithImplementation -> logUnknownProtocol( category, protocolWithImplementation ) )
+                              .map( Pair::other )
+                              .flatMap( Optional::stream )
+                              .map( Protocol::implementation )
+                              .collect( Collectors.toList() );
     }
 
     private <IMPL extends Comparable<IMPL>, T extends Protocol<IMPL>> void logUnknownProtocol( Protocol.Category<T> category,
-            Pair<IMPL,Optional<T>> protocolWithImplementation )
+                                                                                               Pair<IMPL,Optional<T>> protocolWithImplementation )
     {
         if ( protocolWithImplementation.other().isEmpty() )
         {

@@ -154,6 +154,12 @@ public class RaftMessageContentEncoder extends MessageToMessageEncoder<RaftMessa
         }
 
         @Override
+        public Void handle( RaftMessages.StatusResponse statusResponse ) throws Exception
+        {
+            return null;
+        }
+
+        @Override
         public Void handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws Exception
         {
             return illegalOutbound( leadershipTransferProposal );

@@ -3,13 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.consensus.protocol.v2;
+package com.neo4j.causalclustering.core.consensus.protocol.v4;
 
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentTypeProtocol;
 import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.ContentTypeDispatcher;
-import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.DecodingDispatcher;
-import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.RaftMessageComposer;
 import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.ReplicatedContentDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.v4.decoding.DecodingDispatcher;
+import com.neo4j.causalclustering.messaging.marshalling.v4.decoding.RaftMessageComposer;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -27,32 +27,35 @@ import java.util.stream.Collectors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class RaftProtocolServerInstallerV2 implements ProtocolInstaller<ProtocolInstaller.Orientation.Server>
+public class RaftProtocolServerInstallerV4 implements ProtocolInstaller<ProtocolInstaller.Orientation.Server>
 {
-    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.RAFT_2_0;
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.RAFT_4_0;
     private final LogProvider logProvider;
-
-    public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,RaftProtocolServerInstallerV2>
-    {
-        public Factory( ChannelInboundHandler raftMessageHandler, NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider )
-        {
-            super( APPLICATION_PROTOCOL, modifiers -> new RaftProtocolServerInstallerV2( raftMessageHandler, pipelineBuilderFactory, modifiers, logProvider ) );
-        }
-    }
-
     private final ChannelInboundHandler raftMessageHandler;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final List<ModifierProtocolInstaller<Orientation.Server>> modifiers;
     private final Log log;
+    private final Clock clock;
 
-    public RaftProtocolServerInstallerV2( ChannelInboundHandler raftMessageHandler, NettyPipelineBuilderFactory pipelineBuilderFactory,
-            List<ModifierProtocolInstaller<Orientation.Server>> modifiers, LogProvider logProvider )
+    public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,RaftProtocolServerInstallerV4>
+    {
+        public Factory( ChannelInboundHandler raftMessageHandler, NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider,
+                        Clock clock )
+        {
+            super( APPLICATION_PROTOCOL,
+                   modifiers -> new RaftProtocolServerInstallerV4( raftMessageHandler, pipelineBuilderFactory, modifiers, logProvider, clock ) );
+        }
+    }
+
+    public RaftProtocolServerInstallerV4( ChannelInboundHandler raftMessageHandler, NettyPipelineBuilderFactory pipelineBuilderFactory,
+                                          List<ModifierProtocolInstaller<Orientation.Server>> modifiers, LogProvider logProvider, Clock clock )
     {
         this.raftMessageHandler = raftMessageHandler;
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.modifiers = modifiers;
         this.logProvider = logProvider;
         this.log = this.logProvider.getLog( getClass() );
+        this.clock = clock;
     }
 
     /**
@@ -71,7 +74,7 @@ public class RaftProtocolServerInstallerV2 implements ProtocolInstaller<Protocol
                 .add( "raft_content_type_dispatcher", new ContentTypeDispatcher( contentTypeProtocol ) )
                 .add( "raft_component_decoder", decodingDispatcher )
                 .add( "raft_content_decoder", new ReplicatedContentDecoder( contentTypeProtocol ) )
-                .add( "raft_message_composer", new RaftMessageComposer( Clock.systemUTC() ) )
+                .add( "raft_message_composer", new RaftMessageComposer( clock ) )
                 .add( "raft_handler", raftMessageHandler )
                 .install();
     }

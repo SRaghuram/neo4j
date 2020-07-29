@@ -174,5 +174,11 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
         {
             return FALSE;
         }
+
+        @Override
+        public Boolean handle( RaftMessages.StatusResponse statusResponse ) throws RuntimeException
+        {
+            return FALSE;
+        }
     }
 }
