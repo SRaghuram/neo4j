@@ -16,6 +16,7 @@ import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.procedure.Context
+import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.stringValue
 
@@ -168,5 +169,29 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     } finally {
       transaction.close()
     }
+  }
+
+  test("should handle a procedure call followed by has-label check") {
+    val labeledNode = createLabeledNode("Label")
+
+    registerProcedure("getNode") { builder =>
+      builder.out("node", Neo4jTypes.NTNode)
+      new BasicProcedure(builder.build()) {
+
+        override def apply(ctx: Context, input: Array[AnyValue], resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
+          RawIterator.of(Array(ValueUtils.of(labeledNode)))
+      }
+    }
+
+    val q =
+      """CALL getNode() YIELD node
+        |WHERE node.x IS NULL AND
+        |      node.y IS NULL AND
+        |      node.z IS NULL AND
+        |      node:Label
+        |RETURN node""".stripMargin
+
+    val res = execute(q)
+    res.toList shouldBe List(Map("node" -> labeledNode))
   }
 }
