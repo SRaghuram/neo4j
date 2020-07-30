@@ -258,12 +258,13 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   }
 
   test("should handle complex COLLECT + UNWIND with multiple WHERE") {
+    //See https://github.com/neo4j/neo4j/issues/12543
     //given
     val query =
       """MATCH (r)
         |WHERE false
-        |WITH COLLECT(r) as rs // COLLECT + UNWIND throws error in planning
-        |UNWIND rs as r // if there is three or more conditions below (in a single or multiple WHERE)
+        |WITH COLLECT(r) as rs
+        |UNWIND rs as r
         |WITH DISTINCT r
         |  WHERE
         |  (r.prop >= 2000)
