@@ -423,12 +423,12 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   protected def getOtherNode: IntermediateRepresentation = invoke(loadField(relationshipsField), otherNodeMethod)
   protected def getRelationship: IntermediateRepresentation = invoke(loadField(relationshipsField),
     method[RelationshipTraversalCursor, Long]("relationshipReference"))
-  protected def setUpCursors(fromNode: String): IntermediateRepresentation = {
+  protected def setUpCursors(fromNode: String, canBeNull: Boolean = false): IntermediateRepresentation = {
     //look if there is already a registered nodeCursor otherwise create and register one
     val externalCursor: Option[NodeCursorRepresentation] = codeGen.cursorFor(fromName) match {
       case Some(cursor: NodeCursorRepresentation) => Some(cursor)
       case _ =>
-        codeGen.registerCursor(fromName, NodeCursorRepresentation(loadField(nodeCursorField)))
+        codeGen.registerCursor(fromName, NodeCursorRepresentation(loadField(nodeCursorField), canBeNull, codeGen))
         None
     }
 

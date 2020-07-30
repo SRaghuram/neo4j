@@ -3128,9 +3128,9 @@ object AbstractExpressionCompilerFront {
 }
 
 trait CursorRepresentation {
+  protected def reference: IntermediateRepresentation
   def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation
   def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation
   def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation
-  def reference: IntermediateRepresentation
   def relationshipType: IntermediateRepresentation
 }

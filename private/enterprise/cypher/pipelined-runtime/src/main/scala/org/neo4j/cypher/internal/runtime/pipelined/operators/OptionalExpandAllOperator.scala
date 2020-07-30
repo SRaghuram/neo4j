@@ -236,7 +236,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       setField(hasWritten, constant(false)),
       ifElse(notEqual(load(fromNode), constant(-1L))) {
         block(
-          setUpCursors(fromNode),
+          setUpCursors(fromNode, canBeNull = true),
           setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
         )
       }{//else

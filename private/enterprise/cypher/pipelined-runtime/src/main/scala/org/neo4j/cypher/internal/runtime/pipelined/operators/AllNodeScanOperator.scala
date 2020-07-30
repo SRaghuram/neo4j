@@ -209,7 +209,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
 
-  codeGen.registerCursor(nodeVarName, NodeCursorRepresentation(loadField(nodeCursorField)))
+  codeGen.registerCursor(nodeVarName, NodeCursorRepresentation(loadField(nodeCursorField), canBeNull = false, codeGen))
 
   override final def scopeId: String = "allNodesScan" + id.x
 

@@ -16,10 +16,12 @@ import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declare
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
@@ -793,7 +795,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 }
 
 abstract class BaseCursorRepresentation extends CursorRepresentation {
-  override def reference: IntermediateRepresentation = fail()
+  override protected def reference: IntermediateRepresentation = fail()
   override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = fail()
   override def relationshipType: IntermediateRepresentation = fail()
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = fail()
@@ -801,33 +803,46 @@ abstract class BaseCursorRepresentation extends CursorRepresentation {
   private def fail() = throw new IllegalStateException(s"illegal usage of cursor: $this")
 }
 
-case class NodeCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
-  override def reference: IntermediateRepresentation = {
-    invoke(target, method[NodeCursor, Long]("nodeReference"))
-  }
+case class NodeCursorRepresentation(target: IntermediateRepresentation, canBeNull: Boolean, codeGen: OperatorExpressionCompiler) extends BaseCursorRepresentation {
+  private def withNullCheck[TYPE](expression: IntermediateRepresentation, onNull: IntermediateRepresentation)(implicit typ: Manifest[TYPE]) =
+    if (canBeNull) {
+      val tmpVar = codeGen.namer.nextVariableName()
+      block(
+        declareAndAssign(IntermediateRepresentation.typeRefOf(manifest), tmpVar, onNull),
+        condition(isNotNull(target)){
+          IntermediateRepresentation.assign(tmpVar, expression)
+        },
+        load(tmpVar)
+      )
+    } else expression
+
+
+  override protected def reference: IntermediateRepresentation = invoke(target, method[NodeCursor, Long]("nodeReference"))
 
   override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation =
-    invoke(target, method[NodeCursor, Boolean, Int]("hasLabel"), labelToken)
+    withNullCheck[Boolean](invoke(target, method[NodeCursor, Boolean, Int]("hasLabel"), labelToken), constant(false))
 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
-    block(
+    val ops = block(
       invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompilation.PROPERTY_CURSOR),
       ternary(invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
         invoke( ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
         noValue)
     )
+    withNullCheck[Value](ops, noValue)
   }
 
   override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
-    block(
+    val ops = block(
       invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompilation.PROPERTY_CURSOR),
       invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
     )
+    withNullCheck[Boolean](ops, constant(false))
   }
 }
 
 case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
-  override def reference: IntermediateRepresentation = {
+  override protected def reference: IntermediateRepresentation = {
     invoke(target, method[NodeLabelIndexCursor, Long]("nodeReference"))
   }
 
@@ -843,7 +858,7 @@ case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) ext
 }
 
 case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
-  override def reference: IntermediateRepresentation = {
+  override protected def reference: IntermediateRepresentation = {
     invoke(target, method[NodeValueIndexCursor, Long]("nodeReference"))
   }
 
@@ -860,7 +875,7 @@ case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) ext
 
 case class RelationshipCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
 
-  override def reference: IntermediateRepresentation = {
+  override protected def reference: IntermediateRepresentation = {
     invoke(target, method[RelationshipTraversalCursor, Long]("relationshipReference"))
   }
 
