@@ -17,8 +17,8 @@ trait WithSlotsMemoryManagementTestBase {
 
   override protected def estimateSize(data: ValueToEstimate): Long = {
     data match {
-      case E_INT => ValueUtils.of(0).estimatedHeapUsage()
-      case E_INT_IN_DISTINCT => ValueUtils.of(0).estimatedHeapUsage() // Slotted does not wrap single columns in lists for distinct
+      case E_INT => ValueUtils.of(0L).estimatedHeapUsage()
+      case E_INT_IN_DISTINCT => ValueUtils.of(0L).estimatedHeapUsage() // Slotted does not wrap single columns in lists for distinct
       case E_NODE_PRIMITIVE => java.lang.Long.BYTES // Just a long in slotted
       case E_NODE_VALUE => VirtualValues.node(0).estimatedHeapUsage()
     }
