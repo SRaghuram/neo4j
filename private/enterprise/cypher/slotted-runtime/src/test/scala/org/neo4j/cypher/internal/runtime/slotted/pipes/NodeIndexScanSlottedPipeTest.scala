@@ -6,7 +6,8 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito
+import org.mockito.Mockito.when
+import org.mockito.invocation.InvocationOnMock
 import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
@@ -29,7 +30,11 @@ class NodeIndexScanSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    Mockito.when(state.query.indexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenReturn(cursor)
+    when(state.query.indexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenAnswer((_: InvocationOnMock) => {
+      //NOTE: this is what is done in TransactionBoundQueryContext
+      resourceManager.trace(cursor)
+      cursor
+    })
 
     val pipe = NodeIndexScanSlottedPipe(
       "n",
@@ -51,8 +56,11 @@ class NodeIndexScanSlottedPipeTest extends CypherFunSuite {
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
 
     val cursor = new StubNodeValueIndexCursor().withNode(0)
-    Mockito.when(state.query.indexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenReturn(cursor)
-
+    when(state.query.indexScan(any[IndexReadSession], any[Boolean], any[IndexOrder])).thenAnswer((_: InvocationOnMock) => {
+      //NOTE: this is what is done in TransactionBoundQueryContext
+      resourceManager.trace(cursor)
+      cursor
+    })
     val pipe = NodeIndexScanSlottedPipe(
       "n",
       LabelToken("Awesome", LabelId(0)),
