@@ -97,16 +97,17 @@ public class ExportPlanCommand implements Runnable
         ForkDirectory forkDirectory = ForkDirectory.openAt( outputDir.toPath() );
         BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
 
-        try ( Resources resources = new Resources( workDir.toPath() );
-              // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
-              Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
+        try ( Resources resources = new Resources( workDir.toPath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
-            Query query = workload.queryForName( queryName ).copyWith( runtime );
-
-            System.out.println( "Generating plan for : " + query.name() );
-            Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile.toPath(), query );
-            System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
+            // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
+            try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
+            {
+                Query query = workload.queryForName( queryName ).copyWith( runtime );
+                System.out.println( "Generating plan for : " + query.name() );
+                Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile.toPath(), query );
+                System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
+            }
         }
         catch ( Exception e )
         {

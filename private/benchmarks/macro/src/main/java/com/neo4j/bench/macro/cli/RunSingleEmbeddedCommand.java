@@ -13,9 +13,6 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.model.model.Neo4jConfig;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.HasPid;
@@ -26,9 +23,14 @@ import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.options.Edition;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -160,33 +162,45 @@ public class RunSingleEmbeddedCommand implements Runnable
     @Override
     public void run()
     {
-        // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
-        try ( Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
+        ForkDirectory forkDir = ForkDirectory.openAt( outputDir.toPath() );
+        try ( Resources resources = new Resources( workDir.toPath() ) )
         {
-            if ( neo4jConfigFile != null )
+            Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
+
+            // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
+            try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
             {
-                BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
+                if ( neo4jConfigFile != null )
+                {
+                    BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
+                }
+                Neo4jConfig neo4jConfig = getNeo4jConfig();
+                QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
+                                                                      forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
+                Pid clientPid = HasPid.getPid();
+                QueryRunner.runSingleCommand( queryRunner,
+                                              Jvm.bestEffortOrFail( jvmFile ),
+                                              forkDir,
+                                              workload,
+                                              queryName,
+                                              planner,
+                                              runtime,
+                                              executionMode,
+                                              singletonMap( clientPid, Parameters.NONE ),
+                                              singletonMap( clientPid, ProfilerType.deserializeProfilers( profilerNames ) ),
+                                              warmupCount,
+                                              minMeasurementSeconds,
+                                              maxMeasurementSeconds,
+                                              measurementCount );
             }
-            Neo4jConfig neo4jConfig = getNeo4jConfig();
-            QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
-                                                                  forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
-            Pid clientPid = HasPid.getPid();
-            QueryRunner.runSingleCommand( queryRunner,
-                                          Jvm.bestEffortOrFail( jvmFile ),
-                                          ForkDirectory.openAt( outputDir.toPath() ),
-                                          workloadName,
-                                          queryName,
-                                          planner,
-                                          runtime,
-                                          executionMode,
-                                          singletonMap( clientPid, Parameters.NONE ),
-                                          singletonMap( clientPid, ProfilerType.deserializeProfilers( profilerNames ) ),
-                                          warmupCount,
-                                          minMeasurementSeconds,
-                                          maxMeasurementSeconds,
-                                          measurementCount,
-                                          Deployment.embedded(),
-                                          workDir.toPath() );
+        }
+        catch ( Exception e )
+        {
+            Path errorFile = forkDir.logError( e );
+            throw new RuntimeException( "Error running query\n" +
+                                        "Workload          : " + workloadName + "\n" +
+                                        "Query             : " + queryName + "\n" +
+                                        "See error file at : " + errorFile.toAbsolutePath().toString(), e );
         }
     }
 

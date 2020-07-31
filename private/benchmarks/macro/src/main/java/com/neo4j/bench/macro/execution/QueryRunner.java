@@ -5,23 +5,20 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.model.Parameters;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +51,7 @@ public abstract class QueryRunner
     public static void runSingleCommand( QueryRunner queryRunner,
                                          Jvm jvm,
                                          ForkDirectory forkDir,
-                                         String workloadName,
+                                         Workload workload,
                                          String queryName,
                                          Planner planner,
                                          Runtime runtime,
@@ -64,44 +61,31 @@ public abstract class QueryRunner
                                          int warmupCount,
                                          int minMeasurementSeconds,
                                          int maxMeasurementSeconds,
-                                         int measurementCount,
-                                         DeploymentMode deployment,
-                                         Path workDir )
+                                         int measurementCount )
     {
-        try ( Resources resources = new Resources( workDir ) )
-        {
-            Workload workload = Workload.fromName( workloadName, resources, deployment );
-            Query query = workload.queryForName( queryName )
-                                  .copyWith( planner )
-                                  .copyWith( runtime )
-                                  .copyWith( executionMode );
 
-            List<ProfilerType> allProfilerTypes = pidProfilers.keySet().stream()
-                                                              .map( pidProfilers::get )
-                                                              .flatMap( List::stream )
-                                                              .distinct()
-                                                              .collect( toList() );
-            ProfilerType.assertInternal( allProfilerTypes );
+        Query query = workload.queryForName( queryName )
+                              .copyWith( planner )
+                              .copyWith( runtime )
+                              .copyWith( executionMode );
 
-            Map<Pid,List<InternalProfiler>> pidInternalProfilers = new HashMap<>();
-            pidProfilers.keySet().forEach( pid -> pidInternalProfilers.put( pid, ProfilerType.createInternalProfilers( pidProfilers.get( pid ) ) ) );
+        List<ProfilerType> allProfilerTypes = pidProfilers.keySet().stream()
+                                                          .map( pidProfilers::get )
+                                                          .flatMap( List::stream )
+                                                          .distinct()
+                                                          .collect( toList() );
+        ProfilerType.assertInternal( allProfilerTypes );
 
-            queryRunner.run( jvm,
-                             pidParameters,
-                             pidInternalProfilers,
-                             query,
-                             forkDir,
-                             compositeOf( warmupCount, minMeasurementSeconds, maxMeasurementSeconds ),
-                             compositeOf( measurementCount, minMeasurementSeconds, maxMeasurementSeconds ) );
-        }
-        catch ( Exception e )
-        {
-            Path errorFile = forkDir.logError( e );
-            throw new RuntimeException( "Error running query\n" +
-                                        "Workload          : " + workloadName + "\n" +
-                                        "Query             : " + queryName + "\n" +
-                                        "See error file at : " + errorFile.toAbsolutePath().toString(), e );
-        }
+        Map<Pid,List<InternalProfiler>> pidInternalProfilers = new HashMap<>();
+        pidProfilers.keySet().forEach( pid -> pidInternalProfilers.put( pid, ProfilerType.createInternalProfilers( pidProfilers.get( pid ) ) ) );
+
+        queryRunner.run( jvm,
+                         pidParameters,
+                         pidInternalProfilers,
+                         query,
+                         forkDir,
+                         compositeOf( warmupCount, minMeasurementSeconds, maxMeasurementSeconds ),
+                         compositeOf( measurementCount, minMeasurementSeconds, maxMeasurementSeconds ) );
     }
 
     protected abstract void run( Jvm jvm,

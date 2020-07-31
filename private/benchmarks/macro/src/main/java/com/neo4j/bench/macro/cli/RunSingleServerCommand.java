@@ -10,11 +10,10 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.process.HasPid;
-import com.neo4j.bench.common.process.Pid;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
@@ -26,6 +25,7 @@ import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.model.Parameters;
 
 import java.io.File;
 import java.net.URI;
@@ -181,7 +181,7 @@ public class RunSingleServerCommand implements Runnable
             QueryRunner.runSingleCommand( queryRunner,
                                           Jvm.bestEffortOrFail( jvmFile ),
                                           ForkDirectory.openAt( outputDir.toPath() ),
-                                          workloadName,
+                                          workload,
                                           queryName,
                                           planner,
                                           runtime,
@@ -191,9 +191,7 @@ public class RunSingleServerCommand implements Runnable
                                           warmupCount,
                                           minMeasurementSeconds,
                                           maxMeasurementSeconds,
-                                          measurementCount,
-                                          deploymentMode,
-                                          workDir.toPath() );
+                                          measurementCount );
         }
     }
 
