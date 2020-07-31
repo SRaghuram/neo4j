@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -149,6 +150,14 @@ public class Workload
             }
             Path schemaFile = workloadConfigFile.getParent().resolve( (String) config.get( SCHEMA ) );
             Schema schema = loadSchema( schemaFile );
+            Optional<List<Schema.SchemaEntry>> maybeDuplicates = schema.duplicates();
+            if ( maybeDuplicates.isPresent() )
+            {
+                final String duplicateSchemaEntries = maybeDuplicates.get().stream()
+                                                                     .map( e -> "\t" + e.description() )
+                                                                     .collect( joining( "\n" ) );
+                throw new WorkloadConfigException( "Duplicate Schema Entries:\n" + duplicateSchemaEntries + "\n", WorkloadConfigError.INVALID_SCHEMA_ENTRY );
+            }
             DatabaseName databaseName = Neo4jDatabaseNames.ofNullable( (String) config.get( DATABASE_NAME ) );
 
             int queryPartitionSize = 1;

@@ -1,0 +1,2 @@
+INDEX ON :Foo(bar)
+INDEX ON :Foo(bar)

@@ -12,10 +12,12 @@ import com.neo4j.bench.macro.workload.WorkloadConfigException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -57,6 +59,17 @@ public class Schema
     Schema( List<SchemaEntry> entries )
     {
         this.entries = entries;
+    }
+
+    public Optional<List<SchemaEntry>> duplicates()
+    {
+        List<SchemaEntry> duplicates = entries.stream()
+                                              .collect( groupingBy( SchemaEntry::description ) )
+                                              .entrySet().stream()
+                                              .filter( e -> e.getValue().size() > 1 )
+                                              .map( e -> e.getValue().get( 0 ) )
+                                              .collect( toList() );
+        return duplicates.isEmpty() ? Optional.empty() : Optional.of( duplicates );
     }
 
     public boolean isEmpty()

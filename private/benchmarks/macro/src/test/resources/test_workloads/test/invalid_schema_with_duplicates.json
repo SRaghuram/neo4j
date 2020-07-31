@@ -1,0 +1,40 @@
+{
+  "name": "invalid_schema_with_duplicates",
+  "schema": "invalid_schema_duplicates.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "D1",
+      "warmupQueryFile": "queries/WARMUP-Q1.cypher",
+      "queryFile": "queries/Q1.cypher",
+      "isSingleShot": true,
+      "isMutating": true,
+      "parameters": {
+        "file": "parameters/PF1.txt",
+        "isLoopable": true
+      }
+    },
+    {
+      "name": "Q2",
+      "queryFile": "queries/Q2.cypher",
+      "isSingleShot": false,
+      "parameters": {
+        "file": "parameters/PF1.txt",
+        "isLoopable": false
+      }
+    },
+    {
+      "name": "Q3",
+      "queryFile": "queries/Q3.cypher",
+      "isMutating": false,
+      "parameters": {
+        "file": "parameters/PF1.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "warmupQueryFile": "queries/WARMUP-Q4.cypher",
+      "queryFile": "queries/Q4.cypher"
+    }
+  ]
+}
