@@ -69,7 +69,9 @@ import org.neo4j.cypher.internal.util.attribution.Attribute
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 
-case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, interpretedPipesPolicy: InterpretedPipesFallbackPolicy) extends PipelineBreakingPolicy {
+case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
+                                           interpretedPipesPolicy: InterpretedPipesFallbackPolicy,
+                                           parallelExecution: Boolean) extends PipelineBreakingPolicy {
 
   private class BreakOn extends Attribute[LogicalPlan, Boolean]
 
@@ -119,6 +121,9 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
            _: Anti |
            _: VarExpand
       => !canFuseOneChildOperator(lp, outerApplyPlanId)
+
+      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates
+        =>  !call.signature.isVoid // Void procedures preserve cardinality and are non-breaking
 
       case _: ProduceResult |
            _: Limit |
@@ -245,8 +250,8 @@ object InterpretedPipesFallbackPolicy {
 
       //------------------------------------------------------------------------------------
       // Whitelisted plans that can be breaking or non-breaking
-      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates =>
-        !call.signature.isVoid // Void procedures preserve cardinality and are non-breaking
+    //  case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates =>
+//        !call.signature.isVoid // Void procedures preserve cardinality and are non-breaking
 
       case p: ProjectEndpoints =>
         !p.directed // Undirected is cardinality increasing, directed is not

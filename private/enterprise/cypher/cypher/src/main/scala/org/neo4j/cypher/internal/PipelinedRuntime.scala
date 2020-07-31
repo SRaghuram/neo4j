@@ -152,7 +152,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders, name)
 
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution, name)
-    val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
+    val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy, parallelExecution)
 
     var physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             logicalPlan,
@@ -218,7 +218,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       context.tokenContext,
       interpretedPipesFallbackPolicy,
       maybePipeMapper,
-      name)
+      name,
+      parallelExecution)
 
     DebugLog.logDiff("ExecutionGraphDefiner")
     //=======================================================

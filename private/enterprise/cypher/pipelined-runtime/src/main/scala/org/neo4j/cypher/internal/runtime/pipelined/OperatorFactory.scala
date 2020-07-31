@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
@@ -37,11 +38,13 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
+import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
@@ -101,6 +104,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialSortOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialTopOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallMiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
@@ -148,13 +153,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       tokenContext: TokenContext,
                       val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
                       val slottedPipeBuilder: Option[PipeMapper],
-                      runtimeName: String) {
+                      runtimeName: String,
+                      parallelExecution: Boolean) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
 
   // When determining if an interpreted pipe fallback operator can be used as a middle operator we need breakOn() to answer with fusion disabled
-  private val breakingPolicyForInterpretedPipesFallback = PipelinedPipelineBreakingPolicy(OPERATOR_FUSION_DISABLED, interpretedPipesFallbackPolicy)
+  private val breakingPolicyForInterpretedPipesFallback = PipelinedPipelineBreakingPolicy(OPERATOR_FUSION_DISABLED, interpretedPipesFallbackPolicy, parallelExecution)
 
   def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {
     val id = plan.id
@@ -632,6 +638,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           SlottedPipeMapper.computeUnionRowMapping(rhsSlots, slots)
         )
 
+      case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) =>
+        val callArgumentCommands = callArguments.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
+          case (given, default) => given.map(converters.toCommandExpression(id, _)).getOrElse(Literal(default.get))
+        }
+        new ProcedureCallOperator(
+          WorkIdentity.fromPlan(plan),
+          signature,
+          ProcedureCallMode.fromAccessMode(signature.accessMode),
+          callArgumentCommands,
+          call.callResults.map(r => r.outputName).toArray,
+          call.callResultIndices.map {
+            case (k, (n, _)) => (k, (slots(n).offset))
+          }.toArray)
+
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
         interpretedPipesFallbackPolicy.breakOn(plan)
@@ -747,6 +767,19 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
 
       case _: plans.Argument => None
+
+      case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) =>
+        val callMode = ProcedureCallMode.fromAccessMode(signature.accessMode)
+        val callArgumentCommands = callArguments.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
+          case (given, default) => given.map(converters.toCommandExpression(id, _)).getOrElse(Literal(default.get))
+        }
+        Some(new ProcedureCallMiddleOperator(
+          WorkIdentity.fromPlan(plan),
+          signature,
+          callMode,
+          callArgumentCommands,
+          call.callResults.map(r => r.outputName).toArray
+        ))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)
