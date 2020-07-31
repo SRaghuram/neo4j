@@ -6,6 +6,7 @@
 package com.neo4j.procedure;
 
 import com.neo4j.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -585,7 +586,7 @@ class FunctionIT
         assertEquals( 101L, value );
         try ( Transaction transaction = db.beginTx() )
         {
-            //Make sure all the lines has been properly commited to the database.
+            //Make sure all the lines has been properly committed to the database.
             String[] dbContents =
                     transaction.execute( "MATCH (n) return n.prop" ).stream().map( m -> Long.toString( (long) m.get( "n.prop" ) ) ).toArray( String[]::new );
             assertThat( dbContents ).isEqualTo( lines );
@@ -890,6 +891,27 @@ class FunctionIT
         }
     }
 
+    @Test
+    void shouldHandleNullPathsAsUDFArguments()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            //given
+            tx.execute( "MERGE(a:User)\n" +
+                        "MERGE(b:User)\n" +
+                        "MERGE (a)-[:KNOWS]->(b)" );
+
+            //when
+            Result result = tx.execute( "MATCH p1=(a:User)-[:KNOWS]->(b:User)\n" +
+                                        "OPTIONAL MATCH p2=(b)-[:DOESNTKNOW]->(a)\n" +
+                                        "WITH com.neo4j.procedure.sizeOfPaths(p1, p2) as size\n" +
+                                        "RETURN size" );
+
+            //then
+            assertThat( Iterators.asList( result ) ).isEqualTo( List.of( Map.of( "size", 1L ) ) );
+        }
+    }
+
     @BeforeEach
     void setUp() throws IOException
     {
@@ -910,6 +932,7 @@ class FunctionIT
         }
     }
 
+    @SuppressWarnings( {"unused", "SameReturnValue"} )
     public static class ClassWithFunctions
     {
         @Context
@@ -1030,7 +1053,7 @@ class FunctionIT
         @UserFunction
         public double avgDoubleList( @Name( "someValue" ) List<Double> list )
         {
-            return list.stream().reduce( ( l, r ) -> l + r ).orElse( 0.0d ) / list.size();
+            return list.stream().reduce( Double::sum ).orElse( 0.0d ) / list.size();
         }
 
         @UserFunction
@@ -1049,6 +1072,7 @@ class FunctionIT
         public long indexOutOfBounds()
         {
             int[] ints = {1, 2, 3};
+            //noinspection ConstantConditions
             return ints[4];
         }
 
@@ -1143,6 +1167,12 @@ class FunctionIT
         {
             transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
             return "done";
+        }
+
+        @UserFunction
+        public long sizeOfPaths( @Name( "p1" ) Path p1, @Name( "p1" ) Path p2 )
+        {
+            return (p1 == null ? 0 : p1.length()) + (p2 == null ? 0 : p2.length());
         }
     }
 

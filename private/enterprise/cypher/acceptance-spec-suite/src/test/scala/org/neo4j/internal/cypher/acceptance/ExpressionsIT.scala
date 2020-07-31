@@ -3246,6 +3246,21 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(udf)) should equal(stringValue("success"))
   }
 
+  test("should null-check incoming argument if necessary") {
+    // given
+    registerUserDefinedFunction("foo") { builder =>
+      builder.in("arg", Neo4jTypes.NTFloat).out(Neo4jTypes.NTString)
+      new BasicUserFunction(builder.build) {
+        override def apply(ctx: Context, input: Array[AnyValue]): AnyValue = stringValue("success")
+      }
+    }
+    val id = getUserFunctionHandle("foo").id()
+    val udf = callFunction(signature(qualifiedName("foo"), id), function("sin", nullLiteral))
+
+    //then
+    evaluate(compile(udf)) should equal(stringValue("success"))
+  }
+
   test("should compile grouping key with single expression") {
     //given
     val slots = SlotConfiguration.empty.newReference("a", nullable = true, symbols.CTAny)

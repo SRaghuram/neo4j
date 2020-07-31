@@ -1601,7 +1601,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           DB_ACCESS,
           method[DbAccess, AnyValue, Int, Array[AnyValue], Array[String]]("callFunction"),
           constant(signature.id),
-          arrayOf[AnyValue](inputArgs.map(_.ir): _*),
+          arrayOf[AnyValue](inputArgs.map(nullCheckIfRequired(_)): _*),
           getStatic[Array[String]](allowed.name))))
 
         Some(IntermediateExpression(block(ops, load(variableName)), fields, variables,
