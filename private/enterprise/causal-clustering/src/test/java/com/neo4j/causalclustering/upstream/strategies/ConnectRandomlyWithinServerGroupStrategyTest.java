@@ -100,7 +100,7 @@ class ConnectRandomlyWithinServerGroupStrategyTest
 
         // and
         ConnectRandomlyWithinServerGroupStrategy connectRandomlyWithinServerGroupStrategy = new ConnectRandomlyWithinServerGroupStrategy();
-        MemberId myself = new MemberId( new UUID( 123, 456 ) );
+        MemberId myself = MemberId.of( new UUID( 123, 456 ) );
         connectRandomlyWithinServerGroupStrategy.inject( new TopologyServiceThatPrioritisesItself( myself, groupName ), config, NullLogProvider.getInstance(),
                 myself );
 

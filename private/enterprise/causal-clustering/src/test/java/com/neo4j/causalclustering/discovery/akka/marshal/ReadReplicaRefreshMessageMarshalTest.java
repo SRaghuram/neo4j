@@ -11,14 +11,13 @@ import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
+import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.UUID;
 
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -36,7 +35,7 @@ public class ReadReplicaRefreshMessageMarshalTest extends BaseMarshalTest<ReadRe
     {
         return singletonList( new ReadReplicaRefreshMessage(
                 TestTopology.addressesForReadReplica( 432 ),
-                new ServerId( UUID.randomUUID() ),
+                IdFactory.randomServerId(),
                 system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name + "1" ) ),
                 system.provider().resolveActorRef( String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name + "2" ) ),
                 defaultDatabaseStates() ) );

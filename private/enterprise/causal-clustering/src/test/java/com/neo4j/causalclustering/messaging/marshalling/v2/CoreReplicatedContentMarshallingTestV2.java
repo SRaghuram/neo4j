@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.helpers.Buffers;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
@@ -42,12 +42,12 @@ class CoreReplicatedContentMarshallingTestV2
     {
         var databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
         return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
-                new MemberIdSet( Set.of( new MemberId( UUID.randomUUID() ) ) ),
+                new MemberIdSet( Set.of( IdFactory.randomMemberId() ) ),
                 new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
-                new ReplicatedLeaseRequest( new MemberId( UUID.randomUUID() ), 2, databaseId ), new DistributedOperation(
+                new ReplicatedLeaseRequest( IdFactory.randomMemberId(), 2, databaseId ), new DistributedOperation(
                 new DistributedOperation( ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseId ),
-                        new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 1, 2 ) ),
-                new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 4, 5 ) )};
+                        new GlobalSession( UUID.randomUUID(), IdFactory.randomMemberId() ), new LocalOperationId( 1, 2 ) ),
+                new GlobalSession( UUID.randomUUID(), IdFactory.randomMemberId() ), new LocalOperationId( 4, 5 ) )};
     }
 
     @ParameterizedTest

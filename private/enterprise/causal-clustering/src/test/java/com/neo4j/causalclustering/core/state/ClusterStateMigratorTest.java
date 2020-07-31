@@ -6,8 +6,7 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftIdFactory;
+import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.parallel.Resources;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.state.SimpleFileStorage;
@@ -109,7 +107,7 @@ class ClusterStateMigratorTest
     @Test
     void shouldKeepMemberIdStorage() throws Exception
     {
-        var memberId = new MemberId( UUID.randomUUID() );
+        var memberId = IdFactory.randomMemberId();
         var memberIdFile = clusterStateLayout.memberIdStateFile();
         assertFalse( fs.fileExists( memberIdFile ) );
         var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), INSTANCE );
@@ -131,7 +129,7 @@ class ClusterStateMigratorTest
     {
         assertFalse( fs.fileExists( file ) );
         var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), INSTANCE );
-        clusterIdStorage.writeState( RaftIdFactory.random() );
+        clusterIdStorage.writeState( IdFactory.randomRaftId() );
         assertTrue( fs.fileExists( file ) );
     }
 

@@ -7,16 +7,15 @@ package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -122,7 +121,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
     {
         var thisCore = memberId( -1 );
 
-        var otherReplicas = Stream.generate( UUID::randomUUID ).map( MemberId::new ).limit( 10 ).collect( Collectors.toSet() );
+        var otherReplicas = Stream.generate( IdFactory::randomMemberId ).limit( 10 ).collect( Collectors.toSet() );
 
         var allReplicas = new HashSet<>( myGroupMemberIds );
         allReplicas.addAll( otherReplicas );

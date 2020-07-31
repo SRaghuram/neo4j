@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModuleImpl;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collection;
@@ -61,7 +60,7 @@ class ReadReplicaViewMessage
                 .values()
                 .stream()
                 .filter( info -> info.readReplicaInfo().startedDatabaseIds().contains( databaseId ) )
-                .map( info -> Pair.of( ClusteringIdentityModuleImpl.fromServerId( info.serverId() ), info.readReplicaInfo() ) )
+                .map( info -> Pair.of( MemberId.of( info.serverId() ), info.readReplicaInfo() ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new DatabaseReadReplicaTopology( databaseId, knownReadReplicas );
@@ -79,7 +78,7 @@ class ReadReplicaViewMessage
 
     private Stream<Pair<MemberId,DiscoveryDatabaseState>> getAllStatesFromMember( ReadReplicaViewRecord record )
     {
-         return record.databaseStates().values().stream().map( state -> Pair.of( ClusteringIdentityModuleImpl.fromServerId( record.serverId() ), state ) );
+         return record.databaseStates().values().stream().map( state -> Pair.of( MemberId.of( record.serverId() ), state ) );
     }
 
     Set<DatabaseId> databaseIds()

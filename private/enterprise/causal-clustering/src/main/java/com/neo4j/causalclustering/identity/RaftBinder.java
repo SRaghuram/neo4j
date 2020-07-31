@@ -150,7 +150,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         }
         else
         {
-            var initialMemberIds = systemGraph.getInitialMembers( namedDatabaseId ).stream().map( MemberId::new ).collect( toSet() );
+            var initialMemberIds = systemGraph.getInitialMembers( namedDatabaseId ).stream().map( MemberId::of ).collect( toSet() );
             return bindToRaftGroupNotPartOfInitialDatabases( bindingConditions, initialMemberIds );
         }
     }

@@ -5,12 +5,11 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 
@@ -27,42 +26,42 @@ class AnyGroupFilterTest
 
         ServerInfo serverA = new ServerInfo(
                 new SocketAddress( "bolt", 1 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "china-west" )
         );
         ServerInfo serverB = new ServerInfo(
                 new SocketAddress( "bolt", 2 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "europe" )
         );
         ServerInfo serverC = new ServerInfo(
                 new SocketAddress( "bolt", 3 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "china", "china-west" )
         );
         ServerInfo serverD = new ServerInfo(
                 new SocketAddress( "bolt", 4 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "china-west", "china" )
         );
         ServerInfo serverE = new ServerInfo(
                 new SocketAddress( "bolt", 5 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "china-east", "asia" )
         );
         ServerInfo serverF = new ServerInfo(
                 new SocketAddress( "bolt", 6 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "europe-west" )
         );
         ServerInfo serverG = new ServerInfo(
                 new SocketAddress( "bolt", 7 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "china-west", "europe" )
         );
         ServerInfo serverH = new ServerInfo(
                 new SocketAddress( "bolt", 8 ),
-                new MemberId( UUID.randomUUID() ),
+                IdFactory.randomMemberId(),
                 setOf( "africa" )
         );
 

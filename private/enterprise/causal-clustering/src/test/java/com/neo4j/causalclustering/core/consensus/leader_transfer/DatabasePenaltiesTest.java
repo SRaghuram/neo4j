@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
@@ -23,8 +24,8 @@ class DatabasePenaltiesTest
 {
     private final FakeClock fakeClock = Clocks.fakeClock();
     private final Duration suspensionTime = Duration.ofMillis( 10 );
-    private final MemberId member1 = new MemberId( UUID.randomUUID() );
-    private final MemberId member2 = new MemberId( UUID.randomUUID() );
+    private final MemberId member1 = IdFactory.randomMemberId();
+    private final MemberId member2 = IdFactory.randomMemberId();
     private final NamedDatabaseId db1 = from( "db-one", UUID.randomUUID() );
     private final NamedDatabaseId db2 = from( "db-two", UUID.randomUUID() );
     private final DatabasePenalties databasePenalties = new DatabasePenalties( suspensionTime, fakeClock );

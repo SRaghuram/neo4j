@@ -13,33 +13,40 @@ import java.util.UUID;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.dbms.identity.StandaloneIdentityModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 
-public class ClusteringIdentityModuleImpl extends StandaloneIdentityModule implements ClusteringIdentityModule
+public class CoreIdentityModule extends ClusteringIdentityModule
 {
     /**
      * This field needs to be removed, a Map is needed here keyed by NamedDatabaseId or DatabaseId or Id
      */
     private final MemberId myself;
 
-    public static ClusteringIdentityModuleImpl create( LogProvider logProvider, FileSystemAbstraction fs, File dataDir, MemoryTracker memoryTracker,
+    public static CoreIdentityModule create( LogProvider logProvider, FileSystemAbstraction fs, File dataDir, MemoryTracker memoryTracker,
             ClusterStateStorageFactory storageFactory )
     {
-        var log = logProvider.getLog( ClusteringIdentityModuleImpl.class );
-        var storage = storageFactory.createMemberIdStorage();
-        var memberId = readOrGenerate( storage, log, MemberId.class.getSimpleName(), MemberId::new, MemberId::getUuid, UUID::randomUUID );
+        var log = logProvider.getLog( StandaloneIdentityModule.class );
+        var memberStorage = storageFactory.createMemberIdStorage();
+        var memberId = readOrGenerate( memberStorage, log, MemberId.class, MemberId::of, UUID::randomUUID );
 
-        return new ClusteringIdentityModuleImpl( logProvider, createServerIdStorage( fs, dataDir, memoryTracker ), memberId );
+        // this is here temporary just to save the value of an already existing MemberId to ServerId
+        var serverIdStorage = createServerIdStorage( fs, dataDir, memoryTracker );
+        readOrGenerate( serverIdStorage, log, ServerId.class, ServerId::of, memberId::getUuid );
+
+        return new CoreIdentityModule( memberId );
     }
 
-    private ClusteringIdentityModuleImpl( LogProvider logProvider, SimpleStorage<ServerId> storage, MemberId memberId )
+    private CoreIdentityModule( MemberId memberId )
     {
-        super( logProvider, storage, memberId::getUuid );
         this.myself = memberId;
+    }
+
+    @Override
+    public ServerId myself()
+    {
+        return myself;
     }
 
     /**
@@ -58,15 +65,5 @@ public class ClusteringIdentityModuleImpl extends StandaloneIdentityModule imple
     public MemberId memberId( NamedDatabaseId namedDatabaseId )
     {
         return myself;
-    }
-
-    /**
-     * This method is here for the time MemberId -> ServerId conversion is done.
-     * It serves the purpose not to be forced to change everything at once
-     */
-    @Deprecated
-    public static MemberId fromServerId( ServerId serverId )
-    {
-        return new MemberId( serverId.getUuid() );
     }
 }

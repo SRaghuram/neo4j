@@ -7,12 +7,11 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -39,8 +38,8 @@ class AkkaTopologyClientTest
         var databaseId = databaseIdRepository.getRaw( "people" );
         var identityModule = new StubClusteringIdentityModule();
         var memberId1 = identityModule.memberId();
-        var memberId2 = new MemberId( UUID.randomUUID() );
-        var memberId3 = new MemberId( UUID.randomUUID() );
+        var memberId2 = IdFactory.randomMemberId();
+        var memberId3 = IdFactory.randomMemberId();
 
         var topologyClient = new AkkaTopologyClient( Config.defaults(), nullLogProvider(), identityModule,
                 mock( ActorSystemLifecycle.class, RETURNS_MOCKS ), TestDiscoveryMember::new, Clocks.systemClock() );

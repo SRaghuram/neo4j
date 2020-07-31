@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
@@ -32,10 +33,10 @@ public class RandomEvenStrategyTest
     {
         // given
         var identityModule = new StubClusteringIdentityModule();
-        var member1 = new MemberId( UUID.randomUUID() );
-        var member2 = new MemberId( UUID.randomUUID() );
+        var member1 = IdFactory.randomMemberId();
+        var member2 = IdFactory.randomMemberId();
         var member3 = identityModule.memberId();
-        var member4 = new MemberId( UUID.randomUUID() );
+        var member4 = IdFactory.randomMemberId();
 
         var memberLeaderMap = Map.of(
                 member1, databaseIds( 0 ).limit( 4 ).collect( Collectors.toList() ),
@@ -71,10 +72,10 @@ public class RandomEvenStrategyTest
     {
         // given
         var identityModule = new StubClusteringIdentityModule();
-        var member1 = new MemberId( UUID.randomUUID() );
-        var member2 = new MemberId( UUID.randomUUID() );
+        var member1 = IdFactory.randomMemberId();
+        var member2 = IdFactory.randomMemberId();
         var member3 = identityModule.memberId();
-        var member4 = new MemberId( UUID.randomUUID() );
+        var member4 = IdFactory.randomMemberId();
 
         var memberLeaderMap = Map.of(
                 member1, databaseIds( 0 ).limit( 4 ).collect( Collectors.toList() ),

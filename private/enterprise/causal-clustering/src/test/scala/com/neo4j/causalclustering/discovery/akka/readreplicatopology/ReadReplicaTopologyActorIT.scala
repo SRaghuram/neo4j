@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology
 
 import java.time.Instant
-import java.util.UUID
 
 import akka.cluster.client.ClusterClientReceptionist
 import akka.stream.ActorMaterializer
@@ -20,6 +19,7 @@ import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState
+import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.dbms.EnterpriseOperatorState.STARTED
 import org.neo4j.configuration.Config
@@ -110,7 +110,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         .map(_.databaseId)
         .map(id => (id, new DiscoveryDatabaseState(id, STARTED)) )
         .toMap
-      new ReadReplicaViewRecord(readReplicaInfo, topologyClient, new ServerId(UUID.randomUUID()), Instant.now(), states.asJava )
+      new ReadReplicaViewRecord(readReplicaInfo, topologyClient, IdFactory.randomServerId(), Instant.now(), states.asJava )
     }
   }
 

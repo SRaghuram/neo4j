@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.RaftIdFactory;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
@@ -44,9 +44,9 @@ class ConnectToRandomCoreServerStrategyTest
     void shouldConnectToRandomCoreServer() throws Exception
     {
         // given
-        MemberId memberId1 = new MemberId( UUID.randomUUID() );
-        MemberId memberId2 = new MemberId( UUID.randomUUID() );
-        MemberId memberId3 = new MemberId( UUID.randomUUID() );
+        MemberId memberId1 = IdFactory.randomMemberId();
+        MemberId memberId2 = IdFactory.randomMemberId();
+        MemberId memberId3 = IdFactory.randomMemberId();
 
         TopologyService topologyService = mock( TopologyService.class );
         when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
@@ -66,7 +66,7 @@ class ConnectToRandomCoreServerStrategyTest
     void filtersSelf() throws UpstreamDatabaseSelectionException
     {
         // given
-        MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
+        MemberId myself = MemberId.of( new UUID( 1234, 5678 ) );
         Config config = Config.defaults();
         var groupName = new ServerGroupName( "groupName" );
 
@@ -87,7 +87,7 @@ class ConnectToRandomCoreServerStrategyTest
     {
         assertThat( memberIds, arrayWithSize( greaterThan( 0 ) ) );
 
-        RaftId raftId = RaftIdFactory.random();
+        RaftId raftId = IdFactory.randomRaftId();
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
 
         int offset = 0;

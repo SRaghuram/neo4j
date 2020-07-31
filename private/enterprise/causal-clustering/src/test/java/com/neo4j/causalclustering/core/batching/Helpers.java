@@ -21,7 +21,7 @@ class Helpers
 {
     private static final java.util.UUID UUID = java.util.UUID.randomUUID();
     private static final RaftId RAFT_ID = RaftId.from( DatabaseIdFactory.from( UUID ) );
-    private static final MemberId MEMBER_ID = new MemberId( UUID );
+    private static final MemberId MEMBER_ID = MemberId.of( UUID );
     private static final Instant INSTANT = Instant.MAX;
 
     static ReplicatedContent emptyContent()

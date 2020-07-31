@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +25,6 @@ import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.Prun
 import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.PruningStateSink.forCoreTopologies;
 import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.PruningStateSink.forReadReplicaTopologies;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static java.util.UUID.randomUUID;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -149,9 +148,9 @@ class PruningStateSinkTest
         var databaseId = randomNamedDatabaseId().databaseId();
         var raftId = RaftId.from( databaseId );
         var coreMembers = Map.of(
-                new MemberId( randomUUID() ), addressesForCore( 0, false ),
-                new MemberId( randomUUID() ), addressesForCore( 1, false ),
-                new MemberId( randomUUID() ), addressesForCore( 2, false ) );
+                IdFactory.randomMemberId(), addressesForCore( 0, false ),
+                IdFactory.randomMemberId(), addressesForCore( 1, false ),
+                IdFactory.randomMemberId(), addressesForCore( 2, false ) );
 
         return new DatabaseCoreTopology( databaseId, raftId, coreMembers );
     }
@@ -160,8 +159,8 @@ class PruningStateSinkTest
     {
         var databaseId = randomNamedDatabaseId().databaseId();
         var readReplicas = Map.of(
-                new MemberId( randomUUID() ), addressesForReadReplica( 0 ),
-                new MemberId( randomUUID() ), addressesForReadReplica( 1 ) );
+                IdFactory.randomMemberId(), addressesForReadReplica( 0 ),
+                IdFactory.randomMemberId(), addressesForReadReplica( 1 ) );
 
         return new DatabaseReadReplicaTopology( databaseId, readReplicas );
     }
@@ -170,9 +169,9 @@ class PruningStateSinkTest
     {
         var databaseId = randomDatabaseId();
         var states = Map.of(
-                new MemberId( randomUUID() ), new DiscoveryDatabaseState( databaseId, STARTED ),
-                new MemberId( randomUUID() ), new DiscoveryDatabaseState( databaseId, STARTED ),
-                new MemberId( randomUUID() ), new DiscoveryDatabaseState( databaseId, STARTED ) );
+                IdFactory.randomMemberId(), new DiscoveryDatabaseState( databaseId, STARTED ),
+                IdFactory.randomMemberId(), new DiscoveryDatabaseState( databaseId, STARTED ),
+                IdFactory.randomMemberId(), new DiscoveryDatabaseState( databaseId, STARTED ) );
         return ReplicatedDatabaseState.ofCores( databaseId, states );
     }
 

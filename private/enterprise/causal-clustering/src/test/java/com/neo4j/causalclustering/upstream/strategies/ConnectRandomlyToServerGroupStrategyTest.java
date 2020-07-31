@@ -99,7 +99,7 @@ class ConnectRandomlyToServerGroupStrategyTest
     {
         // given
         ConnectRandomlyToServerGroupStrategy connectRandomlyToServerGroupStrategy = new ConnectRandomlyToServerGroupStrategy();
-        MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
+        MemberId myself = MemberId.of( new UUID( 1234, 5678 ) );
 
         // and
         LogProvider logProvider = NullLogProvider.getInstance();

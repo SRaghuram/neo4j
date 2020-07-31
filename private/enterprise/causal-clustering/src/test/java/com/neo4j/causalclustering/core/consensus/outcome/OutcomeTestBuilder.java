@@ -7,14 +7,14 @@ package com.neo4j.causalclustering.core.consensus.outcome;
 
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
-import java.util.UUID;
 
 public class OutcomeTestBuilder
 {
-    private static final MemberId DEFAULT_LEADER = new MemberId( UUID.randomUUID() );
+    private static final MemberId DEFAULT_LEADER = IdFactory.randomMemberId();
 
     public static OutcomeBuilder builder()
     {
