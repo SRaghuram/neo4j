@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.Server;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -333,7 +334,7 @@ class StoreCopyClientIT
     void shouldLogUpstreamIssueMessage()
     {
         InMemoryStoreStreamProvider clientStoreFileStream = new InMemoryStoreStreamProvider();
-        CatchupAddressResolutionException catchupAddressResolutionException = new CatchupAddressResolutionException( IdFactory.randomMemberId() );
+        CatchupAddressResolutionException catchupAddressResolutionException = new CatchupAddressResolutionException( new MemberId( UUID.randomUUID() ) );
 
         CatchupAddressProvider addressProvider = new CatchupAddressProvider()
         {

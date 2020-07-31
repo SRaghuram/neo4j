@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
@@ -28,6 +27,7 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.annotations.service.ServiceProvider;
@@ -61,7 +61,7 @@ class ReadReplicaBootstrapTest
 {
     private final NamedDatabaseId namedDatabaseA = TestDatabaseIdRepository.randomNamedDatabaseId();
     private final RaftId raftId = RaftId.from( namedDatabaseA.databaseId() );
-    private final MemberId memberA = IdFactory.randomMemberId();
+    private final MemberId memberA = new MemberId( UUID.randomUUID() );
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
     private final StoreId storeB = new StoreId( 5, 6, 7, 8, 9 );
@@ -85,7 +85,7 @@ class ReadReplicaBootstrapTest
     void shouldTryAllUpstreamMembersBeforeBackingOff() throws Exception
     {
         // given
-        var memberB = IdFactory.randomMemberId();
+        var memberB = new MemberId( UUID.randomUUID() );
         var topologyService = mock( TopologyService.class );
         var members = Map.of(
                 memberA, mock( CoreServerInfo.class ),

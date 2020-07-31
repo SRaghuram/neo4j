@@ -20,8 +20,9 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabas
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,10 +30,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,21 +65,21 @@ class BaseAkkaSerializerTest
         var randomDbId = randomDatabaseId();
         var randomRaftId = RaftId.from( randomDbId );
         return Stream.of(
-                new Object[]{new LeaderInfo( IdFactory.randomMemberId(), 37L ), new LeaderInfoSerializer()},
-                new Object[]{IdFactory.randomRaftId(), new RaftIdSerializer()},
+                new Object[]{new LeaderInfo( new MemberId( UUID.randomUUID() ), 37L ), new LeaderInfoSerializer()},
+                new Object[]{RaftIdFactory.random(), new RaftIdSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ), new UniqueAddressSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system", "host", 79 ), 398L ),
                              new UniqueAddressSerializer()},
-                new Object[]{new CoreServerInfoForServerId( IdFactory.randomServerId(), TestTopology.addressesForCore( 1, false ) ),
+                new Object[]{new CoreServerInfoForServerId( new ServerId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ),
                              new CoreServerInfoForServerIdSerializer()},
                 new Object[]{new ReadReplicaRefreshMessage(
                         TestTopology.addressesForReadReplica( 432 ),
-                        IdFactory.randomServerId(),
+                        new ServerId( UUID.randomUUID() ),
                         system.provider().resolveActorRef( actorPath + 1 ),
                         system.provider().resolveActorRef( actorPath + 2 ),
                         Collections.emptyMap() ),
                              new ReadReplicaRefreshMessageSerializer( (ExtendedActorSystem) system )},
-                new Object[]{IdFactory.randomMemberId(),
+                new Object[]{new MemberId( UUID.randomUUID() ),
                              new MemberIdSerializer()},
                 new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                              new ReadReplicaInfoSerializer()},
@@ -86,7 +89,7 @@ class BaseAkkaSerializerTest
                              new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},
                 new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
                 new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
-                new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( IdFactory.randomMemberId(), 14L ) ), new ReplicatedLeaderInfoSerializer()},
+                new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()},
                 new Object[]{randomDatabaseId(), new DatabaseIdWithoutNameSerializer()},
                 new Object[]{randomDatabaseToMember(), new DatabaseToMemberSerializer()},
                 new Object[]{randomDatabaseState( randomDatabaseId() ), new DiscoveryDatabaseStateSerializer()},
@@ -120,7 +123,7 @@ class BaseAkkaSerializerTest
 
     private static DatabaseToMember randomDatabaseToMember()
     {
-        return new DatabaseToMember( randomDatabaseId(), IdFactory.randomMemberId() );
+        return new DatabaseToMember( randomDatabaseId(), new MemberId( UUID.randomUUID() ) );
     }
 
     private static DiscoveryDatabaseState randomDatabaseState( DatabaseId databaseId )
@@ -135,7 +138,7 @@ class BaseAkkaSerializerTest
     {
         var isCore = ThreadLocalRandom.current().nextBoolean();
         var id = randomDatabaseId();
-        var randomMemberStates = Stream.generate( () -> Map.entry( IdFactory.randomMemberId(), randomDatabaseState( id ) ) )
+        var randomMemberStates = Stream.generate( () -> Map.entry( new MemberId( UUID.randomUUID() ), randomDatabaseState( id ) ) )
                 .limit( 5 )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
         if ( isCore )

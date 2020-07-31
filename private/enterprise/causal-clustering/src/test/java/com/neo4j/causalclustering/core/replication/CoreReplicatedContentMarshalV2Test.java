@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionFactory;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.UUID;
 
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.marshal.ChannelMarshal;
@@ -76,8 +77,8 @@ class CoreReplicatedContentMarshalV2Test
     {
         ByteBuf buffer = Unpooled.buffer();
         ReplicatedContent message = new MemberIdSet( asSet(
-                IdFactory.randomMemberId(),
-                IdFactory.randomMemberId()
+                new MemberId( UUID.randomUUID() ),
+                new MemberId( UUID.randomUUID() )
         ) );
 
         assertMarshalingEquality( buffer, message );

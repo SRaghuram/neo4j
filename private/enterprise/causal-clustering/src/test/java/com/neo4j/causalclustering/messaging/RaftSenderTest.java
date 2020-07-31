@@ -6,13 +6,15 @@
 package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.PooledChannel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
@@ -53,7 +55,7 @@ class RaftSenderTest
         // when
         var socketAddress = new SocketAddress( 1 );
         raftSender.send( socketAddress,
-                         RaftMessages.OutboundRaftMessageContainer.of( null, new RaftMessages.Timeout.Election( IdFactory.randomMemberId() ) ),
+                         RaftMessages.OutboundRaftMessageContainer.of( null, new RaftMessages.Timeout.Election( new MemberId( UUID.randomUUID() ) ) ),
                          false );
 
         assertThat( logProvider ).forClass( RaftSender.class ).forLevel( WARN )

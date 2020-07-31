@@ -7,12 +7,14 @@ package com.neo4j.causalclustering.identity;
 
 import java.util.UUID;
 
-import org.neo4j.dbms.identity.StandaloneServerId;
-
-class ClusteringServerId extends StandaloneServerId implements MemberId
+public final class RaftIdFactory
 {
-    ClusteringServerId( UUID uuid )
+    private RaftIdFactory()
     {
-        super( uuid );
+    }
+
+    public static RaftId random()
+    {
+        return new RaftId( UUID.randomUUID() );
     }
 }

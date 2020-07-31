@@ -5,9 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery.akka.directory
 
+import java.util.UUID
+
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
-import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
@@ -19,10 +20,10 @@ class ReplicatedLeaderInfoTest extends NeoSuite {
 
    "prefer higher term LeaderInfo values when merging" in {
      Given("High term leader info")
-     val leaderInfoHigh = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),2L))
+     val leaderInfoHigh = new ReplicatedLeaderInfo(new LeaderInfo(new MemberId(UUID.randomUUID),2L))
 
      And("Low term leader info")
-     val leaderInfoLow = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),1L))
+     val leaderInfoLow = new ReplicatedLeaderInfo(new LeaderInfo(new MemberId(UUID.randomUUID),1L))
 
      When("Merging low into high")
 
@@ -36,10 +37,10 @@ class ReplicatedLeaderInfoTest extends NeoSuite {
 
    "prefer stepping down LeaderInfo values when merging in the same term" in {
      Given("Stepping down leader info")
-     val steppingDownleaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),1L).stepDown())
+     val steppingDownleaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(new MemberId(UUID.randomUUID),1L).stepDown())
 
      And("Normal leaderInfo")
-     val leaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),1L))
+     val leaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(new MemberId(UUID.randomUUID),1L))
 
      When("Merging normal into stepping down")
 

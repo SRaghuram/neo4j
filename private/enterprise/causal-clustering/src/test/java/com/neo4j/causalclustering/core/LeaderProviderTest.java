@@ -5,29 +5,30 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.UUID;
+
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.core.consensus.LeaderLocator;
+import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class LeaderProviderTest
 {
     private NamedDatabaseId databaseId = DatabaseIdFactory.from( "system", UUID.randomUUID() );
-    private MemberId leaderFromRaft = IdFactory.randomMemberId();
-    private MemberId leaderFromDiscovery = IdFactory.randomMemberId();
+    private MemberId leaderFromRaft = new MemberId( UUID.randomUUID() );
+    private MemberId leaderFromDiscovery = new MemberId( UUID.randomUUID() );
 
     @Test
     void shouldReturnEmptyIfBothAreEmpty()

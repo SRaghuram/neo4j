@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 import org.junit.jupiter.api.Test;
 
@@ -82,7 +82,7 @@ class RaftMessageDispatcherTest
 
     private static RaftId newId()
     {
-        return IdFactory.randomRaftId();
+        return RaftIdFactory.random();
     }
 
     private static InboundRaftMessageContainer<RaftMessage> newMessage( RaftId id )

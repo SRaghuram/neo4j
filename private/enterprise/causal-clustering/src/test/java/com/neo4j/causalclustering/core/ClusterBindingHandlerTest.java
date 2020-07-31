@@ -6,8 +6,9 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -15,6 +16,7 @@ import org.mockito.Mockito;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 
 import org.neo4j.logging.NullLogProvider;
 
@@ -28,11 +30,11 @@ import static org.mockito.Mockito.verify;
 
 class ClusterBindingHandlerTest
 {
-    private RaftId raftId = IdFactory.randomRaftId();
+    private RaftId raftId = RaftIdFactory.random();
 
     private RaftMessages.InboundRaftMessageContainer<?> heartbeat =
             RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId,
-                                                         new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 0L, 0, 0 ) );
+                                                         new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0L, 0, 0 ) );
 
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
@@ -72,8 +74,8 @@ class ClusterBindingHandlerTest
 
         // when
         handler.handle( RaftMessages.InboundRaftMessageContainer.of(
-                Instant.now(), IdFactory.randomRaftId(),
-                new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 0L, 0, 0 )
+                Instant.now(), RaftIdFactory.random(),
+                new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0L, 0, 0 )
         ) );
 
         // then

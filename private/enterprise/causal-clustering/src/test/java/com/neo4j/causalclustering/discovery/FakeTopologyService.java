@@ -291,7 +291,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     public static MemberId memberId( int seed )
     {
         var rng = new Random( seed );
-        return MemberId.of( new UUID( rng.nextLong(), rng.nextLong() ) );
+        return new MemberId( new UUID( rng.nextLong(), rng.nextLong() ) );
     }
 
     public static Set<MemberId> memberIds( int from, int until )

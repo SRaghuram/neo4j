@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinde
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
-import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +55,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState.INITIAL_LEASE_STATE;
 import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
+import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
@@ -410,6 +410,6 @@ class RaftBootstrapperIT
 
     private static MemberId randomMember()
     {
-        return IdFactory.randomMemberId();
+        return new MemberId( randomUUID() );
     }
 }

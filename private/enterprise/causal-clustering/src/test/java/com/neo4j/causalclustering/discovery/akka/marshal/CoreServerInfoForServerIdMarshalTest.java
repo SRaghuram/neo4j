@@ -7,10 +7,11 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
-import com.neo4j.causalclustering.identity.IdFactory;
 
 import java.util.Collection;
+import java.util.UUID;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.marshal.ChannelMarshal;
 
 import static java.util.Collections.singletonList;
@@ -20,7 +21,7 @@ class CoreServerInfoForServerIdMarshalTest extends BaseMarshalTest<CoreServerInf
     @Override
     Collection<CoreServerInfoForServerId> originals()
     {
-        return singletonList( new CoreServerInfoForServerId( IdFactory.randomServerId(), TestTopology.addressesForCore( 1, false ) ) );
+        return singletonList( new CoreServerInfoForServerId( new ServerId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ) );
     }
 
     @Override

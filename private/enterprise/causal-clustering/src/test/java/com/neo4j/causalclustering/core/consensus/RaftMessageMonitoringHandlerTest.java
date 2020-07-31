@@ -5,8 +5,9 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.mockito.Mockito;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
@@ -33,7 +35,7 @@ class RaftMessageMonitoringHandlerTest
     private Duration messageQueueDelay = Duration.ofMillis( 5 );
     private Duration messageProcessingDelay = Duration.ofMillis( 7 );
     private RaftMessages.InboundRaftMessageContainer<?> message = RaftMessages.InboundRaftMessageContainer.of(
-            now.minus( messageQueueDelay ), IdFactory.randomRaftId(), new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 0, 0, 0 )
+            now.minus( messageQueueDelay ), RaftIdFactory.random(), new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0, 0, 0 )
     );
     private Clock clock = Clocks.tickOnAccessClock( now, messageProcessingDelay );
 
@@ -79,7 +81,7 @@ class RaftMessageMonitoringHandlerTest
     void shouldDelegateStart() throws Throwable
     {
         // given
-        RaftId raftId = IdFactory.randomRaftId();
+        RaftId raftId = RaftIdFactory.random();
 
         // when
         handler.start( raftId );

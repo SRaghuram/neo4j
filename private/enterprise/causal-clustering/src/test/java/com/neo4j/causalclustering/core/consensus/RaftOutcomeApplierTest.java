@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import org.junit.jupiter.api.Test;
@@ -21,6 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -68,7 +68,8 @@ class RaftOutcomeApplierTest
     @Test
     void shouldSendMessages() throws IOException
     {
-        var outgoingMessages = Stream.generate( IdFactory::randomMemberId )
+        var outgoingMessages = Stream.generate( UUID::randomUUID )
+                .map( MemberId::new )
                 .map( member -> new RaftMessages.Directed( member, null ) )
                 .limit( 3 )
                 .collect( Collectors.toList() );
@@ -223,7 +224,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotifyLeaderChangesIfNewLeader() throws IOException
     {
-        when( raftState.leader() ).thenReturn( IdFactory.randomMemberId() );
+        when( raftState.leader() ).thenReturn( new MemberId( UUID.randomUUID() ) );
         var outcome = outcomeTestBuilder.build();
         var listener = mock( LeaderListener.class );
         raftOutcomeApplier.registerListener( listener );
@@ -236,7 +237,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotNotifyLeaderChangesIfNoNewLeader() throws IOException
     {
-        MemberId leader = IdFactory.randomMemberId();
+        MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( leader );
         var outcome = outcomeTestBuilder.setLeader( leader ).build();
         var listener = mock( LeaderListener.class );
@@ -251,7 +252,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotifyLeaderChangesIfNullNewLeader() throws IOException
     {
-        MemberId leader = IdFactory.randomMemberId();
+        MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( leader );
         var outcome = outcomeTestBuilder.setLeader( null ).build();
         var listener = mock( LeaderListener.class );
@@ -274,7 +275,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotifyLeaderChangesIfNullOldLeader() throws IOException
     {
-        MemberId leader = IdFactory.randomMemberId();
+        MemberId leader = new MemberId( UUID.randomUUID() );
         when( raftState.leader() ).thenReturn( null );
         var outcome = outcomeTestBuilder.setLeader( leader ).build();
         var listener = mock( LeaderListener.class );
@@ -319,7 +320,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldChangeMembershipManagerStateIfTransferringLeadership() throws IOException
     {
-        var transferTarget = IdFactory.randomMemberId();
+        var transferTarget = new MemberId( UUID.randomUUID() );
         var outcome = outcomeTestBuilder.setRole( Role.LEADER )
                                         .startTransferringLeadership( transferTarget )
                                         .build();
@@ -333,7 +334,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotChangeMembershipManagerStateIfNextRoleIsNotLeader() throws IOException
     {
-        var transferTarget = IdFactory.randomMemberId();
+        var transferTarget = new MemberId( UUID.randomUUID() );
         var outcome = outcomeTestBuilder.setRole( Role.FOLLOWER )
                                         .startTransferringLeadership( transferTarget )
                                         .build();

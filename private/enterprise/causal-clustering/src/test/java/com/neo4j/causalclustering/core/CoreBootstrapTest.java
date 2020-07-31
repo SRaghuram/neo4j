@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusterInternalDbmsOperator.BootstrappingHandle;
@@ -50,7 +50,7 @@ class CoreBootstrapTest
     private final TempBootstrapDir tempBootstrapDir = mock( TempBootstrapDir.class );
 
     private final NamedDatabaseId databaseId = databaseIdRepository.getRaw( "foo" );
-    private final RaftId raftId = IdFactory.randomRaftId();
+    private final RaftId raftId = RaftIdFactory.random();
     private InMemorySimpleStorage raftIdStorage = mock(InMemorySimpleStorage.class);
 
     @BeforeEach

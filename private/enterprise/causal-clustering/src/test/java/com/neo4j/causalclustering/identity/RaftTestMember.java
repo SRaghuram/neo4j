@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class RaftTestMember
 {
@@ -20,12 +21,12 @@ public class RaftTestMember
 
     public static MemberId member( int id )
     {
-        return testMembers.computeIfAbsent( id, k -> IdFactory.randomMemberId() );
+        return testMembers.computeIfAbsent( id, k -> new MemberId( UUID.randomUUID() ) );
     }
 
     public static LeaderInfo leader( int id, long term )
     {
-        var member = testMembers.computeIfAbsent( id, k -> IdFactory.randomMemberId() );
+        var member = testMembers.computeIfAbsent( id, k -> new MemberId( UUID.randomUUID() ) );
         return new LeaderInfo( member, term );
     }
 }

@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -23,6 +23,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
@@ -151,8 +152,8 @@ class AkkaCoreTopologyServiceTest
         var databaseId1 = randomNamedDatabaseId();
         var databaseId2 = randomNamedDatabaseId();
 
-        var memberId1 = IdFactory.randomMemberId();
-        var memberId2 = IdFactory.randomMemberId();
+        var memberId1 = new MemberId( UUID.randomUUID() );
+        var memberId2 = new MemberId( UUID.randomUUID() );
 
         var leaderInfo1 = new LeaderInfo( memberId1, 1 );
         var leaderInfo2 = new LeaderInfo( memberId2, 2 );
@@ -171,7 +172,7 @@ class AkkaCoreTopologyServiceTest
     void shouldReturnRoleForRemoteLeader()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
+        var leaderId = new MemberId( UUID.randomUUID() );
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId );
 
@@ -182,9 +183,9 @@ class AkkaCoreTopologyServiceTest
     void shouldReturnRoleForFollower()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
-        var followerId1 = IdFactory.randomMemberId();
-        var followerId2 = IdFactory.randomMemberId();
+        var leaderId = new MemberId( UUID.randomUUID() );
+        var followerId1 = new MemberId( UUID.randomUUID() );
+        var followerId2 = new MemberId( UUID.randomUUID() );
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId1, followerId2 );
 
@@ -199,8 +200,8 @@ class AkkaCoreTopologyServiceTest
         var knownDatabaseId = randomNamedDatabaseId();
         var unknownDatabaseId = randomNamedDatabaseId();
 
-        var leaderId = IdFactory.randomMemberId();
-        var followerId = IdFactory.randomMemberId();
+        var leaderId = new MemberId( UUID.randomUUID() );
+        var followerId = new MemberId( UUID.randomUUID() );
 
         setupCoreTopologyState( service.topologyState(), knownDatabaseId, leaderId, followerId );
 
@@ -212,9 +213,9 @@ class AkkaCoreTopologyServiceTest
     void shouldReturnRoleForUnknownMemberId()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
-        var followerId = IdFactory.randomMemberId();
-        var unknownId = IdFactory.randomMemberId();
+        var leaderId = new MemberId( UUID.randomUUID() );
+        var followerId = new MemberId( UUID.randomUUID() );
+        var unknownId = new MemberId( UUID.randomUUID() );
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId );
 
@@ -225,7 +226,7 @@ class AkkaCoreTopologyServiceTest
     void shouldReturnRoleWhenDatabaseStopped()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
+        var leaderId = new MemberId( UUID.randomUUID() );
         var leaderInfo = new LeaderInfo( leaderId, 1 );
 
         service.setLeader( leaderInfo, databaseId );
@@ -327,9 +328,9 @@ class AkkaCoreTopologyServiceTest
     private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception
     {
         var databaseId = randomNamedDatabaseId();
-        var memberId1 = IdFactory.randomMemberId();
-        var memberId2 = IdFactory.randomMemberId();
-        var memberId3 = IdFactory.randomMemberId();
+        var memberId1 = new MemberId( UUID.randomUUID() );
+        var memberId2 = new MemberId( UUID.randomUUID() );
+        var memberId3 = new MemberId( UUID.randomUUID() );
 
         service.init();
         service.start();

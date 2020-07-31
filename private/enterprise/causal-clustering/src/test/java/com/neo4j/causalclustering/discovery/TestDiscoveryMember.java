@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
-import com.neo4j.causalclustering.identity.IdFactory;
 
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.identity.ServerId;
@@ -23,7 +23,7 @@ public class TestDiscoveryMember implements DiscoveryMember
 
     public TestDiscoveryMember()
     {
-        this( IdFactory.randomServerId() );
+        this( new ServerId( UUID.randomUUID() ) );
     }
 
     public TestDiscoveryMember( ServerId memberId )

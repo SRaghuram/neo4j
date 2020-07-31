@@ -46,6 +46,7 @@ import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
+import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -75,7 +76,7 @@ class RaftBinderTest
 
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-    private final MemberId myIdentity = IdFactory.randomMemberId();
+    private final MemberId myIdentity = new MemberId( randomUUID() );
 
     private Set<UUID> extractMemberUUIDs( Map<MemberId,CoreServerInfo> members )
     {
@@ -132,7 +133,7 @@ class RaftBinderTest
     void shouldThrowOnRaftIdDatabaseIdMismatch()
     {
         // given
-        var previouslyBoundRaftId = IdFactory.randomRaftId();
+        var previouslyBoundRaftId = RaftIdFactory.random();
 
         var raftIdStorage = new InMemorySimpleStorage<RaftId>();
         raftIdStorage.writeState( previouslyBoundRaftId );
@@ -263,7 +264,7 @@ class RaftBinderTest
         // given
         var namedDatabaseId = randomNamedDatabaseId();
         var members = IntStream.range( 0, minCoreHosts ).boxed().collect( Collectors.toMap(
-                        i -> IdFactory.randomMemberId(),
+                        i -> new MemberId( randomUUID() ),
                         i -> addressesForCore( i, false, singleton( namedDatabaseId.databaseId() ) ) ) );
 
         var bootstrappableTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), null, members );
@@ -294,7 +295,7 @@ class RaftBinderTest
         // given
         var namedDatabaseId = randomNamedDatabaseId();
         var members = IntStream.range( 0, minCoreHosts ).boxed().collect( Collectors.toMap(
-                i -> IdFactory.randomMemberId(),
+                i -> new MemberId( randomUUID() ),
                 i -> addressesForCore( i, false, singleton( namedDatabaseId.databaseId() ) ) ) );
 
         var bootstrappableTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), null, members );
@@ -330,7 +331,7 @@ class RaftBinderTest
     {
         // given
         var topologyMembers = IntStream.range( 0, minCoreHosts ).boxed()
-                .collect( Collectors.toMap( i -> IdFactory.randomMemberId(), i -> addressesForCore( i, false ) ) );
+                .collect( Collectors.toMap( i -> new MemberId( randomUUID() ), i -> addressesForCore( i, false ) ) );
 
         DatabaseCoreTopology topology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), null, topologyMembers );
 
@@ -368,7 +369,7 @@ class RaftBinderTest
     {
         // given
         Map<MemberId,CoreServerInfo> topologyMembers = IntStream.range( 0, minCoreHosts - 1 )
-                .mapToObj( i -> Pair.of( IdFactory.randomMemberId(), addressesForCore( i, false ) ) )
+                .mapToObj( i -> Pair.of( new MemberId( randomUUID() ), addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         topologyMembers.put( myIdentity, addressesForCore( minCoreHosts, false ) );

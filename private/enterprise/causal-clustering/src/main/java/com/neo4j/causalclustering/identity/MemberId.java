@@ -5,50 +5,57 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
-
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
+import org.neo4j.util.Id;
 
-/**
- * {@link MemberId} was historically used throughout causal clustering to identify:
- *     1. Neo4j servers (used in discovery, catchup and routing components).
- *     2. Membership of a Neo4j server in a raft group (used in raft components and state machines).
- *
- * In Neo4j 4.2 the {@link ServerId} interface was introduced to serve the first purpose for all editions.
- * Unfortunately, our use of MemberId as a server identifier (use 1.) is present in public api (such as
- * {@link UpstreamDatabaseSelectionStrategy}) and so cannot change until the next major version.
- *
- * As a result, we made the unintuitive decision to have MemberId extend ServerId.
- * This means that everywhere a ServerId is expected a MemberId can be used and our concrete
- * server identifier ({@link ClusteringServerId}) implements MemberId, not ServerId.
- *
- * Our prior use of MemberId to uniquely identify raft group membership (use 2.) does not exist
- * in public api. Therefore, our new concrete type {@link RaftMemberId} does *not* implement MemberId,
- * so that the compiler can prevent us from confusing the two.
- *
- * In the next major version of Neo4j, the intent is that all uses of MemberId will be replaced with ServerId.
- *
- * TL;DR Despite what the name suggests, implementers of MemberId uniquely identify Neo4j servers,
- * *not* raft group memberships. See ClusteringServerId and RaftMemberId for concrete types.
- */
-public interface MemberId extends ServerId
+import static java.lang.String.format;
+
+public class MemberId
 {
-    static MemberId of( UUID id )
+    private final Id id;
+
+    public MemberId( UUID uuid )
     {
-        return new ClusteringServerId( id );
+        id = new Id( uuid );
     }
 
-    @Deprecated
-    static MemberId of( ServerId id )
+    public UUID getUuid()
     {
-        return (id instanceof MemberId) ? (MemberId) id : MemberId.of( id.getUuid() );
+        return id.uuid();
+    }
+
+    @Override
+    public String toString()
+    {
+        return format( "MemberId{%s}", id );
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+
+        MemberId that = (MemberId) o;
+        return Objects.equals( id, that.id );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hashCode( id );
     }
 
     /**
@@ -58,7 +65,7 @@ public interface MemberId extends ServerId
      * │leastSignificantBits   8 bytes│
      * └──────────────────────────────┘
      */
-    class Marshal extends SafeStateMarshal<MemberId>
+    public static class Marshal extends SafeStateMarshal<MemberId>
     {
         public static final Marshal INSTANCE = new Marshal();
 
@@ -89,7 +96,7 @@ public interface MemberId extends ServerId
             {
                 long mostSigBits = channel.getLong();
                 long leastSigBits = channel.getLong();
-                return MemberId.of( new UUID( mostSigBits, leastSigBits ) );
+                return new MemberId( new UUID( mostSigBits, leastSigBits ) );
             }
         }
 

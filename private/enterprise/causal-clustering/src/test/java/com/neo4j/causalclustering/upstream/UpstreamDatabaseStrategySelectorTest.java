@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.upstream;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
@@ -18,6 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
@@ -28,9 +28,9 @@ import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
 import static org.neo4j.internal.helpers.collection.Iterables.iterable;
 
 public class UpstreamDatabaseStrategySelectorTest
@@ -45,7 +45,7 @@ public class UpstreamDatabaseStrategySelectorTest
         var badOne = new DummyUpstreamDatabaseSelectionStrategy();
         var anotherBadOne = new DummyUpstreamDatabaseSelectionStrategy();
         var goodOne = new DummyUpstreamDatabaseSelectionStrategy();
-        MemberId theMemberId = IdFactory.randomMemberId();
+        MemberId theMemberId = new MemberId( UUID.randomUUID() );
         goodOne.setMemberId( theMemberId );
 
         UpstreamDatabaseStrategySelector selector =
@@ -65,7 +65,7 @@ public class UpstreamDatabaseStrategySelectorTest
     {
         // given
         TopologyService topologyService = mock( TopologyService.class );
-        MemberId memberId = IdFactory.randomMemberId();
+        MemberId memberId = new MemberId( UUID.randomUUID() );
         when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) )
                 .thenReturn( new DatabaseCoreTopology( DATABASE_ID, RaftId.from( DATABASE_ID ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
@@ -88,7 +88,7 @@ public class UpstreamDatabaseStrategySelectorTest
     {
         // given
         TopologyService topologyService = mock( TopologyService.class );
-        MemberId memberId = IdFactory.randomMemberId();
+        MemberId memberId = new MemberId( UUID.randomUUID() );
         when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) ).thenReturn(
                 new DatabaseCoreTopology( DATABASE_ID, RaftId.from( DATABASE_ID ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
 
@@ -148,13 +148,13 @@ public class UpstreamDatabaseStrategySelectorTest
         @Override
         public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return Optional.of( IdFactory.randomMemberId() );
+            return Optional.of( new MemberId( UUID.randomUUID() ) );
         }
 
         @Override
         public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return List.of( IdFactory.randomMemberId() );
+            return List.of( new MemberId( UUID.randomUUID() ) );
         }
     }
 
@@ -169,13 +169,13 @@ public class UpstreamDatabaseStrategySelectorTest
         @Override
         public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return Optional.of( IdFactory.randomMemberId() );
+            return Optional.of( new MemberId( UUID.randomUUID() ) );
         }
 
         @Override
         public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return List.of( IdFactory.randomMemberId() );
+            return List.of( new MemberId( UUID.randomUUID() ) );
         }
     }
 }

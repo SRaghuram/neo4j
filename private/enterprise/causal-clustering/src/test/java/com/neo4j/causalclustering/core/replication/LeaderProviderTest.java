@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -13,6 +12,7 @@ import org.junit.jupiter.api.TestInstance;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -26,12 +26,13 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class LeaderProviderTest
 {
-    private static final MemberId MEMBER_ID = IdFactory.randomMemberId();
+    private static final MemberId MEMBER_ID = new MemberId( UUID.randomUUID() );
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
     @AfterAll

@@ -6,9 +6,10 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collection;
+import java.util.UUID;
 
 import org.neo4j.io.marshal.ChannelMarshal;
 
@@ -19,7 +20,7 @@ public class LeaderInfoMarshalTest extends BaseMarshalTest<LeaderInfo>
     @Override
     Collection<LeaderInfo> originals()
     {
-        return singletonList( new LeaderInfo( IdFactory.randomMemberId(), 12L ) );
+        return singletonList( new LeaderInfo( new MemberId( UUID.randomUUID() ), 12L ) );
     }
 
     @Override

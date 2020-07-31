@@ -25,7 +25,7 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -72,7 +72,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class RaftMessageEncoderDecoderTest
 {
-    private static final MemberId MEMBER_ID = IdFactory.randomMemberId();
+    private static final MemberId MEMBER_ID = new MemberId( UUID.randomUUID() );
 
     private static final List<ApplicationProtocolVersion> PROTOCOLS = ApplicationProtocols.withCategory( RAFT )
             .stream()
@@ -142,7 +142,7 @@ class RaftMessageEncoderDecoderTest
         assumeTrue( isSupported( raftProtocol, raftMessage ), format( "Message '%s' is not supported on this protocol '%s'", raftMessage, raftProtocol ) );
         setupChannels( raftProtocol );
 
-        var raftId = IdFactory.randomRaftId();
+        var raftId = RaftIdFactory.random();
         var outboundMessage = RaftMessages.OutboundRaftMessageContainer.of( raftId, raftMessage );
 
         outbound.writeOutbound( outboundMessage );

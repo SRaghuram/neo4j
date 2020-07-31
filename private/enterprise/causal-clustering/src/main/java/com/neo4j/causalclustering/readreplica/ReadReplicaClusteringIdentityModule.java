@@ -19,8 +19,9 @@ import org.neo4j.logging.LogProvider;
  * problems. This class is to replace as soon a solution for the discovery is found
  */
 @Deprecated
-public class ReadReplicaClusteringIdentityModule extends ClusteringIdentityModule
+public class ReadReplicaClusteringIdentityModule implements ClusteringIdentityModule
 {
+    private final ServerId serverId;
     private final MemberId memberId;
 
     public static ReadReplicaClusteringIdentityModule create( LogProvider logProvider )
@@ -31,15 +32,16 @@ public class ReadReplicaClusteringIdentityModule extends ClusteringIdentityModul
     private ReadReplicaClusteringIdentityModule( LogProvider logProvider )
     {
         var uuid = UUID.randomUUID();
-        memberId = MemberId.of( uuid );
+        serverId = new ServerId( uuid );
+        memberId = new MemberId( uuid );
         var log = logProvider.getLog( getClass() );
-        log.info( "Creating transient ServerID/MemberId for read replica: %s (%s)", memberId, uuid );
+        log.info( "Creating transient ServerID/MemberId for read replica: %s/%s (%s)", serverId, memberId, uuid );
     }
 
     @Override
     public ServerId myself()
     {
-        return memberId;
+        return serverId;
     }
 
     @Override

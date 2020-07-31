@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology
 
 import java.util.Collections
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.cluster.client.ClusterClient
@@ -27,7 +28,6 @@ import com.neo4j.causalclustering.discovery.akka.TopologyUpdateSink
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
-import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.causalclustering.identity.RaftId
 import com.neo4j.configuration.CausalClusteringSettings
@@ -69,8 +69,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
         val dbId = randomNamedDatabaseId().databaseId()
         val raftId = RaftId.from(dbId)
         val newCoreTopology = new DatabaseCoreTopology(dbId, raftId, Map(
-                                            IdFactory.randomMemberId() -> TestTopology.addressesForCore(0, false),
-                                            IdFactory.randomMemberId() -> TestTopology.addressesForCore(1, false)
+                                            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
+                                            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)
                                           ).asJava)
 
         When("incoming topology")
@@ -86,8 +86,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
         val newRRTopology = new DatabaseReadReplicaTopology(randomNamedDatabaseId().databaseId(), Map(
-                          IdFactory.randomMemberId() -> TestTopology.addressesForReadReplica(0),
-                          IdFactory.randomMemberId() -> TestTopology.addressesForReadReplica(1)
+                          new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
+                          new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
                         ).asJava )
 
         When("incoming topology")
@@ -103,8 +103,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming leaders" in new Fixture {
         Given("new leaders")
         val newLeaders = new LeaderInfoDirectoryMessage(Map[DatabaseId,LeaderInfo](
-                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(IdFactory.randomMemberId(), 1),
-                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(IdFactory.randomMemberId(), 2)
+                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 1),
+                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 2)
                   ).asJava)
 
         When("incoming topology")
@@ -196,7 +196,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       .to(Sink.foreach(updateSink.onDbStateUpdate))
       .run(materializer)
 
-    val serverId = IdFactory.randomServerId()
+    val serverId = new ServerId(UUID.randomUUID())
 
     val databaseIds = Set(randomNamedDatabaseId(), randomNamedDatabaseId(), randomNamedDatabaseId())
 

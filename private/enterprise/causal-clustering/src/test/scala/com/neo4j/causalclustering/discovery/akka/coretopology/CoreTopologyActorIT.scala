@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util
 import java.util.Collections
+import java.util.UUID
 
 import akka.actor.Address
 import akka.cluster.Cluster
@@ -27,7 +28,6 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
-import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.causalclustering.identity.RaftId
 import org.mockito.ArgumentMatchers
@@ -119,7 +119,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           makeTopologyActorKnowAboutCoreMember()
 
           val otherDatabaseId = randomNamedDatabaseId().databaseId()
-          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(IdFactory.randomMemberId() -> coreServerInfo(42)).asJava)
+          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(new MemberId(UUID.randomUUID()) -> coreServerInfo(42)).asJava)
           val emptyTopology = new DatabaseCoreTopology(databaseId, raftId, Map.empty[MemberId, CoreServerInfo].asJava)
 
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(otherDatabaseId), any(), any(), any())).thenReturn(otherTopology)
@@ -216,8 +216,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
     val topologyBuilder = mock[TopologyBuilder]
     val expectedCoreTopology = new DatabaseCoreTopology(databaseId, raftId, Map(
-                        IdFactory.randomMemberId() -> coreServerInfo(0),
-                        IdFactory.randomMemberId() -> coreServerInfo(1)
+                        new MemberId(UUID.randomUUID()) -> coreServerInfo(0),
+                        new MemberId(UUID.randomUUID()) -> coreServerInfo(1)
                       ).asJava)
     Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
       .thenReturn(expectedCoreTopology)
@@ -255,7 +255,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     def newMetadataMessage(databaseId: DatabaseId = databaseId): MetadataMessage = {
-      val info = new CoreServerInfoForServerId(IdFactory.randomServerId(), coreServerInfo(1, databaseId))
+      val info = new CoreServerInfoForServerId(new ServerId(UUID.randomUUID()), coreServerInfo(1, databaseId))
       val metadata = Map(UniqueAddress(Address("protocol", "system"), 1L) -> info).asJava
       new MetadataMessage(metadata)
     }

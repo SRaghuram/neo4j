@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
+import java.util.UUID
+
 import akka.actor
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.CurrentClusterState
@@ -14,8 +16,7 @@ import akka.cluster.UniqueAddress
 import akka.cluster.ddata.LWWMap
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.TestTopology
-import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.causalclustering.identity.ClusteringIdentityModuleImpl
 import com.neo4j.causalclustering.identity.RaftId
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -95,7 +96,8 @@ class TopologyBuilderTest
     "correctly associate cluster members and meta data by unique address" in new Fixture {
       val clusterMembers = clusterState(4)
       val metadata = memberMetaData(4, 2)
-      val expected = clusterMembers.members.asScala.flatMap(m => metadata.getOpt(m.uniqueAddress).asScala).map(_.serverId).map(MemberId.of)
+      val expected = clusterMembers.members.asScala.flatMap(m => metadata.getOpt(m.uniqueAddress).asScala ).map(_.serverId)
+        .map(ClusteringIdentityModuleImpl.fromServerId)
       val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterMembers, metadata)
       topology.members().keySet() should contain theSameElementsAs expected
     }
@@ -134,7 +136,7 @@ class TopologyBuilderTest
     def memberMetaData(n: Int, from: Int = 0, refusesToBeLeader: Int => Boolean = _ => false, databaseId: DatabaseId = databaseId ): MetadataMessage = {
       val coreServerInfoStream = Stream.from(from)
         .map(i => TestTopology.addressesForCore(i, refusesToBeLeader(i), Set[DatabaseId](databaseId).asJava))
-        .map(info => new CoreServerInfoForServerId(IdFactory.randomServerId(), info))
+        .map(info => new CoreServerInfoForServerId(new ServerId(UUID.randomUUID()), info))
 
       val addressWithInfo = uniqueAddressStreamFrom(from).zip(coreServerInfoStream).take(n)
 

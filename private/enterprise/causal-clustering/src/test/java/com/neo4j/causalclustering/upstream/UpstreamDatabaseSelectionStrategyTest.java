@@ -5,12 +5,13 @@
  */
 package com.neo4j.causalclustering.upstream;
 
-import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.UUID;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -25,7 +26,7 @@ public class UpstreamDatabaseSelectionStrategyTest
     void upstreamMembersShouldWrapWrapOptionalByDefault() throws UpstreamDatabaseSelectionException
     {
         // given
-        var memberId = IdFactory.randomMemberId();
+        var memberId = new MemberId( UUID.randomUUID() );
         var populatedStrategy = new StubStrategy( memberId );
         var emptyStrategy = new StubStrategy( null );
 

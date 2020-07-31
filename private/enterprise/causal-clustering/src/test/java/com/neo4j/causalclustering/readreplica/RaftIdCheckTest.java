@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -20,7 +20,7 @@ class RaftIdCheckTest
     {
         // given
         var databaseId = randomNamedDatabaseId();
-        var raftId = IdFactory.randomRaftId();
+        var raftId = RaftIdFactory.random();
 
         var raftIdStorage = new InMemorySimpleStorage<RaftId>();
         raftIdStorage.writeState( raftId );

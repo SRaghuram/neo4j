@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
-import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.state.SimpleFileStorage;
@@ -36,7 +36,7 @@ class SimpleStorageTest
         SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), INSTANCE );
 
         // when
-        MemberId idA = IdFactory.randomMemberId();
+        MemberId idA = new MemberId( UUID.randomUUID() );
         storage.writeState( idA );
         MemberId idB = storage.readState();
 

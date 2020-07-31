@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
 import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +24,7 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 import java.time.Instant;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -61,11 +62,11 @@ class BatchingMessageHandlerTest
     private final Instant now = Instant.now();
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<InboundRaftMessageContainer<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
-    private RaftId localRaftId = IdFactory.randomRaftId();
+    private RaftId localRaftId = RaftIdFactory.random();
     private final LimitingScheduler jobScheduler = mock( LimitingScheduler.class );
 
     private ExecutorService executor;
-    private MemberId leader = IdFactory.randomMemberId();
+    private MemberId leader = new MemberId( UUID.randomUUID() );
 
     @BeforeEach
     void before()
@@ -405,7 +406,7 @@ class BatchingMessageHandlerTest
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                                                                           BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
-        RaftId raftId = IdFactory.randomRaftId();
+        RaftId raftId = RaftIdFactory.random();
 
         // when
         batchHandler.start( raftId );
@@ -477,7 +478,7 @@ class BatchingMessageHandlerTest
             }
         };
 
-        RaftId raftId = IdFactory.randomRaftId();
+        RaftId raftId = RaftIdFactory.random();
         var jobScheduler = new ThreadPoolJobScheduler( executor );
         var scheduler = new LimitingScheduler( jobScheduler, Group.RAFT_HANDLER, NullLogProvider.getInstance().getLog( this.getClass() ),
                 new ReoccurringJobQueue<>() );

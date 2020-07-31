@@ -26,7 +26,7 @@ class RaftIdMarshalTest
     void shouldMarshalRaftId() throws Throwable
     {
         // given
-        RaftId original = IdFactory.randomRaftId();
+        RaftId original = RaftIdFactory.random();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         // when

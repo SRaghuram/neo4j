@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +18,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.state.SimpleStorage;
@@ -62,10 +63,10 @@ class DumpClusterStateTest
     {
         // given
         int numClusterStateItems = 8;
-        MemberId nonDefaultMember = IdFactory.randomMemberId();
+        MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
         TermState nonDefaultTermState = new TermState();
         nonDefaultTermState.update( 1L );
-        RaftId nonDefaultRaftId = IdFactory.randomRaftId();
+        RaftId nonDefaultRaftId = RaftIdFactory.random();
         createStates( nonDefaultMember, nonDefaultRaftId, nonDefaultTermState );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DumpClusterState dumpTool = new DumpClusterState( testDirectory.getFileSystem(), dataDir, new PrintStream( out ), DEFAULT_DATABASE_NAME );

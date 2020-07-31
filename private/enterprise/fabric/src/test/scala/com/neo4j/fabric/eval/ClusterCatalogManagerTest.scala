@@ -55,8 +55,8 @@ class ClusterCatalogManagerTest extends FabricTest {
 
   private val internalDbs = Set(intA, intB, mega)
 
-  private val myId = MemberId.of(UUID.randomUUID())
-  private val remoteId = MemberId.of(UUID.randomUUID())
+  private val myId = new MemberId(UUID.randomUUID())
+  private val remoteId = new MemberId(UUID.randomUUID())
   private val remoteAddress = new SocketAddress("remote", 1234)
   private val remoteAddresses = Map(remoteId -> remoteAddress)
   private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
