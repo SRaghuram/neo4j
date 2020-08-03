@@ -27,6 +27,7 @@ import org.neo4j.graphdb.impl.notification.NotificationCode.REPEATED_REL_IN_PATT
 import org.neo4j.graphdb.impl.notification.NotificationCode.RUNTIME_UNSUPPORTED
 import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY
 import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY
+import org.neo4j.graphdb.impl.notification.NotificationCode.SUBQUERY_VARIABLE_SHADOWING
 import org.neo4j.graphdb.impl.notification.NotificationCode.UNBOUNDED_SHORTEST_PATH
 import org.neo4j.graphdb.impl.notification.NotificationDetail
 import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.bindingVarLengthRelationship
@@ -679,6 +680,14 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications should contain(REPEATED_REL_IN_PATTERN_EXPRESSION.notification(
       new graphdb.InputPosition(37, 1, 38),
       NotificationDetail.Factory.repeatedRel("r")))
+  }
+
+  test("should warn about variable shadowing in a subquery") {
+    val query = "EXPLAIN MATCH (n) CALL { MATCH (n)--(m) RETURN m } RETURN *"
+    val result = executeSingle(query, Map.empty)
+    result.notifications should contain(SUBQUERY_VARIABLE_SHADOWING.notification(
+      new graphdb.InputPosition(32, 1, 33),
+      NotificationDetail.Factory.shadowingVariable("n")))
   }
 }
 
