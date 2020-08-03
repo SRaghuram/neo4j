@@ -45,6 +45,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.dbHits
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallOperator.createProcedureCallContext
 import org.neo4j.cypher.internal.runtime.pipelined.procedures.Procedures
@@ -53,6 +54,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIn
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.result.OperatorProfile
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
 import org.neo4j.values.AnyValue
@@ -102,6 +104,11 @@ class ProcedureCallMiddleOperator(val workIdentity: WorkIdentity,
       callMode.callProcedure(state.query, signature.id, argValues, createProcedureCallContext(state.query, originalVariables))
     }
   }
+
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = if (event != null) {
+    //this marks the number of db hits as uncertain
+    event.dbHits(OperatorProfile.NO_DATA)
+  }
 }
 
 class ProcedureCallTask(inputMorsel: Morsel,
@@ -136,7 +143,12 @@ class ProcedureCallTask(inputMorsel: Morsel,
     }
   }
 
-  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+    if (event != null) {
+      //this marks the number of db hits as uncertain
+      event.dbHits(OperatorProfile.NO_DATA)
+    }
+  }
 
   override protected def closeInnerLoop(resources: QueryResources): Unit = {
     iterator = null
@@ -246,7 +258,13 @@ class VoidProcedureOperatorTemplate(val inner: OperatorTaskTemplate,
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      //this marks the number of db hits as uncertain
+      dbHits(event, constant(-1L) ),
+      inner.genSetExecutionEvent(event)
+    )
+  }
 }
 
 class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
@@ -268,14 +286,19 @@ class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val nextVar = field[Array[AnyValue]](codeGen.namer.nextVariableName("next"))
   private val callArgumentsGenerator = createArgsWithDefaultValue(args, signature, codeGen)
 
-
   override final def scopeId: String = "procedureCall" + id.x
 
   override def genMoreFields: Seq[Field] = Seq(iteratorField, callModeField, originalVariablesField, nextVar)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      //this marks the number of db hits as uncertain
+      dbHits(event, constant(-1L) ),
+      inner.genSetExecutionEvent(event)
+    )
+  }
 
   override def genExpressions: Seq[IntermediateExpression] = argExpression
 

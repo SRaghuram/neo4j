@@ -343,7 +343,8 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
                                 resources: QueryResources): OperatorTask = this
 
   // stateless operators by definition do not hold cursors
-  final override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+  //however a void procedure call might internally access database
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 }
 
 /**
