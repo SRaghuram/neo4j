@@ -12,6 +12,7 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
+import com.neo4j.server.security.enterprise.systemgraph.FlatfileRealm;
 import com.neo4j.server.security.enterprise.auth.InClusterAuthManager;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
@@ -56,6 +57,7 @@ import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
@@ -186,7 +188,9 @@ public class EnterpriseSecurityModule extends SecurityModule
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        SystemGraphRealm internalRealm = createSystemGraphRealm( config, systemSupplier );
+        AuthenticationStrategy strategy = CommunitySecurityModule.createAuthenticationStrategy( config );
+
+                SystemGraphRealm internalRealm = createSystemGraphRealm( strategy, systemSupplier );
         realms.add( internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -213,8 +217,12 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         inClusterAuthManager = new InClusterAuthManager( internalRealm, securityLog, logAuthSuccess, defaultDatabase );
 
-        return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config, cacheFactory ),
-                securityLog, config.get( SecuritySettings.security_log_successful_authentication ), config.get( GraphDatabaseSettings.default_database ) );
+        if ( config.get( SecurityInternalSettings.restrict_upgrade ) )
+        {
+            orderedActiveRealms.add( 0, new FlatfileRealm( strategy, config.get( SecurityInternalSettings.upgrade_username ),
+                                                           getOperatorUserRepository( config, logProvider, fileSystem ) ) );
+        }
+        return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config, cacheFactory ), securityLog, config );
     }
 
     private SecurityConfig getValidatedSecurityConfig( Config config )
@@ -250,11 +258,11 @@ public class EnterpriseSecurityModule extends SecurityModule
         return new EnterpriseSecurityGraphComponent( securityLog, migrationRoleRepository, defaultAdminRepository, config );
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config, Supplier<GraphDatabaseService> systemSupplier )
+    private SystemGraphRealm createSystemGraphRealm( AuthenticationStrategy strategy, Supplier<GraphDatabaseService> systemSupplier )
     {
         return new SystemGraphRealm(
                 new SystemGraphRealmHelper( systemSupplier, secureHasher ),
-                CommunitySecurityModule.createAuthenticationStrategy( config ),
+                strategy,
                 securityConfig.nativeAuthentication,
                 securityConfig.nativeAuthorization,
                 enterpriseSecurityGraphComponent

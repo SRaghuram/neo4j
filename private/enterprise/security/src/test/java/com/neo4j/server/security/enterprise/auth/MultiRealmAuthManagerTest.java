@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.Map;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -66,8 +69,11 @@ class MultiRealmAuthManagerTest
         realmHelper = spy( new SystemGraphRealmHelper( null, new SecureHasher() ) );
         SystemGraphRealm realm = new SystemGraphRealm( realmHelper, authStrategy, true, true, mock( EnterpriseSecurityGraphComponent.class ) );
 
+        Config config = Config.defaults();
+        config.set( SecuritySettings.security_log_successful_authentication, logSuccessfulAuthentications );
+
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
-                new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications, DEFAULT_DATABASE_NAME );
+                new SecurityLog( logProvider.getLog( this.getClass() ) ), config );
 
         manager.init();
         return manager;

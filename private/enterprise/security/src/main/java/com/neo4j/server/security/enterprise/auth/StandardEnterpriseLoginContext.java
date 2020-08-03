@@ -113,7 +113,10 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             Collection<String> roles = authInfo.getRoles();
             return roles == null ? Stream.empty() : roles.stream();
         } ).collect( Collectors.toSet() );
-        collection.add( PredefinedRoles.PUBLIC );
+        if ( authManager.shouldGetPublicRole( shiroSubject.getPrincipal() ) )
+        {
+            collection.add( PredefinedRoles.PUBLIC );
+        }
         return collection;
     }
 

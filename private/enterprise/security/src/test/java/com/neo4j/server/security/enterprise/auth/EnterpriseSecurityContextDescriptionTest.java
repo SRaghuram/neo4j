@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.Set;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -50,8 +52,9 @@ class EnterpriseSecurityContextDescriptionTest
         realm = mock(SystemGraphRealm.class);
         when( realm.doGetAuthenticationInfo( any() ) ).thenReturn( new ShiroAuthenticationInfo( "mats", "SystemGraphRealm", AuthenticationResult.SUCCESS ) );
         when( realm.supports( any() ) ).thenReturn( true );
-        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false,
-                DEFAULT_DATABASE_NAME );
+
+        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ),
+                                                 Config.defaults() );
         authManager.start();
         principals = new SimplePrincipalCollection( "mats", "SystemGraphRealm" );
     }

@@ -68,7 +68,7 @@ class LdapCachingTest
 
         authManager = new MultiRealmAuthManager( systemGraphRealm, Collections.singletonList( testRealm ),
                                                  new ShiroCaffeineCache.Manager( fakeTicker::read, 100, cacheFactory, 10, true ),
-                                                 securityLog, false, DEFAULT_DATABASE_NAME );
+                                                 securityLog, Config.defaults() );
         authManager.init();
         authManager.start();
     }

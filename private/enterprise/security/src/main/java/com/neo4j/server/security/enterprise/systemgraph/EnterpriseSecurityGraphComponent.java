@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -30,6 +31,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
@@ -122,6 +124,27 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
                 }
             }
         } );
+    }
+
+    @Override
+    protected void assertSystemGraphIntegrity( GraphDatabaseService system ) throws Exception
+    {
+        if ( config.get( SecurityInternalSettings.restrict_upgrade ) )
+        {
+            String upgradeUser = config.get( SecurityInternalSettings.upgrade_username );
+
+            try ( Transaction tx = system.beginTx() )
+            {
+                Node node = tx.findNode( USER_LABEL, "name", upgradeUser );
+                if ( node != null )
+                {
+                    throw new IllegalStateException( String.format( "The user specified by %s (%s) already exists in the system graph. " +
+                                                                    "Change the username or delete the user before restricting upgrade.",
+                                                                    SecurityInternalSettings.upgrade_username.name(),
+                                                                    upgradeUser) );
+                }
+            }
+        }
     }
 
     public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException

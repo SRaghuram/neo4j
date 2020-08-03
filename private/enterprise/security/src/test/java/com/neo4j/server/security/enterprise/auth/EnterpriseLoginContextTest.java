@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.Set;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -70,8 +71,8 @@ class EnterpriseLoginContextTest
         when( realm.supports( any() ) ).thenReturn( true );
         createPrivileges();
 
-        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false,
-                DEFAULT_DATABASE_NAME );
+        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ),
+                                                 Config.defaults() );
         authManager.start();
 
     }

@@ -10,6 +10,7 @@ import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.configuration.EnterpriseEditionSettings
+import com.neo4j.configuration.SecurityInternalSettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.Resource
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
@@ -185,7 +186,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case CreateUser(source, userName, password, requirePasswordChange, suspendedOptional) => (context, parameterMapping) =>
       val suspended = suspendedOptional.getOrElse(false)
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
-      makeCreateUserExecutionPlan(userName, password, requirePasswordChange, suspended)(sourcePlan, normalExecutionEngine)
+      val restrictedUsers = if (config.get(SecurityInternalSettings.restrict_upgrade)) Seq(config.get(SecurityInternalSettings.upgrade_username)) else Seq.empty
+      makeCreateUserExecutionPlan(userName, password, requirePasswordChange, suspended, restrictedUsers)(sourcePlan, normalExecutionEngine)
 
     // ALTER USER foo [SET PASSWORD pw] [CHANGE [NOT] REQUIRED] [SET STATUS ACTIVE]
     case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping) =>
