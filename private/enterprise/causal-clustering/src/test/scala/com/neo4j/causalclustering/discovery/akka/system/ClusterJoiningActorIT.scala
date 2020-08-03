@@ -39,7 +39,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
       "retry joining seed nodes" in new Fixture {
         actorRef ! JoinMessage.initial(false, Collections.emptyList())
 
-        awaitAssert(verify(cluster, Mockito.atLeast(2)).joinSeedNodes(initialDiscoveryMembersAsAddresses.asJava), max = defaultWaitTime + refresh)
+        awaitAssert(verify(cluster, Mockito.atLeast(2)).joinSeedNodes(initialDiscoveryMembersAsAddresses.asJava), max = defaultWaitTime * 2 + refresh)
       }
     }
     "initial message is rejoin" when {
