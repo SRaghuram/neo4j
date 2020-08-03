@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.logical.plans.RangeBetween
 import org.neo4j.cypher.internal.logical.plans.RangeGreaterThan
 import org.neo4j.cypher.internal.logical.plans.RangeLessThan
 import org.neo4j.cypher.internal.logical.plans.RangeQueryExpression
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.internal.logical.plans.SingleSeekableArg
 import org.neo4j.cypher.internal.logical.plans.Skip
@@ -45,6 +46,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
+import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
@@ -79,6 +81,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
@@ -99,6 +102,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.VoidProcedureOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
@@ -445,6 +449,32 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               tempRelationshipOffset,
               nodePredicate,
               relationshipPredicate)(ctx.expressionCompiler)
+
+        case plan@plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) if !parallelExecution =>
+          ctx: TemplateContext => {
+            if (call.signature.isVoid) {
+              new VoidProcedureOperatorTemplate(
+                ctx.inner,
+                plan.id,
+                callArguments,
+                signature,
+                ProcedureCallMode.fromAccessMode(signature.accessMode),
+                call.callResults.map(r => r.outputName).toArray)(ctx.expressionCompiler)
+            } else {
+              new ProcedureOperatorTaskTemplate(
+                ctx.inner,
+                plan.id,
+                ctx.innermost,
+                isHeadOperator,
+                callArguments,
+                signature,
+                ProcedureCallMode.fromAccessMode(signature.accessMode),
+                call.callResults.map(r => r.outputName).toArray,
+                call.callResultIndices.map {
+                  case (k, (n, _)) => (k, ctx.slotConfigurations.get(plan.id)(n).offset)
+                }.toArray)(ctx.expressionCompiler)
+            }
+          }
 
         case plan@plans.Selection(predicate, _) =>
           ctx: TemplateContext =>

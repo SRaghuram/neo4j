@@ -123,7 +123,9 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
       => !canFuseOneChildOperator(lp, outerApplyPlanId)
 
       case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates
-        =>  !call.signature.isVoid // Void procedures preserve cardinality and are non-breaking
+      =>
+        // Void procedures preserve cardinality and are always non-breaking
+        !call.signature.isVoid && !canFuseOneChildOperator(lp, outerApplyPlanId)
 
       case _: ProduceResult |
            _: Limit |

@@ -81,6 +81,8 @@ object ProcedureCallOperator {
     val databaseId = qtx.transactionalContext.databaseId
     new ProcedureCallContext(originalVariables, true, databaseId.name(), databaseId.isSystemDatabase)
   }
+
+  val EMPTY_ARGS: Array[AnyValue] = Array.empty
 }
 
 class ProcedureCallMiddleOperator(val workIdentity: WorkIdentity,
@@ -141,6 +143,214 @@ class ProcedureCallTask(inputMorsel: Morsel,
   }
 
   override def canContinue: Boolean = iterator != null || inputCursor.onValidRow()
+}
+
+trait ProcedureCaller {
+  self => OperatorTaskTemplate
+
+  /**
+   * Compiles input args to ir and also handles default arguments by adding static constant fields for all default values.
+   */
+  def createArgsWithDefaultValue(args: Seq[expressions.Expression],
+                                 signature: ProcedureSignature,
+                                 codeGen: OperatorExpressionCompiler): Seq[() => IntermediateExpression] = args.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
+    case (Some(arg), _) => () =>
+      val v = compile(arg, codeGen)
+      v.copy(ir = nullCheckIfRequired(v))
+    case (_, Some(defaultValue)) => () =>
+      val defaultValueField = staticConstant[AnyValue](codeGen.namer.nextVariableName(), defaultValue)
+      IntermediateExpression(getStatic(defaultValueField),Seq(defaultValueField), Seq.empty, Set.empty, requireNullCheck = false)
+    case _ => throw new IllegalStateException("should have been caught by semantic checking")
+  }
+
+  def callProcedureWithSideEffect(callModeField: StaticField,
+                                  signature: ProcedureSignature,
+                                  originalVariablesField: StaticField,
+                                  argExpression: Array[IntermediateExpression]): IntermediateRepresentation =
+    callProcedure(callModeField, signature, originalVariablesField, argExpression, isSideEffect = true)
+
+  def callProcedure(callModeField: StaticField,
+                    signature: ProcedureSignature,
+                    originalVariablesField: StaticField,
+                    argExpression: Array[IntermediateExpression],
+                    isSideEffect: Boolean = false): IntermediateRepresentation = {
+    val invoker: (IntermediateRepresentation, Method, Seq[IntermediateRepresentation]) => IntermediateRepresentation =
+      if (isSideEffect) invokeSideEffect else invoke
+    invoker(
+      getStatic(callModeField),
+      method[ProcedureCallMode, Iterator[Array[AnyValue]], QueryContext, Int, Array[AnyValue], ProcedureCallContext]("callProcedure"),
+      Seq(DB_ACCESS,
+        constant(signature.id),
+        getProcedureArguments(argExpression),
+        invokeStatic(method[ProcedureCallOperator, ProcedureCallContext, QueryContext, Array[String]]("createProcedureCallContext"),
+          DB_ACCESS,
+          getStatic(originalVariablesField))))
+  }
+
+  private def getProcedureArguments(argExpression: Array[IntermediateExpression]): IntermediateRepresentation = {
+
+    if (argExpression.isEmpty) {
+      getStatic[Procedures, Array[AnyValue]]("EMPTY_ARGS")
+    } else {
+      arrayOf[AnyValue](argExpression.map(_.ir): _*)
+    }
+  }
+
+  private def compile(e: expressions.Expression, codeGen: OperatorExpressionCompiler): IntermediateExpression =
+    codeGen.compileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
+}
+
+/**
+ * Special case template for void procedures, using a void procedure is just adding a call to the procedure
+ * without affecting the cardinality of the results.
+ */
+class VoidProcedureOperatorTemplate(val inner: OperatorTaskTemplate,
+                                    override val id: Id,
+                                    args: Seq[expressions.Expression],
+                                    signature: ProcedureSignature,
+                                    callMode: ProcedureCallMode,
+                                    originalVariables: Array[String])
+                                   (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate with ProcedureCaller {
+  override def genInit: IntermediateRepresentation = {
+    inner.genInit
+  }
+  private val callArgumentsGenerator = createArgsWithDefaultValue(args, signature, codeGen)
+  private var argExpression: Array[IntermediateExpression] = _
+  private val callModeField: StaticField = staticConstant[ProcedureCallMode](codeGen.namer.nextVariableName("callMode"), callMode)
+  private val originalVariablesField: StaticField = staticConstant[Array[String]](codeGen.namer.nextVariableName("vars"), originalVariables)
+
+  override def genExpressions: Seq[IntermediateExpression] = argExpression
+
+  override def genOperate: IntermediateRepresentation = {
+    if (argExpression == null) {
+      argExpression = callArgumentsGenerator.map(_ ()).toArray
+    }
+    /**
+     * {{{
+     *   [callProcedure]
+     *   <inner>
+     * }}}
+     */
+    block(
+      callProcedureWithSideEffect(callModeField, signature, originalVariablesField, argExpression),
+      profileRow(id),
+      inner.genOperateWithExpressions
+    )
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+
+  override def genFields: Seq[Field] = Seq(callModeField, originalVariablesField)
+
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+}
+
+class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                    id: Id,
+                                    innermost: DelegateOperatorTaskTemplate,
+                                    isHead: Boolean,
+                                    args: Seq[expressions.Expression],
+                                    signature: ProcedureSignature,
+                                    callMode: ProcedureCallMode,
+                                    originalVariables: Array[String],
+                                    indexToOffset: Array[(Int, Int)])
+                                   (codeGen: OperatorExpressionCompiler)
+  extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) with ProcedureCaller {
+
+  private val iteratorField = field[Iterator[Array[AnyValue]]](codeGen.namer.nextVariableName("iterator"))
+  private val callModeField = staticConstant[ProcedureCallMode](codeGen.namer.nextVariableName("callMode"), callMode)
+  private val originalVariablesField = staticConstant[Array[String]](codeGen.namer.nextVariableName("vars"), originalVariables)
+  private var argExpression: Array[IntermediateExpression] = _
+  private val nextVar = field[Array[AnyValue]](codeGen.namer.nextVariableName("next"))
+  private val callArgumentsGenerator = createArgsWithDefaultValue(args, signature, codeGen)
+
+
+  override final def scopeId: String = "procedureCall" + id.x
+
+  override def genMoreFields: Seq[Field] = Seq(iteratorField, callModeField, originalVariablesField, nextVar)
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  override def genExpressions: Seq[IntermediateExpression] = argExpression
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    if (argExpression == null) {
+      argExpression = callArgumentsGenerator.map(_ ()).toArray
+    }
+
+    /**
+     * {{{
+     *   this.iterator = [callProcedure]
+     *   this.canContinue = this.iterator.hasNext()
+     *   if (this.canContinue) {
+     *    this.next = this.iterator.next()
+     *    profile(...)
+     *   }
+     *   true
+     * }}}
+     */
+    block(
+      setField(iteratorField, callProcedure(callModeField, signature, originalVariablesField, argExpression)),
+      setField(canContinue, invoke(loadField(iteratorField), method[Iterator[_], Boolean]("hasNext"))),
+      condition(loadField(canContinue)) {
+        block(
+          profileRow(id),
+          setField(nextVar, cast[Array[AnyValue]](invoke(loadField(iteratorField), method[Iterator[_], Object]("next"))))
+        )
+      },
+      constant(true)
+    )
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    /**
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     setRefAt(offset1, nextVar(0))
+     *     setRefAt(offset2, nextVar(1))
+     *     ....
+     *     << inner.genOperate >>
+     *     this.canContinue = this.iterator.hasNext()
+     *     if (this.canContinue) {
+     *      this.next = this.iterator.next()
+     *      profile(...)
+     *     }
+     *   }
+     * }}}
+     */
+    block(
+      loop(and(innermost.predicate, loadField(canContinue)))(
+        block(
+          codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs,
+            codeGen.inputSlotConfiguration.numberOfReferences),
+          block(indexToOffset.map {
+            case (index, offset) => codeGen.setRefAt(offset, arrayLoad(loadField(nextVar), index))
+          }: _*),
+          inner.genOperateWithExpressions,
+          doIfInnerCantContinue(
+            block(
+              innermost.setUnlessPastLimit(canContinue, invoke(loadField(iteratorField), method[Iterator[_], Boolean]("hasNext"))),
+              condition(loadField(canContinue)) {
+                block(
+                  profileRow(id),
+                  setField(nextVar, cast[Array[AnyValue]](invoke(loadField(iteratorField), method[Iterator[_], Object]("next"))))
+                )
+              }),
+          )
+        )
+      )
+    )
+  }
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    noop()
+  }
 }
 
 

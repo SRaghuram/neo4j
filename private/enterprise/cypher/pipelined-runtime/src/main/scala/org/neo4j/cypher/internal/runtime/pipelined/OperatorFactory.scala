@@ -649,7 +649,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           callArgumentCommands,
           call.callResults.map(r => r.outputName).toArray,
           call.callResultIndices.map {
-            case (k, (n, _)) => (k, (slots(n).offset))
+            case (k, (n, _)) => (k, slots(n).offset)
           }.toArray)
 
       case _ if slottedPipeBuilder.isDefined =>
