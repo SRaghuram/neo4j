@@ -5,11 +5,10 @@
  */
 package com.neo4j.causalclustering.core.consensus.vote;
 
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
 
 class VoteStateTest
 {
@@ -18,7 +17,7 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member = new MemberId( UUID.randomUUID() );
+        MemberId member = IdFactory.randomMemberId();
 
         // when
         voteState.update( member, 0 );
@@ -42,8 +41,8 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member1 = new MemberId( UUID.randomUUID() );
-        MemberId member2 = new MemberId( UUID.randomUUID() );
+        MemberId member1 = IdFactory.randomMemberId();
+        MemberId member2 = IdFactory.randomMemberId();
 
         // when
         voteState.update( member1, 0 );
@@ -58,7 +57,7 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member = new MemberId( UUID.randomUUID() );
+        MemberId member = IdFactory.randomMemberId();
 
         voteState.update( member, 0 );
 
@@ -74,8 +73,8 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member1 = new MemberId( UUID.randomUUID() );
-        MemberId member2 = new MemberId( UUID.randomUUID() );
+        MemberId member1 = IdFactory.randomMemberId();
+        MemberId member2 = IdFactory.randomMemberId();
 
         voteState.update( member1, 0 );
 
@@ -96,7 +95,7 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member = new MemberId( UUID.randomUUID() );
+        MemberId member = IdFactory.randomMemberId();
 
         voteState.update( member, 0 );
 
@@ -117,8 +116,8 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member1 = new MemberId( UUID.randomUUID() );
-        MemberId member2 = new MemberId( UUID.randomUUID() );
+        MemberId member1 = IdFactory.randomMemberId();
+        MemberId member2 = IdFactory.randomMemberId();
 
         // when
         Assertions.assertTrue( voteState.update( null, 0 ) );

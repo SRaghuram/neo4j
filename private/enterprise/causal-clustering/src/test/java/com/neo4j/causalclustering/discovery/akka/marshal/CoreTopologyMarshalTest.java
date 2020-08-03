@@ -8,13 +8,13 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -48,7 +48,7 @@ class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
     static Map<MemberId,CoreServerInfo> coreServerInfos( int count )
     {
         return IntStream.range( 0, count )
-                .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
+                .mapToObj( i -> Pair.of( IdFactory.randomMemberId(), TestTopology.addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
     }
 }

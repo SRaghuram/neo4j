@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
-import com.neo4j.causalclustering.identity.RaftIdFactory;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -215,7 +215,7 @@ class ClusterBindingIT
         var layout = coreMember.clusterStateLayout();
         var storageFactory = new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config(), INSTANCE );
         var raftIdStorage = storageFactory.createRaftIdStorage( databaseName, nullDatabaseLogProvider() );
-        raftIdStorage.writeState( RaftIdFactory.random() );
+        raftIdStorage.writeState( IdFactory.randomRaftId() );
     }
 
     private void changeStoreId( DatabaseLayout databaseLayout ) throws Exception

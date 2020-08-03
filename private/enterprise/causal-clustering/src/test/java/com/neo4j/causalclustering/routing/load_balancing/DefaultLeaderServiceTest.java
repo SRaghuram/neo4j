@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.routing.load_balancing;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,9 +29,9 @@ class DefaultLeaderServiceTest
     private final NamedDatabaseId dbone = from( "one", UUID.randomUUID() );
     private final NamedDatabaseId dbtwo = from( "one", UUID.randomUUID() );
 
-    private final MemberId memberOne = new MemberId( UUID.randomUUID() );
-    private final MemberId memberTwo = new MemberId( UUID.randomUUID() );
-    private final MemberId topologyLeader = new MemberId( UUID.randomUUID() );
+    private final MemberId memberOne = IdFactory.randomMemberId();
+    private final MemberId memberTwo = IdFactory.randomMemberId();
+    private final MemberId topologyLeader = IdFactory.randomMemberId();
 
     private TopologyService topologyService = mock( TopologyService.class );
     private DefaultLeaderService leaderService = new DefaultLeaderService( topologyService, NullLogProvider.nullLogProvider() );

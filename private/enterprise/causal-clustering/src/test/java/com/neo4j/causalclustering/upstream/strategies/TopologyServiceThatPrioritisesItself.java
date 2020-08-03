@@ -37,8 +37,8 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     private final MemberId memberId;
     private final ServerGroupName matchingGroupName;
 
-    private final MemberId coreNotSelf = new MemberId( new UUID( 321, 654 ) );
-    private final MemberId readReplicaNotSelf = new MemberId( new UUID( 432, 543 ) );
+    private final MemberId coreNotSelf = MemberId.of( new UUID( 321, 654 ) );
+    private final MemberId readReplicaNotSelf = MemberId.of( new UUID( 432, 543 ) );
 
     TopologyServiceThatPrioritisesItself( MemberId memberId, ServerGroupName matchingGroupName )
     {

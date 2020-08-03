@@ -22,6 +22,7 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick
+import com.neo4j.causalclustering.identity.IdFactory
 import org.neo4j.dbms.identity.ServerId
 import org.neo4j.time.Clocks
 
@@ -117,7 +118,7 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
     val rrInfo1 = TestTopology.addressesForReadReplica(1)
     val rrInfo2 = TestTopology.addressesForReadReplica(2)
     
-    val serverId1,serverId2 = new ServerId(UUID.randomUUID())
+    val serverId1,serverId2 = IdFactory.randomServerId()
 
     val clusterClient1, clusterClient2, topologyClient1, topologyClient2 = TestProbe().ref
 

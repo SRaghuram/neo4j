@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
@@ -14,7 +15,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -97,6 +97,6 @@ public class TestTopology
     public static Map<MemberId,ReadReplicaInfo> readReplicaInfoMap( int... ids )
     {
         return Arrays.stream( ids ).mapToObj( TestTopology::addressesForReadReplica ).collect( Collectors
-                .toMap( p -> new MemberId( UUID.randomUUID() ), Function.identity() ) );
+                .toMap( p -> IdFactory.randomMemberId(), Function.identity() ) );
     }
 }

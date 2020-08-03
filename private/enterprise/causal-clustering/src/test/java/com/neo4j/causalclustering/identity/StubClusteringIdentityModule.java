@@ -10,16 +10,19 @@ import java.util.UUID;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-public class StubClusteringIdentityModule implements ClusteringIdentityModule
+public class StubClusteringIdentityModule extends ClusteringIdentityModule
 {
-    private final ServerId serverId;
     private final MemberId memberId;
 
     public StubClusteringIdentityModule()
     {
-        var uuid = UUID.randomUUID();
-        serverId = new ServerId( uuid );
-        memberId = new MemberId( uuid );
+        memberId = IdFactory.randomMemberId();
+    }
+
+    @Override
+    public ServerId myself()
+    {
+        return memberId;
     }
 
     @Override
@@ -32,11 +35,5 @@ public class StubClusteringIdentityModule implements ClusteringIdentityModule
     public MemberId memberId( NamedDatabaseId namedDatabaseId )
     {
         return memberId;
-    }
-
-    @Override
-    public ServerId myself()
-    {
-        return serverId;
     }
 }

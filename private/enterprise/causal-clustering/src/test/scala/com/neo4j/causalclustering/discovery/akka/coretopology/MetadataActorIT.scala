@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
-import java.util.UUID
-
 import akka.actor.Address
 import akka.cluster.UniqueAddress
 import akka.cluster.ddata.LWWMap
@@ -19,6 +17,8 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
+import com.neo4j.causalclustering.identity.IdFactory
+import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
 import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
@@ -41,12 +41,12 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       Given("new member metadata")
       val member1Address = UniqueAddress(Address("udp", system.name, "1.2.3.4", 8213), 1L)
       val member1Info = new CoreServerInfoForServerId(
-        new ServerId(UUID.randomUUID()),
+        IdFactory.randomServerId(),
         TestTopology.addressesForCore(0, false)
       )
       val member2Address = UniqueAddress(Address("udp", system.name, "1.2.3.5", 8214), 2L)
       val member2Info = new CoreServerInfoForServerId(
-        new ServerId(UUID.randomUUID()),
+        IdFactory.randomServerId(),
         TestTopology.addressesForCore(1, false)
       )
 
@@ -118,7 +118,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForServerId]] {
     val coreTopologyProbe = TestProbe("topology")
-    val myself = new ServerId(UUID.randomUUID())
+    val myself = IdFactory.randomServerId()
     val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForServerId](ReplicatedDataIdentifier.METADATA.keyName())
     val data = LWWMap.empty[UniqueAddress, CoreServerInfoForServerId]
 

@@ -5,12 +5,11 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
-import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -40,8 +39,8 @@ class PoliciesTest
         // when
         Policy policy = policies.selectFor( EMPTY_MAP );
         Set<ServerInfo> input = asSet(
-                new ServerInfo( new SocketAddress( "bolt", 1 ), new MemberId( UUID.randomUUID() ), ServerGroupName.setOf( "groupA" ) ),
-                new ServerInfo( new SocketAddress( "bolt", 2 ), new MemberId( UUID.randomUUID() ), ServerGroupName.setOf( "groupB" ) )
+                new ServerInfo( new SocketAddress( "bolt", 1 ), IdFactory.randomMemberId(), ServerGroupName.setOf( "groupA" ) ),
+                new ServerInfo( new SocketAddress( "bolt", 2 ), IdFactory.randomMemberId(), ServerGroupName.setOf( "groupB" ) )
         );
 
         Set<ServerInfo> output = policy.apply( input );

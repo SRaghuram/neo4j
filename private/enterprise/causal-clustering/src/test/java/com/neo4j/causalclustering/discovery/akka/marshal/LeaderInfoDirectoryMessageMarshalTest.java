@@ -7,10 +7,9 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 
 import java.util.Collection;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -37,7 +36,7 @@ public class LeaderInfoDirectoryMessageMarshalTest extends BaseMarshalTest<Leade
     static LeaderInfoDirectoryMessage generate()
     {
         var leaders = IntStream.range( 0, 5 )
-                .mapToObj( id -> Pair.of( randomDatabaseId(), new LeaderInfo( new MemberId( UUID.randomUUID() ), id ) ) )
+                .mapToObj( id -> Pair.of( randomDatabaseId(), new LeaderInfo( IdFactory.randomMemberId(), id ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
         return new LeaderInfoDirectoryMessage( leaders );
     }

@@ -12,13 +12,12 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseReque
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -82,11 +81,11 @@ class SegmentedRaftLogPartialEntryRecoveryTest
 
         // Add a bunch of entries, preferably one of each available kind.
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( new MemberId( UUID.randomUUID() ),
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomMemberId(),
                 1, databaseId ) ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( new MemberId( UUID.randomUUID() ),
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomMemberId(),
                 1, databaseId ) ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( new MemberId( UUID.randomUUID() ), 1, databaseId ) ) );
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomMemberId(), 1, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
         raftLog.append( new RaftLogEntry( 5, new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "labelToken", new byte[]{ 1, 2, 3 } ) ) );
         raftLog.append( new RaftLogEntry( 5,

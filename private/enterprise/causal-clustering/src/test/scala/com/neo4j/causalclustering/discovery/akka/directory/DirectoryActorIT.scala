@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.discovery.akka.directory
 
 import java.util
 import java.util.Collections
-import java.util.UUID
 
 import akka.actor.ActorRef
 import akka.cluster.ddata.Key
@@ -23,6 +22,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
+import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
@@ -73,7 +73,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
   class Fixture extends ReplicatedDataActorFixture[ORMap[DatabaseId,ReplicatedLeaderInfo]] {
     private val random = new Random()
     def newReplicatedLeaderInfo = {
-      new ReplicatedLeaderInfo(new LeaderInfo(new MemberId(UUID.randomUUID()), random.nextLong()))
+      new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(), random.nextLong()))
     }
 
     var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]

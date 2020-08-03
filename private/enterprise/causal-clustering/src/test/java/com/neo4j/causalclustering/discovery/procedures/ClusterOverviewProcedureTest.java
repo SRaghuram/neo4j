@@ -84,9 +84,9 @@ class ClusterOverviewProcedureTest
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
 
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
-        MemberId theLeader = new MemberId( new UUID( 1, 0 ) );
-        MemberId follower1 = new MemberId( new UUID( 2, 0 ) );
-        MemberId follower2 = new MemberId( new UUID( 3, 0 ) );
+        MemberId theLeader = MemberId.of( new UUID( 1, 0 ) );
+        MemberId follower1 = MemberId.of( new UUID( 2, 0 ) );
+        MemberId follower2 = MemberId.of( new UUID( 3, 0 ) );
 
         Set<NamedDatabaseId> leaderDatabases = databaseIds( "customers", "orders", "system" );
         Set<NamedDatabaseId> follower1Databases = databaseIds( "system", "orders" );
@@ -96,8 +96,8 @@ class ClusterOverviewProcedureTest
         coreMembers.put( follower2, addressesForCore( 2, false, toRaw( follower2Databases ) ) );
 
         Map<MemberId,ReadReplicaInfo> replicaMembers = new HashMap<>();
-        MemberId replica4 = new MemberId( new UUID( 4, 0 ) );
-        MemberId replica5 = new MemberId( new UUID( 5, 0 ) );
+        MemberId replica4 = MemberId.of( new UUID( 4, 0 ) );
+        MemberId replica5 = MemberId.of( new UUID( 5, 0 ) );
 
         Set<NamedDatabaseId> replica1Databases = databaseIds( "system", "orders" );
         Set<NamedDatabaseId> replica2Databases = databaseIds( "system", "customers" );

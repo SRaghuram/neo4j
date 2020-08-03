@@ -6,10 +6,9 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 
 import java.util.Collection;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,7 +21,7 @@ public class DatabaseToMemberMarshalTest extends BaseMarshalTest<DatabaseToMembe
     @Override
     Collection<DatabaseToMember> originals()
     {
-        return Stream.generate( () -> new DatabaseToMember( randomDatabaseId(), new MemberId( UUID.randomUUID() ) ) )
+        return Stream.generate( () -> new DatabaseToMember( randomDatabaseId(), IdFactory.randomMemberId() ) )
                 .limit( 5 )
                 .collect( Collectors.toList() );
     }

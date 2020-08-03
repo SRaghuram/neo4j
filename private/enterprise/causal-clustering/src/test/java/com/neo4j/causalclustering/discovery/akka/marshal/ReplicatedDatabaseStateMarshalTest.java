@@ -7,13 +7,13 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.EnterpriseOperatorState;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -41,7 +41,7 @@ public class ReplicatedDatabaseStateMarshalTest extends BaseMarshalTest<Replicat
 
     private static Map<MemberId,DiscoveryDatabaseState> memberStates( DatabaseId databaseId, int numMembers )
     {
-        return Stream.generate( () -> Map.entry( new MemberId( UUID.randomUUID() ),
+        return Stream.generate( () -> Map.entry( IdFactory.randomMemberId(),
                         new DiscoveryDatabaseState( databaseId, EnterpriseOperatorState.STARTED ) ) )
                 .limit( numMembers )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );

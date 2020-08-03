@@ -8,11 +8,11 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TestTopology;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -39,7 +39,7 @@ public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseRead
     static DatabaseReadReplicaTopology generate()
     {
         Map<MemberId,ReadReplicaInfo> replicas = IntStream.range( 0, 5 )
-                .mapToObj( id -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForReadReplica( id ) ) )
+                .mapToObj( id -> Pair.of( IdFactory.randomMemberId(), TestTopology.addressesForReadReplica( id ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
         return new DatabaseReadReplicaTopology( randomDatabaseId(), replicas );
     }

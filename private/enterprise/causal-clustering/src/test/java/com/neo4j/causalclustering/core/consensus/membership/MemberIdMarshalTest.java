@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
@@ -12,8 +13,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
 
 import org.neo4j.io.marshal.EndOfStreamException;
 
@@ -25,7 +24,7 @@ class MemberIdMarshalTest
         // given
         MemberId.Marshal marshal = new MemberId.Marshal();
 
-        final MemberId member = new MemberId( UUID.randomUUID() );
+        final MemberId member = IdFactory.randomMemberId();
 
         // when
         ByteBuf buffer = Unpooled.buffer( 1_000 );
@@ -42,7 +41,7 @@ class MemberIdMarshalTest
         // given
         // a CoreMember and a ByteBuffer to write it to
         MemberId.Marshal marshal = new MemberId.Marshal();
-        final MemberId aRealMember = new MemberId( UUID.randomUUID() );
+        final MemberId aRealMember = IdFactory.randomMemberId();
 
         ByteBuf buffer = Unpooled.buffer( 1000 );
 

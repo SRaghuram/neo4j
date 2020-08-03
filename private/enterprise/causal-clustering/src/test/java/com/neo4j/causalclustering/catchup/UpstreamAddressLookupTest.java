@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
@@ -20,7 +21,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -37,9 +37,9 @@ import static org.mockito.Mockito.when;
 class UpstreamAddressLookupTest
 {
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
-    private final MemberId defaultMember = new MemberId( UUID.randomUUID() );
-    private final MemberId firstMember = new MemberId( UUID.randomUUID() );
-    private final MemberId secondMember = new MemberId( UUID.randomUUID() );
+    private final MemberId defaultMember = IdFactory.randomMemberId();
+    private final MemberId firstMember = IdFactory.randomMemberId();
+    private final MemberId secondMember = IdFactory.randomMemberId();
     private final SocketAddress defaultAddress = new SocketAddress( "Default", 123 );
     private final SocketAddress firstAddress = new SocketAddress( "First", 456 );
     private final SocketAddress secondAddress = new SocketAddress( "Second", 789 );

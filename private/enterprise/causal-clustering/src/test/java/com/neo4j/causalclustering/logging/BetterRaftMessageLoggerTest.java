@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.logging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,10 +14,8 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.OutputStream;
 import java.time.Clock;
-import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -32,7 +31,7 @@ import static org.mockito.Mockito.when;
 class BetterRaftMessageLoggerTest
 {
     private final NamedDatabaseId databaseId = DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
-    private final MemberId memberId = new MemberId( UUID.randomUUID() );
+    private final MemberId memberId = IdFactory.randomMemberId();
     private final File logFile = new File( "raft-messages" );
     private final FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
     private final OutputStream outputStream = mock( OutputStream.class );

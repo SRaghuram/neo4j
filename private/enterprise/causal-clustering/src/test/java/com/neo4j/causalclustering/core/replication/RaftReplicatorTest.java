@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import org.assertj.core.api.Condition;
@@ -35,10 +36,10 @@ import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
@@ -65,8 +66,8 @@ class RaftReplicatorTest
 
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final LeaderLocator leaderLocator = mock( LeaderLocator.class );
-    private final MemberId myself = new MemberId( UUID.randomUUID() );
-    private final LeaderInfo leaderInfo = new LeaderInfo( new MemberId( UUID.randomUUID() ), 1 );
+    private final MemberId myself = IdFactory.randomMemberId();
+    private final LeaderInfo leaderInfo = new LeaderInfo( IdFactory.randomMemberId(), 1 );
     private final GlobalSession session = new GlobalSession( UUID.randomUUID(), myself );
     private final LocalSessionPool sessionPool = new LocalSessionPool( session );
     private final TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
@@ -295,7 +296,7 @@ class RaftReplicatorTest
         assertEquals( outbound.lastTo, lastLeader.memberId() );
 
         // update with valid new leader, sends to new leader
-        lastLeader = new LeaderInfo( new MemberId( UUID.randomUUID() ), 1 );
+        lastLeader = new LeaderInfo( IdFactory.randomMemberId(), 1 );
         replicator.onLeaderSwitch( lastLeader );
         replicator.replicate( content );
         assertEquals( outbound.lastTo, lastLeader.memberId() );

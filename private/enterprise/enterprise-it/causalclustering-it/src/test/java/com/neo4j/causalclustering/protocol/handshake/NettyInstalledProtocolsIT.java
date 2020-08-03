@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.protocol.handshake;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -48,7 +48,7 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.ports.PortAuthority;
 
-import static com.neo4j.causalclustering.identity.RaftIdFactory.random;
+import static com.neo4j.causalclustering.identity.IdFactory.randomRaftId;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
@@ -56,7 +56,6 @@ import static com.neo4j.configuration.CausalClusteringInternalSettings.inbound_c
 import static com.neo4j.configuration.CausalClusteringSettings.handshake_timeout;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
-import static java.util.UUID.randomUUID;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -97,9 +96,9 @@ class NettyInstalledProtocolsIT
         startServerAndConnect( parameters );
 
         // given
-        var heartbeat = new RaftMessages.Heartbeat( new MemberId( randomUUID() ), 1, 2, 3 );
+        var heartbeat = new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 1, 2, 3 );
         var networkMessage =
-                RaftMessages.OutboundRaftMessageContainer.of( random(), heartbeat );
+                RaftMessages.OutboundRaftMessageContainer.of( randomRaftId(), heartbeat );
 
         // when
         client.send( networkMessage ).syncUninterruptibly();

@@ -6,13 +6,12 @@
 package com.neo4j.causalclustering.diagnostics;
 
 import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -31,7 +30,7 @@ class RaftMonitorTest
     private final AssertableLogProvider debug = new AssertableLogProvider();
 
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private final MemberId myself = new MemberId( UUID.randomUUID() );
+    private final MemberId myself = IdFactory.randomMemberId();
 
     private RaftBinder.Monitor raftBinderMonitor;
     private PersistentSnapshotDownloader.Monitor snapshotMonitor;

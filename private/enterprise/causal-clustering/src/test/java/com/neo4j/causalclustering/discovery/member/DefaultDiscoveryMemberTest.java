@@ -5,12 +5,11 @@
  */
 package com.neo4j.causalclustering.discovery.member;
 
+import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
-import java.util.UUID;
 
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -26,7 +25,7 @@ class DefaultDiscoveryMemberTest
     @Test
     void shouldReturnMemberId()
     {
-        var id = new ServerId( UUID.randomUUID() );
+        var id = IdFactory.randomServerId();
 
         var discoveryMember = new DefaultDiscoveryMember( id, Set.of( databaseId1, databaseId2 ) );
 
@@ -36,7 +35,8 @@ class DefaultDiscoveryMemberTest
     @Test
     void shouldReturnStartedDatabases()
     {
-        var id = new ServerId( UUID.randomUUID() );
+        var id = IdFactory.randomServerId();
+
         var startedDatabases = Set.of( databaseId1, databaseId2 );
 
         var discoveryMember = new DefaultDiscoveryMember( id, startedDatabases );

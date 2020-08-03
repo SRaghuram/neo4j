@@ -6,18 +6,17 @@
 package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.core.consensus.roles.Voting;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
 class VotingTest
 {
-    private MemberId candidate = new MemberId( UUID.randomUUID() );
+    private MemberId candidate = IdFactory.randomMemberId();
 
     private long logTerm = 10;
     private long currentTerm = 20;

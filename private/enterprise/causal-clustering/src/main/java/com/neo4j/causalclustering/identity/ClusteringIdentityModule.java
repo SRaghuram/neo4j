@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.identity;
 
+import org.neo4j.dbms.identity.DefaultIdentityModule;
 import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-public interface ClusteringIdentityModule extends IdentityModule
+public abstract class ClusteringIdentityModule extends DefaultIdentityModule implements IdentityModule
 {
     /**
      * This method is left here to allow us to make the changes step by step
@@ -17,7 +18,7 @@ public interface ClusteringIdentityModule extends IdentityModule
      * and only use memberId() in the context of Raft with the corresponding RaftId/Databaseid
      */
     @Deprecated
-    MemberId memberId();
+    public abstract MemberId memberId();
 
-    MemberId memberId( NamedDatabaseId namedDatabaseId );
+    public abstract MemberId memberId( NamedDatabaseId namedDatabaseId );
 }

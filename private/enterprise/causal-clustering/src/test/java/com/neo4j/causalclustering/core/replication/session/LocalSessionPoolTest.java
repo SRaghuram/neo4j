@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication.session;
 
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,7 @@ import java.util.UUID;
 
 class LocalSessionPoolTest
 {
-    private MemberId memberId = new MemberId( UUID.randomUUID() );
+    private MemberId memberId = IdFactory.randomMemberId();
     private GlobalSession globalSession = new GlobalSession( UUID.randomUUID(), memberId );
 
     @Test

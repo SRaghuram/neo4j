@@ -8,13 +8,12 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.RaftIdFactory;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.time.Instant;
-import java.util.UUID;
 import java.util.function.LongSupplier;
 
 import org.neo4j.time.Clocks;
@@ -27,13 +26,13 @@ class LeaderAvailabilityHandlerTest
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
     private LeaderAvailabilityTimers leaderAvailabilityTimers = Mockito.mock( LeaderAvailabilityTimers.class );
-    private RaftId raftId = RaftIdFactory.random();
+    private RaftId raftId = IdFactory.randomRaftId();
     private RaftMessageTimerResetMonitor raftMessageTimerResetMonitor = new DurationSinceLastMessageMonitor( Clocks.nanoClock() );
     private LongSupplier term = () -> 3;
 
     private LeaderAvailabilityHandler handler = new LeaderAvailabilityHandler( delegate, leaderAvailabilityTimers, raftMessageTimerResetMonitor, term );
 
-    private MemberId leader = new MemberId( UUID.randomUUID() );
+    private MemberId leader = IdFactory.randomMemberId();
     private RaftMessages.InboundRaftMessageContainer<?> heartbeat =
             RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, new RaftMessages.Heartbeat( leader, term.getAsLong(), 0, 0 ) );
     private RaftMessages.InboundRaftMessageContainer<?> appendEntries =

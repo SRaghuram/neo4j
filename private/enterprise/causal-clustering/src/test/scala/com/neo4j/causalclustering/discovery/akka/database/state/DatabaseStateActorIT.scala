@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.database.state
 
-import java.util.UUID
-
 import akka.cluster.ddata.LWWMap
 import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
@@ -19,6 +17,7 @@ import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
+import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.dbms.EnterpriseOperatorState
 import org.neo4j.kernel.database.DatabaseId
@@ -86,7 +85,7 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[DatabaseToMember,DiscoveryDatabaseState]] {
     val rrTopologyProbe = TestProbe("rrTopology")
-    val myself = new MemberId(UUID.randomUUID)
+    val myself = IdFactory.randomMemberId()
     var actualDatabaseStates = Map.empty[DatabaseId,ReplicatedDatabaseState]
 
     val updateSink = new DatabaseStateUpdateSink {

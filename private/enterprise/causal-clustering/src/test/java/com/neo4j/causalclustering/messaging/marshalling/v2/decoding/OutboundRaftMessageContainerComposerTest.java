@@ -7,12 +7,11 @@ package com.neo4j.causalclustering.messaging.marshalling.v2.decoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.identity.RaftIdFactory;
+import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -65,6 +64,6 @@ class OutboundRaftMessageContainerComposerTest
 
     private RaftMessageDecoder.InboundRaftMessageContainerComposer messageCreator( RaftMessageDecoder.LazyComposer composer )
     {
-        return new RaftMessageDecoder.InboundRaftMessageContainerComposer( composer, RaftIdFactory.random() );
+        return new RaftMessageDecoder.InboundRaftMessageContainerComposer( composer, IdFactory.randomRaftId() );
     }
 }

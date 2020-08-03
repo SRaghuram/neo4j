@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.configuration.ServerGroupName;
@@ -22,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -58,15 +58,15 @@ class GlobalTopologyStateTest
     private final NamedDatabaseId namedDatabaseId2 = databaseIdRepository.getRaw( "db2" );
     private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "db2" ).databaseId();
 
-    private final MemberId coreId1 = new MemberId( UUID.randomUUID() );
-    private final MemberId coreId2 = new MemberId( UUID.randomUUID() );
-    private final MemberId coreId3 = new MemberId( UUID.randomUUID() );
+    private final MemberId coreId1 = IdFactory.randomMemberId();
+    private final MemberId coreId2 = IdFactory.randomMemberId();
+    private final MemberId coreId3 = IdFactory.randomMemberId();
     private final CoreServerInfo coreInfo1 = newCoreInfo( coreId1, Set.of( databaseId1, databaseId2 ) );
     private final CoreServerInfo coreInfo2 = newCoreInfo( coreId2, Set.of( databaseId1 ) );
     private final CoreServerInfo coreInfo3 = newCoreInfo( coreId3, Set.of( databaseId1 ) );
 
-    private final MemberId readReplicaId1 = new MemberId( UUID.randomUUID() );
-    private final MemberId readReplicaId2 = new MemberId( UUID.randomUUID() );
+    private final MemberId readReplicaId1 = IdFactory.randomMemberId();
+    private final MemberId readReplicaId2 = IdFactory.randomMemberId();
     private final ReadReplicaInfo readReplicaInfo1 = newReadReplicaInfo( readReplicaId1, Set.of( databaseId1, databaseId2 ) );
     private final ReadReplicaInfo readReplicaInfo2 = newReadReplicaInfo( readReplicaId2, Set.of( databaseId2 ) );
 
