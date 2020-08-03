@@ -35,4 +35,18 @@ public class SecurityInternalSettings implements SettingsDeclaration
     @Deprecated
     public static final Setting<String> property_level_authorization_permissions =
             newBuilder( "dbms.security.property_level.blacklist", STRING, null ).build();
+
+    @Internal
+    @Description( "Setting this to true will limit who execute the `dbms.upgrade` procedure. " +
+                  "A user and role with the name specified by unsupported.dbms.upgrade_procedure_username will be created on startup/upgrade. " +
+                  "This user will only be able to execute the `dbms.upgrade` procedure and nothing else. " +
+                  "The only administration command that will be executable on this user is `ALTER CURRENT USER SET PASSWORD FROM old_password TO password`." +
+                  "No administration commands will be executable on the role." )
+    public static final Setting<Boolean> restrict_upgrade =
+            newBuilder( "unsupported.dbms.upgrade_restriction_enabled", BOOL, false ).build();
+
+    @Internal
+    @Description( "The name of the user that should be allowed to call dbms.upgrade when `unsupported.dbms.upgrade_restriction_enabled` is enabled" )
+    public static final Setting<String> upgrade_username =
+            newBuilder( "unsupported.dbms.upgrade_procedure_username", STRING, "aura_operator" ).build();
 }

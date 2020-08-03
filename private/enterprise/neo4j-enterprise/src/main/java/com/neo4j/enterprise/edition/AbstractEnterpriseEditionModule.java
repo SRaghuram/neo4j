@@ -92,7 +92,8 @@ public interface AbstractEnterpriseEditionModule
                     globalModule.getGlobalDependencies(),
                     globalModule.getTransactionEventListeners(),
                     securityComponent,
-                    cacheFactory
+                    cacheFactory,
+                    globalModule.getFileSystem()
             );
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule.authManager() );

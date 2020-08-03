@@ -71,16 +71,19 @@ public class EnterpriseSecurityModule extends SecurityModule
 {
     private static final String ROLE_STORE_FILENAME = "roles";
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
+    public static final String OPERATOR_STORE_FILENAME = "operator_auth";
 
     private final Config config;
     private final Log log;
     private final EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent;
     private CaffeineCacheFactory cacheFactory;
+    private final FileSystemAbstraction fileSystem;
     private final Dependencies dependencies;
     private final GlobalTransactionEventListeners transactionEventListeners;
     private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
     private SecureHasher secureHasher;
+    private final LogProvider logProvider;
     private final SecurityLog securityLog;
     private AuthManager inClusterAuthManager;
 
@@ -90,15 +93,18 @@ public class EnterpriseSecurityModule extends SecurityModule
                                      Dependencies dependencies,
                                      GlobalTransactionEventListeners transactionEventListeners,
                                      EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent,
-                                     CaffeineCacheFactory cacheFactory )
+                                     CaffeineCacheFactory cacheFactory,
+                                     FileSystemAbstraction fileSystem )
     {
         this.securityLog = securityLog;
         this.config = config;
         this.dependencies = dependencies;
         this.transactionEventListeners = transactionEventListeners;
+        this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
         this.enterpriseSecurityGraphComponent = enterpriseSecurityGraphComponent;
         this.cacheFactory = cacheFactory;
+        this.fileSystem = fileSystem;
     }
 
     @Override
@@ -350,24 +356,30 @@ public class EnterpriseSecurityModule extends SecurityModule
 
     private static RoleRepository getRoleRepository( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
     {
-        return new FileRoleRepository( fileSystem, getRoleRepositoryFile( config ), logProvider );
+        return new FileRoleRepository( fileSystem, getRepositoryFile( config, ROLE_STORE_FILENAME ), logProvider );
     }
 
     private static UserRepository getDefaultAdminRepository( Config config, LogProvider logProvider,
             FileSystemAbstraction fileSystem )
     {
-        return new FileUserRepository( fileSystem, getDefaultAdminRepositoryFile( config ), logProvider );
+        return new FileUserRepository( fileSystem, getRepositoryFile( config, DEFAULT_ADMIN_STORE_FILENAME ), logProvider );
     }
 
-    private static File getRoleRepositoryFile( Config config )
+    private static UserRepository getOperatorUserRepository( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
     {
-        return new File( config.get( DatabaseManagementSystemSettings.auth_store_directory ).toFile(), ROLE_STORE_FILENAME );
+        return new FileUserRepository( fileSystem, getRepositoryFile( config, OPERATOR_STORE_FILENAME ), logProvider );
     }
 
-    private static File getDefaultAdminRepositoryFile( Config config )
+    public static File getOperatorUserRepositoryFile( Config config )
     {
-        return new File( config.get( DatabaseManagementSystemSettings.auth_store_directory ).toFile(),
-                DEFAULT_ADMIN_STORE_FILENAME );
+        return getRepositoryFile( config, OPERATOR_STORE_FILENAME );
+    }
+
+    private static File getRepositoryFile( Config config, String fileName )
+    {
+        // Resolve auth store file names
+        File authStoreDir = config.get( DatabaseManagementSystemSettings.auth_store_directory ).toFile();
+        return new File( authStoreDir, fileName );
     }
 
     private static IllegalArgumentException illegalConfiguration( String message )

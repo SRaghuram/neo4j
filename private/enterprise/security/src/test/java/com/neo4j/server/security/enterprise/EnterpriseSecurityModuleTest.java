@@ -32,6 +32,7 @@ import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
@@ -320,6 +321,6 @@ class EnterpriseSecurityModuleTest
     private EnterpriseSecurityModule createModule( LogProvider logProvider, Config config )
     {
         return new EnterpriseSecurityModule( logProvider, mockSecurityLog, config, mockDependencies, mockEventListeners, mockSecurityComponent,
-                                             caffeineCacheFactory );
+                caffeineCacheFactory, new EphemeralFileSystemAbstraction() );
     }
 }
