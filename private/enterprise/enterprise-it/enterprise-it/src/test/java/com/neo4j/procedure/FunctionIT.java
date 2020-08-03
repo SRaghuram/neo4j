@@ -876,18 +876,17 @@ class FunctionIT
     }
 
     @Test
-    void shouldNotSupportPipelinedRuntime()
+    void shouldNotSupportParallelRuntime()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            // When
-            Result res = tx.execute( "CYPHER runtime=PIPELINED RETURN com.neo4j.procedure.squareLong(2) AS someVal" );
-
-            // Then
-            assertThat( res.next() ).isEqualTo( map( "someVal", 4L ) );
-            assertFalse( res.hasNext() );
-            assertThat( res.getExecutionPlanDescription().getArguments().get( "runtime" ) ).isNotEqualTo( "PIPELINED" );
+            // then
+            QueryExecutionException exception = assertThrows(
+                    QueryExecutionException.class,
+                    () -> tx.execute(
+                            "CYPHER runtime=PARALLEL RETURN com.neo4j.procedure.squareLong(2) AS someVal" ) );
+            assertThat( exception.getMessage() ).isEqualTo( "Parallel does not yet support `User-defined functions`, use another runtime." );
         }
     }
 
@@ -917,7 +916,7 @@ class FunctionIT
     {
         exceptionsInFunction.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        managementService = new TestDatabaseManagementServiceBuilder().impermanent()
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.homePath().toAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
