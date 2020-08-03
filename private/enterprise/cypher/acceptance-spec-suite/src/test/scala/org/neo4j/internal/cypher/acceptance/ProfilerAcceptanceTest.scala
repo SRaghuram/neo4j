@@ -198,8 +198,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
           .withRows(2)
           .withExactVariables("n", "label")
           .containingArgument("db.labels() :: (label :: STRING?)")
-          .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
-        plan.totalDbHits shouldBe TotalHits(2, uncertain = true)
+          .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHitsBetween(1, 2))
+        plan.totalDbHits should (be (TotalHits(1, uncertain = true)) or be(TotalHits(2, uncertain = true)))
       }
     )
   }
