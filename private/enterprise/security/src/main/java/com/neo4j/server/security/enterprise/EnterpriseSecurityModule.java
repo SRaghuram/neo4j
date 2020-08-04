@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
 import org.neo4j.cypher.internal.security.SecureHasher;
@@ -217,9 +218,9 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         inClusterAuthManager = new InClusterAuthManager( internalRealm, securityLog, logAuthSuccess, defaultDatabase );
 
-        if ( config.get( SecurityInternalSettings.restrict_upgrade ) )
+        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
         {
-            orderedActiveRealms.add( 0, new FlatfileRealm( strategy, config.get( SecurityInternalSettings.upgrade_username ),
+            orderedActiveRealms.add( 0, new FlatfileRealm( strategy, config.get( GraphDatabaseInternalSettings.upgrade_username ),
                                                            getOperatorUserRepository( config, logProvider, fileSystem ) ) );
         }
         return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config, cacheFactory ), securityLog, config );

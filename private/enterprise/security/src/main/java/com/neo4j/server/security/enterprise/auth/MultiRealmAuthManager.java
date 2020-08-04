@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
@@ -37,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
@@ -68,8 +68,8 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
         this.realms = realms;
         this.cacheManager = cacheManager;
 
-        this.upgradeUsername = config.get( SecurityInternalSettings.upgrade_username );
-        this.restrictUpgrade = config.get( SecurityInternalSettings.restrict_upgrade );
+        this.upgradeUsername = config.get( GraphDatabaseInternalSettings.upgrade_username );
+        this.restrictUpgrade = config.get( GraphDatabaseInternalSettings.restrict_upgrade );
 
         securityManager = new DefaultSecurityManager( realms );
         this.securityLog = securityLog;

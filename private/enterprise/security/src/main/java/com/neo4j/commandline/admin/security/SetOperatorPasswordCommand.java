@@ -5,7 +5,6 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
@@ -14,6 +13,7 @@ import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.cypher.internal.security.SystemGraphCredential;
@@ -46,7 +46,7 @@ public class SetOperatorPasswordCommand extends AbstractCommand
     {
         Config config = loadNeo4jConfig();
         FileSystemAbstraction fileSystem = ctx.fs();
-        String username = config.get( SecurityInternalSettings.upgrade_username );
+        String username = config.get( GraphDatabaseInternalSettings.upgrade_username );
 
         File file = EnterpriseSecurityModule.getOperatorUserRepositoryFile( config );
         if ( fileSystem.fileExists( file ) )

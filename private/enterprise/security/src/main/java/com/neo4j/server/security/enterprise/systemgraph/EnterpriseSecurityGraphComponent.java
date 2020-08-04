@@ -6,7 +6,6 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -28,6 +27,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -129,9 +129,9 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     @Override
     protected void assertSystemGraphIntegrity( GraphDatabaseService system ) throws Exception
     {
-        if ( config.get( SecurityInternalSettings.restrict_upgrade ) )
+        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
         {
-            String upgradeUser = config.get( SecurityInternalSettings.upgrade_username );
+            String upgradeUser = config.get( GraphDatabaseInternalSettings.upgrade_username );
 
             try ( Transaction tx = system.beginTx() )
             {
@@ -140,7 +140,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
                 {
                     throw new IllegalStateException( String.format( "The user specified by %s (%s) already exists in the system graph. " +
                                                                     "Change the username or delete the user before restricting upgrade.",
-                                                                    SecurityInternalSettings.upgrade_username.name(),
+                                                                    GraphDatabaseInternalSettings.upgrade_username.name(),
                                                                     upgradeUser) );
                 }
             }

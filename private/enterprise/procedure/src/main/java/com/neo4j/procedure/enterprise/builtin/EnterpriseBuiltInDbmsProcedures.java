@@ -23,13 +23,13 @@ import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
@@ -52,6 +52,7 @@ import org.neo4j.kernel.impl.query.FunctionInformation;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.ScopedMemoryPool;
@@ -101,7 +102,7 @@ public class EnterpriseBuiltInDbmsProcedures
     public KernelTransaction kernelTransaction;
 
     @Context
-    public GraphDatabaseService graph;
+    public GraphDatabaseAPI graph;
 
     @Context
     public SystemGraphComponents systemGraphComponents;
@@ -236,7 +237,7 @@ public class EnterpriseBuiltInDbmsProcedures
         private boolean isAdminProcedure()
         {
             // This procedure asserts admin right internally (to be able to execute for your own user) so we can't rely on the signature to detect that
-            return name.startsWith( "dbms.security.listRolesForUser" );
+            return name.startsWith( "dbms.security.listRolesForUser" ) || name.startsWith( "dbms.upgrade" );
         }
 
         private boolean isInvalidProcedure()
@@ -440,13 +441,13 @@ public class EnterpriseBuiltInDbmsProcedures
         return Stream.of( transactionId == -1 ? CheckpointResult.TERMINATED : CheckpointResult.SUCCESS );
     }
 
-    @Admin
     @Internal
     @SystemProcedure
     @Description( "Report the current status of the system database sub-graph schema, providing details for each sub-graph component." )
     @Procedure( name = "dbms.upgradeStatusDetails", mode = READ )
     public Stream<SystemGraphComponentStatusResultDetails> systemSchemaVersionDetails() throws ProcedureException
     {
+        assertAllowedUpgradeProc();
         if ( !callContext.isSystemDatabase() )
         {
             throw new ProcedureException( ProcedureCallFailed,
@@ -459,13 +460,13 @@ public class EnterpriseBuiltInDbmsProcedures
                 results.stream() );
     }
 
-    @Admin
     @Internal
     @SystemProcedure
     @Description( "Upgrade the system database schema if it is not the current schema, providing upgrade status results for each sub-graph component." )
     @Procedure( name = "dbms.upgradeDetails", mode = WRITE )
     public Stream<SystemGraphComponentUpgradeResultDetails> upgradeSystemSchemaDetails() throws ProcedureException
     {
+        assertAllowedUpgradeProc();
         if ( !callContext.isSystemDatabase() )
         {
             throw new ProcedureException( ProcedureCallFailed,
@@ -511,6 +512,27 @@ public class EnterpriseBuiltInDbmsProcedures
                     version -> results.add( new SystemGraphComponentUpgradeResultDetails( version.component(), version.detect( transaction ).name(), "" ) ) );
             return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), "" ) ),
                     results.stream() );
+        }
+    }
+
+    private void assertAllowedUpgradeProc()
+    {
+        Config config = graph.getDependencyResolver().resolveDependency( Config.class );
+        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
+        {
+            if ( !securityContext.subject().hasUsername( config.get( GraphDatabaseInternalSettings.upgrade_username ) ) )
+            {
+                throw new AuthorizationViolationException(
+                        String.format( "%s Execution of this procedure has been restricted by the system.", PERMISSION_DENIED ) );
+            }
+        }
+        else
+        {
+            securityContext.assertCredentialsNotExpired();
+            if ( !securityContext.allowExecuteAdminProcedure() )
+            {
+                throw new AuthorizationViolationException( PERMISSION_DENIED );
+            }
         }
     }
 

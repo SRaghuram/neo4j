@@ -5,7 +5,6 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,9 +18,9 @@ import java.nio.charset.StandardCharsets;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.security.auth.FileUserRepository;
@@ -46,7 +45,7 @@ class SetOperatorPasswordCommandIT
     private PrintStream out;
     private PrintStream err;
 
-    private String upgradeUsername = Config.defaults().get( SecurityInternalSettings.upgrade_username );
+    private String upgradeUsername = Config.defaults().get( GraphDatabaseInternalSettings.upgrade_username );
 
     @BeforeEach
     void setup()

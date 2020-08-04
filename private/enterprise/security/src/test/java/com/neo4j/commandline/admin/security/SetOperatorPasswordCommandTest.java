@@ -5,7 +5,6 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
@@ -108,7 +108,7 @@ class SetOperatorPasswordCommandTest
         FileUserRepository userRepository = new FileUserRepository( fileSystem, authOperatorFile,
                 NullLogProvider.getInstance() );
         userRepository.start();
-        User operator = userRepository.getUserByName( Config.defaults().get( SecurityInternalSettings.upgrade_username ) );
+        User operator = userRepository.getUserByName( Config.defaults().get( GraphDatabaseInternalSettings.upgrade_username ) );
         assertNotNull( operator );
         assertTrue( operator.credentials().matchesPassword( password.getBytes( StandardCharsets.UTF_8 ) ) );
         assertFalse( operator.hasFlag( User.PASSWORD_CHANGE_REQUIRED ) );

@@ -6,12 +6,13 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.commandline.admin.security.SetOperatorPasswordCommand;
-import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import picocli.CommandLine;
 
 import java.io.PrintStream;
@@ -25,6 +26,8 @@ import java.util.stream.Collectors;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -60,6 +63,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.oneOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -71,6 +75,7 @@ import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 class SystemGraphRealmUpgradeIT
 {
     private static final String DEFAULT_PASSWORD = "bar";
+    private static final String UPGRADE_USERNAME = Config.defaults().get( GraphDatabaseInternalSettings.upgrade_username );
 
     @SuppressWarnings( "unused" )
     @Inject
@@ -293,64 +298,57 @@ class SystemGraphRealmUpgradeIT
     }
 
     @Test
-    void shouldSetOperatorPasswordWhenSettingEnabled() throws InvalidAuthTokenException
-    {
-        setOperatorPassword( "bar" );
-        enterpriseDbms = getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, true ) );
-
-        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
-        assertLoginResult( database, "aura_operator", "bar" , AuthenticationResult.SUCCESS);
-    }
-
-    @Test
-    void shouldNotSetOperatorPasswordWhenSettingDisabled() throws InvalidAuthTokenException
-    {
-        setOperatorPassword( "bar" );
-        enterpriseDbms = getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, false ) );
-
-        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
-        assertLoginResult( database, "aura_operator", "bar", AuthenticationResult.FAILURE );
-    }
-
-    @Test
     void shouldCreateOperatorUserWhenRestrictUpgradeIsEnabled() throws InvalidAuthTokenException
     {
         setOperatorPassword( "bar" );
-        enterpriseDbms = getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, true ) );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, true ) );
         GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
 
-        LoginContext loginContext = assertLoginResult( database, "aura_operator", "bar", AuthenticationResult.SUCCESS);
+        LoginContext loginContext = assertLoginResult( database, UPGRADE_USERNAME, "bar", AuthenticationResult.SUCCESS );
 
-        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) ) {
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
             Result result = tx.execute( "CALL dbms.showCurrentUser()" );
             Map<String,Object> row = result.next();
 
-            assertThat(row.get("username"), equalTo( "aura_operator" ));
-            assertThat(row.get("roles"), equalTo(Collections.EMPTY_LIST));
-            assertThat(row.get("flags"), equalTo(Collections.EMPTY_LIST));
+            assertThat( row.get( "username" ), equalTo( UPGRADE_USERNAME ) );
+            assertThat( row.get( "roles" ), equalTo( Collections.EMPTY_LIST ) );
+            assertThat( row.get( "flags" ), equalTo( Collections.EMPTY_LIST ) );
         }
+    }
+
+    @Test
+    void shouldNotCreateOperatorUserWhenRestrictUpgradeIsDisabled() throws InvalidAuthTokenException
+    {
+        setOperatorPassword( "bar" );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, false ) );
+
+        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
+        assertLoginResult( database, UPGRADE_USERNAME, "bar", AuthenticationResult.FAILURE );
     }
 
     @Test
     void shouldNotReserveUpgradeUsernameWhenRestrictUpgradeIsDisabled() throws InvalidAuthTokenException
     {
-        enterpriseDbms = getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, false ) );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, false ) );
         GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
 
-        try ( Transaction tx = database.beginTx() ) {
-            tx.execute( "CREATE USER aura_operator SET PASSWORD 'bar' CHANGE NOT REQUIRED" );
+        try ( Transaction tx = database.beginTx() )
+        {
+            tx.execute( String.format( "CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) );
             tx.commit();
         }
 
-        LoginContext loginContext = assertLoginResult( database, "aura_operator", "bar", AuthenticationResult.SUCCESS);
+        LoginContext loginContext = assertLoginResult( database, UPGRADE_USERNAME, "bar", AuthenticationResult.SUCCESS );
 
-        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) ) {
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
             Result result = tx.execute( "CALL dbms.showCurrentUser()" );
             Map<String,Object> row = result.next();
 
-            assertThat(row.get("username"), equalTo( "aura_operator" ));
-            assertThat(row.get("roles"), equalTo(List.of(PUBLIC)));
-            assertThat(row.get("flags"), equalTo(Collections.EMPTY_LIST));
+            assertThat( row.get( "username" ), equalTo( UPGRADE_USERNAME ) );
+            assertThat( row.get( "roles" ), equalTo( List.of( PUBLIC ) ) );
+            assertThat( row.get( "flags" ), equalTo( Collections.EMPTY_LIST ) );
         }
     }
 
@@ -358,44 +356,107 @@ class SystemGraphRealmUpgradeIT
     void shouldReserveUpgradeUsernameWhenRestrictUpgradeIsEnabled()
     {
         setOperatorPassword( "bar" );
-        enterpriseDbms = getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, true ) );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, true ) );
         GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
 
-        try ( Transaction tx = database.beginTx() ) {
-            assertThrows( QueryExecutionException.class, () -> tx.execute( "CREATE USER aura_operator SET PASSWORD 'foo' CHANGE NOT REQUIRED"));
+        try ( Transaction tx = database.beginTx() )
+        {
+            assertThrows( QueryExecutionException.class,
+                    () -> tx.execute( String.format( "CREATE USER %s SET PASSWORD 'foo' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) ) );
         }
     }
 
     @Test
-    void shouldNotStartDatabaseIfUgradeUsernameIsTakenByAnotherUser()
+    void shouldNotStartDatabaseIfUpgradeUsernameIsTakenByAnotherUser()
     {
-        enterpriseDbms = getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, false ) );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, false ) );
         GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
 
-        try ( Transaction tx = database.beginTx() ) {
-            tx.execute( "CREATE USER aura_operator SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        try ( Transaction tx = database.beginTx() )
+        {
+            tx.execute( String.format( "CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) );
             tx.commit();
         }
 
         enterpriseDbms.shutdown();
 
-        setOperatorPassword( "bar" );
+        setOperatorPassword( "foo" );
 
-        Throwable exception = assertThrows( RuntimeException.class, () -> getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, true )));
-        assertThat( exception.getCause().getMessage(), containsString("The user specified by unsupported.dbms.upgrade_procedure_username (aura_operator) already exists in the system graph. " +
-                                                                      "Change the username or delete the user before restricting upgrade."));
+        Throwable exception =
+                assertThrows( RuntimeException.class, () -> getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, true ) ) );
+        assertThat( exception.getCause().getMessage(),
+                containsString( String.format( "The user specified by unsupported.dbms.upgrade_procedure_username (%s) already exists in the system graph. " +
+                                "Change the username or delete the user before restricting upgrade.", UPGRADE_USERNAME ) ) );
     }
 
     @Test
     void shouldNotAllowTransactionToDefaultDatabaseAsUpgradeUser() throws InvalidAuthTokenException
     {
         setOperatorPassword( "bar" );
-        enterpriseDbms = getEnterpriseManagementService( Map.of( SecurityInternalSettings.restrict_upgrade, true ) );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, true ) );
         GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( DEFAULT_DATABASE_NAME );
 
-        LoginContext loginContext = assertLoginResult( database, "aura_operator", "bar", AuthenticationResult.SUCCESS);
+        LoginContext loginContext = assertLoginResult( database, UPGRADE_USERNAME, "bar", AuthenticationResult.SUCCESS );
 
-        assertThrows( AuthorizationViolationException.class, () -> database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext) );
+        assertThrows( AuthorizationViolationException.class, () -> database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) );
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"dbms.upgrade", "dbms.upgradeStatus", "dbms.upgradeDetails", "dbms.upgradeStatusDetails"} )
+    void shouldOnlyAllowOperatorUserToCallUpgradeProcedure( String procedureName ) throws InvalidAuthTokenException
+    {
+        String query = String.format( "CALL %s()", procedureName );
+        setInitialPassword( "foo" );
+        setOperatorPassword( "bar" );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, true ) );
+        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
+
+        LoginContext loginContext = assertLoginResult( database, UPGRADE_USERNAME, "bar", AuthenticationResult.SUCCESS );
+
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( query );
+            assertTrue( result.hasNext() );
+        }
+
+        LoginContext adminUser = assertLoginResult( database, INITIAL_USER_NAME, "foo", AuthenticationResult.SUCCESS );
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, adminUser ) )
+        {
+            Throwable exception = assertThrows( QueryExecutionException.class, () -> tx.execute( query ) );
+            assertThat( exception.getMessage(), containsString( "Execution of this procedure has been restricted by the system." ) );
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"dbms.upgrade", "dbms.upgradeStatus", "dbms.upgradeDetails", "dbms.upgradeStatusDetails"} )
+    void shouldNotAllowOperatorUserToCallUpgradeProcedure( String procedureName ) throws InvalidAuthTokenException
+    {
+        String query = String.format( "CALL %s()", procedureName );
+        setInitialPassword( "foo" );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, false ) );
+        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
+
+        // create user with same name as upgrade_username setting
+        try ( Transaction tx = database.beginTx() )
+        {
+            tx.execute( String.format( "CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) );
+            tx.commit();
+        }
+
+        LoginContext loginContext = assertLoginResult( database, UPGRADE_USERNAME, "bar", AuthenticationResult.SUCCESS );
+
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Throwable exception = assertThrows( QueryExecutionException.class, () -> tx.execute( query ) );
+            assertThat( exception.getMessage(), containsString( AuthorizationViolationException.PERMISSION_DENIED ) );
+        }
+
+        LoginContext adminUser = assertLoginResult( database, INITIAL_USER_NAME, "foo", AuthenticationResult.SUCCESS );
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, adminUser ) )
+        {
+            Result result = tx.execute( query );
+            assertTrue( result.hasNext() );
+        }
     }
 
     private void assertLogin( GraphDatabaseAPI database, String username, String password ) throws InvalidAuthTokenException
