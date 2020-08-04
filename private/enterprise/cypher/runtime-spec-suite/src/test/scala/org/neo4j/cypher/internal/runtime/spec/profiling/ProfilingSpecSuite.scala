@@ -11,34 +11,30 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.InterpretedRuntime
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.SlottedRuntime
-import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_BIG
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_SMALL
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.ENTERPRISE_PROFILING
+import org.neo4j.cypher.internal.runtime.spec.pipelined.AssertFusingSucceeded
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryMeasurementTestBase.COMMUNITY_PROFILING
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryMeasurementTestBase.DEFAULT_MORSEL_SIZE_BIG
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryMeasurementTestBase.DEFAULT_MORSEL_SIZE_SMALL
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryMeasurementTestBase.ENTERPRISE_PROFILING
 
-// EXPERIMENTAL PROFILING
-// These classes are using the runtime spec suite for convenience, but are currently intended mainly for manual profiling,
-// so their names do not end with Test or IT on purpose so that they do not get included in automated test runs.
+class InterpretedMemoryMeasurementTest
+  extends MemoryMeasurementTestBase(COMMUNITY_PROFILING, InterpretedRuntime)
+    with FullSupportMemoryMeasurementTestBase[CommunityRuntimeContext]
 
-// Run these to get heap dumps and memory usage estimates
+class SlottedMemoryMeasurementTest
+  extends MemoryMeasurementTestBase(ENTERPRISE_PROFILING, SlottedRuntime)
+    with FullSupportMemoryMeasurementTestBase[EnterpriseRuntimeContext]
 
-class InterpretedMemoryManagementProfiling extends MemoryManagementProfilingBase(MemoryManagementProfilingBase.COMMUNITY_PROFILING, InterpretedRuntime)
-                                              with FullSupportMemoryManagementProfilingBase[CommunityRuntimeContext]
+class PipelinedBigMorselMemoryMeasurementTest
+  extends MemoryMeasurementTestBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG)
+    with AssertFusingSucceeded
 
-class SlottedMemoryManagementProfiling extends MemoryManagementProfilingBase(MemoryManagementProfilingBase.ENTERPRISE_PROFILING, SlottedRuntime)
-                                          with FullSupportMemoryManagementProfilingBase[EnterpriseRuntimeContext]
+class PipelinedSmallMorselMemoryMeasurementTest
+  extends MemoryMeasurementTestBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_SMALL)
+    with AssertFusingSucceeded
 
-class PipelinedMemoryManagementBigMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING,
-                                                                                        PIPELINED,
-                                                                                        DEFAULT_MORSEL_SIZE_BIG) with PipelinedSpecSuite
-class PipelinedMemoryManagementSmallMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED,
-                                                                                          DEFAULT_MORSEL_SIZE_SMALL) with PipelinedSpecSuite
-class PipelinedMemoryManagementCustomProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED,
-                                                                                     DEFAULT_MORSEL_SIZE_BIG,
-                                                                                     runtimeSuffix="after") with PipelinedSpecSuite
-
-class PipelinedMemoryManagementBigMorselNoFusingProfiling extends MemoryManagementProfilingBase(
-  ENTERPRISE_PROFILING.copyWith(GraphDatabaseInternalSettings.cypher_operator_engine -> GraphDatabaseInternalSettings.CypherOperatorEngine.INTERPRETED),
-  PIPELINED,
-  DEFAULT_MORSEL_SIZE_BIG,
-  runtimeSuffix = "noFusing") with PipelinedSpecSuite
+class PipelinedBigMorselNoFusingMemoryMeasurementTest
+  extends MemoryMeasurementTestBase(
+    ENTERPRISE_PROFILING.copyWith(GraphDatabaseInternalSettings.cypher_operator_engine -> GraphDatabaseInternalSettings.CypherOperatorEngine.INTERPRETED),
+    PIPELINED, DEFAULT_MORSEL_SIZE_BIG)
+    with AssertFusingSucceeded
