@@ -1174,6 +1174,106 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     res.toList shouldBe List(Map("x" -> 1))
   }
 
+  test("WHERE NOT EXISTS WITH OR and horizon") {
+    // test
+    val q =
+      """WITH 1 AS x
+         WHERE x = 1 OR NOT EXISTS {
+         MATCH (:Badger)
+         }
+         RETURN x""".stripMargin
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE NOT pattern predicate exists WITH OR and horizon") {
+    // test
+    val q =
+      """MATCH (n)
+         WITH 1 AS x, n AS n
+         WHERE x = 1 OR NOT exists((n)-->(n))
+         RETURN x
+         LIMIT 1""".stripMargin
+
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE NOT property predicate exists WITH OR and horizon") {
+    // test
+    val q =
+      """MATCH (n)
+         WITH 1 AS x, n AS n
+         WHERE x = 1 OR NOT exists(n.prop)
+         RETURN x
+         LIMIT 1""".stripMargin
+
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE EXISTS WITH OR and horizon") {
+    // test
+    val q =
+      """WITH 1 AS x
+         WHERE x = 1 OR EXISTS {
+         MATCH (:Badger)
+         }
+         RETURN x""".stripMargin
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE EXISTS or WHERE NOT EXISTS WITH OR and horizon") {
+    // test
+    val q =
+      """WITH 1 AS x
+         WHERE x = 1 OR EXISTS {
+         MATCH (:Badger)
+         } OR NOT EXISTS {
+          MATCH (:Snake)
+         }
+         RETURN x""".stripMargin
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE NOT EXISTS WITH AND and horizon") {
+    val q =
+      """WITH 1 AS x
+         WHERE x = 1 AND NOT EXISTS {
+         MATCH (:Badger)
+         }
+         RETURN x""".stripMargin
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE NOT EXISTS WITH OR, AND and horizon") {
+    // test
+    val q =
+      """WITH 1 AS x
+         WHERE x = 1 OR NOT EXISTS {
+         MATCH (:Badger)
+         } AND x < 64
+         RETURN x""".stripMargin
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
+  test("WHERE NOT EXISTS WITH OR and multiple horizons") {
+    // test
+    val q =
+      """WITH 1 AS x
+         WITH 2 AS y, x
+         WHERE x = 1 OR NOT EXISTS {
+         MATCH (:Badger)
+         } OR y < 64
+         RETURN x""".stripMargin
+    val res = executeSingle(q)
+    res.toList shouldBe List(Map("x" -> 1))
+  }
+
   test("NOT EXISTS with single node should work") {
 
     val query =
