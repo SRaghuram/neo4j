@@ -65,6 +65,7 @@
           "MinvCpus": 0,
           "DesiredvCpus": 0,
           "MaxvCpus": 512,
+          "AllocationStrategy": "SPOT_CAPACITY_OPTIMIZED",
           "InstanceTypes": [
             "m5d.2xlarge"
           ],
@@ -111,6 +112,7 @@
           "MinvCpus": 0,
           "DesiredvCpus": 0,
           "MaxvCpus": 512,
+          "AllocationStrategy": "SPOT_CAPACITY_OPTIMIZED",
           "InstanceTypes": [
             "m5d.large"
           ],
@@ -157,6 +159,7 @@
           "MinvCpus": 0,
           "DesiredvCpus": 0,
           "MaxvCpus": 512,
+          "AllocationStrategy": "SPOT_CAPACITY_OPTIMIZED",
           "InstanceTypes": [
             "r5d.2xlarge"
           ],
