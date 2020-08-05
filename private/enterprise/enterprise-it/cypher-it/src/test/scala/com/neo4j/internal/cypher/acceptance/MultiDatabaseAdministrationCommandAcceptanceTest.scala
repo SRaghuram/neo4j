@@ -12,6 +12,7 @@ import com.neo4j.configuration.EnterpriseEditionSettings
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseInternalSettings.block_create_drop_database
+import org.neo4j.configuration.GraphDatabaseInternalSettings.block_start_stop_database
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
@@ -145,6 +146,75 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     exception.getMessage should include("DROP DATABASE is not supported")
   }
 
+  test("should not fail to stop and start database when config setting start_stop_drop_database is default ") {
+    // GIVEN
+    val config = Config.defaults()
+    setup(config)
+    execute("CREATE DATABASE foo")
+
+    // WHEN & THEN
+    execute("STOP DATABASE foo")
+    execute("START DATABASE foo")
+  }
+
+  test("should not fail to stop and start database when config setting start_stop_drop_database is set to false") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_start_stop_database, java.lang.Boolean.FALSE)
+    setup(config)
+    execute("CREATE DATABASE foo")
+
+    // WHEN & THEN
+    execute("STOP DATABASE foo")
+    execute("START DATABASE foo")
+  }
+
+  test("should fail to stop database when config setting start_stop_drop_database is set to true") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_start_stop_database, java.lang.Boolean.TRUE)
+    setup(config)
+    execute("CREATE DATABASE foo")
+
+    // WHEN & THEN
+    val exception = the[UnsupportedOperationException] thrownBy {
+      execute("STOP DATABASE foo")
+    }
+    exception.getMessage should include("STOP DATABASE is not supported")
+  }
+
+  test("should fail to start database when config setting start_stop_drop_database is set to true") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_start_stop_database, java.lang.Boolean.TRUE)
+    setup(config)
+    execute("CREATE DATABASE foo")
+
+    // WHEN & THEN
+    val exception = the[UnsupportedOperationException] thrownBy {
+      execute("START DATABASE foo")
+    }
+    exception.getMessage should include("START DATABASE is not supported")
+  }
+
+  test("should fail to start stopped database when config setting start_stop_drop_database is set to true") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_start_stop_database, java.lang.Boolean.FALSE)
+    setup(config, impermanent = false)
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+
+    config.set(block_start_stop_database, java.lang.Boolean.TRUE)
+    restart(config)
+
+    // WHEN & THEN
+    val exception = the[UnsupportedOperationException] thrownBy {
+      execute("START DATABASE foo")
+    }
+    exception.getMessage should include("START DATABASE is not supported")
+  }
+
   // Tests for showing databases
 
   test(s"should show database $DEFAULT_DATABASE_NAME") {
@@ -276,9 +346,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES WHERE default").toList
 
     // THEN
-    result.size shouldBe(1)
-    result.head("name") shouldBe("neo4j")
-    result.head("default") shouldBe(true)
+    result.size shouldBe 1
+    result.head("name") shouldBe "neo4j"
+    result.head("default") shouldBe true
   }
 
   test("should not show database with invalid yield") {

@@ -136,6 +136,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val config: Config = resolver.resolveDependency(classOf[Config])
   private val maxDBLimit: Long = config.get(EnterpriseEditionSettings.max_number_of_databases)
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
+  private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
 
   override def name: String = "enterprise administration-commands"
 
@@ -718,6 +719,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // START DATABASE foo
     case StartDatabase(source, dbName) => (context, parameterMapping) =>
+      if (start_stop_database_is_blocked) {
+        throw new UnsupportedOperationException("START DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
+      }
+
       val oldStatusKey = internalKey("oldStatus")
       val statusKey = internalKey("status")
       val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
@@ -751,6 +756,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // STOP DATABASE foo
     case StopDatabase(source, dbName) => (context, parameterMapping) =>
+      if (start_stop_database_is_blocked) {
+        throw new UnsupportedOperationException("STOP DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
+      }
+
       val oldStatusKey = internalKey("oldStatus")
       val statusKey = internalKey("status")
       val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
