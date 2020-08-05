@@ -43,18 +43,23 @@ class StartStopLeader extends RepeatOnLeader
         log.info( "Stopping Leader: " + leader );
 
         var startTime = Instant.now();
-        leader.shutdown();
+        var shutdownFuture = runAsync( leader::shutdown );
         var oldLeader = leader;
+
         while ( oldLeader.serverId() == leader.serverId() )
         {
             leader = this.cluster.awaitLeader( databaseName );
         }
+
         var timeTaken = Duration.between( startTime, Instant.now() );
         log.info( "New leader for database {} is server {}", databaseName, leader.serverId() );
+
         if ( timeTaken.toMillis() < leaderFailureDetectionWindow.getMin().toMillis() )
         {
             succeses++;
         }
+
+        assertThat( shutdownFuture ).succeedsWithin( 2, TimeUnit.MINUTES );
         log.info( "Leader transfer completed in %s (failure timeout %s)", timeTaken, leaderFailureDetectionWindow );
 
         Thread.sleep( 1000 );

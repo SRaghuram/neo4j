@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -88,9 +89,18 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseId, type, tokenName, createCommands( tokenName, internal ) );
         ReplicationResult replicationResult = replicator.replicate( tokenRequest );
 
-        if ( replicationResult.outcome() != ReplicationResult.Outcome.APPLIED )
+        switch ( replicationResult.outcome() )
         {
-            throw new TransactionFailureException( "Could not replicate token for " + databaseId, replicationResult.failure() );
+        case NOT_REPLICATED:
+            // The caller can safely retry this action because we know it was not replicated
+            throw new TransientTransactionFailureException( "Could not replicate token for " + databaseId, replicationResult.failure() );
+        case MAYBE_REPLICATED:
+            // The caller can safely retry this action because it is idempotent.
+            throw new TransientTransactionFailureException( "Could not replicate token for " + databaseId, replicationResult.failure() );
+        case APPLIED:
+            break;
+        default:
+            throw new IllegalArgumentException( "Unknown replication result outcome: " + replicationResult.outcome().toString() );
         }
 
         try

@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -20,6 +21,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,20 +36,24 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.TransientFailureException;
 import org.neo4j.internal.helpers.collection.Iterators;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.TokenAccess;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.election_failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
 import static java.util.concurrent.CompletableFuture.allOf;
-import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
@@ -61,17 +68,29 @@ class TokenReplicationStressIT
     private ClusterFactory clusterFactory;
 
     private Cluster cluster;
+    private ExecutorService executorService;
 
     @BeforeEach
     void setUp() throws Exception
     {
         cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig()
-                .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( leader_failure_detection_window, "2s-3s" )
-                .withSharedCoreParam( election_failure_detection_window, "2s-3s" ) );
+                                                             .withNumberOfCoreMembers( 3 )
+                                                             .withNumberOfReadReplicas( 0 )
+                                                             .withSharedCoreParam( leader_failure_detection_window, "2s-3s" )
+                                                             .withSharedCoreParam( election_failure_detection_window, "2s-3s" ) );
 
         cluster.start();
+        executorService = Executors.newFixedThreadPool( 3 );
+    }
+
+    @AfterEach
+    void tearDown() throws TimeoutException, InterruptedException
+    {
+        executorService.shutdownNow();
+        if ( !executorService.awaitTermination( 5, MINUTES ) )
+        {
+            throw new TimeoutException( "Executor service did not terminate" );
+        }
     }
 
     @Test
@@ -79,15 +98,17 @@ class TokenReplicationStressIT
     {
         AtomicBoolean stop = new AtomicBoolean();
 
-        CompletableFuture<Void> tokenCreator1 = runAsync( () -> createTokens( cluster, evenTokenIdsSupplier(), stop ) );
-        CompletableFuture<Void> tokenCreator2 = runAsync( () -> createTokens( cluster, oddTokenIdsSupplier(), stop ) );
-        CompletableFuture<Void> electionTrigger = runAsync( () -> triggerElections( cluster, stop ) );
+        var tokenCreator1 = supplyAsync( () -> createTokens( cluster, evenTokenIdsSupplier(), stop ), executorService );
+        var tokenCreator2 = supplyAsync( () -> createTokens( cluster, oddTokenIdsSupplier(), stop ), executorService );
+        var electionTrigger = supplyAsync( () -> triggerElections( cluster, stop ), executorService );
         CompletableFuture<Void> allOperations = allOf( tokenCreator1, tokenCreator2, electionTrigger );
 
         awaitUntilDeadlineOrFailure( stop, allOperations );
 
         stop.set( true );
-        allOperations.join();
+        assertThat( allOperations ).succeedsWithin( 3, MINUTES );
+
+        assertOperationExpectations( tokenCreator1, tokenCreator2, electionTrigger );
 
         // we need to allow time for the tokens to replicate
         assertEventually( () -> verifyTokens( cluster ), 15, SECONDS );
@@ -98,6 +119,24 @@ class TokenReplicationStressIT
         cluster.start();
 
         verifyTokens( cluster );
+    }
+
+    private void assertOperationExpectations(
+            CompletableFuture<Pair<Long,Long>> tokenCreator1,
+            CompletableFuture<Pair<Long,Long>> tokenCreator2,
+            CompletableFuture<Long> electionTrigger
+    ) throws InterruptedException, java.util.concurrent.ExecutionException
+    {
+        assertThat( electionTrigger ).as( "There should be at least one election" ).isCompletedWithValueMatching( elections -> elections > 0 );
+        final var elections = electionTrigger.get();
+        assertThat( tokenCreator1 )
+                .as( "We should succeed in creating tokens sometimes" ).isCompletedWithValueMatching( outcome -> outcome.first() > 0 )
+                .as( "We should succeed more often than fail" ).isCompletedWithValueMatching( outcome -> outcome.first() > outcome.other() )
+                .as( "Failures should not outnumber elections" ).isCompletedWithValueMatching( outcome -> outcome.other() <= elections );
+        assertThat( tokenCreator2 )
+                .as( "We should succeed in creating tokens sometimes" ).isCompletedWithValueMatching( outcome -> outcome.first() > 0 )
+                .as( "We should succeed more often than fail" ).isCompletedWithValueMatching( outcome -> outcome.first() > outcome.other() )
+                .as( "Failures should not outnumber elections" ).isCompletedWithValueMatching( outcome -> outcome.other() <= elections );
     }
 
     void assertEventually( ThrowingAction<?> actual, long timeout, TimeUnit timeUnit ) throws Exception
@@ -121,11 +160,14 @@ class TokenReplicationStressIT
             }
 
             Thread.sleep( 10 );
-        } while ( true );
+        }
+        while ( true );
     }
 
-    private static void createTokens( Cluster cluster, LongSupplier tokenIdSupplier, AtomicBoolean stop )
+    private static Pair<Long,Long> createTokens( Cluster cluster, LongSupplier tokenIdSupplier, AtomicBoolean stop )
     {
+        var failures = 0L;
+        var successes = 0L;
         while ( !stop.get() )
         {
             CoreClusterMember leader = awaitLeader( cluster );
@@ -151,10 +193,12 @@ class TokenReplicationStressIT
                     node1.createRelationshipTo( node2, type );
                 }
                 tx.commit();
+                successes++;
             }
             catch ( Throwable t )
             {
-                if ( isLeaderUnavailableError( t ) )
+                failures++;
+                if ( t instanceof TransientFailureException || isLeaderUnavailableError( t ) )
                 {
                     // this can happen because other thread is forcing elections
                     continue;
@@ -162,6 +206,7 @@ class TokenReplicationStressIT
                 throw new RuntimeException( "Failed to create tokens", t );
             }
         }
+        return Pair.of( successes, failures );
     }
 
     private static boolean isLeaderUnavailableError( Throwable error )
@@ -174,20 +219,23 @@ class TokenReplicationStressIT
         return false;
     }
 
-    private static void triggerElections( Cluster cluster, AtomicBoolean stop )
+    private static Long triggerElections( Cluster cluster, AtomicBoolean stop )
     {
+        var count = 0L;
         while ( !stop.get() )
         {
             try
             {
                 SECONDS.sleep( 5 );
                 CausalClusteringTestHelpers.forceReelection( cluster, DEFAULT_DATABASE_NAME );
+                count++;
             }
             catch ( Throwable t )
             {
                 throw new RuntimeException( "Failed to trigger an election", t );
             }
         }
+        return count;
     }
 
     private static void awaitUntilDeadlineOrFailure( AtomicBoolean stop, CompletableFuture<Void> allOperations ) throws InterruptedException
