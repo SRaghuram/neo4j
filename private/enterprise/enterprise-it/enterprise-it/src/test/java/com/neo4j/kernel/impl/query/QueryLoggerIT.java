@@ -322,6 +322,25 @@ class QueryLoggerIT
     }
 
     @Test
+    void shouldLogCorrectPlanningTimeWhenFailsToParse() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled, true );
+        buildDatabase();
+
+        assertThrows( QueryExecutionException.class, () -> executeQuery( "Not a parsable query" ) );
+        databaseManagementService.shutdown();
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 1, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "ERROR" ) );
+        assertThat( logLines.get( 0 ), containsString( "Not a parsable query" ) );
+        assertFalse( logLines.get( 0 ).split( "planning: " )[1].startsWith( "-" ),
+                "Expected log to contain positive planning time, was:\n" + logLines.get( 0 ) );
+    }
+
+    @Test
     void shouldLogStartBeforeQueryParsingIfRawLoggingEnabled() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
