@@ -57,7 +57,7 @@
       "Properties": {
         "Type": "MANAGED",
         "ComputeResources": {
-          "Type": "EC2",
+          "Type": "SPOT",
           "ImageId": {
             "Ref": "AMIID"
           },
@@ -104,7 +104,7 @@
       "Properties": {
         "Type": "MANAGED",
         "ComputeResources": {
-          "Type": "EC2",
+          "Type": "SPOT",
           "ImageId": {
             "Ref": "AMIID"
           },
@@ -151,7 +151,7 @@
       "Properties": {
         "Type": "MANAGED",
         "ComputeResources": {
-          "Type": "EC2",
+          "Type": "SPOT",
           "ImageId": {
             "Ref": "AMIID"
           },
