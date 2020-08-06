@@ -108,6 +108,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialTopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator
@@ -122,6 +124,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ValueHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.VarLengthProjectEndpointsMiddleOperator
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
@@ -650,6 +653,15 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             case (k, (n, _)) => (k, slots(n).offset)
           }.toArray)
 
+      case plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, _, length) =>
+        val lazyTypes = types.map(_.toArray).map(RelationshipTypes.apply(_)(semanticTable)).getOrElse(RelationshipTypes.empty)
+       new ProjectEndpointsOperator(WorkIdentity.fromPlan(plan),
+                                    slots(rel),
+                                    slots.getLongOffsetFor(start),
+                                    slots.getLongOffsetFor(end),
+                                    lazyTypes,
+                                    length.isSimple)
+
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
         interpretedPipesFallbackPolicy.breakOn(plan)
@@ -763,6 +775,28 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.CacheProperties(_, properties) =>
         val propertyOps = properties.toArray.map(converters.toCommandExpression(id, _))
         Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
+
+      case plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, directed, length) =>
+        val lazyTypes = types.map(_.toArray).map(RelationshipTypes.apply(_)(semanticTable)).getOrElse(RelationshipTypes.empty)
+        if (length.isSimple) {
+          Some(new ProjectEndpointsMiddleOperator(WorkIdentity.fromPlan(plan),
+                                                  slots(rel),
+                                                  slots.getLongOffsetFor(start),
+                                                  startInScope,
+                                                  slots.getLongOffsetFor(end),
+                                                  endInScope,
+                                                  lazyTypes,
+                                                  directed))
+        } else {
+          Some(new VarLengthProjectEndpointsMiddleOperator(WorkIdentity.fromPlan(plan),
+                                                           slots(rel),
+                                                           slots.getLongOffsetFor(start),
+                                                           startInScope,
+                                                           slots.getLongOffsetFor(end),
+                                                           endInScope,
+                                                           lazyTypes,
+                                                           directed))
+        }
 
       case _: plans.Argument => None
 

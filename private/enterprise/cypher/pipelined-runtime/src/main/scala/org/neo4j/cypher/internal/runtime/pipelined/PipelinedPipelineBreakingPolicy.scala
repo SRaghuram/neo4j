@@ -127,6 +127,10 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
         // Void procedures preserve cardinality and are always non-breaking
         !call.signature.isVoid && !canFuseOneChildOperator(lp, outerApplyPlanId)
 
+      case p: ProjectEndpoints =>
+        // Undirected is cardinality increasing if nothing is in scope, otherwise not
+        (!p.directed && (!p.startInScope && !p.endInScope)) && !canFuseOneChildOperator(lp, outerApplyPlanId)
+
       case _: ProduceResult |
            _: Limit |
            _: Skip |
@@ -254,6 +258,9 @@ object InterpretedPipesFallbackPolicy {
       // Whitelisted plans that can be breaking or non-breaking
       case p: ProjectEndpoints =>
         !p.directed // Undirected is cardinality increasing, directed is not
+
+      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates =>
+        !call.signature.isVoid // Void procedures preserve cardinality and are non-breaking
 
       //------------------------------------------------------------------------------------
       // Whitelisted non-breaking plans

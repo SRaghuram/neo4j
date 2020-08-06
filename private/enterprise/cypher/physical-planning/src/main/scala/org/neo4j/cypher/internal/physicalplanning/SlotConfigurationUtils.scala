@@ -151,7 +151,7 @@ object SlotConfigurationUtils {
     makeGetPrimitiveFromSlotFunctionFor(slot, CTNode, throwOnTypeError)
 
   /**
-   * Use this to make a specialized getter function for a slot that is expected to contain a node
+   * Use this to make a specialized getter function for a slot that is expected to contain a relationship
    * that given an ExecutionContext returns a long with the relationship id.
    */
   def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ReadableRow] =
