@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
@@ -68,7 +69,7 @@ class UpgradeProceduresUserIT
     @BeforeEach
     void setup()
     {
-        Path graphDir = Path.of( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        Path graphDir = Path.of( DEFAULT_DATABASE_NAME ).resolve( UUID.randomUUID().toString() );
         confDir = graphDir.resolve( "conf" );
         homeDir = graphDir.resolve( "home" );
         out = mock( PrintStream.class );
@@ -82,7 +83,6 @@ class UpgradeProceduresUserIT
         {
             enterpriseDbms.shutdown();
         }
-        fileSystem.clear();
         fileSystem.close();
     }
 

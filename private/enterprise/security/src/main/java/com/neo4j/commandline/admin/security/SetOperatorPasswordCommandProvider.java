@@ -10,7 +10,7 @@ import org.neo4j.cli.Command;
 import org.neo4j.cli.CommandProvider;
 import org.neo4j.cli.ExecutionContext;
 
-import static org.neo4j.cli.Command.CommandType.SET_INITIAL_PASSWORD;
+import static org.neo4j.cli.Command.CommandType.SET_OPERATOR_PASSWORD;
 
 @ServiceProvider
 public class SetOperatorPasswordCommandProvider implements CommandProvider<SetOperatorPasswordCommand>
@@ -24,6 +24,6 @@ public class SetOperatorPasswordCommandProvider implements CommandProvider<SetOp
     @Override
     public Command.CommandType commandType()
     {
-        return SET_INITIAL_PASSWORD;
+        return SET_OPERATOR_PASSWORD;
     }
 }
