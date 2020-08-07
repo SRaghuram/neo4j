@@ -905,7 +905,7 @@ public class ProcedureIT
             // When
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readWriteTryingToWriteSchema" ).next() );
-            assertThat( exception.getMessage() ).isEqualTo( "Schema operations are not allowed for AUTH_DISABLED with FULL restricted to TOKEN_WRITE." );
+            assertThat( exception.getMessage() ).startsWith( "Schema operations are not allowed" );
         }
     }
 

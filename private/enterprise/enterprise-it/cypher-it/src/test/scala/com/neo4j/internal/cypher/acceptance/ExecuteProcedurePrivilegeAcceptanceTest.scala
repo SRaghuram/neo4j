@@ -7,7 +7,6 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -77,7 +76,6 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
   def setupUserAndGraph( username: String = "joe", password: String = "soap" ): Unit = {
     super.setupUserWithCustomRole( username, password )
-    execute("REVOKE EXECUTE PROCEDURE * ON DBMS FROM PUBLIC")
 
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     execute(
@@ -88,6 +86,8 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     selectDatabase(SYSTEM_DATABASE_NAME)
   }
+
+  // EXECUTE PROCEDURE
 
   test("should execute procedure with execute procedure *") {
     // GIVEN
@@ -139,30 +139,6 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     }) should be(1)
   }
 
-  test("should execute admin procedure with ALL ON DBMS") {
-    // GIVEN
-    setupUserAndGraph("foo", "bar")
-
-    // WHEN
-    execute("GRANT ALL ON DBMS TO custom")
-
-    // THEN
-    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
-  }
-
-  test("should fail execute admin procedure with execute procedure") {
-    // GIVEN
-    setupUserAndGraph("foo", "bar")
-
-    // WHEN
-    execute("GRANT EXECUTE PROCEDURE dbms.listConfig ON DBMS TO custom")
-
-    // THEN
-    (the[QueryExecutionException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
-    }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
-  }
-
   test("should fail execute procedure with no privileges") {
     // GIVEN
     setupUserAndGraph("foo", "bar")
@@ -212,6 +188,134 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  // EXECUTE BOOSTED PROCEDURE
+
+  test("should execute procedure with execute boosted procedure *") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE BOOSTED PROCEDURE * ON DBMS TO custom")
+
+    val expected = Seq("A", "B")
+    // THEN
+    executeOnDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+      row.get("label") should equal(expected(idx))
+    }) should be(2)
+  }
+
+  test("should execute procedure with execute boosted procedure through globbing") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE BOOSTED PROCEDURE *.labels ON DBMS TO custom")
+
+    val expected = Seq("A", "B")
+    // THEN
+    executeOnDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+      row.get("label") should equal(expected(idx))
+    }) should be(2)
+  }
+
+  test("should execute procedure without boosting when denied execute boosted") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE PROCEDURE * ON DBMS TO custom")
+    execute("DENY EXECUTE BOOSTED PROCEDURE db.labels ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+      row.get("label") should equal("A")
+    }) should be(1)
+  }
+
+  test("should execute procedure without boosting when denied execute boosted through globbing") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE PROCEDURE * ON DBMS TO custom")
+    execute("DENY EXECUTE BOOSTED PROCEDURE db.la?els ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+      row.get("label") should equal("A")
+    }) should be(1)
+  }
+
+  test("should fail execute procedure when denied execute granted execute boosted") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE BOOSTED PROCEDURE * ON DBMS TO custom")
+    execute("DENY EXECUTE PROCEDURE db.labels ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL db.labels")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  // EXECUTE admin procedures
+
+  test("should execute admin procedure with ALL ON DBMS") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT ALL ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
+  }
+
+  test("should fail execute admin procedure with execute procedure") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE PROCEDURE dbms.listConfig ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+    }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
+  }
+
+  test("should execute admin procedure with execute boosted procedure") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE BOOSTED PROCEDURE dbms.listConfig ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
+  }
+
+  test("should fail execute admin procedure with execute boosted and denied execute procedure") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE BOOSTED PROCEDURE dbms.listConfig ON DBMS TO custom")
+    execute("DENY EXECUTE PROCEDURE dbms.listConfig ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 }

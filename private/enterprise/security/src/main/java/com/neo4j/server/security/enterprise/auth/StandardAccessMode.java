@@ -519,6 +519,12 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
+    public boolean shouldBoostProcedure( int procedureId )
+    {
+        return procedurePrivileges.shouldBoostProcedure( procedureId ) ;
+    }
+
+    @Override
     public boolean allowsSetLabel( long labelId )
     {
         if ( disallowWrites || disallowSetAllLabels || blacklistSetLabels.contains( (int) labelId ) )

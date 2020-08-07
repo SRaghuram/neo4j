@@ -220,7 +220,8 @@ abstract class SecurityGraphCompatibilityTestBase
     );
 
     static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_42D4 = Set.of(
-            new PrivilegeCommand( "EXECUTE PROCEDURE * ON DBMS", GRANT_DENY_REVOKE )
+            new PrivilegeCommand( "EXECUTE PROCEDURE * ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "EXECUTE BOOSTED PROCEDURE * ON DBMS", GRANT_DENY_REVOKE )
     );
 
     static Set<PrivilegeCommand> ALL_PRIVILEGES = new HashSet<>();

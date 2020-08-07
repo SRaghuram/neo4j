@@ -92,6 +92,8 @@ class StandardAccessModeBuilder
 
     private Map<ResourcePrivilege.GrantOrDeny,Boolean> executeAllProcedures = new HashMap<>();
     private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeProcedures = new HashMap<>();
+    private Map<ResourcePrivilege.GrantOrDeny,Boolean> executeBoostedAllProcedures = new HashMap<>();
+    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeBoostedProcedures = new HashMap<>();
 
     private StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
@@ -127,6 +129,7 @@ class StandardAccessModeBuilder
             this.writeNodeSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
             this.writeRelationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
             this.executeProcedures.put( privilegeType, IntSets.mutable.empty() );
+            this.executeBoostedProcedures.put( privilegeType, IntSets.mutable.empty() );
         }
     }
 
@@ -217,7 +220,11 @@ class StandardAccessModeBuilder
                 new ProcedurePrivileges( executeAllProcedures.getOrDefault( GRANT, false ),
                                          executeAllProcedures.getOrDefault( DENY, false ),
                                          executeProcedures.get( GRANT ),
-                                         executeProcedures.get( DENY ) ),
+                                         executeProcedures.get( DENY ),
+                                         executeBoostedAllProcedures.getOrDefault( GRANT, false ),
+                                         executeBoostedAllProcedures.getOrDefault( DENY, false ),
+                                         executeBoostedProcedures.get( GRANT ),
+                                         executeBoostedProcedures.get( DENY ) ),
 
                 adminModeBuilder.build(),
                 database );
@@ -296,6 +303,10 @@ class StandardAccessModeBuilder
             handleExecute( segment, privilegeType, executeAllProcedures, executeProcedures );
             break;
 
+        case EXECUTE_BOOSTED:
+            handleExecute( segment, privilegeType, executeBoostedAllProcedures, executeBoostedProcedures );
+            break;
+
         default:
             if ( TOKEN.satisfies( action ) )
             {
@@ -321,7 +332,7 @@ class StandardAccessModeBuilder
 
             if ( action == DBMS_ACTIONS || action == ADMIN_PROCEDURE || action == ADMIN )
             {
-                executeAllProcedures.put( privilegeType, true );
+                executeBoostedAllProcedures.put( privilegeType, true );
             }
         }
         return this;

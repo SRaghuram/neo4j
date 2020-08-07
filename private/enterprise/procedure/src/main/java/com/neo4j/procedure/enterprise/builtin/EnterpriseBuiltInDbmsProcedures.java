@@ -442,6 +442,7 @@ public class EnterpriseBuiltInDbmsProcedures
         return Stream.of( transactionId == -1 ? CheckpointResult.TERMINATED : CheckpointResult.SUCCESS );
     }
 
+    @Admin
     @Internal
     @SystemProcedure
     @Description( "Report the current status of the system database sub-graph schema, providing details for each sub-graph component." )
@@ -461,6 +462,7 @@ public class EnterpriseBuiltInDbmsProcedures
                 results.stream() );
     }
 
+    @Admin
     @Internal
     @SystemProcedure
     @Description( "Upgrade the system database schema if it is not the current schema, providing upgrade status results for each sub-graph component." )
@@ -528,14 +530,6 @@ public class EnterpriseBuiltInDbmsProcedures
                         String.format( "%s Execution of this procedure has been restricted by the system.", PERMISSION_DENIED ) );
             }
         }
-        else
-        {
-            securityContext.assertCredentialsNotExpired();
-            if ( !securityContext.allowExecuteAdminProcedure() )
-            {
-                throw new AuthorizationViolationException( format("Executing admin procedure is not allowed for %s.", securityContext.description() ) );
-            }
-        }
     }
 
     public enum CheckpointResult
@@ -588,7 +582,7 @@ public class EnterpriseBuiltInDbmsProcedures
 
     private boolean isAdminOrSelf( String username )
     {
-        return securityContext.allowExecuteAdminProcedure() || securityContext.subject().hasUsername( username );
+        return securityContext.allowExecuteAdminProcedure( callContext.id() ) || securityContext.subject().hasUsername( username );
     }
 
     public static class ActiveSchedulingGroup

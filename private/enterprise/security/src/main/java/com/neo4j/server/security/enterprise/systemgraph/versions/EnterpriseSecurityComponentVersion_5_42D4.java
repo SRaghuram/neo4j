@@ -70,6 +70,7 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
         {
         // Execute procedures
         case EXECUTE:
+        case EXECUTE_BOOSTED:
             return true;
 
         default:

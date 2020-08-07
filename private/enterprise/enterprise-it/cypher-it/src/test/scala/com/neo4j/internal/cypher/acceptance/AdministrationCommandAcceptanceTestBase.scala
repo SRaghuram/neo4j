@@ -258,6 +258,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def adminAction(action: String): Map[String, String] = baseMap + ("resource" -> "database", "action" -> action)
 
   val executeProcedure: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute", "segment" -> "PROCEDURE(*)")
+  val executeBoosted: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute_boosted", "segment" -> "PROCEDURE(*)")
 
   val startDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "start_database")
   val stopDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "stop_database")
@@ -326,7 +327,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val dbmsCommands: Iterable[String] = dbmsPrivileges.keys
 
   val executePrivileges: Map[String, Map[String, String]] = Map(
-    "EXECUTE PROCEDURE" -> executeProcedure
+    "EXECUTE PROCEDURE" -> executeProcedure,
+    "EXECUTE BOOSTED PROCEDURE" -> executeBoosted
   )
   val executeCommands: Iterable[String] = executePrivileges.keys
 

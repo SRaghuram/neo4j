@@ -932,9 +932,12 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"REVOKE CONSTRAINT ON DATABASE * FROM $role")
     execute(s"REVOKE NAME MANAGEMENT ON DATABASE * FROM $role")
     // have to deny since we can't revoke compound admin privilege
+    // technically we should deny transaction management as well but this should just die with the ADMIN compound
     execute(s"DENY START ON DATABASE * TO $role")
     execute(s"DENY STOP ON DATABASE * TO $role")
-    // technically we should deny transaction management and procedure execution as well but this should just die with the ADMIN compound
+    execute(s"DENY EXECUTE BOOSTED PROCEDURE * ON DBMS TO $role")
+    // have to grant execute on procedure for label creation since there is no command for creating tokens
+    execute(s"GRANT EXECUTE PROCEDURE db.createLabel ON DBMS TO $role")
 
     // THEN
     testAlwaysAllowedForAdmin(populatedRoles)
@@ -1047,8 +1050,6 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     executeOnSystem("Alice", "secret", "DROP ROLE mine")
     executeOnSystem("Alice", "secret", "DROP USER Bob")
     executeOnSystem("Alice", "secret", "DROP DATABASE bar")
-
-    // technically we should add execute procedure as well but this should just die with the ADMIN compound
   }
 
   // Disable normal database creation because we need different settings on each test

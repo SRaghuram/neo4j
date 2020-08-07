@@ -33,9 +33,9 @@ public class EnterpriseSecurityContext extends SecurityContext
     }
 
     @Override
-    public boolean allowExecuteAdminProcedure()
+    public boolean allowExecuteAdminProcedure( int procedureId )
     {
-        return adminAccessMode.allows( executeAdminProc );
+        return adminAccessMode.allows( executeAdminProc ) || mode.shouldBoostProcedure( procedureId );
     }
 
     @Override

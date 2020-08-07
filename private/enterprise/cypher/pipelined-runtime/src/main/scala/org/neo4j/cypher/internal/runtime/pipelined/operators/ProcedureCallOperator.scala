@@ -78,10 +78,10 @@ class ProcedureCallOperator(val workIdentity: WorkIdentity,
 }
 
 object ProcedureCallOperator {
-  def createProcedureCallContext(qtx: QueryContext, originalVariables: Array[String]): ProcedureCallContext = {
+  def createProcedureCallContext(id: Int, qtx: QueryContext, originalVariables: Array[String]): ProcedureCallContext = {
     // getting the original name of the yielded variable
     val databaseId = qtx.transactionalContext.databaseId
-    new ProcedureCallContext(originalVariables, true, databaseId.name(), databaseId.isSystemDatabase)
+    new ProcedureCallContext(id, originalVariables, true, databaseId.name(), databaseId.isSystemDatabase)
   }
 
   val EMPTY_ARGS: Array[AnyValue] = Array.empty
@@ -101,7 +101,7 @@ class ProcedureCallMiddleOperator(val workIdentity: WorkIdentity,
     val readCursor = morsel.readCursor()
     while (readCursor.next()) {
       val argValues = argExprs.map(arg => arg(readCursor, queryState)).toArray
-      callMode.callProcedure(state.query, signature.id, argValues, createProcedureCallContext(state.query, originalVariables))
+      callMode.callProcedure(state.query, signature.id, argValues, createProcedureCallContext(signature.id, state.query, originalVariables))
     }
   }
 
@@ -125,7 +125,7 @@ class ProcedureCallTask(inputMorsel: Morsel,
     val queryState = state.queryStateForExpressionEvaluation(resources)
     initExecutionContext.copyFrom(inputCursor, inputMorsel.longsPerRow, inputMorsel.refsPerRow)
     val argValues = argExprs.map(arg => arg(initExecutionContext, queryState)).toArray
-    iterator = callMode.callProcedure(state.query, signature.id, argValues, createProcedureCallContext(state.query, originalVariables))
+    iterator = callMode.callProcedure(state.query, signature.id, argValues, createProcedureCallContext(signature.id, state.query, originalVariables))
     true
   }
 
@@ -194,7 +194,8 @@ trait ProcedureCaller {
       Seq(DB_ACCESS,
         constant(signature.id),
         getProcedureArguments(argExpression),
-        invokeStatic(method[ProcedureCallOperator, ProcedureCallContext, QueryContext, Array[String]]("createProcedureCallContext"),
+        invokeStatic(method[ProcedureCallOperator, ProcedureCallContext, Int, QueryContext, Array[String]]("createProcedureCallContext"),
+          constant(signature.id),
           DB_ACCESS,
           getStatic(originalVariablesField))))
   }
