@@ -31,7 +31,6 @@ import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.channel.Channel;
@@ -127,12 +126,6 @@ public class CatchupProtocolServerInstaller implements ProtocolInstaller<Orienta
         decoderDispatcher.register( CatchupServerProtocol.State.PREPARE_STORE_COPY, new PrepareStoreCopyRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_FILE, new GetStoreFileRequestDecoder() );
         return decoderDispatcher;
-    }
-
-    @Override
-    public ApplicationProtocol applicationProtocol()
-    {
-        return APPLICATION_PROTOCOL;
     }
 
     @Override

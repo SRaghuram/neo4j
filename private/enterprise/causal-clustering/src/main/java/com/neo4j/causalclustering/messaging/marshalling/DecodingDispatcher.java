@@ -3,24 +3,24 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging.marshalling.v3.decoding;
+package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.catchup.Protocol;
 import com.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
-import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
-import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.RaftLogEntryTermsDecoder;
-import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.ReplicatedContentChunkDecoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
+import java.util.function.Function;
 
 import org.neo4j.logging.LogProvider;
 
 public class DecodingDispatcher extends RequestDecoderDispatcher<ContentType>
 {
-    public DecodingDispatcher( Protocol<ContentType> protocol, LogProvider logProvider )
+    public DecodingDispatcher( Protocol<ContentType> protocol,
+                               LogProvider logProvider,
+                               Function<Protocol<ContentType>,RaftMessageDecoder> messageDecoder )
     {
         super( protocol, logProvider );
         register( ContentType.ContentType, new ByteToMessageDecoder()
@@ -36,6 +36,6 @@ public class DecodingDispatcher extends RequestDecoderDispatcher<ContentType>
         } );
         register( ContentType.RaftLogEntryTerms, new RaftLogEntryTermsDecoder( protocol ) );
         register( ContentType.ReplicatedContent, new ReplicatedContentChunkDecoder() );
-        register( ContentType.Message, new RaftMessageDecoder( protocol ) );
+        register( ContentType.Message, messageDecoder.apply( protocol ) );
     }
 }

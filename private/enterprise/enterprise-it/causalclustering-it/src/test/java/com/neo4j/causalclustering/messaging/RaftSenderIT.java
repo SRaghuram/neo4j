@@ -7,15 +7,21 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolClientInstallerV4;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolServerInstallerV4;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
+import com.neo4j.causalclustering.messaging.marshalling.DecodingDispatcher;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageComposer;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
+import com.neo4j.causalclustering.messaging.marshalling.v3.decoding.RaftMessageDecoderV3;
+import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageEncoderV3;
+import com.neo4j.causalclustering.messaging.marshalling.v4.decoding.RaftMessageDecoderV4;
+import com.neo4j.causalclustering.messaging.marshalling.v4.encoding.RaftMessageEncoderV4;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.PooledChannel;
 import com.neo4j.causalclustering.net.Server;
@@ -65,6 +71,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -264,33 +271,46 @@ class RaftSenderIT
         assertTrue( messageReceived.tryAcquire( 15, SECONDS ) );
     }
 
-    private Server raftServer( ChannelInboundHandler nettyHandler, ApplicationProtocols protocols )
+    private Server raftServer( ChannelInboundHandler nettyHandler, ApplicationProtocols protocol )
     {
         NettyPipelineBuilderFactory pipelineFactory = NettyPipelineBuilderFactory.insecure();
 
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> installer;
-        if ( protocols == ApplicationProtocols.RAFT_2_0 )
+        final var clock = Clock.systemUTC();
+        if ( protocol == ApplicationProtocols.RAFT_2_0 )
         {
 
-            var factoryV2 =
-                    new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineFactory, logProvider );
+            var factoryV2 = new RaftProtocolServerInstaller.Factory( nettyHandler,
+                                                                     pipelineFactory,
+                                                                     logProvider,
+                                                                     c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoder::new ),
+                                                                     () -> new RaftMessageComposer( clock ),
+                                                                     protocol );
             installer = new ProtocolInstallerRepository<>( List.of( factoryV2 ), ModifierProtocolInstaller.allServerInstallers );
         }
-        else if ( protocols == ApplicationProtocols.RAFT_3_0 )
+        else if ( protocol == ApplicationProtocols.RAFT_3_0 )
         {
-            var factoryV3 =
-                    new RaftProtocolServerInstallerV3.Factory( nettyHandler, pipelineFactory, logProvider );
+            var factoryV3 = new RaftProtocolServerInstaller.Factory( nettyHandler,
+                                                                     pipelineFactory,
+                                                                     logProvider,
+                                                                     c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV3::new ),
+                                                                     () -> new RaftMessageComposer( clock ),
+                                                                     protocol );
             installer = new ProtocolInstallerRepository<>( List.of( factoryV3 ), ModifierProtocolInstaller.allServerInstallers );
         }
-        else if ( protocols == ApplicationProtocols.RAFT_4_0 )
+        else if ( protocol == ApplicationProtocols.RAFT_4_0 )
         {
-            var factoryV4 =
-                    new RaftProtocolServerInstallerV4.Factory( nettyHandler, pipelineFactory, logProvider, Clock.systemUTC() );
+            var factoryV4 = new RaftProtocolServerInstaller.Factory( nettyHandler,
+                                                                     pipelineFactory,
+                                                                     logProvider,
+                                                                     c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV4::new ),
+                                                                     () -> new RaftMessageComposer( clock ),
+                                                                     protocol );
             installer = new ProtocolInstallerRepository<>( List.of( factoryV4 ), ModifierProtocolInstaller.allServerInstallers );
         }
         else
         {
-            throw new IllegalArgumentException( "Unknown protocol " + protocols );
+            throw new IllegalArgumentException( "Unknown protocol " + protocol );
         }
 
         HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( clientProtocolRepository, modifierProtocolRepository,
@@ -312,17 +332,29 @@ class RaftSenderIT
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstaller;
         if ( clientProtocol == ApplicationProtocols.RAFT_2_0 )
         {
-            RaftProtocolClientInstallerV2.Factory factoryV2 = new RaftProtocolClientInstallerV2.Factory( pipelineFactory, logProvider );
+            var factoryV2 = new RaftProtocolClientInstaller.Factory( pipelineFactory,
+                                                                     logProvider,
+                                                                     new SupportedMessagesV2(),
+                                                                     () -> new RaftMessageEncoder(),
+                                                                     ApplicationProtocols.RAFT_2_0 );
             protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV2 ), ModifierProtocolInstaller.allClientInstallers );
         }
         else if ( clientProtocol == ApplicationProtocols.RAFT_3_0 )
         {
-            RaftProtocolClientInstallerV3.Factory factoryV3 = new RaftProtocolClientInstallerV3.Factory( pipelineFactory, logProvider );
+            var factoryV3 = new RaftProtocolClientInstaller.Factory( pipelineFactory,
+                                                                     logProvider,
+                                                                     new SupportedMessagesV3(),
+                                                                     () -> new RaftMessageEncoderV3(),
+                                                                     ApplicationProtocols.RAFT_3_0 );
             protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV3 ), ModifierProtocolInstaller.allClientInstallers );
         }
         else if ( clientProtocol == ApplicationProtocols.RAFT_4_0 )
         {
-            RaftProtocolClientInstallerV4.Factory factoryV4 = new RaftProtocolClientInstallerV4.Factory( pipelineFactory, logProvider );
+            var factoryV4 = new RaftProtocolClientInstaller.Factory( pipelineFactory,
+                                                                     logProvider,
+                                                                     SUPPORT_ALL,
+                                                                     () -> new RaftMessageEncoderV4(),
+                                                                     ApplicationProtocols.RAFT_4_0 );
             protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV4 ), ModifierProtocolInstaller.allClientInstallers );
         }
         else

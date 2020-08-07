@@ -6,9 +6,14 @@
 package com.neo4j.causalclustering.protocol.handshake;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
+import com.neo4j.causalclustering.messaging.marshalling.DecodingDispatcher;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageComposer;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -36,6 +41,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -219,15 +225,20 @@ class NettyInstalledProtocolsIT
         void start( final ApplicationProtocolRepository applicationProtocolRepository, final ModifierProtocolRepository modifierProtocolRepository,
                 LogProvider logProvider )
         {
-            var raftFactoryV2 =
-                    new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
+            var raftFactoryV2 = new RaftProtocolServerInstaller.Factory( nettyHandler,
+                                                                         pipelineBuilderFactory,
+                                                                         logProvider,
+                                                                         c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoder::new ),
+                                                                         () -> new RaftMessageComposer( Clock.systemUTC() ),
+                                                                         RAFT_2_0 );
+
             var protocolInstallerRepository =
                     new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allServerInstallers );
 
             eventLoopGroup = new NioEventLoopGroup();
 
             var handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                    protocolInstallerRepository, pipelineBuilderFactory, logProvider, config );
+                                                                       protocolInstallerRepository, pipelineBuilderFactory, logProvider, config );
 
             var channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
                     config.get( handshake_timeout ), logProvider, config );
@@ -268,7 +279,11 @@ class NettyInstalledProtocolsIT
         Client( ApplicationProtocolRepository applicationProtocolRepository, ModifierProtocolRepository modifierProtocolRepository,
                 NettyPipelineBuilderFactory pipelineBuilderFactory, Config config, LogProvider logProvider )
         {
-            var raftFactoryV2 = new RaftProtocolClientInstallerV2.Factory( pipelineBuilderFactory, logProvider );
+            var raftFactoryV2 = new RaftProtocolClientInstaller.Factory( pipelineBuilderFactory,
+                                                                         logProvider,
+                                                                         new SupportedMessagesV2(),
+                                                                         () -> new RaftMessageEncoder(),
+                                                                         ApplicationProtocols.RAFT_2_0 );
             var protocolInstallerRepository =
                     new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allClientInstallers );
             eventLoopGroup = new NioEventLoopGroup();

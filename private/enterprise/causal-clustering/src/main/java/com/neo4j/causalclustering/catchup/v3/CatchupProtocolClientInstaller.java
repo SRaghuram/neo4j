@@ -40,7 +40,6 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotResponseHandle
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.channel.Channel;
@@ -129,12 +128,6 @@ public class CatchupProtocolClientInstaller implements ProtocolInstaller<Protoco
                 .add( "hnd_res_store_listing", new StoreListingResponseHandler( protocol, handler ))
                 .add( "hnd_res_catchup_error", new CatchupErrorResponseHandler( protocol, handler ) )
                 .install();
-    }
-
-    @Override
-    public ApplicationProtocol applicationProtocol()
-    {
-        return APPLICATION_PROTOCOL;
     }
 
     @Override

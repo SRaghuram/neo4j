@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentati
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
@@ -41,9 +41,9 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.ANONYMOUS;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
-class CoreReplicatedContentMarshalV2Test
+class CoreReplicatedContentMarshalTest
 {
-    private final ChannelMarshal<ReplicatedContent> marshal = new CoreReplicatedContentMarshalV2();
+    private final ChannelMarshal<ReplicatedContent> marshal = new CoreReplicatedContentMarshal();
     private static final NamedDatabaseId DATABASE_ID = randomNamedDatabaseId();
 
     @Test

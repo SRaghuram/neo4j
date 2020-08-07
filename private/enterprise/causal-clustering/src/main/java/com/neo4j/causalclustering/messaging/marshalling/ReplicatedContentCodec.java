@@ -124,7 +124,7 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
         case ContentCodes.DUMMY_REQUEST:
             return ContentBuilder.finished( DummyRequest.decode( buffer ) );
         default:
-            return CoreReplicatedContentMarshalV2.unmarshal( contentType, new NetworkReadableChannel( buffer ) );
+            return CoreReplicatedContentMarshal.unmarshal( contentType, new NetworkReadableChannel( buffer ) );
         }
     }
 

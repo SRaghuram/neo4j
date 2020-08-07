@@ -9,16 +9,27 @@ import com.neo4j.bench.micro.benchmarks.cluster.ProtocolInstallers;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolClientInstallerV4;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
 import com.neo4j.causalclustering.messaging.Inbound;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
+import com.neo4j.causalclustering.messaging.marshalling.DecodingDispatcher;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageComposer;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
+import com.neo4j.causalclustering.messaging.marshalling.v3.decoding.RaftMessageDecoderV3;
+import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageEncoderV3;
+import com.neo4j.causalclustering.messaging.marshalling.v4.decoding.RaftMessageDecoderV4;
+import com.neo4j.causalclustering.messaging.marshalling.v4.encoding.RaftMessageEncoderV4;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 
+import java.time.Clock;
+
 import org.neo4j.logging.LogProvider;
 
+import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static java.util.Collections.emptyList;
 
 public class RaftProtocolInstallers implements ProtocolInstallers
@@ -45,14 +56,26 @@ public class RaftProtocolInstallers implements ProtocolInstallers
         {
         case V2:
         {
-            return new RaftProtocolClientInstallerV2( pipelineBuilderFactory, emptyList(), logProvider );
+            return new RaftProtocolClientInstaller( pipelineBuilderFactory,
+                                                    emptyList(),
+                                                    logProvider,
+                                                    new SupportedMessagesV2(),
+                                                    () -> new RaftMessageEncoder() );
         }
         case V3:
         {
-            return new RaftProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), logProvider );
+            return new RaftProtocolClientInstaller( pipelineBuilderFactory,
+                                                    emptyList(),
+                                                    logProvider,
+                                                    new SupportedMessagesV3(),
+                                                    () -> new RaftMessageEncoderV3() );
         }
         case V4:
-            return new RaftProtocolClientInstallerV4( pipelineBuilderFactory, emptyList(), logProvider );
+            return new RaftProtocolClientInstaller( pipelineBuilderFactory,
+                                                    emptyList(),
+                                                    logProvider,
+                                                    SUPPORT_ALL,
+                                                    () -> new RaftMessageEncoderV4() );
         default:
         {
             throw new IllegalArgumentException( "Can't handle: " + version );
@@ -68,7 +91,30 @@ public class RaftProtocolInstallers implements ProtocolInstallers
 
         if ( version == ProtocolVersion.V2 )
         {
-            return new RaftProtocolServerInstallerV2( raftMessageNettyHandler, pipelineBuilderFactory, emptyList(), logProvider );
+            return new RaftProtocolServerInstaller( raftMessageNettyHandler,
+                                                    pipelineBuilderFactory,
+                                                    emptyList(),
+                                                    logProvider,
+                                                    c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoder::new ),
+                                                    () -> new RaftMessageComposer( Clock.systemUTC() ) );
+        }
+        else if ( version == ProtocolVersion.V3 )
+        {
+            return new RaftProtocolServerInstaller( raftMessageNettyHandler,
+                                                    pipelineBuilderFactory,
+                                                    emptyList(),
+                                                    logProvider,
+                                                    c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV3::new ),
+                                                    () -> new RaftMessageComposer( Clock.systemUTC() ) );
+        }
+        else if ( version == ProtocolVersion.V4 )
+        {
+            new RaftProtocolServerInstaller( raftMessageNettyHandler,
+                                             pipelineBuilderFactory,
+                                             emptyList(),
+                                             logProvider,
+                                             c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV4::new ),
+                                             () -> new RaftMessageComposer( Clock.systemUTC() ) );
         }
         throw new IllegalArgumentException( "Can't handle: " + version );
     }

@@ -33,7 +33,7 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.InFlightCacheFactory;
@@ -83,7 +83,7 @@ public class RaftGroup
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
-        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
+        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshal() );
         RaftLog underlyingLog =
                 createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId, memoryTracker, clock );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );

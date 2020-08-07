@@ -14,9 +14,7 @@ import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolClientInstallerV4;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
@@ -38,6 +36,11 @@ import com.neo4j.causalclustering.logging.NullRaftMessageLogger;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.RaftChannelPoolService;
 import com.neo4j.causalclustering.messaging.RaftSender;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
+import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageEncoderV3;
+import com.neo4j.causalclustering.messaging.marshalling.v4.encoding.RaftMessageEncoderV4;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
@@ -45,6 +48,9 @@ import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocolValidator;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -117,6 +123,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
+import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_raft_protocol;
 import static com.neo4j.configuration.CausalClusteringSettings.status_throughput_window;
 import static com.neo4j.configuration.ServerGroupsSupplier.listen;
@@ -486,19 +493,40 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
     }
 
-    private List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolList( ApplicationProtocols maximumProtocol )
+    private List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolList( ApplicationProtocol maximumProtocol )
     {
-        return createProtocolMap().entrySet()
-                           .stream()
-                           .filter( p -> p.getKey().lessOrEquals( maximumProtocol ) )
-                           .map( Map.Entry::getValue )
-                           .collect( Collectors.toList() );
+        final var protocolMap = createProtocolMap();
+        ApplicationProtocolValidator.checkInstallersExhaustive( protocolMap.keySet(), ApplicationProtocolCategory.RAFT );
+
+        return protocolMap
+                .entrySet()
+                .stream()
+                .filter( p -> p.getKey().lessOrEquals( maximumProtocol ) )
+                .map( Map.Entry::getValue )
+                .collect( Collectors.toList() );
     }
 
-    private Map<ApplicationProtocols,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolMap()
+    private Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolMap()
     {
-        return Map.of( ApplicationProtocols.RAFT_2_0, new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ),
-                       ApplicationProtocols.RAFT_3_0, new RaftProtocolClientInstallerV3.Factory( pipelineBuilders.client(), logProvider ),
-                       ApplicationProtocols.RAFT_4_0, new RaftProtocolClientInstallerV4.Factory( pipelineBuilders.client(), logProvider ) );
+        var factoryV2 = new RaftProtocolClientInstaller.Factory( pipelineBuilders.client(),
+                                                                 logProvider,
+                                                                 new SupportedMessagesV2(),
+                                                                 () -> new RaftMessageEncoder(),
+                                                                 ApplicationProtocols.RAFT_2_0 );
+
+        var factoryV3 = new RaftProtocolClientInstaller.Factory( pipelineBuilders.client(),
+                                                                 logProvider,
+                                                                 new SupportedMessagesV3(),
+                                                                 () -> new RaftMessageEncoderV3(),
+                                                                 ApplicationProtocols.RAFT_3_0 );
+
+        var factoryV4 = new RaftProtocolClientInstaller.Factory( pipelineBuilders.client(),
+                                                                 logProvider,
+                                                                 SUPPORT_ALL,
+                                                                 () -> new RaftMessageEncoderV4(),
+                                                                 ApplicationProtocols.RAFT_4_0 );
+        return List.of( factoryV2, factoryV3, factoryV4 )
+                   .stream()
+                   .collect( Collectors.toMap( ProtocolInstaller.Factory::applicationProtocol, f -> f ) );
     }
 }

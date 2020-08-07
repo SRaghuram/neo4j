@@ -60,15 +60,4 @@ public enum ApplicationProtocols implements ApplicationProtocol
         return category().equals( applicationProtocol.category() );
     }
 
-    public boolean lessOrEquals( ApplicationProtocols applicationProtocol )
-    {
-        if ( this.identifier != applicationProtocol.identifier )
-        {
-            throw new IllegalArgumentException( "Can't compare protocol with different identifiers" );
-        }
-        else
-        {
-            return this.version.compareTo( applicationProtocol.version ) <= 0;
-        }
-    }
 }

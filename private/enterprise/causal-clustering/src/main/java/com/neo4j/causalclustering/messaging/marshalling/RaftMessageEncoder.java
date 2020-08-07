@@ -3,15 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging.marshalling.v4.encoding;
+package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.UUIDMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -31,15 +28,20 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         channel.putInt( message.type().ordinal() );
         memberMarshal.marshal( message.from(), channel );
 
-        message.dispatch( new Handler( memberMarshal, channel ) );
+        message.dispatch( createHandler( memberMarshal, channel ) );
     }
 
-    private static class Handler implements RaftMessages.Handler<Void,Exception>
+    protected Handler createHandler( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
     {
-        private final MemberId.Marshal memberMarshal;
-        private final NetworkWritableChannel channel;
+        return new Handler( memberMarshal, channel );
+    }
 
-        Handler( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
+    protected static class Handler implements RaftMessages.Handler<Void,Exception>
+    {
+        protected final MemberId.Marshal memberMarshal;
+        protected final NetworkWritableChannel channel;
+
+        protected Handler( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
         {
             this.memberMarshal = memberMarshal;
             this.channel = channel;
@@ -166,15 +168,7 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
         {
-            channel.putLong( leadershipTransferRequest.previousIndex() );
-            channel.putLong( leadershipTransferRequest.term() );
-            var groups = leadershipTransferRequest.groups();
-            channel.putInt( groups.size() );
-            for ( var group : groups )
-            {
-                StringMarshal.marshal( channel, group.toString() );
-            }
-            return null;
+            throw new UnsupportedOperationException( "Leadership Transfer extension is not supported with Raft protocol v2!" );
         }
 
         @Override
@@ -186,18 +180,13 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
         {
-            channel.putLong( leadershipTransferRejection.previousIndex() );
-            channel.putLong( leadershipTransferRejection.term() );
-            return null;
+            throw new UnsupportedOperationException( "Leadership Transfer extension is not supported with Raft protocol v2!" );
         }
 
         @Override
         public Void handle( RaftMessages.StatusResponse statusResponse ) throws Exception
         {
-            UUIDMarshal.INSTANCE.marshal( statusResponse.getRequestId(), channel );
-            StringMarshal.marshal( channel, statusResponse.getStatus().message.name() );
-
-            return null;
+            throw new UnsupportedOperationException( "Status response is not supported with Raft protocol v2!" );
         }
     }
 }

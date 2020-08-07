@@ -42,11 +42,6 @@ public interface ProtocolInstaller<O extends ProtocolInstaller.Orientation>
     /**
      * For testing
      */
-    ApplicationProtocol applicationProtocol();
-
-    /**
-     * For testing
-     */
     Collection<Collection<ModifierProtocol>> modifiers();
 
     interface Orientation

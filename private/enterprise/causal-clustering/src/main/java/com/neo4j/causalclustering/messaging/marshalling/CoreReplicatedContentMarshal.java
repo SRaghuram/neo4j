@@ -27,7 +27,7 @@ import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.io.marshal.SafeChannelMarshal;
 
-public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<ReplicatedContent>
+public class CoreReplicatedContentMarshal extends SafeChannelMarshal<ReplicatedContent>
 {
     @Override
     public void marshal( ReplicatedContent replicatedContent, WritableChannel channel ) throws IOException

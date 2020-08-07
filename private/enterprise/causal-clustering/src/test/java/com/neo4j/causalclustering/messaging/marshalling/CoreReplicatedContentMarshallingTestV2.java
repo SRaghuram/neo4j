@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging.marshalling.v2;
+package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.helpers.Buffers;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -54,7 +53,7 @@ class CoreReplicatedContentMarshallingTestV2
     @MethodSource( "data" )
     public void shouldSerializeAndDeserialize( ReplicatedContent replicatedContent ) throws Exception
     {
-        var coreReplicatedContentMarshal = new CoreReplicatedContentMarshalV2();
+        var coreReplicatedContentMarshal = new CoreReplicatedContentMarshal();
         var buffer = buffers.buffer();
         var channel = new BoundedNetworkWritableChannel( buffer );
         coreReplicatedContentMarshal.marshal( replicatedContent, channel );

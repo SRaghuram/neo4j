@@ -8,12 +8,8 @@ package com.neo4j.causalclustering.messaging.marshalling;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolClientInstallerV4;
-import com.neo4j.causalclustering.core.consensus.protocol.v4.RaftProtocolServerInstallerV4;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
@@ -28,6 +24,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
+import com.neo4j.causalclustering.messaging.marshalling.v3.decoding.RaftMessageDecoderV3;
+import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageEncoderV3;
+import com.neo4j.causalclustering.messaging.marshalling.v4.decoding.RaftMessageDecoderV4;
+import com.neo4j.causalclustering.messaging.marshalling.v4.encoding.RaftMessageEncoderV4;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
@@ -45,6 +45,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -55,12 +56,12 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.log4j.Log4jLogProvider;
-import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static io.netty.util.ReferenceCountUtil.release;
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -178,26 +179,49 @@ class RaftMessageEncoderDecoderTest
 
     private void setupChannels( ApplicationProtocolVersion raftProtocol ) throws Exception
     {
+        final var logProvider = new Log4jLogProvider( System.out );
+        final var clock = Clock.systemUTC();
         if ( ApplicationProtocols.RAFT_2_0.implementation().equals( raftProtocol ) )
         {
-            new RaftProtocolClientInstallerV2( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    new Log4jLogProvider( System.out ) ).install( outbound );
-            new RaftProtocolServerInstallerV2( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    new Log4jLogProvider( System.out ) ).install( inbound );
+            new RaftProtocolClientInstaller( NettyPipelineBuilderFactory.insecure(),
+                                             Collections.emptyList(),
+                                             logProvider,
+                                             new SupportedMessagesV2(),
+                                             () -> new RaftMessageEncoder() ).install( outbound );
+            new RaftProtocolServerInstaller( handler,
+                                             NettyPipelineBuilderFactory.insecure(),
+                                             emptyList(),
+                                             logProvider,
+                                             c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoder::new ),
+                                             () -> new RaftMessageComposer( clock ) ).install( inbound );
         }
         else if ( ApplicationProtocols.RAFT_3_0.implementation().equals( raftProtocol ) )
         {
-            new RaftProtocolClientInstallerV3( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    new Log4jLogProvider( System.out ) ).install( outbound );
-            new RaftProtocolServerInstallerV3( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                    new Log4jLogProvider( System.out ) ).install( inbound );
+            new RaftProtocolClientInstaller( NettyPipelineBuilderFactory.insecure(),
+                                             Collections.emptyList(),
+                                             logProvider,
+                                             new SupportedMessagesV3(),
+                                             () -> new RaftMessageEncoderV3() ).install( outbound );
+            new RaftProtocolServerInstaller( handler,
+                                             NettyPipelineBuilderFactory.insecure(),
+                                             emptyList(),
+                                             logProvider,
+                                             c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV3::new ),
+                                             () -> new RaftMessageComposer( clock ) ).install( inbound );
         }
         else if ( ApplicationProtocols.RAFT_4_0.implementation().equals( raftProtocol ) )
         {
-            new RaftProtocolClientInstallerV4( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                                               new Log4jLogProvider( System.out ) ).install( outbound );
-            new RaftProtocolServerInstallerV4( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
-                                               new Log4jLogProvider( System.out ), Clocks.systemClock() ).install( inbound );
+            new RaftProtocolClientInstaller( NettyPipelineBuilderFactory.insecure(),
+                                             Collections.emptyList(),
+                                             logProvider,
+                                             SUPPORT_ALL,
+                                             () -> new RaftMessageEncoderV4() ).install( outbound );
+            new RaftProtocolServerInstaller( handler,
+                                             NettyPipelineBuilderFactory.insecure(),
+                                             emptyList(),
+                                             logProvider,
+                                             c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV4::new ),
+                                             () -> new RaftMessageComposer( clock ) ).install( inbound );
         }
         else
         {

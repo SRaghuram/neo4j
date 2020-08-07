@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -59,7 +59,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "100 entries", logProvider ).newInstance();
-        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> new CoreReplicatedContentMarshalV2(),
+        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> new CoreReplicatedContentMarshal(),
                 logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy, INSTANCE );
     }
 
@@ -67,7 +67,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     {
         FileNames fileNames = new FileNames( logDirectory );
         return new RecoveryProtocol( fs, fileNames, new ReaderPool( 8, getInstance(), fileNames, fs, Clocks.fakeClock() ),
-                ignored -> new CoreReplicatedContentMarshalV2(), getInstance(), INSTANCE );
+                ignored -> new CoreReplicatedContentMarshal(), getInstance(), INSTANCE );
     }
 
     @Test

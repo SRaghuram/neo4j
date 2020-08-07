@@ -10,4 +10,15 @@ import com.neo4j.configuration.ApplicationProtocolVersion;
 
 public interface ApplicationProtocol extends Protocol<ApplicationProtocolVersion>
 {
+    default boolean lessOrEquals( ApplicationProtocol applicationProtocol )
+    {
+        if ( !this.category().equals( applicationProtocol.category() ) )
+        {
+            throw new IllegalArgumentException( "Can't compare protocol with different category" );
+        }
+        else
+        {
+            return this.implementation().compareTo( applicationProtocol.implementation() ) <= 0;
+        }
+    }
 }

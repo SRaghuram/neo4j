@@ -5,8 +5,13 @@
  */
 package com.neo4j.causalclustering.protocol;
 
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
+import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
+import com.neo4j.causalclustering.messaging.marshalling.DecodingDispatcher;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageComposer;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
@@ -15,11 +20,13 @@ import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.util.Collection;
 import java.util.List;
 
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,7 +34,6 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ProtocolInstallerRepositoryTest
@@ -47,31 +53,24 @@ class ProtocolInstallerRepositoryTest
 
     private final NettyPipelineBuilderFactory pipelineBuilderFactory =
             NettyPipelineBuilderFactory.insecure();
-    private final RaftProtocolClientInstallerV2.Factory raftProtocolClientInstaller =
-            new RaftProtocolClientInstallerV2.Factory( pipelineBuilderFactory, NullLogProvider.getInstance() );
-    private final RaftProtocolServerInstallerV2.Factory raftProtocolServerInstaller =
-            new RaftProtocolServerInstallerV2.Factory( null, pipelineBuilderFactory, NullLogProvider.getInstance() );
+    RaftProtocolClientInstaller.Factory raftProtocolClientInstaller =
+            new RaftProtocolClientInstaller.Factory( pipelineBuilderFactory,
+                                                     NullLogProvider.getInstance(),
+                                                     new SupportedMessagesV2(),
+                                                     () -> new RaftMessageEncoder(),
+                                                     ApplicationProtocols.RAFT_2_0 );
 
+    RaftProtocolServerInstaller.Factory raftProtocolServerInstaller =
+            new RaftProtocolServerInstaller.Factory( null,
+                                                     pipelineBuilderFactory,
+                                                     NullLogProvider.getInstance(),
+                                                     c -> new DecodingDispatcher( c, NullLogProvider.getInstance(), RaftMessageDecoder::new ),
+                                                     () -> new RaftMessageComposer( Clock.systemUTC() ),
+                                                     RAFT_2_0 );
     private final ProtocolInstallerRepository<Orientation.Client> clientRepository =
             new ProtocolInstallerRepository<>( List.of( raftProtocolClientInstaller ), clientModifiers );
     private final ProtocolInstallerRepository<Orientation.Server> serverRepository =
             new ProtocolInstallerRepository<>( List.of( raftProtocolServerInstaller ), serverModifiers );
-
-    @Test
-    void shouldReturnRaftServerInstaller()
-    {
-        assertEquals(
-                raftProtocolServerInstaller.applicationProtocol(),
-                serverRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2_0, emptyList() ) ).applicationProtocol() );
-    }
-
-    @Test
-    void shouldReturnRaftClientInstaller()
-    {
-        assertEquals(
-                raftProtocolClientInstaller.applicationProtocol(),
-                clientRepository.installerFor( new ProtocolStack( ApplicationProtocols.RAFT_2_0, emptyList() ) ).applicationProtocol() );
-    }
 
     @Test
     void shouldReturnModifierProtocolsForClient()
