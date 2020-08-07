@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import java.util
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
@@ -32,7 +31,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLABLE
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
@@ -864,6 +862,14 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
 
   override def reference: IntermediateRepresentation = {
     invoke(target, method[RelationshipTraversalCursor, Long]("relationshipReference"))
+  }
+
+  def sourceNode: IntermediateRepresentation = {
+    invoke(target, method[RelationshipTraversalCursor, Long]("sourceNodeReference"))
+  }
+
+  def targetNode: IntermediateRepresentation = {
+    invoke(target, method[RelationshipTraversalCursor, Long]("targetNodeReference"))
   }
 
   override def relationshipType: IntermediateRepresentation = {

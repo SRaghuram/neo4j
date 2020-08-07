@@ -554,17 +554,6 @@ object ExpandAllOperatorTaskTemplate {
     newTokens.toArray
   }
 
-  def loadTypes( types: Array[Int], missingTypes: Array[String], typeField: Field, missingTypeField: Field ): IntermediateRepresentation = {
-    if (missingTypes.isEmpty) noop()
-    else {
-      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
-        setField(typeField,
-          invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
-            loadField(typeField), loadField(missingTypeField), DB_ACCESS))
-      }
-    }
-  }
-
   def getNodeIdFromSlot(slot: Slot, codeGen: OperatorExpressionCompiler): IntermediateRepresentation = slot match {
     // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
     case LongSlot(offset, _, _) =>
@@ -580,4 +569,16 @@ object ExpandAllOperatorTaskTemplate {
     case _ =>
       throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
+
+  def loadTypes( types: Array[Int], missingTypes: Array[String], typeField: Field, missingTypeField: Field ): IntermediateRepresentation = {
+    if (missingTypes.isEmpty) noop()
+    else {
+      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
+        setField(typeField,
+          invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
+            loadField(typeField), loadField(missingTypeField), DB_ACCESS))
+      }
+    }
+  }
+
 }

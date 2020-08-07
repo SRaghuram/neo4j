@@ -82,6 +82,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplat
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
@@ -99,10 +100,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNodeScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabelScanTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedProjectEndpointsTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VoidProcedureOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.VarLengthProjectEndpointsMiddleOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.VarLengthUndirectedProjectEndpointsTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
@@ -654,6 +658,63 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               lhsSlots,
               rhsSlots
             )(ctx.expressionCompiler.asInstanceOf[BinaryOperatorExpressionCompiler])
+
+        case plan@plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, directed, length) =>
+          ctx: TemplateContext =>
+            val typeTokenOrNames = types.map(_.map(r => ctx.tokenContext.getOptRelTypeId(r.name) match {
+                  case Some(token) => Left(token)
+                  case None => Right(r.name)
+                })
+            )
+            if (!directed && !startInScope && !endInScope) {
+              if (length.isSimple) {
+                new UndirectedProjectEndpointsTaskTemplate(
+                  ctx.inner,
+                  plan.id,
+                  ctx.innermost,
+                  isHeadOperator,
+                  rel,
+                  ctx.slots(rel),
+                  ctx.slots.getLongOffsetFor(start),
+                  ctx.slots.getLongOffsetFor(end),
+                  typeTokenOrNames)(ctx.expressionCompiler)
+              } else {
+                new VarLengthUndirectedProjectEndpointsTaskTemplate(
+                  ctx.inner,
+                  plan.id,
+                  ctx.innermost,
+                  isHeadOperator,
+                  ctx.slots(rel),
+                  ctx.slots.getLongOffsetFor(start),
+                  ctx.slots.getLongOffsetFor(end),
+                  typeTokenOrNames)(ctx.expressionCompiler)
+              }
+            } else {
+              if (length.isSimple) {
+                new ProjectEndpointsMiddleOperatorTemplate(
+                  ctx.inner,
+                  plan.id,
+                  rel,
+                  ctx.slots(rel),
+                  ctx.slots.getLongOffsetFor(start),
+                  startInScope,
+                  ctx.slots.getLongOffsetFor(end),
+                  endInScope,
+                  typeTokenOrNames,
+                  directed)(ctx.expressionCompiler)
+              } else {
+                new VarLengthProjectEndpointsMiddleOperatorTemplate(
+                  ctx.inner,
+                  plan.id,
+                  ctx.slots(rel),
+                  ctx.slots.getLongOffsetFor(start),
+                  startInScope,
+                  ctx.slots.getLongOffsetFor(end),
+                  endInScope,
+                  typeTokenOrNames,
+                  directed)(ctx.expressionCompiler)
+              }
+            }
 
         case _ =>
           None

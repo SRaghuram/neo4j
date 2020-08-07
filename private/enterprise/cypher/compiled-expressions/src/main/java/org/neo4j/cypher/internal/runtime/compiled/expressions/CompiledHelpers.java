@@ -29,6 +29,7 @@ import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.ListValueBuilder;
 import org.neo4j.values.virtual.VirtualNodeValue;
+import org.neo4j.values.virtual.VirtualRelationshipValue;
 
 import static java.lang.String.format;
 import static org.neo4j.cypher.operations.CypherCoercions.asStorableValue;
@@ -262,6 +263,20 @@ public final class CompiledHelpers
         {
             throw new ParameterWrongTypeException(
                     format( "Expected to find a node but found %s instead", value ) );
+        }
+    }
+
+    @CalledFromGeneratedCode
+    public static long relationshipFromAnyValue( AnyValue value )
+    {
+        if ( value instanceof VirtualRelationshipValue )
+        {
+            return ((VirtualRelationshipValue) value).id();
+        }
+        else
+        {
+            throw new ParameterWrongTypeException(
+                    format( "Expected to find a relationship but found %s instead", value ) );
         }
     }
 

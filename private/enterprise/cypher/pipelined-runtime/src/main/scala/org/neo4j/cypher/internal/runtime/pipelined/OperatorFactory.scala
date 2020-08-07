@@ -654,6 +654,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           }.toArray)
 
       case plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, _, length) =>
+        require(!startInScope && !endInScope)
         val lazyTypes = types.map(_.toArray).map(RelationshipTypes.apply(_)(semanticTable)).getOrElse(RelationshipTypes.empty)
        new ProjectEndpointsOperator(WorkIdentity.fromPlan(plan),
                                     slots(rel),
