@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit
 import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_idp_solver_duration_threshold
 import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_idp_solver_table_threshold
+import org.neo4j.configuration.GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -89,7 +90,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     val a = createNode()
     val b = createNode()
 
-    val limit: Long = Int.MaxValue + 1l
+    val limit: Long = Int.MaxValue + 1L
     // If we would use Ints for storing the limit, then we would end up with "limit 0"
     // thus, if we actually return the two nodes, then it proves that we used a long
     val query = "MATCH (n) RETURN n LIMIT " + limit
@@ -282,5 +283,34 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
 
     //then, we shouldn't crash
     result shouldBe empty
+  }
+
+  test("should handle UNION subquery followed by UNWIND and another subquery") {
+    val morselSize = databaseConfig()
+      .getOrElse(cypher_pipelined_batch_size_small, cypher_pipelined_batch_size_small.defaultValue())
+      .asInstanceOf[Integer]
+
+    val nodes = for (_ <- 0 until morselSize * 10) yield createNode()
+
+    val query =
+      """CALL {
+        |  MATCH (n) RETURN n
+        |  UNION
+        |  MATCH (n:DoesNotExist) RETURN n
+        |}
+        |WITH n
+        |UNWIND [n] AS x
+        |CALL {
+        |  WITH n, x
+        |  MATCH (m)
+        |  RETURN count(m) AS c
+        |}
+        |RETURN n, x, c
+        |""".stripMargin
+
+    val result = executeWith(Configs.All, query)
+
+    val expectedResult = nodes.map(n => Map("n" -> n, "x" -> n, "c" -> nodes.size)).toSet
+    result.toSet shouldBe expectedResult
   }
 }

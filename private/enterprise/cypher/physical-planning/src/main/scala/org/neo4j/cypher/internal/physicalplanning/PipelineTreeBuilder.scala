@@ -464,9 +464,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   private def outputToUnionBuffer(lhs: PipelineDefiner, rhs: PipelineDefiner, nextPipelineHeadPlan: Id): UnionBufferDefiner = {
-    // The Buffer doesn't really have a slot configuration, since it can store Morsels from both LHS and RHS with different slot configs.
-    // Does it work to use the configuration of the Union plan?
-    val output = stateDefiner.newUnionBuffer(lhs.id, rhs.id, nextPipelineHeadPlan, slotConfigurations(nextPipelineHeadPlan))
+    // When fusing, buffer configuration is used to determine which slots are not modified by the pipeline and should be copied from input.
+    val bufferSlotConfiguration = SlotConfiguration.empty // For Union we want it to be empty because:
+                                                          // a) Union operator logic already copies everything we need.
+                                                          // b) Buffer stores morsels from both LHS and RHS with different slot configs, so
+                                                          //    there isn't a single non-empty config that would match them both for all cases.
+    val output = stateDefiner.newUnionBuffer(lhs.id, rhs.id, nextPipelineHeadPlan, bufferSlotConfiguration)
     lhs.fuseOrInterpret(MorselBufferOutput(output.id, nextPipelineHeadPlan))
     rhs.fuseOrInterpret(MorselBufferOutput(output.id, nextPipelineHeadPlan))
     output
