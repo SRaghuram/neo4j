@@ -18,6 +18,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 
@@ -93,7 +94,12 @@ public class DataCreator
 
     public static long countNodes( ClusterMember member )
     {
-        GraphDatabaseFacade db = member.defaultDatabase();
+        return countNodes( member, member.config().get( default_database ) );
+    }
+
+    public static long countNodes( ClusterMember member, String databaseName )
+    {
+        GraphDatabaseFacade db = member.database( databaseName );
         long count;
         try ( Transaction tx = db.beginTx() )
         {

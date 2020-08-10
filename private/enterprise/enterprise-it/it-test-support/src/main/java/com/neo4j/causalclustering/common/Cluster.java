@@ -228,6 +228,11 @@ public class Cluster
         shutdownMembers( coreMembers() );
     }
 
+    public void shutdownReadReplicas()
+    {
+        shutdownMembers( readReplicas() );
+    }
+
     public static void shutdownMembers( ClusterMember... clusterMembers )
     {
         shutdownMembers( Arrays.asList( clusterMembers ) );
@@ -698,7 +703,7 @@ public class Cluster
         startMembers( coreMembers() );
     }
 
-    private void startReadReplicas() throws InterruptedException, ExecutionException
+    public void startReadReplicas() throws InterruptedException, ExecutionException
     {
         startMembers( readReplicas() );
     }

@@ -28,7 +28,7 @@ import static picocli.CommandLine.Command;
         header = "Removes all cluster state.",
         description = "Removes all cluster state, so that the instance can rebind to a cluster."
 )
-class UnbindFromClusterCommand extends AbstractCommand
+public class UnbindFromClusterCommand extends AbstractCommand
 {
     UnbindFromClusterCommand( ExecutionContext ctx )
     {
