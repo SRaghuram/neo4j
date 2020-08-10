@@ -141,4 +141,22 @@ class HintAcceptanceTest
     result.toList should be(List(Map("COUNT(*)" -> 1)))
 
   }
+
+  test("Index hints solved on RHS of OR should not be lost when forming UNION") {
+
+    createLabeledNode(Map("name"->"foo", "job"->"janitor"), "Person")
+    graph.createIndex("Person", "name")
+    graph.createIndex("Person", "job")
+
+    val query =
+      """MATCH(p:Person)
+        |USING INDEX p:Person(job)
+        |WHERE p.name IN ["Bob"] OR p.job IN ["janitor"]
+        |RETURN p.name, p.job""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+    result.toSet shouldBe Set(Map("p.name"->"foo", "p.job"->"janitor"))
+
+  }
 }
