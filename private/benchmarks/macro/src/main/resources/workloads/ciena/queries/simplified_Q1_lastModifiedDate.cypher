@@ -4,6 +4,6 @@ WHERE NOT (1 IN port.latest)
   AND exists(port.name)
   AND exists(port.lastModifiedDate)
 RETURN port
-ORDER BY p_lastModifiedDate, p_name, p_drniId
+ORDER BY port.lastModifiedDate, port.name, port.drniId
 SKIP 0
 LIMIT 25
