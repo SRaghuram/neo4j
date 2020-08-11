@@ -43,7 +43,13 @@ import org.neo4j.cypher.internal.util.symbols.TimeType
 import org.neo4j.exceptions.KernelException
 import org.neo4j.internal.schema.ConstraintDescriptor
 import org.neo4j.internal.schema.IndexCapability
-import org.neo4j.internal.schema.IndexOrder
+import org.neo4j.internal.schema.IndexOrderCapability.ASC_FULLY_SORTED
+import org.neo4j.internal.schema.IndexOrderCapability.ASC_PARTIALLY_SORTED
+import org.neo4j.internal.schema.IndexOrderCapability.BOTH_FULLY_SORTED
+import org.neo4j.internal.schema.IndexOrderCapability.BOTH_PARTIALLY_SORTED
+import org.neo4j.internal.schema.IndexOrderCapability.DESC_FULLY_SORTED
+import org.neo4j.internal.schema.IndexOrderCapability.DESC_PARTIALLY_SORTED
+import org.neo4j.internal.schema.IndexOrderCapability.NONE
 import org.neo4j.internal.schema.IndexValueCapability
 import org.neo4j.internal.schema.SchemaDescriptor
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
@@ -55,7 +61,7 @@ import scala.collection.mutable
 /**
  * This PlanContext is used for injecting customer statistics into the planner, which can help in
  * reproducing bug and support cases. It is not fit for production use. You can plug it into the
- * product, _temporarily_, overriding the var [[org.neo4j.cypher.internal.planning.CypherPlanner].customPlanContextCreator
+ * product, _temporarily_, overriding the var [[org.neo4j.cypher.internal.planning.CypherPlanner]].customPlanContextCreator
  * with an instance of this class in your test.
  *
  * @param data The parsed graph counts data.
@@ -72,12 +78,13 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
   // Same as product code in TransactionBoundPlanContext
   private val orderCapability: OrderCapability = tps => {
     indexCapability.orderCapability(tps.map(typeToValueCategory): _*) match {
-      case Array() => IndexOrderCapability.NONE
-      case Array(IndexOrder.ASCENDING, IndexOrder.DESCENDING) => IndexOrderCapability.BOTH
-      case Array(IndexOrder.DESCENDING, IndexOrder.ASCENDING) => IndexOrderCapability.BOTH
-      case Array(IndexOrder.ASCENDING) => IndexOrderCapability.ASC
-      case Array(IndexOrder.DESCENDING) => IndexOrderCapability.DESC
-      case _ => IndexOrderCapability.NONE
+      case BOTH_FULLY_SORTED => IndexOrderCapability.BOTH
+      case BOTH_PARTIALLY_SORTED => IndexOrderCapability.BOTH
+      case ASC_FULLY_SORTED => IndexOrderCapability.ASC
+      case ASC_PARTIALLY_SORTED => IndexOrderCapability.ASC
+      case DESC_FULLY_SORTED => IndexOrderCapability.DESC
+      case DESC_PARTIALLY_SORTED => IndexOrderCapability.DESC
+      case NONE => IndexOrderCapability.NONE
     }
   }
   private val valueCapability: ValueCapability = tps => {
