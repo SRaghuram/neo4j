@@ -90,7 +90,10 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
+import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompilerFront
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.StandaloneExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -98,6 +101,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.OverrideDefaultCompiler
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
@@ -4526,16 +4530,22 @@ class CompiledExpressionsIT extends ExpressionsIT {
   private val compiledExpressionsContext = CompiledExpressionContext( new CachingExpressionCompilerCache(TestExecutorCaffeineCacheFactory),
     CachingExpressionCompilerTracer.NONE)
 
-  override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
-      .compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+  private def compiler(slots: SlotConfiguration) = {
+    val front = new DefaultExpressionCompilerFront(slots, readOnly = false, new VariableNamer) with OverrideDefaultCompiler {
+      override protected def fallBack(expression: Expression): Option[IntermediateExpression] = super[DefaultExpressionCompilerFront].compileExpression(expression)
+    }
+    StandaloneExpressionCompiler.withFront(front, codeGenerationMode, compiledExpressionsContext)
+  }
+
+  override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression = {
+    compiler(slots).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+  }
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
-      .compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
+    compiler(slots).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext)
+    compiler(slots)
       .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }

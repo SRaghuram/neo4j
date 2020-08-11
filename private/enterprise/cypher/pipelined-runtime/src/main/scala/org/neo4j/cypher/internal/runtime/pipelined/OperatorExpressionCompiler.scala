@@ -15,8 +15,10 @@ import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.constructor
 import org.neo4j.codegen.api.IntermediateRepresentation.declare
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
@@ -26,12 +28,19 @@ import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.oneTime
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.In
+import org.neo4j.cypher.internal.expressions.ListLiteral
+import org.neo4j.cypher.internal.expressions.Literal
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLABLE
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
@@ -42,6 +51,9 @@ import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.noValueOr
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.LocalsForSlots
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.ScopeContinuationState
@@ -52,12 +64,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_LONG_SLOT_VALUE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_REF_SLOT_VALUE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.asListValue
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeGetProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeHasLabel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeHasProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipGetProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipHasProperty
 import org.neo4j.cypher.operations.CursorUtils
+import org.neo4j.cypher.operations.InCache
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
@@ -67,6 +81,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
+import org.neo4j.values.virtual.ListValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -413,11 +428,49 @@ object OperatorExpressionCompiler {
   }
 }
 
+trait OverrideDefaultCompiler {
+  self: AbstractExpressionCompilerFront =>
+
+  protected def fallBack(expression: Expression): Option[IntermediateExpression]
+
+  /**
+   * Extends expression compiler to add pipelined optimizations.
+   *
+   * In most cases we should just call the base class but in some cases we can
+   * do better than normal compiled expressions.
+   */
+  override def compileExpression(expression: Expression): Option[IntermediateExpression] = expression match {
+    case In(_, ListLiteral(expressions)) if expressions.isEmpty =>fallBack(expression)
+    case In(_, ListLiteral(expressions)) if expressions.forall(e => e.isInstanceOf[Literal]) => fallBack(expression)
+    case In(lhs, rhs) =>
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
+        val variableName = namer.nextVariableName()
+        val setName = namer.nextVariableName()
+        val set = variable[InCache](setName, newInstance(constructor[InCache]))
+        val lazySet =
+          oneTime(
+            declareAndAssign(typeRefOf[Value], variableName,
+              noValueOr(r)(invoke(load(setName),
+                method[InCache, Value, AnyValue, ListValue]("check"), nullCheckIfRequired(l), asListValue(r.ir)))
+            )
+          )
+
+        val ops = block(lazySet, load(variableName))
+        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+
+        IntermediateExpression(ops, l.fields ++ r.fields, (l.variables ++ r.variables) :+ set, Set(nullChecks), requireNullCheck = false)
+      }
+
+    case _ => fallBack(expression)
+  }
+}
+
 class OperatorExpressionCompiler(slots: SlotConfiguration,
                                  val inputSlotConfiguration: SlotConfiguration,
                                  readOnly: Boolean,
                                  namer: VariableNamer)
-  extends AbstractExpressionCompilerFront(slots, readOnly, namer) {
+  extends AbstractExpressionCompilerFront(slots, readOnly, namer) with OverrideDefaultCompiler {
 
 
   /**
@@ -520,6 +573,9 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       input, constant(nLongs), constant(nRefs)
     )
   }
+
+  override protected def fallBack(expression: Expression): Option[IntermediateExpression] =
+    super[AbstractExpressionCompilerFront].compileExpression(expression)
 
   // Testing hooks
   protected def didInitializeCachedPropertyFromStore(): Unit = {}

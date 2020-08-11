@@ -56,13 +56,21 @@ object StandaloneExpressionCompiler {
               compiledExpressionsContext: CompiledExpressionContext
              ): StandaloneExpressionCompiler = {
     val front = new DefaultExpressionCompilerFront(slots, readOnly, new VariableNamer)
+    withFront(front, codeGenerationMode, compiledExpressionsContext)
+  }
+
+  def withFront(front: AbstractExpressionCompilerFront,
+                codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                compiledExpressionsContext: CompiledExpressionContext
+               ): StandaloneExpressionCompiler = {
     val back = {
       val defaultBack = new DefaultExpressionCompilerBack(codeGenerationMode)
-      if (codeGenerationMode.saver.options.isEmpty)
+      if (codeGenerationMode.saver.options.isEmpty) {
         new CachingExpressionCompilerBack(defaultBack, compiledExpressionsContext.cachingExpressionCompilerTracer,
           compiledExpressionsContext.cachingExpressionCompilerCache)
-      else
+      } else {
         defaultBack
+      }
     }
     new StandaloneExpressionCompiler(front, back)
   }

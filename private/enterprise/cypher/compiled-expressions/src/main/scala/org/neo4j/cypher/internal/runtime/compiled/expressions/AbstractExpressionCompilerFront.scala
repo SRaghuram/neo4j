@@ -1139,22 +1139,6 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                   trueValue, onNotFound), l.fields :+ setField, l.variables, l.nullChecks)
       }
 
-    case In(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
-
-        val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-                                               noValueOr(r)(invokeStatic(
-                                       method[CypherBoolean, Value, AnyValue, AnyValue]("in"), l.ir,
-                                       nullCheckIfRequired(r)))))
-
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
-
-        IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
-      }
-
     // misc
     case CoerceTo(expr, typ) =>
       for (e <- compileExpression(expr)) yield {

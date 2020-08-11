@@ -41,6 +41,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.trueValue
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.logical.plans.VariablePredicate
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
@@ -68,6 +69,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthExpandPipe
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.OverrideDefaultCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
@@ -485,7 +487,11 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     //use the provided OperatorExpressionCompiler since it will try to read from local variables instead of accessing the context.
     //Here we assume we are always running as start operator of a pipeline and will always read from context unless we are
     //accessing fromNode and toNode which we already have stored in fields.
-    val newScopeExpressionCompiler = new DefaultExpressionCompilerFront(codeGen.slots, codeGen.readOnly, codeGen.namer) {
+    val newScopeExpressionCompiler = new DefaultExpressionCompilerFront(codeGen.slots, codeGen.readOnly, codeGen.namer) with OverrideDefaultCompiler {
+
+      override protected def fallBack(expression: expressions.Expression): Option[IntermediateExpression] =
+        super[DefaultExpressionCompilerFront].compileExpression(expression)
+
       override protected def getLongAt(offset: Int): IntermediateRepresentation =
         if (fromSlot.isLongSlot && offset == fromSlot.offset) {
           invoke(self(), method[VarExpandCursor, Long]("fromNode"))
