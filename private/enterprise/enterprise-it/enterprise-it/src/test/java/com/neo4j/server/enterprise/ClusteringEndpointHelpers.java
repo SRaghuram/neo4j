@@ -17,6 +17,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -26,16 +27,17 @@ import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpResponse.BodySubscribers.mapping;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
-final class CausalClusterRestEndpointHelpers
+final class ClusteringEndpointHelpers
 {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final HttpClient HTTP_CLIENT = newHttpClient();
 
-    private CausalClusterRestEndpointHelpers()
+    private ClusteringEndpointHelpers()
     {
     }
 
@@ -55,12 +57,12 @@ final class CausalClusterRestEndpointHelpers
 
     static HttpResponse<Map<String,Object>> queryClusterEndpoint( ClusterMember server, String databaseName )
     {
-        return sendGET( clusterEndpoint( server, databaseName ), ofJson() );
+        return sendGET( clusterEndpoint( server, databaseName ), ofJsonObject() );
     }
 
     static HttpResponse<Map<String,Object>> queryLegacyClusterEndpoint( ClusterMember server )
     {
-        return sendGET( legacyClusterEndpoint( server ), ofJson() );
+        return sendGET( legacyClusterEndpoint( server ), ofJsonObject() );
     }
 
     static HttpResponse<Boolean> queryLegacyClusterEndpoint( ClusterMember server, String path )
@@ -70,7 +72,7 @@ final class CausalClusterRestEndpointHelpers
 
     static HttpResponse<Map<String,Object>> queryLegacyClusterStatusEndpoint( ClusterMember server )
     {
-        return sendGET( legacyClusterEndpoint( server, "status" ), ofJson() );
+        return sendGET( legacyClusterEndpoint( server, "status" ), ofJsonObject() );
     }
 
     static HttpResponse<Boolean> queryAvailabilityEndpoint( ClusterMember server, String databaseName )
@@ -90,7 +92,12 @@ final class CausalClusterRestEndpointHelpers
 
     static HttpResponse<Map<String,Object>> queryStatusEndpoint( ClusterMember server, String databaseName )
     {
-        return sendGET( statusEndpoint( server, databaseName ), ofJson() );
+        return sendGET( statusEndpoint( server, databaseName ), ofJsonObject() );
+    }
+
+    static HttpResponse<List<Map<String,Object>>> queryCombinedStatusEndpoint( ClusterMember server )
+    {
+        return sendGET( combinedStatusEndpoint( server ), ofJsonArray() );
     }
 
     private static URI legacyClusterEndpoint( ClusterMember server )
@@ -138,6 +145,11 @@ final class CausalClusterRestEndpointHelpers
         return clusterEndpointBase( server, databaseName ).resolve( "status" );
     }
 
+    private static URI combinedStatusEndpoint( ClusterMember server )
+    {
+        return httpURI( server ).resolve( "/dbms/cluster/status" );
+    }
+
     private static HttpResponse<Boolean> queryBooleanEndpoint( URI uri )
     {
         return sendGET( uri, ofBoolean() );
@@ -170,13 +182,18 @@ final class CausalClusterRestEndpointHelpers
         return responseInfo -> mapping( ofString( UTF_8 ), Boolean::valueOf );
     }
 
-    private static BodyHandler<Map<String,Object>> ofJson()
+    private static BodyHandler<Map<String,Object>> ofJsonObject()
     {
-        return responseInfo -> mapping( ofString( UTF_8 ), CausalClusterRestEndpointHelpers::readJson );
+        return responseInfo -> mapping( ofString( UTF_8 ), ClusteringEndpointHelpers::readJsonObject );
+    }
+
+    private static BodyHandler<List<Map<String,Object>>> ofJsonArray()
+    {
+        return responseInfo -> mapping( ofString( UTF_8 ), ClusteringEndpointHelpers::readJsonArray );
     }
 
     @SuppressWarnings( "unchecked" )
-    private static Map<String,Object> readJson( String str )
+    private static Map<String,Object> readJsonObject( String str )
     {
         if ( StringUtils.isBlank( str ) )
         {
@@ -185,6 +202,23 @@ final class CausalClusterRestEndpointHelpers
         try
         {
             return OBJECT_MAPPER.readValue( str, Map.class );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    @SuppressWarnings( "unchecked" )
+    private static List<Map<String,Object>> readJsonArray( String str )
+    {
+        if ( StringUtils.isBlank( str ) )
+        {
+            return emptyList();
+        }
+        try
+        {
+            return OBJECT_MAPPER.readValue( str, List.class );
         }
         catch ( IOException e )
         {

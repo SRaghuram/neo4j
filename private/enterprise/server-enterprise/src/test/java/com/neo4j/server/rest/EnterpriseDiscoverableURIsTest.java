@@ -38,7 +38,8 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertNull( discoverableURIs.get( "cluster" ) );
+        assertNull( discoverableURIs.get( "db/cluster" ) );
+        assertNull( discoverableURIs.get( "dbms/cluster" ) );
     }
 
     @Test
@@ -54,7 +55,8 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/db/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "db/cluster" ), equalTo( "/db/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "dbms/cluster" ), equalTo( "/dbms/cluster" ) );
     }
 
     @Test
@@ -70,7 +72,8 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/db/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "db/cluster" ), equalTo( "/db/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "dbms/cluster" ), equalTo( "/dbms/cluster" ) );
     }
 
     @Test
@@ -81,13 +84,15 @@ class EnterpriseDiscoverableURIsTest
                 .set( GraphDatabaseSettings.mode, CORE )
                 .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
                 .set( ServerSettings.db_api_path, URI.create( "/a/new/core/db/path" ) )
+                .set( ServerSettings.dbms_api_path, URI.create( "/yet/another/new/path" ) )
                 .build();
 
         // When
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/a/new/core/db/path/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "db/cluster" ), equalTo( "/a/new/core/db/path/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "dbms/cluster" ), equalTo( "/yet/another/new/path/cluster" ) );
     }
 
     @Test
@@ -98,13 +103,15 @@ class EnterpriseDiscoverableURIsTest
                 .set( GraphDatabaseSettings.mode, READ_REPLICA )
                 .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
                 .set( ServerSettings.db_api_path, URI.create( "/a/new/read_replica/db/path" ) )
+                .set( ServerSettings.dbms_api_path, URI.create( "/another/read_replica/path" ) )
                 .build();
 
         // When
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/a/new/read_replica/db/path/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "db/cluster" ), equalTo( "/a/new/read_replica/db/path/{databaseName}/cluster" ) );
+        assertThat( discoverableURIs.get( "dbms/cluster" ), equalTo( "/another/read_replica/path/cluster" ) );
     }
 
     private static Map<String,Object> findEnterpriseDiscoverableURIs( Config config )

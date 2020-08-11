@@ -8,18 +8,18 @@ package com.neo4j.server.rest.causalclustering;
 import org.neo4j.server.rest.repr.MappingRepresentation;
 import org.neo4j.server.rest.repr.MappingSerializer;
 
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.AVAILABLE;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.READ_ONLY;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.STATUS;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.WRITABLE;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseService.AVAILABLE;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseService.READ_ONLY;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseService.STATUS;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseService.WRITABLE;
 
-public class CausalClusteringDiscovery extends MappingRepresentation
+public class ClusteringEndpointDiscovery extends MappingRepresentation
 {
     private static final String DISCOVERY_REPRESENTATION_TYPE = "discovery";
 
     private final String databasePath;
 
-    CausalClusteringDiscovery( String databasePath )
+    ClusteringEndpointDiscovery( String databasePath )
     {
         super( DISCOVERY_REPRESENTATION_TYPE );
         this.databasePath = databasePath;

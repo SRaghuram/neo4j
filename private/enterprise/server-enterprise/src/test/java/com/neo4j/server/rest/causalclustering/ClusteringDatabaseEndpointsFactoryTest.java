@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.factory.DbmsInfo.COMMUNITY;
@@ -37,7 +38,7 @@ import static org.neo4j.kernel.impl.factory.DbmsInfo.ENTERPRISE;
 import static org.neo4j.kernel.impl.factory.DbmsInfo.READ_REPLICA;
 import static org.neo4j.kernel.impl.factory.DbmsInfo.UNKNOWN;
 
-class CausalClusteringStatusFactoryTest
+class ClusteringDatabaseEndpointsFactoryTest
 {
     private static final String KNOWN_DB = "foo";
     private static final String UNKNOWN_DB = "bar";
@@ -50,7 +51,7 @@ class CausalClusteringStatusFactoryTest
 
         var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
 
-        assertThat( status, instanceOf( CoreStatus.class ) );
+        assertThat( status, instanceOf( CoreDatabaseEndpoints.class ) );
     }
 
     @Test
@@ -61,7 +62,7 @@ class CausalClusteringStatusFactoryTest
 
         var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
 
-        assertThat( status, instanceOf( ReadReplicaStatus.class ) );
+        assertThat( status, instanceOf( ReadReplicaDatabaseEndpoints.class ) );
     }
 
     @Test
@@ -133,11 +134,11 @@ class CausalClusteringStatusFactoryTest
             return operatorState;
         }
 
-        void assertMatches( CausalClusteringStatus actual )
+        void assertMatches( ClusteringEndpoints actual )
         {
             if ( responseEvaluator == null )
             {
-                assertThat( actual, instanceOf( CoreStatus.class ) );
+                assertThat( actual, instanceOf( CoreDatabaseEndpoints.class ) );
             }
             else
             {
@@ -223,10 +224,11 @@ class CausalClusteringStatusFactoryTest
         return databaseStateService;
     }
 
-    private static CausalClusteringStatus buildStatus( DatabaseManagementService dbService, String databaseName,
-                                                       DatabaseStateService databaseStateService )
+    private static ClusteringEndpoints buildStatus( DatabaseManagementService dbService, String databaseName,
+                                                   DatabaseStateService databaseStateService )
     {
-        return CausalClusteringStatusFactory.build( mock( OutputFormat.class ), databaseStateService, dbService, databaseName, mock( ClusterService.class ) );
+        return ClusteringDatabaseEndpointsFactory.build( mock( OutputFormat.class ), databaseStateService,
+                                                         dbService, databaseName, mock( PerDatabaseService.class ) );
     }
 
     private static DatabaseManagementService databaseServiceMock( DbmsInfo knownDbmsInfo )
@@ -240,6 +242,7 @@ class CausalClusteringStatusFactoryTest
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         when( dbService.database( KNOWN_DB ) ).thenReturn( db );
         when( dbService.database( UNKNOWN_DB ) ).thenThrow( new DatabaseNotFoundException() );
+        when( db.isAvailable( anyLong() ) ).thenReturn( true );
         return dbService;
     }
 }

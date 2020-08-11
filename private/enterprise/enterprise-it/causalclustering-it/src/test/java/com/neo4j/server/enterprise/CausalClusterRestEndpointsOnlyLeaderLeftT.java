@@ -20,8 +20,8 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.canVote;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.statusEndpoint;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.canVote;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.statusEndpoint;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;

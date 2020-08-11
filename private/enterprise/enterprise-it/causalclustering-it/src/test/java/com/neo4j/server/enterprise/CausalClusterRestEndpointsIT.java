@@ -6,6 +6,7 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -16,38 +17,41 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.clusterEndpointBase;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.legacyClusterEndpointBase;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryAvailabilityEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryClusterEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterStatusEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryReadOnlyEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryStatusEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryWritableEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.writeSomeData;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.coreFieldIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.discoveryHealthFieldIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.healthFieldIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.lastAppliedRaftIndexFieldIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.leaderFieldIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.memberIdFieldIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.millisSinceLastLeaderMessageSanityCheck;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.participatingInRaftGroup;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.raftMessageThroughputPerSecondFieldIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.votingMemberSetIs;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.allReplicaFieldValues;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.allStatusEndpointValues;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.allValuesEqual;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.asCollection;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.canVote;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.lastAppliedRaftIndex;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.statusEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.clusterEndpointBase;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.legacyClusterEndpointBase;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryAvailabilityEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryClusterEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryLegacyClusterEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryLegacyClusterStatusEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryReadOnlyEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryStatusEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryWritableEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.writeSomeData;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.coreFieldIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.discoveryHealthFieldIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.healthFieldIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.lastAppliedRaftIndexFieldIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.leaderFieldIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.memberIdFieldIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.millisSinceLastLeaderMessageSanityCheck;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.participatingInRaftGroup;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.raftMessageThroughputPerSecondFieldIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.FieldMatchers.votingMemberSetIs;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.allReplicaFieldValues;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.allStatusEndpointValues;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.allValuesEqual;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.asCollection;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.canVote;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.combinedStatusEndpoint;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.lastAppliedRaftIndex;
+import static com.neo4j.server.enterprise.ClusteringStatusEndpointMatchers.statusEndpoint;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
@@ -56,6 +60,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.Every.everyItem;
@@ -63,8 +68,10 @@ import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.assertion.Assert.awaitUntilAsserted;
 import static org.neo4j.test.conditions.Conditions.TRUE;
@@ -470,5 +477,89 @@ class CausalClusterRestEndpointsIT
                 new HamcrestCondition<>( everyItem( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ) ), 1, MINUTES );
         assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ),
                 new HamcrestCondition<>( everyItem( raftMessageThroughputPerSecondFieldIs( equalTo( 0.0 ) ) ) ), 90, SECONDS );
+    }
+
+    @Test
+    void coresAndReadReplicasHaveCombinedStatusEndpoint() throws Exception
+    {
+        writeSomeData( cluster, DEFAULT_DATABASE_NAME );
+        assertEventually( allReplicaFieldValues( cluster, DataCreator::countNodes ),
+                          new HamcrestCondition<>( everyItem( greaterThan( 0L ) ) ), 3, MINUTES );
+
+        var newDatabaseName = "foo";
+        createDatabase( newDatabaseName );
+        assertNotNull( cluster.awaitLeader( newDatabaseName ) );
+
+        var systemDbUuid = databaseUuid( SYSTEM_DATABASE_NAME );
+        var defaultDbUuid = databaseUuid( DEFAULT_DATABASE_NAME );
+        var newDbUuid = databaseUuid( newDatabaseName );
+
+        for ( var core : cluster.coreMembers() )
+        {
+            writeSomeData( cluster, DEFAULT_DATABASE_NAME );
+            writeSomeData( cluster, newDatabaseName );
+
+            assertEventually( combinedStatusEndpoint( core ), statuses -> statuses.size() == 3, 1, MINUTES );
+            verifyCombinedStatusEndpointOnCore( core, SYSTEM_DATABASE_NAME, systemDbUuid );
+            verifyCombinedStatusEndpointOnCore( core, DEFAULT_DATABASE_NAME, defaultDbUuid );
+            verifyCombinedStatusEndpointOnCore( core, newDatabaseName, newDbUuid );
+        }
+
+        for ( var readReplica : cluster.readReplicas() )
+        {
+            writeSomeData( cluster, DEFAULT_DATABASE_NAME );
+            writeSomeData( cluster, newDatabaseName );
+
+            assertEventually( combinedStatusEndpoint( readReplica ), statuses -> statuses.size() == 3, 1, MINUTES );
+            verifyCombinedStatusEndpointOnReadReplica( readReplica, SYSTEM_DATABASE_NAME, systemDbUuid );
+            verifyCombinedStatusEndpointOnReadReplica( readReplica, DEFAULT_DATABASE_NAME, defaultDbUuid );
+            verifyCombinedStatusEndpointOnReadReplica( readReplica, newDatabaseName, newDbUuid );
+        }
+    }
+
+    private static void verifyCombinedStatusEndpointOnCore( ClusterMember core, String databaseName, UUID databaseUuid ) throws Exception
+    {
+        var coreStatus = ClusteringStatusEndpointMatchers.statusFromCombinedEndpoint( core, databaseName, databaseUuid );
+        assertEventually( coreStatus, new HamcrestCondition<>( coreFieldIs( equalTo( true ) ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( memberIdFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( healthFieldIs( equalTo( true ) ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThanOrEqualTo( 0.0 ) ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( votingMemberSetIs( hasSize( 3 ) ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( participatingInRaftGroup( true ) ), 1, MINUTES );
+        assertEventually( coreStatus, new HamcrestCondition<>( millisSinceLastLeaderMessageSanityCheck( true ) ), 1, MINUTES );
+    }
+
+    private static void verifyCombinedStatusEndpointOnReadReplica( ClusterMember readReplica, String databaseName, UUID databaseUuid ) throws Exception
+    {
+        var readReplicaStatus = ClusteringStatusEndpointMatchers.statusFromCombinedEndpoint( readReplica, databaseName, databaseUuid );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( coreFieldIs( equalTo( false ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( memberIdFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( healthFieldIs( equalTo( true ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThanOrEqualTo( 0.0 ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( votingMemberSetIs( hasSize( 3 ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( participatingInRaftGroup( false ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( millisSinceLastLeaderMessageSanityCheck( false ) ), 1, MINUTES );
+    }
+
+    private UUID databaseUuid( String databaseName ) throws TimeoutException
+    {
+        var managementService = cluster.awaitLeader( databaseName ).managementService();
+        var db = (GraphDatabaseAPI) managementService.database( databaseName );
+        return db.databaseId().databaseId().uuid();
+    }
+
+    private void createDatabase( String name ) throws TimeoutException
+    {
+        var systemDbLeader = cluster.awaitLeader( SYSTEM_DATABASE_NAME );
+        var systemDb = systemDbLeader.managementService().database( SYSTEM_DATABASE_NAME );
+        try ( var tx = systemDb.beginTx() )
+        {
+            tx.execute( "CREATE DATABASE `" + name + "`" );
+            tx.commit();
+        }
     }
 }

@@ -7,7 +7,7 @@ package com.neo4j.server.rest.causalclustering;
 
 import javax.ws.rs.core.Response;
 
-class FixedResponse implements CausalClusteringStatus
+class FixedResponse implements ClusteringEndpoints
 {
     private Response response;
 

@@ -11,15 +11,15 @@ import java.net.URI;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.absoluteDatabaseClusterPath;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.databaseClusterUriPattern;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseService.absoluteDatabaseClusterPath;
+import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseService.databaseClusterUriPattern;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.server.configuration.ServerSettings.db_api_path;
 
-class CausalClusteringServiceTest
+class ClusteringDatabaseServiceTest
 {
     @Test
     void shouldReturnDatabaseManageUriPattern()

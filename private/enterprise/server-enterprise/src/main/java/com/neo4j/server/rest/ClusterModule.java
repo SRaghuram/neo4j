@@ -5,7 +5,8 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.server.rest.causalclustering.CausalClusteringService;
+import com.neo4j.server.rest.causalclustering.ClusteringDatabaseService;
+import com.neo4j.server.rest.causalclustering.ClusteringDbmsService;
 
 import java.util.List;
 
@@ -17,34 +18,33 @@ import org.neo4j.server.web.WebServer;
 public class ClusterModule implements ServerModule
 {
     private final WebServer server;
-    private final Config config;
+
+    private final String dbMountPoint;
+    private final List<Class<?>> dbJaxRsClasses;
+
+    private final String dbmsMountPoint;
+    private final List<Class<?>> dbmsJaxRsClasses;
 
     public ClusterModule( WebServer server, Config config )
     {
         this.server = server;
-        this.config = config;
+        this.dbMountPoint = config.get( ServerSettings.db_api_path ).toString();
+        this.dbJaxRsClasses = List.of( ClusteringDatabaseService.class );
+        this.dbmsMountPoint = ServerSettings.DBMS_MOUNT_POINT;
+        this.dbmsJaxRsClasses = List.of( ClusteringDbmsService.class );
     }
 
     @Override
     public void start()
     {
-        var mountPoint = mountPoint();
-        server.addJAXRSClasses( jaxRsClasses(), mountPoint, null );
+        server.addJAXRSClasses( dbJaxRsClasses, dbMountPoint, null );
+        server.addJAXRSClasses( dbmsJaxRsClasses, dbmsMountPoint, null );
     }
 
     @Override
     public void stop()
     {
-        server.removeJAXRSClasses( jaxRsClasses(), mountPoint() );
-    }
-
-    private String mountPoint()
-    {
-        return config.get( ServerSettings.db_api_path ).toString();
-    }
-
-    private static List<Class<?>> jaxRsClasses()
-    {
-        return List.of( CausalClusteringService.class );
+        server.removeJAXRSClasses( dbJaxRsClasses, dbMountPoint );
+        server.removeJAXRSClasses( dbmsJaxRsClasses, dbmsMountPoint );
     }
 }

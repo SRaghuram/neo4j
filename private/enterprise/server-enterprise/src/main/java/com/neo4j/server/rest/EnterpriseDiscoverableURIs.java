@@ -5,7 +5,8 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.server.rest.causalclustering.CausalClusteringService;
+import com.neo4j.server.rest.causalclustering.ClusteringDatabaseService;
+import com.neo4j.server.rest.causalclustering.ClusteringDbmsService;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -25,7 +26,8 @@ public class EnterpriseDiscoverableURIs
         var mode = config.get( GraphDatabaseSettings.mode );
         if ( mode == CORE || mode == READ_REPLICA )
         {
-            discoverableURIsBuilder.addEndpoint( CausalClusteringService.NAME, CausalClusteringService.absoluteDatabaseClusterPath( config ) );
+            discoverableURIsBuilder.addEndpoint( ClusteringDatabaseService.KEY, ClusteringDatabaseService.absoluteDatabaseClusterPath( config ) );
+            discoverableURIsBuilder.addEndpoint( ClusteringDbmsService.KEY, ClusteringDbmsService.absoluteDbmsClusterPath( config ) );
         }
 
         return discoverableURIsBuilder.build();

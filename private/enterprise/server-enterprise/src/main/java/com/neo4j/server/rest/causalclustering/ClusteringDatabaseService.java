@@ -16,16 +16,16 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-@Path( CausalClusteringService.DB_CLUSTER_PATH )
-public class CausalClusteringService extends AbstractCausalClusteringService
+@Path( ClusteringDatabaseService.DB_CLUSTER_PATH )
+public class ClusteringDatabaseService extends AbstractClusteringDatabaseService
 {
-    public static final String NAME = "cluster";
-    private static final String CLUSTER_PATH = "/" + NAME;
+    private static final String CLUSTER_PATH = "/cluster";
     private static final String DB_NAME = "databaseName";
     static final String DB_CLUSTER_PATH = "/{" + DB_NAME + "}" + CLUSTER_PATH;
+    public static final String KEY = "db" + CLUSTER_PATH;
 
-    public CausalClusteringService( @Context OutputFormat output, @Context DatabaseManagementService managementService,
-                                    @Context DatabaseStateService databaseStateService, @PathParam( DB_NAME ) String databaseName )
+    public ClusteringDatabaseService( @Context OutputFormat output, @Context DatabaseManagementService managementService,
+                                     @Context DatabaseStateService databaseStateService, @PathParam( DB_NAME ) String databaseName )
     {
         super( output, databaseStateService, managementService, databaseName );
     }
@@ -41,7 +41,7 @@ public class CausalClusteringService extends AbstractCausalClusteringService
     }
 
     @Override
-    public String relativeClusterPath( String databaseName )
+    public String relativePath( String databaseName )
     {
         return databaseName + CLUSTER_PATH;
     }

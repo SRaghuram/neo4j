@@ -16,14 +16,19 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryStatusEndpoint;
+import org.neo4j.function.ThrowingSupplier;
+
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryCombinedStatusEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryStatusEndpoint;
 import static java.lang.String.format;
+import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
 
-class CausalClusterStatusEndpointMatchers
+class ClusteringStatusEndpointMatchers
 {
     private static final String FIELD_THROUGHPUT = "raftCommandsPerSecond";
     private static final String FIELD_CORE = "core";
@@ -35,6 +40,10 @@ class CausalClusterStatusEndpointMatchers
     private static final String FIELD_VOTING = "votingMembers";
     private static final String FIELD_PARTICIPATING = "participatingInRaftGroup";
     private static final String FIELD_LAST_MESSAGE = "millisSinceLastLeaderMessage";
+
+    private static final String FIELD_DATABASE_NAME = "databaseName";
+    private static final String FIELD_DATABASE_UUID = "databaseUuid";
+    private static final String FIELD_DATABASE_STATUS = "databaseStatus";
 
     static class FieldMatchers
     {
@@ -162,6 +171,24 @@ class CausalClusterStatusEndpointMatchers
     static Callable<Map<String,Object>> statusEndpoint( ClusterMember server, String databaseName )
     {
         return () -> queryStatusEndpoint( server, databaseName ).body();
+    }
+
+    @SuppressWarnings( "unchecked" )
+    static Callable<Map<String,Object>> statusFromCombinedEndpoint( ClusterMember server, String databaseName, UUID databaseUuid )
+    {
+        return () ->
+                combinedStatusEndpoint( server ).call()
+                                                .stream()
+                                                .filter( element -> databaseName.equals( element.get( FIELD_DATABASE_NAME ) ) )
+                                                .filter( element -> databaseUuid.toString().equals( element.get( FIELD_DATABASE_UUID ) ) )
+                                                .map( element -> (Map<String,Object>) element.get( FIELD_DATABASE_STATUS ) )
+                                                .findFirst()
+                                                .orElse( emptyMap() );
+    }
+
+    static Callable<List<Map<String,Object>>> combinedStatusEndpoint( ClusterMember server )
+    {
+        return () -> queryCombinedStatusEndpoint( server ).body();
     }
 
     static Callable<Boolean> canVote( Callable<Map<String,Object>> statusDescription )

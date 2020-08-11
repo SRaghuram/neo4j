@@ -16,7 +16,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class AbstractCausalClusteringServiceTest
+class AbstractClusteringDatabaseServiceTest
 {
     @Test
     void shouldReturnServerErrorOnUnknownException()
@@ -33,7 +33,7 @@ class AbstractCausalClusteringServiceTest
         assertEquals( responseStatus.getEntity().toString(), exception.toString() );
     }
 
-    static class CausalClusteringServiceStub extends AbstractCausalClusteringService
+    static class CausalClusteringServiceStub extends AbstractClusteringDatabaseService
     {
         CausalClusteringServiceStub( DatabaseManagementService dbService )
         {
@@ -41,7 +41,7 @@ class AbstractCausalClusteringServiceTest
         }
 
         @Override
-        public String relativeClusterPath( String databaseName )
+        public String relativePath( String databaseName )
         {
             throw new UnsupportedOperationException();
         }

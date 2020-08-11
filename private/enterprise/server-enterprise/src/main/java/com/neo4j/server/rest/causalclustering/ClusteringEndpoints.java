@@ -5,7 +5,17 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-public interface ClusterService
+import javax.ws.rs.core.Response;
+
+interface ClusteringEndpoints
 {
-    String relativeClusterPath( String databaseName );
+    Response discover();
+
+    Response available();
+
+    Response readonly();
+
+    Response writable();
+
+    Response description();
 }

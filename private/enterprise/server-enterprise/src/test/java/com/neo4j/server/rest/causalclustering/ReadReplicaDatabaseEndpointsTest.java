@@ -54,13 +54,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-class ReadReplicaStatusTest
+class ReadReplicaDatabaseEndpointsTest
 {
-    private CausalClusteringStatus status;
+    private ClusteringEndpoints status;
 
     private FakeTopologyService topologyService;
     private Dependencies dependencyResolver = new Dependencies();
@@ -83,6 +84,7 @@ class ReadReplicaStatusTest
         var db = mock( GraphDatabaseFacade.class );
         when( db.databaseName() ).thenReturn( databaseName );
         when( db.databaseId() ).thenReturn( idRepository.defaultDatabase() );
+        when( db.isAvailable( anyLong() ) ).thenReturn( true );
         when( db.dbmsInfo() ).thenReturn( DbmsInfo.READ_REPLICA );
         when( managementService.database( databaseName ) ).thenReturn( db );
         topologyService = new FakeTopologyService( cores, replicas, myself, Set.of( idRepository.defaultDatabase() ) );
@@ -104,7 +106,8 @@ class ReadReplicaStatusTest
         var databaseStateService = mock( DatabaseStateService.class );
         when( databaseStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( EnterpriseOperatorState.STARTED );
 
-        status = CausalClusteringStatusFactory.build( output, databaseStateService, managementService, DEFAULT_DATABASE_NAME, mock( ClusterService.class ) );
+        status = ClusteringDatabaseEndpointsFactory.build( output, databaseStateService, managementService,
+                                                           DEFAULT_DATABASE_NAME, mock( PerDatabaseService.class ) );
     }
 
     @AfterEach

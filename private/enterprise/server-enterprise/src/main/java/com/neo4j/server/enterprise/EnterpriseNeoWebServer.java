@@ -9,8 +9,9 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
 import com.neo4j.server.rest.ClusterModule;
 import com.neo4j.server.rest.LegacyManagementModule;
-import com.neo4j.server.rest.causalclustering.CausalClusteringService;
-import com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService;
+import com.neo4j.server.rest.causalclustering.ClusteringDatabaseService;
+import com.neo4j.server.rest.causalclustering.ClusteringDbmsService;
+import com.neo4j.server.rest.causalclustering.LegacyClusteringRedirectService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,8 +71,9 @@ public class EnterpriseNeoWebServer extends CommunityNeoWebServer
         var result = new ArrayList<>( super.getUriWhitelist() );
         if ( !getConfig().get( CausalClusteringSettings.status_auth_enabled ) )
         {
-            result.add( CausalClusteringService.databaseClusterUriPattern( getConfig() ) );
-            result.add( LegacyCausalClusteringRedirectService.databaseLegacyClusterUriPattern( getConfig() ) );
+            result.add( ClusteringDbmsService.dbmsClusterUriPattern() );
+            result.add( ClusteringDatabaseService.databaseClusterUriPattern( getConfig() ) );
+            result.add( LegacyClusteringRedirectService.databaseLegacyClusterUriPattern( getConfig() ) );
         }
         return result;
     }

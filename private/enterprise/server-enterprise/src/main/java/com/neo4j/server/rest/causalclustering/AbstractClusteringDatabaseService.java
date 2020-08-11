@@ -16,27 +16,27 @@ import org.neo4j.server.rest.repr.OutputFormat;
 
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
-public abstract class AbstractCausalClusteringService implements ClusterService
+public abstract class AbstractClusteringDatabaseService implements PerDatabaseService
 {
     static final String AVAILABLE = "available";
     static final String WRITABLE = "writable";
     static final String READ_ONLY = "read-only";
     static final String STATUS = "status";
 
-    private final CausalClusteringStatus status;
+    private final ClusteringEndpoints status;
 
-    AbstractCausalClusteringService( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
-                                     String databaseName )
+    AbstractClusteringDatabaseService( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
+                                      String databaseName )
     {
         this.status = createStatus( output, dbStateService, managementService, databaseName );
     }
 
-    private CausalClusteringStatus createStatus( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
-                                                 String databaseName )
+    private ClusteringEndpoints createStatus( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
+                                             String databaseName )
     {
         try
         {
-            return CausalClusteringStatusFactory.build( output, dbStateService, managementService, databaseName, this );
+            return ClusteringDatabaseEndpointsFactory.build( output, dbStateService, managementService, databaseName, this );
         }
         catch ( Exception e )
         {

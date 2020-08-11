@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.server.rest.causalclustering.CausalClusteringService;
+import com.neo4j.server.rest.causalclustering.ClusteringDatabaseService;
 import org.junit.After;
 import org.junit.Test;
 
@@ -52,6 +52,6 @@ public class EnterpriseDiscoveryServiceIT extends ExclusiveWebContainerTestBase
         assertThat( res.get( "neo4j_edition" ).asText() ).isEqualTo( "enterprise" );
         assertThat( res.get( "neo4j_version" ).asText() ).isEqualTo( releaseVersion );
 
-        assertThat( res.get( CausalClusteringService.NAME ) ).isNull(); // no CC URI in standalone
+        assertThat( res.get( ClusteringDatabaseService.KEY ) ).isNull(); // no CC URI in standalone
     }
 }

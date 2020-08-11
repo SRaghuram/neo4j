@@ -16,15 +16,15 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-import static com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService.CC_PATH;
+import static com.neo4j.server.rest.causalclustering.LegacyClusteringRedirectService.CC_PATH;
 
 @Path( CC_PATH )
-public class LegacyCausalClusteringRedirectService extends AbstractCausalClusteringService
+public class LegacyClusteringRedirectService extends AbstractClusteringDatabaseService
 {
     static final String CC_PATH = "/server/causalclustering";
 
-    public LegacyCausalClusteringRedirectService( @Context OutputFormat output, @Context DatabaseManagementService managementService,
-                                                  @Context DatabaseStateService dbStateService, @Context Config config )
+    public LegacyClusteringRedirectService( @Context OutputFormat output, @Context DatabaseManagementService managementService,
+                                           @Context DatabaseStateService dbStateService, @Context Config config )
     {
         super( output, dbStateService, managementService, config.get( GraphDatabaseSettings.default_database ) );
     }
@@ -35,7 +35,7 @@ public class LegacyCausalClusteringRedirectService extends AbstractCausalCluster
     }
 
     @Override
-    public String relativeClusterPath( String databaseName )
+    public String relativePath( String databaseName )
     {
         return CC_PATH;
     }

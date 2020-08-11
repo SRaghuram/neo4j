@@ -19,10 +19,10 @@ import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 import static javax.ws.rs.core.Response.status;
 
-public class CausalClusteringStatusFactory
+public class ClusteringDatabaseEndpointsFactory
 {
-    public static CausalClusteringStatus build( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
-                                                String databaseName, ClusterService clusterService )
+    public static ClusteringEndpoints build( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
+                                            String databaseName, PerDatabaseService clusterService )
     {
         var db = findDb( managementService, databaseName );
         if ( db == null )
@@ -32,11 +32,11 @@ public class CausalClusteringStatusFactory
 
         // This cast is safe because Causal Clustering endpoints are only available in enterprise mode
         EnterpriseOperatorState operatorState = (EnterpriseOperatorState) dbStateService.stateOfDatabase( db.databaseId() );
-        return handleDbState( output, databaseName, clusterService, db, operatorState );
+        return availabilityAwareStatus( output, databaseName, clusterService, db, operatorState );
     }
 
-    private static CausalClusteringStatus handleDbState( OutputFormat output, String databaseName, ClusterService clusterService, GraphDatabaseAPI db,
-                                                         EnterpriseOperatorState operatorState )
+    private static ClusteringEndpoints availabilityAwareStatus( OutputFormat output, String databaseName, PerDatabaseService clusterService,
+                                                               GraphDatabaseAPI db, EnterpriseOperatorState operatorState )
     {
         switch ( operatorState )
         {
@@ -55,14 +55,14 @@ public class CausalClusteringStatusFactory
         }
     }
 
-    private static CausalClusteringStatus createStatus( OutputFormat output, ClusterService clusterService, GraphDatabaseAPI db )
+    private static ClusteringEndpoints createStatus( OutputFormat output, PerDatabaseService clusterService, GraphDatabaseAPI db )
     {
         switch ( db.dbmsInfo() )
         {
         case CORE:
-            return new CoreStatus( output, db, clusterService );
+            return new CoreDatabaseEndpoints( output, db, clusterService );
         case READ_REPLICA:
-            return new ReadReplicaStatus( output, db, clusterService );
+            return new ReadReplicaDatabaseEndpoints( output, db, clusterService );
         default:
             return new FixedResponse( FORBIDDEN );
         }

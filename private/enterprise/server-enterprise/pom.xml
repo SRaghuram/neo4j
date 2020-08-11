@@ -153,6 +153,14 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-causal-clustering</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
 </project>

@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService;
+import com.neo4j.server.rest.causalclustering.LegacyClusteringRedirectService;
 
 import java.util.List;
 
@@ -48,6 +48,6 @@ public class LegacyManagementModule implements ServerModule
 
     private static List<Class<?>> jaxRsClasses()
     {
-        return List.of( LegacyCausalClusteringRedirectService.class );
+        return List.of( LegacyClusteringRedirectService.class );
     }
 }

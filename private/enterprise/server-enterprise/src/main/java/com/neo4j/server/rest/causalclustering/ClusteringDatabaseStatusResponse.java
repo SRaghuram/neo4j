@@ -13,7 +13,7 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 @JsonSerialize
-public class ClusterStatusResponse
+public class ClusteringDatabaseStatusResponse
 {
     private final boolean isCore;
     private final long lastAppliedRaftIndex;
@@ -26,7 +26,7 @@ public class ClusterStatusResponse
     private final Double raftCommandsPerSecond;
     private final boolean isDiscoveryHealthy;
 
-    ClusterStatusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,
+    ClusteringDatabaseStatusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,
             MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore,
             boolean isDiscoveryHealthy )
     {

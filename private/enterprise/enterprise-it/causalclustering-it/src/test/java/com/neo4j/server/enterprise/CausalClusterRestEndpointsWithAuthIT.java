@@ -22,8 +22,8 @@ import java.util.function.BiFunction;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterStatusEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryLegacyClusterEndpoint;
+import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryLegacyClusterStatusEndpoint;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
@@ -71,31 +71,31 @@ class CausalClusterRestEndpointsWithAuthIT
     @Test
     void shouldAllowToAccessDiscoveryEndpointUnauthenticated() throws Exception
     {
-        verifyEndpointAccessible( CausalClusterRestEndpointHelpers::queryClusterEndpoint );
+        verifyEndpointAccessible( ClusteringEndpointHelpers::queryClusterEndpoint );
     }
 
     @Test
     void shouldAllowToAccessWritableEndpointUnauthenticated() throws Exception
     {
-        verifyEndpointAccessible( CausalClusterRestEndpointHelpers::queryWritableEndpoint );
+        verifyEndpointAccessible( ClusteringEndpointHelpers::queryWritableEndpoint );
     }
 
     @Test
     void shouldAllowToAccessReadOnlyEndpointUnauthenticated() throws Exception
     {
-        verifyEndpointAccessible( CausalClusterRestEndpointHelpers::queryReadOnlyEndpoint );
+        verifyEndpointAccessible( ClusteringEndpointHelpers::queryReadOnlyEndpoint );
     }
 
     @Test
     void shouldAllowToAccessAvailableEndpointUnauthenticated() throws Exception
     {
-        verifyEndpointAccessible( CausalClusterRestEndpointHelpers::queryAvailabilityEndpoint );
+        verifyEndpointAccessible( ClusteringEndpointHelpers::queryAvailabilityEndpoint );
     }
 
     @Test
     void shouldAllowToAccessStatusEndpointUnauthenticated() throws Exception
     {
-        verifyEndpointAccessible( CausalClusterRestEndpointHelpers::queryStatusEndpoint );
+        verifyEndpointAccessible( ClusteringEndpointHelpers::queryStatusEndpoint );
     }
 
     @Test

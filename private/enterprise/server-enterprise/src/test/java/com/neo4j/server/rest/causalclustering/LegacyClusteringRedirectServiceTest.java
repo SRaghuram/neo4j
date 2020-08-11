@@ -11,13 +11,13 @@ import java.net.URI;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService.databaseLegacyClusterUriPattern;
+import static com.neo4j.server.rest.causalclustering.LegacyClusteringRedirectService.databaseLegacyClusterUriPattern;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.neo4j.server.configuration.ServerSettings.management_api_path;
 
-class LegacyCausalClusteringRedirectServiceTest
+class LegacyClusteringRedirectServiceTest
 {
     @Test
     void shouldReturnDatabaseManageUriPattern()

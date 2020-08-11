@@ -48,7 +48,7 @@ import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
 
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
-import static com.neo4j.server.rest.causalclustering.ReadReplicaStatusTest.responseAsMap;
+import static com.neo4j.server.rest.causalclustering.ReadReplicaDatabaseEndpointsTest.responseAsMap;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
@@ -57,13 +57,14 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-class CoreStatusTest
+class CoreDatabaseEndpointsTest
 {
-    private CausalClusteringStatus status;
+    private ClusteringEndpoints endpoints;
 
     private final Dependencies dependencyResolver = new Dependencies();
     private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
@@ -93,6 +94,7 @@ class CoreStatusTest
         var databaseFacade = mock( GraphDatabaseFacade.class );
         when( databaseFacade.databaseName() ).thenReturn( databaseName );
         when( databaseFacade.databaseId() ).thenReturn( idRepository.defaultDatabase() );
+        when( databaseFacade.isAvailable( anyLong() ) ).thenReturn( true );
         when( databaseFacade.dbmsInfo() ).thenReturn( DbmsInfo.CORE );
         when( databaseFacade.getDependencyResolver() ).thenReturn( dependencyResolver );
         when( managementService.database( databaseName ) ).thenReturn( databaseFacade );
@@ -113,7 +115,7 @@ class CoreStatusTest
         var databaseStateService = mock( DatabaseStateService.class );
         when( databaseStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( EnterpriseOperatorState.STARTED );
 
-        status = CausalClusteringStatusFactory.build( output, databaseStateService, managementService, databaseName, mock( ClusterService.class ) );
+        endpoints = ClusteringDatabaseEndpointsFactory.build( output, databaseStateService, managementService, databaseName, mock( PerDatabaseService.class ) );
     }
 
     @Test
@@ -123,9 +125,9 @@ class CoreStatusTest
         when( raftMachine.currentRole() ).thenReturn( Role.LEADER );
 
         // when
-        var available = status.available();
-        var readonly = status.readonly();
-        var writable = status.writable();
+        var available = endpoints.available();
+        var readonly = endpoints.readonly();
+        var writable = endpoints.writable();
 
         // then
         assertEquals( OK.getStatusCode(), available.getStatus() );
@@ -145,9 +147,9 @@ class CoreStatusTest
         when( raftMachine.currentRole() ).thenReturn( Role.CANDIDATE );
 
         // when
-        var available = status.available();
-        var readonly = status.readonly();
-        var writable = status.writable();
+        var available = endpoints.available();
+        var readonly = endpoints.readonly();
+        var writable = endpoints.writable();
 
         // then
         assertEquals( OK.getStatusCode(), available.getStatus() );
@@ -167,9 +169,9 @@ class CoreStatusTest
         when( raftMachine.currentRole() ).thenReturn( Role.FOLLOWER );
 
         // when
-        var available = status.available();
-        var readonly = status.readonly();
-        var writable = status.writable();
+        var available = endpoints.available();
+        var readonly = endpoints.readonly();
+        var writable = endpoints.writable();
 
         // then
         assertEquals( OK.getStatusCode(), available.getStatus() );
@@ -200,7 +202,7 @@ class CoreStatusTest
                 .collect( toList() );
 
         // when
-        var description = status.description();
+        var description = endpoints.description();
         var response = responseAsMap( description );
 
         // then
@@ -224,7 +226,7 @@ class CoreStatusTest
         when( raftMembershipManager.votingMembers() ).thenReturn( new HashSet<>( Arrays.asList( core2, core3 ) ) );
 
         // when
-        var description = status.description();
+        var description = endpoints.description();
 
         // then
         var response = responseAsMap( description );
@@ -238,7 +240,7 @@ class CoreStatusTest
         topologyService.setRole( null, RoleInfo.LEADER );
 
         // when
-        var description = status.description();
+        var description = endpoints.description();
 
         // then
         var response = responseAsMap( description );
@@ -252,7 +254,7 @@ class CoreStatusTest
         databaseHealth.panic( new RuntimeException() );
 
         // when
-        var description = status.description();
+        var description = endpoints.description();
         var response = responseAsMap( description );
 
         // then
@@ -266,7 +268,7 @@ class CoreStatusTest
         topologyService.setRole( null, RoleInfo.LEADER );
 
         // when
-        var description = status.description();
+        var description = endpoints.description();
 
         // then
         var response = responseAsMap( description );
@@ -278,7 +280,7 @@ class CoreStatusTest
     {
         when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
 
-        var description = status.description();
+        var description = endpoints.description();
 
         var response = responseAsMap( description );
         assertNull( response.get( "raftCommandsPerSecond" ) );
