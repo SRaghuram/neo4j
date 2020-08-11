@@ -84,12 +84,12 @@ import scala.collection.mutable.ArrayBuffer
  * is increasing cardinality which is only happening for undirected projections where
  * neither startNode nor endNode is in scope.
  */
-class ProjectEndpointsOperator(val workIdentity: WorkIdentity,
-                               relSlot: Slot,
-                               startOffset: Int,
-                               endOffset: Int,
-                               types: RelationshipTypes,
-                               isSimplePath: Boolean) extends StreamingOperator {
+class ProjectEndpointsHeadOperator(val workIdentity: WorkIdentity,
+                                   relSlot: Slot,
+                                   startOffset: Int,
+                                   endOffset: Int,
+                                   types: RelationshipTypes,
+                                   isSimplePath: Boolean) extends StreamingOperator {
   override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
@@ -120,6 +120,8 @@ abstract class BaseProjectEndpointsTask(val workIdentity: WorkIdentity,
     while (outputRow.onValidRow() && (!forwardDirection || initialized)) {
       initialized = false
       outputRow.copyFrom(inputCursor)
+      //For each relationship we write two rows: once in the forward (->) direction and
+      //once in the backwards direction (<-)
       if (forwardDirection) {
         outputRow.setLongAt(startOffset, source)
         outputRow.setLongAt(endOffset, target)
@@ -279,7 +281,11 @@ abstract class BaseProjectEndpointsMiddleOperator(val workIdentity: WorkIdentity
                               resources: QueryResources,
                               typesToCheck: Array[Int]): Option[(Long, Long)]
 
-
+  /**
+   * When ProjectEndpoints acts as a middle operator we are either a directed projections or if
+   * undirected at least one of the two nodes are in scope. That means we will never increase
+   * cardinality here and will at most write a single row per relationship.
+   */
   private def writeRow(readCursor: MorselReadCursor,
                        writeCursor: MorselWriteCursor,
                        start: Long,
@@ -363,11 +369,11 @@ trait ProjectEndpointsFields {
     case Right(name) => name
   }.toArray).getOrElse(Array.empty[String])
 
-  protected val typeField: InstanceField = field[Array[Int]](codeGen.namer.nextVariableName("type"),
+  protected val typesField: InstanceField = field[Array[Int]](codeGen.namer.nextVariableName("types"),
     if (types.isEmpty) constant(null)
     else arrayOf[Int](knownTypes.map(constant):_*))
 
-  protected val missingTypeField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName("missingTypes"),
+  protected val missingTypesField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName("missingTypes"),
     arrayOf[String](missingTypes.map(constant):_*))
 
   def types: Option[Seq[Either[Int, String]]]
@@ -403,10 +409,10 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
   override def genFields: Seq[Field] = {
     val builder = Seq.newBuilder[Field]
     if (types.nonEmpty) {
-      builder += typeField
+      builder += typesField
     }
     if (missingTypes.nonEmpty) {
-      builder += missingTypeField
+      builder += missingTypesField
     }
     builder.result()
   }
@@ -537,7 +543,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
     val ops = codeGen.cursorFor(relName) match {
       case Some(cursor: RelationshipCursorRepresentation) =>
         //we have a cursor available for getting the start and end node
-        onValidType(cursor.relationshipType, typeField, types.isEmpty) {
+        onValidType(cursor.relationshipType, typesField, types.isEmpty) {
           block(
             declareAndAssign(typeRefOf[Long], startVar, cursor.sourceNode),
             declareAndAssign(typeRefOf[Long], endVar, cursor.targetNode),
@@ -545,15 +551,15 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
           )
         }
       case None =>
-        //we have a cursor available for getting the start and end node
-        //do a read.singleRelationship(id, cursor) and read star and end from the cursor
+        //we don't have a cursor available for getting the start and end node
+        //do a read.singleRelationship(id, cursor) and read start and end from the cursor
         block(
           declareAndAssign(typeRefOf[Long], relIdVar, getRelationshipIdFromSlot(relSlot, codeGen)),
           condition(notEqual(load(relIdVar), constant(-1L))) {
             block(
               singleRelationship(load(relIdVar), RELATIONSHIP_CURSOR),
               condition(cursorNext[RelationshipScanCursor](RELATIONSHIP_CURSOR)) {
-                onValidType(invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Int]("type")), typeField, types.isEmpty) {
+                onValidType(invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Int]("type")), typesField, types.isEmpty) {
                   block(
                     declareAndAssign(typeRefOf[Long], startVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("sourceNodeReference"))),
                     declareAndAssign(typeRefOf[Long], endVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("targetNodeReference"))),
@@ -567,7 +573,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
     }
 
     block(
-      loadTypes(knownTypes, missingTypes, typeField, missingTypeField),
+      loadTypes(knownTypes, missingTypes, typesField, missingTypesField),
       ops
     )
   }
@@ -631,12 +637,12 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
     val endVar = codeGen.namer.nextVariableName("end")
     val startEnd = codeGen.namer.nextVariableName()
     block(
-      loadTypes(knownTypes, missingTypes, typeField, missingTypeField),
+      loadTypes(knownTypes, missingTypes, typesField, missingTypesField),
       declareAndAssign(typeRefOf[ListValue], relIdVar, asListValue(codeGen.getRefAt(relSlot.offset))),
       declareAndAssign(typeRefOf[Array[Long]], startEnd,
         invokeStatic(
           method[VarLengthProjectEndpointsTask, Array[Long], ListValue, QueryContext, Array[Int]]("varLengthFindStartAndEnd"),
-          load(relIdVar), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typeField))
+          load(relIdVar), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typesField))
         ),
       condition(IntermediateRepresentation.isNotNull(load(startEnd))) {
         block(
@@ -674,10 +680,10 @@ abstract class BaseUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTem
   override def genMoreFields: Seq[Field] = {
     val builder = ArrayBuffer(forwardField, startField, endField)
     if (knownTypes.nonEmpty) {
-      builder += typeField
+      builder += typesField
     }
     if (missingTypes.nonEmpty) {
-      builder += missingTypeField
+      builder += missingTypesField
     }
     builder
   }
@@ -741,7 +747,7 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
       case Some(cursor: RelationshipCursorRepresentation) =>
         block(
           setField(canContinue, constant(false)),
-          onValidType(cursor.relationshipType, typeField, types.isEmpty) {
+          onValidType(cursor.relationshipType, typesField, types.isEmpty) {
             block(
               setField(startField, cursor.sourceNode),
               setField(endField, cursor.targetNode),
@@ -758,7 +764,7 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
             block(
               singleRelationship(load(relIdVar), RELATIONSHIP_CURSOR),
               condition(cursorNext[RelationshipScanCursor](RELATIONSHIP_CURSOR)) {
-                onValidType(invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Int]("type")), typeField, types.isEmpty) {
+                onValidType(invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Int]("type")), typesField, types.isEmpty) {
                   block(
                     setField(startField, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("sourceNodeReference"))),
                     setField(endField, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("targetNodeReference"))),
@@ -772,7 +778,7 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
         )
     }
     block(
-      loadTypes(knownTypes, missingTypes, typeField, missingTypeField),
+      loadTypes(knownTypes, missingTypes, typesField, missingTypesField),
       ops
     )
   }
@@ -793,13 +799,13 @@ class VarLengthUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplat
     val relIds = codeGen.namer.nextVariableName()
     val startEnd = codeGen.namer.nextVariableName()
     block(
-      loadTypes(knownTypes, missingTypes, typeField, missingTypeField),
+      loadTypes(knownTypes, missingTypes, typesField, missingTypesField),
       declareAndAssign(typeRefOf[ListValue], relIds, asListValue(codeGen.getRefAt(relSlot.offset))),
       setField(canContinue, constant(false)),
       declareAndAssign(typeRefOf[Array[Long]], startEnd,
         invokeStatic(
           method[VarLengthProjectEndpointsTask, Array[Long], ListValue, QueryContext, Array[Int]]("varLengthFindStartAndEnd"),
-          load(relIds), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typeField))
+          load(relIds), ExpressionCompilation.DB_ACCESS, if (types.isEmpty) constant(null) else loadField(typesField))
       ),
       condition(IntermediateRepresentation.isNotNull(load(startEnd))) {
         block(
@@ -812,5 +818,3 @@ class VarLengthUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplat
     )
   }
 }
-
-

@@ -570,15 +570,15 @@ object ExpandAllOperatorTaskTemplate {
       throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
 
-  def loadTypes( types: Array[Int], missingTypes: Array[String], typeField: Field, missingTypeField: Field ): IntermediateRepresentation = {
-    if (missingTypes.isEmpty) noop()
-    else {
-      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
+  def loadTypes(types: Array[Int], missingTypes: Array[String], typeField: Field, missingTypeField: Field): IntermediateRepresentation = {
+    if (missingTypes.isEmpty) {
+      noop()
+    } else {
+      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))) {
         setField(typeField,
           invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
             loadField(typeField), loadField(missingTypeField), DB_ACCESS))
       }
     }
   }
-
 }

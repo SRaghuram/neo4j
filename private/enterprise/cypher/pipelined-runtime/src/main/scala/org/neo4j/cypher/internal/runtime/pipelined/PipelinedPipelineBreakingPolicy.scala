@@ -129,7 +129,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
 
       case p: ProjectEndpoints =>
         // Undirected is cardinality increasing if nothing is in scope, otherwise not
-        (!p.directed && (!p.startInScope && !p.endInScope)) && !canFuseOneChildOperator(lp, outerApplyPlanId)
+        !p.directed && !p.startInScope && !p.endInScope && !canFuseOneChildOperator(lp, outerApplyPlanId)
 
       case _: ProduceResult |
            _: Limit |

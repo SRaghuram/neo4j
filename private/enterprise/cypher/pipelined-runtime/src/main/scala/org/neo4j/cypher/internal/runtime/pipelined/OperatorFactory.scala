@@ -108,8 +108,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialTopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator
@@ -653,10 +653,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             case (k, (n, _)) => (k, slots(n).offset)
           }.toArray)
 
-      case plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, _, length) =>
-        require(!startInScope && !endInScope)
+      case plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, directed, length) =>
+        require(!startInScope && !endInScope && !directed)
         val lazyTypes = types.map(_.toArray).map(RelationshipTypes.apply(_)(semanticTable)).getOrElse(RelationshipTypes.empty)
-       new ProjectEndpointsOperator(WorkIdentity.fromPlan(plan),
+       new ProjectEndpointsHeadOperator(WorkIdentity.fromPlan(plan),
                                     slots(rel),
                                     slots.getLongOffsetFor(start),
                                     slots.getLongOffsetFor(end),
@@ -778,6 +778,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
 
       case plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, directed, length) =>
+        require(directed || (startInScope || endInScope))
+
         val lazyTypes = types.map(_.toArray).map(RelationshipTypes.apply(_)(semanticTable)).getOrElse(RelationshipTypes.empty)
         if (length.isSimple) {
           Some(new ProjectEndpointsMiddleOperator(WorkIdentity.fromPlan(plan),
