@@ -52,6 +52,8 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ByNameLookup
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ByTokenLookup
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalOperatorTaskTemplate
@@ -84,6 +86,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoO
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectionTypes
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
@@ -661,11 +664,10 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
         case plan@plans.ProjectEndpoints(_, rel, start, startInScope, end, endInScope, types, directed, length) =>
           ctx: TemplateContext =>
-            val typeTokenOrNames = types.map(_.map(r => ctx.tokenContext.getOptRelTypeId(r.name) match {
-                  case Some(token) => Left(token)
-                  case None => Right(r.name)
-                })
-            )
+            val projectionTypes = types.map(t => ProjectionTypes(t.map(r => ctx.tokenContext.getOptRelTypeId(r.name) match {
+              case Some(token) => ByTokenLookup(token)
+              case None => ByNameLookup(r.name)
+            })))
             if (!directed && !startInScope && !endInScope) {
               if (length.isSimple) {
                 new UndirectedProjectEndpointsTaskTemplate(
@@ -677,7 +679,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.slots(rel),
                   ctx.slots.getLongOffsetFor(start),
                   ctx.slots.getLongOffsetFor(end),
-                  typeTokenOrNames)(ctx.expressionCompiler)
+                  projectionTypes)(ctx.expressionCompiler)
               } else {
                 new VarLengthUndirectedProjectEndpointsTaskTemplate(
                   ctx.inner,
@@ -687,7 +689,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.slots(rel),
                   ctx.slots.getLongOffsetFor(start),
                   ctx.slots.getLongOffsetFor(end),
-                  typeTokenOrNames)(ctx.expressionCompiler)
+                  projectionTypes)(ctx.expressionCompiler)
               }
             } else {
               if (length.isSimple) {
@@ -700,7 +702,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   startInScope,
                   ctx.slots.getLongOffsetFor(end),
                   endInScope,
-                  typeTokenOrNames,
+                  projectionTypes,
                   directed)(ctx.expressionCompiler)
               } else {
                 new VarLengthProjectEndpointsMiddleOperatorTemplate(
@@ -711,7 +713,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   startInScope,
                   ctx.slots.getLongOffsetFor(end),
                   endInScope,
-                  typeTokenOrNames,
+                  projectionTypes,
                   directed)(ctx.expressionCompiler)
               }
             }

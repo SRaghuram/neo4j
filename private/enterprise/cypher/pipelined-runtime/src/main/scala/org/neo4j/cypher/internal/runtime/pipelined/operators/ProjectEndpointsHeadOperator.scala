@@ -329,7 +329,7 @@ class ProjectEndpointsMiddleOperator(workIdentity: WorkIdentity,
     } else {
       state.query.transactionalContext.dataRead.singleRelationship(relId, cursor)
       if (cursor.next() && hasValidType(cursor, typesToCheck)) {
-        Some(cursor.sourceNodeReference(), cursor.targetNodeReference())
+        Some((cursor.sourceNodeReference(), cursor.targetNodeReference()))
       } else {
         None
       }
@@ -359,15 +359,23 @@ class VarLengthProjectEndpointsMiddleOperator(workIdentity: WorkIdentity,
   }
 }
 
+sealed trait RelationshipTypeLookup
+case class ByTokenLookup(token: Int) extends RelationshipTypeLookup
+case class ByNameLookup(name: String) extends RelationshipTypeLookup
+
+case class ProjectionTypes(lookup: Seq[RelationshipTypeLookup]) {
+  def knownTypes: Seq[Int] = lookup.collect {
+    case ByTokenLookup(token) => token
+  }
+  def missingTypes: Seq[String] = lookup.collect {
+    case ByNameLookup(name) => name
+  }
+}
 
 trait ProjectEndpointsFields {
-  protected val knownTypes: Array[Int] = types.map(_.collect {
-    case Left(token) => token
-  }.toArray).getOrElse(Array.empty[Int])
+  protected val knownTypes: Seq[Int] = types.map(_.knownTypes).getOrElse(Seq.empty)
 
-  protected val missingTypes: Array[String] = types.map(_.collect {
-    case Right(name) => name
-  }.toArray).getOrElse(Array.empty[String])
+  protected val missingTypes: Seq[String] = types.map(_.missingTypes).getOrElse(Seq.empty)
 
   protected val typesField: InstanceField = field[Array[Int]](codeGen.namer.nextVariableName("types"),
     if (types.isEmpty) constant(null)
@@ -376,7 +384,7 @@ trait ProjectEndpointsFields {
   protected val missingTypesField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName("missingTypes"),
     arrayOf[String](missingTypes.map(constant):_*))
 
-  def types: Option[Seq[Either[Int, String]]]
+  def types: Option[ProjectionTypes]
   def codeGen: OperatorExpressionCompiler
 }
 
@@ -391,7 +399,7 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
                                                           startInScope: Boolean,
                                                           endOffset: Int,
                                                           endInScope: Boolean,
-                                                          types: Option[Seq[Either[Int, String]]],
+                                                          types: Option[ProjectionTypes],
                                                           directed: Boolean,
                                                           codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate with ProjectEndpointsFields  {
   override def genInit: IntermediateRepresentation = {
@@ -527,7 +535,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
                                              startInScope: Boolean,
                                              endOffset: Int,
                                              endInScope: Boolean,
-                                             val types: Option[Seq[Either[Int, String]]],
+                                             val types: Option[ProjectionTypes],
                                              directed: Boolean)
                                             (val codeGen: OperatorExpressionCompiler)
      extends BaseProjectEndpointsMiddleOperatorTemplate(inner, id, startOffset, startInScope, endOffset, endInScope, types, directed, codeGen) {
@@ -571,7 +579,6 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
           }
         )
     }
-
     block(
       loadTypes(knownTypes, missingTypes, typesField, missingTypesField),
       ops
@@ -626,7 +633,7 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
                                                       startInScope: Boolean,
                                                       endOffset: Int,
                                                       endInScope: Boolean,
-                                                      val types: Option[Seq[Either[Int, String]]],
+                                                      val types: Option[ProjectionTypes],
                                                       directed: Boolean)
                                                      (val codeGen: OperatorExpressionCompiler)
   extends BaseProjectEndpointsMiddleOperatorTemplate(inner, id, startOffset, startInScope, endOffset, endInScope, types, directed, codeGen) {
@@ -657,13 +664,14 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 }
 
+
 abstract class BaseUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
                                                           id: Id,
                                                           innermost: DelegateOperatorTaskTemplate,
                                                           isHead: Boolean,
                                                           startOffset: Int,
                                                           endOffset: Int,
-                                                          val types: Option[Seq[Either[Int, String]]],
+                                                          val types: Option[ProjectionTypes],
                                                           override val codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) with ProjectEndpointsFields {
 
@@ -738,7 +746,7 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
                                              relSlot: Slot,
                                              startOffset: Int,
                                              endOffset: Int,
-                                             types: Option[Seq[Either[Int, String]]])
+                                             types: Option[ProjectionTypes])
                                             (codeGen: OperatorExpressionCompiler)
   extends BaseUndirectedProjectEndpointsTaskTemplate(inner, id, innermost, isHead, startOffset, endOffset, types, codeGen) {
 
@@ -791,7 +799,7 @@ class VarLengthUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplat
                                    relSlot: Slot,
                                    startOffset: Int,
                                    endOffset: Int,
-                                   types: Option[Seq[Either[Int, String]]])
+                                   types: Option[ProjectionTypes])
                                   (codeGen: OperatorExpressionCompiler)
   extends BaseUndirectedProjectEndpointsTaskTemplate(inner, id, innermost, isHead, startOffset, endOffset, types, codeGen) {
 

@@ -570,7 +570,7 @@ object ExpandAllOperatorTaskTemplate {
       throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
 
-  def loadTypes(types: Array[Int], missingTypes: Array[String], typeField: Field, missingTypeField: Field): IntermediateRepresentation = {
+  def loadTypes(types: Seq[Int], missingTypes: Seq[String], typeField: Field, missingTypeField: Field): IntermediateRepresentation = {
     if (missingTypes.isEmpty) {
       noop()
     } else {
