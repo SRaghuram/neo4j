@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
+import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
@@ -639,14 +640,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         )
 
       case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) =>
-        val callArgumentCommands = callArguments.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
-          case (given, default) => given.map(converters.toCommandExpression(id, _)).getOrElse(Literal(default.get))
-        }
         new ProcedureCallOperator(
           WorkIdentity.fromPlan(plan),
           signature,
           ProcedureCallMode.fromAccessMode(signature.accessMode),
-          callArgumentCommands,
+          argumentsForProcedureCall(id, signature, callArguments),
           call.callResults.map(r => r.outputName).toArray,
           call.callResultIndices.map {
             case (k, (n, _)) => (k, slots(n).offset)
@@ -770,14 +768,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.ProcedureCall(_, call@ResolvedCall(signature, callArguments, _, _, _)) =>
         val callMode = ProcedureCallMode.fromAccessMode(signature.accessMode)
-        val callArgumentCommands = callArguments.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
-          case (given, default) => given.map(converters.toCommandExpression(id, _)).getOrElse(Literal(default.get))
-        }
         Some(new ProcedureCallMiddleOperator(
           WorkIdentity.fromPlan(plan),
           signature,
           callMode,
-          callArgumentCommands,
+          argumentsForProcedureCall(id, signature, callArguments),
           call.callResults.map(r => r.outputName).toArray
         ))
 
@@ -905,6 +900,13 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
+  private def argumentsForProcedureCall(id: Id,
+                                        signature: ProcedureSignature,
+                                        callArguments: Seq[org.neo4j.cypher.internal.expressions.Expression]): Seq[Expression] = {
+    callArguments.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
+      case (given, default) => given.map(converters.toCommandExpression(id, _)).getOrElse(Literal(default.get))
+    }
+  }
 }
 
 object OperatorFactory {
