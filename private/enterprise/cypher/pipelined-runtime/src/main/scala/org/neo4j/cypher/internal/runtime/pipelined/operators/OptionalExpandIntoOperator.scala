@@ -269,8 +269,8 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
     def doIfPredicate(ir: => IntermediateRepresentation): IntermediateRepresentation = doIfPredicateOrElse(ir)(noop())
     def innerBlock: IntermediateRepresentation = block(
       setField(hasWritten, constant(true)),
-      profileRow(id),
       inner.genOperateWithExpressions,
+      doIfInnerCantContinue(profileRow(id))
     )
 
     val shouldWriteRow = codeGen.namer.nextVariableName()

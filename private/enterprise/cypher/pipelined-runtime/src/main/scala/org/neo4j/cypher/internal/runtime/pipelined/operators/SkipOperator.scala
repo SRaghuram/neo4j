@@ -89,11 +89,12 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genOperate: IntermediateRepresentation = {
     block(
-    ifElse(equal(load(countLeftVar), constant(0)))(block(
-      profileRow(id),
-      inner.genOperateWithExpressions))(
-      doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
-    )
+      ifElse(equal(load(countLeftVar), constant(0)))(block(
+        inner.genOperateWithExpressions,
+        doIfInnerCantContinue(profileRow(id))
+      ))(
+        doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
+      )
     )
   }
 }

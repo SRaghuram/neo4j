@@ -72,8 +72,8 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
 
     condition(equal(nullCheckIfRequired(predicate), trueValue)) (
       block(
-        profileRow(id),
-        inner.genOperateWithExpressions
+        inner.genOperateWithExpressions,
+        doIfInnerCantContinue(profileRow(id))
       )
     )
   }

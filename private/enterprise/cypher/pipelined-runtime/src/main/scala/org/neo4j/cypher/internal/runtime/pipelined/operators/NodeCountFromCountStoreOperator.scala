@@ -235,9 +235,9 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       wildCardOps,
       codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), load(countVar))),
-      profileRow(id),
       inner.genOperateWithExpressions,
-      setField(canContinue, constant(false))
+      setField(canContinue, constant(false)),
+      doIfInnerCantContinue(profileRow(id))
     )
   }
 

@@ -218,9 +218,9 @@ class SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Opera
         invoke(loadField(distinctStateField),
           method[DistinctSinglePrimitiveState, Boolean, Long]("seen"), load(keyVar)))) {
         block(
-          profileRow(id),
           project,
-          inner.genOperateWithExpressions
+          inner.genOperateWithExpressions,
+          doIfInnerCantContinue(profileRow(id))
         )
       })
   }

@@ -159,10 +159,10 @@ class SerialTopLevelDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTas
           method[DistinctState, Boolean, AnyValue]("seen"),
           load(groupingKeyAsArrayVar)))) {
         block(
-          profileRow(id),
           declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
           nullCheckIfRequired(groupingExpression.projectKey),
-          inner.genOperateWithExpressions
+          inner.genOperateWithExpressions,
+          doIfInnerCantContinue(profileRow(id))
         )
       })
   }

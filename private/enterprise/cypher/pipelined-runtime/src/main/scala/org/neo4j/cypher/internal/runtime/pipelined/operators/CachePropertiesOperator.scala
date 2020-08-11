@@ -57,7 +57,7 @@ class CachePropertiesOperatorTemplate(override val inner: OperatorTaskTemplate,
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $p"))
         )
     }
-    val irs = properties.map(_.ir) ++ Seq(profileRow(id), inner.genOperateWithExpressions)
+    val irs = properties.map(_.ir) ++ Seq(inner.genOperateWithExpressions, doIfInnerCantContinue(profileRow(id)))
     block(irs:_*)
   }
 

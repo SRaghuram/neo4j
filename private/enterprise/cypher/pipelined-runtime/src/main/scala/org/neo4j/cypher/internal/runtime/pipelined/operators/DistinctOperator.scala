@@ -211,9 +211,9 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
                           method[DistinctState, Boolean, AnyValue]("seen"),
                           load(keyVar)))) {
         block(
-          profileRow(id),
           nullCheckIfRequired(groupingExpression.projectKey),
-          inner.genOperateWithExpressions
+          inner.genOperateWithExpressions,
+          doIfInnerCantContinue(profileRow(id))
         )
       })
   }
