@@ -46,11 +46,11 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
                 .setUserLogProvider( NullLogProvider.getInstance() )
                 .setExternalDependencies( dependencies );
 
-        augmentConfig( managementServiceBuilder, originalConfig, rootDirectory );
+        augmentConfig( managementServiceBuilder, originalConfig, rootDirectory, isSystem );
         return new TemporaryDatabase( managementServiceBuilder.build(), isSystem );
     }
 
-    private static void augmentConfig( DatabaseManagementServiceBuilder managementServiceBuilder, Config originalConfig, Path rootDirectory )
+    private static void augmentConfig( DatabaseManagementServiceBuilder managementServiceBuilder, Config originalConfig, Path rootDirectory, boolean isSystem )
     {
         // use the same record format as specified by the original config
         managementServiceBuilder.setConfig( GraphDatabaseSettings.record_format, originalConfig.get( GraphDatabaseSettings.record_format ) );
@@ -82,6 +82,11 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
         if ( originalConfig.isExplicitlySet( GraphDatabaseInternalSettings.auth_store ) )
         {
             managementServiceBuilder.setConfig( GraphDatabaseInternalSettings.auth_store, originalConfig.get( GraphDatabaseInternalSettings.auth_store ) );
+        }
+        // proper default database node created in the system graph
+        if ( isSystem )
+        {
+            managementServiceBuilder.setConfig( GraphDatabaseSettings.default_database, originalConfig.get( GraphDatabaseSettings.default_database ) );
         }
     }
 }
