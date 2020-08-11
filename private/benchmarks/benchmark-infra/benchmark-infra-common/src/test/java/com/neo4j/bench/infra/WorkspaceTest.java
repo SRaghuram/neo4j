@@ -6,6 +6,7 @@
 package com.neo4j.bench.infra;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -180,5 +181,35 @@ public class WorkspaceTest
         assertThat( format( "Found: %s", deserializedArtifacts ), deserializedArtifacts, containsInAnyOrder( neo4j, script ) );
         List<String> workspaceKeys = deserializedWorkspace.allArtifactKeys();
         assertThat( format( "Found: %s", workspaceKeys ), workspaceKeys, containsInAnyOrder( Workspace.NEO4J_ARCHIVE, Workspace.RUN_SCRIPT ) );
+    }
+
+    @Test
+    public void shouldFindAllFilesRecursivelyAndRemoveProfiles() throws IOException
+    {
+        // given
+        Path folder = temporaryFolder.newFolder().toPath();
+        Path childFolder1 = folder.resolve( "folder1" );
+        Path childFolder2 = childFolder1.resolve( "folder2" );
+        Files.createDirectories( childFolder2 );
+
+        Path childFile1 = Files.createFile( childFolder1.resolve( "file1.txt" ) );
+        Path childFile2 = Files.createFile( childFolder2.resolve( "file2.txt" ) );
+        Path childFile3 = Files.createFile( childFolder1.resolve( "file3" + RecordingType.ASYNC.extension() ) );
+        Path childFile4 = Files.createFile( childFolder2.resolve( "file4" + RecordingType.JFR.extension() ) );
+
+        BenchmarkUtil.assertFileExists( childFile1 );
+        BenchmarkUtil.assertFileExists( childFile2 );
+        BenchmarkUtil.assertFileExists( childFile3 );
+        BenchmarkUtil.assertFileExists( childFile4 );
+
+        // when
+        Workspace workspace = Workspace.create( folder ).withFilesRecursively( new IgnoreProfilerFileFilter() ).build();
+
+        // then
+        List<Path> workspaceFiles = workspace.allArtifacts();
+        assertThat( format( "Found: %s", workspaceFiles ), workspaceFiles.size(), equalTo( 2 ) );
+        assertThat( format( "Found: %s", workspaceFiles ), workspaceFiles, containsInAnyOrder( childFile1, childFile2 ) );
+        List<String> workspaceKeys = workspace.allArtifactKeys();
+        assertThat( format( "Found: %s", workspaceKeys ), workspaceKeys, containsInAnyOrder( "folder1/file1.txt", "folder1/folder2/file2.txt" ) );
     }
 }

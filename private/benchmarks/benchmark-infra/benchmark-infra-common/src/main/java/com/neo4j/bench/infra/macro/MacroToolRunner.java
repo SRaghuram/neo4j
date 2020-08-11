@@ -16,9 +16,9 @@ import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Extractor;
+import com.neo4j.bench.infra.IgnoreProfilerFileFilter;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
-import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +106,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
 
         int waitFor = process.waitFor();
 
-        Workspace resultsWorkspace = Workspace.create( workDir ).withFilesRecursively( TrueFileFilter.INSTANCE ).build();
+        Workspace resultsWorkspace = Workspace.create( workDir ).withFilesRecursively( new IgnoreProfilerFileFilter() ).build();
 
         artifactStorage.uploadBuildArtifacts( artifactBaseUri.resolve( "results" ), resultsWorkspace );
 
