@@ -435,8 +435,6 @@ class WorkloadTest
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_schema_with_duplicates.json" );
 
-            Workload.fromFile( workloadConfigurationFile, Deployment.embedded() );
-
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                        () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.INVALID_SCHEMA_ENTRY ) );
