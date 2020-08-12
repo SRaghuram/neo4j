@@ -9,6 +9,7 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentModes;
@@ -39,10 +40,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.UUID;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 @Command( name = "schedule" )
 public class ScheduleMacroCommand extends BaseRunWorkloadCommand
@@ -131,9 +134,9 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     @Required
     private URI artifactBaseUri;
 
-    private static String getJobName( String tool, String benchmark, String queryName, String version, String triggered )
+    private static String getJobName( String tool, String benchmark, String version, String triggered )
     {
-        return format( "%s-%s-%s-%s-%s", tool, benchmark, queryName, version, triggered );
+        return format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
     }
 
     @Override
@@ -168,12 +171,13 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             try ( Resources resources = new Resources( Paths.get( "." ) ) )
             {
                 Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
+                List<List<Query>> partitions = Lists.partition( workload.queries(), workload.queryPartitionSize() );
 
-                for ( Query query : workload.queries() )
+                for ( List<Query> queries : partitions )
                 {
 
-                    URI artifactBaseQueryRunURI = artifactBaseWorkloadURI.resolve( URIHelper.toURIPart( query.name() ) )
-                                                                         .resolve( URIHelper.toURIPart( uuid.toString() ) );
+                    List<String> queryNames = queries.stream().map( Query::name ).collect( toList() );
+                    URI artifactBaseQueryRunURI = artifactBaseWorkloadURI.resolve( URIHelper.toURIPart( uuid.toString() ) );
                     URI artifactWorkerQueryRunURI = artifactBaseQueryRunURI.resolve( "benchmark-infra-worker.jar" );
                     // then store job params as JSON
                     InfraParams infraParams = new InfraParams( awsCredentials,
@@ -187,14 +191,13 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                          new BenchmarkingEnvironment(
                                                                  new BenchmarkingTool( MacroToolRunner.class,
                                                                                        new RunToolMacroWorkloadParams(
-                                                                                               runMacroWorkloadParams.setQuery( query.name() ),
+                                                                                               runMacroWorkloadParams.setQueryNames( queryNames ),
                                                                                                storeName ) ) ) );
 
                     workspace.assertArtifactsExist();
 
                     benchmarkJobScheduler.scheduleBenchmarkJob( getJobName( "macro",
                                                                             workload.name(),
-                                                                            query.name(),
                                                                             runMacroWorkloadParams.neo4jVersion().toString(),
                                                                             runMacroWorkloadParams.triggeredBy() ),
                                                                 jobParams,

@@ -1,6 +1,7 @@
 {
   "name": "valid",
   "schema": "schema.txt",
+  "queryPartitionSize" : 2,
   "queries": [
     {
       "name": "Q1",

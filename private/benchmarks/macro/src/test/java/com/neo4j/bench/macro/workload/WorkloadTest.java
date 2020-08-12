@@ -32,6 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -291,6 +292,7 @@ class WorkloadTest
             Path validWorkloadConfig = workloadDir.resolve( "valid.json" );
             Workload workload = Workload.fromFile( validWorkloadConfig, Deployment.embedded() );
             String expectedWorkloadName = workload.configFile().getFileName().toString().replace( ".json", "" );
+            assertEquals( 2, workload.queryPartitionSize() );
             assertThat( format( "Workload with config: %s%n" +
                                 "Should have name: %s%n" +
                                 "But had name: %s",

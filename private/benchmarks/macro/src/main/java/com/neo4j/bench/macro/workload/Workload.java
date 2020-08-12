@@ -40,12 +40,14 @@ public class Workload
     private static final String QUERIES = "queries";
     private static final String SCHEMA = "schema";
     private static final String DATABASE_NAME = "databaseName";
+    private static final String QUERY_PARTITION_SIZE = "queryPartitionSize";
 
     private final List<Query> queries;
     private final String name;
     private final Path configFile;
     private final Schema schema;
     private final DatabaseName databaseName;
+    private final int queryPartitionSize;
 
     public static Workload fromName( String workloadName, Resources resources, DeploymentMode mode )
     {
@@ -148,7 +150,14 @@ public class Workload
             Path schemaFile = workloadConfigFile.getParent().resolve( (String) config.get( SCHEMA ) );
             Schema schema = loadSchema( schemaFile );
             DatabaseName databaseName = Neo4jDatabaseNames.ofNullable( (String) config.get( DATABASE_NAME ) );
-            return new Workload( queries, workloadName, workloadConfigFile, schema, databaseName );
+
+            int queryPartitionSize = 1;
+            if ( config.containsKey( QUERY_PARTITION_SIZE ) )
+            {
+                queryPartitionSize = Integer.parseInt( config.get( QUERY_PARTITION_SIZE ).toString() );
+            }
+
+            return new Workload( queries, workloadName, workloadConfigFile, schema, databaseName, queryPartitionSize );
         }
         catch ( WorkloadConfigException e )
         {
@@ -197,6 +206,8 @@ public class Workload
         // not compulsory, and is checked for elsewhere
         invalidKeys.remove( QUERIES );
         invalidKeys.remove( DATABASE_NAME );
+        // has default value, is optional
+        invalidKeys.remove( QUERY_PARTITION_SIZE );
 
         if ( !workloadConfig.containsKey( NAME ) )
         {
@@ -236,13 +247,14 @@ public class Workload
         }
     }
 
-    private Workload( List<Query> queries, String name, Path configFile, Schema schema, DatabaseName databaseName )
+    private Workload( List<Query> queries, String name, Path configFile, Schema schema, DatabaseName databaseName, int queryPartitionSize )
     {
         this.queries = queries;
         this.name = name;
         this.configFile = configFile;
         this.schema = schema;
         this.databaseName = Objects.requireNonNull( databaseName );
+        this.queryPartitionSize = queryPartitionSize;
     }
 
     public Schema expectedSchema()
@@ -275,6 +287,11 @@ public class Workload
     public String name()
     {
         return name;
+    }
+
+    public int queryPartitionSize()
+    {
+        return queryPartitionSize;
     }
 
     Path configFile()

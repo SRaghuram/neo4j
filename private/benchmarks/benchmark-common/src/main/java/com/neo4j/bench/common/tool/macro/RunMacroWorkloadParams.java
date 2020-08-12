@@ -5,12 +5,11 @@
  */
 package com.neo4j.bench.common.tool.macro;
 
-import com.google.common.collect.Lists;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -421,11 +420,11 @@ public class RunMacroWorkloadParams
                       .collect( toList() );
     }
 
-    public RunMacroWorkloadParams setQuery( String queryName )
+    public RunMacroWorkloadParams setQueryNames( List<String> queryNames )
     {
         return new RunMacroWorkloadParams(
                 workloadName,
-                Lists.newArrayList( queryName ),
+                queryNames,
                 neo4jEdition,
                 jvm,
                 profilers,
@@ -465,5 +464,4 @@ public class RunMacroWorkloadParams
     {
         return HashCodeBuilder.reflectionHashCode( this );
     }
-
 }
