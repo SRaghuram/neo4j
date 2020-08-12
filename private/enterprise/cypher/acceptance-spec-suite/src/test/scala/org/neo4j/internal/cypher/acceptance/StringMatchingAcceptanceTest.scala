@@ -128,4 +128,20 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
     val result = executeWith(Configs.InterpretedAndSlotted, "MERGE ()-[r:REL {`123``abc`:2}]->() RETURN properties(r)")
     result.toList should be(List(Map("properties(r)" -> Map("123`abc" -> 2))))
   }
+
+  test("should allow escaped backtick in index names") {
+    executeWith(Configs.All, "CREATE INDEX `my``index` FOR (n:Person) ON (n.firstname, n.lastname)")
+  }
+
+  test("should allow escaped backtick in uniqueness constraint names") {
+    executeWith(Configs.All, "CREATE CONSTRAINT `my``constraint` ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+  }
+
+  test("should allow escaped backtick in exists constraint names") {
+    executeWith(Configs.All, "CREATE CONSTRAINT `my``constraint` ON (n:Label) ASSERT exists(n.prop)")
+  }
+
+  test("should allow escaped backtick in node key constraint names") {
+    executeWith(Configs.All, "CREATE CONSTRAINT `my``constraint` ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+  }
 }

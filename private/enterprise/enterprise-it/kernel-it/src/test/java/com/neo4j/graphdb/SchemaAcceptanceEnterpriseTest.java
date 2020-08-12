@@ -398,18 +398,18 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     }
 
     @Test
-    void nonIndexBackedConstraintNamesCannotContainBackTicks()
+    void nonIndexBackedConstraintNamesCanContainBackTicks()
     {
         try ( Transaction tx = db.beginTx() )
         {
             ConstraintCreator creator = tx.schema().constraintFor( label ).withName( "a`b" ).assertPropertyExists( propertyKey );
-            assertThrows( IllegalArgumentException.class, creator::create );
+            creator.create();
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             assertThat( count( tx.schema().getIndexes() ) ).isEqualTo( 0L );
-            assertThat( count( tx.schema().getConstraints() ) ).isEqualTo( 0L );
+            assertThat( count( tx.schema().getConstraints() ) ).isEqualTo( 1L );
             tx.commit();
         }
     }
