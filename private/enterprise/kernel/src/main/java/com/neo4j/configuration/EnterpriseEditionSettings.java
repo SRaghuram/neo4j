@@ -29,9 +29,17 @@ public class EnterpriseEditionSettings implements SettingsDeclaration
     @Description( "The maximum number of databases." )
     public static final Setting<Long> max_number_of_databases = newBuilder( "dbms.max_databases", LONG, 100L ).addConstraint( min( 2L ) ).build();
 
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "A list of setting name patterns (comma separated) that are allowed to be dynamically changed. " +
+            "The list may contain both full setting names, and partial names with the wildcard '*'. " +
+            "If this setting is left empty all dynamic settings updates will be blocked. " +
+            "Deprecated, use dbms.dynamic.setting.allowlist" )
+    public static final Setting<List<String>> dynamic_setting_whitelist =
+            newBuilder( "dbms.dynamic.setting.whitelist", listOf( STRING ), List.of( "*" ) ).build();
+
     @Description( "A list of setting name patterns (comma separated) that are allowed to be dynamically changed. " +
             "The list may contain both full setting names, and partial names with the wildcard '*'. " +
             "If this setting is left empty all dynamic settings updates will be blocked." )
-    public static final Setting<List<String>> dynamic_setting_whitelist =
-            newBuilder( "dbms.dynamic.setting.whitelist", listOf( STRING ), List.of( "*" ) ).build();
+    public static final Setting<List<String>> dynamic_setting_allowlist =
+            newBuilder( "dbms.dynamic.setting.allowlist", listOf( STRING ), List.of( "*" ) ).build();
 }

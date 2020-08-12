@@ -69,7 +69,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
-import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_whitelist;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_allowlist;
 import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
@@ -491,7 +491,7 @@ class PageCacheWarmerTest
 
                 Config config = Config.newBuilder()
                         .set( pagecache_warmup_prefetch, true )
-                        .set( pagecache_warmup_prefetch_whitelist, "\\.taken" )
+                        .set( pagecache_warmup_prefetch_allowlist, "\\.taken" )
                         .build();
                 PageCacheWarmer warmer = createPageCacheWarmer( pageCache, config, log );
                 warmer.start();
@@ -526,7 +526,7 @@ class PageCacheWarmerTest
                 warmer.stop();
             }
             assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( INFO ).containsMessageWithArguments(
-                    "Warming up page cache by pre-fetching files matching regex: %s", pagecache_warmup_prefetch_whitelist.defaultValue() );
+                    "Warming up page cache by pre-fetching files matching regex: %s", pagecache_warmup_prefetch_allowlist.defaultValue() );
             assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( DEBUG )
                     .containsMessageWithArguments(  "Pre-fetching %s", testfile.getFileName() );
             assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( INFO ).containsMessages( "Warming of page cache completed" );

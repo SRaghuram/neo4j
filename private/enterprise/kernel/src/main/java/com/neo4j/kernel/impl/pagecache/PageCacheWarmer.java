@@ -49,7 +49,7 @@ import org.neo4j.storageengine.api.StoreFileMetadata;
 
 import static java.util.Comparator.naturalOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
-import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_whitelist;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_allowlist;
 import static org.neo4j.io.pagecache.PagedFile.PF_NO_FAULT;
 import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
@@ -177,13 +177,13 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     {
         try
         {
-            Pattern whitelist = Pattern.compile( config.get( pagecache_warmup_prefetch_whitelist ) );
-            log.info( "Warming up page cache by pre-fetching files matching regex: %s", whitelist.pattern() );
+            Pattern allowList = Pattern.compile( config.get( pagecache_warmup_prefetch_allowlist ) );
+            log.info( "Warming up page cache by pre-fetching files matching regex: %s", allowList.pattern() );
             List<JobHandle> handles = new ArrayList<>();
             LongAdder totalPageCounter = new LongAdder();
             for ( PagedFile pagedFile : pageCache.listExistingMappings() )
             {
-                if ( whitelist.matcher( pagedFile.path().toString() ).find() )
+                if ( allowList.matcher( pagedFile.path().toString() ).find() )
                 {
                     var fileName = pagedFile.path().getFileName();
                     var monitoringParams = systemJob( databaseName, "Pre-fetching file '" + fileName + "' into the page cache" );

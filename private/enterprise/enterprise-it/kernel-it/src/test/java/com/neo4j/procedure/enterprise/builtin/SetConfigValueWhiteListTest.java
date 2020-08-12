@@ -19,7 +19,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.configuration.EnterpriseEditionSettings.dynamic_setting_whitelist;
+import static com.neo4j.configuration.EnterpriseEditionSettings.dynamic_setting_allowlist;
 import static java.util.List.of;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -51,7 +51,7 @@ class SetConfigValueWhiteListTest
     private void prepareDatabase( List<String> settingWhitelist )
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
-                                    .setConfig( dynamic_setting_whitelist, settingWhitelist )
+                                    .setConfig( dynamic_setting_allowlist, settingWhitelist )
                                     .impermanent().build();
         databaseAPI = (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }

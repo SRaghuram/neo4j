@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.configuration.EnterpriseEditionSettings.dynamic_setting_whitelist;
+import static com.neo4j.configuration.EnterpriseEditionSettings.dynamic_setting_allowlist;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
@@ -20,7 +20,7 @@ public class SettingsWhitelist
 
     public SettingsWhitelist( Config config )
     {
-        settingsWhitelist = refreshWhiteList( config.get( dynamic_setting_whitelist ) );
+        settingsWhitelist = refreshWhiteList( config.get( dynamic_setting_allowlist ) );
     }
 
     private List<Pattern> refreshWhiteList( List<String> whiteList )

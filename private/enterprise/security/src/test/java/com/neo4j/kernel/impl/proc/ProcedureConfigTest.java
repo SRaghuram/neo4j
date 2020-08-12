@@ -15,9 +15,9 @@ import org.neo4j.procedure.impl.ProcedureConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_allowed;
+import static org.neo4j.configuration.GraphDatabaseSettings.procedure_allowlist;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_roles;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
-import static org.neo4j.configuration.GraphDatabaseSettings.procedure_whitelist;
 
 
 class ProcedureConfigTest
@@ -205,7 +205,7 @@ class ProcedureConfigTest
     {
         Config config = Config.defaults( Map.of(
                 procedure_unrestricted, List.of( "test.procedure.name", "test.procedure.name2" ),
-                procedure_whitelist, List.of( "test.procedure.name" ) ) );
+                procedure_allowlist, List.of( "test.procedure.name" ) ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
         assertThat( procConfig.isWhitelisted( "xyzabc" ) ).isEqualTo( false );
@@ -216,7 +216,7 @@ class ProcedureConfigTest
     @Test
     void shouldAllowWhiteListsWildcardProceduresNames()
     {
-        Config config = Config.defaults( procedure_whitelist, List.of( " test.procedure.*",  "test.*.otherName" ) );
+        Config config = Config.defaults( procedure_allowlist, List.of( " test.procedure.*",  "test.*.otherName" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
         assertThat( procConfig.isWhitelisted( "xyzabc" ) ).isEqualTo( false );
@@ -230,46 +230,46 @@ class ProcedureConfigTest
     @Test
     void shouldIgnoreOddRegex()
     {
-        Config config = Config.defaults( procedure_whitelist, List.of( "[\\db^a]*" ) );
+        Config config = Config.defaults( procedure_allowlist, List.of( "[\\db^a]*" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "123" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "b" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
 
-        config = Config.defaults( procedure_whitelist, List.of( "(abc)" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "(abc)" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "(abc)" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "^$" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "^$" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "^$" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "\\" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "\\" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "\\" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "&&" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "&&" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "&&" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "\\p{Lower}" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "\\p{Lower}" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "\\p{Lower}" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "a+" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "a+" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "aaaaaa" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "a+" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "a|b" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "a|b" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "b" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "|" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "a|b" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "[a-c]" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "[a-c]" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "b" ) ).isEqualTo( false );
@@ -277,7 +277,7 @@ class ProcedureConfigTest
         assertThat( procConfig.isWhitelisted( "-" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "[a-c]" ) ).isEqualTo( true );
 
-        config = Config.defaults( procedure_whitelist, List.of( "a\tb" ) );
+        config = Config.defaults( procedure_allowlist, List.of( "a\tb" ) );
         procConfig = new ProcedureConfig( config );
         assertThat( procConfig.isWhitelisted( "a    b" ) ).isEqualTo( false );
         assertThat( procConfig.isWhitelisted( "a\tb" ) ).isEqualTo( true );
