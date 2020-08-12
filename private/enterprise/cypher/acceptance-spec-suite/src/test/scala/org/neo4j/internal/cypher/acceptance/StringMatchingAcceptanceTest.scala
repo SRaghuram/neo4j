@@ -106,4 +106,26 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   private val newline = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "\r\n" else "\n"
+
+  test("should allow escaped backtick in labels") {
+    val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n:`123``abc`) RETURN labels(n)")
+    result.toList should be(List(Map("labels(n)" -> List("123`abc"))))
+  }
+
+  test("should allow escaped backtick in relationship types") {
+    val result = executeWith(Configs.InterpretedAndSlotted,"CREATE ()-[r:`123``abc`]->() RETURN type(r)")
+    result.toList should be(List(Map("type(r)" -> "123`abc")))
+  }
+
+  test("should allow escaped backtick in node property names") {
+    createLabeledNode("Label")
+
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:Label) SET n.`123``abc` = 2 RETURN n.`123``abc`")
+   result.toList should be(List(Map("n.`123``abc`" -> 2)))
+  }
+
+  test("should allow escaped backtick in relationship property names") {
+    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE ()-[r:REL {`123``abc`:2}]->() RETURN properties(r)")
+    result.toList should be(List(Map("properties(r)" -> Map("123`abc" -> 2))))
+  }
 }
