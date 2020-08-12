@@ -55,7 +55,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
-import static org.neo4j.dbms.identity.IdentityModule.SERVER_ID_FILENAME;
 
 public class CoreClusterMember implements ClusterMember
 {
@@ -349,6 +348,6 @@ public class CoreClusterMember implements ClusterMember
     public void unbind( FileSystemAbstraction fs ) throws IOException
     {
         fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
-        fs.deleteFile( config().get( data_directory ).resolve( SERVER_ID_FILENAME ).toFile() );
+        fs.deleteFile( neo4jLayout.serverIdFile().toFile() );
     }
 }

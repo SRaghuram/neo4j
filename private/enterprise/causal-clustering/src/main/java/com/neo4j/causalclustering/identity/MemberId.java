@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
 import java.io.IOException;

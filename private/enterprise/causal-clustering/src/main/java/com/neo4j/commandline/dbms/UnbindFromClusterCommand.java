@@ -18,7 +18,6 @@ import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LockChecker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.internal.locker.FileLockException;
 
@@ -65,8 +64,7 @@ class UnbindFromClusterCommand extends AbstractCommand
                     ctx.err().println( "This instance was not bound. No work performed." );
                 }
 
-                File serverId = new File( config.get( GraphDatabaseSettings.data_directory ).toFile(), IdentityModule.SERVER_ID_FILENAME );
-                ctx.fs().deleteFile( serverId );
+                ctx.fs().deleteFile( neo4jLayout.serverIdFile().toFile() );
             }
         }
         catch ( FileLockException e )

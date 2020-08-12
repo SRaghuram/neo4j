@@ -7,12 +7,12 @@ package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 
-import java.io.File;
 import java.util.UUID;
 
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.dbms.identity.StandaloneIdentityModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
@@ -24,18 +24,13 @@ public class CoreIdentityModule extends ClusteringIdentityModule
      */
     private final MemberId myself;
 
-    public static CoreIdentityModule create( LogProvider logProvider, FileSystemAbstraction fs, File dataDir, MemoryTracker memoryTracker,
+    public static CoreIdentityModule create( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout layout, MemoryTracker memoryTracker,
             ClusterStateStorageFactory storageFactory )
     {
         var log = logProvider.getLog( StandaloneIdentityModule.class );
-        var memberStorage = storageFactory.createMemberIdStorage();
-        var memberId = readOrGenerate( memberStorage, log, MemberId.class, MemberId::of, UUID::randomUUID );
-
-        // this is here temporary just to save the value of an already existing MemberId to ServerId
-        var serverIdStorage = createServerIdStorage( fs, dataDir, memoryTracker );
-        readOrGenerate( serverIdStorage, log, ServerId.class, ServerId::of, memberId::getUuid );
-
-        return new CoreIdentityModule( memberId );
+        var serverIdStorage = createServerIdStorage( fs, layout.serverIdFile(), memoryTracker );
+        var serverId = readOrGenerate( serverIdStorage, log, ServerId.class, ServerId::of, UUID::randomUUID );
+        return new CoreIdentityModule( new ClusteringServerId( serverId.getUuid() ) );
     }
 
     private CoreIdentityModule( MemberId memberId )

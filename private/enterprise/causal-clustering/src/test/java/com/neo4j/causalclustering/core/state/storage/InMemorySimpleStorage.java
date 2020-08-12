@@ -28,4 +28,10 @@ public class InMemorySimpleStorage<T> implements SimpleStorage<T>
     {
         this.state = state;
     }
+
+    @Override
+    public void removeState()
+    {
+        state =  null;
+    }
 }

@@ -6,19 +6,20 @@
 package com.neo4j.causalclustering.core.state.storage;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.io.IOException;
 
-import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.state.SimpleFileStorage;
-import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
@@ -28,20 +29,29 @@ class SimpleStorageTest
     private TestDirectory testDirectory;
 
     @Test
-    void shouldWriteAndReadState() throws Exception
+    void shouldWriteReadAndRemoveState() throws Exception
     {
         // given
-        File dir = testDirectory.homeDir();
-        FileSystemAbstraction fs = testDirectory.getFileSystem();
-        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), INSTANCE );
+        var dir = testDirectory.homeDir();
+        var fs = testDirectory.getFileSystem();
+        var storage = new SimpleFileStorage<>( fs, dir, new ServerId.Marshal(), INSTANCE );
 
         // when
-        MemberId idA = IdFactory.randomMemberId();
+        var idA = IdFactory.randomServerId();
         storage.writeState( idA );
-        MemberId idB = storage.readState();
+        var idB = storage.readState();
 
         // then
+        assertTrue( storage.exists() );
         assertEquals( idA.getUuid(), idB.getUuid() );
         assertEquals( idA, idB );
+
+        // when
+        storage.removeState();
+
+        // then
+        assertFalse( storage.exists() );
+        assertFalse( fs.fileExists( dir ) );
+        assertThrows( IOException.class, storage::readState );
     }
 }

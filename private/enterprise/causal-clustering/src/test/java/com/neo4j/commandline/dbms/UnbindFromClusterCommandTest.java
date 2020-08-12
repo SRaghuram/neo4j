@@ -22,7 +22,6 @@ import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
-import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -160,8 +159,7 @@ class UnbindFromClusterCommandTest
 
     private File createServerIdStore() throws IOException
     {
-        var dataDir = neo4jLayout.homeDirectory().resolve( DEFAULT_DATA_DIR_NAME );
-        var serverIdFile = new File( dataDir.toFile(), IdentityModule.SERVER_ID_FILENAME );
+        var serverIdFile = neo4jLayout.serverIdFile().toFile();
         try ( var channel = fs.write( serverIdFile ) )
         {
             channel.writeAll( ByteBuffer.wrap( new byte[]{0} ) );

@@ -31,6 +31,7 @@ import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.MemberIdMigrator;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
 import com.neo4j.causalclustering.logging.NullRaftMessageLogger;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
@@ -203,7 +204,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        identityModule = CoreIdentityModule.create( logProvider, fileSystem, dataDir, memoryTracker, storageFactory );
+        MemberIdMigrator.create( logProvider, fileSystem, globalModule.getNeo4jLayout(), memoryTracker, storageFactory ).migrate();
+        identityModule = CoreIdentityModule.create( logProvider, fileSystem, globalModule.getNeo4jLayout(), memoryTracker, storageFactory );
         globalDependencies.satisfyDependency( identityModule );
         globalModule.getJobScheduler().setTopLevelGroupName( "Core " + identityModule.myself() );
         this.discoveryServiceFactory = discoveryServiceFactory;

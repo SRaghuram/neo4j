@@ -65,8 +65,8 @@ class ClusterStateIT
             File databaseStateDir = new File( core.clusterStateDirectory(), "db" );
             File defaultDatabaseStateDir = new File( databaseStateDir, DEFAULT_DATABASE_NAME );
 
-            // global simple storage
-            File coreMemberIdStateDir = new File( clusterStateDirectory, "core-member-id-state" );
+            // global server id
+            File serverId = core.neo4jLayout().serverIdFile().toFile();
 
             // database specific durable storage (a/b)
             File raftIdStateDir = new File( defaultDatabaseStateDir, "raft-id-state" );
@@ -81,7 +81,6 @@ class ClusterStateIT
             File raftLogDir = new File( defaultDatabaseStateDir, "raft-log" );
 
             assertTrue( raftIdStateDir.isDirectory() );
-            assertTrue( coreMemberIdStateDir.isDirectory() );
             assertTrue( lastFlushedStateDir.isDirectory() );
             assertTrue( membershipStateDir.isDirectory() );
             assertTrue( sessionTrackerStateDir.isDirectory() );
@@ -90,8 +89,8 @@ class ClusterStateIT
             assertTrue( raftLogDir.isDirectory() );
             assertTrue( leaseStateDir.isDirectory() );
 
+            assertTrue( serverId.isFile() );
             assertTrue( new File( raftIdStateDir, "raft-id" ).isFile() );
-            assertTrue( new File( coreMemberIdStateDir, "core-member-id" ).isFile() );
 
             assertTrue( new File( lastFlushedStateDir, "last-flushed.a" ).isFile() );
             assertTrue( new File( lastFlushedStateDir, "last-flushed.b" ).isFile() );
