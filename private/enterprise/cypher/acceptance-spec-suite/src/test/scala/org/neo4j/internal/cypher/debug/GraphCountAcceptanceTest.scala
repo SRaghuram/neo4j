@@ -119,6 +119,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     createGraph(graphCountData)
 
     // Modify graph to account for predicates in the query, add relationships, etc.
+    println("Finished creating graph")
 
     // Execute your buggy query
     val query = ???

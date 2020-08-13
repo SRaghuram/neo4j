@@ -45,7 +45,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
   }
 
   test("should create node key constraint, two properties") {
-    val constraint = Constraint(Some("User"), None, Seq("name", "surname"), "Node key")
+    val constraint = Constraint(Some("User"), None, Seq("name", "surname"), "Node Key")
     val json = data(constraint = Seq(constraint))
 
     createGraph(json)

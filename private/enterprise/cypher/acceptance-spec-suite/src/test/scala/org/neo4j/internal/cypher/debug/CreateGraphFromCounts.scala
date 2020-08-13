@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.debug
 
+import java.util.concurrent.atomic.AtomicLong
+
 import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.graphdb.ConstraintViolationException
 import org.neo4j.graphdb.Label
@@ -46,7 +48,7 @@ trait CreateGraphFromCounts {
               case _ =>
                 throw new IllegalArgumentException(s"Expected either node or relationship existence constraint, but got: $constraint")
             }
-          case "Node key" =>
+          case "Node Key" =>
             // Node key constraints can only be on labels, not on relationship types
             val label = constraint.label.getOrElse(throw new IllegalArgumentException(s"Expected a node label in $constraint"))
             val properties = propertiesString(constraint.properties)
@@ -71,6 +73,7 @@ trait CreateGraphFromCounts {
 
     graph.withTx { tx =>
       val nodeMap = scala.collection.mutable.Map[String, ArrayBuffer[Node]]()
+      val uniqueNumber = new AtomicLong()
       for (nodeLabel <- graphCountData.nodes) {
         nodeLabel.label match {
           case None =>
@@ -82,8 +85,14 @@ trait CreateGraphFromCounts {
           case Some(labelName) =>
             val label = Label.label(labelName)
             val nodes = nodeMap.getOrElseUpdate(labelName, new ArrayBuffer)
+            val relevantConstraints = graphCountData.constraints.filter { const => const.label.contains(labelName) }
             for (_ <- 0L until 10) {
-              nodes += tx.createNode(label)
+              val node = tx.createNode(label)
+              // Create unique property values for all properties involved in constraints
+              relevantConstraints.foreach(const => {
+                const.properties.foreach(p => node.setProperty(p, uniqueNumber.incrementAndGet()))
+              })
+              nodes += node
             }
         }
       }
