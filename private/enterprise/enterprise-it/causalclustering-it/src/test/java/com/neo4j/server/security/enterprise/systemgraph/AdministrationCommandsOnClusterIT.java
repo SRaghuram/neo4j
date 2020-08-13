@@ -1396,6 +1396,37 @@ class AdministrationCommandsOnClusterIT
                 equalityCondition( Set.of( DatabaseStatus.Offline().stringValue() ) ), 10, TimeUnit.SECONDS );
     }
 
+    /**
+     * Aug 2020
+     * There was a bug that caused database to fail during startup
+     * after have been created, dropped and created again in quick
+     * succession. Test would wait forever for database to come online
+     * after the second create statement.
+     */
+    @Test
+    void dbShouldComeOnlineAfterCreateDropCreate() throws Exception
+    {
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE DATABASE " + dbName );
+            tx.commit();
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "DROP DATABASE " + dbName + " IF EXISTS" );
+            tx.commit();
+        } );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( dbName, cluster );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE DATABASE " + dbName );
+            tx.commit();
+        } );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+    }
+
     // Help methods
     private boolean showDatabaseHasRowsFor( String dbName ) throws Exception
     {
