@@ -52,7 +52,7 @@ public class BenchmarksFinder
                             .getAllClasses()
                             .stream()
                             .filter( classInfo -> classInfo.getPackageName().startsWith( packageName ) )
-                            .filter( classInfo -> !classInfo.getName().contains( ".generated." ) )
+                            .filter( classInfo -> !classInfo.getName().contains( ".jmh_generated." ) )
                             .map( ClassPath.ClassInfo::load )
                             .filter( clazz -> !Modifier.isAbstract( clazz.getModifiers() ) )
                             // ignore anonymous benchmark classes (awkwardly, they are sometimes created for testing purposes)

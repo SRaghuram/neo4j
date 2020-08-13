@@ -13,7 +13,6 @@
 
     <properties>
         <moduleName>com.neo4j.bench.jmh.api</moduleName>
-        <jmh.version>1.22</jmh.version>
         <metrics.version>3.1.2</metrics.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
@@ -41,13 +40,11 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>${jmh.version}</version>
         </dependency>
         <!--TODO note: this is only used by IntelliJ build, not Maven+Terminal-->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>${jmh.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

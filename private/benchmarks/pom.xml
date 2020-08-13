@@ -28,7 +28,8 @@
         <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
         <!-- This is benchmark version, that is going to be used for internal release -->
         <!-- DO NOT REMOVE IT !!!, TOUCH IT ONLY WHEN YOU WANT TO DO INTERNAL RELEASE -->
-        <benchmarks.version>1.0.0-alpha5</benchmarks.version>
+        <benchmarks.version>1.0.0-alpha6</benchmarks.version>
+        <jmh.version>1.24</jmh.version>
     </properties>
 
     <licenses>
@@ -69,6 +70,18 @@
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
+            <!--TODO note: this is only used by IntelliJ build, not Maven+Terminal-->
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-generator-annprocess</artifactId>
+                <version>${jmh.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
