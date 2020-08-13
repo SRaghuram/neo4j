@@ -44,7 +44,7 @@ public class SecurityLog extends AbstractLog implements Lifecycle
     public void init()
     {
         ctx = LogConfig.createBuilder( config.get( SecuritySettings.security_log_filename ), config.get( SecuritySettings.security_log_level ) )
-                .withCategory( true )
+                .withCategory( false )
                 .withFormat( config.get( GraphDatabaseInternalSettings.log_format ) )
                 .withTimezone( config.get( GraphDatabaseSettings.db_timezone ) )
                 .withRotation( config.get( SecuritySettings.store_security_log_rotation_threshold ),
