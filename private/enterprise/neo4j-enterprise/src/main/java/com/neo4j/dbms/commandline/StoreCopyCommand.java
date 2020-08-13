@@ -79,6 +79,13 @@ public class StoreCopyCommand extends AbstractCommand
     @Option( names = "--to-database", description = "Name of database to copy to.", required = true, converter = DatabaseNameConverter.class )
     private NormalizedDatabaseName database;
 
+    @Option(
+            names = "--neo4j-home-directory",
+            description = "Path to the home directory for the copied database. Default is the same as the database copied from.",
+            paramLabel = "<path>"
+    )
+    private Path toHome;
+
     // --force
     @Option( names = "--force", description = "Force the command to run even if the integrity of the database can not be verified." )
     private boolean force;
@@ -201,7 +208,8 @@ public class StoreCopyCommand extends AbstractCommand
 
         validateSource( fromDatabaseLayout );
 
-        DatabaseLayout toDatabaseLayout = Neo4jLayout.of( config ).databaseLayout( database.name() );
+        Neo4jLayout toLayout = toHome != null ? Neo4jLayout.of( toHome ) : Neo4jLayout.of( config );
+        DatabaseLayout toDatabaseLayout = toLayout.databaseLayout( database.name() );
         var memoryTracker = EmptyMemoryTracker.INSTANCE;
 
         validateTarget( toDatabaseLayout );

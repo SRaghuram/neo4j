@@ -35,7 +35,8 @@ class StoreCopyCommandTest
                 "USAGE%n" +
                 "%n" +
                 "copy [--force] [--verbose] [--from-pagecache=<size>] [--from-path-tx=<path>]%n" +
-                "     --to-database=<database> [--to-format=<format>] [--to-pagecache=<size>]%n" +
+                "     [--neo4j-home-directory=<path>] --to-database=<database>%n" +
+                "     [--to-format=<format>] [--to-pagecache=<size>]%n" +
                 "     [--delete-nodes-with-labels=<label>[,<label>...]]...%n" +
                 "     [--keep-only-node-properties=<label.property>[,<label.property>...]]...%n" +
                 "     [--keep-only-nodes-with-labels=<label>[,<label>...]]...%n" +
@@ -63,6 +64,10 @@ class StoreCopyCommandTest
                 "                               the same folder as '--from-path'.%n" +
                 "      --to-database=<database>%n" +
                 "                             Name of database to copy to.%n" +
+                "      --neo4j-home-directory=<path>%n" +
+                "                             Path to the home directory for the copied%n" +
+                "                               database. Default is the same as the database%n" +
+                "                               copied from.%n" +
                 "      --force                Force the command to run even if the integrity of%n" +
                 "                               the database can not be verified.%n" +
                 "      --to-format=<format>   Set the format for the new database. Must be one%n" +

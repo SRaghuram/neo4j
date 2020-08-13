@@ -7,6 +7,7 @@ package com.neo4j.commandline.dbms;
 
 import com.neo4j.dbms.commandline.StoreCopyCommand;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -23,6 +24,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.neo4j.cli.CommandFailedException;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -31,6 +34,7 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterable;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -178,6 +182,52 @@ class StoreCopyCommandIT extends AbstractCommandIT
             tx.commit();
         }
         managementService.dropDatabase( copyName );
+    }
+
+    @Test
+    void canSpecifyTargetHomeDirectory() throws Exception
+    {
+        //Given
+        Label label = Label.label( "foo" );
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            tx.createNode( label );
+            tx.commit();
+        }
+
+        String databaseName = databaseAPI.databaseName();
+        managementService.shutdownDatabase( databaseName );
+        Path copyHome = testDirectory.homePath( "copy-home" );
+        String copyDatabaseName = "copy";
+
+        //When
+        copyDatabase(
+                "--from-path=" + getDatabaseAbsolutePath( databaseName ),
+                "--from-path-tx=" + databaseAPI.databaseLayout().getTransactionLogsDirectory().toAbsolutePath(),
+                "--to-database=" + copyDatabaseName,
+                "--neo4j-home-directory=" + copyHome.toAbsolutePath().toString()
+        );
+
+        //Then
+        DatabaseManagementService copyDbms = new TestEnterpriseDatabaseManagementServiceBuilder( copyHome )
+                .setConfig( GraphDatabaseSettings.default_database, copyDatabaseName )
+                .build();
+        try
+        {
+            GraphDatabaseService database = copyDbms.database( copyDatabaseName );
+            try ( Transaction tx = database.beginTx() )
+            {
+                ResourceIterator<Node> itr = tx.getAllNodes().iterator();
+                assertThat( itr.hasNext() ).isTrue();
+                Node node = itr.next();
+                assertThat( itr.hasNext() ).isFalse();
+                assertThat( node.getLabels() ).containsExactly( label );
+            }
+        }
+        finally
+        {
+            copyDbms.shutdown();
+        }
     }
 
     @Test
