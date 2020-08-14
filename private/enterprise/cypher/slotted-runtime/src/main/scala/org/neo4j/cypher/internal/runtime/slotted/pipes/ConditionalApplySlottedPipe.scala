@@ -15,15 +15,14 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.Values
 
-case class ConditionalApplySlottedPipe(lhs: Pipe,
+abstract class BaseConditionalApplySlottedPipe(lhs: Pipe,
                                        rhs: Pipe,
                                        longOffsets: Seq[Int],
                                        refOffsets: Seq[Int],
-                                       negated: Boolean,
                                        slots: SlotConfiguration,
                                        nullableSlots: Seq[Slot])
                                       (val id: Id = Id.INVALID_ID)
@@ -66,11 +65,59 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
         }
     }
 
-  private def condition(context: CypherRow): Boolean = {
-    val hasNull =
-      longOffsets.exists(offset => NullChecker.entityIsNull(context.getLongAt(offset))) ||
-      refOffsets.exists(x => context.getRefAt(x) eq Values.NO_VALUE)
-    if (negated) hasNull else !hasNull
-  }
+  def condition(context: CypherRow): Boolean
+}
 
+case class ConditionalApplySlottedPipe(lhs: Pipe,
+                                       rhs: Pipe,
+                                       longOffsets: Array[Int],
+                                       refOffsets: Array[Int],
+                                       slots: SlotConfiguration,
+                                       nullableSlots: Seq[Slot])
+                                       (id: Id = Id.INVALID_ID)
+  extends BaseConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, slots, nullableSlots)(id) {
+  override def condition(context: CypherRow): Boolean = {
+    var i = 0
+    while (i < longOffsets.length) {
+      if (entityIsNull(context.getLongAt(longOffsets(i)))) {
+        return false
+      }
+      i += 1
+    }
+    i = 0
+    while (i < refOffsets.length) {
+      if (context.getRefAt(refOffsets(i)) eq Values.NO_VALUE) {
+        return false
+      }
+      i += 1
+    }
+    true
+  }
+}
+
+case class AntiConditionalApplySlottedPipe(lhs: Pipe,
+                                           rhs: Pipe,
+                                           longOffsets: Array[Int],
+                                           refOffsets: Array[Int],
+                                           slots: SlotConfiguration,
+                                           nullableSlots: Seq[Slot])
+                                          (id: Id = Id.INVALID_ID)
+  extends BaseConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, slots, nullableSlots)(id) {
+  override def condition(context: CypherRow): Boolean = {
+    var i = 0
+    while (i < longOffsets.length) {
+      if (!entityIsNull(context.getLongAt(longOffsets(i)))) {
+        return false
+      }
+      i += 1
+    }
+    i = 0
+    while (i < refOffsets.length) {
+      if (!(context.getRefAt(refOffsets(i)) eq Values.NO_VALUE)) {
+        return false
+      }
+      i += 1
+    }
+    true
+  }
 }

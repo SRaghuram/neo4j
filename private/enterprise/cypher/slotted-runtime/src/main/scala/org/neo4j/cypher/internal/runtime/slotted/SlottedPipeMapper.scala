@@ -137,6 +137,7 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllNodesScanSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPrimitivePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.AntiConditionalApplySlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ApplySlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ArgumentSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CartesianProductSlottedPipe
@@ -179,7 +180,6 @@ import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 
 class SlottedPipeMapper(fallback: PipeMapper,
                         expressionConverters: ExpressionConverters,
@@ -558,7 +558,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val longOffsets = longIds.map(e => slots.getLongOffsetFor(e))
         val refOffsets = refIds.map(e => slots.getReferenceOffsetFor(e))
         val nullableSlots = symbolsToSlots(right.availableSymbols -- left.availableSymbols, slots)
-        ConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, negated = false, slots, nullableSlots)(id)
+        ConditionalApplySlottedPipe(lhs, rhs, longOffsets.toArray, refOffsets.toArray, slots, nullableSlots)(id)
 
       case AntiConditionalApply(left, right, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
@@ -569,7 +569,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val longOffsets = longIds.map(e => slots.getLongOffsetFor(e))
         val refOffsets = refIds.map(e => slots.getReferenceOffsetFor(e))
         val nullableSlots = symbolsToSlots(right.availableSymbols -- left.availableSymbols, slots)
-        ConditionalApplySlottedPipe(lhs, rhs, longOffsets, refOffsets, negated = true, slots, nullableSlots)(id)
+        AntiConditionalApplySlottedPipe(lhs, rhs, longOffsets.toArray, refOffsets.toArray, slots, nullableSlots)(id)
 
       case ForeachApply(_, _, variable, expression) =>
         val innerVariableSlot = slots.get(variable).getOrElse(throw new InternalException(s"Foreach variable '$variable' has no slot"))
