@@ -77,7 +77,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
     val headOperator =
       p.headPlan match {
         case f: FusedHead =>
-          f.operatorFuser.asInstanceOf[TemplateOperatorFuser].compile(executionGraphDefinition)
+          f.operatorFuser.asInstanceOf[TemplateOperatorFuser].compile(executionGraphDefinition, p.id)
         case InterpretedHead(plan) =>
           operatorFactory.create(plan, p.inputBuffer)
       }

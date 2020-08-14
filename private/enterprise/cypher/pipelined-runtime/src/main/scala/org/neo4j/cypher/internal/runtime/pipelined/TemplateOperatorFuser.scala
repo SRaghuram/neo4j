@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.physicalplanning.OperatorFuser
 import org.neo4j.cypher.internal.physicalplanning.OperatorFuserFactory
 import org.neo4j.cypher.internal.physicalplanning.OutputDefinition
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -33,7 +34,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorNoGroupingTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselGenerator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselGenerator.compileOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
@@ -79,7 +80,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
 
   def fusedPlans: IndexedSeq[LogicalPlan] = _fusedPlans
 
-  def compile(executionGraphDefinition: ExecutionGraphDefinition): Operator = {
+  def compile(executionGraphDefinition: ExecutionGraphDefinition, pipelineId: PipelineId): Operator = {
 
     val expressionCompiler =
       _fusedPlans.head match {
@@ -113,7 +114,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
     val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
     val operatorTaskWithMorselTemplate = currentTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
     try {
-      ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity, argumentStates, codeGenerationMode)
+      compileOperator(operatorTaskWithMorselTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId)
     } catch {
       // In the case of a StackOverflowError we cannot recover correctly and abort fusing altogether.
       case e: StackOverflowError =>

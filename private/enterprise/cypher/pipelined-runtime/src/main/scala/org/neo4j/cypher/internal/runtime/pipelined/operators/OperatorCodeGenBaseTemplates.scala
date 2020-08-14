@@ -46,6 +46,7 @@ import org.neo4j.codegen.api.MethodDeclaration
 import org.neo4j.codegen.api.StaticField
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.CypherRow
@@ -211,13 +212,15 @@ object ContinuableOperatorTaskWithMorselGenerator {
   def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate,
                       workIdentity: WorkIdentity,
                       argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])],
-                      codeGenerationMode: CodeGenerationMode): CompiledStreamingOperator = {
+                      codeGenerationMode: CodeGenerationMode,
+                      pipelineId: PipelineId): CompiledStreamingOperator = {
     val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
     val operatorId = COUNTER.getAndIncrement()
+    def className(name: String) = s"${name}Pipeline${pipelineId.x}_$operatorId"
     val generator = CodeGeneration.createGenerator(codeGenerationMode)
-    val taskDeclaration = template.genClassDeclaration(PACKAGE_NAME, "OperatorTask" + operatorId, Seq(staticWorkIdentity))
+    val taskDeclaration = template.genClassDeclaration(PACKAGE_NAME, className("OperatorTask"), Seq(staticWorkIdentity))
     val taskClassHandle = compileClass(taskDeclaration, generator)
-    val operatorDeclaration = CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, "Operator" + operatorId, taskClassHandle, staticWorkIdentity, argumentStates)
+    val operatorDeclaration = CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, className("Operator"), taskClassHandle, staticWorkIdentity, argumentStates)
     val operatorClassHandle = compileClass(operatorDeclaration, generator)
 
     CodeGeneration.loadAndSetConstants(taskClassHandle, taskDeclaration)
