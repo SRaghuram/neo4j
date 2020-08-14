@@ -75,15 +75,19 @@ class IndexProceduresIT
     private static final Label labelWhitespace = Label.label( "Label 1" );
     private static final Label labelWhitespace2 = Label.label( "Label 2" );
     private static final Label labelWhitespace3 = Label.label( "Label 3" );
+    private static final Label labelBackticks = Label.label( "`Label``4`" );
     private static final RelationshipType relType = RelationshipType.withName( "relType" );
     private static final RelationshipType relType2 = RelationshipType.withName( "relType2" );
     private static final RelationshipType relTypeWhitespace = RelationshipType.withName( "relType 3" );
+    private static final RelationshipType relTypeBackticks = RelationshipType.withName( "`rel`type`" );
     private static final String prop = "prop";
     private static final String prop2 = "prop2";
     private static final String prop3 = "prop3";
     private static final String propWhitespace = "prop 1";
     private static final String propWhitespace2 = "prop 2";
     private static final String propWhitespace3 = "prop 3";
+    private static final String propBackticks = "``prop`4`";
+    private static final String propBackticks2 = "`prop5``";
     private static final String labels = "['" + label + "']";
     private static final String properties = "['" + prop + "']";
     private static final String NO_CONFIG = "{}";
@@ -283,6 +287,16 @@ class IndexProceduresIT
                     .withIndexType( IndexType.BTREE )
                     .withIndexConfiguration( randomBtreeSettings() )
                     .create();
+            tx.schema().indexFor( labelBackticks ).on( propBackticks )
+                    .withName( "btree backticks" )
+                    .withIndexType( IndexType.BTREE )
+                    .withIndexConfiguration( randomBtreeSettings() )
+                    .create();
+            tx.schema().indexFor( label ).on( prop2 )
+                    .withName( "``horrible `index`name```" )
+                    .withIndexType( IndexType.BTREE )
+                    .withIndexConfiguration( randomBtreeSettings() )
+                    .create();
             tx.schema().indexFor( label ).on( prop )
                     .withName( "full-text" )
                     .withIndexType( IndexType.FULLTEXT )
@@ -303,6 +317,21 @@ class IndexProceduresIT
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
                     .create();
+            tx.schema().indexFor( labelBackticks ).on( propBackticks )
+                    .withName( "full-text backticks" )
+                    .withIndexType( IndexType.FULLTEXT )
+                    .withIndexConfiguration( randomFulltextSettings() )
+                    .create();
+            tx.schema().indexFor( labelBackticks, label ).on( prop).on( propBackticks )
+                    .withName( "advanced full-text backticks" )
+                    .withIndexType( IndexType.FULLTEXT )
+                    .withIndexConfiguration( randomFulltextSettings() )
+                    .create();
+            tx.schema().indexFor( label ).on( prop2 )
+                    .withName( "``horrible `index`name``2`" )
+                    .withIndexType( IndexType.FULLTEXT )
+                    .withIndexConfiguration( randomFulltextSettings() )
+                    .create();
             tx.schema().indexFor( relType ).on( prop )
                     .withName( "relType full-text" )
                     .withIndexType( IndexType.FULLTEXT )
@@ -320,6 +349,16 @@ class IndexProceduresIT
                     .create();
             tx.schema().indexFor( relType ).on( prop ).on( prop2 )
                     .withName( "relType full-text multi-prop" )
+                    .withIndexType( IndexType.FULLTEXT )
+                    .withIndexConfiguration( randomFulltextSettings() )
+                    .create();
+            tx.schema().indexFor( relTypeBackticks ).on( propBackticks )
+                    .withName( "relType full-text backticks" )
+                    .withIndexType( IndexType.FULLTEXT )
+                    .withIndexConfiguration( randomFulltextSettings() )
+                    .create();
+            tx.schema().indexFor( relType ).on( prop2 )
+                    .withName( "``horrible `index`name`3``" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
                     .create();
@@ -359,11 +398,35 @@ class IndexProceduresIT
             tx.schema().constraintFor( labelWhitespace3 ).assertPropertyExists( propWhitespace3 )
                     .withName( "node prop exists whitespace" )
                     .create();
+            tx.schema().constraintFor( labelBackticks ).assertPropertyExists( propBackticks )
+                    .withName( "exists backticks" )
+                    .create();
+            tx.schema().constraintFor( labelBackticks ).assertPropertyIsUnique( propBackticks )
+                    .withName( "unique backticks" )
+                    .create();
+            tx.schema().constraintFor( labelBackticks ).assertPropertyIsNodeKey( propBackticks2 )
+                    .withName( "node key backticks" )
+                    .create();
+            tx.schema().constraintFor( label2 ).assertPropertyIsUnique( prop )
+                    .withName( "``horrible`name`" )
+                    .create();
+            tx.schema().constraintFor( label3 ).assertPropertyExists( prop2 )
+                    .withName( "``horrible`name2`" )
+                    .create();
+            tx.schema().constraintFor( label ).assertPropertyIsNodeKey( prop2 )
+                    .withName( "``horrible`name3`" )
+                    .create();
             tx.schema().constraintFor( relType ).assertPropertyExists( prop )
                     .withName( "rel prop exists" )
                     .create();
             tx.schema().constraintFor( relTypeWhitespace ).assertPropertyExists( propWhitespace )
                     .withName( "rel prop exists whitespace" )
+                    .create();
+            tx.schema().constraintFor( relTypeBackticks ).assertPropertyExists( propBackticks )
+                    .withName( "rel prop exists backticks" )
+                    .create();
+            tx.schema().constraintFor( relType ).assertPropertyExists( prop2 )
+                    .withName( "``horrible`name4`" )
                     .create();
             tx.commit();
         }
