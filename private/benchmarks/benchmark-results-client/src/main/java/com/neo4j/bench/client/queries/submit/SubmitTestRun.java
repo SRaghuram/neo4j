@@ -6,12 +6,14 @@
 package com.neo4j.bench.client.queries.submit;
 
 import com.neo4j.bench.client.queries.Query;
+import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.BenchmarkMetrics;
 import com.neo4j.bench.model.model.Project;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
-import com.neo4j.bench.common.options.Planner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +38,7 @@ import static org.neo4j.driver.AccessMode.WRITE;
 
 public class SubmitTestRun implements Query<SubmitTestRunResult>
 {
+    private static final Logger LOG = LoggerFactory.getLogger( SubmitTestRun.class );
     private static final String SUBMIT_TEST_RUN = Resources.fileToString( "/queries/write/submit_test_run.cypher" );
 
     private final TestRunReport report;
@@ -57,6 +60,8 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     @Override
     public SubmitTestRunResult execute( Driver driver )
     {
+        LOG.debug( "submitting test results {}", report );
+
         try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( WRITE ).build() ) )
         {
             try ( Transaction tx = session.beginTransaction() )
@@ -146,8 +151,6 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
         params.put( "tool_commit", report.benchmarkTool().commit() );
         params.put( "tool_owner", report.benchmarkTool().owner() );
         params.put( "tool_branch", report.benchmarkTool().branch() );
-        params.put( "operating_system", report.environment().operatingSystem() );
-        params.put( "server", report.environment().server() );
         params.put( "jvm", report.java().jvm() );
         params.put( "jvm_version", report.java().version() );
         params.put( "jvm_args", report.java().jvmArgs() );
@@ -155,6 +158,7 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
         params.put( "base_neo4j_config", report.baseNeo4jConfig().toMap() );
         params.put( "test_run", report.testRun().toMap() );
         params.put( "benchmark_config", report.benchmarkConfig().toMap() );
+        params.put( "instances", report.environment().toMap() );
         return params;
     }
 

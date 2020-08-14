@@ -15,6 +15,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
+import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Version;
@@ -25,6 +26,7 @@ import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkTool;
 import com.neo4j.bench.model.model.BranchAndVersion;
 import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Neo4j;
@@ -330,8 +332,19 @@ public class Main
             Neo4j neo4j = new Neo4j( neo4jCommit, neo4jVersion, neo4jEdition, neo4jBranch, neo4jBranchOwner );
             String id = UUID.randomUUID().toString();
             TestRun testRun = new TestRun( id, time, start, build, parentBuild, "import-benchmark" );
+
+            InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();
+            Instance instance = instanceDiscovery.currentInstance( System.getenv() );
+
             TestRunReport report =
-                    new TestRunReport( testRun, new BenchmarkConfig(), Sets.newHashSet( neo4j ), neo4jConfig, Environment.current(), metrics, tool, java,
+                    new TestRunReport( testRun,
+                                       new BenchmarkConfig(),
+                                       Sets.newHashSet( neo4j ),
+                                       neo4jConfig,
+                                       Environment.from( instance ),
+                                       metrics,
+                                       tool,
+                                       java,
                                        Lists.newArrayList() );
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
             LOG.debug( "Test run reported: " + report );

@@ -27,6 +27,7 @@ import com.ldbc.driver.runtime.metrics.WorkloadResultsSnapshot;
 import com.ldbc.driver.temporal.SystemTimeSource;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
@@ -54,6 +55,7 @@ import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkTool;
 import com.neo4j.bench.model.model.BranchAndVersion;
 import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Neo4j;
@@ -582,7 +584,7 @@ public class RunReportCommand implements Runnable
         }
         catch ( Exception e )
         {
-            LOG.error("fata error",e);
+            LOG.error( "fata error", e );
             System.exit( 1 );
         }
     }
@@ -947,12 +949,15 @@ public class RunReportCommand implements Runnable
             workloadMetrics.add( benchmarkGroup, benchmark, metrics, null /*auxiliary metrics*/, neo4jConfig );
         }
 
+        InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();
+        Instance instance = instanceDiscovery.currentInstance( System.getenv() );
+
         return new TestRunReport(
                 testRun,
                 benchmarkConfig,
                 Sets.newHashSet( neo4j ),
                 neo4jConfig,
-                Environment.current(),
+                Environment.from( instance ),
                 workloadMetrics,
                 tool,
                 java,

@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo( use = JsonTypeInfo.Id.CLASS )
 public interface ValueGeneratorFactory<T>
 {
     ValueGeneratorFun<T> create();

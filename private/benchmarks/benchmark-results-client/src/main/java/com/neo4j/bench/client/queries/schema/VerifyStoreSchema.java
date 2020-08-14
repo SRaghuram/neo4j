@@ -6,7 +6,6 @@
 package com.neo4j.bench.client.queries.schema;
 
 import com.neo4j.bench.client.queries.Query;
-
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,8 +66,11 @@ public class VerifyStoreSchema implements Query<Void>
             assertManyToOne( "TestRun nodes connect to Java nodes correctly",
                              "(:TestRun)", "-[:WITH_JAVA]->", "(:Java)", session );
 
-            assertManyToOne( "TestRun nodes connect to Environment nodes correctly",
-                             "(:TestRun)", "-[:IN_ENVIRONMENT]->", "(:Environment)", session );
+            assertOneToOne( "TestRun nodes connect to Environment nodes correctly",
+                            "(:TestRun)", "-[:IN_ENVIRONMENT]->", "(:Environment)", session );
+
+            assertManyToOne( "Environment nodes connect to Instance nodes correctly",
+                             "(:Environment)", "-[:HAS_INSTANCE]->", "(:Instance)", session );
 
             assertManyToOne( "TestRun nodes connect to BenchmarkToolVersion nodes correctly",
                              "(:TestRun)", "-[:WITH_TOOL]->", "(:BenchmarkToolVersion)", session );

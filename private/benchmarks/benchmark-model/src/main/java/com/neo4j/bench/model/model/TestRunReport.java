@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -37,7 +38,7 @@ public class TestRunReport
                 new BenchmarkConfig(),
                 Sets.newHashSet( new Project() ),
                 Neo4jConfig.empty(),
-                new Environment(),
+                new Environment( Collections.emptyMap() ),
                 new BenchmarkGroupBenchmarkMetrics(),
                 new BenchmarkTool(),
                 new Java(),

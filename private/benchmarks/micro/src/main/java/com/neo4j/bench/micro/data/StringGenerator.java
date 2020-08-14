@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -116,11 +120,9 @@ public class StringGenerator
         private Characters characters;
         private int stringLength;
 
-        private RandomStringGeneratorFactory()
-        {
-        }
-
-        private RandomStringGeneratorFactory( Characters characters, int stringLength )
+        @JsonCreator
+        public RandomStringGeneratorFactory( @JsonProperty( "characters" ) Characters characters,
+                                             @JsonProperty( "stringLength" ) int stringLength )
         {
             this.characters = characters;
             this.stringLength = stringLength;
@@ -145,7 +147,7 @@ public class StringGenerator
             }
             RandomStringGeneratorFactory that = (RandomStringGeneratorFactory) o;
             return stringLength == that.stringLength &&
-                    characters.getClass().equals( that.characters.getClass() );
+                   characters.getClass().equals( that.characters.getClass() );
         }
 
         @Override
@@ -189,7 +191,7 @@ public class StringGenerator
             }
             NumberStringGeneratorFactory that = (NumberStringGeneratorFactory) o;
             return length == that.length &&
-                    Objects.equals( numberGeneratorFactory, that.numberGeneratorFactory );
+                   Objects.equals( numberGeneratorFactory, that.numberGeneratorFactory );
         }
 
         @Override
@@ -308,6 +310,7 @@ public class StringGenerator
         }
     }
 
+    @JsonTypeInfo( use = JsonTypeInfo.Id.CLASS )
     private interface Characters
     {
         List<Character> characters();

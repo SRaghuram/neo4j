@@ -183,7 +183,7 @@ public class SyntheticStoreGeneratorIT
 
                 MatcherAssert.assertThat( "has correct number of unique Environment nodes",
                                           session.run( "MATCH (:Environment) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                                          CoreMatchers.equalTo( generationResult.environments() ) );
+                                          CoreMatchers.equalTo( generationResult.testRuns() ) );
 
                 MatcherAssert.assertThat( "has correct number of unique Java nodes",
                                           session.run( "MATCH (:Java) RETURN count(*) AS c" ).next().get( "c" ).asInt(),

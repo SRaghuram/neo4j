@@ -5,6 +5,7 @@ DROP CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNI
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.id IS UNIQUE
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.jobId IS UNIQUE
+DROP CONSTRAINT ON ( job:Job ) ASSERT job.id IS UNIQUE
 // Exists
 DROP CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.author)
 DROP CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.comment)
@@ -70,6 +71,9 @@ DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.date)
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.duration)
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.id)
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.triggered_by)
+DROP CONSTRAINT ON ( job:Job ) ASSERT exists(job.id)
+DROP CONSTRAINT ON ( instance:Instance) ASSERT (instance.instance_type,instance.kind,instance.operating_system,instance.available_cores,instance.total_memory) IS NODE KEY
+DROP CONSTRAINT ON ()-[has_instance:HAS_INSTANCE]->() ASSERT exists(has_instance.count)
 // Index
 DROP INDEX ON :Annotation(author)
 DROP INDEX ON :Annotation(comment)

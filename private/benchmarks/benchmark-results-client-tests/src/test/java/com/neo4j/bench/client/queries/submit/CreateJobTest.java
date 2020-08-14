@@ -97,7 +97,7 @@ public class CreateJobTest
                             "owner" )
                     ),
                     Neo4jConfig.empty(),
-                    Environment.current(),
+                    Environment.local(),
                     benchmarkGroupBenchmarkMetrics,
                     new BenchmarkTool( Repository.NEO4J, "commit", "owner", "branch" ),
                     Java.current( "" ),

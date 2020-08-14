@@ -5,8 +5,9 @@
  */
 package com.neo4j.bench.infra;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -24,32 +25,31 @@ public class InfraParams
     public static final String CMD_AWS_REGION = "--aws-region";
 
     public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
-    private URI artifactBaseUri;
+    public static final String CMD_AWS_ENDPOINT_URL = "--aws-endpoint-url";
+    private final URI artifactBaseUri;
 
-    private Workspace workspaceStructure;
+    private final Workspace workspaceStructure;
 
     // -----------------------------------------------------------------------
     // Common: Result Client Report Results Args
     // -----------------------------------------------------------------------
 
     public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
-    private String resultsStoreUsername;
+    private final String resultsStoreUsername;
 
     public static final String CMD_RESULTS_STORE_PASSWORD_SECRET_NAME = "--results-store-pass-secret-name";
-    private String resultsStorePasswordSecretName;
+    private final String resultsStorePasswordSecretName;
 
     public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    private URI resultsStoreUri;
+    private final URI resultsStoreUri;
 
-    private ErrorReportingPolicy errorPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
+    private final ErrorReportingPolicy errorPolicy;
 
-    private AWSCredentials awsCredentials;
+    private final AWSCredentials awsCredentials;
 
-    // needed for JSON serialization
-    private InfraParams()
-    {
-    }
+    private final String resultsStorePassword;
 
+    @Deprecated
     public InfraParams( AWSCredentials awsCredentials,
                         String resultsStoreUsername,
                         String resultsStorePasswordSecretName,
@@ -58,9 +58,30 @@ public class InfraParams
                         ErrorReportingPolicy errorPolicy,
                         Workspace workspaceStructure )
     {
+        this( awsCredentials,
+              resultsStoreUsername,
+              resultsStorePasswordSecretName,
+              null,
+              resultsStoreUri,
+              artifactBaseUri,
+              errorPolicy,
+              workspaceStructure );
+    }
+
+    @JsonCreator
+    public InfraParams( @JsonProperty( "awsCredentials" ) AWSCredentials awsCredentials,
+                        @JsonProperty( "resultsStoreUsername" ) String resultsStoreUsername,
+                        @JsonProperty( "resultsStorePasswordSecretName" ) String resultsStorePasswordSecretName,
+                        @JsonProperty( "resultsStorePassword" ) String resultsStorePassword,
+                        @JsonProperty( "resultsStoreUri" ) URI resultsStoreUri,
+                        @JsonProperty( "artifactBaseUri" ) URI artifactBaseUri,
+                        @JsonProperty( "errorPolicy" ) ErrorReportingPolicy errorPolicy,
+                        @JsonProperty( "workspaceStructure" ) Workspace workspaceStructure )
+    {
         this.awsCredentials = awsCredentials;
         this.resultsStoreUsername = resultsStoreUsername;
         this.resultsStorePasswordSecretName = resultsStorePasswordSecretName;
+        this.resultsStorePassword = resultsStorePassword;
         this.resultsStoreUri = resultsStoreUri;
         this.artifactBaseUri = artifactBaseUri;
         this.errorPolicy = errorPolicy;
@@ -80,6 +101,11 @@ public class InfraParams
     public String resultsStorePasswordSecretName()
     {
         return resultsStorePasswordSecretName;
+    }
+
+    public String resultsStorePassword()
+    {
+        return resultsStorePassword;
     }
 
     public URI resultsStoreUri()

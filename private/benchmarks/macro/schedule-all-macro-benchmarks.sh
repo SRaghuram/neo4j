@@ -95,8 +95,7 @@ for i in "${workloads[@]}"; do
 
   job_definition="macro-benchmark-job-definition-oracle8-production"
   if [[ $instance_type == "M5DLargeJobQueue" ]]; then
-    job_definition="macro-benchmark-job-definition-small-oracle8-production
-"
+    job_definition="macro-benchmark-job-definition-small-oracle8-production"
   fi
 
   (

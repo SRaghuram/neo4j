@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
@@ -52,7 +53,13 @@ public class SerializationTest
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
         Metrics metrics = getMetrics();
         AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
-        Environment environment = new Environment( "operating system", "server" );
+        Environment environment = new Environment( new HashMap<>(
+                ImmutableMap.of( new Instance( "host",
+                                               Instance.Kind.AWS,
+                                               "Linux",
+                                               8,
+                                               1024 ),
+                                 1L ) ) );
         BenchmarkTool benchmarkTool = new BenchmarkTool( Repository.LDBC_BENCH, "commit", "neo-technology", "3.2" );
         Java java = new Java( "jvm", "version", "jvm args" );
         Plan plan = testPlan();
@@ -293,7 +300,12 @@ public class SerializationTest
     void shouldSerializeEnvironment()
     {
         // given
-        Environment before = new Environment( "operating system", "server" );
+        Environment before = new Environment( new HashMap<>( ImmutableMap.of( new Instance( "host",
+                                                                                            Instance.Kind.AWS,
+                                                                                            "Linux",
+                                                                                            8,
+                                                                                            1024 ),
+                                                                              1L ) ) );
         // then
         shouldSerializeAndDeserialize( before );
     }

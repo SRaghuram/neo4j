@@ -57,6 +57,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -78,6 +79,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 @TestDirectoryExtension
 public class SubmitTestRunsAndPlansIT
@@ -175,6 +177,8 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Neo4jConfig", 3, client );
             assertLabelCount( "Java", 1, client );
             assertLabelCount( "Environment", 1, client );
+            assertLabelCount( "Instance", 1, client );
+            assertRelationship( "Environment", "HAS_INSTANCE", "Instance", 1, client );
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
@@ -219,6 +223,8 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Neo4jConfig", 3, client );
             assertLabelCount( "Java", 1, client );
             assertLabelCount( "Environment", 1, client );
+            assertLabelCount( "Instance", 1, client );
+            assertRelationship( "Environment", "HAS_INSTANCE", "Instance", 1, client );
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
@@ -252,7 +258,9 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Project", 2, client );
             assertLabelCount( "Neo4jConfig", 6, client );
             assertLabelCount( "Java", 1, client );
-            assertLabelCount( "Environment", 1, client );
+            assertLabelCount( "Environment", 2, client );
+            assertLabelCount( "Instance", 1, client );
+            assertRelationship( "Environment", "HAS_INSTANCE", "Instance", 2, client );
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
@@ -295,7 +303,9 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Project", 2, client );
             assertLabelCount( "Neo4jConfig", 9, client );
             assertLabelCount( "Java", 1, client );
-            assertLabelCount( "Environment", 1, client );
+            assertLabelCount( "Environment", 3, client );
+            assertLabelCount( "Instance", 1, client );
+            assertRelationship( "Environment", "HAS_INSTANCE", "Instance", 3, client );
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
@@ -303,6 +313,15 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Operator", 0, client );
             // Annotation specific
             assertLabelCount( "Annotation", 0, client );
+        }
+    }
+
+    private void assertRelationship( String from, String relationship, String to, int relationshipCount, StoreClient client )
+    {
+        try ( Session session = client.session() )
+        {
+            Result result = session.run( format( "MATCH p=(from:%s)-[:%s]->(to:%s) return p", from, relationship, to ) );
+            assertEquals( relationshipCount, result.list().size() );
         }
     }
 
@@ -432,7 +451,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Project", 2, client );
             assertLabelCount( "Neo4jConfig", 8, client );
             assertLabelCount( "Java", 1, client );
-            assertLabelCount( "Environment", 1, client );
+            assertLabelCount( "Environment", 2, client );
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 5, client );
@@ -457,7 +476,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Project", 2, client );
             assertLabelCount( "Neo4jConfig", 8, client );
             assertLabelCount( "Java", 1, client );
-            assertLabelCount( "Environment", 1, client );
+            assertLabelCount( "Environment", 2, client );
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 5, client );
@@ -471,10 +490,10 @@ public class SubmitTestRunsAndPlansIT
     private Regression createRegression() throws MalformedURLException
     {
         return Regression.create( "comment",
-                               "author",
-                               Regression.Status.REPORTED,
-                               new URL( "http://some-domain/trello-card" ),
-                               "4.1" );
+                                  "author",
+                                  Regression.Status.REPORTED,
+                                  new URL( "http://some-domain/trello-card" ),
+                                  "4.1" );
     }
 
     @Test
@@ -750,7 +769,7 @@ public class SubmitTestRunsAndPlansIT
                 new BenchmarkConfig( emptyMap() ),
                 Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.2.1", COMMUNITY, "branch", "owner" ) ),
                 neo4jConfig,
-                Environment.current(),
+                Environment.local(),
                 benchmarkGroupBenchmarkMetrics,
                 new BenchmarkTool( Repository.LDBC_BENCH, "commit", "neo-technology", "3.2" ),
                 Java.current( "args" ),
@@ -781,7 +800,7 @@ public class SubmitTestRunsAndPlansIT
                 Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.2.1", COMMUNITY, "branch", "owner" ),
                                  new Project( Repository.CAPS, "commit", "3.2.1", COMMUNITY, "branch", "owner" ) ),
                 neo4jConfig,
-                Environment.current(),
+                Environment.local(),
                 benchmarkGroupBenchmarkMetrics,
                 new BenchmarkTool( Repository.LDBC_BENCH, "commit", "neo-technology", "3.2" ),
                 Java.current( "args" ),

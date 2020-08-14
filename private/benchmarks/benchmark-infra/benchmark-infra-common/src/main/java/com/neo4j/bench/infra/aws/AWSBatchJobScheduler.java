@@ -11,6 +11,9 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.AWSBatchClientBuilder;
+import com.amazonaws.services.batch.model.ComputeEnvironmentDetail;
+import com.amazonaws.services.batch.model.ComputeResource;
+import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsRequest;
 import com.amazonaws.services.batch.model.DescribeJobsRequest;
 import com.amazonaws.services.batch.model.JobDetail;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
@@ -39,6 +42,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
 
 public class AWSBatchJobScheduler implements JobScheduler
@@ -171,13 +175,17 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, String jobParameters, Optional<JobRequestConsumer> jobRequestConsumer )
+    public JobId schedule( URI workerArtifactUri,
+                           URI baseArtifactUri,
+                           String jobName,
+                           String jobParameters,
+                           Optional<JobRequestConsumer> jobRequestConsumer )
     {
         return schedule(
                 workerArtifactUri,
                 baseArtifactUri,
                 jobName,
-                Collections.singletonMap( RunMacroWorkloadParams.CMD_JOB_PARAMETERS, jobParameters ),
+                singletonMap( RunMacroWorkloadParams.CMD_JOB_PARAMETERS, jobParameters ),
                 jobRequestConsumer
         );
     }

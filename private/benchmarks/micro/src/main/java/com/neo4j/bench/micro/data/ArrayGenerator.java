@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 import java.util.Objects;
 import java.util.SplittableRandom;
 
@@ -138,6 +140,7 @@ public class ArrayGenerator
         }
     }
 
+    @JsonTypeInfo( use = JsonTypeInfo.Id.CLASS )
     interface ArrayGeneratorFun<GENERATOR_TYPE, ELEMENT_TYPE>
     {
         GENERATOR_TYPE generateArray(
@@ -166,7 +169,7 @@ public class ArrayGenerator
 
         @Override
         public ArrayValue generateArrayValue( int arrayLength, SplittableRandom rng,
-                ValueGeneratorFun<String> valueGenerator )
+                                              ValueGeneratorFun<String> valueGenerator )
         {
             return Values.stringArray( generateArray( arrayLength, rng, valueGenerator ) );
         }
@@ -187,7 +190,7 @@ public class ArrayGenerator
 
         @Override
         public ArrayValue generateArrayValue( int arrayLength, SplittableRandom rng,
-                ValueGeneratorFun<Short> valueGenerator )
+                                              ValueGeneratorFun<Short> valueGenerator )
         {
             return Values.shortArray( generateArray( arrayLength, rng, valueGenerator ) );
         }
@@ -208,7 +211,7 @@ public class ArrayGenerator
 
         @Override
         public ArrayValue generateArrayValue( int arrayLength, SplittableRandom rng,
-                ValueGeneratorFun<Byte> valueGenerator )
+                                              ValueGeneratorFun<Byte> valueGenerator )
         {
             return Values.byteArray( generateArray( arrayLength, rng, valueGenerator ) );
         }
@@ -229,7 +232,7 @@ public class ArrayGenerator
 
         @Override
         public ArrayValue generateArrayValue( int arrayLength, SplittableRandom rng,
-                ValueGeneratorFun<Integer> valueGenerator )
+                                              ValueGeneratorFun<Integer> valueGenerator )
         {
             return Values.intArray( generateArray( arrayLength, rng, valueGenerator ) );
         }
@@ -250,7 +253,7 @@ public class ArrayGenerator
 
         @Override
         public ArrayValue generateArrayValue( int arrayLength, SplittableRandom rng,
-                ValueGeneratorFun<Long> valueGenerator )
+                                              ValueGeneratorFun<Long> valueGenerator )
         {
             return Values.longArray( generateArray( arrayLength, rng, valueGenerator ) );
         }
@@ -271,7 +274,7 @@ public class ArrayGenerator
 
         @Override
         public ArrayValue generateArrayValue( int arrayLength, SplittableRandom rng,
-                ValueGeneratorFun<Float> valueGenerator )
+                                              ValueGeneratorFun<Float> valueGenerator )
         {
             return Values.floatArray( generateArray( arrayLength, rng, valueGenerator ) );
         }
@@ -292,7 +295,7 @@ public class ArrayGenerator
 
         @Override
         public ArrayValue generateArrayValue( int arrayLength, SplittableRandom rng,
-                ValueGeneratorFun<Double> valueGenerator )
+                                              ValueGeneratorFun<Double> valueGenerator )
         {
             return Values.doubleArray( generateArray( arrayLength, rng, valueGenerator ) );
         }

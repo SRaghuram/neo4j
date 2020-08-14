@@ -5,78 +5,90 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import oshi.SystemInfo;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Objects;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
+import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toSet;
 
 public class Environment
 {
-    private final String operatingSystem;
-    private final String server;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    public Environment()
+    public static Environment from( Instance... instances )
     {
-        this( "-1", "-1" );
+        return new Environment( Arrays.stream( instances ).collect( groupingBy( identity(), counting() ) ) );
     }
 
-    public Environment( String operatingSystem, String server )
+    public static Environment local()
     {
-        this.operatingSystem = requireNonNull( operatingSystem );
-        this.server = requireNonNull( server );
+        SystemInfo systemInfo = new SystemInfo();
+        long totalMemory = systemInfo.getHardware().getMemory().getTotal();
+        int availableCores = systemInfo.getHardware().getProcessor().getLogicalProcessorCount();
+        return new Environment( new HashMap<>( singletonMap(
+                new Instance( currentServer(),
+                              Instance.Kind.Server,
+                              currentOperatingSystem(),
+                              availableCores,
+                              totalMemory )
+                , 1L ) ) );
     }
 
-    public static Environment current()
+    @JsonSerialize( keyUsing = Instance.InstanceKeySerializer.class )
+    @JsonDeserialize( keyUsing = Instance.InstanceKeyDeserializer.class )
+    private final Map<Instance,Long> instances;
+
+    @JsonCreator
+    public Environment( @JsonProperty( "instances" ) Map<Instance,Long> instances )
     {
-        return new Environment( currentOperatingSystem(), currentServer() );
+        this.instances = requireNonNull( instances );
     }
 
-    public String operatingSystem()
+    public Map<Instance,Long> instances()
     {
-        return operatingSystem;
+        return instances;
     }
 
-    public String server()
+    public Set<Instance> distinctInstances()
     {
-        return server;
+        return instances.keySet();
     }
 
     @Override
     public boolean equals( Object o )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        Environment that = (Environment) o;
-        return Objects.equals( operatingSystem, that.operatingSystem ) &&
-               Objects.equals( server, that.server );
+        return EqualsBuilder.reflectionEquals( o, this );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( operatingSystem, server );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 
     @Override
     public String toString()
     {
-        return "Environment{" +
-               "operatingSystem='" + operatingSystem + '\'' +
-               ", server='" + server + '\'' +
-               '}';
+        return ToStringBuilder.reflectionToString( this );
     }
 
     private static String currentOperatingSystem()
@@ -94,5 +106,17 @@ public class Environment
         {
             throw new RuntimeException( e );
         }
+    }
+
+    public Collection<Map<String,Object>> toMap()
+    {
+        return instances.entrySet()
+                        .stream()
+                        .map( entry ->
+                                      ImmutableMap.<String,Object>builder()
+                                              .putAll( entry.getKey().toMap() )
+                                              .put( "count", entry.getValue() )
+                                              .build() )
+                        .collect( toSet() );
     }
 }

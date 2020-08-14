@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.infra.worker;
 
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
@@ -20,6 +21,7 @@ import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSPasswordManager;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.model.util.JsonUtil;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.net.URI;
@@ -30,33 +32,38 @@ public class RunWorkerCommand implements Runnable
 {
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_AWS_REGION,
-             title = "AWS Region" )
+            name = InfraParams.CMD_AWS_REGION,
+            title = "AWS Region" )
     private String awsRegion = "eu-north-1";
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_ARTIFACT_BASE_URI,
-             description = "Location of worker jar and other artifacts needed (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
-             title = "Location of build artifacts" )
+            name = InfraParams.CMD_AWS_ENDPOINT_URL,
+            title = "AWS endpoint URL, used for testing" )
+    private String awsEndpointUrl;
+
+    @Option( type = OptionType.COMMAND,
+            name = InfraParams.CMD_ARTIFACT_BASE_URI,
+            description = "Location of worker jar and other artifacts needed (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
+            title = "Location of build artifacts" )
     @Required
     private URI artifactBaseUri;
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_WORKSPACE_DIR,
-             description = "Local directory containing artifacts to be uploaded to S3, which the worker requires",
-             title = "Local workspace" )
+            name = InfraParams.CMD_WORKSPACE_DIR,
+            description = "Local directory containing artifacts to be uploaded to S3, which the worker requires",
+            title = "Local workspace" )
     @Required
     private File workspaceDir;
 
     @Option( type = OptionType.COMMAND,
-             name = RunMacroWorkloadParams.CMD_BATCH_JOB_ID,
-             title = "AWS Batch JOB ID" )
+            name = RunMacroWorkloadParams.CMD_BATCH_JOB_ID,
+            title = "AWS Batch JOB ID" )
     @Required
     private String batchJobId = "";
 
     @Option( type = OptionType.COMMAND,
-             name = RunMacroWorkloadParams.CMD_JOB_PARAMETERS,
-             title = "Job parameters file" )
+            name = RunMacroWorkloadParams.CMD_JOB_PARAMETERS,
+            title = "Job parameters file" )
     private String jobParameters = Workspace.JOB_PARAMETERS_JSON;
 
     @Override
@@ -64,7 +71,15 @@ public class RunWorkerCommand implements Runnable
     {
         try
         {
-            AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsRegion );
+            AWSS3ArtifactStorage artifactStorage;
+            if ( StringUtils.isNotEmpty( awsEndpointUrl ) )
+            {
+                artifactStorage = AWSS3ArtifactStorage.create( new AwsClientBuilder.EndpointConfiguration( awsEndpointUrl, awsRegion ) );
+            }
+            else
+            {
+                artifactStorage = AWSS3ArtifactStorage.create( awsRegion );
+            }
 
             // download artifacts
 
@@ -81,8 +96,16 @@ public class RunWorkerCommand implements Runnable
             Workspace.assertWorkspaceAreEqual( artifactsWorkspace, deserializeWorkspace );
 
             // fetch result db password
-            PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsCredentials().awsRegion() );
-            String resultsStorePassword = awsSecretsManager.getSecret( infraParams.resultsStorePasswordSecretName() );
+            String resultsStorePassword;
+            if ( StringUtils.isNotEmpty( infraParams.resultsStorePasswordSecretName() ) )
+            {
+                PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsCredentials().awsRegion() );
+                resultsStorePassword = awsSecretsManager.getSecret( infraParams.resultsStorePasswordSecretName() );
+            }
+            else
+            {
+                resultsStorePassword = infraParams.resultsStorePassword();
+            }
 
             BenchmarkingRun benchmarkingRun = jobParams.benchmarkingRun();
             BenchmarkingTool benchmarkingTool = benchmarkingRun.benchmarkingTool();

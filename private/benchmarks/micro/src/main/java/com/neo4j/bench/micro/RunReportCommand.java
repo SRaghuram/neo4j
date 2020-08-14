@@ -11,6 +11,7 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
@@ -25,6 +26,7 @@ import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkTool;
 import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Neo4j;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -197,6 +199,9 @@ public class RunReportCommand extends BaseRunReportCommand
                                    runReportParams.toolBranch() );
         Java java = Java.current( String.join( " ", jvmArgs ) );
 
+        InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();
+        Instance instance = instanceDiscovery.currentInstance( System.getenv() );
+
         TestRunReport testRunReport = new TestRunReport(
                 testRun,
                 benchmarkConfig,
@@ -206,7 +211,7 @@ public class RunReportCommand extends BaseRunReportCommand
                                             runReportParams.neo4jBranch(),
                                             runReportParams.neo4jBranchOwner() ) ),
                 baseNeo4jConfig,
-                Environment.current(),
+                Environment.from( instance ),
                 resultMetrics,
                 tool,
                 java,

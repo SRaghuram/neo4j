@@ -9,6 +9,7 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
@@ -34,6 +35,7 @@ import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkPlan;
 import com.neo4j.bench.model.model.BenchmarkTool;
 import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Neo4j;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -298,15 +300,15 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                 catch ( ForkFailureException e )
                 {
                     LOG.error( format( "\n" +
-                                                "***************************************\n" +
-                                                "Benchmark Execution Failed!\n" +
-                                                "Benchmark: %s\n" +
-                                                "See directory for error log: %s\n" +
-                                                "%s\n" +
-                                                "***************************************\n",
-                                                e.query().benchmark().name(),
-                                                e.benchmarkDir().toAbsolutePath(),
-                                                ErrorReporter.stackTraceToString( e ) ) );
+                                       "***************************************\n" +
+                                       "Benchmark Execution Failed!\n" +
+                                       "Benchmark: %s\n" +
+                                       "See directory for error log: %s\n" +
+                                       "%s\n" +
+                                       "***************************************\n",
+                                       e.query().benchmark().name(),
+                                       e.benchmarkDir().toAbsolutePath(),
+                                       ErrorReporter.stackTraceToString( e ) ) );
                     errorReporter.recordOrThrow( e, query.benchmarkGroup(), query.benchmark() );
                 }
             }
@@ -329,6 +331,10 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
 
             BenchmarkConfig benchmarkConfig = new BenchmarkConfig( new HashMap<>() );
             Java java = Java.current( params.jvmArgs().toArgsString() );
+
+            InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();
+            Instance instance = instanceDiscovery.currentInstance( System.getenv() );
+
             TestRunReport testRunReport = new TestRunReport(
                     testRun,
                     benchmarkConfig,
@@ -338,7 +344,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                            params.neo4jBranch(),
                                            params.neo4jBranchOwner() ) ),
                     neo4jConfig,
-                    Environment.current(),
+                    Environment.from( instance ),
                     allResults,
                     tool,
                     java,

@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.client;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
@@ -17,6 +18,7 @@ import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkPlan;
 import com.neo4j.bench.model.model.BenchmarkTool;
 import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Neo4jConfig;
@@ -301,7 +303,13 @@ public class AddProfilesIT
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
         Metrics metrics = new Metrics( SECONDS, 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
         AuxiliaryMetrics auxiliaryMetrics = new AuxiliaryMetrics( "rows", 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
-        Environment environment = new Environment( "operating system", "server" );
+        Environment environment = new Environment( new HashMap<>( ImmutableMap.of(
+                new Instance( "instance",
+                              Instance.Kind.AWS,
+                              "Linux",
+                              8,
+                              1024 ),
+                1L ) ) );
         BenchmarkTool benchmarkTool = new BenchmarkTool( Repository.LDBC_BENCH, "commit", Repository.LDBC_BENCH.defaultOwner(), "3.2" );
         Java java = new Java( "jvm", "version", "jvm args" );
         Plan plan = SubmitTestRunsAndPlansIT.plan( "plan description" );

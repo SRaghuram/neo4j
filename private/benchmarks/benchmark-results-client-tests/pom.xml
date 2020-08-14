@@ -19,6 +19,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.30</version>
+        </dependency>
+        <dependency>
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-results-client</artifactId>
             <version>${project.version}</version>
@@ -39,6 +44,12 @@
             <artifactId>neo4j-harness-enterprise</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

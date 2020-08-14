@@ -1,4 +1,10 @@
-MERGE (environment:Environment {operating_system:$operating_system, server:$server})
+CREATE (environment:Environment)
+FOREACH (instance in $instances | MERGE (machine:Instance { host: instance.host,
+                                                           kind: instance.kind,
+                                                           operating_system: instance.operatingSystem,
+                                                           available_cores: instance.availableCores,
+                                                           total_memory: instance.totalMemory })
+                                 CREATE (machine)<-[:HAS_INSTANCE { count : instance.count} ]-(environment) )
 MERGE (benchmark_tool:BenchmarkTool {name: $tool_name})
 ON CREATE SET
     benchmark_tool.repository_name=$tool_repository_name

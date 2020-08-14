@@ -5,6 +5,11 @@
  */
 package com.neo4j.bench.common.tool.macro;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -15,11 +20,15 @@ import java.util.Objects;
 
 import static java.lang.String.format;
 
+@JsonTypeInfo( use = JsonTypeInfo.Id.NAME )
+@JsonSubTypes( {@JsonSubTypes.Type( Deployment.Server.class ),
+                @JsonSubTypes.Type( Deployment.Embedded.class )} )
 public abstract class Deployment implements DeploymentMode
 {
     protected static DeploymentModes mode;
 
-    public Deployment( DeploymentModes mode )
+    @JsonCreator
+    public Deployment( @JsonProperty( "mode" ) DeploymentModes mode )
     {
         this.mode = mode;
     }
@@ -76,9 +85,11 @@ public abstract class Deployment implements DeploymentMode
         return parsableValue();
     }
 
+    @JsonTypeName( "embedded" )
     public static class Embedded extends Deployment
     {
 
+        @JsonCreator
         public Embedded()
         {
             super( DeploymentModes.EMBEDDED );
@@ -122,13 +133,15 @@ public abstract class Deployment implements DeploymentMode
         }
     }
 
+    @JsonTypeName( "server" )
     public static class Server extends Deployment
     {
         private static final String VALUE_PREFIX = DeploymentModes.SERVER.name() + ":";
 
         private final String path;
 
-        private Server( String path )
+        @JsonCreator
+        public Server( @JsonProperty( "path" ) String path )
         {
             super( DeploymentModes.SERVER );
             this.path = path;
