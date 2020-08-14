@@ -402,14 +402,41 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     {
         try ( Transaction tx = db.beginTx() )
         {
-            ConstraintCreator creator = tx.schema().constraintFor( label ).withName( "a`b" ).assertPropertyExists( propertyKey );
+            ConstraintCreator creator = tx.schema().constraintFor( label ).withName( "`a`b`" ).assertPropertyExists( propertyKey );
             creator.create();
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             assertThat( count( tx.schema().getIndexes() ) ).isEqualTo( 0L );
-            assertThat( count( tx.schema().getConstraints() ) ).isEqualTo( 1L );
+
+            final Iterable<ConstraintDefinition> constraints = tx.schema().getConstraints();
+            assertThat( count( constraints ) ).isEqualTo( 1L );
+            assertEquals( "`a`b`", constraints.iterator().next().getName() );
+            tx.commit();
+        }
+    }
+
+    @Test
+    void nonIndexBackedConstraintTokensCanContainBackTicks()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintCreator creator = tx.schema().constraintFor( labelWithBackticks ).withName( "abc" ).assertPropertyExists( propertyKeyWithBackticks );
+            creator.create();
+            tx.commit();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertThat( count( tx.schema().getIndexes() ) ).isEqualTo( 0L );
+
+            final Iterable<ConstraintDefinition> constraints = tx.schema().getConstraints();
+            assertThat( count( constraints ) ).isEqualTo( 1L );
+
+            final ConstraintDefinition constraint = constraints.iterator().next();
+            assertEquals( "abc", constraint.getName() );
+            assertEquals( labelWithBackticks.name(), constraint.getLabel().name() );
+            assertEquals( propertyKeyWithBackticks, constraint.getPropertyKeys().iterator().next() );
             tx.commit();
         }
     }

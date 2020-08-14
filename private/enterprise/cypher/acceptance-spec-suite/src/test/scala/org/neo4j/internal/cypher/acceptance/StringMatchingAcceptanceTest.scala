@@ -108,40 +108,94 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   private val newline = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "\r\n" else "\n"
 
   test("should allow escaped backtick in labels") {
+    // Label without escaping: 123`abc
     val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n:`123``abc`) RETURN labels(n)")
     result.toList should be(List(Map("labels(n)" -> List("123`abc"))))
   }
 
+  test("should allow escaped backticks first and last in labels") {
+    // Label without escaping: `123`
+    val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n:```123```) RETURN labels(n)")
+    result.toList should be(List(Map("labels(n)" -> List("`123`"))))
+  }
+
   test("should allow escaped backtick in relationship types") {
+    // Relationship type without escaping: 123`abc
     val result = executeWith(Configs.InterpretedAndSlotted,"CREATE ()-[r:`123``abc`]->() RETURN type(r)")
     result.toList should be(List(Map("type(r)" -> "123`abc")))
+  }
+
+  test("should allow escaped backtick first and last in relationship types") {
+    // Relationship type without escaping: ``123abc`
+    val result = executeWith(Configs.InterpretedAndSlotted,"CREATE ()-[r:`````123abc```]->() RETURN type(r)")
+    result.toList should be(List(Map("type(r)" -> "``123abc`")))
   }
 
   test("should allow escaped backtick in node property names") {
     createLabeledNode("Label")
 
+    // Property without escaping: 123`abc
     val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:Label) SET n.`123``abc` = 2 RETURN n.`123``abc`")
    result.toList should be(List(Map("n.`123``abc`" -> 2)))
   }
 
+  test("should allow escaped backticks first and last in node property names") {
+    createLabeledNode("Label")
+
+    // Property without escaping: `123abc`
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:Label) SET n.```123abc``` = 2 RETURN n.```123abc```")
+    result.toList should be(List(Map("n.```123abc```" -> 2)))
+  }
+
   test("should allow escaped backtick in relationship property names") {
+    // Property without escaping: 123`abc
     val result = executeWith(Configs.InterpretedAndSlotted, "MERGE ()-[r:REL {`123``abc`:2}]->() RETURN properties(r)")
     result.toList should be(List(Map("properties(r)" -> Map("123`abc" -> 2))))
   }
 
+  test("should allow escaped backticks first and last in relationship property names") {
+    // Property without escaping: ``123abc``
+    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE ()-[r:REL {`````123abc`````:2}]->() RETURN properties(r)")
+    result.toList should be(List(Map("properties(r)" -> Map("``123abc``" -> 2))))
+  }
+
   test("should allow escaped backtick in index names") {
-    executeWith(Configs.All, "CREATE INDEX `my``index` FOR (n:Person) ON (n.firstname, n.lastname)")
+    // Index name without escaping: `my`index``
+    executeWith(Configs.All, "CREATE INDEX ```my``index````` FOR (n:Person) ON (n.firstname, n.lastname)")
+  }
+
+  test("should allow escaped backticks in index tokens") {
+    // Index tokens without escaping: `Person`, `first`name`, `lastname``
+    executeWith(Configs.All, "CREATE INDEX myindex FOR (n:```Person```) ON (n.```first``name```, n.```lastname`````)")
   }
 
   test("should allow escaped backtick in uniqueness constraint names") {
-    executeWith(Configs.All, "CREATE CONSTRAINT `my``constraint` ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    // Constraint name without escaping: `my`constraint`
+    executeWith(Configs.All, "CREATE CONSTRAINT ```my``constraint``` ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+  }
+
+  test("should allow escaped backtick in uniqueness constraint tokens") {
+    // Constraint tokens without escaping: `Label, prop`
+    executeWith(Configs.All, "CREATE CONSTRAINT ```my``constraint``` ON (n:```Label`) ASSERT (n.`prop```) IS UNIQUE")
   }
 
   test("should allow escaped backtick in exists constraint names") {
-    executeWith(Configs.All, "CREATE CONSTRAINT `my``constraint` ON (n:Label) ASSERT exists(n.prop)")
+    // Constraint name without escaping: ``myconstraint
+    executeWith(Configs.All, "CREATE CONSTRAINT `````myconstraint` ON (n:Label) ASSERT exists(n.prop)")
+  }
+
+  test("should allow escaped backtick in exists constraint tokens") {
+      // Constraint property without escaping: `prop`
+    executeWith(Configs.All, "CREATE CONSTRAINT myconstraint ON (n:Label) ASSERT exists(n.```prop```)")
   }
 
   test("should allow escaped backtick in node key constraint names") {
-    executeWith(Configs.All, "CREATE CONSTRAINT `my``constraint` ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    // Constraint name without escaping: my`constraint``
+    executeWith(Configs.All, "CREATE CONSTRAINT `my``constraint``` ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+  }
+
+  test("should allow escaped backtick in node key constraint tokens") {
+    // Constraint property without escaping: pr``op
+    executeWith(Configs.All, "CREATE CONSTRAINT myconstraint ON (n:Label) ASSERT (n.`pr````op`) IS NODE KEY")
   }
 }
