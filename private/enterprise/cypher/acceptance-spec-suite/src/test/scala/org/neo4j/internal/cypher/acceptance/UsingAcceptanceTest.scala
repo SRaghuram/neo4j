@@ -344,7 +344,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING INDEX n:Entity(source) " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
+      List("Multiple index hints for same variable are not supported"))
   }
 
   test("does not accept multiple index hints for the same variable (named indexes)") {
@@ -362,7 +362,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING INDEX n:Entity(source) " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
+      List("Multiple index hints for same variable are not supported"))
   }
 
   test("does not accept multiple scan hints for the same variable") {
@@ -372,7 +372,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING SCAN n:Entity " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
+      List("Multiple index hints for same variable are not supported"))
 
   }
 
@@ -383,7 +383,16 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING INDEX n:Entity(first_name) " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
+      List("Multiple index hints for same variable are not supported"))
+  }
+
+  test("does not accept multiple join hints for the same variables") {
+    failWithError(Configs.All,
+      """MATCH (liskov:Scientist { name:'Liskov' })-[:KNOWS]->(wing:Scientist { name:'Wing' })-[:RESEARCHED]->(cs:Science { name:'Computer Science' })<-[:RESEARCHED]-(liskov)
+        |USING JOIN ON liskov, cs
+        |USING JOIN ON liskov, cs
+        |RETURN wing.born AS column""".stripMargin,
+      List("Multiple join hints for same variable are not supported"))
   }
 
   test("scan hint must fail if using a variable not used in the query") {
