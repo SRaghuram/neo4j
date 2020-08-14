@@ -48,7 +48,7 @@ object ParseCypherComplex {
   val QUERY1 =
     """
       |match (root:Component{cID:'7000-08001-0300150'})
-      |​
+      |
       |// step 1: recursively fetch full bom tree of given component and store it in `bomTree`
       |call apoc.path.expandConfig(root, {
       |   bfs:true,
@@ -61,7 +61,7 @@ object ParseCypherComplex {
       |	and all(x in boms WHERE not (x)-[:next]->() )  // nur aktuellsten BOM
       |match (componentNode)-[:hasComponentType]->(ct:ComponentType)
       |with collect({level:length(path)/3, id: componentNode.id, cID: componentNode.cID, name: componentNode.name, ctName: ct.name, ctId: ct.id}) as bomTree, root
-      |​
+      |
       |// step 2: find relevant components and their component type chains
       |match (root)-[:hasComponentType]->(:ComponentType)-[:hasExport]->(:Export)-[:basedOnExportMapping]->(em:ExportMapping)-[:hasRelevantComponent]->(rc:RelevantComponent)-[:nextPathItem*]->(lpi:PathItem)-[:with]->(ct:ComponentType)
       |// aggregate on 2 differnt levels
@@ -332,9 +332,9 @@ object ParseCypherComplex {
       |        END
       |     ) AS value,
       |                COALESCE(Uoms[0],'') AS uom
-      |​
+      |
       |ORDER BY componentid,index
-      |​
+      |
       |WITH params,
       |     sectionTree,
       |     COLLECT(
@@ -347,10 +347,10 @@ object ParseCypherComplex {
       |         END
       |       ]
       |     ) AS attributeValues
-      |​
+      |
       |with apoc.map.updateTree(sectionTree,'uuid',attributeValues) AS exportMap,
       |     {shortid: params.templateShortId} as template
-      |​
+      |
       |return apoc.convert.toJson({template: template, data: exportMap}) AS JSON
       |""".stripMargin
 
