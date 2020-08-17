@@ -114,6 +114,7 @@ public class DatabaseMetricsExporter
 
     private String databaseMetricsPrefix()
     {
-        return config.get( MetricsSettings.metrics_prefix ) + "." + dependencies.database().getNamedDatabaseId().name();
+        var databaseNamespaceSeparator = config.get( MetricsSettings.metrics_namespaces_enabled ) ? ".database." : ".";
+        return config.get( MetricsSettings.metrics_prefix ) + databaseNamespaceSeparator + dependencies.database().getNamedDatabaseId().name();
     }
 }

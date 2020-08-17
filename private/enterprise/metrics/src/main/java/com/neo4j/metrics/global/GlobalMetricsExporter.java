@@ -49,7 +49,8 @@ public class GlobalMetricsExporter
 
     public void export()
     {
-        String globalMetricsPrefix = config.get( MetricsSettings.metrics_prefix );
+        String globalMetricsPrefix = config.get( MetricsSettings.metrics_namespaces_enabled ) ?
+                                     config.get( MetricsSettings.metrics_prefix ) + ".dbms" : config.get( MetricsSettings.metrics_prefix );
         if ( config.get( MetricsSettings.neo_page_cache_enabled ) )
         {
             life.add( new PageCacheMetrics( globalMetricsPrefix, registry, dependencies.pageCacheCounters() ) );
@@ -107,7 +108,8 @@ public class GlobalMetricsExporter
 
         if ( config.get( MetricsSettings.neo_memory_pools_enabled ) )
         {
-            life.add( new GlobalMemoryPoolMetrics( globalMetricsPrefix, registry, dependencies.memoryPools() ) );
+            // GlobalMemoryPoolMetrics already contains dbms in its name, therefore its prefix doesn't depend on metrics_namespaces_enabled.
+            life.add( new GlobalMemoryPoolMetrics( config.get( MetricsSettings.metrics_prefix ), registry, dependencies.memoryPools() ) );
         }
 
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );

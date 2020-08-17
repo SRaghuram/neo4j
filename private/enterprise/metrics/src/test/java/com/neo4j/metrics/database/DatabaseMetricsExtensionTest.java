@@ -124,6 +124,26 @@ class DatabaseMetricsExtensionTest
         } );
     }
 
+    @Test
+    void namespacesEnabledShouldGroupGlobalAndDatabaseMetrics()
+    {
+        Config config = Config.defaults( MetricsSettings.metrics_namespaces_enabled, true );
+        GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, new GlobalMetricsDependencies( config ) );
+        DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config, globalMetricsExtension );
+        DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
+
+        assertDoesNotThrow( () ->
+        {
+            try ( Lifespan ignored = new Lifespan( globalMetricsExtension, databaseMetricsExtension ) )
+            {
+                globalMetricsExtension.getRegistry().getNames().forEach(
+                        metric -> assertThat( metric ).satisfiesAnyOf(
+                                ( String name ) -> assertThat( name ).startsWith( "neo4j.dbms" ),
+                                ( String name ) -> assertThat( name ).startsWith( "neo4j.database." + DATABASE_ID.name() ) ) );
+            }
+        } );
+    }
+
     private class GlobalMetricsDependencies implements GlobalMetricsExtensionFactory.Dependencies
     {
         private final Config config;

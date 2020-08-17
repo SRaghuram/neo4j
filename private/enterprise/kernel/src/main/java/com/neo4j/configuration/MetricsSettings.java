@@ -37,6 +37,13 @@ public class MetricsSettings implements SettingsDeclaration
     @Description( "A common prefix for the reported metrics field names." )
     public static final Setting<String> metrics_prefix = newBuilder( "metrics.prefix", STRING, "neo4j" ).build();
 
+    @Description( "Enable metrics namespaces that separates the global and database specific metrics. " +
+                  "If enabled all database specific metrics will have field names starting with <metrics_prefix>.database.<database_name> " +
+                  "and all global metrics will start with <metrics_prefix>.dbms. " +
+                  "For example neo4j.page_cache.hits will become neo4j.dbms.page_cache.hits and " +
+                  "neo4j.system.log.rotation_events will become neo4j.database.system.log.rotation_events." )
+    public static final Setting<Boolean> metrics_namespaces_enabled = newBuilder( "metrics.namespaces.enabled", BOOL, false ).build();
+
     // The below settings define what metrics to gather
     // By default everything is on
     @Description( "Enable metrics. Setting this to `false` will to turn off all metrics." )
