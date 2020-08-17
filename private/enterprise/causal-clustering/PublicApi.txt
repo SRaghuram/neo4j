@@ -39,6 +39,7 @@ com.neo4j.configuration.CausalClusteringSettings::join_catch_up_max_lag org.neo4
 com.neo4j.configuration.CausalClusteringSettings::join_catch_up_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 com.neo4j.configuration.CausalClusteringSettings::kubernetes_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
 com.neo4j.configuration.CausalClusteringSettings::kubernetes_ca_crt org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
+com.neo4j.configuration.CausalClusteringSettings::kubernetes_cluster_domain org.neo4j.graphdb.config.Setting<java.lang.String> public static final
 com.neo4j.configuration.CausalClusteringSettings::kubernetes_label_selector org.neo4j.graphdb.config.Setting<java.lang.String> public static final
 com.neo4j.configuration.CausalClusteringSettings::kubernetes_namespace org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
 com.neo4j.configuration.CausalClusteringSettings::kubernetes_service_port_name org.neo4j.graphdb.config.Setting<java.lang.String> public static final

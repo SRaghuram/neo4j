@@ -182,6 +182,7 @@ public class KubernetesResolver implements RemoteMembersResolver
         private final ObjectMapper objectMapper;
         private final String portName;
         private final SocketAddress kubernetesAddress;
+        private final String clusterDomain;
 
         KubernetesClient( LogService logService, HttpClient httpClient, String token, String namespace,
                 Config config, RetryStrategy retryStrategy )
@@ -192,6 +193,7 @@ public class KubernetesResolver implements RemoteMembersResolver
             this.token = token;
             this.namespace = namespace;
 
+            this.clusterDomain = config.get( CausalClusteringSettings.kubernetes_cluster_domain );
             this.kubernetesAddress = config.get( CausalClusteringSettings.kubernetes_address );
             this.labelSelector = config.get( CausalClusteringSettings.kubernetes_label_selector );
             this.portName = config.get( CausalClusteringSettings.kubernetes_service_port_name );
@@ -219,7 +221,7 @@ public class KubernetesResolver implements RemoteMembersResolver
 
                 KubernetesType serviceList = objectMapper.readValue( response.getContent(), KubernetesType.class );
 
-                Collection<SocketAddress> addresses = serviceList.handle( new Parser( portName, namespace ) );
+                Collection<SocketAddress> addresses = serviceList.handle( new Parser( portName, namespace, clusterDomain ) );
 
                 userLog.info( "Resolved %s from Kubernetes API at %s namespace %s labelSelector %s",
                         addresses, kubernetesAddress, namespace, labelSelector );
@@ -252,11 +254,13 @@ public class KubernetesResolver implements RemoteMembersResolver
     {
         private final String portName;
         private final String namespace;
+        private final String clusterDomain;
 
-        private Parser( String portName, String namespace )
+        private Parser( String portName, String namespace, String clusterDomain )
         {
             this.portName = portName;
             this.namespace = namespace;
+            this.clusterDomain = clusterDomain;
         }
 
         @Override
@@ -277,7 +281,7 @@ public class KubernetesResolver implements RemoteMembersResolver
 
             return serviceNamePortStream
                     .map( serviceNamePort -> new SocketAddress(
-                            String.format( "%s.%s.svc.cluster.local", serviceNamePort.first(), namespace ),
+                            String.format( "%s.%s.svc.%s", serviceNamePort.first(), namespace, clusterDomain ),
                             serviceNamePort.other().port() ) )
                     .collect( Collectors.toSet() );
         }

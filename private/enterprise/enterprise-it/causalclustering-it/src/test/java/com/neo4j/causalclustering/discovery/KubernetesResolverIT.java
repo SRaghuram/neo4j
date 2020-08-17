@@ -66,17 +66,19 @@ public class KubernetesResolverIT
     private final String testPortName = "test-port-name";
     private final String testServiceName = "test-service-name";
     private final int testPortNumber = 4313;
+    private final String testDomain = "cluster-domain.example";
     private final String testNamespace = "test-namespace";
     private final String testLabelSelector = "test-label-selector";
     private final String testAuthToken = "Oh go on then";
     private final Config config = Config.newBuilder()
+            .set( CausalClusteringSettings.kubernetes_cluster_domain, testDomain )
             .set( CausalClusteringSettings.kubernetes_address, new SocketAddress( "localhost", port ) )
             .set( CausalClusteringSettings.kubernetes_label_selector, testLabelSelector )
             .set( CausalClusteringSettings.kubernetes_service_port_name, testPortName )
             .build();
 
-    private SocketAddress expectedAddress =
-            new SocketAddress( String.format( "%s.%s.svc.cluster.local", testServiceName, testNamespace ), testPortNumber );
+    private final SocketAddress expectedAddress =
+            new SocketAddress( String.format( "%s.%s.svc.%s", testServiceName, testNamespace, testDomain ), testPortNumber );
 
     private final HttpClient httpClient = new HttpClient( new SslContextFactory( true ) );
 

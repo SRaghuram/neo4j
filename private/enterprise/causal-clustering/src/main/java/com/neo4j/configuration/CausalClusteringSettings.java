@@ -197,6 +197,10 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Long> in_flight_cache_max_bytes =
             newBuilder( "causal_clustering.in_flight_cache.max_bytes", BYTES, ByteUnit.gibiBytes( 2 ) ).build();
 
+    @Description( "Kubernetes cluster domain" )
+    public static final Setting<String> kubernetes_cluster_domain =
+            newBuilder( "causal_clustering.kubernetes.cluster_domain", STRING, "cluster.local" ).build();
+
     @Description( "Address for Kubernetes API" )
     public static final Setting<SocketAddress> kubernetes_address =
             newBuilder( "causal_clustering.kubernetes.address", SOCKET_ADDRESS, new SocketAddress( "kubernetes.default.svc", 443 ) ).build();
