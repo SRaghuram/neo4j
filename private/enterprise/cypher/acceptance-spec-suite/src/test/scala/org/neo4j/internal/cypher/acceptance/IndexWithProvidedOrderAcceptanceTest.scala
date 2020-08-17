@@ -576,10 +576,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       Map("n.prop1" -> 44, "n.prop2" -> 3), Map("n.prop1" -> 45, "n.prop2" -> 2), Map("n.prop1" -> 45, "n.prop2" -> 5)
     )
     Seq(
-      ("n.prop1 ASC, n.prop2 ASC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")))))),
-      ("n.prop1 ASC, n.prop2 DESC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")).reverse)))),
-      ("n.prop1 DESC, n.prop2 ASC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).reverse.thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")))))),
-      ("n.prop1 DESC, n.prop2 DESC", expectedResult.sorted(Ordering.comparatorToOrdering(Ordering.by[Map[String, Int], Int](_ ("n.prop1")).reverse.thenComparing(Ordering.by[Map[String, Int], Int](_ ("n.prop2")).reverse))))
+      ("n.prop1 ASC, n.prop2 ASC",   expectedResult.sortBy(row => ( row("n.prop1"),  row("n.prop2")))),
+      ("n.prop1 ASC, n.prop2 DESC",  expectedResult.sortBy(row => ( row("n.prop1"), -row("n.prop2")))),
+      ("n.prop1 DESC, n.prop2 ASC",  expectedResult.sortBy(row => (-row("n.prop1"),  row("n.prop2")))),
+      ("n.prop1 DESC, n.prop2 DESC", expectedResult.sortBy(row => (-row("n.prop1"), -row("n.prop2"))))
     ).foreach {
       case (orderByString,  expected) =>
         // When
