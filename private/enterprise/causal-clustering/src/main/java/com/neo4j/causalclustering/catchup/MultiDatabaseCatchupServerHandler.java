@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequestHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequestHandler;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import io.netty.channel.ChannelHandler;
@@ -84,6 +85,12 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
                 CoreSnapshotRequest.class, logProvider );
     }
 
+    @Override
+    public ChannelHandler getAllDatabaseIds( CatchupServerProtocol protocol )
+    {
+        return buildGetAllDatabaseIdsRequestHandler( protocol, databaseManager );
+    }
+
     private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
         return new TxPullRequestHandler( protocol, db );
@@ -107,5 +114,10 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private static CoreSnapshotRequestHandler buildCoreSnapshotRequestRequestHandler( Database db, CatchupServerProtocol protocol )
     {
         return new CoreSnapshotRequestHandler( protocol, db );
+    }
+
+    private static GetAllDatabaseIdsRequestHandler buildGetAllDatabaseIdsRequestHandler( CatchupServerProtocol protocol, DatabaseManager<?> databaseManager )
+    {
+        return new GetAllDatabaseIdsRequestHandler( protocol, databaseManager );
     }
 }

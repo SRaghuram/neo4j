@@ -45,7 +45,8 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 
-import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolValidator.checkInstallersExhaustive;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.buildServerInstallers;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.checkInstallersExhaustive;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_3_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_4_0;
@@ -126,12 +127,7 @@ public class RaftServerFactory
         final var protocolMap = createApplicationProtocolMap( nettyHandler );
         checkInstallersExhaustive( protocolMap.keySet(), ApplicationProtocolCategory.RAFT );
 
-        return protocolMap
-                .entrySet()
-                .stream()
-                .filter( p -> p.getKey().lessOrEquals( maximumProtocol ) )
-                .map( Map.Entry::getValue )
-                .collect( Collectors.toList() );
+        return buildServerInstallers( protocolMap, maximumProtocol );
     }
 
     private Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> createApplicationProtocolMap(

@@ -22,6 +22,7 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.io.IOException;
@@ -113,6 +114,13 @@ class BareClient implements CatchupResponseHandler
     {
         log.error( "This onCatchupErrorResponse should have never been called with %s, %s", response.status(), response.message() );
         callbackError( new IllegalArgumentException( String.format( "onCatchupErrorResponse: %s, %s", response.status(), response.message() ) ) );
+    }
+
+    @Override
+    public void onGetAllDatabaseIdsResponse( GetAllDatabaseIdsResponse response )
+    {
+        log.error( "This onGetAllDatabaseIdsResponse should have never been called with %s", response.databaseIds() );
+        callbackError( new IllegalArgumentException( String.format( "onGetAllDatabaseIdsResponse: %s", response.databaseIds() ) ) );
     }
 
     @Override

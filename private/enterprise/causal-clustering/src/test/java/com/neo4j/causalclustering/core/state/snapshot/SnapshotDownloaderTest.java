@@ -9,8 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
+import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV4;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,12 +25,14 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 class SnapshotDownloaderTest
@@ -81,14 +82,25 @@ class SnapshotDownloaderTest
     }
 
     private CatchupClientFactory mockCatchupClient( MockClientResponses clientResponses,
-            ApplicationProtocol protocol ) throws Exception
+                                                    ApplicationProtocol protocol ) throws Exception
     {
         CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
-
-        CatchupClientV3 v3Client = new MockClientV3( clientResponses, databaseIdRepository );
-
-        VersionedCatchupClients catchupClient = new MockCatchupClient( protocol, v3Client );
-        when( catchupClientFactory.getClient( eq( remoteAddress ), any( Log.class ) ) ).thenReturn( catchupClient );
+        MockCatchupClient catchupClient;
+        if ( protocol.equals( CATCHUP_3_0 ) )
+        {
+            MockClientV3 v3 = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
+            catchupClient = new MockCatchupClient( protocol, v3 );
+        }
+        else if ( protocol.equals( CATCHUP_4_0 ) )
+        {
+            MockClientV4 v4 = spy( new MockClientV4( clientResponses, databaseIdRepository ) );
+            catchupClient = new MockCatchupClient( protocol, v4 );
+        }
+        else
+        {
+            throw new IllegalStateException( protocol.implementation() + " is not initialized" );
+        }
+        when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
         return catchupClientFactory;
     }
 }

@@ -12,10 +12,13 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstaller;
-import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstaller;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
+import com.neo4j.causalclustering.catchup.v4.CatchupProtocolClientInstallerV4;
+import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
@@ -185,9 +188,15 @@ abstract class EnterpriseCatchupTest
     {
         if ( applicationProtocols == ApplicationProtocols.CATCHUP_3_0 )
         {
-            new CatchupProtocolClientInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
-                    new TestCommandReaderFactory() ).install( client );
-            new CatchupProtocolServerInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
+            new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
+                                                  new TestCommandReaderFactory() ).install( client );
+            new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
+        }
+        else if ( applicationProtocols == ApplicationProtocols.CATCHUP_4_0 )
+        {
+            new CatchupProtocolClientInstallerV4( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
+                                                  new TestCommandReaderFactory() ).install( client );
+            new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
         }
         else
         {
@@ -256,6 +265,12 @@ abstract class EnterpriseCatchupTest
 
         @Override
         public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )
+        {
+            unexpected();
+        }
+
+        @Override
+        public void onGetAllDatabaseIdsResponse( GetAllDatabaseIdsResponse response )
         {
             unexpected();
         }

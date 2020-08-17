@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.causalclustering.catchup.v4;
+
+import com.neo4j.causalclustering.catchup.CatchupServerHandler;
+import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
+import com.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequestDecoder;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponseEncoder;
+import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
+import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
+import com.neo4j.causalclustering.protocol.ProtocolInstaller;
+import com.neo4j.causalclustering.protocol.ServerNettyPipelineBuilder;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+
+import java.util.List;
+
+import org.neo4j.logging.LogProvider;
+
+public class CatchupProtocolServerInstallerV4 extends CatchupProtocolServerInstallerV3
+{
+    private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.CATCHUP_4_0;
+
+    public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV3>
+    {
+        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+        {
+            super( APPLICATION_PROTOCOL,
+                   modifiers -> new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
+        }
+    }
+
+    public CatchupProtocolServerInstallerV4( NettyPipelineBuilderFactory pipelineBuilderFactory,
+                                             List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
+                                             LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+    {
+        super( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler );
+    }
+
+    @Override
+    protected ServerNettyPipelineBuilder encoders( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
+    {
+        return super.encoders( builder, state )
+                    .add( "enc_res_all_databases_id", new GetAllDatabaseIdsResponseEncoder() )
+                    .add( "hnd_req_all_databases_id", handler().getAllDatabaseIds( state ) );
+    }
+
+    @Override
+    protected void decoders( RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher )
+    {
+        super.decoders( decoderDispatcher );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_ALL_DATABASE_IDS, new GetAllDatabaseIdsRequestDecoder() );
+    }
+}

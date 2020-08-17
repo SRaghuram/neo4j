@@ -25,6 +25,7 @@ public class CatchupClientProtocol extends Protocol<CatchupClientProtocol.State>
         PREPARE_STORE_COPY_RESPONSE,
         INDEX_SNAPSHOT_RESPONSE,
         ERROR_RESPONSE,
-        DATABASE_ID
+        DATABASE_ID,
+        GET_ALL_DATABASE_IDS
     }
 }

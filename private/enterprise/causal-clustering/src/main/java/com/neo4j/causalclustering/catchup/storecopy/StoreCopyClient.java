@@ -91,6 +91,7 @@ public class StoreCopyClient
 
             persistentCallToSecondary( addressProvider,
                     c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId ),
+                    c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId ),
                     storeFileStream, terminationConditions.get(), txIdHandler );
 
             storeCopyClientMonitor.finishReceivingStoreFile( destDir.resolve( path.getFileName() ).toString() );
@@ -99,9 +100,10 @@ public class StoreCopyClient
     }
 
     private void persistentCallToSecondary( CatchupAddressProvider addressProvider,
-            Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request,
-            StoreFileStreamProvider storeFileStream,
-            TerminationCondition terminationCondition, TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
+                                            Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request,
+                                            Function<VersionedCatchupClients.CatchupClientV4,PreparedRequest<StoreCopyFinishedResponse>> v4Request,
+                                            StoreFileStreamProvider storeFileStream,
+                                            TerminationCondition terminationCondition, TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
     {
         var successful = false;
         TimeoutStrategy.Timeout timeout = backOffStrategy.newTimeout();
@@ -121,7 +123,7 @@ public class StoreCopyClient
 
             for ( var secondary : secondaries )
             {
-                successful = requestToSecondary( secondary, storeFileStream, txIdHandler, v3Request );
+                successful = requestToSecondary( secondary, storeFileStream, txIdHandler, v3Request, v4Request );
                 if ( successful )
                 {
                     return;
@@ -133,7 +135,8 @@ public class StoreCopyClient
     }
 
     private boolean requestToSecondary( SocketAddress secondary, StoreFileStreamProvider storeFileStream, TransactionIdHandler txIdHandler,
-            Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request )
+                                        Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request,
+                                        Function<VersionedCatchupClients.CatchupClientV4,PreparedRequest<StoreCopyFinishedResponse>> v4Request )
     {
         var successfulRequest = false;
         try
@@ -142,6 +145,7 @@ public class StoreCopyClient
 
             StoreCopyFinishedResponse response = catchUpClientFactory.getClient(secondary, log)
                     .v3(v3Request)
+                    .v4(v4Request)
                     .withResponseHandler(StoreCopyResponseAdaptors.filesCopyAdaptor(storeFileStream, log))
                     .request();
 
@@ -188,6 +192,7 @@ public class StoreCopyClient
             log.info( "Requesting store listing from: " + from );
             prepareStoreCopyResponse = catchUpClientFactory.getClient( from, log )
                     .v3( c -> c.prepareStoreCopy( expectedStoreId, namedDatabaseId ) )
+                    .v4( c -> c.prepareStoreCopy( expectedStoreId, namedDatabaseId ) )
                     .withResponseHandler( StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( storeFileStream, log ) )
                     .request();
         }
@@ -217,6 +222,7 @@ public class StoreCopyClient
             };
             return catchUpClientFactory.getClient( fromAddress, log )
                     .v3( c -> c.getStoreId( namedDatabaseId ) )
+                    .v4( c -> c.getStoreId( namedDatabaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }

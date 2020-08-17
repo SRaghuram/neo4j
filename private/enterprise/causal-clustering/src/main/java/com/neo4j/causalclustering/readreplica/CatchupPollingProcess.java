@@ -248,6 +248,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
             result = catchUpClient
                     .getClient( address, log )
                     .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
+                    .v4( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseContext.databaseId() ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }

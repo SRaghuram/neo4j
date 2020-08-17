@@ -37,8 +37,8 @@ import com.neo4j.causalclustering.logging.NullRaftMessageLogger;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.RaftChannelPoolService;
 import com.neo4j.causalclustering.messaging.RaftSender;
-import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
 import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageEncoderV3;
 import com.neo4j.causalclustering.messaging.marshalling.v4.encoding.RaftMessageEncoderV4;
@@ -51,7 +51,6 @@ import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocolValidator;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -125,6 +124,8 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.buildClientInstallers;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.checkInstallersExhaustive;
 import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_raft_protocol;
 import static com.neo4j.configuration.CausalClusteringSettings.status_throughput_window;
 import static com.neo4j.configuration.ServerGroupsSupplier.listen;
@@ -498,14 +499,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolList( ApplicationProtocol maximumProtocol )
     {
         final var protocolMap = createProtocolMap();
-        ApplicationProtocolValidator.checkInstallersExhaustive( protocolMap.keySet(), ApplicationProtocolCategory.RAFT );
+        checkInstallersExhaustive( protocolMap.keySet(), ApplicationProtocolCategory.RAFT );
 
-        return protocolMap
-                .entrySet()
-                .stream()
-                .filter( p -> p.getKey().lessOrEquals( maximumProtocol ) )
-                .map( Map.Entry::getValue )
-                .collect( Collectors.toList() );
+        return buildClientInstallers( protocolMap, maximumProtocol);
     }
 
     private Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> createProtocolMap()

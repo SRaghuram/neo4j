@@ -142,6 +142,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( GraphDatabaseInternalSettings.auth_store, parentDir.resolve( "auth" ).toAbsolutePath() );
         config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
         config.set( CausalClusteringInternalSettings.experimental_raft_protocol, true );
+        config.set( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();

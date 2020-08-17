@@ -47,6 +47,7 @@ public class SnapshotDownloader
 
             coreSnapshot = client
                     .v3( c -> c.getCoreSnapshot( namedDatabaseId ) )
+                    .v4( c -> c.getCoreSnapshot( namedDatabaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }

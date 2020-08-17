@@ -20,4 +20,6 @@ public interface CatchupServerHandler
     ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol catchupServerProtocol );
 
     ChannelHandler snapshotHandler( CatchupServerProtocol catchupServerProtocol );
+
+    ChannelHandler getAllDatabaseIds( CatchupServerProtocol catchupServerProtocol );
 }

@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.dbms.ShowDatabasesHelpers;
@@ -135,7 +136,9 @@ public final class CausalClusteringTestHelpers
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
-                .inactivityTimeout( Duration.of( 10, ChronoUnit.SECONDS ) ).scheduler( scheduler )
+                .inactivityTimeout( Duration.of( 10, ChronoUnit.SECONDS ) )
+                .scheduler( scheduler )
+                .config( Config.defaults( CausalClusteringInternalSettings.experimental_catchup_protocol, true ) )
                 .bootstrapConfig( clientConfig( Config.defaults() ) )
                 .commandReader( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                 .debugLogProvider( logProvider )
@@ -152,7 +155,7 @@ public final class CausalClusteringTestHelpers
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .installedProtocolsHandler( null )
                 .listenAddress( listenAddress ).scheduler( scheduler )
-                .config( Config.defaults() )
+                .config( Config.defaults( CausalClusteringInternalSettings.experimental_catchup_protocol, true ) )
                 .bootstrapConfig( serverConfig( Config.defaults() ) )
                 .portRegister( new ConnectorPortRegister() )
                 .debugLogProvider( NullLogProvider.getInstance() )

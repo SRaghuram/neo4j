@@ -5,14 +5,15 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstaller;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
-import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
@@ -26,6 +27,7 @@ import io.netty.channel.socket.ServerSocketChannel;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
@@ -35,6 +37,14 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
+
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.buildServerInstallers;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.checkInstallersExhaustive;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.values;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
 
 public final class CatchupServerBuilder
 {
@@ -172,24 +182,39 @@ public final class CatchupServerBuilder
         public Server build()
         {
             ApplicationProtocolRepository
-                    applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
+                    applicationProtocolRepository = new ApplicationProtocolRepository( values(), catchupProtocols );
             ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
 
-            List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = List.of(
-                    new CatchupProtocolServerInstaller.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
+            List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = buildProtocolList();
 
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
                     protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
 
             HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                    protocolInstallerRepository, pipelineBuilder, debugLogProvider, config );
+                                                                                              protocolInstallerRepository, pipelineBuilder, debugLogProvider,
+                                                                                              config );
             ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout,
-                    debugLogProvider, config );
+                                                                                        debugLogProvider, config );
 
             Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
             return new Server( channelInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, portRegister,
-                    bootstrapConfiguration );
+                               bootstrapConfiguration );
+        }
+
+        private List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> buildProtocolList()
+        {
+            final var maximumProtocol = config.get( experimental_catchup_protocol ) ? CATCHUP_4_0 : CATCHUP_3_0;
+            final var protocolMap = createApplicationProtocolMap();
+            checkInstallersExhaustive( protocolMap.keySet(), CATCHUP );
+
+            return buildServerInstallers( protocolMap, maximumProtocol );
+        }
+
+        private Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> createApplicationProtocolMap()
+        {
+            return Map.of( CATCHUP_3_0, new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
+                           CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
         }
     }
 

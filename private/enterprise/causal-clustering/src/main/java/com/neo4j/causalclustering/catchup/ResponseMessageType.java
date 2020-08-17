@@ -18,6 +18,7 @@ public enum ResponseMessageType
     PREPARE_STORE_COPY_RESPONSE( (byte) 7 ),
     INDEX_SNAPSHOT_RESPONSE( (byte) 8 ),
     DATABASE_ID_RESPONSE( (byte) 9 ),
+    ALL_DATABASE_IDS_RESPONSE( (byte) 10 ),
     ERROR( (byte) 199 ),
     UNKNOWN( (byte) 200 );
 

@@ -57,11 +57,15 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
+import static com.neo4j.causalclustering.catchup.MockCatchupClient.CatchupClientV4;
+import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
+import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV4;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -108,16 +112,18 @@ class StoreCopyClientTest
     private Path targetLocation = Path.of( "targetLocation" );
     private ConstantTimeTimeoutStrategy backOffStrategy;
     private MockCatchupClient catchupClient;
-    private final MockCatchupClient.MockClientResponses clientResponses = responses();
+    private final MockClientResponses clientResponses = responses();
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
+    private final CatchupClientV4 v4Client = spy( new MockClientV4( clientResponses, databaseIdRepository ) );
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )
     @ParameterizedTest( name = "{0}" )
     @MethodSource( "protocols" )
     @interface TestWithCatchupProtocols
-    { }
+    {
+    }
 
     @BeforeEach
     void setup()
@@ -128,7 +134,18 @@ class StoreCopyClientTest
 
     private void mockClient( ApplicationProtocol protocol ) throws Exception
     {
-        catchupClient = new MockCatchupClient( protocol, v3Client );
+        if ( protocol.equals( CATCHUP_3_0 ) )
+        {
+            catchupClient = new MockCatchupClient( protocol, v3Client );
+        }
+        else if ( protocol.equals( CATCHUP_4_0 ) )
+        {
+            catchupClient = new MockCatchupClient( protocol, v4Client );
+        }
+        else
+        {
+            throw new IllegalStateException( protocol.implementation() + " is not initialized" );
+        }
         when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
     }
 
@@ -148,7 +165,7 @@ class StoreCopyClientTest
                 logProvider,
                 backoffStrategy );
 
-        var files = new Path[] { Path.of( "fileA.txt" ) };
+        var files = new Path[]{Path.of( "fileA.txt" )};
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );
 
@@ -169,8 +186,8 @@ class StoreCopyClientTest
 
         CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
         var addresses = IntStream.range( 1, 4 )
-                .mapToObj( port -> new SocketAddress( "foo", port ) )
-                .collect( Collectors.toList() );
+                                 .mapToObj( port -> new SocketAddress( "foo", port ) )
+                                 .collect( Collectors.toList() );
         when( catchupAddressProvider.primary( any( NamedDatabaseId.class ) ) ).thenReturn( new SocketAddress( "foo", 0 ) );
         when( catchupAddressProvider.allSecondaries( any( NamedDatabaseId.class ) ) ).thenReturn( addresses );
 
@@ -286,7 +303,7 @@ class StoreCopyClientTest
         }
         catch ( StoreCopyFailedException expectedException )
         {
-            assertThat( expectedException.getMessage(), containsString( "This can't go on") );
+            assertThat( expectedException.getMessage(), containsString( "This can't go on" ) );
             return;
         }
 
@@ -303,15 +320,16 @@ class StoreCopyClientTest
         Queue<Supplier<PrepareStoreCopyResponse>> responses = new LinkedList<>();
         responses.add( () -> prepareStoreCopyResponse );
         responses.add( () ->
-        {
-            throw new RuntimeException( "Should not be accessible" );
-        } );
+                       {
+                           throw new RuntimeException( "Should not be accessible" );
+                       } );
 
         clientResponses.withPrepareStoreCopyResponse( ignored -> responses.poll().get() );
 
         // when
         StoreCopyFailedException exception = assertThrows( StoreCopyFailedException.class,
-                () -> subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation ) );
+                                                           () -> subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream,
+                                                                                         continueIndefinitely(), targetLocation ) );
 
         // then
         assertEquals( "Preparing store failed due to: E_LISTING_STORE", exception.getMessage() );
@@ -339,11 +357,11 @@ class StoreCopyClientTest
 
         // when
         StoreCopyFailedException exception = assertThrows( StoreCopyFailedException.class,
-                () -> subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation ) );
+                                                           () -> subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream,
+                                                                                         continueIndefinitely(), targetLocation ) );
 
         // then
         assertEquals( "Preparing store failed due to: E_STORE_ID_MISMATCH", exception.getMessage() );
-
     }
 
     @TestWithCatchupProtocols
@@ -383,14 +401,18 @@ class StoreCopyClientTest
         {
             verify( v3Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( NamedDatabaseId.class ) );
         }
+        else if ( protocol.equals( CATCHUP_4_0 ) )
+        {
+            verify( v4Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( NamedDatabaseId.class ) );
+        }
         else
         {
             throw new IllegalArgumentException( "Unknown protocol: " + protocol );
         }
         return fileArgumentCaptor.getAllValues().stream()
-                .map( Path::getFileName )
-                .map( Path::toString )
-                .collect( Collectors.toList() );
+                                 .map( Path::getFileName )
+                                 .map( Path::toString )
+                                 .collect( Collectors.toList() );
     }
 
     private static StoreCopyFinishedResponse expectedStoreCopyFinishedResponse( StoreCopyFinishedResponse.Status status )

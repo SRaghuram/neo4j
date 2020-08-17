@@ -20,6 +20,7 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import java.io.IOException;
 import java.time.Duration;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -104,6 +105,7 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .inactivityTimeout( Duration.ofSeconds( 60 ) )
                 .scheduler( dependencyResolver.resolveDependency( JobScheduler.class ) )
+                .config( Config.defaults() )
                 .bootstrapConfig( BootstrapConfiguration.clientConfig( config() ) )
                 .commandReader( module().getStorageEngineFactory().commandReaderFactory() )
                 .clock( Clocks.nanoClock() )

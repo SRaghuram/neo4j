@@ -8,8 +8,8 @@ package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolInstallers;
 import com.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
-import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstaller;
-import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstaller;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 
@@ -39,12 +39,12 @@ class CatchupProtocolInstallers implements ProtocolInstallers
     @Override
     public ProtocolInstaller<ProtocolInstaller.Orientation.Client> clientInstaller()
     {
-        return new CatchupProtocolClientInstaller( pipelineBuilderFactory, emptyList(), logProvider, responseHandler, commandReaderFactory );
+        return new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, responseHandler, commandReaderFactory );
     }
 
     @Override
     public ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverInstaller()
     {
-        return new CatchupProtocolServerInstaller( pipelineBuilderFactory, emptyList(), logProvider, serverHandler );
+        return new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, serverHandler );
     }
 }

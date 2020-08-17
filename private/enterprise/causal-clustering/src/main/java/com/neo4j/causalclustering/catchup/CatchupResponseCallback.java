@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.util.concurrent.CompletableFuture;
@@ -38,4 +39,6 @@ public interface CatchupResponseCallback<T>
     void onStoreListingResponse( CompletableFuture<T> signal, PrepareStoreCopyResponse prepareStoreCopyResponse );
 
     void onCatchupErrorResponse( CompletableFuture<T> signal, CatchupErrorResponse catchupErrorResponse );
+
+    void onGetAllDatabaseIdsResponse( CompletableFuture<T> signal, GetAllDatabaseIdsResponse response );
 }

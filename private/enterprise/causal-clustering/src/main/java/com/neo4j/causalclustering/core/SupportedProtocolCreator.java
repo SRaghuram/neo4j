@@ -43,27 +43,34 @@ public class SupportedProtocolCreator
 
     public ApplicationSupportedProtocols getSupportedCatchupProtocolsFromConfiguration()
     {
-        return getApplicationSupportedProtocols( config.get( CausalClusteringSettings.catchup_implementations ), ApplicationProtocolCategory.CATCHUP );
+
+        final var catchupList = config.get( CausalClusteringSettings.catchup_implementations );
+        final var userExperimentalProtocol = config.get( CausalClusteringInternalSettings.experimental_catchup_protocol );
+        final var protocols = getProtocols( catchupList, userExperimentalProtocol, ApplicationProtocols.CATCHUP_4_0 );
+        return getApplicationSupportedProtocols( protocols, ApplicationProtocolCategory.CATCHUP );
     }
 
     public ApplicationSupportedProtocols getSupportedRaftProtocolsFromConfiguration()
     {
-        return getApplicationSupportedProtocols( getRaftProtocols(), ApplicationProtocolCategory.RAFT );
-    }
-
-    private List<ApplicationProtocolVersion> getRaftProtocols()
-    {
         final var raftImplementationList = config.get( CausalClusteringSettings.raft_implementations );
         final var useExperimentalRaft = config.get( CausalClusteringInternalSettings.experimental_raft_protocol );
-        if ( raftImplementationList.isEmpty() && !useExperimentalRaft )
+        final var protocols = getProtocols( raftImplementationList, useExperimentalRaft, ApplicationProtocols.RAFT_4_0 );
+
+        return getApplicationSupportedProtocols( protocols, ApplicationProtocolCategory.RAFT );
+    }
+
+    private List<ApplicationProtocolVersion> getProtocols( List<ApplicationProtocolVersion> protocols,
+                                                           boolean useExperimentalProtocol, ApplicationProtocols experimentalProtocolVersion )
+    {
+        if ( protocols.isEmpty() && !useExperimentalProtocol )
         {
             return List.of( ApplicationProtocols.values() ).stream()
-                       .filter( p -> p.isSameCategory( ApplicationProtocols.RAFT_4_0 ) )
-                       .filter( p -> !p.equals( ApplicationProtocols.RAFT_4_0 ) )
+                       .filter( p -> p.isSameCategory( experimentalProtocolVersion ) )
+                       .filter( p -> !p.equals( experimentalProtocolVersion ) )
                        .map( ApplicationProtocols::implementation )
                        .collect( Collectors.toList() );
         }
-        return raftImplementationList;
+        return protocols;
     }
 
     private ApplicationSupportedProtocols getApplicationSupportedProtocols( List<ApplicationProtocolVersion> configVersions,

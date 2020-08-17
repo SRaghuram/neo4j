@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
@@ -35,12 +36,19 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class MockCatchupClient implements VersionedCatchupClients
 {
     private ApplicationProtocol protocol;
-    private final CatchupClientV3 v3Client;
+    private CatchupClientV3 v3Client;
+    private CatchupClientV4 v4Client;
 
     public MockCatchupClient( ApplicationProtocol protocol, CatchupClientV3 v3Client )
     {
         this.protocol = protocol;
         this.v3Client = v3Client;
+    }
+
+    public MockCatchupClient( ApplicationProtocol protocol, CatchupClientV4 v4Client )
+    {
+        this.protocol = protocol;
+        this.v4Client = v4Client;
     }
 
     public static MockClientResponses responses()
@@ -49,9 +57,10 @@ public class MockCatchupClient implements VersionedCatchupClients
     }
 
     @Override
-    public <RESULT> NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
+    public <RESULT> NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( v3Client );
+
+        Builder<RESULT> reqBuilder = new Builder<>( v3Client, v4Client );
         return reqBuilder.v3( v3Request );
     }
 
@@ -73,18 +82,28 @@ public class MockCatchupClient implements VersionedCatchupClients
     private class Builder<RESULT> implements CatchupRequestBuilder<RESULT>
     {
         private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
-        private CatchupClientV3 v3Client;
+        private Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request;
+        private final CatchupClientV3 v3Client;
+        private final CatchupClientV4 v4Client;
         private Log log = NullLog.getInstance();
 
-        Builder( CatchupClientV3 v3Client )
+        Builder( CatchupClientV3 v3Client, CatchupClientV4 v4Client )
         {
             this.v3Client = v3Client;
+            this.v4Client = v4Client;
         }
 
         @Override
-        public NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
+        public NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
         {
             this.v3Request = v3Request;
+            return this;
+        }
+
+        @Override
+        public NeedsResponseHandler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request )
+        {
+            this.v4Request = v4Request;
             return this;
         }
 
@@ -100,7 +119,19 @@ public class MockCatchupClient implements VersionedCatchupClients
         {
             if ( protocol.equals( ApplicationProtocols.CATCHUP_3_0 ) )
             {
+                if ( v3Client == null || v3Request == null )
+                {
+                    throw new IllegalStateException( "v3Client is not initialized correctly" );
+                }
                 return withProgressMonitor( v3Request.apply( v3Client ).execute( null ) ).get();
+            }
+            else if ( protocol.equals( ApplicationProtocols.CATCHUP_4_0 ) )
+            {
+                if ( v4Client == null || v4Request == null )
+                {
+                    throw new IllegalStateException( "v4Client is not initialized" );
+                }
+                return withProgressMonitor( v4Request.apply( v4Client ).execute( null ) ).get();
             }
             return withProgressMonitor( failedFuture( new Exception( "Unrecognised protocol" ) ) ).get();
         }
@@ -113,7 +144,7 @@ public class MockCatchupClient implements VersionedCatchupClients
 
     public static class MockClientV3 implements CatchupClientV3
     {
-        private final MockClientResponses responses;
+        protected final MockClientResponses responses;
         private final DatabaseIdRepository databaseIdRepository;
 
         public MockClientV3( MockClientResponses responses, DatabaseIdRepository databaseIdRepository )
@@ -166,6 +197,21 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
     }
 
+    public static class MockClientV4 extends MockClientV3 implements CatchupClientV4
+    {
+
+        public MockClientV4( MockClientResponses responses, DatabaseIdRepository databaseIdRepository )
+        {
+            super( responses, databaseIdRepository );
+        }
+
+        @Override
+        public PreparedRequest<GetAllDatabaseIdsResponse> getAllDatabaseIds()
+        {
+            return handler -> completedFuture( responses.allDatabaseIdsResponse );
+        }
+    }
+
     public static class MockClientResponses
     {
 
@@ -174,6 +220,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         private Function<TxPullRequest,TxStreamFinishedResponse> txPullResponse;
         private Function<PrepareStoreCopyRequest,PrepareStoreCopyResponse> prepareStoreCopyResponse;
         private Function<GetStoreFileRequest,StoreCopyFinishedResponse> storeFiles;
+        private GetAllDatabaseIdsResponse allDatabaseIdsResponse;
 
         public MockClientResponses withCoreSnapshot( CoreSnapshot coreSnapshot )
         {
@@ -232,6 +279,12 @@ public class MockCatchupClient implements VersionedCatchupClients
         public MockClientResponses withStoreFilesResponse( Function<GetStoreFileRequest,StoreCopyFinishedResponse> storeFiles )
         {
             this.storeFiles = storeFiles;
+            return this;
+        }
+
+        public MockClientResponses withAllDatabaseResponse( GetAllDatabaseIdsResponse allDatabaseIdsResponse )
+        {
+            this.allDatabaseIdsResponse = allDatabaseIdsResponse;
             return this;
         }
     }

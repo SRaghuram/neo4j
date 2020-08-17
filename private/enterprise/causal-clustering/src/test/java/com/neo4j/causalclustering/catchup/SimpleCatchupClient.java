@@ -77,6 +77,7 @@ class SimpleCatchupClient implements AutoCloseable
                 StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( streamToDiskProvider, logProvider.getLog( SimpleCatchupClient.class ) );
         return catchUpClientFactory.getClient( from, log )
                 .v3( c -> c.prepareStoreCopy( expectedStoreId, expectedNamedDatabaseId ) )
+                .v4( c -> c.prepareStoreCopy( expectedStoreId, expectedNamedDatabaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }
@@ -92,6 +93,7 @@ class SimpleCatchupClient implements AutoCloseable
         CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );
         return catchUpClientFactory.getClient( from, log )
                 .v3( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedNamedDatabaseId ) )
+                .v4( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedNamedDatabaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }

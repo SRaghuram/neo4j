@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
@@ -31,21 +32,31 @@ public interface VersionedCatchupClients extends AutoCloseable
      * @param <RESULT> the type of result expected when executing he operation in {@code v1Request}
      * @return the second stage of the {@link CatchupRequestBuilder} step builder.
      */
-    <RESULT> NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
+    <RESULT> NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
 
     /** Step builder interface for Catchup requests (instances of {@link CatchupProtocolMessage}) against multiple versions of the protocol */
     interface CatchupRequestBuilder<RESULT>
-            extends NeedsV3Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
+            extends NeedsV3Handler<RESULT>, NeedsV4Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
     {
     }
 
-    /** {@link CatchupRequestBuilder} Step 1 */
+    /**
+     * {@link CatchupRequestBuilder} Step 1
+     */
     interface NeedsV3Handler<RESULT>
     {
-        NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
+        NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
     }
 
-    /** {@link CatchupRequestBuilder} Step 2 */
+    /**
+     * {@link CatchupRequestBuilder} Step 2
+     */
+    interface NeedsV4Handler<RESULT>
+    {
+        NeedsResponseHandler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request );
+    }
+
+    /** {@link CatchupRequestBuilder} Step 3 */
     interface NeedsResponseHandler<RESULT>
     {
         IsPrepared<RESULT> withResponseHandler( CatchupResponseCallback<RESULT> responseHandler );
@@ -75,6 +86,16 @@ public interface VersionedCatchupClients extends AutoCloseable
         PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, NamedDatabaseId namedDatabaseId );
 
         PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, Path path, long requiredTxId, NamedDatabaseId namedDatabaseId );
+
+        default PreparedRequest<GetAllDatabaseIdsResponse> getAllDatabaseIds()
+        {
+            throw new UnsupportedOperationException( "Not supported in V3" );
+        }
+    }
+
+    interface CatchupClientV4 extends CatchupClientV3
+    {
+        PreparedRequest<GetAllDatabaseIdsResponse> getAllDatabaseIds();
     }
 
     @FunctionalInterface

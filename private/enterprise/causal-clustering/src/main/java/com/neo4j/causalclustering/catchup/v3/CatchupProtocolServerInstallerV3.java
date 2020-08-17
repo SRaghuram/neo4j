@@ -31,6 +31,7 @@ import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
+import com.neo4j.causalclustering.protocol.ServerNettyPipelineBuilder;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import io.netty.channel.Channel;
@@ -45,16 +46,16 @@ import java.util.stream.Collectors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class CatchupProtocolServerInstaller implements ProtocolInstaller<Orientation.Server>
+public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orientation.Server>
 {
     private static final ApplicationProtocols APPLICATION_PROTOCOL = ApplicationProtocols.CATCHUP_3_0;
 
-    public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstaller>
+    public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV3>
     {
         public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler )
         {
             super( APPLICATION_PROTOCOL,
-                    modifiers -> new CatchupProtocolServerInstaller( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
+                   modifiers -> new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
         }
     }
 
@@ -65,8 +66,8 @@ public class CatchupProtocolServerInstaller implements ProtocolInstaller<Orienta
     private final LogProvider logProvider;
     private final CatchupServerHandler catchupServerHandler;
 
-    public CatchupProtocolServerInstaller( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
-            LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+    public CatchupProtocolServerInstallerV3( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
+                                             LogProvider logProvider, CatchupServerHandler catchupServerHandler )
     {
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.modifiers = modifiers;
@@ -83,10 +84,17 @@ public class CatchupProtocolServerInstaller implements ProtocolInstaller<Orienta
     {
         CatchupServerProtocol state = new CatchupServerProtocol();
 
-        pipelineBuilderFactory
+        final var builder = pipelineBuilderFactory
                 .server( channel, log )
                 .modify( modifiers )
-                .addFraming()
+                .addFraming();
+
+        encoders( builder, state ).install();
+    }
+
+    protected ServerNettyPipelineBuilder encoders( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
+    {
+        return builder
                 .add( "enc_req_type", new RequestMessageTypeEncoder() )
                 .add( "enc_res_type", new ResponseMessageTypeEncoder() )
                 .add( "enc_res_tx_pull", new TxPullResponseEncoder() )
@@ -102,13 +110,12 @@ public class CatchupProtocolServerInstaller implements ProtocolInstaller<Orienta
                 .add( "in_req_type", serverMessageHandler( state ) )
                 .add( "dec_req_dispatch", requestDecoders( state ) )
                 .add( "out_chunked_write", new ChunkedWriteHandler() )
-                .add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ))
+                .add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ) )
                 .add( "hnd_req_tx", catchupServerHandler.txPullRequestHandler( state ) )
                 .add( "hnd_req_store_id", catchupServerHandler.getStoreIdRequestHandler( state ) )
                 .add( "hnd_req_store_listing", catchupServerHandler.storeListingRequestHandler( state ) )
                 .add( "hnd_req_store_file", catchupServerHandler.getStoreFileRequestHandler( state ) )
-                .add( "hnd_req_snapshot", catchupServerHandler.snapshotHandler( state ) )
-                .install();
+                .add( "hnd_req_snapshot", catchupServerHandler.snapshotHandler( state ) );
     }
 
     private ChannelHandler serverMessageHandler( CatchupServerProtocol state )
@@ -119,13 +126,24 @@ public class CatchupProtocolServerInstaller implements ProtocolInstaller<Orienta
     private ChannelInboundHandler requestDecoders( CatchupServerProtocol protocol )
     {
         RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
+        decoders( decoderDispatcher );
+
+        return decoderDispatcher;
+    }
+
+    protected void decoders( RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher )
+    {
         decoderDispatcher.register( CatchupServerProtocol.State.GET_DATABASE_ID, new GetDatabaseIdRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.TX_PULL, new TxPullRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_ID, new GetStoreIdRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, new CoreSnapshotRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.PREPARE_STORE_COPY, new PrepareStoreCopyRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_FILE, new GetStoreFileRequestDecoder() );
-        return decoderDispatcher;
+    }
+
+    protected CatchupServerHandler handler()
+    {
+        return catchupServerHandler;
     }
 
     @Override

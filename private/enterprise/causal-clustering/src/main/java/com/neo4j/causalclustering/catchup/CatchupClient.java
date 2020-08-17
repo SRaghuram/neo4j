@@ -13,6 +13,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequest;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
@@ -47,7 +49,7 @@ class CatchupClient implements VersionedCatchupClients
     }
 
     private static <RESULT> CompletableFuture<RESULT> makeBlockingRequest( CatchupProtocolMessage request, CatchupResponseCallback<RESULT> responseHandler,
-            CatchupChannel channel )
+                                                                           CatchupChannel channel )
     {
         CompletableFuture<RESULT> future = new CompletableFuture<>();
         try
@@ -65,7 +67,7 @@ class CatchupClient implements VersionedCatchupClients
     }
 
     @Override
-    public <RESULT> NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
+    public <RESULT> NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
     {
         Builder<RESULT> reqBuilder = new Builder<>( channelFuture, log );
         return reqBuilder.v3( v3Request );
@@ -81,6 +83,7 @@ class CatchupClient implements VersionedCatchupClients
         private final CompletableFuture<CatchupChannel> channel;
         private final Log log;
         private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
+        private Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request;
         private CatchupResponseCallback<RESULT> responseHandler;
 
         private Builder( CompletableFuture<CatchupChannel> channel, Log log )
@@ -90,9 +93,16 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
+        public NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
         {
             this.v3Request = v3Request;
+            return this;
+        }
+
+        @Override
+        public NeedsResponseHandler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request )
+        {
+            this.v4Request = v4Request;
             return this;
         }
 
@@ -121,6 +131,11 @@ class CatchupClient implements VersionedCatchupClients
                 CatchupClient.V3 client = new CatchupClient.V3( catchupChannel );
                 return performRequest( client, v3Request, protocol, catchupChannel );
             }
+            else if ( protocol.equals( ApplicationProtocols.CATCHUP_4_0 ) )
+            {
+                CatchupClient.V4 client = new CatchupClient.V4( catchupChannel );
+                return performRequest( client, v4Request, protocol, catchupChannel );
+            }
             else
             {
                 String message = "Unrecognised protocol " + protocol;
@@ -130,8 +145,8 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         private <CLIENT> OperationProgressMonitor<RESULT> performRequest( CLIENT client,
-                Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest,
-                ApplicationProtocol protocol, CatchupChannel catchupChannel )
+                                                                          Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest,
+                                                                          ApplicationProtocol protocol, CatchupChannel catchupChannel )
         {
             if ( specificVersionRequest != null )
             {
@@ -196,7 +211,61 @@ class CatchupClient implements VersionedCatchupClients
         {
             return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, namedDatabaseId.databaseId() ), handler, channel );
         }
+    }
 
+    private static class V4 implements CatchupClientV4
+    {
+
+        private final V3 v3;
+        private final CatchupChannel channel;
+
+        V4( CatchupChannel channel )
+        {
+            this.v3 = new V3( channel );
+            this.channel = channel;
+        }
+
+        @Override
+        public PreparedRequest<NamedDatabaseId> getDatabaseId( String databaseName )
+        {
+            return v3.getDatabaseId( databaseName );
+        }
+
+        @Override
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( NamedDatabaseId namedDatabaseId )
+        {
+            return v3.getCoreSnapshot( namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<StoreId> getStoreId( NamedDatabaseId namedDatabaseId )
+        {
+            return v3.getStoreId( namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, NamedDatabaseId namedDatabaseId )
+        {
+            return v3.pullTransactions( storeId, previousTxId, namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, NamedDatabaseId namedDatabaseId )
+        {
+            return v3.prepareStoreCopy( storeId, namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, Path path, long requiredTxId, NamedDatabaseId namedDatabaseId )
+        {
+            return v3.getStoreFile( storeId, path, requiredTxId, namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<GetAllDatabaseIdsResponse> getAllDatabaseIds()
+        {
+            return handler -> makeBlockingRequest( new GetAllDatabaseIdsRequest(), handler, channel );
+        }
     }
 
     private static class ReleaseOnComplete implements BiConsumer<Object,Throwable>
@@ -222,5 +291,4 @@ class CatchupClient implements VersionedCatchupClients
             }
         }
     }
-
 }

@@ -22,7 +22,8 @@ public enum ApplicationProtocols implements ApplicationProtocol
     RAFT_4_0( ApplicationProtocolCategory.RAFT, new ApplicationProtocolVersion( 4, 0 ) ),
 
     // support for catchup 1.0 and 2.0 was removed in neo4j 4.0
-    CATCHUP_3_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 3, 0 ) );
+    CATCHUP_3_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 3, 0 ) ),
+    CATCHUP_4_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 4, 0 ) );
 
     private final ApplicationProtocolVersion version;
     private final ApplicationProtocolCategory identifier;

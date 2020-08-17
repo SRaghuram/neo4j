@@ -16,6 +16,7 @@ public enum RequestMessageType
     PREPARE_STORE_COPY( (byte) 5 ),
     STORE_FILE( (byte) 6 ),
     DATABASE_ID( (byte) 7 ),
+    ALL_DATABASE_IDS_REQUEST( (byte) 8 ),
     UNKNOWN( (byte) 404 );
 
     private byte messageType;

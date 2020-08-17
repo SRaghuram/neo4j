@@ -177,6 +177,12 @@ class FakeCatchupServer implements CatchupServerHandler
         return new ChannelInboundHandlerAdapter();
     }
 
+    @Override
+    public ChannelHandler getAllDatabaseIds( CatchupServerProtocol catchupServerProtocol )
+    {
+        return new ChannelInboundHandlerAdapter();
+    }
+
     public StoreId getStoreId()
     {
         return new StoreId( 1, 2, 3, 4, 5 );

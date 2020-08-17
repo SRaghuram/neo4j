@@ -199,6 +199,10 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
             newBuilder( "unsupported.causal_clustering.experimental_raft_protocol_enabled", BOOL, false ).build();
 
     @Internal
+    public static final Setting<Boolean> experimental_catchup_protocol =
+            newBuilder( "unsupported.causal_clustering.experimental_catchup_protocol_enabled", BOOL, false ).build();
+
+    @Internal
     @Description( "Maximum timeout for cluster status request execution" )
     public static final Setting<Duration> cluster_status_request_maximum_wait =
             newBuilder( "unsupported.causal_clustering.cluster_status_request_maximum_wait", DURATION, ofSeconds( 5 ) ).build();

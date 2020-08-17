@@ -106,6 +106,7 @@ public final class CatchupComponentsProvider
                 .pipelineBuilder( pipelineBuilders.client() )
                 .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( scheduler )
+                .config( config )
                 .bootstrapConfig( clientConfig( config ) )
                 .commandReader( storageEngineFactory.commandReaderFactory() )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )

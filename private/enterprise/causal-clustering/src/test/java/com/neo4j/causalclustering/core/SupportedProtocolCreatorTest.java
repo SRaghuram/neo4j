@@ -19,6 +19,7 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_3_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY;
@@ -47,7 +48,7 @@ class SupportedProtocolCreatorTest
     }
 
     @Test
-    void shouldReturnAllVersionExpect4_0IfNoVersionsConfiguredAndExperimentalVersionIsTurnOff()
+    void shouldReturnAllVersionExpectRaft4_0IfNoVersionsConfiguredAndExperimentalVersionIsTurnOff()
     {
         // given
         var config = Config.defaults();
@@ -68,6 +69,33 @@ class SupportedProtocolCreatorTest
 
         // when
         var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
+
+        //then
+        assertThat( supportedRaftProtocol.versions(), empty() );
+    }
+
+    @Test
+    void shouldReturnAllVersionExpectCatchup_4_0IfNoVersionsConfiguredAndExperimentalVersionIsTurnOff()
+    {
+        // given
+        var config = Config.defaults();
+
+        // when
+        var catchupProtocols = new SupportedProtocolCreator( config, log ).getSupportedCatchupProtocolsFromConfiguration();
+
+        // then
+        assertEquals( List.of( CATCHUP_3_0.implementation() ), catchupProtocols.versions() );
+    }
+
+    @Test
+    void shouldReturnEmptyVersionSupportedCatchupProtocolIfNoVersionsConfiguredAndExperimentalVersionIsTurnOn()
+    {
+        // given
+        var config = Config.defaults();
+        config.set( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
+
+        // when
+        var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedCatchupProtocolsFromConfiguration();
 
         //then
         assertThat( supportedRaftProtocol.versions(), empty() );

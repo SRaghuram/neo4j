@@ -97,9 +97,10 @@ class BackupDelegator extends LifecycleAdapter
         try
         {
             return catchUpClient.getClient( fromAddress, logProvider.getLog( getClass() ) )
-                    .v3( client -> client.getDatabaseId( databaseName ) )
-                    .withResponseHandler( copyWithDatabaseId )
-                    .request();
+                                .v3( client -> client.getDatabaseId( databaseName ) )
+                                .v4( client -> client.getDatabaseId( databaseName ) )
+                                .withResponseHandler( copyWithDatabaseId )
+                                .request();
         }
         catch ( Exception e )
         {

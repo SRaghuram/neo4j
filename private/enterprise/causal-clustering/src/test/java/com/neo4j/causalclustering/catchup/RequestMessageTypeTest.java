@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import org.junit.jupiter.api.Test;
 
+import static com.neo4j.causalclustering.catchup.RequestMessageType.ALL_DATABASE_IDS_REQUEST;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.CORE_SNAPSHOT;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.DATABASE_ID;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.PREPARE_STORE_COPY;
@@ -29,8 +30,9 @@ class RequestMessageTypeTest
         RequestMessageType[] givenStates = RequestMessageType.values();
 
         RequestMessageType[] expectedStates =
-                new RequestMessageType[]{TX_PULL_REQUEST, STORE, CORE_SNAPSHOT, STORE_ID, PREPARE_STORE_COPY, STORE_FILE, DATABASE_ID, UNKNOWN};
-        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, 7, (byte) 404};
+                new RequestMessageType[]{TX_PULL_REQUEST, STORE, CORE_SNAPSHOT, STORE_ID, PREPARE_STORE_COPY, STORE_FILE, DATABASE_ID, ALL_DATABASE_IDS_REQUEST,
+                                         UNKNOWN};
+        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, (byte) 404};
 
         assertEquals( expectedStates.length, givenStates.length );
         assertEquals( expectedStates.length, expectedValues.length );
