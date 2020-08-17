@@ -64,8 +64,8 @@ class WorkloadTest
     }
 
     @Test
-        // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
-        //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
     void shouldAlwaysMarkMutatingQueriesAsMutating()
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
@@ -91,8 +91,8 @@ class WorkloadTest
     }
 
     @Test
-        // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
-        //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
     void shouldNeverHaveMutatingWarmupQueries()
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
