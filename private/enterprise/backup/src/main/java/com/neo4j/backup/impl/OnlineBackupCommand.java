@@ -135,6 +135,10 @@ public class OnlineBackupCommand extends AbstractCommand
         {
             throw new CommandFailedException( "Execution of backup failed. " + getRootCause( e ).getMessage(), e );
         }
+        finally
+        {
+            userLogProvider.close();
+        }
 
         ctx.out().println( "Backup complete." );
     }

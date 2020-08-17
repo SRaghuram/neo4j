@@ -168,9 +168,11 @@ public class StoreCopy
     public void copyTo( DatabaseLayout toDatabaseLayout, String fromPageCacheMemory, String toPageCacheMemory ) throws Exception
     {
         Path logFilePath = getLogFilePath( config );
-        try ( OutputStream logFile = new BufferedOutputStream( Files.newOutputStream( logFilePath ) ) )
+        try ( OutputStream logFile = new BufferedOutputStream( Files.newOutputStream( logFilePath ) );
+              Log4jLogProvider log1 = getLog( logFile );
+              Log4jLogProvider log2 = getLog( out ); )
         {
-            LogProvider logProvider = new DuplicatingLogProvider( getLog( logFile ), getLog( out ) );
+            LogProvider logProvider = new DuplicatingLogProvider( log1, log2 );
             Log log = logProvider.getLog( "StoreCopy" );
             try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_COPY_TAG );
                   FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
@@ -432,7 +434,7 @@ public class StoreCopy
                 new ConfigurableIOBufferFactory( config, memoryTracker ) );
     }
 
-    private LogProvider getLog( OutputStream out )
+    private Log4jLogProvider getLog( OutputStream out )
     {
         Neo4jLoggerContext context =
                 LogConfig.createBuilder( out, verbose ? DEBUG : INFO ).withTimezone( config.get( GraphDatabaseSettings.db_timezone ) ).build();

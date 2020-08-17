@@ -105,35 +105,36 @@ public class CcRobustness
 
     public static void main( String[] argArray )
     {
-        LogProvider logProvider =
-                new Log4jLogProvider( LogConfig.createBuilder( System.out, Level.INFO ).withTimezone( LogTimeZone.UTC ).build() );
-        Log log = logProvider.getLog( CcRobustness.class );
-
-        Args args = Args.parse( argArray );
-        Predicate<Void> keepOnGoing = instantiateGoer( args.get( NUMBER_OF_RUNS, "1" ) );
-        for ( int i = 0; keepOnGoing.test( null ); i++ )
+        try ( var logProvider = new Log4jLogProvider( LogConfig.createBuilder( System.out, Level.INFO ).withTimezone( LogTimeZone.UTC ).build() ) )
         {
-            log.info( "=== RUN " + i + " ===" );
-            try
+            Log log = logProvider.getLog( CcRobustness.class );
+
+            Args args = Args.parse( argArray );
+            Predicate<Void> keepOnGoing = instantiateGoer( args.get( NUMBER_OF_RUNS, "1" ) );
+            for ( int i = 0; keepOnGoing.test( null ); i++ )
             {
-                oneRun( args, logProvider );
-            }
-            catch ( AlreadyClosedException e )
-            {
-                // dully ignored
-            }
-            catch ( Exception e )
-            {
-                log.error( "Got exception: ", e );
-                log.error( "I don't know how to deal with it. Exiting with status code 1." );
-                System.out.flush();
-                System.err.flush();
-                exit( 1 );
-            }
-            finally
-            {
-                System.out.flush();
-                System.err.flush();
+                log.info( "=== RUN " + i + " ===" );
+                try
+                {
+                    oneRun( args, logProvider );
+                }
+                catch ( AlreadyClosedException e )
+                {
+                    // dully ignored
+                }
+                catch ( Exception e )
+                {
+                    log.error( "Got exception: ", e );
+                    log.error( "I don't know how to deal with it. Exiting with status code 1." );
+                    System.out.flush();
+                    System.err.flush();
+                    exit( 1 );
+                }
+                finally
+                {
+                    System.out.flush();
+                    System.err.flush();
+                }
             }
         }
     }
