@@ -78,7 +78,10 @@
     {
       "name": "Q3",
       "description": "Similar to Q2, but instead of retrieving 100 sorted results, this counts the amount of rows.",
-      "queryFile": "queries/Q3.cypher"
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/device_latest.txt"
+      }
     },
     {
       "name": "Q4",
