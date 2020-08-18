@@ -317,7 +317,13 @@ class SystemGraphComponentsTest
     {
         EnterpriseVersionFake( Log log )
         {
-            super( Integer.MAX_VALUE, "Neo4j 8.8.88", log, true );
+            super( Integer.MAX_VALUE, "Neo4j 8.8.88", log );
+        }
+
+        @Override
+        public boolean isCurrent()
+        {
+            return true;
         }
 
         @Override

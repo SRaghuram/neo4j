@@ -44,18 +44,6 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
                componentNotInVersionNode( tx );
     }
 
-    @Override
-    public boolean migrationSupported()
-    {
-        return true;
-    }
-
-    @Override
-    public boolean runtimeSupported()
-    {
-        return true;
-    }
-
     // INITIALIZATION
 
     @Override

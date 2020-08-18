@@ -90,12 +90,6 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
     }
 
     @Override
-    public boolean migrationSupported()
-    {
-        return true;
-    }
-
-    @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
         assert latest.version == LATEST_VERSION;

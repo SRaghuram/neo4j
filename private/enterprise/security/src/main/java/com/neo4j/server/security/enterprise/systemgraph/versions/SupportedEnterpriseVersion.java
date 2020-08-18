@@ -51,14 +51,9 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
     Node allDb;
     Node dbResource;
 
-    SupportedEnterpriseVersion( int version, String description, Log log )
+    protected SupportedEnterpriseVersion( int version, String description, Log log )
     {
         super( version, description, log );
-    }
-
-    protected SupportedEnterpriseVersion( int version, String description, Log log, boolean isCurrent )
-    {
-        super( version, description, log, isCurrent );
     }
 
     UnsupportedOperationException unsupportedAction()

@@ -40,18 +40,6 @@ public class EnterpriseVersion_4_41 extends SupportedEnterpriseVersion
     }
 
     @Override
-    public boolean migrationSupported()
-    {
-        return true;
-    }
-
-    @Override
-    public boolean runtimeSupported()
-    {
-        return true;
-    }
-
-    @Override
     public void setUpDefaultPrivileges( Transaction tx )
     {
         super.setUpDefaultPrivileges( tx );

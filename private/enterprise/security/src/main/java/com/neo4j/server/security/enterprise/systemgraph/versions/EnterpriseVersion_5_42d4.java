@@ -27,7 +27,7 @@ public class EnterpriseVersion_5_42d4 extends SupportedEnterpriseVersion
 
     public EnterpriseVersion_5_42d4( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( LATEST_VERSION, VERSION_42D4, log, true );
+        super( LATEST_VERSION, VERSION_42D4, log );
         this.previous = previous;
     }
 

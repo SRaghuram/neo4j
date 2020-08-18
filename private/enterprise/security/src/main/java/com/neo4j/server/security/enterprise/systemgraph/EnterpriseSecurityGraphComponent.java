@@ -20,6 +20,7 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersi
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseComponentVersion;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -44,12 +45,15 @@ import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphComponent
 {
+    public static final int LATEST_VERSION = 4;
+    public static final List<Integer> VERSIONS_MIGRATION_SUPPORTED = Arrays.asList(0, 1, 2, 3, 4);
+    public static final List<Integer> VERSIONS_RUNTIME_SUPPORTED = Arrays.asList(2, 3, 4);
+
     private final UserRepository defaultAdminRepository;
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
             new KnownSystemComponentVersions<>( new NoEnterpriseComponentVersion() );
     private final CustomSecurityInitializer customSecurityInitializer;
     private final Log log;
-    public static final int LATEST_VERSION = 5;
     public static final String COMPONENT = "security-privileges";
 
     public EnterpriseSecurityGraphComponent( Log log, RoleRepository migrationRoleRepository, UserRepository defaultAdminRepository, Config config )

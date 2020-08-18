@@ -51,19 +51,11 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     static final RelationshipType QUALIFIED = RelationshipType.withName( "QUALIFIED" );
     public static final RelationshipType FOR = RelationshipType.withName( "FOR" );
 
-    private final boolean isCurrent;
-
     private List<Node> roleNodes = new ArrayList<>();
 
     KnownEnterpriseSecurityComponentVersion( int version, String description, Log log )
     {
-        this( version, description, log, false );
-    }
-
-    KnownEnterpriseSecurityComponentVersion( int version, String description, Log log, boolean isCurrent )
-    {
         super( EnterpriseSecurityGraphComponent.COMPONENT, version, description, log );
-        this.isCurrent = isCurrent;
     }
 
     boolean componentNotInVersionNode( Transaction tx )
@@ -95,7 +87,19 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     @Override
     public boolean isCurrent()
     {
-        return isCurrent;
+        return version == EnterpriseSecurityGraphComponent.LATEST_VERSION;
+    }
+
+    @Override
+    public boolean migrationSupported()
+    {
+        return EnterpriseSecurityGraphComponent.VERSIONS_MIGRATION_SUPPORTED.contains( version );
+    }
+
+    @Override
+    public boolean runtimeSupported()
+    {
+        return EnterpriseSecurityGraphComponent.VERSIONS_RUNTIME_SUPPORTED.contains( version );
     }
 
     public boolean isEmpty()
