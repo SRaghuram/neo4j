@@ -850,6 +850,17 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(db("f.o-o123")))
   }
 
+  test("should create database with dots in name in systemdb") {
+    setup(defaultConfig)
+
+    // WHEN
+    execute("CREATE DATABASE f.oo123")
+
+    // THEN
+    val result = execute("SHOW DATABASE f.oo123")
+    result.toList should be(List(db("f.oo123")))
+  }
+
   test("should create database using if not exists") {
     setup()
 
