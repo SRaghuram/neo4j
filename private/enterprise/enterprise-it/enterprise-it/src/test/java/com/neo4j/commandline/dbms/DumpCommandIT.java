@@ -25,7 +25,7 @@ class DumpCommandIT extends AbstractCommandIT
     void failToDumpRunningDatabase()
     {
         String databaseName = databaseAPI.databaseName();
-        Path dumpDestination = testDirectory.file( "dump1" ).toPath();
+        Path dumpDestination = testDirectory.filePath( "dump1" );
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> dumpDatabase( databaseName, dumpDestination ) );
         assertThat( exception.getMessage() ).startsWith( "The database is in use. Stop database" );
     }
@@ -33,7 +33,7 @@ class DumpCommandIT extends AbstractCommandIT
     @Test
     void failToDumpDatabaseWithInvalidName()
     {
-        Path dumpDestination = testDirectory.file( "dump1" ).toPath();
+        Path dumpDestination = testDirectory.filePath( "dump1" );
         var exception = assertThrows( Exception.class, () -> dumpDatabase( "_someDb_", dumpDestination ) );
         assertThat( exception ).hasMessageContaining( "Invalid database name '_someDb_'" );
     }
@@ -41,7 +41,7 @@ class DumpCommandIT extends AbstractCommandIT
     @Test
     void failToDumpNonExistentDatabase()
     {
-        Path dumpDestination = testDirectory.file( "dump2" ).toPath();
+        Path dumpDestination = testDirectory.filePath( "dump2" );
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> dumpDatabase( "foo", dumpDestination ) );
         assertThat( exception.getMessage() ).startsWith( "Database does not exist: foo" );
     }
@@ -50,7 +50,7 @@ class DumpCommandIT extends AbstractCommandIT
     void dumpStoppedDatabase()
     {
         String databaseName = databaseAPI.databaseName();
-        Path dumpDestination = testDirectory.file( "dump2" ).toPath();
+        Path dumpDestination = testDirectory.filePath( "dump2" );
 
         managementService.shutdownDatabase( databaseName );
 
@@ -62,7 +62,7 @@ class DumpCommandIT extends AbstractCommandIT
     void dumpLowerCasedStoppedDatabase()
     {
         String databaseName = databaseAPI.databaseName();
-        Path dumpDestination = testDirectory.file( "dump3" ).toPath();
+        Path dumpDestination = testDirectory.filePath( "dump3" );
 
         managementService.shutdownDatabase( databaseName );
 

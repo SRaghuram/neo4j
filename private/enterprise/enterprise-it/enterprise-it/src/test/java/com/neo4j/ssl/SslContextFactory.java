@@ -7,7 +7,8 @@ package com.neo4j.ssl;
 
 import io.netty.handler.ssl.SslProvider;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
@@ -19,6 +20,8 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
 import org.neo4j.ssl.config.SslPolicyLoader;
+
+import static java.nio.file.Files.createDirectories;
 
 public class SslContextFactory
 {
@@ -65,38 +68,38 @@ public class SslContextFactory
         }
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource, SslParameters params, SslPolicyScope scope )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslParameters params, SslPolicyScope scope ) throws IOException
     {
         return makeSslPolicy( sslResource, SslProvider.JDK, params.protocols, params.ciphers, scope );
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, SslPolicyScope scope )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, SslPolicyScope scope ) throws IOException
     {
         return makeSslPolicy( sslResource, sslProvider, null, null, scope );
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource, SslPolicyScope scope )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslPolicyScope scope ) throws IOException
     {
         return makeSslPolicy( sslResource, SslProvider.JDK, null, null, scope );
     }
 
     public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, List<String> protocols, List<String> ciphers,
-            SslPolicyScope scope )
+            SslPolicyScope scope ) throws IOException
     {
         Config.Builder config = Config.newBuilder();
         config.set( SslSystemSettings.netty_ssl_provider, sslProvider );
 
         SslPolicyConfig policyConfig = SslPolicyConfig.forScope( scope );
-        File baseDirectory = sslResource.privateKey().getParentFile();
-        new File( baseDirectory, "trusted" ).mkdirs();
-        new File( baseDirectory, "revoked" ).mkdirs();
+        Path baseDirectory = sslResource.privateKey().getParent();
+        createDirectories( baseDirectory.resolve(  "trusted" ) );
+        createDirectories( baseDirectory.resolve( "revoked" ) );
 
         config.set( policyConfig.enabled, Boolean.TRUE );
-        config.set( policyConfig.base_directory, baseDirectory.toPath() );
-        config.set( policyConfig.private_key, sslResource.privateKey().toPath() );
-        config.set( policyConfig.public_certificate, sslResource.publicCertificate().toPath() );
-        config.set( policyConfig.trusted_dir, sslResource.trustedDirectory().toPath() );
-        config.set( policyConfig.revoked_dir, sslResource.revokedDirectory().toPath() );
+        config.set( policyConfig.base_directory, baseDirectory );
+        config.set( policyConfig.private_key, sslResource.privateKey() );
+        config.set( policyConfig.public_certificate, sslResource.publicCertificate() );
+        config.set( policyConfig.trusted_dir, sslResource.trustedDirectory() );
+        config.set( policyConfig.revoked_dir, sslResource.revokedDirectory() );
         config.set( policyConfig.verify_hostname, false );
 
         if ( protocols != null )

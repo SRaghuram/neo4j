@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -63,30 +62,30 @@ class CsvOutputTest
     void shouldHaveRelativeMetricsCsvPathBeRelativeToNeo4jHome() throws Exception
     {
         // GIVEN
-        File home = directory.absolutePath();
+        Path home = directory.homePath().toAbsolutePath();
         Config config = Config.newBuilder()
                 .set( MetricsSettings.csv_enabled, true )
                 .set( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
                 .set( MetricsSettings.csv_path, Path.of( "the-metrics-dir" ) )
-                .set( GraphDatabaseSettings.neo4j_home, home.toPath().toAbsolutePath() ).build();
+                .set( GraphDatabaseSettings.neo4j_home, home.toAbsolutePath() ).build();
         life.add( createCsvOutput( config ) );
 
         // WHEN
         life.start();
 
         // THEN
-        waitForFileToAppear( new File( home, "the-metrics-dir" ) );
+        waitForFileToAppear( home.resolve( "the-metrics-dir" ) );
     }
 
     @Test
     void shouldHaveAbsoluteMetricsCsvPathBeAbsolute() throws Exception
     {
         // GIVEN
-        File outputFPath = Files.createTempDirectory( "output" ).toFile();
+        Path outputFPath = Files.createTempDirectory( "output" );
         Config config = Config.newBuilder()
                 .set( MetricsSettings.csv_enabled, true )
                 .set( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
-                .set( MetricsSettings.csv_path, outputFPath.toPath().toAbsolutePath() ).build();
+                .set( MetricsSettings.csv_path, outputFPath.toAbsolutePath() ).build();
         life.add( createCsvOutput( config ) );
 
         // WHEN
@@ -101,10 +100,10 @@ class CsvOutputTest
         return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), extensionContext, fileSystem, jobScheduler );
     }
 
-    private void waitForFileToAppear( File file ) throws InterruptedException
+    private void waitForFileToAppear( Path file ) throws InterruptedException
     {
         long end = currentTimeMillis() + SECONDS.toMillis( 10 );
-        while ( !file.exists() )
+        while ( Files.notExists( file ) )
         {
             Thread.sleep( 10 );
             if ( currentTimeMillis() > end )

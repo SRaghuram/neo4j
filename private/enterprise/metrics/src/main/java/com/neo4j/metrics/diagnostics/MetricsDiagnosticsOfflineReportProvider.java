@@ -8,6 +8,7 @@ package com.neo4j.metrics.diagnostics;
 import com.neo4j.configuration.MetricsSettings;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +34,7 @@ public class MetricsDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, File storeDirectory )
+    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, Path storeDirectory )
     {
         this.fs = fs;
         this.config = config;
@@ -42,13 +43,13 @@ public class MetricsDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     @Override
     protected List<DiagnosticsReportSource> provideSources( Set<String> classifiers )
     {
-        File metricsDirectory = config.get( MetricsSettings.csv_path ).toFile();
-        if ( fs.fileExists( metricsDirectory ) && fs.isDirectory( metricsDirectory ) )
+        Path metricsDirectory = config.get( MetricsSettings.csv_path );
+        if ( fs.fileExists( metricsDirectory.toFile() ) && fs.isDirectory( metricsDirectory.toFile() ) )
         {
             List<DiagnosticsReportSource> files = new ArrayList<>();
-            for ( File file : fs.listFiles( metricsDirectory ) )
+            for ( File file : fs.listFiles( metricsDirectory.toFile() ) )
             {
-                files.add( newDiagnosticsFile( "metrics/" + file.getName(), fs, file ) );
+                files.add( newDiagnosticsFile( "metrics/" + file.getName(), fs, file.toPath() ) );
             }
             return files;
         }

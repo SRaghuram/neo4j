@@ -289,8 +289,8 @@ abstract class BaseEncryptedBackupIT
     private void installCryptographicObjectsToBackupHome( Path neo4jHome, int keyId ) throws IOException
     {
         createConfigFile( neo4jHome );
-        var certificatesLocation = neo4jHome.resolve( "certificates" ).resolve( BACKUP_POLICY_NAME ).toFile();
-        fs.mkdirs( certificatesLocation );
+        var certificatesLocation = neo4jHome.resolve( "certificates" ).resolve( BACKUP_POLICY_NAME );
+        fs.mkdirs( certificatesLocation.toFile() );
         installSsl( certificatesLocation, keyId );
     }
 
@@ -311,10 +311,10 @@ abstract class BaseEncryptedBackupIT
         }
     }
 
-    private void installSsl( File baseDir, int keyId ) throws IOException
+    private void installSsl( Path baseDir, int keyId ) throws IOException
     {
-        fs.mkdirs( new File( baseDir, "trusted" ) );
-        fs.mkdirs( new File( baseDir, "revoked" ) );
+        fs.mkdirs( baseDir.resolve( "trusted" ).toFile() );
+        fs.mkdirs( baseDir.resolve( "revoked" ).toFile() );
         SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }
 
@@ -390,7 +390,7 @@ abstract class BaseEncryptedBackupIT
     {
         var homeDir = member.homePath();
         var policyDir = createPolicyDirectories( homeDir, policyName );
-        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( policyDir.toFile() );
+        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( policyDir );
     }
 
     private Path createPolicyDirectories( Path homeDir, String policyName ) throws IOException

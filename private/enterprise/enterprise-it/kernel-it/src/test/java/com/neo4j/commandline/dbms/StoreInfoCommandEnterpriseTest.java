@@ -48,7 +48,7 @@ class StoreInfoCommandEnterpriseTest
     @BeforeEach
     void setUp() throws Exception
     {
-        Path homeDir = testDirectory.directory( "home-dir" ).toPath();
+        Path homeDir = testDirectory.directoryPath( "home-dir" );
         databaseDirectory = homeDir.resolve( "data/databases/foo" );
         Files.createDirectories( databaseDirectory );
         out = mock( PrintStream.class );

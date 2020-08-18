@@ -41,7 +41,7 @@ class FakeFile
 
     private Path getRelativePath()
     {
-        return Optional.ofNullable( relativePath ).orElse( new File( "." ).toPath() );
+        return Optional.ofNullable( relativePath ).orElse( Path.of( "." ) );
     }
 
     public File getFile()

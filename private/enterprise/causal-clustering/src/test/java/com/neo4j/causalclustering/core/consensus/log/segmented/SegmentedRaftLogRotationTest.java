@@ -87,7 +87,7 @@ class SegmentedRaftLogRotationTest
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.defaultValue(), logProvider )
                         .newInstance();
-        return new SegmentedRaftLog( fileSystem, testDirectory.homeDir(), rotateAtSize,
+        return new SegmentedRaftLog( fileSystem, testDirectory.homePath(), rotateAtSize,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, 0, Clocks.fakeClock(), new OnDemandJobScheduler(),
                 pruningStrategy, INSTANCE );
     }

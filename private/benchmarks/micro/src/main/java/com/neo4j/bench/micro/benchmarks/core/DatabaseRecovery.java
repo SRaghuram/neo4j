@@ -21,7 +21,7 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.SplittableRandom;
@@ -148,7 +148,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     private static void removeLastCheckpointsRecordFromLastLogFile( DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory ) throws Exception
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory().toFile(), fileSystem ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem ).build();
 
         LogFile logFile = logFiles.getLogFile();
         VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
@@ -164,11 +164,11 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
             }
         }
         while ( logEntry != null );
-        File highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
+        Path highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
         while ( !checkPoints.isEmpty() )
         {
             CheckPoint checkPoint = checkPoints.pollLast();
-            try ( StoreChannel storeChannel = fileSystem.write( highestLogFile ) )
+            try ( StoreChannel storeChannel = fileSystem.write( highestLogFile.toFile() ) )
             {
                 storeChannel.truncate( checkPoint.getLogPosition().getByteOffset() );
             }

@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 
@@ -72,7 +71,7 @@ class AdminToolCausalClusterBackupIT
     {
         CoreClusterMember leader = cluster.awaitLeader();
 
-        File backupDir = testDirectory.directory( "backups", newBackupDirName() );
+        Path backupDir = testDirectory.directoryPath( "backups", newBackupDirName() );
         String backupAddress = leader.config().get( OnlineBackupSettings.online_backup_listen_address ).toString();
 
         cluster.coreTx( AdminToolCausalClusterBackupIT::createSomeData );
@@ -86,7 +85,7 @@ class AdminToolCausalClusterBackupIT
 
         DbRepresentation leaderDbRepresentation = DbRepresentation.of( leader.defaultDatabase() );
         DbRepresentation backupDbRepresentation =
-                DbRepresentation.of( DatabaseLayout.ofFlat( backupDir.toPath().resolve( DEFAULT_DATABASE_NAME ) ), tempDbConfig() );
+                DbRepresentation.of( DatabaseLayout.ofFlat( backupDir.resolve( DEFAULT_DATABASE_NAME ) ), tempDbConfig() );
         assertEquals( leaderDbRepresentation, backupDbRepresentation );
     }
 

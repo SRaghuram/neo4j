@@ -16,11 +16,11 @@ import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -35,15 +35,15 @@ public class RotatableCsvReporter extends ScheduledReporter
 {
     private final Locale locale;
     private final Clock clock;
-    private final File directory;
-    private final Map<File,CsvRotatableWriter> writers;
-    private final BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
+    private final Path directory;
+    private final Map<Path,CsvRotatableWriter> writers;
+    private final BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
 
     private boolean stopped;
 
     RotatableCsvReporter( MetricRegistry registry, Locale locale, TimeUnit rateUnit, TimeUnit durationUnit, Clock clock,
-            File directory,
-            BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
+            Path directory,
+            BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
     {
         super( registry, "csv-reporter", MetricFilter.ALL, rateUnit, durationUnit );
         this.locale = locale;
@@ -149,7 +149,7 @@ public class RotatableCsvReporter extends ScheduledReporter
 
     private void report( long timestamp, String name, String header, String line, Object... values )
     {
-        File file = new File( directory, name + ".csv" );
+        Path file = directory.resolve( name + ".csv" );
         CsvRotatableWriter csvRotatableWriter = writers.computeIfAbsent( file,
                 new RotatingCsvWriterSupplier( header, fileSupplierStreamCreator ) );
         csvRotatableWriter.writeValues( locale, timestamp, line, values );
@@ -162,7 +162,7 @@ public class RotatableCsvReporter extends ScheduledReporter
         private TimeUnit rateUnit;
         private TimeUnit durationUnit;
         private Clock clock;
-        private BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier>
+        private BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier>
                 outputStreamSupplierFactory;
 
         private Builder( MetricRegistry registry )
@@ -193,7 +193,7 @@ public class RotatableCsvReporter extends ScheduledReporter
         }
 
         Builder outputStreamSupplierFactory(
-                BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> outputStreamSupplierFactory )
+                BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> outputStreamSupplierFactory )
         {
             this.outputStreamSupplierFactory = outputStreamSupplierFactory;
             return this;
@@ -206,27 +206,27 @@ public class RotatableCsvReporter extends ScheduledReporter
          * @param directory the directory in which the {@code .csv} files will be created
          * @return a {@link RotatableCsvReporter}
          */
-        public RotatableCsvReporter build( File directory )
+        public RotatableCsvReporter build( Path directory )
         {
             return new RotatableCsvReporter( registry, locale, rateUnit, durationUnit, clock, directory,
                     outputStreamSupplierFactory );
         }
     }
 
-    private static class RotatingCsvWriterSupplier implements Function<File,CsvRotatableWriter>
+    private static class RotatingCsvWriterSupplier implements Function<Path,CsvRotatableWriter>
     {
         private final String header;
-        private final BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
+        private final BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
 
         RotatingCsvWriterSupplier( String header,
-                BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
+                BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
         {
             this.header = header;
             this.fileSupplierStreamCreator = fileSupplierStreamCreator;
         }
 
         @Override
-        public CsvRotatableWriter apply( File file )
+        public CsvRotatableWriter apply( Path file )
         {
             RotatingFileOutputStreamSupplier outputStreamSupplier =
                     fileSupplierStreamCreator.apply( file, new HeaderWriterRotationListener() );

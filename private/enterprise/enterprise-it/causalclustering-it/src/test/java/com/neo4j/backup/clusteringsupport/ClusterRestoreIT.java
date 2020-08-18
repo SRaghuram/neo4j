@@ -68,7 +68,7 @@ class ClusterRestoreIT
     @BeforeEach
     void before() throws IOException
     {
-        backupsDirectory = testDirectory.cleanDirectory( "backups" ).toPath();
+        backupsDirectory = testDirectory.cleanDirectoryPath( "backups" );
     }
 
     @AfterEach

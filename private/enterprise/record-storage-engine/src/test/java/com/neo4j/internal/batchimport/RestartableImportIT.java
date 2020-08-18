@@ -141,10 +141,10 @@ class RestartableImportIT
         long seed = random.seed();
         ProcessBuilder pb = new ProcessBuilder( getJavaExecutable().toString(), "-cp", getClassPath(),
                 getClass().getCanonicalName(), databaseDirectory.toAbsolutePath().toString(), Long.toString( seed ) );
-        File wd = new File( "target/test-classes" ).getAbsoluteFile();
-        Files.createDirectories( wd.toPath() );
+        Path wd = Path.of( "target/test-classes" ).toAbsolutePath();
+        Files.createDirectories( wd );
         File reportFile = testDirectory.createFile( "testReport" + seed );
-        return pb.directory( wd )
+        return pb.directory( wd.toFile() )
                  .redirectOutput( appendTo( reportFile ) )
                  .redirectError( appendTo( reportFile ) )
                  .start();
@@ -159,14 +159,14 @@ class RestartableImportIT
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            File databaseDirectory = new File( args[0] );
+            Path databaseDirectory = Path.of( args[0] );
             BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
-            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory.toPath() ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
+            factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(),
                     NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for real
-            new File( databaseDirectory, COMPLETED ).createNewFile();
+            Files.createFile( databaseDirectory.resolve( COMPLETED ) );
         }
         catch ( IllegalStateException e )
         {

@@ -6,12 +6,11 @@
 package com.neo4j.metrics;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
@@ -24,7 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
-public class MetricsTestHelper
+public final class MetricsTestHelper
 {
     interface CsvField
     {
@@ -94,64 +93,64 @@ public class MetricsTestHelper
     {
     }
 
-    public static long readLongCounterValue( File metricFile ) throws IOException
+    public static long readLongCounterValue( Path metricFile ) throws IOException
     {
         return readLongCounterAndAssert( metricFile, ( one, two ) -> true );
     }
 
-    public static long readLongGaugeValue( File metricFile ) throws IOException
+    public static long readLongGaugeValue( Path metricFile ) throws IOException
     {
         return readLongGaugeAndAssert( metricFile, ( one, two ) -> true );
     }
 
-    public static long readLongGaugeAndAssert( File metricFile, BiPredicate<Long,Long> assumption )
+    public static long readLongGaugeAndAssert( Path metricFile, BiPredicate<Long,Long> assumption )
             throws IOException
     {
         return readValueAndAssert( metricFile, 0L, GaugeField.TIME_STAMP, GaugeField.METRICS_VALUE, Long::parseLong, assumption );
     }
 
-    public static long readLongCounterAndAssert( File metricFile, BiPredicate<Long,Long> assumption )
+    public static long readLongCounterAndAssert( Path metricFile, BiPredicate<Long,Long> assumption )
             throws IOException
     {
         return readValueAndAssert( metricFile, 0L, CounterField.TIME_STAMP, CounterField.COUNT, Long::parseLong, assumption );
     }
 
-    public static long readLongCounterAndAssert( File metricFile, long startValue, BiPredicate<Long,Long> assumption )
+    public static long readLongCounterAndAssert( Path metricFile, long startValue, BiPredicate<Long,Long> assumption )
             throws IOException
     {
         return readValueAndAssert( metricFile, startValue, CounterField.TIME_STAMP, CounterField.COUNT, Long::parseLong, assumption );
     }
 
-    static double readDoubleGaugeValue( File metricFile ) throws IOException
+    static double readDoubleGaugeValue( Path metricFile ) throws IOException
     {
         return readValueAndAssert( metricFile, 0d, GaugeField.TIME_STAMP, GaugeField.METRICS_VALUE,
                 Double::parseDouble, ( one, two ) -> true );
     }
 
-    static long readTimerLongValueAndAssert( File metricFile, BiPredicate<Long,Long> assumption, TimerField field ) throws IOException
+    static long readTimerLongValueAndAssert( Path metricFile, BiPredicate<Long,Long> assumption, TimerField field ) throws IOException
     {
         return readValueAndAssert( metricFile, 0L, TimerField.T, field, Long::parseLong, assumption );
     }
 
-    static double readTimerDoubleValue( File metricFile, TimerField field ) throws IOException
+    static double readTimerDoubleValue( Path metricFile, TimerField field ) throws IOException
     {
         return readTimerDoubleValueAndAssert( metricFile, ( a, b ) -> true, field );
     }
 
-    private static double readTimerDoubleValueAndAssert( File metricFile, BiPredicate<Double,Double> assumption, TimerField field )
+    private static double readTimerDoubleValueAndAssert( Path metricFile, BiPredicate<Double,Double> assumption, TimerField field )
             throws IOException
     {
         return readValueAndAssert( metricFile, 0d, TimerField.T, field, Double::parseDouble, assumption );
     }
 
-    private static <T, FIELD extends Enum<FIELD> & CsvField> T readValueAndAssert( File metricFile, T startValue, FIELD timeStampField, FIELD metricsValue,
+    private static <T, FIELD extends Enum<FIELD> & CsvField> T readValueAndAssert( Path metricFile, T startValue, FIELD timeStampField, FIELD metricsValue,
             Function<String,T> parser, BiPredicate<T,T> assumption ) throws IOException
     {
         // let's try until the file is in place (since the reporting is async that might take a while)
         long endTime = currentTimeMillis() + MINUTES.toMillis( 2 );
         while ( currentTimeMillis() < endTime )
         {
-            try ( BufferedReader reader = new BufferedReader( new FileReader( metricFile, StandardCharsets.UTF_8 ) ) )
+            try ( BufferedReader reader = Files.newBufferedReader( metricFile, StandardCharsets.UTF_8 ) )
             {
                 String headerLine = reader.readLine();
                 if ( headerLine == null )
@@ -193,20 +192,20 @@ public class MetricsTestHelper
         return startValue;
     }
 
-    public static File metricsCsv( File dbDir, String metric )
+    public static Path metricsCsv( Path dbDir, String metric )
     {
-        File csvFile = new File( dbDir, metric + ".csv" );
+        Path csvFile = dbDir.resolve( metric + ".csv" );
         assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), TRUE, 2, MINUTES );
         return csvFile;
     }
 
-    private static Callable<Boolean> fileExistAndHasDataLines( File file )
+    private static Callable<Boolean> fileExistAndHasDataLines( Path file )
     {
         return () ->
         {
             try
             {
-                return file.exists() && (Files.readAllLines( file.toPath() ).size() > 1);
+                return Files.exists( file ) && (Files.readAllLines( file ).size() > 1);
             }
             catch ( IOException e )
             {

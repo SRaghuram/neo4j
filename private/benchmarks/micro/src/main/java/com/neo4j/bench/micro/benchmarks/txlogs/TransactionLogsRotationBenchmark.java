@@ -15,8 +15,8 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
@@ -48,7 +48,7 @@ public class TransactionLogsRotationBenchmark extends AbstractTransactionLogsBen
 
     @Benchmark
     @BenchmarkMode( value = Mode.SampleTime )
-    public File rotate() throws IOException
+    public Path rotate() throws IOException
     {
         return logFile.rotate();
     }

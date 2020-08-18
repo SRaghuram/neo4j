@@ -79,7 +79,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -189,7 +189,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
         final MemoryTracker memoryTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
-        final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
+        final Path dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
         storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig, memoryTracker );
@@ -305,7 +305,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var config = globalModule.getGlobalConfig();
         if ( config.get( CausalClusteringInternalSettings.raft_messages_log_enable ) )
         {
-            var logFile = config.get( CausalClusteringInternalSettings.raft_messages_log_path ).toFile();
+            var logFile = config.get( CausalClusteringInternalSettings.raft_messages_log_path );
             var logger = new BetterRaftMessageLogger<>( myself, logFile, globalModule.getFileSystem(), globalModule.getGlobalClock() );
             raftMessageLogger = globalModule.getGlobalLife().add( logger );
         }

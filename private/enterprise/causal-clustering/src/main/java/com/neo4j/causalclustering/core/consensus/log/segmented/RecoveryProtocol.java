@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +63,7 @@ class RecoveryProtocol
     State run() throws IOException, DamagedLogStorageException, DisposedException
     {
         State state = new State();
-        SortedMap<Long,File> files = fileNames.getAllFiles( fileSystem, log );
+        SortedMap<Long,Path> files = fileNames.getAllFiles( fileSystem, log );
 
         if ( files.entrySet().isEmpty() )
         {
@@ -80,10 +80,10 @@ class RecoveryProtocol
         boolean mustRecoverLastHeader = false;
         boolean skip = true; // the first file is treated the same as a skip
 
-        for ( Map.Entry<Long,File> entry : files.entrySet() )
+        for ( Map.Entry<Long,Path> entry : files.entrySet() )
         {
             long fileSegmentNumber = entry.getKey();
-            File file = entry.getValue();
+            Path file = entry.getValue();
             SegmentHeader header;
 
             checkSegmentNumberSequence( fileSegmentNumber, expectedSegmentNumber );
@@ -150,7 +150,7 @@ class RecoveryProtocol
             SegmentHeader header = new SegmentHeader( state.appendIndex, expectedSegmentNumber, state.appendIndex, state.terms.latest() );
             log.warn( "Recovering last file based on next-to-last file. " + header );
 
-            File file = fileNames.getForSegment( expectedSegmentNumber );
+            Path file = fileNames.getForSegment( expectedSegmentNumber );
             writeHeader( fileSystem, file, header, memoryTracker );
 
             segment = new SegmentFile( fileSystem, file, readerPool, expectedSegmentNumber,
@@ -166,10 +166,10 @@ class RecoveryProtocol
 
     private static SegmentHeader loadHeader(
             FileSystemAbstraction fileSystem,
-            File file,
+            Path path,
             MemoryTracker memoryTracker ) throws IOException, EndOfStreamException
     {
-        try ( StoreChannel channel = fileSystem.read( file ) )
+        try ( StoreChannel channel = fileSystem.read( path.toFile() ) )
         {
             return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) );
         }
@@ -177,11 +177,11 @@ class RecoveryProtocol
 
     private static void writeHeader(
             FileSystemAbstraction fileSystem,
-            File file,
+            Path file,
             SegmentHeader header,
             MemoryTracker memoryTracker ) throws IOException
     {
-        try ( StoreChannel channel = fileSystem.write( file ) )
+        try ( StoreChannel channel = fileSystem.write( file.toFile() ) )
         {
             channel.position( 0 );
             try ( PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) )

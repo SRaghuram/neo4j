@@ -5,8 +5,8 @@
  */
 package com.neo4j.internal.batchimport;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.internal.batchimport.DataStatistics;
 import org.neo4j.internal.batchimport.DataStatistics.RelationshipTypeCount;
@@ -23,13 +23,13 @@ import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 class RelationshipTypeDistributionStorage
 {
     private final FileSystemAbstraction fs;
-    private final File file;
+    private final Path path;
     private final MemoryTracker memoryTracker;
 
-    RelationshipTypeDistributionStorage( FileSystemAbstraction fs, File file, MemoryTracker memoryTracker )
+    RelationshipTypeDistributionStorage( FileSystemAbstraction fs, Path path, MemoryTracker memoryTracker )
     {
         this.fs = fs;
-        this.file = file;
+        this.path = path;
         this.memoryTracker = memoryTracker;
     }
 
@@ -37,7 +37,7 @@ class RelationshipTypeDistributionStorage
     {
         // This could have been done using a writer and writing human readable text.
         // Perhaps simpler code, but this format is safe against any type of weird characters that the type may contain
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( file ), memoryTracker ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( path.toFile() ), memoryTracker ) )
         {
             channel.putLong( distribution.getNodeCount() );
             channel.putLong( distribution.getPropertyCount() );
@@ -52,7 +52,7 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( path.toFile() ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();
@@ -69,6 +69,6 @@ class RelationshipTypeDistributionStorage
 
     void remove()
     {
-        fs.deleteFile( file );
+        fs.deleteFile( path.toFile() );
     }
 }

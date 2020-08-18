@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -41,7 +41,7 @@ class SegmentFileTest
     @Inject
     private FileSystemAbstraction fsa;
 
-    private final File baseDir = new File( "raft-log" );
+    private final Path baseDir = Path.of( "raft-log" );
     private final FileNames fileNames = new FileNames( baseDir );
     private final DummyRaftableContentSerializer contentMarshal = new DummyRaftableContentSerializer();
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
@@ -60,7 +60,7 @@ class SegmentFileTest
     void before() throws IOException
     {
         readerPool = spy( new ReaderPool( 0, logProvider, fileNames, fsa, Clocks.fakeClock() ) );
-        fsa.mkdirs( baseDir );
+        fsa.mkdirs( baseDir.toFile() );
     }
 
     @Test

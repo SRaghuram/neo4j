@@ -7,10 +7,10 @@ package com.neo4j.backup.stores;
 
 import com.neo4j.causalclustering.common.Cluster;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 
 public interface BackupStore
 {
-    Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster backupCluster ) throws Exception;
+    Optional<DefaultDatabasesBackup> generate( Path backupDir, Cluster backupCluster ) throws Exception;
 }

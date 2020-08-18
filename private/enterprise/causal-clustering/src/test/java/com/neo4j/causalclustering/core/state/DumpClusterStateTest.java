@@ -7,17 +7,17 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.state.SimpleStorage;
@@ -46,13 +46,13 @@ class DumpClusterStateTest
     @Inject
     private LifeSupport life;
 
-    private File dataDir;
+    private Path dataDir;
     private ClusterStateStorageFactory storageFactory;
 
     @BeforeEach
     void setup()
     {
-        dataDir = testDirectory.directory( "data" );
+        dataDir = testDirectory.directoryPath( "data" );
         storageFactory = new ClusterStateStorageFactory( testDirectory.getFileSystem(), ClusterStateLayout.of( dataDir ),
                 NullLogProvider.getInstance(), Config.defaults(), INSTANCE );
     }

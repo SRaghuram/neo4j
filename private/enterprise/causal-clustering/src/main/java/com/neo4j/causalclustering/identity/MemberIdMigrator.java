@@ -153,6 +153,6 @@ public class MemberIdMigrator
 
     private SimpleStorage<ServerId> createServerIdStorage()
     {
-        return new SimpleFileStorage<>( fs, neo4jLayout.serverIdFile().toFile(), ServerId.Marshal.INSTANCE, memoryTracker );
+        return new SimpleFileStorage<>( fs, neo4jLayout.serverIdFile(), ServerId.Marshal.INSTANCE, memoryTracker );
     }
 }

@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -103,7 +103,7 @@ class SegmentedRaftLogCursorIT
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize, String pruneStrategy )
     {
-        File directory = testDirectory.homeDir();
+        Path directory = testDirectory.homePath();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =

@@ -9,14 +9,14 @@ import com.neo4j.causalclustering.core.consensus.log.ConcurrentStressIT;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 
 public class InMemoryConcurrentStressIT extends ConcurrentStressIT
 {
     @Override
-    public RaftLog createRaftLog( FileSystemAbstraction fsa, File dir )
+    public RaftLog createRaftLog( FileSystemAbstraction fsa, Path dir )
     {
         return new InMemoryRaftLog();
     }

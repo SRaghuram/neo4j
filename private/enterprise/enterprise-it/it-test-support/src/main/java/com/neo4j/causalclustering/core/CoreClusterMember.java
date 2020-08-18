@@ -16,7 +16,6 @@ import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -155,7 +154,7 @@ public class CoreClusterMember implements ClusterMember
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
-        clusterStateLayout = ClusterStateLayout.of( memberConfig.get( data_directory ).toFile() );
+        clusterStateLayout = ClusterStateLayout.of( memberConfig.get( data_directory ) );
 
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
@@ -245,7 +244,7 @@ public class CoreClusterMember implements ClusterMember
         return defaultDatabaseLayout;
     }
 
-    public SortedMap<Long, File> getRaftLogFileNames( String databaseName ) throws IOException
+    public SortedMap<Long, Path> getRaftLogFileNames( String databaseName ) throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
@@ -317,12 +316,12 @@ public class CoreClusterMember implements ClusterMember
         return clusterStateLayout;
     }
 
-    public File clusterStateDirectory()
+    public Path clusterStateDirectory()
     {
         return clusterStateLayout.getClusterStateDirectory();
     }
 
-    public File raftLogDirectory( String databaseName )
+    public Path raftLogDirectory( String databaseName )
     {
         return clusterStateLayout.raftLogDirectory( databaseName );
     }
@@ -340,7 +339,7 @@ public class CoreClusterMember implements ClusterMember
         }
         else if ( databaseIdRepository == null )
         {
-            DatabaseManager databaseManager = defaultDatabase.getDependencyResolver().resolveDependency( DatabaseManager.class );
+            DatabaseManager<?> databaseManager = defaultDatabase.getDependencyResolver().resolveDependency( DatabaseManager.class );
             databaseIdRepository = databaseManager.databaseIdRepository();
         }
         return databaseIdRepository.getByName( databaseName ).orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
@@ -348,7 +347,7 @@ public class CoreClusterMember implements ClusterMember
 
     public void unbind( FileSystemAbstraction fs ) throws IOException
     {
-        fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
+        fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory().toFile() );
         fs.deleteFile( neo4jLayout.serverIdFile().toFile() );
     }
 }

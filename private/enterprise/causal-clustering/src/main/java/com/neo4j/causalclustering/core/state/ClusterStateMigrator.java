@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -62,7 +62,8 @@ public class ClusterStateMigrator extends LifecycleAdapter
             // delete old cluster state files and directories except member ID
             // member ID storage is created outside of the lifecycle and can't be deleted in a lifecycle method
             // it is fine to keep member ID because it is a simple UUID and does not need to be migrated
-            var oldClusterStateFiles = fs.listFiles( clusterStateLayout.getClusterStateDirectory(), this::isNotMemberIdStorage );
+            var oldClusterStateFiles = fs.listFiles( clusterStateLayout.getClusterStateDirectory().toFile(),
+                    ( parentDir, name ) -> isNotMemberIdStorage( parentDir.toPath(), name ) );
             if ( isNotEmpty( oldClusterStateFiles ) )
             {
                 for ( var oldClusterStateFile : oldClusterStateFiles )
@@ -81,12 +82,12 @@ public class ClusterStateMigrator extends LifecycleAdapter
         }
     }
 
-    private boolean isNotMemberIdStorage( File parentDir, String name )
+    private boolean isNotMemberIdStorage( Path parentDir, String name )
     {
         // member ID file is located at cluster-state/core-member-id-state/core-member-id
         // thus this filter needs to return false for core-member-id-state directory
         var clusterStateDir = clusterStateLayout.getClusterStateDirectory();
-        var memberIdDir = clusterStateLayout.memberIdStateFile().getParentFile().getName();
+        var memberIdDir = clusterStateLayout.memberIdStateFile().getParent().getFileName().toString();
         return !(parentDir.equals( clusterStateDir ) && name.equals( memberIdDir ));
     }
 

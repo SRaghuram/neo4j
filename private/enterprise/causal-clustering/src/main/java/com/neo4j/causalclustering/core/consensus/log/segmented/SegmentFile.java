@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.cursor.EmptyIOCursor;
 import org.neo4j.cursor.IOCursor;
@@ -38,7 +38,7 @@ class SegmentFile implements AutoCloseable
 
     private final Log log;
     private final FileSystemAbstraction fileSystem;
-    private final File file;
+    private final Path path;
     private final ReaderPool readerPool;
     private final ChannelMarshal<ReplicatedContent> contentMarshal;
 
@@ -51,11 +51,11 @@ class SegmentFile implements AutoCloseable
 
     private PhysicalFlushableChannel bufferedWriter;
 
-    SegmentFile( FileSystemAbstraction fileSystem, File file, ReaderPool readerPool, long version,
+    SegmentFile( FileSystemAbstraction fileSystem, Path path, ReaderPool readerPool, long version,
             ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
-        this.file = file;
+        this.path = path;
         this.readerPool = readerPool;
         this.contentMarshal = contentMarshal;
         this.header = header;
@@ -68,16 +68,16 @@ class SegmentFile implements AutoCloseable
         this.log = logProvider.getLog( getClass() );
     }
 
-    static SegmentFile create( FileSystemAbstraction fileSystem, File file, ReaderPool readerPool, long version,
+    static SegmentFile create( FileSystemAbstraction fileSystem, Path path, ReaderPool readerPool, long version,
             ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header, MemoryTracker memoryTracker )
             throws IOException
     {
-        if ( fileSystem.fileExists( file ) )
+        if ( fileSystem.fileExists( path.toFile() ) )
         {
             throw new IllegalStateException( "File was not expected to exist" );
         }
 
-        SegmentFile segment = new SegmentFile( fileSystem, file, readerPool, version, contentMarshal, logProvider, header, memoryTracker );
+        SegmentFile segment = new SegmentFile( fileSystem, path, readerPool, version, contentMarshal, logProvider, header, memoryTracker );
         headerMarshal.marshal( header, segment.getOrCreateWriter() );
         segment.flush();
 
@@ -131,7 +131,7 @@ class SegmentFile implements AutoCloseable
                 throw new IOException( "Writer has been closed" );
             }
 
-            StoreChannel channel = fileSystem.write( file );
+            StoreChannel channel = fileSystem.write( path.toFile() );
             channel.position( channel.size() );
             bufferedWriter = new PhysicalFlushableChannel( channel, new NativeScopedBuffer( ByteUnit.kibiBytes( 512 ), memoryTracker ) );
         }
@@ -158,7 +158,7 @@ class SegmentFile implements AutoCloseable
             }
             catch ( IOException e )
             {
-                log.error( "Failed to close writer for: " + file, e );
+                log.error( "Failed to close writer for: " + path, e );
             }
             finally
             {
@@ -180,7 +180,7 @@ class SegmentFile implements AutoCloseable
 
     public boolean delete()
     {
-        return fileSystem.deleteFile( file );
+        return fileSystem.deleteFile( path.toFile() );
     }
 
     public SegmentHeader header()
@@ -190,12 +190,12 @@ class SegmentFile implements AutoCloseable
 
     public long size()
     {
-        return fileSystem.getFileSize( file );
+        return fileSystem.getFileSize( path.toFile() );
     }
 
     String getFilename()
     {
-        return file.getName();
+        return path.getFileName().toString();
     }
 
     /**
@@ -230,7 +230,7 @@ class SegmentFile implements AutoCloseable
     public String toString()
     {
         return "SegmentFile{" +
-               "file=" + file.getName() +
+               "path=" + path.getFileName() +
                ", header=" + header +
                '}';
     }

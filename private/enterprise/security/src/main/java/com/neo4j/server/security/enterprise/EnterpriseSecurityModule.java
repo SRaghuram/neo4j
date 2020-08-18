@@ -12,7 +12,6 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
-import com.neo4j.server.security.enterprise.systemgraph.FlatfileRealm;
 import com.neo4j.server.security.enterprise.auth.InClusterAuthManager;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
@@ -26,11 +25,12 @@ import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
+import com.neo4j.server.security.enterprise.systemgraph.FlatfileRealm;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -379,16 +379,16 @@ public class EnterpriseSecurityModule extends SecurityModule
         return new FileUserRepository( fileSystem, getRepositoryFile( config, OPERATOR_STORE_FILENAME ), logProvider );
     }
 
-    public static File getOperatorUserRepositoryFile( Config config )
+    public static Path getOperatorUserRepositoryFile( Config config )
     {
         return getRepositoryFile( config, OPERATOR_STORE_FILENAME );
     }
 
-    private static File getRepositoryFile( Config config, String fileName )
+    private static Path getRepositoryFile( Config config, String fileName )
     {
         // Resolve auth store file names
-        File authStoreDir = config.get( DatabaseManagementSystemSettings.auth_store_directory ).toFile();
-        return new File( authStoreDir, fileName );
+        Path authStoreDir = config.get( DatabaseManagementSystemSettings.auth_store_directory );
+        return authStoreDir.resolve( fileName );
     }
 
     private static IllegalArgumentException illegalConfiguration( String message )

@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -57,32 +58,32 @@ public class StoreFiles
             }
         }
 
-        for ( File txLog : logFiles.logFiles() )
+        for ( Path txLog : logFiles.logFiles() )
         {
-            fs.deleteFile( txLog );
+            fs.deleteFile( txLog.toFile() );
         }
         fs.deleteFile( databaseDirectory );
     }
 
     public void delete( LogFiles logFiles )
     {
-        for ( File txLog : logFiles.logFiles() )
+        for ( Path txLog : logFiles.logFiles() )
         {
-            fs.deleteFile( txLog );
+            fs.deleteFile( txLog.toFile() );
         }
     }
 
     public void moveTo( File source, DatabaseLayout target, LogFiles logFiles ) throws IOException
     {
-        fs.mkdirs( logFiles.logFilesDirectory() );
+        fs.mkdirs( logFiles.logFilesDirectory().toFile() );
 
-        File[] files = fs.listFiles( source, filenameFilter );
-        if ( files != null )
+        Path[] files = Arrays.stream( fs.listFiles( source, filenameFilter ) ).map( File::toPath ).toArray( Path[]::new );
+        if ( files.length != 0 )
         {
-            for ( File file : files )
+            for ( Path file : files )
             {
                 File destination = logFiles.isLogFile( file ) ? target.getTransactionLogsDirectory().toFile() : target.databaseDirectory().toFile();
-                fs.moveToDirectory( file, destination );
+                fs.moveToDirectory( file.toFile(), destination );
             }
         }
     }

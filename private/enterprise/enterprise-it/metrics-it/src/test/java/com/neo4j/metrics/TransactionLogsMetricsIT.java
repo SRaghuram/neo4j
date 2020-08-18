@@ -10,7 +10,9 @@ import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -53,43 +55,43 @@ class TransactionLogsMetricsIT
     private DatabaseManagementService managementService;
     @Inject
     private LogFiles logFiles;
-    private File outputPath;
+    private Path outputPath;
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        outputPath = new File( directory.homeDir(), "metrics" );
+        outputPath = directory.homePath("metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true );
         builder.setConfig( MetricsSettings.csv_enabled, true );
         builder.setConfig( preallocate_logical_logs, false );
-        builder.setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( MetricsSettings.csv_path, outputPath.toAbsolutePath() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
     @Test
-    void reportTransactionLogsAppendedBytesEqualToFileSizeWhenPreallocationDisabled()
+    void reportTransactionLogsAppendedBytesEqualToFileSizeWhenPreallocationDisabled() throws IOException
     {
         addNodes( 100, db );
-        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
+        Path metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
 
-        long fileLength = logFiles.getHighestLogFile().length();
+        long fileLength = Files.size( logFiles.getHighestLogFile() );
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes.", () -> readLongCounterValue( metricsFile ),
                 equalityCondition( fileLength ), 1, MINUTES );
     }
 
     @Test
-    void transactionLogsMetricsForDifferentDatabasesAreIndependent()
+    void transactionLogsMetricsForDifferentDatabasesAreIndependent() throws IOException
     {
         String secondDbName = "seconddatabase";
         managementService.createDatabase( secondDbName );
         GraphDatabaseAPI secondDb = (GraphDatabaseAPI) managementService.database( secondDbName );
 
         addNodes( 100, db );
-        long fileLength = logFiles.getHighestLogFile().length();
+        long fileLength = Files.size( logFiles.getHighestLogFile() );
 
-        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
-        File secondMetricsFile = metricsCsv( outputPath, "neo4j." + secondDbName + ".log.appended_bytes" );
+        Path metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
+        Path secondMetricsFile = metricsCsv( outputPath, "neo4j." + secondDbName + ".log.appended_bytes" );
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes for default db.",
                 () -> readLongCounterValue( metricsFile ), equalityCondition( fileLength ), 1, MINUTES );
@@ -119,10 +121,10 @@ class TransactionLogsMetricsIT
             logRotation.rotateLogFile( logAppendEvent );
         }
 
-        File rotationEvents = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_events" );
-        File rotationTime = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_total_time" );
-        File rotationDuration = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_duration" );
-        File bytesFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
+        Path rotationEvents = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_events" );
+        Path rotationTime = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_total_time" );
+        Path rotationDuration = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_duration" );
+        Path bytesFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
 
         assertEventually( "Metrics report should include correct number of reported rotations.",
                 () -> readLongCounterValue( rotationEvents ), equalityCondition( 2L ), 1, MINUTES );

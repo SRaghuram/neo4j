@@ -13,7 +13,6 @@ import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
@@ -66,17 +65,17 @@ class GlobalMetricsExtensionFactoryIT
     @Inject
     private Config config;
 
-    private File outputPath;
+    private Path outputPath;
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        outputPath = new File( directory.homeDir(), "metrics" );
+        outputPath = directory.homePath("metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true );
         builder.setConfig( MetricsSettings.jmx_enabled, true );
         builder.setConfig( MetricsSettings.csv_enabled, true );
         builder.setConfig( GraphDatabaseSettings.cypher_min_replan_interval, Duration.ofMillis( 0 ) );
-        builder.setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( MetricsSettings.csv_path, outputPath.toAbsolutePath() );
         builder.setConfig( GraphDatabaseSettings.check_point_interval_time, Duration.ofMillis( 100 ) );
         builder.setConfig( MetricsSettings.graphite_interval, Duration.ofSeconds( 1 ) );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
@@ -95,8 +94,8 @@ class GlobalMetricsExtensionFactoryIT
         addNodes( 100 );
 
         // wait for the file to be written before shutting down the cluster
-        File threadTotalFile = metricsCsv( outputPath, "neo4j.vm.thread.total" );
-        File threadCountFile = metricsCsv( outputPath, "neo4j.vm.thread.count" );
+        Path threadTotalFile = metricsCsv( outputPath, "neo4j.vm.thread.total" );
+        Path threadCountFile = metricsCsv( outputPath, "neo4j.vm.thread.count" );
 
         long threadTotalResult = readLongGaugeAndAssert( threadTotalFile, ( newValue, currentValue ) -> newValue >= 0 );
         long threadCountResult = readLongGaugeAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
@@ -110,9 +109,9 @@ class GlobalMetricsExtensionFactoryIT
     void reportHeapUsageMetrics() throws IOException
     {
         String prefix = config.get( metrics_prefix ) + ".";
-        File heapCommittedFile = metricsCsv( outputPath, prefix + HEAP_COMMITTED_TEMPLATE );
-        File heapMaxFile = metricsCsv( outputPath, prefix + HEAP_MAX_TEMPLATE );
-        File heapUsedFile = metricsCsv( outputPath, prefix + HEAP_USED_TEMPLATE );
+        Path heapCommittedFile = metricsCsv( outputPath, prefix + HEAP_COMMITTED_TEMPLATE );
+        Path heapMaxFile = metricsCsv( outputPath, prefix + HEAP_MAX_TEMPLATE );
+        Path heapUsedFile = metricsCsv( outputPath, prefix + HEAP_USED_TEMPLATE );
 
         long heapCommittedResult = readLongGaugeAndAssert( heapCommittedFile, ( newValue, currentValue ) -> newValue >= 0 );
         long heapUsedResult = readLongGaugeAndAssert( heapUsedFile, ( newValue, currentValue ) -> newValue >= 0 );
@@ -134,7 +133,7 @@ class GlobalMetricsExtensionFactoryIT
                 .setConfig( MetricsSettings.metrics_enabled, true )
                 .setConfig( MetricsSettings.csv_enabled, true )
                 .setConfig( MetricsSettings.jmx_enabled, false )
-                .setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() )
+                .setConfig( MetricsSettings.csv_path, outputPath.toAbsolutePath() )
                 .setConfig( GraphDatabaseInternalSettings.tracer, "null" ) // key point!
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .build();

@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogVerificationIT;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -33,7 +33,7 @@ public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
     @Override
     protected RaftLog createRaftLog( TestDirectory testDirectory )
     {
-        File directory = testDirectory.homeDir();
+        Path directory = testDirectory.homePath();
 
         long rotateAtSizeBytes = 128;
         int readerPoolSize = 8;

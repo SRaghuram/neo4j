@@ -8,8 +8,8 @@ package com.neo4j.metrics.output;
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.configuration.MetricsSettings;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +38,7 @@ public class CsvOutput implements Lifecycle
     private final FileSystemAbstraction fileSystem;
     private final JobScheduler scheduler;
     private RotatableCsvReporter csvReporter;
-    private File outputPath;
+    private Path outputPath;
 
     CsvOutput( Config config, MetricRegistry registry, Log logger, ExtensionContext extensionContext,
             FileSystemAbstraction fileSystem, JobScheduler scheduler )
@@ -55,7 +55,7 @@ public class CsvOutput implements Lifecycle
     public void init() throws IOException
     {
         // Setup CSV reporting
-        File configuredPath = config.get( csv_path ).toFile();
+        Path configuredPath = config.get( csv_path );
         if ( configuredPath == null )
         {
             throw new IllegalArgumentException( csv_path.name() + " configuration is required since " +
@@ -63,7 +63,7 @@ public class CsvOutput implements Lifecycle
         }
         Long rotationThreshold = config.get( MetricsSettings.csv_rotation_threshold );
         Integer maxArchives = config.get( MetricsSettings.csv_max_archives );
-        outputPath = absoluteFileOrRelativeTo( extensionContext.directory().toFile(), configuredPath );
+        outputPath = absoluteFileOrRelativeTo( extensionContext.directory(), configuredPath );
         csvReporter = RotatableCsvReporter.forRegistry( registry )
                 .convertRatesTo( TimeUnit.SECONDS )
                 .convertDurationsTo( TimeUnit.MILLISECONDS )
@@ -92,14 +92,14 @@ public class CsvOutput implements Lifecycle
         csvReporter = null;
     }
 
-    private BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> getFileRotatingFileOutputStreamSupplier(
+    private BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> getFileRotatingFileOutputStreamSupplier(
             Long rotationThreshold, Integer maxArchives )
     {
         return ( file, listener ) -> {
             try
             {
                 MonitoredJobExecutor monitoredJobExecutor = scheduler.monitoredJobExecutor( Group.LOG_ROTATION );
-                Executor executor = job -> monitoredJobExecutor.execute( systemJob( "Rotation of CSV metrics output file '" + file.getName() + "'" ), job );
+                Executor executor = job -> monitoredJobExecutor.execute( systemJob( "Rotation of CSV metrics output file '" + file.getFileName() + "'" ), job );
                 return new RotatingFileOutputStreamSupplier( fileSystem, file, rotationThreshold, 0, maxArchives, executor, listener );
             }
             catch ( IOException e )
@@ -109,33 +109,33 @@ public class CsvOutput implements Lifecycle
         };
     }
 
-    private File ensureDirectoryExists( File dir ) throws IOException
+    private Path ensureDirectoryExists( Path dir ) throws IOException
     {
-        if ( !fileSystem.fileExists( dir ) )
+        if ( !fileSystem.fileExists( dir.toFile() ) )
         {
-            fileSystem.mkdirs( dir );
+            fileSystem.mkdirs( dir.toFile() );
         }
-        if ( !fileSystem.isDirectory( dir ) )
+        if ( !fileSystem.isDirectory( dir.toFile() ) )
         {
             throw new IllegalStateException(
                     "The given path for CSV files points to a file, but a directory is required: " +
-                            dir.getAbsolutePath() );
+                            dir.toAbsolutePath() );
         }
         return dir;
     }
 
     /**
      * Looks at configured file {@code absoluteOrRelativeFile} and just returns it if absolute, otherwise
-     * returns a {@link File} with {@code baseDirectoryIfRelative} as parent.
+     * returns a {@link Path} with {@code baseDirectoryIfRelative} as parent.
      *
      * @param baseDirectoryIfRelative base directory to use as parent if {@code absoluteOrRelativeFile}
      * is relative, otherwise unused.
      * @param absoluteOrRelativeFile file to return as absolute or relative to {@code baseDirectoryIfRelative}.
      */
-    private static File absoluteFileOrRelativeTo( File baseDirectoryIfRelative, File absoluteOrRelativeFile )
+    private static Path absoluteFileOrRelativeTo( Path baseDirectoryIfRelative, Path absoluteOrRelativeFile )
     {
         return absoluteOrRelativeFile.isAbsolute()
                 ? absoluteOrRelativeFile
-                : new File( baseDirectoryIfRelative, absoluteOrRelativeFile.getPath() );
+                : baseDirectoryIfRelative.resolve( absoluteOrRelativeFile );
     }
 }

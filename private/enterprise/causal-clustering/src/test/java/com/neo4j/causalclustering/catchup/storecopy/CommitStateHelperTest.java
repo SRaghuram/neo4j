@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -43,10 +42,10 @@ class CommitStateHelperTest
     @BeforeEach
     void setUp()
     {
-        File txLogLocation = new File( testDirectory.homeDir(), "txLogLocation" );
+        Path txLogLocation = testDirectory.homePath("txLogLocation" );
         var config = Config.newBuilder()
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.homePath() )
-                .set( GraphDatabaseSettings.transaction_logs_root_path, txLogLocation.toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.transaction_logs_root_path, txLogLocation.toAbsolutePath() )
                 .build();
         databaseLayout = DatabaseLayout.of( config );
         commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine() );
@@ -72,10 +71,10 @@ class CommitStateHelperTest
     @Test
     void shouldNotHaveTxLogsIfDirectoryHasFilesWithIncorrectName() throws IOException
     {
-        File txDir = databaseLayout.getTransactionLogsDirectory().toFile();
-        fsa.mkdirs( txDir );
+        Path txDir = databaseLayout.getTransactionLogsDirectory();
+        fsa.mkdirs( txDir.toFile() );
 
-        fsa.write( new File( txDir, "foo.bar" ) ).close();
+        fsa.write( txDir.resolve( "foo.bar" ).toFile() ).close();
 
         assertFalse( commitStateHelper.hasTxLogs( databaseLayout ) );
     }
@@ -83,9 +82,9 @@ class CommitStateHelperTest
     @Test
     void shouldHaveTxLogsIfDirectoryHasTxFile() throws IOException
     {
-        File txDir = databaseLayout.getTransactionLogsDirectory().toFile();
-        fsa.mkdirs( txDir );
-        fsa.write( new File( txDir, TransactionLogFilesHelper.DEFAULT_NAME + ".0" ) ).close();
+        Path txDir = databaseLayout.getTransactionLogsDirectory();
+        fsa.mkdirs( txDir.toFile() );
+        fsa.write( txDir.resolve( TransactionLogFilesHelper.DEFAULT_NAME + ".0" ).toFile() ).close();
 
         assertTrue( commitStateHelper.hasTxLogs( databaseLayout ) );
     }

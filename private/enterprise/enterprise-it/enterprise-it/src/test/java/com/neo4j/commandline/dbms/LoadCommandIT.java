@@ -78,7 +78,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.file( "dump1" ).toPath();
+        var dump = testDirectory.filePath( "dump1" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -107,7 +107,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.file( "dump2" ).toPath();
+        var dump = testDirectory.filePath( "dump2" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -138,7 +138,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.file( "dump3" ).toPath();
+        var dump = testDirectory.filePath( "dump3" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -161,7 +161,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.file( "dump4" ).toPath();
+        var dump = testDirectory.filePath( "dump4" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -177,7 +177,7 @@ class LoadCommandIT extends AbstractCommandIT
         var databaseLayout = databaseAPI.databaseLayout();
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.file( "dump5" ).toPath();
+        var dump = testDirectory.filePath( "dump5" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -197,8 +197,8 @@ class LoadCommandIT extends AbstractCommandIT
 
     private void createRaftGroupDirectoryFor( Config config, String databaseName ) throws IOException
     {
-        var raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).raftGroupDir( databaseName );
-        fs.mkdirs( raftGroupDir );
+        var raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
+        fs.mkdirs( raftGroupDir.toFile() );
     }
 
     private Config configWith( Neo4jLayout layout )

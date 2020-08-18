@@ -219,7 +219,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
@@ -245,7 +245,7 @@ public class StoreUpgradeIT
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
 
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
@@ -279,7 +279,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, false );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             var defaultDatabase = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             var db = defaultDatabase.getDependencyResolver().resolveDependency( Database.class );
@@ -330,7 +330,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
@@ -378,7 +378,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
@@ -530,7 +530,7 @@ public class StoreUpgradeIT
             try ( JobScheduler scheduler = JobSchedulerFactory.createInitialisedScheduler();
                  PageCache pageCache = StandalonePageCacheFactory.createPageCache( testDir.getFileSystem(), scheduler ) )
             {
-                LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir.toFile(), fileSystem ).build();
+                LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fileSystem ).build();
                 assertEquals( "This test only anticipates a single log file. " +
                                 "Please update if a test database has more than one log file.",
                         logFiles.getLowestLogVersion(), logFiles.getHighestLogVersion() );
@@ -617,12 +617,12 @@ public class StoreUpgradeIT
             store.prepareDirectory( databaseDir );
 
             // Remove all log files.
-            TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir.toFile() );
-            File[] logs = helper.getLogFiles();
+            TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir );
+            Path[] logs = helper.getLogFiles();
             assertNotNull( "Expected some log files to exist.", logs );
-            for ( File logFile : logs )
+            for ( Path logFile : logs )
             {
-                fileSystem.deleteFile( logFile );
+                fileSystem.deleteFile( logFile.toFile() );
             }
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
@@ -682,12 +682,12 @@ public class StoreUpgradeIT
             store.prepareDirectory( databaseDir );
 
             // Remove all log files.
-            TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir.toFile() );
-            File[] logs = helper.getLogFiles();
+            TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir );
+            Path[] logs = helper.getLogFiles();
             assertNotNull( "Expected some log files to exist.", logs );
-            for ( File logFile : logs )
+            for ( Path logFile : logs )
             {
-                fileSystem.deleteFile( logFile );
+                fileSystem.deleteFile( logFile.toFile() );
             }
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
@@ -717,24 +717,24 @@ public class StoreUpgradeIT
         private static void moveAvailableLogsToCustomLocation( FileSystemAbstraction fileSystem, Path customTransactionLogsLocation, Path databaseDirectory )
                 throws IOException
         {
-            File[] availableTransactionLogFiles = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
-            for ( File transactionLogFile : availableTransactionLogFiles )
+            Path[] availableTransactionLogFiles = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
+            for ( Path transactionLogFile : availableTransactionLogFiles )
             {
-                moveToDirectory( transactionLogFile, customTransactionLogsLocation.toFile(), true );
+                moveToDirectory( transactionLogFile.toFile(), customTransactionLogsLocation.toFile(), true );
             }
         }
 
         private static Set<String> getTransactionLogFileNames( Path databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
         {
-            File[] availableLogFilesBeforeMigration = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
+            Path[] availableLogFilesBeforeMigration = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
             assertThat( availableLogFilesBeforeMigration ).isNotEmpty();
 
-            return stream( availableLogFilesBeforeMigration ).map( File::getName ).collect( toSet() );
+            return stream( availableLogFilesBeforeMigration ).map( Path::getFileName ).map( Path::toString ).collect( toSet() );
         }
 
-        private static File[] getAvailableTransactionLogFiles( Path databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
+        private static Path[] getAvailableTransactionLogFiles( Path databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
         {
-            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDirectory.toFile(), fileSystem ).build();
+            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDirectory, fileSystem ).build();
             return logFiles.logFiles();
         }
 
@@ -785,7 +785,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, false );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();

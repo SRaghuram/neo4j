@@ -11,7 +11,7 @@ import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 
 import org.neo4j.bolt.testing.TransportTestUtil;
@@ -48,13 +48,13 @@ class BoltMetricsIT
     private GraphDatabaseAPI db;
 
     private final TransportTestUtil util = new TransportTestUtil();
-    private File metricsFolder;
+    private Path metricsFolder;
     private TransportConnection conn;
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        metricsFolder = testDirectory.directory( "metrics" );
+        metricsFolder = testDirectory.directoryPath( "metrics" );
         builder.setConfig( BoltConnector.enabled, true )
             .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
             .setConfig( GraphDatabaseSettings.auth_enabled, false )
@@ -62,7 +62,7 @@ class BoltMetricsIT
             .setConfig( MetricsSettings.bolt_messages_enabled, true )
             .setConfig( MetricsSettings.csv_enabled, true )
             .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 100 ) )
-            .setConfig( MetricsSettings.csv_path, metricsFolder.toPath().toAbsolutePath() )
+            .setConfig( MetricsSettings.csv_path, metricsFolder.toAbsolutePath() )
             .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

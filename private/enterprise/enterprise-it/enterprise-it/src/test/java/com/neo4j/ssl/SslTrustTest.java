@@ -7,9 +7,7 @@ package com.neo4j.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -24,7 +22,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.ssl.SslPolicyScope.TESTING;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
@@ -66,8 +63,8 @@ class SslTrustTest
     void partiesWithMutualTrustShouldCommunicate() throws Exception
     {
         // given
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directoryPath( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
 
         server = new SecureServer( makeSslPolicy( sslServerResource, TESTING ) );
 
@@ -89,8 +86,8 @@ class SslTrustTest
     void partiesWithMutualTrustThroughCAShouldCommunicate() throws Exception
     {
         // given
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directory( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directoryPath( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directoryPath( "client" ) );
 
         server = new SecureServer( makeSslPolicy( sslServerResource, TESTING ) );
 
@@ -112,8 +109,8 @@ class SslTrustTest
     void serverShouldNotCommunicateWithUntrustedClient() throws Exception
     {
         // given
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directoryPath( "server" ) );
 
         server = new SecureServer( makeSslPolicy( sslServerResource, TESTING ) );
 
@@ -129,8 +126,8 @@ class SslTrustTest
     void clientShouldNotCommunicateWithUntrustedServer() throws Exception
     {
         // given
-        SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directory( "client" ) );
-        SslResource sslServerResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "server" ) );
 
         server = new SecureServer( makeSslPolicy( sslServerResource, TESTING ) );
 
@@ -146,8 +143,8 @@ class SslTrustTest
     void partiesWithMutualTrustThroughCAShouldNotCommunicateWhenServerRevoked() throws Exception
     {
         // given
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().revoke( 0 ).install( testDir.directory( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directoryPath( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().revoke( 0 ).install( testDir.directoryPath( "client" ) );
 
         server = new SecureServer( makeSslPolicy( sslServerResource, TESTING ) );
 
@@ -163,8 +160,8 @@ class SslTrustTest
     void partiesWithMutualTrustThroughCAShouldNotCommunicateWhenClientRevoked() throws Exception
     {
         // given
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().revoke( 1 ).install( testDir.directory( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directory( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().revoke( 1 ).install( testDir.directoryPath( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directoryPath( "client" ) );
 
         server = new SecureServer( makeSslPolicy( sslServerResource, TESTING ) );
 

@@ -7,7 +7,7 @@ package com.neo4j.commandline.admin.security;
 
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.ExecutionContext;
@@ -48,10 +48,10 @@ public class SetOperatorPasswordCommand extends AbstractCommand
         FileSystemAbstraction fileSystem = ctx.fs();
         String username = config.get( GraphDatabaseInternalSettings.upgrade_username );
 
-        File file = EnterpriseSecurityModule.getOperatorUserRepositoryFile( config );
-        if ( fileSystem.fileExists( file ) )
+        Path file = EnterpriseSecurityModule.getOperatorUserRepositoryFile( config );
+        if ( fileSystem.fileExists( file.toFile() ) )
         {
-            fileSystem.deleteFile( file );
+            fileSystem.deleteFile( file.toFile() );
         }
 
         FileUserRepository userRepository =

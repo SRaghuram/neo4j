@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -20,7 +20,7 @@ import static com.neo4j.configuration.CausalClusteringInternalSettings.TEMP_STOR
 
 public class TemporaryStoreDirectory implements AutoCloseable
 {
-    private final File tempHomeDir;
+    private final Path tempHomeDir;
     private final DatabaseLayout tempDatabaseLayout;
     private final FileSystemAbstraction fs;
     private final StoreFiles storeFiles;
@@ -30,11 +30,11 @@ public class TemporaryStoreDirectory implements AutoCloseable
     TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory )
             throws IOException
     {
-        this.tempHomeDir = databaseLayout.file( TEMP_STORE_COPY_DIRECTORY_NAME ).toFile();
-        this.tempDatabaseLayout = Neo4jLayout.ofFlat( tempHomeDir.toPath() ).databaseLayout( databaseLayout.getDatabaseName() );
+        this.tempHomeDir = databaseLayout.file( TEMP_STORE_COPY_DIRECTORY_NAME );
+        this.tempDatabaseLayout = Neo4jLayout.ofFlat( tempHomeDir ).databaseLayout( databaseLayout.getDatabaseName() );
         this.fs = fs;
         storeFiles = new StoreFiles( fs, pageCache, ( directory, name ) -> true );
-        tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory().toFile(), fs )
+        tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory(), fs )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
         storeFiles.delete( tempDatabaseLayout, tempLogFiles );
@@ -56,7 +56,7 @@ public class TemporaryStoreDirectory implements AutoCloseable
         if ( !keepStore )
         {
             storeFiles.delete( tempDatabaseLayout, tempLogFiles );
-            fs.deleteFile( tempHomeDir );
+            fs.deleteFile( tempHomeDir.toFile() );
         }
     }
 }

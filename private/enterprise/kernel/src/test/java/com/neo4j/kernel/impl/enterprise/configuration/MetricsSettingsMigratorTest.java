@@ -7,9 +7,9 @@ package com.neo4j.kernel.impl.enterprise.configuration;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.test.extension.Inject;
@@ -30,8 +30,8 @@ class MetricsSettingsMigratorTest
     @Test
     void migrateSetting() throws IOException
     {
-        File confFile = testDirectory.createFile( "neo4j.conf" );
-        Files.write( confFile.toPath(), singletonList( "metrics.neo4j.logrotation.enabled=false" ) );
+        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Files.write( confFile, singletonList( "metrics.neo4j.logrotation.enabled=false" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
 
@@ -41,8 +41,8 @@ class MetricsSettingsMigratorTest
     @Test
     void overriddenSettingMigration() throws IOException
     {
-        File confFile = testDirectory.createFile( "neo4j.conf" );
-        Files.write( confFile.toPath(), asList( "metrics.neo4j.logrotation.enabled=false",
+        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Files.write( confFile, asList( "metrics.neo4j.logrotation.enabled=false",
                 neo_transaction_logs_enabled.name() + "=true" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();

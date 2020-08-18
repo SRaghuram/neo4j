@@ -7,7 +7,7 @@ package com.neo4j.io.pagecache.stresstests;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.stress.PageCacheStressTest;
@@ -33,9 +33,9 @@ class PageCacheStressTesting
         int numberOfPages = parseInt( fromEnv( "PAGE_CACHE_STRESS_NUMBER_OF_PAGES", "10000" ) );
         int numberOfThreads = parseInt( fromEnv( "PAGE_CACHE_STRESS_NUMBER_OF_THREADS", "8" ) );
         int numberOfCachePages = parseInt( fromEnv( "PAGE_CACHE_STRESS_NUMBER_OF_CACHE_PAGES", "1000" ) );
-        File baseDir = new File( fromEnv( "PAGE_CACHE_STRESS_WORKING_DIRECTORY", getProperty( "java.io.tmpdir" ) ) );
+        Path baseDir = Path.of( fromEnv( "PAGE_CACHE_STRESS_WORKING_DIRECTORY", getProperty( "java.io.tmpdir" ) ) );
 
-        File workingDirectory = new File( baseDir,  "working" );
+        Path workingDirectory = baseDir.resolve(  "working" );
 
         DefaultPageCacheTracer monitor = new DefaultPageCacheTracer();
         PageCacheStressTest runner = new PageCacheStressTest.Builder()
@@ -58,6 +58,6 @@ class PageCacheStressTesting
                 faults, evictions, pins, unpins, flushes );
 
         // let's cleanup disk space when everything went well
-        FileUtils.deleteRecursively( workingDirectory );
+        FileUtils.deletePathRecursively( workingDirectory );
     }
 }

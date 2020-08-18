@@ -56,8 +56,8 @@ class SslPlatformTest
     void shouldSupportOpenSSLOnSupportedPlatforms() throws Exception
     {
         // given
-        var sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDirectory.directory( "server" ) );
-        var sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDirectory.directory( "client" ) );
+        var sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDirectory.directoryPath( "server" ) );
+        var sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDirectory.directoryPath( "client" ) );
 
         server = new SecureServer( SslContextFactory.makeSslPolicy( sslServerResource, SslProvider.OPENSSL, TESTING ) );
 

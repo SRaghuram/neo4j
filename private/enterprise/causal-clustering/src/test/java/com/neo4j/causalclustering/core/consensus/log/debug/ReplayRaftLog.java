@@ -13,8 +13,8 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionFactory;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.Args;
@@ -47,7 +47,7 @@ public class ReplayRaftLog
         System.out.println( "From is " + from );
         String to = arg.get( "to" );
         System.out.println( "To is " + to );
-        File logDirectory = new File( from );
+        Path logDirectory = Path.of( from );
         System.out.println( "logDirectory = " + logDirectory );
         Config config = Config.defaults();
 

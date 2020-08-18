@@ -11,7 +11,6 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -43,7 +42,7 @@ class SecurityLoggingIT
     @Inject
     public TestDirectory testDirectory;
 
-    private File securityLog;
+    private Path securityLog;
     private FileSystemAbstraction fileSystem;
     private EnterpriseAuthManager authManager;
     private DatabaseManagementService managementService;
@@ -51,8 +50,8 @@ class SecurityLoggingIT
     @BeforeEach
     void setup()
     {
-        Path homeDir = testDirectory.directory( "logs" ).toPath();
-        securityLog = new File( homeDir.toFile(), "security.log" );
+        Path homeDir = testDirectory.directoryPath( "logs" );
+        securityLog = homeDir.resolve( "security.log" );
 
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true )
@@ -150,7 +149,7 @@ class SecurityLoggingIT
 
         void load() throws IOException
         {
-            try ( var reader = fileSystem.openAsReader( securityLog, StandardCharsets.UTF_8 ) )
+            try ( var reader = fileSystem.openAsReader( securityLog.toFile(), StandardCharsets.UTF_8 ) )
             {
                 lines = readLines( reader );
             }

@@ -9,7 +9,6 @@ import com.neo4j.configuration.DiscoveryType;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.io.File;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -175,9 +174,9 @@ class CausalClusterSettingConstraintsTest
     @TestClusterMode
     void nonParseableAkkaExternalConfig( Mode mode ) throws URISyntaxException
     {
-        File conf = new File( getClass().getResource( "/akka.external.config/illegal.conf" ).toURI() );
+        Path conf = Path.of( getClass().getResource( "/akka.external.config/illegal.conf" ).toURI() );
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( middleware_akka_external_config, conf.toPath() )
+                .set( middleware_akka_external_config, conf )
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
@@ -189,11 +188,11 @@ class CausalClusterSettingConstraintsTest
     @TestClusterMode
     void parseableAkkaExternalConfig( Mode mode ) throws URISyntaxException
     {
-        File conf = new File( getClass().getResource( "/akka.external.config/legal.conf" ).toURI() );
+        Path conf = Path.of( getClass().getResource( "/akka.external.config/legal.conf" ).toURI() );
 
         // when
         assertDoesNotThrow( () -> Config.newBuilder()
-                .set( middleware_akka_external_config, conf.toPath() )
+                .set( middleware_akka_external_config, conf )
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )

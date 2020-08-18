@@ -17,10 +17,10 @@ import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -62,8 +62,8 @@ public class KubernetesResolver implements RemoteMembersResolver
         SslContextFactory sslContextFactory = createSslContextFactory( config );
         this.httpClient = new HttpClient( sslContextFactory );
 
-        String token = read( config.get( CausalClusteringSettings.kubernetes_token ).toFile() );
-        String namespace = read( config.get( CausalClusteringSettings.kubernetes_namespace ).toFile() );
+        String token = read( config.get( CausalClusteringSettings.kubernetes_token ) );
+        String namespace = read( config.get( CausalClusteringSettings.kubernetes_namespace ) );
 
         this.kubernetesClient = new KubernetesClient( logService, httpClient, token, namespace, config,
                 RetryingHostnameResolver.defaultRetryStrategy( config ) );
@@ -76,10 +76,10 @@ public class KubernetesResolver implements RemoteMembersResolver
 
     private SslContextFactory createSslContextFactory( Config config )
     {
-        File caCert = config.get( CausalClusteringSettings.kubernetes_ca_crt ).toFile();
+        Path caCert = config.get( CausalClusteringSettings.kubernetes_ca_crt );
         try (
                 SecurePassword password = new SecurePassword( 16, new SecureRandom() );
-                InputStream caCertStream = Files.newInputStream( caCert.toPath(), StandardOpenOption.READ )
+                InputStream caCertStream = Files.newInputStream( caCert, StandardOpenOption.READ )
         )
         {
             KeyStore keyStore = loadKeyStore( password, caCertStream );
@@ -113,11 +113,11 @@ public class KubernetesResolver implements RemoteMembersResolver
         return keyStore;
     }
 
-    private String read( File file )
+    private String read( Path file )
     {
         try
         {
-            Optional<String> line = Files.lines( file.toPath() ).findFirst();
+            Optional<String> line = Files.lines( file ).findFirst();
 
             if ( line.isPresent() )
             {

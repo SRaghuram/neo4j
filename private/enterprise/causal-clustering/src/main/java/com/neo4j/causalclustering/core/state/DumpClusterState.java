@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
@@ -35,24 +35,24 @@ public class DumpClusterState
      */
     public static void main( String[] args )
     {
-        File dataDirectory;
+        Path dataDirectory;
         Optional<String> databaseToDumpOpt;
         Optional<String> databaseNameOpt;
         if ( args.length == 1 )
         {
-            dataDirectory = new File( args[0] );
+            dataDirectory = Path.of( args[0] );
             databaseToDumpOpt = Optional.empty();
             databaseNameOpt = Optional.empty();
         }
         else if ( args.length == 2 )
         {
-            dataDirectory = new File( args[0] );
+            dataDirectory = Path.of( args[0] );
             databaseToDumpOpt = Optional.ofNullable( args[1] );
             databaseNameOpt = Optional.empty();
         }
         else if ( args.length == 3 )
         {
-            dataDirectory = new File( args[0] );
+            dataDirectory = Path.of( args[0] );
             databaseToDumpOpt = Optional.ofNullable( args[1] );
             databaseNameOpt = Optional.ofNullable( args[2] );
         }
@@ -77,7 +77,7 @@ public class DumpClusterState
         }
     }
 
-    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump )
+    DumpClusterState( FileSystemAbstraction fs, Path dataDirectory, PrintStream out, String databaseToDump )
     {
         this.storageFactory = newCoreStateStorageService( fs, dataDirectory );
         this.out = out;
@@ -133,7 +133,7 @@ public class DumpClusterState
         }
     }
 
-    private static ClusterStateStorageFactory newCoreStateStorageService( FileSystemAbstraction fs, File dataDirectory )
+    private static ClusterStateStorageFactory newCoreStateStorageService( FileSystemAbstraction fs, Path dataDirectory )
     {
         ClusterStateLayout layout = ClusterStateLayout.of( dataDirectory );
         return new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), Config.defaults(), EmptyMemoryTracker.INSTANCE );

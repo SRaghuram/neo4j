@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.function.Function;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -34,15 +34,15 @@ class RecoveryProtocolTest
     private FileSystemAbstraction fsa;
 
     private Function<Integer,ChannelMarshal<ReplicatedContent>> contentMarshal = ignored -> new DummyRaftableContentSerializer();
-    private final File root = new File( "root" );
-    private FileNames fileNames = new FileNames( root );
-    private SegmentHeader.Marshal headerMarshal = new SegmentHeader.Marshal();
+    private final Path root = Path.of( "root" );
+    private final FileNames fileNames = new FileNames( root );
+    private final SegmentHeader.Marshal headerMarshal = new SegmentHeader.Marshal();
     private ReaderPool readerPool;
 
     @BeforeEach
     void setup() throws IOException
     {
-        fsa.mkdirs( root );
+        fsa.mkdirs( root.toFile() );
         readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa, Clocks.fakeClock() );
     }
 
@@ -139,7 +139,7 @@ class RecoveryProtocolTest
         protocol.run();
 
         // then
-        Assertions.assertNotEquals( 0, fsa.getFileSize( fileNames.getForSegment( 1 ) ) );
+        Assertions.assertNotEquals( 0, fsa.getFileSize( fileNames.getForSegment( 1 ).toFile() ) );
     }
 
     @Test
@@ -272,7 +272,7 @@ class RecoveryProtocolTest
     private void createLogFile( FileSystemAbstraction fsa, long prevFileLastIndex, long fileNameVersion,
             long headerVersion, long prevIndex, long prevTerm ) throws IOException
     {
-        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
+        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ).toFile() );
         PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, INSTANCE );
         headerMarshal.marshal( new SegmentHeader( prevFileLastIndex, headerVersion, prevIndex, prevTerm ), writer );
         writer.prepareForFlush().flush();
@@ -281,7 +281,7 @@ class RecoveryProtocolTest
 
     private void createEmptyLogFile( FileSystemAbstraction fsa, long fileNameVersion ) throws IOException
     {
-        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
+        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ).toFile() );
         channel.close();
     }
 }

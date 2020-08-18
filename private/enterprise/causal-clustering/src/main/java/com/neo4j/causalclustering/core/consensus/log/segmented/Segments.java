@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -125,7 +125,7 @@ class Segments implements AutoCloseable
         currentVersion++;
         SegmentHeader header = new SegmentHeader( prevFileLastIndex, currentVersion, prevIndex, prevTerm );
 
-        File file = fileNames.getForSegment( currentVersion );
+        Path file = fileNames.getForSegment( currentVersion );
         ChannelMarshal<ReplicatedContent> contentMarshal = marshalSelector.apply( header.formatVersion() );
         SegmentFile segment = SegmentFile.create( fileSystem, file, readerPool, currentVersion, contentMarshal, logProvider, header, memoryTracker );
         // TODO: Force base directory... probably not possible using fsa.

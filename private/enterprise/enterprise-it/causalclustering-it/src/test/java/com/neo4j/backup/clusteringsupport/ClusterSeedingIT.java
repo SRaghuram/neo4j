@@ -66,7 +66,7 @@ class ClusterSeedingIT
     void shouldSeedNewCluster( BackupStore initialStore, boolean shouldStoreCopy ) throws Exception
     {
         // given
-        var baseBackupDir = testDir.directory( "backups" );
+        var baseBackupDir = testDir.directoryPath( "backups" );
         var fileCopyDetector = new FileCopyDetector();
 
         var realCluster = createCluster();

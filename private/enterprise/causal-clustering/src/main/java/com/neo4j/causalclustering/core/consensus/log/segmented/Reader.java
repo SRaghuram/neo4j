@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -18,9 +18,9 @@ public class Reader implements Closeable
     private final StoreChannel storeChannel;
     private long timeStamp;
 
-    Reader( FileSystemAbstraction fsa, File file, long version ) throws IOException
+    Reader( FileSystemAbstraction fsa, Path path, long version ) throws IOException
     {
-        this.storeChannel = fsa.read( file );
+        this.storeChannel = fsa.read( path.toFile() );
         this.version = version;
     }
 

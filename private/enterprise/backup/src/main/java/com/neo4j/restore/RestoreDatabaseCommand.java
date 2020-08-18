@@ -31,7 +31,7 @@ public class RestoreDatabaseCommand
     private final FileSystemAbstraction fs;
     private final Path fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
-    private final File raftGroupDirectory;
+    private final Path raftGroupDirectory;
     private final boolean forceOverwrite;
     private final boolean moveFiles;
 
@@ -55,7 +55,7 @@ public class RestoreDatabaseCommand
 
         try
         {
-            Validators.CONTAINS_EXISTING_DATABASE.validate( fromDatabasePath.toFile() );
+            Validators.CONTAINS_EXISTING_DATABASE.validate( fromDatabasePath );
         }
         catch ( IllegalArgumentException e )
         {
@@ -69,7 +69,7 @@ public class RestoreDatabaseCommand
                     targetDatabaseLayout.databaseDirectory().toFile() ) );
         }
 
-        if ( fs.fileExists( raftGroupDirectory ) )
+        if ( fs.fileExists( raftGroupDirectory.toFile() ) )
         {
             throw new IllegalArgumentException( format(
                     "Database with name [%s] already exists locally. " +
@@ -119,7 +119,7 @@ public class RestoreDatabaseCommand
     private void restoreDatabaseFiles() throws IOException
     {
         var databaseFiles = fs.listFiles( fromDatabasePath.toFile() );
-        var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath.toFile(), fs ).build();
+        var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
 
         if ( databaseFiles != null )
         {
@@ -143,7 +143,7 @@ public class RestoreDatabaseCommand
                 }
                 else
                 {
-                    var targetDirectory = transactionLogFiles.isLogFile( file ) ? transactionLogsDirectory : databaseDirectory;
+                    var targetDirectory = transactionLogFiles.isLogFile( file.toPath() ) ? transactionLogsDirectory : databaseDirectory;
                     var targetFile = new File( targetDirectory, file.getName() );
                     if ( !databaseLockFile.equals( targetFile ) )
                     {
@@ -170,8 +170,8 @@ public class RestoreDatabaseCommand
         return Neo4jLayout.of( config ).databaseLayout( databaseName );
     }
 
-    private File getRaftGroupDirectory( String databaseName, Config config )
+    private Path getRaftGroupDirectory( String databaseName, Config config )
     {
-        return ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).raftGroupDir( databaseName );
+        return ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
     }
 }

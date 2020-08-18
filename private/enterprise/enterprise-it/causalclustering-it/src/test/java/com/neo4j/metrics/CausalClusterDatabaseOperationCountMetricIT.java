@@ -12,9 +12,9 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 
 import org.neo4j.test.extension.Inject;
 
@@ -109,11 +109,11 @@ class CausalClusterDatabaseOperationCountMetricIT
     private static void assertMetricsEqual( ClusterMember member, String metricsName, long count ) throws InterruptedException
     {
         var metricsDir = member.homePath().resolve( MetricsSettings.csv_path.defaultValue().toString() );
-        File file = metricsCsv( metricsDir.toFile(), metricsName );
+        Path file = metricsCsv( metricsDir, metricsName );
         assertEventually( () -> readValue( file ), t ->  t == count, TIMEOUT, SECONDS );
     }
 
-    private static Long readValue( File file )
+    private static Long readValue( Path file )
     {
         try
         {

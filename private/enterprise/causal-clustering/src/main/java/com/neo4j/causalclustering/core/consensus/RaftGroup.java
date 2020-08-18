@@ -39,7 +39,7 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.InFlightCacheFactory;
 import com.neo4j.configuration.ServerGroupsSupplier;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -158,7 +158,7 @@ public class RaftGroup
             CoreLogPruningStrategy pruningStrategy = new CoreLogPruningStrategyFactory(
                     config.get( CausalClusteringSettings.raft_log_pruning_strategy ), logProvider ).newInstance();
 
-            File directory = layout.raftLogDirectory( namedDatabaseId.name() );
+            Path directory = layout.raftLogDirectory( namedDatabaseId.name() );
 
             return life.add(
                     new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, clock, scheduler,

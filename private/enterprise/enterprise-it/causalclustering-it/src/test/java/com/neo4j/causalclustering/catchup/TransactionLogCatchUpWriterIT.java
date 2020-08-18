@@ -12,9 +12,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.LongStream;
 
@@ -22,7 +22,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.helpers.collection.LongRange;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -114,7 +113,7 @@ class TransactionLogCatchUpWriterIT
 
     private void deleteTransactionLogs() throws IOException
     {
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory().toFile(), fs ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fs ).build();
         logFiles.accept( ( file, version ) -> deleteFileOrThrow( file ) );
     }
 
@@ -129,7 +128,7 @@ class TransactionLogCatchUpWriterIT
     @ParameterizedTest( name = "fullStoreCopy: {0}" )
     void createTransactionLogWithCheckpointInCustomLocation( boolean fullStoreCopy ) throws IOException
     {
-        createTransactionLogWithCheckpoint( defaults( transaction_logs_root_path, dir.directory( "custom-tx-logs" ).toPath().toAbsolutePath() ), false,
+        createTransactionLogWithCheckpoint( defaults( transaction_logs_root_path, dir.directoryPath( "custom-tx-logs" ).toAbsolutePath() ), false,
                 fullStoreCopy );
     }
 
@@ -309,11 +308,11 @@ class TransactionLogCatchUpWriterIT
         return new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
     }
 
-    private void deleteFileOrThrow( File file )
+    private void deleteFileOrThrow( Path file )
     {
         try
         {
-            fs.deleteFileOrThrow( file );
+            fs.deleteFileOrThrow( file.toFile() );
         }
         catch ( IOException e )
         {

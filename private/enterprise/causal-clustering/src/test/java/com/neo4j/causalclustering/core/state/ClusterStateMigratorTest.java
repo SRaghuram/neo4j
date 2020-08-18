@@ -13,9 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.state.SimpleFileStorage;
@@ -57,7 +57,7 @@ class ClusterStateMigratorTest
     {
         logProvider = new Log4jLogProvider( System.out );
 
-        clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( "data" ) );
+        clusterStateLayout = ClusterStateLayout.of( testDirectory.directoryPath( "data" ) );
         writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
 
         clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), INSTANCE );
@@ -76,8 +76,8 @@ class ClusterStateMigratorTest
     void shouldThrowWhenVersionStorageExistsButIsUnreadable() throws Exception
     {
         // create an empty file so that reading a version from it fails
-        fs.mkdirs( clusterStateLayout.clusterStateVersionFile().getParentFile() );
-        fs.write( clusterStateLayout.clusterStateVersionFile() ).close();
+        fs.mkdirs( clusterStateLayout.clusterStateVersionFile().getParent().toFile() );
+        fs.write( clusterStateLayout.clusterStateVersionFile().toFile() ).close();
 
         assertThrows( UncheckedIOException.class, this::runMigration );
 
@@ -109,10 +109,10 @@ class ClusterStateMigratorTest
     {
         var memberId = IdFactory.randomMemberId();
         var memberIdFile = clusterStateLayout.memberIdStateFile();
-        assertFalse( fs.fileExists( memberIdFile ) );
+        assertFalse( fs.fileExists( memberIdFile.toFile() ) );
         var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), INSTANCE );
         memberIdStorage.writeState( memberId );
-        assertTrue( fs.fileExists( memberIdFile ) );
+        assertTrue( fs.fileExists( memberIdFile.toFile() ) );
 
         runMigration();
 
@@ -125,25 +125,25 @@ class ClusterStateMigratorTest
         migrator.init();
     }
 
-    private void writeRandomClusterId( File file ) throws IOException
+    private void writeRandomClusterId( Path file ) throws IOException
     {
-        assertFalse( fs.fileExists( file ) );
+        assertFalse( fs.fileExists( file.toFile() ) );
         var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), INSTANCE );
         clusterIdStorage.writeState( IdFactory.randomRaftId() );
-        assertTrue( fs.fileExists( file ) );
+        assertTrue( fs.fileExists( file.toFile() ) );
     }
 
     private void assertMigrationHappened() throws Exception
     {
-        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
-        assertTrue( fs.fileExists( clusterStateLayout.clusterStateVersionFile() ) );
-        assertFalse( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
+        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory().toFile() ) );
+        assertTrue( fs.fileExists( clusterStateLayout.clusterStateVersionFile().toFile() ) );
+        assertFalse( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ).toFile() ) );
         assertEquals( new ClusterStateVersion( 1, 0 ), clusterStateVersionStorage.readState() );
     }
 
     private void assertMigrationDidNotHappen()
     {
-        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
-        assertTrue( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
+        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory().toFile() ) );
+        assertTrue( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ).toFile() ) );
     }
 }

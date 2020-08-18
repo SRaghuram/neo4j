@@ -11,13 +11,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Path;
 
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.extension.Inject;
@@ -50,12 +50,12 @@ class ServerMetricsIT
     void shouldShowServerMetrics() throws Throwable
     {
         // Given
-        File metrics = directory.file( "metrics" );
+        Path metrics = directory.filePath( "metrics" );
         var webServerContainer = serverOnRandomPorts()
                                                   .usingDataDir( directory.homeDir().getAbsolutePath() )
                                                   .withProperty( MetricsSettings.metrics_enabled.name(), TRUE )
                                                   .withProperty( MetricsSettings.csv_enabled.name(), TRUE )
-                                                  .withProperty( MetricsSettings.csv_path.name(), metrics.getPath() )
+                                                  .withProperty( MetricsSettings.csv_path.name(), metrics.toAbsolutePath().toString() )
                                                   .withProperty( MetricsSettings.csv_interval.name(), "100ms" )
                                                   .persistent()
                                                   .build();
@@ -89,13 +89,13 @@ class ServerMetricsIT
         }
     }
 
-    private static void assertMetricsExists( File metricsPath, String metricsName )
+    private static void assertMetricsExists( Path metricsPath, String metricsName )
     {
-        File file = metricsCsv( metricsPath, metricsName );
+        Path file = metricsCsv( metricsPath, metricsName );
         assertEventually( () -> threadCountReader( file ), v -> v >= 0, 1, MINUTES );
     }
 
-    private static Long threadCountReader( File file )
+    private static Long threadCountReader( Path file )
     {
         try
         {

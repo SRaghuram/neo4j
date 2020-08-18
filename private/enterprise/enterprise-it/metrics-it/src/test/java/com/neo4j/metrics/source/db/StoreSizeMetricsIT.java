@@ -11,8 +11,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
@@ -47,7 +47,7 @@ class StoreSizeMetricsIT
     @Inject
     private CheckPointer checkPointer;
 
-    private File metricsFolder;
+    private Path metricsFolder;
     private FakeClock clock;
 
     @ExtensionCallback
@@ -62,7 +62,7 @@ class StoreSizeMetricsIT
     @BeforeEach
     void setUp()
     {
-        metricsFolder = testDirectory.directory( "metrics" );
+        metricsFolder = testDirectory.directoryPath( "metrics" );
     }
 
     @AfterEach

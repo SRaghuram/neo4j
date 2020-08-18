@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,12 +127,12 @@ public abstract class ProcedureInteractionTestBase<S>
 
     protected NeoInteractionLevel<S> neo;
     protected final TransportTestUtil util = new TransportTestUtil();
-    File securityLog;
+    Path securityLog;
 
     Map<Setting<?>,String> defaultConfiguration()
     {
-        Path homeDir = testDirectory.directory( "logs" ).toPath();
-        securityLog = new File( homeDir.toFile(), "security.log" );
+        Path homeDir = testDirectory.directoryPath( "logs" );
+        securityLog = homeDir.resolve( "security.log" );
         return Map.of(
                 GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),
                 GraphDatabaseSettings.procedure_roles,

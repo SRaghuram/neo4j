@@ -11,7 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
@@ -117,7 +117,7 @@ class SegmentedRaftLogRotationTruncationPruneTest
 
     private SegmentedRaftLog createRaftLog() throws Exception
     {
-        File directory = testDirectory.homeDir();
+        Path directory = testDirectory.homePath();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =

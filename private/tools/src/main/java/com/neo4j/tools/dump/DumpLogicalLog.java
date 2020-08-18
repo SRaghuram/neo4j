@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.TimeZone;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -32,7 +33,6 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader;
-import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StorageCommand;
 
 import static java.util.TimeZone.getTimeZone;
@@ -59,18 +59,18 @@ public class DumpLogicalLog
     public void dump( String filenameOrDirectory, PrintStream out,
             Predicate<LogEntry[]> filter, Function<LogEntry,String> serializer ) throws IOException
     {
-        TransactionLogAnalyzer.analyze( fileSystem, new File( filenameOrDirectory ), new Monitor()
+        TransactionLogAnalyzer.analyze( fileSystem, Path.of( filenameOrDirectory ), new Monitor()
         {
-            private File file;
+            private Path path;
             private LogEntryCommit firstTx;
             private LogEntryCommit lastTx;
 
             @Override
-            public void logFile( File file, long logVersion ) throws IOException
+            public void logFile( Path path, long logVersion ) throws IOException
             {
-                this.file = file;
-                LogHeader logHeader = LogHeaderReader.readLogHeader( fileSystem, file, INSTANCE );
-                out.println( "=== " + file.getAbsolutePath() + "[" + logHeader + "] ===" );
+                this.path = path;
+                LogHeader logHeader = LogHeaderReader.readLogHeader( fileSystem, path, INSTANCE );
+                out.println( "=== " + path.toAbsolutePath() + "[" + logHeader + "] ===" );
             }
 
             @Override
@@ -78,7 +78,7 @@ public class DumpLogicalLog
             {
                 if ( lastTx != null )
                 {
-                    out.println( "=== END " + file.getAbsolutePath() + ", firstTx=" + firstTx + ", lastTx=" + lastTx + " ===" );
+                    out.println( "=== END " + path.toAbsolutePath() + ", firstTx=" + firstTx + ", lastTx=" + lastTx + " ===" );
                     firstTx = null;
                     lastTx = null;
                 }

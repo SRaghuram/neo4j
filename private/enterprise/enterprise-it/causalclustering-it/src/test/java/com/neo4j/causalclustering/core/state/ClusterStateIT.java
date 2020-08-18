@@ -15,7 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -23,6 +23,8 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
+import static java.nio.file.Files.isDirectory;
+import static java.nio.file.Files.isRegularFile;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -61,56 +63,56 @@ class ClusterStateIT
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            File clusterStateDirectory = core.clusterStateDirectory();
-            File databaseStateDir = new File( core.clusterStateDirectory(), "db" );
-            File defaultDatabaseStateDir = new File( databaseStateDir, DEFAULT_DATABASE_NAME );
+            Path clusterStateDirectory = core.clusterStateDirectory();
+            Path databaseStateDir = core.clusterStateDirectory().resolve( "db" );
+            Path defaultDatabaseStateDir = databaseStateDir.resolve( DEFAULT_DATABASE_NAME );
 
             // global server id
-            File serverId = core.neo4jLayout().serverIdFile().toFile();
+            Path serverId = core.neo4jLayout().serverIdFile();
 
             // database specific durable storage (a/b)
-            File raftIdStateDir = new File( defaultDatabaseStateDir, "raft-id-state" );
-            File lastFlushedStateDir = new File( defaultDatabaseStateDir, "last-flushed-state" );
-            File membershipStateDir = new File( defaultDatabaseStateDir, "membership-state" );
-            File sessionTrackerStateDir = new File( defaultDatabaseStateDir, "session-tracker-state" );
-            File termStateDir = new File( defaultDatabaseStateDir, "term-state" );
-            File voteStateDir = new File( defaultDatabaseStateDir, "vote-state" );
-            File leaseStateDir = new File( defaultDatabaseStateDir, "lease-state" );
+            Path raftIdStateDir = defaultDatabaseStateDir.resolve( "raft-id-state" );
+            Path lastFlushedStateDir = defaultDatabaseStateDir.resolve( "last-flushed-state" );
+            Path membershipStateDir = defaultDatabaseStateDir.resolve( "membership-state" );
+            Path sessionTrackerStateDir = defaultDatabaseStateDir.resolve( "session-tracker-state" );
+            Path termStateDir = defaultDatabaseStateDir.resolve( "term-state" );
+            Path voteStateDir = defaultDatabaseStateDir.resolve( "vote-state" );
+            Path leaseStateDir = defaultDatabaseStateDir.resolve( "lease-state" );
 
             // database specific raft log
-            File raftLogDir = new File( defaultDatabaseStateDir, "raft-log" );
+            Path raftLogDir = defaultDatabaseStateDir.resolve( "raft-log" );
 
-            assertTrue( raftIdStateDir.isDirectory() );
-            assertTrue( lastFlushedStateDir.isDirectory() );
-            assertTrue( membershipStateDir.isDirectory() );
-            assertTrue( sessionTrackerStateDir.isDirectory() );
-            assertTrue( termStateDir.isDirectory() );
-            assertTrue( voteStateDir.isDirectory() );
-            assertTrue( raftLogDir.isDirectory() );
-            assertTrue( leaseStateDir.isDirectory() );
+            assertTrue( isDirectory( raftIdStateDir ) );
+            assertTrue( isDirectory( lastFlushedStateDir ) );
+            assertTrue( isDirectory( membershipStateDir ) );
+            assertTrue( isDirectory( sessionTrackerStateDir ) );
+            assertTrue( isDirectory( termStateDir ) );
+            assertTrue( isDirectory( voteStateDir ) );
+            assertTrue( isDirectory( raftLogDir ) );
+            assertTrue( isDirectory( leaseStateDir ) );
 
-            assertTrue( serverId.isFile() );
-            assertTrue( new File( raftIdStateDir, "raft-id" ).isFile() );
+            assertTrue( isRegularFile( serverId ) );
+            assertTrue( isRegularFile( raftIdStateDir.resolve( "raft-id" ) ) );
 
-            assertTrue( new File( lastFlushedStateDir, "last-flushed.a" ).isFile() );
-            assertTrue( new File( lastFlushedStateDir, "last-flushed.b" ).isFile() );
+            assertTrue( isRegularFile( lastFlushedStateDir.resolve( "last-flushed.a" ) ) );
+            assertTrue( isRegularFile( lastFlushedStateDir.resolve( "last-flushed.b" ) ) );
 
-            assertTrue( new File( membershipStateDir, "membership.a" ).isFile() );
-            assertTrue( new File( membershipStateDir, "membership.b" ).isFile() );
+            assertTrue( isRegularFile( membershipStateDir.resolve( "membership.a" ) ) );
+            assertTrue( isRegularFile( membershipStateDir.resolve( "membership.b" ) ) );
 
-            assertTrue( new File( sessionTrackerStateDir, "session-tracker.a" ).isFile() );
-            assertTrue( new File( sessionTrackerStateDir, "session-tracker.b" ).isFile() );
+            assertTrue( isRegularFile( sessionTrackerStateDir.resolve( "session-tracker.a" ) ) );
+            assertTrue( isRegularFile( sessionTrackerStateDir.resolve( "session-tracker.b" ) ) );
 
-            assertTrue( new File( termStateDir, "term.a" ).isFile() );
-            assertTrue( new File( termStateDir, "term.b" ).isFile() );
+            assertTrue( isRegularFile( termStateDir.resolve( "term.a" ) ) );
+            assertTrue( isRegularFile( termStateDir.resolve( "term.b" ) ) );
 
-            assertTrue( new File( voteStateDir, "vote.a" ).isFile() );
-            assertTrue( new File( voteStateDir, "vote.b" ).isFile() );
+            assertTrue( isRegularFile( voteStateDir.resolve( "vote.a" ) ) );
+            assertTrue( isRegularFile( voteStateDir.resolve( "vote.b" ) ) );
 
-            assertTrue( new File( raftLogDir, "raft.log.0" ).isFile() );
+            assertTrue( isRegularFile( raftLogDir.resolve( "raft.log.0" ) ) );
 
-            assertTrue( new File( leaseStateDir, "lease.a" ).isFile() );
-            assertTrue( new File( leaseStateDir, "lease.b" ).isFile() );
+            assertTrue( isRegularFile( leaseStateDir.resolve( "lease.a" ) ) );
+            assertTrue( isRegularFile( leaseStateDir.resolve( "lease.b" ) ) );
         }
     }
 

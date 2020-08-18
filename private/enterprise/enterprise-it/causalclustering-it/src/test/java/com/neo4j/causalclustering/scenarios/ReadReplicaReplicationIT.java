@@ -27,7 +27,6 @@ import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -501,7 +500,7 @@ class ReadReplicaReplicationIT
         }
     }
 
-    private static long versionBy( File raftLogDir, BinaryOperator<Long> operator ) throws IOException
+    private static long versionBy( Path raftLogDir, BinaryOperator<Long> operator ) throws IOException
     {
         try ( var fileSystem = new DefaultFileSystemAbstraction() )
         {

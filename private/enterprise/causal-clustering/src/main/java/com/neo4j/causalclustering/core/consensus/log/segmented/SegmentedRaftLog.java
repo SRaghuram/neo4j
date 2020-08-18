@@ -11,8 +11,9 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.util.function.Function;
 
@@ -51,7 +52,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     private final int READER_POOL_MAX_AGE = 1; // minutes
 
     private final FileSystemAbstraction fileSystem;
-    private final File directory;
+    private final Path directory;
     private final long rotateAtSize;
     private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final FileNames fileNames;
@@ -67,7 +68,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     private final ReaderPool readerPool;
     private JobHandle<?> readerPoolPruner;
 
-    public SegmentedRaftLog( FileSystemAbstraction fileSystem, File directory, long rotateAtSize,
+    public SegmentedRaftLog( FileSystemAbstraction fileSystem, Path directory, long rotateAtSize,
             Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, int readerPoolSize, Clock clock,
             JobScheduler scheduler, CoreLogPruningStrategy pruningStrategy, MemoryTracker memoryTracker )
     {
@@ -88,9 +89,9 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     @Override
     public synchronized void start() throws IOException, DamagedLogStorageException, DisposedException
     {
-        if ( !directory.exists() && !directory.mkdirs() )
+        if ( Files.notExists( directory ) )
         {
-            throw new IOException( "Could not create: " + directory );
+            Files.createDirectories( directory );
         }
 
         try

@@ -47,12 +47,12 @@ class BareFilesHolder
 
     void prepareFile( String fileName, int size ) throws IOException
     {
-        var file = new File( fileName );
-        if ( fs.fileExists( file ) )
+        var file = Path.of( fileName );
+        if ( fs.fileExists( file.toFile() ) )
         {
-            fs.deleteFile( file );
+            fs.deleteFile( file.toFile() );
         }
-        var channel = fs.write( file );
+        var channel = fs.write( file.toFile() );
         var bytes = new byte[size];
         new Random().nextBytes( bytes );
         var buffer = ByteBuffer.wrap( bytes );

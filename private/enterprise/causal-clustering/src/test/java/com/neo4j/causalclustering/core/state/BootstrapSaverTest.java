@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -149,22 +148,22 @@ class BootstrapSaverTest
             this.fs = fs;
             this.layout = layout;
 
-            TransactionLogFilesHelper txHelper = new TransactionLogFilesHelper( null, layout.getTransactionLogsDirectory().toFile() );
+            TransactionLogFilesHelper txHelper = new TransactionLogFilesHelper( null, layout.getTransactionLogsDirectory() );
 
-            File schema = layout.databaseDirectory().resolve( "schema" ).toFile();
-            File index = layout.databaseDirectory().resolve( "index" ).toFile();
+            Path schema = layout.databaseDirectory().resolve( "schema" );
+            Path index = layout.databaseDirectory().resolve( "index" );
 
             this.fsNodes = List.of(
-                    new FsNode( layout.metadataStore().toFile(), false ),
-                    new FsNode( layout.nodeStore().toFile(), false ),
+                    new FsNode( layout.metadataStore(), false ),
+                    new FsNode( layout.nodeStore(), false ),
 
                     new FsNode( schema, true ),
-                    new FsNode( new File( schema,"schema-0" ), false ),
-                    new FsNode( new File( schema, "schema-1" ), false ),
+                    new FsNode( schema.resolve( "schema-0" ), false ),
+                    new FsNode( schema.resolve(  "schema-1" ), false ),
 
                     new FsNode( index, true ),
-                    new FsNode( new File( index, "index-0" ), false ),
-                    new FsNode( new File( index, "index-1" ), false ),
+                    new FsNode( index.resolve( "index-0" ), false ),
+                    new FsNode( index.resolve( "index-1" ), false ),
 
                     new FsNode( txHelper.getLogFileForVersion( 0 ), false ),
                     new FsNode( txHelper.getLogFileForVersion( 1 ), false )
@@ -201,12 +200,12 @@ class BootstrapSaverTest
 
     private static class FsNode
     {
-        private final File file;
+        private final Path path;
         private final boolean isDirectory;
 
-        FsNode( File file, boolean isDirectory )
+        FsNode( Path path, boolean isDirectory )
         {
-            this.file = file;
+            this.path = path;
             this.isDirectory = isDirectory;
         }
 
@@ -214,11 +213,11 @@ class BootstrapSaverTest
         {
             if ( isDirectory )
             {
-                fs.mkdirs( file );
+                fs.mkdirs( path.toFile() );
             }
             else
             {
-                fs.openAsOutputStream( file, false ).close();
+                fs.openAsOutputStream( path.toFile(), false ).close();
             }
         }
 
@@ -226,12 +225,12 @@ class BootstrapSaverTest
         {
             if ( shouldExist )
             {
-                assertTrue( fs.fileExists( file ), "Should exist: " + file );
-                assertEquals( isDirectory, fs.isDirectory( file ), (isDirectory ? "Should be directory: " : "Should not be directory: ") + file );
+                assertTrue( fs.fileExists( path.toFile() ), "Should exist: " + path );
+                assertEquals( isDirectory, fs.isDirectory( path.toFile() ), (isDirectory ? "Should be directory: " : "Should not be directory: ") + path );
             }
             else
             {
-                assertFalse( fs.fileExists( file ), "Should not exist: " + file );
+                assertFalse( fs.fileExists( path.toFile() ), "Should not exist: " + path );
             }
         }
     }

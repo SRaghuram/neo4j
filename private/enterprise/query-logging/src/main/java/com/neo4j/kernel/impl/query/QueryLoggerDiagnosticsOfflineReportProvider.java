@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.query;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -31,7 +31,7 @@ public class QueryLoggerDiagnosticsOfflineReportProvider extends DiagnosticsOffl
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, File storeDirectory )
+    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, Path storeDirectory )
     {
         this.fs = fs;
         this.config = config;
@@ -42,8 +42,8 @@ public class QueryLoggerDiagnosticsOfflineReportProvider extends DiagnosticsOffl
     {
         if ( classifiers.contains( "logs" ) )
         {
-            File queryLog = config.get( GraphDatabaseSettings.log_queries_filename ).toFile();
-            if ( fs.fileExists( queryLog ) )
+            Path queryLog = config.get( GraphDatabaseSettings.log_queries_filename );
+            if ( fs.fileExists( queryLog.toFile() ) )
             {
                 return newDiagnosticsRotatingFile( "logs/query.log", fs, queryLog );
             }

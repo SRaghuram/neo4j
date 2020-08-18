@@ -10,6 +10,8 @@ import com.neo4j.tools.util.TransactionLogUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
@@ -49,10 +51,10 @@ public class TransactionLogAnalyzer
          * Called when transitioning to a new log file, crossing a log version bridge. This is also called for the
          * first log file opened.
          *
-         * @param file {@link File} pointing to the opened log file.
+         * @param file {@link Path} pointing to the opened log file.
          * @param logVersion log version.
          */
-        default void logFile( File file, long logVersion ) throws IOException
+        default void logFile( Path file, long logVersion ) throws IOException
         {   // no-op by default
         }
 
@@ -93,19 +95,19 @@ public class TransactionLogAnalyzer
      * @param storeDirOrLogFile {@link File} pointing either to a directory containing transaction log files, or directly
      * pointing to a single transaction log file to analyze.
      * @param monitor {@link Monitor} receiving call-backs for all {@link Monitor#transaction(LogEntry[]) transactions},
-     * {@link Monitor#checkpoint(CheckPoint, LogPosition) checkpoints} and {@link Monitor#logFile(File, long) log file transitions}
+     * {@link Monitor#checkpoint(CheckPoint, LogPosition) checkpoints} and {@link Monitor#logFile(Path, long) log file transitions}
      * encountered during the analysis.
      * @throws IOException on I/O error.
      */
-    public static void analyze( FileSystemAbstraction fileSystem, File storeDirOrLogFile, Monitor monitor ) throws IOException
+    public static void analyze( FileSystemAbstraction fileSystem, Path storeDirOrLogFile, Monitor monitor ) throws IOException
     {
-        File firstFile;
+        Path firstFile;
         LogVersionBridge bridge;
         ReadAheadLogChannel channel;
         LogEntryReader entryReader;
         LogPositionMarker positionMarker;
         LogFiles logFiles;
-        if ( storeDirOrLogFile.isDirectory() )
+        if ( Files.isDirectory( storeDirOrLogFile ) )
         {
             // Use natural log version bridging if a directory is supplied
             logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem )
@@ -137,7 +139,7 @@ public class TransactionLogAnalyzer
         {
             // Use no bridging, simply reading this single log file if a file is supplied
             firstFile = storeDirOrLogFile;
-            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile.getParentFile(), fileSystem )
+            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile.getParent(), fileSystem )
                     .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                     .build();
             monitor.logFile( firstFile, logFiles.getLogVersion( firstFile ) );
@@ -178,7 +180,7 @@ public class TransactionLogAnalyzer
         }
 
         @Override
-        public void logFile( File file, long logVersion ) throws IOException
+        public void logFile( Path file, long logVersion ) throws IOException
         {
             for ( Monitor monitor : monitors )
             {

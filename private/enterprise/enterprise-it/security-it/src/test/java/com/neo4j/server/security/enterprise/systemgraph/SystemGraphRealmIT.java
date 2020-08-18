@@ -439,7 +439,7 @@ class SystemGraphRealmIT
 
     private void startSystemGraphRealm() throws Exception
     {
-        Config config = Config.defaults( DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toPath() );
+        Config config = Config.defaults( DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directoryPath( "data/dbms" ) );
 
         UserSecurityGraphComponent userSecurityGraphComponent = new UserSecurityGraphComponent( securityLog, oldUsers, initialPassword, config );
         EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent =

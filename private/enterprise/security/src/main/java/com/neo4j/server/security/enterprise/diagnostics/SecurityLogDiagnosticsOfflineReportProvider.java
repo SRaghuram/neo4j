@@ -7,7 +7,7 @@ package com.neo4j.server.security.enterprise.diagnostics;
 
 import com.neo4j.configuration.SecuritySettings;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -32,7 +32,7 @@ public class SecurityLogDiagnosticsOfflineReportProvider extends DiagnosticsOffl
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, File storeDirectory )
+    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, Path storeDirectory )
     {
         this.fs = fs;
         this.config = config;
@@ -43,8 +43,8 @@ public class SecurityLogDiagnosticsOfflineReportProvider extends DiagnosticsOffl
     {
         if ( classifiers.contains( "logs" ) )
         {
-            File securityLog = config.get( SecuritySettings.security_log_filename ).toFile();
-            if ( fs.fileExists( securityLog ) )
+            Path securityLog = config.get( SecuritySettings.security_log_filename );
+            if ( fs.fileExists( securityLog.toFile() ) )
             {
                 return newDiagnosticsRotatingFile( "logs/security.log", fs, securityLog );
             }

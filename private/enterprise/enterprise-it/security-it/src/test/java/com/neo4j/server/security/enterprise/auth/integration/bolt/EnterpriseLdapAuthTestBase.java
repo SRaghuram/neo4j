@@ -18,6 +18,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 
@@ -109,11 +110,11 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
     void assertSecurityLogContains( String message ) throws IOException
     {
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
-        File workingDirectory = testDirectory.homeDir();
-        File logFile = new File( workingDirectory, "logs/security.log" );
+        Path workingDirectory = testDirectory.homePath();
+        Path logFile = workingDirectory.resolve( "logs/security.log" );
 
         boolean foundError = false;
-        try ( var reader = fileSystem.openAsReader( logFile, UTF_8 ) )
+        try ( var reader = fileSystem.openAsReader( logFile.toFile(), UTF_8 ) )
         {
             var lineReader = lineIterator( reader );
 
@@ -133,10 +134,10 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
     void assertSecurityLogDoesNotContain( String message ) throws IOException
     {
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
-        File workingDirectory = testDirectory.homeDir();
-        File logFile = new File( workingDirectory, "logs/security.log" );
+        Path workingDirectory = testDirectory.homePath();
+        Path logFile = workingDirectory.resolve( "logs/security.log" );
 
-        try ( var reader = fileSystem.openAsReader( logFile, UTF_8 ) )
+        try ( var reader = fileSystem.openAsReader( logFile.toFile(), UTF_8 ) )
         {
             LineIterator lineIterator = lineIterator( reader );
 

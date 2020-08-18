@@ -464,7 +464,7 @@ class BackupIT
         createInitialDataSet( db );
 
         StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
-        LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath.toFile(), fs )
+        LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
 
@@ -705,7 +705,7 @@ class BackupIT
             createNode( db );
         }
 
-        File oldLog = dependencyResolver( db ).resolveDependency( LogFiles.class ).getHighestLogFile();
+        Path oldLog = dependencyResolver( db ).resolveDependency( LogFiles.class ).getHighestLogFile();
         rotateAndCheckPoint( db );
 
         for ( int i = 0; i < 1; i++ )
@@ -717,7 +717,7 @@ class BackupIT
         long lastCommittedTxBefore = getLastCommittedTx( db );
 
         managementService.shutdown();
-        FileUtils.deleteFile( oldLog );
+        FileUtils.deleteFile( oldLog.toFile() );
         GraphDatabaseService dbAfterRestart = startDb( serverHomeDir );
 
         long lastCommittedTxAfter = getLastCommittedTx( dbAfterRestart );
@@ -1330,7 +1330,7 @@ class BackupIT
     private void checkPreviousCommittedTxIdFromBackupTxLog( long logVersion, long txId ) throws IOException
     {
         // Assert header of specified log version containing correct txId
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory().toFile(), fs )
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
         LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ), INSTANCE );

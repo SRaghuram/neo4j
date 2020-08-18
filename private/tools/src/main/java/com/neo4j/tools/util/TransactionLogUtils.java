@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.util;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -21,7 +21,6 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 
 import static java.util.Objects.requireNonNull;
@@ -41,7 +40,7 @@ public class TransactionLogUtils
     public static LogEntryCursor openLogs( final FileSystemAbstraction fs, LogFiles logFiles, CommandReaderFactory commandReaderFactory )
             throws IOException
     {
-        File firstFile = logFiles.getLogFileForVersion( logFiles.getLowestLogVersion() );
+        Path firstFile = logFiles.getLogFileForVersion( logFiles.getLowestLogVersion() );
         return openLogEntryCursor( fs, firstFile, new ReaderLogVersionBridge( logFiles ), logFiles.getChannelNativeAccessor(), commandReaderFactory );
     }
 
@@ -49,13 +48,13 @@ public class TransactionLogUtils
      * Opens a {@link LogEntryCursor} for requested file
      *
      * @param fileSystem to find {@code file} in.
-     * @param file file to open
+     * @param path file to open
      * @param readerLogVersionBridge log version bridge to use
      */
-    public static LogEntryCursor openLogEntryCursor( FileSystemAbstraction fileSystem, File file,
+    public static LogEntryCursor openLogEntryCursor( FileSystemAbstraction fileSystem, Path path,
             LogVersionBridge readerLogVersionBridge, ChannelNativeAccessor nativeAccessor, CommandReaderFactory commandReaderFactory ) throws IOException
     {
-        LogVersionedStoreChannel channel = openVersionedChannel( fileSystem, file, nativeAccessor );
+        LogVersionedStoreChannel channel = openVersionedChannel( fileSystem, path, nativeAccessor );
         ReadableLogChannel logChannel = new ReadAheadLogChannel( channel, readerLogVersionBridge, INSTANCE );
         return new LogEntryCursor( new VersionAwareLogEntryReader( commandReaderFactory ), logChannel );
     }
@@ -64,16 +63,16 @@ public class TransactionLogUtils
      * Opens a file in given {@code fileSystem} as a {@link LogVersionedStoreChannel}.
      *
      * @param fileSystem {@link FileSystemAbstraction} containing the file to open.
-     * @param file file to open as a channel.
+     * @param path file to open as a channel.
      * @return {@link LogVersionedStoreChannel} for the file. Its version is determined by its log header.
      * @throws IOException on I/O error.
      */
-    public static PhysicalLogVersionedStoreChannel openVersionedChannel( FileSystemAbstraction fileSystem, File file,
+    public static PhysicalLogVersionedStoreChannel openVersionedChannel( FileSystemAbstraction fileSystem, Path path,
             ChannelNativeAccessor nativeAccessor ) throws IOException
     {
-        StoreChannel fileChannel = fileSystem.read( file );
-        LogHeader logHeader = readLogHeader( allocate( CURRENT_FORMAT_LOG_HEADER_SIZE, INSTANCE ), fileChannel, true, file );
-        requireNonNull( logHeader, "There is no log header in log file '" + file + "', so it is likely a pre-allocated empty log file." );
-        return new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.getLogVersion(), logHeader.getLogFormatVersion(), file, nativeAccessor );
+        StoreChannel fileChannel = fileSystem.read( path.toFile() );
+        LogHeader logHeader = readLogHeader( allocate( CURRENT_FORMAT_LOG_HEADER_SIZE, INSTANCE ), fileChannel, true, path );
+        requireNonNull( logHeader, "There is no log header in log file '" + path + "', so it is likely a pre-allocated empty log file." );
+        return new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.getLogVersion(), logHeader.getLogFormatVersion(), path, nativeAccessor );
     }
 }

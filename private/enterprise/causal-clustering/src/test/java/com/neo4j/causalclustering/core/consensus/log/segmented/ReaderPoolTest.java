@@ -9,7 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.time.Clocks;
@@ -29,7 +29,7 @@ import static org.neo4j.logging.NullLogProvider.getInstance;
 
 class ReaderPoolTest
 {
-    private final File base = new File( "base" );
+    private final Path base = Path.of( "base" );
     private final FileNames fileNames = new FileNames( base );
     private final EphemeralFileSystemAbstraction fsa = spy( new EphemeralFileSystemAbstraction() );
     private final FakeClock clock = Clocks.fakeClock();
@@ -39,7 +39,7 @@ class ReaderPoolTest
     @BeforeEach
     void before() throws Exception
     {
-        fsa.mkdirs( base );
+        fsa.mkdirs( base.toFile() );
     }
 
     @AfterEach

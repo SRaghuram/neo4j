@@ -11,15 +11,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.collection.PrimitiveLongArrayQueue;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.ByteUnit;
@@ -127,7 +126,7 @@ class TransactionLogAnalyzerTest
     @Test
     void throwExceptionWithErrorMessageIfLogFilesNotFound() throws Exception
     {
-        File emptyDirectory = testDirectory.directory( "empty" );
+        Path emptyDirectory = testDirectory.directoryPath( "empty" );
         assertThrows( IllegalStateException.class, () -> TransactionLogAnalyzer.analyze( fs, emptyDirectory, monitor ) );
     }
 
@@ -232,7 +231,7 @@ class TransactionLogAnalyzerTest
 
     private void analyzeAllTransactionLogs() throws IOException
     {
-        TransactionLogAnalyzer.analyze( fs, databaseLayout.getTransactionLogsDirectory().toFile(), monitor );
+        TransactionLogAnalyzer.analyze( fs, databaseLayout.getTransactionLogsDirectory(), monitor );
     }
 
     private long rotate() throws IOException
@@ -294,7 +293,7 @@ class TransactionLogAnalyzerTest
         }
 
         @Override
-        public void logFile( File file, long logVersion )
+        public void logFile( Path file, long logVersion )
         {
             logFiles++;
             assertEquals( nextExpectedLogVersion++, logVersion );

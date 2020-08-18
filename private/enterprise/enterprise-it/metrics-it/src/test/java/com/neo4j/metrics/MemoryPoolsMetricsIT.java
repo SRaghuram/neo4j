@@ -8,7 +8,7 @@ package com.neo4j.metrics;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -42,15 +42,15 @@ public class MemoryPoolsMetricsIT
     private DatabaseManagementService managementService;
     @Inject
     private MemoryPools pools;
-    private File outputPath;
+    private Path outputPath;
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        outputPath = new File( directory.homeDir(), "metrics" );
+        outputPath = directory.homePath("metrics" );
         builder.setConfig( metrics_enabled, true );
         builder.setConfig( csv_enabled, true );
-        builder.setConfig( csv_path, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( csv_path, outputPath.toAbsolutePath() );
     }
 
     @Test

@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -30,7 +31,7 @@ public class FileNames
     static final String BASE_FILE_NAME = "raft.log.";
     private static final String VERSION_MATCH = "(0|[1-9]\\d*)";
 
-    private final File baseDirectory;
+    private final Path baseDirectory;
     private final Pattern logFilePattern;
 
     /**
@@ -38,7 +39,7 @@ public class FileNames
      *
      * @param baseDirectory The base directory in which the RAFT log files reside.
      */
-    public FileNames( File baseDirectory )
+    public FileNames( Path baseDirectory )
     {
         this.baseDirectory = baseDirectory;
         this.logFilePattern = Pattern.compile( BASE_FILE_NAME + VERSION_MATCH );
@@ -50,9 +51,9 @@ public class FileNames
      *
      * @return A file for the specific version.
      */
-    File getForSegment( long version )
+    Path getForSegment( long version )
     {
-        return new File( baseDirectory, BASE_FILE_NAME + version );
+        return baseDirectory.resolve( BASE_FILE_NAME + version );
     }
 
     /**
@@ -64,11 +65,11 @@ public class FileNames
      *
      * @return The sorted version to file map.
      */
-    public SortedMap<Long,File> getAllFiles( FileSystemAbstraction fileSystem, Log log )
+    public SortedMap<Long,Path> getAllFiles( FileSystemAbstraction fileSystem, Log log )
     {
-        SortedMap<Long,File> versionFileMap = new TreeMap<>();
+        SortedMap<Long,Path> versionFileMap = new TreeMap<>();
 
-        for ( File file : fileSystem.listFiles( baseDirectory ) )
+        for ( File file : fileSystem.listFiles( baseDirectory.toFile() ) )
         {
             Matcher matcher = logFilePattern.matcher( file.getName() );
 
@@ -78,7 +79,7 @@ public class FileNames
                 continue;
             }
 
-            versionFileMap.put( Long.valueOf( matcher.group( 1 ) ), file );
+            versionFileMap.put( Long.valueOf( matcher.group( 1 ) ), file.toPath() );
         }
 
         return versionFileMap;

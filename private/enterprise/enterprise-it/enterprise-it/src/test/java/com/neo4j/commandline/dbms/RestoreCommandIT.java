@@ -9,7 +9,6 @@ import com.neo4j.restore.RestoreDatabaseCli;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -26,9 +25,9 @@ class RestoreCommandIT extends AbstractCommandIT
     void failToRestoreRunningDatabase() throws IOException
     {
         String databaseName = databaseAPI.databaseName();
-        File testBackup = testDirectory.directory( "testbackup" );
-        FileUtils.copyRecursively( databaseAPI.databaseLayout().databaseDirectory().toFile(), testBackup );
-        CommandFailedException exception = assertThrows( CommandFailedException.class, () -> restoreDatabase( databaseName, testBackup.toPath() ) );
+        Path testBackup = testDirectory.directoryPath( "testbackup" );
+        FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
+        CommandFailedException exception = assertThrows( CommandFailedException.class, () -> restoreDatabase( databaseName, testBackup ) );
         assertThat( exception.getMessage() ).startsWith( "The database is in use. Stop database" );
     }
 
@@ -36,12 +35,12 @@ class RestoreCommandIT extends AbstractCommandIT
     void restoreStoppedDatabase() throws IOException
     {
         String databaseName = databaseAPI.databaseName();
-        File testBackup = testDirectory.directory( "testbackup2" );
-        FileUtils.copyRecursively( databaseAPI.databaseLayout().databaseDirectory().toFile(), testBackup );
+        Path testBackup = testDirectory.directoryPath( "testbackup2" );
+        FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
 
         managementService.shutdownDatabase( databaseName );
 
-        assertDoesNotThrow(() -> restoreDatabase( databaseName, testBackup.toPath() ) );
+        assertDoesNotThrow(() -> restoreDatabase( databaseName, testBackup ) );
     }
 
     private void restoreDatabase( String database, Path from ) throws IOException

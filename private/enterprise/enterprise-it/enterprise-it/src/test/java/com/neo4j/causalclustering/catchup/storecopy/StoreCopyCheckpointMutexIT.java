@@ -145,7 +145,7 @@ class StoreCopyCheckpointMutexIT
 
     private void performBackupWithConsistencyCheck( SocketAddress address ) throws Exception
     {
-        var backupDir = directory.directory( "backups" ).toPath();
+        var backupDir = directory.directoryPath( "backups" );
 
         var backupContext = OnlineBackupContext.builder()
                 .withAddress( address.getHostname(), address.getPort() )

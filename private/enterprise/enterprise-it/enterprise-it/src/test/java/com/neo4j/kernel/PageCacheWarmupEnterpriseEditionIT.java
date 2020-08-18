@@ -405,7 +405,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     private static void verifyEventuallyWarmsUp( long pagesInMemory, Path metricsDirectory )
     {
         assertEventually( "Metrics report should include page cache page faults",
-                () -> readLongCounterValue( metricsCsv( metricsDirectory.toFile(), "neo4j.page_cache.page_faults" ) ), v -> v >= pagesInMemory, 20, MINUTES );
+                () -> readLongCounterValue( metricsCsv( metricsDirectory, "neo4j.page_cache.page_faults" ) ), v -> v >= pagesInMemory, 20, MINUTES );
     }
 
     private static void createData( GraphDatabaseService db )

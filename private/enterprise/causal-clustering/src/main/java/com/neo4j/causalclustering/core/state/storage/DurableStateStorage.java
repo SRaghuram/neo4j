@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.core.state.storage;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.StateRecoveryManager;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
@@ -30,19 +30,19 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private final Log log;
     private final MemoryTracker memoryTracker;
     private STATE initialState;
-    private final File fileA;
-    private final File fileB;
+    private final Path fileA;
+    private final Path fileB;
     private final FileSystemAbstraction fsa;
     private final CoreStateFiles<STATE> fileType;
     private final StateMarshal<STATE> marshal;
     private final int numberOfEntriesBeforeRotation;
 
     private int numberOfEntriesWrittenInActiveFile;
-    private File currentStoreFile;
+    private Path currentStoreFile;
 
     private PhysicalFlushableChannel currentStoreChannel;
 
-    public DurableStateStorage( FileSystemAbstraction fsa, File baseDir, CoreStateFiles<STATE> fileType,
+    public DurableStateStorage( FileSystemAbstraction fsa, Path baseDir, CoreStateFiles<STATE> fileType,
             int numberOfEntriesBeforeRotation, LogProvider logProvider, MemoryTracker memoryTracker )
     {
         this.fsa = fsa;
@@ -52,14 +52,14 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         this.log = logProvider.getLog( getClass() );
         this.memoryTracker = memoryTracker;
         this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal, memoryTracker );
-        this.fileA = new File( baseDir, fileType.name() + ".a" );
-        this.fileB = new File( baseDir, fileType.name() + ".b" );
+        this.fileA = baseDir.resolve( fileType.name() + ".a" );
+        this.fileB = baseDir.resolve( fileType.name() + ".b" );
     }
 
     @Override
     public boolean exists()
     {
-        return fsa.fileExists( fileA ) && fsa.fileExists( fileB );
+        return fsa.fileExists( fileA.toFile() ) && fsa.fileExists( fileB.toFile() );
     }
 
     private void create() throws IOException
@@ -68,12 +68,12 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         ensureExists( fileB );
     }
 
-    private void ensureExists( File file ) throws IOException
+    private void ensureExists( Path path ) throws IOException
     {
-        if ( !fsa.fileExists( file ) )
+        if ( !fsa.fileExists( path.toFile() ) )
         {
-            fsa.mkdirs( file.getParentFile() );
-            try ( FlushableChannel channel = channelForFile( file ) )
+            fsa.mkdirs( path.getParent().toFile() );
+            try ( FlushableChannel channel = channelForFile( path ) )
             {
                 marshal.marshal( marshal.startState(), channel );
             }
@@ -151,14 +151,14 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         }
     }
 
-    private PhysicalFlushableChannel resetStoreFile( File nextStore ) throws IOException
+    private PhysicalFlushableChannel resetStoreFile( Path nextStore ) throws IOException
     {
-        fsa.truncate( nextStore, 0 );
+        fsa.truncate( nextStore.toFile(), 0 );
         return channelForFile( nextStore );
     }
 
-    private PhysicalFlushableChannel channelForFile( File file ) throws IOException
+    private PhysicalFlushableChannel channelForFile( Path path ) throws IOException
     {
-        return new PhysicalFlushableChannel( fsa.write( file ), new HeapScopedBuffer( toIntExact( kibiBytes( 512 ) ), memoryTracker ) );
+        return new PhysicalFlushableChannel( fsa.write( path.toFile() ), new HeapScopedBuffer( toIntExact( kibiBytes( 512 ) ), memoryTracker ) );
     }
 }

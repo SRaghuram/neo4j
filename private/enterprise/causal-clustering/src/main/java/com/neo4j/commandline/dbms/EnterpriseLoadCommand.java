@@ -7,7 +7,7 @@ package com.neo4j.commandline.dbms;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LoadCommand;
@@ -32,9 +32,9 @@ public class EnterpriseLoadCommand extends LoadCommand
     protected void loadDump()
     {
         Config config = buildConfig();
-        File raftGroupDirectory = getRaftGroupDirectory( database.name(), config );
+        Path raftGroupDirectory = getRaftGroupDirectory( database.name(), config );
 
-        if ( fs.fileExists( raftGroupDirectory ) )
+        if ( fs.fileExists( raftGroupDirectory.toFile() ) )
         {
             throw new IllegalArgumentException( format(
                     "Database with name [%s] already exists locally. " +
@@ -46,8 +46,8 @@ public class EnterpriseLoadCommand extends LoadCommand
         super.loadDump();
     }
 
-    private File getRaftGroupDirectory( String databaseName, Config config )
+    private Path getRaftGroupDirectory( String databaseName, Config config )
     {
-        return ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).raftGroupDir( databaseName );
+        return ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
     }
 }

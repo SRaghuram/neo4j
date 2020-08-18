@@ -7,9 +7,9 @@ package com.neo4j.kernel.impl.enterprise.configuration;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -31,8 +31,8 @@ class OnlineBackupSettingsMigratorTest
     @Test
     void testMigration() throws IOException
     {
-        File confFile = testDirectory.createFile( "test.conf" );
-        Files.write( confFile.toPath(), Collections.singletonList( "dbms.backup.address=foo:123" ) );
+        Path confFile = testDirectory.createFilePath( "test.conf" );
+        Files.write( confFile, Collections.singletonList( "dbms.backup.address=foo:123" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
 
@@ -42,8 +42,8 @@ class OnlineBackupSettingsMigratorTest
     @Test
     void testMigrationOverriddenMigration() throws IOException
     {
-        File confFile = testDirectory.createFile( "test.conf" );
-        Files.write( confFile.toPath(), Arrays.asList( "dbms.backup.address=foo:123", online_backup_listen_address.name() + "=bar:567" ) );
+        Path confFile = testDirectory.createFilePath( "test.conf" );
+        Files.write( confFile, Arrays.asList( "dbms.backup.address=foo:123", online_backup_listen_address.name() + "=bar:567" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
 

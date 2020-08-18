@@ -10,7 +10,7 @@ import com.neo4j.configuration.OnlineBackupSettings;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -41,17 +41,17 @@ class PageCacheMetricsIT
     @Inject
     private GraphDatabaseService database;
 
-    private File metricsDirectory;
+    private Path metricsDirectory;
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        metricsDirectory = testDirectory.directory( "metrics" );
+        metricsDirectory = testDirectory.directoryPath( "metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true  )
                 .setConfig( MetricsSettings.neo_page_cache_enabled, true  )
                 .setConfig( MetricsSettings.csv_enabled, true )
                 .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
-                .setConfig( MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath() )
+                .setConfig( MetricsSettings.csv_path, metricsDirectory.toAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

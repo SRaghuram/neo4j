@@ -11,16 +11,15 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.LongFunction;
 
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -81,7 +80,7 @@ class CheckTxLogsTest
     void shouldReportNoInconsistenciesFromValidLog() throws Exception
     {
         // Given
-        File log = logFile( 1 );
+        Path log = logFile( 1 );
 
         writeTxContent( log, 1,
                 new Command.NodeCommand(
@@ -122,7 +121,7 @@ class CheckTxLogsTest
 
     private LogFiles getLogFiles() throws IOException
     {
-        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory().toFile(), fs )
+        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
     }
@@ -131,7 +130,7 @@ class CheckTxLogsTest
     void shouldReportNodeInconsistenciesFromSingleLog() throws IOException
     {
         // Given
-        File log = logFile( 1 );
+        Path log = logFile( 1 );
 
         writeTxContent( log, 0,
                 new Command.NodeCommand(
@@ -182,7 +181,7 @@ class CheckTxLogsTest
     void shouldReportTransactionIdAndInconsistencyCount() throws IOException
     {
         // Given
-        File log = logFile( 1 );
+        Path log = logFile( 1 );
 
         writeTxContent( log, 0,
                 new Command.NodeCommand(
@@ -243,9 +242,9 @@ class CheckTxLogsTest
     void shouldReportNodeInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
-        File log1 = logFile( 1 );
-        File log2 = logFile( 2 );
-        File log3 = logFile( 3 );
+        Path log1 = logFile( 1 );
+        Path log2 = logFile( 2 );
+        Path log3 = logFile( 3 );
 
         writeTxContent( log1, 0,
                 new Command.NodeCommand(
@@ -311,7 +310,7 @@ class CheckTxLogsTest
     void shouldReportPropertyInconsistenciesFromSingleLog() throws IOException
     {
         // Given
-        File log = logFile( 1 );
+        Path log = logFile( 1 );
 
         writeTxContent( log, 0,
                 new Command.PropertyCommand(
@@ -358,9 +357,9 @@ class CheckTxLogsTest
     void shouldReportPropertyInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
-        File log1 = logFile( 1 );
-        File log2 = logFile( 2 );
-        File log3 = logFile( 3 );
+        Path log1 = logFile( 1 );
+        Path log2 = logFile( 2 );
+        Path log3 = logFile( 3 );
 
         writeTxContent( log1, 0,
                 new Command.NodeCommand(
@@ -437,7 +436,7 @@ class CheckTxLogsTest
     void shouldReportRelationshipInconsistenciesFromSingleLog() throws IOException
     {
         // Given
-        File log = logFile( 1 );
+        Path log = logFile( 1 );
 
         writeTxContent( log, 0,
                 new Command.RelationshipCommand(
@@ -487,9 +486,9 @@ class CheckTxLogsTest
     void shouldReportRelationshipInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
-        File log1 = logFile( 1 );
-        File log2 = logFile( 2 );
-        File log3 = logFile( 3 );
+        Path log1 = logFile( 1 );
+        Path log2 = logFile( 2 );
+        Path log3 = logFile( 3 );
 
         writeTxContent( log1, 0,
                 new Command.RelationshipCommand(
@@ -556,7 +555,7 @@ class CheckTxLogsTest
     void shouldReportRelationshipGroupInconsistenciesFromSingleLog() throws IOException
     {
         // Given
-        File log = logFile( 1 );
+        Path log = logFile( 1 );
 
         writeTxContent( log, 0,
                 new Command.RelationshipGroupCommand(
@@ -608,9 +607,9 @@ class CheckTxLogsTest
     void shouldReportRelationshipGroupInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
-        File log1 = logFile( 1 );
-        File log2 = logFile( 2 );
-        File log3 = logFile( 3 );
+        Path log1 = logFile( 1 );
+        Path log2 = logFile( 2 );
+        Path log3 = logFile( 3 );
 
         writeTxContent( log1, 0,
                 new Command.RelationshipGroupCommand(
@@ -679,7 +678,7 @@ class CheckTxLogsTest
     void shouldDetectAnInconsistentCheckPointPointingToALogFileGreaterThanMaxLogVersion() throws Exception
     {
         // given
-        File log = logFile( 1 );
+        Path log = logFile( 1 );
         writeCheckPoint( log, 2, CURRENT_FORMAT_LOG_HEADER_SIZE );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
@@ -836,9 +835,9 @@ class CheckTxLogsTest
         return record;
     }
 
-    private File logFile( long version )
+    private Path logFile( long version )
     {
-        return new File( databaseLayout.databaseDirectory().toFile(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
+        return databaseLayout.databaseDirectory().resolve( TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
     }
 
     private static NodeRecord nodeRecord( long id, boolean inUse, boolean dense, long nextRel, long nextProp, long labels )
@@ -869,24 +868,24 @@ class CheckTxLogsTest
         return new RelationshipGroupRecord( id ).initialize( inUse, type, firstOut, firstIn, firstLoop, owningNode, next );
     }
 
-    private void writeTxContent( File log, long txId, Command... commands ) throws IOException
+    private void writeTxContent( Path log, long txId, Command... commands ) throws IOException
     {
         PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Arrays.asList( commands ) );
         tx.setHeader( new byte[0], 0, 0, 0, 0, AUTH_DISABLED );
         writeContent( log, txWriter -> txWriter.append( tx, txId, BASE_TX_CHECKSUM ) );
     }
 
-    private void writeCheckPoint( File log, long logVersion, long byteOffset ) throws IOException
+    private void writeCheckPoint( Path log, long logVersion, long byteOffset ) throws IOException
     {
         LogPosition logPosition = new LogPosition( logVersion, byteOffset );
         writeContent( log, txWriter -> txWriter.checkPoint( logPosition ) );
     }
 
-    private void writeContent( File log, ThrowingConsumer<TransactionLogWriter,IOException> consumer )
+    private void writeContent( Path log, ThrowingConsumer<TransactionLogWriter,IOException> consumer )
             throws IOException
     {
         ensureLogExists( log );
-        try ( StoreChannel channel = fs.write( log );
+        try ( StoreChannel channel = fs.write( log.toFile() );
                 LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log,
                         getLogFiles().getChannelNativeAccessor() );
                 PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel,
@@ -899,11 +898,11 @@ class CheckTxLogsTest
         }
     }
 
-    private void ensureLogExists( File logFile ) throws IOException
+    private void ensureLogExists( Path logFile ) throws IOException
     {
-        if ( !fs.fileExists( logFile ) )
+        if ( !fs.fileExists( logFile.toFile() ) )
         {
-            try ( StoreChannel channel = fs.write( logFile ) )
+            try ( StoreChannel channel = fs.write( logFile.toFile() ) )
             {
                 writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.UNKNOWN ), INSTANCE );
             }

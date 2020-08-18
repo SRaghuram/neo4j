@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.log.ConcurrentStressIT;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -23,7 +23,7 @@ import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 public class SegmentedConcurrentStressIT extends ConcurrentStressIT
 {
     @Override
-    public RaftLog createRaftLog( FileSystemAbstraction fsa, File dir )
+    public RaftLog createRaftLog( FileSystemAbstraction fsa, Path dir )
     {
         var rotateAtSize = ByteUnit.mebiBytes( 8 );
         var logProvider = NullLogProvider.getInstance();

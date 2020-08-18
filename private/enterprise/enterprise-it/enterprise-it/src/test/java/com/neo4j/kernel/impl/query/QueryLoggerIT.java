@@ -17,6 +17,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.Arrays;
@@ -86,8 +88,8 @@ class QueryLoggerIT
     private DatabaseManagementServiceBuilder databaseBuilder;
     private static final String QUERY = "CREATE (n:Foo {bar: 'baz'})";
 
-    private File logsDirectory;
-    private File logFilename;
+    private Path logsDirectory;
+    private Path logFilename;
     private GraphDatabaseFacade systemDb;
     private GraphDatabaseFacade database;
     private DatabaseManagementService databaseManagementService;
@@ -95,8 +97,8 @@ class QueryLoggerIT
     @BeforeEach
     void setUp()
     {
-        logsDirectory = new File( testDirectory.homeDir(), "logs" );
-        logFilename = new File( logsDirectory, "query.log" );
+        logsDirectory = testDirectory.homePath( "logs" );
+        logFilename = logsDirectory.resolve( "query.log" );
         databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) );
     }
@@ -114,7 +116,7 @@ class QueryLoggerIT
     void shouldLogSystemCommandOnlyOnce() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.auth_enabled, true );
         buildDatabase();
 
@@ -158,7 +160,7 @@ class QueryLoggerIT
     {
         // turn on query logging
         databaseBuilder.setConfig( auth_enabled, true )
-                       .setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( log_queries, LogQueryLevel.INFO );
         buildDatabase();
 
@@ -192,7 +194,7 @@ class QueryLoggerIT
     void shouldLogTXMetaDataInQueryLog() throws Throwable
     {
         // turn on query logging
-        databaseBuilder.setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() )
+        databaseBuilder.setConfig( logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( log_queries, LogQueryLevel.INFO )
                        .setConfig( auth_enabled, true );
         buildDatabase();
@@ -242,7 +244,7 @@ class QueryLoggerIT
     void shouldLogQuerySlowerThanThreshold() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
         buildDatabase();
 
@@ -259,7 +261,7 @@ class QueryLoggerIT
     void shouldLogQueryStart() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
         buildDatabase();
 
@@ -276,7 +278,7 @@ class QueryLoggerIT
     void shouldIgnoreThreshold() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
                        .setConfig( GraphDatabaseSettings.log_queries_threshold, Duration.ofSeconds( 6 ) );
         buildDatabase();
@@ -293,7 +295,7 @@ class QueryLoggerIT
     void shouldObeyLevelChangeDuringRuntime() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
         buildDatabase();
 
@@ -310,7 +312,7 @@ class QueryLoggerIT
     void shouldLogQueryWhenItFailsToParse() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() );
         buildDatabase();
 
         assertThrows( QueryExecutionException.class, () -> executeQuery( "Not a parsable query" ) );
@@ -344,7 +346,7 @@ class QueryLoggerIT
     void shouldLogStartBeforeQueryParsingIfRawLoggingEnabled() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
                 .setConfig( GraphDatabaseSettings.log_queries_early_raw_logging_enabled, true );
         buildDatabase();
@@ -361,7 +363,7 @@ class QueryLoggerIT
     void shouldLogPasswordsIfRawLoggingEnabled() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_early_raw_logging_enabled, true );
         buildDatabase();
 
@@ -378,7 +380,7 @@ class QueryLoggerIT
     void shouldNotLogPasswordsWhenSystemCommandFails() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() );
         buildDatabase();
 
         // "This is an administration command and it should be executed against the system database: CREATE USER"
@@ -393,7 +395,7 @@ class QueryLoggerIT
     void shouldLogParametersWhenNestedMap() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true );
         buildDatabase();
 
@@ -423,7 +425,7 @@ class QueryLoggerIT
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
                        .setConfig( GraphDatabaseSettings.log_queries_early_raw_logging_enabled, true )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() );
         buildDatabase();
 
         try
@@ -447,7 +449,7 @@ class QueryLoggerIT
     void shouldLogRuntime() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
         buildDatabase();
 
@@ -467,7 +469,7 @@ class QueryLoggerIT
     void shouldLogParametersWhenList() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() );
         buildDatabase();
 
         Map<String,Object> params = new HashMap<>();
@@ -487,23 +489,23 @@ class QueryLoggerIT
     void disabledQueryLogging()
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
-                       .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() );
+                       .setConfig( log_queries_filename, logFilename.toAbsolutePath() );
         buildDatabase();
 
         executeQuery( QUERY );
         databaseManagementService.shutdown();
 
-        assertFalse( fileSystem.fileExists( logFilename ) );
+        assertFalse( fileSystem.fileExists( logFilename.toFile() ) );
     }
 
     @Test
     void disabledQueryLogRotation() throws Exception
     {
-        final File logsDirectory = new File( testDirectory.homeDir(), "logs" );
-        final File logFilename = new File( logsDirectory, "query.log" );
-        final File shiftedLogFilename1 = new File( logsDirectory, "query.log.1" );
+        final Path logsDirectory = testDirectory.homePath().resolve( "logs" );
+        final Path logFilename = logsDirectory.resolve( "query.log" );
+        final Path shiftedLogFilename1 = logsDirectory.resolve( "query.log.1" );
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 0L );
         buildDatabase();
 
@@ -515,7 +517,7 @@ class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        assertFalse( shiftedLogFilename1.exists(), "There should not exist a shifted log file because rotation is disabled" );
+        assertFalse( Files.exists( shiftedLogFilename1 ), "There should not exist a shifted log file because rotation is disabled" );
 
         List<String> lines = readAllLines( logFilename );
         assertEquals( 100, lines.size() );
@@ -524,9 +526,9 @@ class QueryLoggerIT
     @Test
     void queryLogRotation()
     {
-        final File logsDirectory = new File( testDirectory.homeDir(), "logs" );
+        final Path logsDirectory = testDirectory.homePath().resolve( "logs" );
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_max_archives, 100 )
                        .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 1L );
         buildDatabase();
@@ -541,7 +543,8 @@ class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        File[] queryLogs = fileSystem.listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
+        Path[] queryLogs = Arrays.stream( fileSystem.listFiles( logsDirectory.toFile(), ( dir, name ) -> name.startsWith( "query.log" ) ) ).map( File::toPath )
+                                 .toArray( Path[]::new );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, greaterThanOrEqualTo( 2 ) );
 
         List<String> loggedQueries = Arrays.stream( queryLogs )
@@ -565,7 +568,8 @@ class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        queryLogs = fileSystem.listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
+        queryLogs = Arrays.stream( fileSystem.listFiles( logsDirectory.toFile(), ( dir, name ) -> name.startsWith( "query.log" ) ) ).map( File::toPath )
+                              .toArray( Path[]::new );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, lessThan( 100 ) );
 
         loggedQueries = Arrays.stream( queryLogs )
@@ -580,7 +584,7 @@ class QueryLoggerIT
     {
         databaseBuilder
                 .setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true );
         buildDatabase();
 
@@ -600,7 +604,7 @@ class QueryLoggerIT
     void shouldNotLogPasswordWhenChangedByAdmin() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.auth_enabled, true );
         buildDatabase();
 
@@ -623,7 +627,7 @@ class QueryLoggerIT
     void shouldNotLogPasswordWhenChangedByAdminProcedure() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.auth_enabled, true );
         buildDatabase();
 
@@ -646,7 +650,7 @@ class QueryLoggerIT
     void shouldNotLogPasswordForCreate() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.auth_enabled, true );
         buildDatabase();
 
@@ -669,7 +673,7 @@ class QueryLoggerIT
     {
         databaseBuilder
                 .setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true );
         buildDatabase();
 
@@ -691,7 +695,7 @@ class QueryLoggerIT
     void canBeEnabledAndDisabledAtRuntime() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
-                       .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() );
+                       .setConfig( log_queries_filename, logFilename.toAbsolutePath() );
         buildDatabase();
         List<String> strings;
 
@@ -702,7 +706,7 @@ class QueryLoggerIT
                 transaction.execute( QUERY ).close();
 
                 // File will not be created until query logService is enabled.
-                assertFalse( fileSystem.fileExists( logFilename ) );
+                assertFalse( fileSystem.fileExists( logFilename.toFile() ) );
 
                 transaction.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" ).close();
                 transaction.execute( QUERY ).close();
@@ -750,7 +754,7 @@ class QueryLoggerIT
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                        .setConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() );
         buildDatabase();
         executeQuery( QUERY );
         databaseManagementService.shutdown();
@@ -778,7 +782,7 @@ class QueryLoggerIT
         return EMBEDDED_CONNECTION.asConnectionDetails() + "\t" + databaseName + " - ";
     }
 
-    private List<String> readAllLinesSilent( File logFilename )
+    private List<String> readAllLinesSilent( Path logFilename )
     {
         try
         {
@@ -790,28 +794,28 @@ class QueryLoggerIT
         }
     }
 
-    private List<String> readAllUserQueryLines( File logFilename ) throws IOException
+    private List<String> readAllUserQueryLines( Path logFilename ) throws IOException
     {
         return readAllLines( logFilename ).stream()
                 .filter( l -> !l.contains( connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ) ) )
                 .collect( Collectors.toList() );
     }
 
-    private List<String> readAllLines( File logFilename ) throws IOException
+    private List<String> readAllLines( Path logFilename ) throws IOException
     {
         return readAllLines( fileSystem, logFilename );
     }
 
-    private static List<String> readAllLines( FileSystemAbstraction fs, File logFilename ) throws IOException
+    private static List<String> readAllLines( FileSystemAbstraction fs, Path logFilename ) throws IOException
     {
         // this is needed as the EphemeralFSA is broken, and creates a new file when reading a non-existent file from
         // a valid directory
-        if ( !fs.fileExists( logFilename ) )
+        if ( !fs.fileExists( logFilename.toFile() ) )
         {
             throw new FileNotFoundException( "File does not exist." );
         }
 
-        try ( var reader = fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) )
+        try ( var reader = fs.openAsReader( logFilename.toFile(), StandardCharsets.UTF_8 ) )
         {
             return readLines( reader );
         }

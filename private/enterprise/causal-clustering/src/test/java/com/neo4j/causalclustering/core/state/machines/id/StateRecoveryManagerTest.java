@@ -6,19 +6,19 @@
 package com.neo4j.causalclustering.core.state.machines.id;
 
 import com.neo4j.causalclustering.core.state.StateRecoveryManager;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.WritableChannel;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
@@ -50,11 +50,11 @@ class StateRecoveryManagerTest
         // given
         fsa.mkdir( testDir.homeDir() );
 
-        File fileA = fileA();
-        fsa.write( fileA );
+        Path fileA = fileA();
+        fsa.write( fileA.toFile() );
 
-        File fileB = fileB();
-        fsa.write( fileB );
+        Path fileB = fileB();
+        fsa.write( fileB.toFile() );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
@@ -77,13 +77,13 @@ class StateRecoveryManagerTest
         // given
         fsa.mkdir( testDir.homeDir() );
 
-        File fileA = fileA();
-        StoreChannel channel = fsa.write( fileA );
+        Path fileA = fileA();
+        StoreChannel channel = fsa.write( fileA.toFile() );
 
         fillUpAndForce( channel );
 
-        File fileB = fileB();
-        fsa.write( fileB );
+        Path fileB = fileB();
+        fsa.write( fileB.toFile() );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
@@ -100,15 +100,15 @@ class StateRecoveryManagerTest
         // given
         fsa.mkdir( testDir.homeDir() );
 
-        File fileA = fileA();
-        StoreChannel channel = fsa.write( fileA );
+        Path fileA = fileA();
+        StoreChannel channel = fsa.write( fileA.toFile() );
 
         ByteBuffer buffer = writeLong( 999 );
         channel.writeAll( buffer );
         channel.force( false );
 
-        File fileB = fileB();
-        channel = fsa.write( fileB );
+        Path fileB = fileB();
+        channel = fsa.write( fileB.toFile() );
         channel.close();
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
@@ -128,8 +128,8 @@ class StateRecoveryManagerTest
         // given
         fsa.mkdir( testDir.homeDir() );
 
-        File fileA = fileA();
-        StoreChannel channel = fsa.write( fileA );
+        Path fileA = fileA();
+        StoreChannel channel = fsa.write( fileA.toFile() );
 
         ByteBuffer buffer = writeLong( 42 );
         channel.writeAll( buffer );
@@ -141,8 +141,8 @@ class StateRecoveryManagerTest
         channel.writeAll( buffer );
         channel.force( false );
 
-        File fileB = fileB();
-        fsa.write( fileB );
+        Path fileB = fileB();
+        fsa.write( fileB.toFile() );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
@@ -174,19 +174,19 @@ class StateRecoveryManagerTest
         Assertions.assertEquals( 6L, recovered.recoveredState() );
     }
 
-    private File fileA()
+    private Path fileA()
     {
-        return new File( testDir.homeDir(), "file.A" );
+        return testDir.homePath().resolve( "file.A" );
     }
 
-    private File fileB()
+    private Path fileB()
     {
-        return new File( testDir.homeDir(), "file.B" );
+        return testDir.homePath().resolve( "file.B" );
     }
 
-    private void writeSomeGarbage( FileSystemAbstraction fsa, File file ) throws IOException
+    private void writeSomeGarbage( FileSystemAbstraction fsa, Path file ) throws IOException
     {
-        final StoreChannel channel = fsa.write( file );
+        final StoreChannel channel = fsa.write( file.toFile() );
         ByteBuffer buffer = ByteBuffers.allocate( 4, INSTANCE );
         buffer.putInt( 9876 );
         buffer.flip();
@@ -195,9 +195,9 @@ class StateRecoveryManagerTest
         channel.close();
     }
 
-    private void writeSomeLongsIn( FileSystemAbstraction fsa, File file, long... longs ) throws IOException
+    private void writeSomeLongsIn( FileSystemAbstraction fsa, Path file, long... longs ) throws IOException
     {
-        final StoreChannel channel = fsa.write( file );
+        final StoreChannel channel = fsa.write( file.toFile() );
         ByteBuffer buffer = ByteBuffers.allocate( longs.length * 8, INSTANCE );
 
         for ( long aLong : longs )

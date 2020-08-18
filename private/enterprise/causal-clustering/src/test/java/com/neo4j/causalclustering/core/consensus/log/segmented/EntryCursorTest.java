@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -25,14 +25,14 @@ import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 class EntryCursorTest
 {
     private final FileSystemAbstraction fsa = new EphemeralFileSystemAbstraction();
-    private final File bam = new File( "bam" );
+    private final Path bam = Path.of( "bam" );
     private final FileNames fileNames = new FileNames( bam );
     private final ReaderPool readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa, Clocks.fakeClock() );
     private final Segments segments =
             new Segments( fsa, fileNames, readerPool, emptyList(), ignored -> mock( ChannelMarshal.class ), NullLogProvider.getInstance(), -1, INSTANCE );
 
     {
-        fsa.mkdir( bam );
+        fsa.mkdir( bam.toFile() );
     }
 
     @AfterEach

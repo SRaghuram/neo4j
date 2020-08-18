@@ -11,7 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +45,7 @@ class RotatableCsvOutputIT
     @Inject
     private TestDirectory testDirectory;
 
-    private File outputPath;
+    private Path outputPath;
     private GraphDatabaseService database;
     private static final BiPredicate<Long,Long> MONOTONIC = ( newValue, currentValue ) -> newValue >= currentValue;
     private static final int MAX_ARCHIVES = 20;
@@ -54,9 +54,9 @@ class RotatableCsvOutputIT
     @BeforeEach
     void setup()
     {
-        outputPath = testDirectory.directory( "metrics" );
+        outputPath = testDirectory.directoryPath( "metrics" );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
-                .setConfig( csv_path, outputPath.toPath().toAbsolutePath() )
+                .setConfig( csv_path, outputPath.toAbsolutePath() )
                 .setConfig( csv_rotation_threshold, "t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1L )
                 .setConfig( csv_interval, Duration.ofMillis( 100 ) )
                 .setConfig( csv_max_archives, MAX_ARCHIVES )
@@ -90,11 +90,11 @@ class RotatableCsvOutputIT
         } );
     }
 
-    private void checkTransactionCount( String metricFileName, long expectedValue ) throws Exception
+    private void checkTransactionCount( String metricFileName, long expectedValue )
     {
         assertEventually( () ->
         {
-            File metricsCsv = metricsCsv( outputPath, metricFileName );
+            Path metricsCsv = metricsCsv( outputPath, metricFileName );
             return readLongCounterAndAssert( metricsCsv, MONOTONIC );
         }, equalityCondition( expectedValue ), 2, TimeUnit.MINUTES );
     }
@@ -108,11 +108,11 @@ class RotatableCsvOutputIT
         }
     }
 
-    private static File metricsCsv( File dbDir, String metric )
+    private static Path metricsCsv( Path dbDir, String metric )
     {
         while ( true )
         {
-            Optional<File> metricsFile = findLatestMetricsFile( dbDir, metric );
+            Optional<Path> metricsFile = findLatestMetricsFile( dbDir, metric );
             if ( metricsFile.isPresent() )
             {
                 return metricsFile.get();
@@ -121,12 +121,12 @@ class RotatableCsvOutputIT
         }
     }
 
-    private static Optional<File> findLatestMetricsFile( File metricsPath, String metric )
+    private static Optional<Path> findLatestMetricsFile( Path metricsPath, String metric )
     {
-        String[] metricFiles = requireNonNull( metricsPath.list( ( dir, name ) -> name.equals( metric ) ) );
+        String[] metricFiles = requireNonNull( metricsPath.toFile().list( ( dir, name ) -> name.equals( metric ) ) );
         if ( isNotEmpty( metricFiles ) )
         {
-            return Optional.of( new File( metricsPath, metricFiles[0] ) );
+            return Optional.of( metricsPath.resolve( metricFiles[0] ) );
         }
         return Optional.empty();
     }

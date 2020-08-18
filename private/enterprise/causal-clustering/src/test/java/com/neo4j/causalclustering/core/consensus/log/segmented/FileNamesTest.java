@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -29,16 +30,16 @@ class FileNamesTest
     void shouldProperlyFormatFilenameForVersion()
     {
         // Given
-        File base = new File( "base" );
+        Path base = Path.of( "base" );
         FileNames fileNames = new FileNames( base );
 
         // When - Then
         // when asking for a given version...
         for ( int i = 0; i < 100; i++ )
         {
-            File forVersion = fileNames.getForSegment( i );
+            Path forVersion = fileNames.getForSegment( i );
             // ...then the expected thing is returned
-            assertEquals( forVersion, new File( base, FileNames.BASE_FILE_NAME + i ) );
+            assertEquals( forVersion, base.resolve( FileNames.BASE_FILE_NAME + i ) );
         }
     }
 
@@ -47,7 +48,7 @@ class FileNamesTest
     {
         // Given
         // a raft log directory with just the expected files, without gaps
-        File base = new File( "base" );
+        Path base = Path.of( "base" );
         FileNames fileNames = new FileNames( base );
         FileSystemAbstraction fsa = mock( FileSystemAbstraction.class );
         Log log = mock( Log.class );
@@ -57,19 +58,19 @@ class FileNamesTest
         // the files are added in reverse order, so we can verify that FileNames orders based on version
         for ( int i = upper; i >= lower; i-- )
         {
-            filesPresent.add( fileNames.getForSegment( i ) );
+            filesPresent.add( fileNames.getForSegment( i ).toFile() );
         }
-        when( fsa.listFiles( base ) ).thenReturn( filesPresent.toArray( new File[]{} ) );
+        when( fsa.listFiles( base.toFile() ) ).thenReturn( filesPresent.toArray( new File[]{} ) );
 
         // When
         // asked for the contents of the directory
-        SortedMap<Long, File> allFiles = fileNames.getAllFiles( fsa, log );
+        SortedMap<Long, Path> allFiles = fileNames.getAllFiles( fsa, log );
 
         // Then
         // all the things we added above should be returned
         assertEquals( upper - lower + 1, allFiles.size() );
         long currentVersion = lower;
-        for ( Map.Entry<Long, File> longFileEntry : allFiles.entrySet() )
+        for ( Map.Entry<Long, Path> longFileEntry : allFiles.entrySet() )
         {
             assertEquals( currentVersion, longFileEntry.getKey().longValue() );
             assertEquals( fileNames.getForSegment( currentVersion ), longFileEntry.getValue() );
@@ -82,29 +83,29 @@ class FileNamesTest
     {
         // Given
         // a raft log directory with just the expected files, without gaps
-        File base = new File( "base" );
+        Path base = Path.of( "base" );
         FileNames fileNames = new FileNames( base );
         FileSystemAbstraction fsa = mock( FileSystemAbstraction.class );
         Log log = mock( Log.class );
         List<File> filesPresent = new LinkedList<>();
 
-        filesPresent.add( fileNames.getForSegment( 0 ) ); // should be included
-        filesPresent.add( fileNames.getForSegment( 1 ) ); // should be included
-        filesPresent.add( fileNames.getForSegment( 10 ) ); // should be included
-        filesPresent.add( fileNames.getForSegment( 11 ) ); // should be included
-        filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "01" ) ); // should be ignored
-        filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "001" ) ); // should be ignored
-        filesPresent.add( new File( base, FileNames.BASE_FILE_NAME ) ); // should be ignored
-        filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "-1" ) ); // should be ignored
-        filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "1a" ) ); // should be ignored
-        filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "a1" ) ); // should be ignored
-        filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "ab" ) ); // should be ignored
+        filesPresent.add( fileNames.getForSegment( 0 ).toFile() ); // should be included
+        filesPresent.add( fileNames.getForSegment( 1 ).toFile() ); // should be included
+        filesPresent.add( fileNames.getForSegment( 10 ).toFile() ); // should be included
+        filesPresent.add( fileNames.getForSegment( 11 ).toFile() ); // should be included
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "01" ).toFile() ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "001" ).toFile() ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME ).toFile() ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "-1" ).toFile() ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "1a" ).toFile() ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "a1" ).toFile() ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "ab" ).toFile() ); // should be ignored
 
-        when( fsa.listFiles( base ) ).thenReturn( filesPresent.toArray( new File[]{} ) );
+        when( fsa.listFiles( base.toFile() ) ).thenReturn( filesPresent.toArray( new File[]{} ) );
 
         // When
         // asked for the contents of the directory
-        SortedMap<Long,File> allFiles = fileNames.getAllFiles( fsa, log );
+        SortedMap<Long,Path> allFiles = fileNames.getAllFiles( fsa, log );
 
         // Then
         // only valid things should be returned

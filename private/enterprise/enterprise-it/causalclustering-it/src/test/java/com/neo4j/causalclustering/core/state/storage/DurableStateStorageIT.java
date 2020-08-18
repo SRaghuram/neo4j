@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.adversaries.MethodGuardedAdversary;
@@ -43,12 +44,12 @@ class DurableStateStorageIT
     @Inject
     private TestDirectory testDirectory;
 
-    private File dir;
+    private Path dir;
 
     @BeforeEach
     void setUp()
     {
-        dir = testDirectory.homeDir();
+        dir = testDirectory.homePath();
     }
 
     @Test
@@ -90,7 +91,7 @@ class DurableStateStorageIT
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 20, true ),
                 FileSystemAbstraction.class.getMethod( "truncate", File.class, long.class ) );
         AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( new File( dir, "dummy.a" ), breakingFSA, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ).toFile(), breakingFSA, fs );
 
         long lastValue = 0;
         try ( LongState persistedState = new LongState( combinedFSA, dir, 14 ) )
@@ -127,7 +128,7 @@ class DurableStateStorageIT
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 40, true ),
                 StoreChannel.class.getMethod( "force", boolean.class ) );
         AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( new File( dir, "dummy.a" ), breakingFSA, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ).toFile(), breakingFSA, fs );
 
         long lastValue = 0;
 
@@ -189,7 +190,7 @@ class DurableStateStorageIT
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 5, true ),
                 StoreChannel.class.getMethod( "close" ) );
         AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( new File( dir, "dummy.a" ), breakingFSA, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ).toFile(), breakingFSA, fs );
 
         long lastValue = 0;
         try ( LongState persistedState = new LongState( combinedFSA, dir, 14 ) )
@@ -225,7 +226,7 @@ class DurableStateStorageIT
         private long theState;
         private final LifeSupport lifeSupport = new LifeSupport();
 
-        LongState( FileSystemAbstraction fileSystemAbstraction, File stateDir,
+        LongState( FileSystemAbstraction fileSystemAbstraction, Path stateDir,
                 int numberOfEntriesBeforeRotation )
         {
             lifeSupport.start();

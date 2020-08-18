@@ -10,8 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -59,11 +59,11 @@ public abstract class ConcurrentStressIT
         readAndWrite( 5, 2, SECONDS );
     }
 
-    protected abstract RaftLog createRaftLog( FileSystemAbstraction fsa, File dir );
+    protected abstract RaftLog createRaftLog( FileSystemAbstraction fsa, Path dir );
 
     private void readAndWrite( int nReaders, int time, TimeUnit unit ) throws Throwable
     {
-        var raftLog = createRaftLog( testDir.getFileSystem(), testDir.directory( "raft-logs" ) );
+        var raftLog = createRaftLog( testDir.getFileSystem(), testDir.directoryPath( "raft-logs" ) );
         if ( raftLog instanceof Lifecycle )
         {
             life.add( (Lifecycle) raftLog );

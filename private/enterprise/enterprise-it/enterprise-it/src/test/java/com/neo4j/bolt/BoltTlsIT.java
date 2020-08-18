@@ -15,7 +15,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -37,6 +36,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.ssl.SslContextFactory.SslParameters.protocols;
 import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
+import static java.nio.file.Files.createDirectories;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -61,8 +61,8 @@ public class BoltTlsIT
     @Before
     public void setup() throws IOException
     {
-        File sslObjectsDir = new File( testDirectory.homeDir(), "certificates" );
-        assertTrue( sslObjectsDir.mkdirs() );
+        Path sslObjectsDir = testDirectory.homePath().resolve( "certificates" );
+        createDirectories( sslObjectsDir );
 
         sslResource = selfSignedKeyId( 0 ).trustKeyId( 0 ).install( sslObjectsDir );
 

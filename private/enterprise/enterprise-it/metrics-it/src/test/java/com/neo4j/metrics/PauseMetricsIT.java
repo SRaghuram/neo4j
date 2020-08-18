@@ -10,7 +10,7 @@ import com.neo4j.configuration.OnlineBackupSettings;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 
 import org.neo4j.monitoring.Monitors;
@@ -32,18 +32,18 @@ class PauseMetricsIT
     @Inject
     private TestDirectory testDirectory;
 
-    private File metricsDirectory;
+    private Path metricsDirectory;
     private VmPauseMonitor.Monitor monitor;
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        metricsDirectory = testDirectory.directory( "metrics" );
+        metricsDirectory = testDirectory.directoryPath( "metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true )
                .setConfig( MetricsSettings.jvm_pause_time_enabled, true )
                .setConfig( MetricsSettings.csv_enabled, true )
                .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
-               .setConfig( MetricsSettings.csv_path, metricsDirectory.toPath().toAbsolutePath() )
+               .setConfig( MetricsSettings.csv_path, metricsDirectory.toAbsolutePath() )
                .setConfig( OnlineBackupSettings.online_backup_enabled, false );
         Monitors monitors = new Monitors();
         monitor = monitors.newMonitor( VmPauseMonitor.Monitor.class );

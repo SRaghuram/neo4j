@@ -8,7 +8,7 @@ package com.neo4j.internal.batchimport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,7 +41,7 @@ class RelationshipTypeDistributionStorageTest
     void shouldStoreAndLoadStringTypes() throws Exception
     {
         // given
-        File file = directory.file( "store" );
+        Path file = directory.filePath( "store" );
         RelationshipTypeDistributionStorage storage = new RelationshipTypeDistributionStorage( fs, file, INSTANCE );
         List<RelationshipTypeCount> types = new ArrayList<>();
         for ( int i = 0; i < 10; i++ )

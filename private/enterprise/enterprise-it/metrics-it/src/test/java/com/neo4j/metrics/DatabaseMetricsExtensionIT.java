@@ -21,8 +21,8 @@ import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -83,17 +83,17 @@ class DatabaseMetricsExtensionIT
     @Inject
     private DatabaseManagementService managementService;
 
-    private File outputPath;
+    private Path outputPath;
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        outputPath = new File( directory.homeDir(), "metrics" );
+        outputPath = directory.homePath("metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true );
         builder.setConfig( MetricsSettings.csv_enabled, true );
         builder.setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 30 ) );
         builder.setConfig( cypher_min_replan_interval, Duration.ofMinutes( 0 ) );
-        builder.setConfig( MetricsSettings.csv_path, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( MetricsSettings.csv_path, outputPath.toAbsolutePath() );
         builder.setConfig( check_point_interval_time, Duration.ofMillis( 100 ) );
         builder.setConfig( MetricsSettings.graphite_interval, Duration.ofSeconds( 1 ) );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
@@ -110,7 +110,7 @@ class DatabaseMetricsExtensionIT
     {
         checkPointer.forceCheckPoint( new SimpleTriggerInfo( "testTrigger" ) );
 
-        File checkpointsMetricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.events" );
+        Path checkpointsMetricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.events" );
         assertEventually( "Metrics report should have correct number of checkpoints.",
                 () -> readLongCounterValue( checkpointsMetricsFile ), new Condition<>( value -> value >= 1L, "More than 1." ), 1, MINUTES );
     }
@@ -160,7 +160,7 @@ class DatabaseMetricsExtensionIT
 
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".transaction.committed" );
+        Path metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".transaction.committed" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -178,7 +178,7 @@ class DatabaseMetricsExtensionIT
         // GIVEN
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".ids_in_use.node" );
+        Path metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".ids_in_use.node" );
 
         // WHEN
         long committedTransactions = readLongGaugeAndAssert( metricsFile,
@@ -192,7 +192,7 @@ class DatabaseMetricsExtensionIT
     void reportTransactionLogsAppendedBytesWithDefaultAllocationConfig() throws IOException
     {
         addNodes( 100 );
-        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
+        Path metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
 
         long appendedBytes = 0;
         int attempts = 0;
@@ -232,8 +232,8 @@ class DatabaseMetricsExtensionIT
             addNodes( 1 );
         }
 
-        File replanCountMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".cypher.replan_events" );
-        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".cypher.replan_wait_time" );
+        Path replanCountMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".cypher.replan_events" );
+        Path replanWaitMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".cypher.replan_wait_time" );
 
         // THEN see that the replan metric have pickup up at least one replan event
         // since reporting happens in an async fashion then give it some time and check now and then
@@ -261,7 +261,7 @@ class DatabaseMetricsExtensionIT
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
-        File metricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.duration" );
+        Path metricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.duration" );
 
         long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 

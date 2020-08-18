@@ -45,7 +45,7 @@ class SecurityLogTest
     {
         config = Config.newBuilder()
                 .set( SecuritySettings.store_security_log_rotation_threshold, 5L )
-                .set( GraphDatabaseSettings.neo4j_home, dir.homeDir().toPath() ).build();
+                .set( GraphDatabaseSettings.neo4j_home, dir.homePath() ).build();
     }
 
     @Test
@@ -89,7 +89,7 @@ class SecurityLogTest
         TimeZone.setDefault( TimeZone.getTimeZone( ZoneOffset.ofHours( hoursShift ) ) );
         Config timeZoneConfig = Config.newBuilder()
                 .set( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
-                .set( GraphDatabaseSettings.neo4j_home, dir.homeDir().toPath() ).build();
+                .set( GraphDatabaseSettings.neo4j_home, dir.homePath() ).build();
         SecurityLog securityLog = new SecurityLog( timeZoneConfig );
         securityLog.init();
         securityLog.info( "line 1" );
@@ -133,7 +133,7 @@ class SecurityLogTest
     {
         return new SecurityLog(
                 Config.newBuilder().set( SecuritySettings.security_log_level, debug )
-                        .set( GraphDatabaseSettings.neo4j_home, dir.homeDir().toPath() ).build()
+                        .set( GraphDatabaseSettings.neo4j_home, dir.homePath() ).build()
             );
     }
 

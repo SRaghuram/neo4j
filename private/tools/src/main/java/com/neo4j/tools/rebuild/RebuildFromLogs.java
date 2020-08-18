@@ -155,7 +155,7 @@ class RebuildFromLogs
         try ( JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler, PageCacheTracer.NULL ) )
         {
-            File transactionLogsDirectory = sourceDatabaseLayout.getTransactionLogsDirectory().toFile();
+            Path transactionLogsDirectory = sourceDatabaseLayout.getTransactionLogsDirectory();
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs )
                     .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                     .build();
@@ -214,7 +214,7 @@ class RebuildFromLogs
             this.commitProcess = graphdb.getDependencyResolver().resolveDependency( TransactionCommitProcess.class );
         }
 
-        long applyTransactionsFrom( File sourceDir, long upToTxId ) throws Exception
+        long applyTransactionsFrom( Path sourceDir, long upToTxId ) throws Exception
         {
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( sourceDir, fs )
                     .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )

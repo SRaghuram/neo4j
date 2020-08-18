@@ -11,9 +11,9 @@ import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
@@ -42,13 +42,13 @@ class SetOperatorPasswordCommandTest
     private TestDirectory testDir;
 
     private SetOperatorPasswordCommand command;
-    private File authOperatorFile;
+    private Path authOperatorFile;
 
     @BeforeEach
     void setup()
     {
-        command = new SetOperatorPasswordCommand( new ExecutionContext( testDir.directory( "home" ).toPath(),
-                testDir.directory( "conf" ).toPath(), mock( PrintStream.class ), mock( PrintStream.class ), fileSystem ) );
+        command = new SetOperatorPasswordCommand( new ExecutionContext( testDir.directoryPath( "home" ),
+                testDir.directoryPath( "conf" ), mock( PrintStream.class ), mock( PrintStream.class ), fileSystem ) );
 
         authOperatorFile = EnterpriseSecurityModule.getOperatorUserRepositoryFile( command.loadNeo4jConfig() );
         CommunitySecurityModule.getUserRepositoryFile( command.loadNeo4jConfig() );
@@ -77,7 +77,7 @@ class SetOperatorPasswordCommandTest
     void shouldSetOperatorPassword() throws Throwable
     {
         // Given
-        assertFalse( fileSystem.fileExists( authOperatorFile ) );
+        assertFalse( fileSystem.fileExists( authOperatorFile.toFile() ) );
 
         // When
         CommandLine.populateCommand( command, "123" );
@@ -91,8 +91,8 @@ class SetOperatorPasswordCommandTest
     void shouldOverwriteOperatorPasswordFileIfExists() throws Throwable
     {
         // Given
-        fileSystem.mkdirs( authOperatorFile.getParentFile() );
-        fileSystem.write( authOperatorFile );
+        fileSystem.mkdirs( authOperatorFile.getParent().toFile() );
+        fileSystem.write( authOperatorFile.toFile() );
 
         // When
         CommandLine.populateCommand( command, "321" );
@@ -104,7 +104,7 @@ class SetOperatorPasswordCommandTest
 
     private void assertAuthIniFile( String password ) throws Throwable
     {
-        assertTrue( fileSystem.fileExists( authOperatorFile ) );
+        assertTrue( fileSystem.fileExists( authOperatorFile.toFile() ) );
         FileUserRepository userRepository = new FileUserRepository( fileSystem, authOperatorFile,
                 NullLogProvider.getInstance() );
         userRepository.start();

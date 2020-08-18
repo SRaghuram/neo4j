@@ -12,7 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -37,12 +37,12 @@ class FileDescriptorMetricsTestIT
     private TestDirectory testDirectory;
 
     private DatabaseManagementService managementService;
-    private File metricsFolder;
+    private Path metricsFolder;
 
     @BeforeEach
     void setUp()
     {
-        metricsFolder = testDirectory.directory( "metrics" );
+        metricsFolder = testDirectory.directoryPath( "metrics" );
 
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( MetricsSettings.metrics_enabled, true )

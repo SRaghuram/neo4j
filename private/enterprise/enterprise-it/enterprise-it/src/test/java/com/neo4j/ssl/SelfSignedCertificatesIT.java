@@ -37,7 +37,7 @@ public class SelfSignedCertificatesIT
         certificates.createSelfSignedCertificate( testDirectory.filePath( "certificate" ), testDirectory.filePath( "privateKey" ), "localhost" );
 
         PosixFileAttributes certificateAttributes =
-                Files.getFileAttributeView( testDirectory.file( "certificate" ).toPath(), PosixFileAttributeView.class )
+                Files.getFileAttributeView( testDirectory.filePath( "certificate" ), PosixFileAttributeView.class )
                         .readAttributes();
 
         assertTrue( certificateAttributes.permissions().contains( PosixFilePermission.OWNER_READ ) );
@@ -53,7 +53,7 @@ public class SelfSignedCertificatesIT
         assertFalse( certificateAttributes.permissions().contains( PosixFilePermission.OTHERS_EXECUTE ) );
 
         PosixFileAttributes privateKey =
-                Files.getFileAttributeView( testDirectory.file( "privateKey" ).toPath(), PosixFileAttributeView.class )
+                Files.getFileAttributeView( testDirectory.filePath( "privateKey" ), PosixFileAttributeView.class )
                         .readAttributes();
 
         assertTrue( privateKey.permissions().contains( PosixFilePermission.OWNER_READ ) );

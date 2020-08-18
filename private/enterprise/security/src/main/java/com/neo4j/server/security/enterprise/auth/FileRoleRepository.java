@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,14 +24,14 @@ import org.neo4j.server.security.auth.ListSnapshot;
  */
 public class FileRoleRepository extends AbstractRoleRepository implements FileRepository
 {
-    private final File roleFile;
+    private final Path roleFile;
     private final Log log;
     private final RoleSerialization serialization = new RoleSerialization();
     private final FileSystemAbstraction fileSystem;
 
-    public FileRoleRepository( FileSystemAbstraction fileSystem, File file, LogProvider logProvider )
+    public FileRoleRepository( FileSystemAbstraction fileSystem, Path path, LogProvider logProvider )
     {
-        this.roleFile = file;
+        this.roleFile = path;
         this.log = logProvider.getLog( getClass() );
         this.fileSystem = fileSystem;
     }
@@ -53,18 +53,18 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
     @Override
     protected ListSnapshot<RoleRecord> readPersistedRoles() throws IOException
     {
-        if ( fileSystem.fileExists( roleFile ) )
+        if ( fileSystem.fileExists( roleFile.toFile() ) )
         {
             long readTime;
             List<RoleRecord> readRoles;
             try
             {
-                readTime = fileSystem.lastModifiedTime( roleFile );
+                readTime = fileSystem.lastModifiedTime( roleFile.toFile() );
                 readRoles = serialization.loadRecordsFromFile( fileSystem, roleFile );
             }
             catch ( FormatException e )
             {
-                log.error( "Failed to read role file \"%s\" (%s)", roleFile.getAbsolutePath(), e.getMessage() );
+                log.error( "Failed to read role file \"%s\" (%s)", roleFile.toAbsolutePath(), e.getMessage() );
                 throw new IllegalStateException( "Failed to read role file '" + roleFile + "'." );
             }
 
@@ -82,7 +82,7 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
     @Override
     public ListSnapshot<RoleRecord> getSnapshot() throws IOException
     {
-        if ( lastLoaded.get() < fileSystem.lastModifiedTime( roleFile ) )
+        if ( lastLoaded.get() < fileSystem.lastModifiedTime( roleFile.toFile() ) )
         {
             return readPersistedRoles();
         }
@@ -98,9 +98,9 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
         super.purge(); // Clears all cached data
 
         // Delete the file
-        if ( !fileSystem.deleteFile( roleFile ) )
+        if ( !fileSystem.deleteFile( roleFile.toFile() ) )
         {
-            throw new IOException( "Failed to delete file '" + roleFile.getAbsolutePath() + "'" );
+            throw new IOException( "Failed to delete file '" + roleFile.toAbsolutePath() + "'" );
         }
     }
 
@@ -110,7 +110,7 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
         super.markAsMigrated(); // Clears all cached data
 
         // Rename the file
-        File destinationFile = FileRepository.getMigratedFile( roleFile );
-        fileSystem.renameFile( roleFile, destinationFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES );
+        Path destinationFile = FileRepository.getMigratedFile( roleFile );
+        fileSystem.renameFile( roleFile.toFile(), destinationFile.toFile(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES );
     }
 }

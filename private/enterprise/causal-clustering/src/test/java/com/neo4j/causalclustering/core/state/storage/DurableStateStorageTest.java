@@ -47,7 +47,7 @@ class DurableStateStorageTest
     void shouldMaintainStateGivenAnEmptyInitialStore() throws Exception
     {
         // given
-        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
+        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homePath(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), 100, NullLogProvider.getInstance(), INSTANCE ) );
 
         // when
@@ -62,7 +62,7 @@ class DurableStateStorageTest
     {
         // given
         final int numberOfEntriesBeforeRotation = 100;
-        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
+        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homePath(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance(), INSTANCE ) );
 
         // when
@@ -84,7 +84,7 @@ class DurableStateStorageTest
     {
         // given
         final int numberOfEntriesBeforeRotation = 100;
-        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
+        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homePath(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance(), INSTANCE ) );
 
         // when
@@ -107,7 +107,7 @@ class DurableStateStorageTest
         // given
         int rotationCount = 10;
 
-        DurableStateStorage<AtomicInteger> storage = new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
+        DurableStateStorage<AtomicInteger> storage = new DurableStateStorage<>( fileSystem, testDirectory.homePath(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance(), INSTANCE );
         int largestValueWritten = 0;
         try ( Lifespan lifespan = new Lifespan( storage ) )
@@ -119,7 +119,7 @@ class DurableStateStorageTest
         }
 
         // now both files are full. We reopen, then write some more.
-        storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
+        storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homePath(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance(), INSTANCE ) );
 
         storage.writeState( new AtomicInteger( largestValueWritten++ ) );

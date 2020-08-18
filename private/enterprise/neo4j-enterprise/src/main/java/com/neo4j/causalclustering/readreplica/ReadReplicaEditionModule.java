@@ -40,7 +40,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Supplier;
 
@@ -134,7 +134,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
-        final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
+        final Path dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
                 globalModule.getOtherMemoryPool().getPoolMemoryTracker() );

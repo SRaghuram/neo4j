@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
@@ -28,7 +28,6 @@ import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -40,8 +39,8 @@ class SetOperatorPasswordCommandIT
 {
     @Inject
     private FileSystemAbstraction fileSystem;
-    private File confDir;
-    private File homeDir;
+    private Path confDir;
+    private Path homeDir;
     private PrintStream out;
     private PrintStream err;
 
@@ -50,9 +49,9 @@ class SetOperatorPasswordCommandIT
     @BeforeEach
     void setup()
     {
-        File graphDir = new File( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        confDir = new File( graphDir, "conf" );
-        homeDir = new File( graphDir, "home" );
+        Path graphDir = Path.of( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        confDir = graphDir.resolve( "conf" );
+        homeDir = graphDir.resolve( "home" );
         out = mock( PrintStream.class );
         err = mock( PrintStream.class );
     }
@@ -96,8 +95,8 @@ class SetOperatorPasswordCommandIT
 
     private void assertAuthIniFile( String password ) throws Throwable
     {
-        File authIniFile = getOperatorAuthFile();
-        assertTrue( fileSystem.fileExists( authIniFile ) );
+        Path authIniFile = getOperatorAuthFile();
+        assertTrue( fileSystem.fileExists( authIniFile.toFile() ) );
         FileUserRepository userRepository = new FileUserRepository( fileSystem, authIniFile, NullLogProvider.getInstance() );
         userRepository.start();
         User operator = userRepository.getUserByName( upgradeUsername );
@@ -106,14 +105,14 @@ class SetOperatorPasswordCommandIT
         assertThat( operator.hasFlag( User.PASSWORD_CHANGE_REQUIRED ) ).isEqualTo( false );
     }
 
-    private File getOperatorAuthFile()
+    private Path getOperatorAuthFile()
     {
-        return new File( new File( new File( homeDir, "data" ), "dbms" ), EnterpriseSecurityModule.OPERATOR_STORE_FILENAME );
+        return homeDir.resolve( "data" ).resolve( "dbms" ).resolve( EnterpriseSecurityModule.OPERATOR_STORE_FILENAME );
     }
 
     private void executeCommand( String... args )
     {
-        final var ctx = new ExecutionContext( homeDir.toPath(), confDir.toPath(), out, err, fileSystem );
+        final var ctx = new ExecutionContext( homeDir, confDir, out, err, fileSystem );
         final var command = new SetOperatorPasswordCommand( ctx );
         CommandLine.populateCommand( command, args );
         command.execute();

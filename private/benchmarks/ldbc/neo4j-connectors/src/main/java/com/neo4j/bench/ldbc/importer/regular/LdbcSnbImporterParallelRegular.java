@@ -232,7 +232,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                             Nodes.Message.name()} )
                             ),
                             LdbcCli.CHARSET,
-                            path.toFile()
+                            path
                     ) );
                     nodeHeaders.add( new Header(
                             new Header.Entry( Message.ID, Type.ID, messagesGroup, extractors.long_() ),
@@ -259,7 +259,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                     Nodes.Message.name()} )
                     ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             nodeHeaders.add( new Header(
                     new Header.Entry( Message.ID, Type.ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( Post.IMAGE_FILE, Type.PROPERTY, nonGroup, extractors.string() ),
@@ -283,7 +283,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                     Nodes.Forum.name()} )
                     ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             nodeHeaders.add( new Header(
                     new Header.Entry( Forum.ID, Type.ID, forumsGroup, extractors.long_() ),
                     new Header.Entry( Forum.TITLE, Type.PROPERTY, nonGroup, extractors.string() ),
@@ -296,7 +296,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
             nodeDataFactories.add( DataFactories.data(
                     new LabelCamelCaseDecorator(),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             nodeHeaders.add( new Header(
                     new Header.Entry( Organisation.ID, Type.ID, organizationsGroup, extractors.long_() ),
                     new Header.Entry( "type", Type.LABEL, nonGroup, extractors.string() ),
@@ -316,7 +316,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                     Nodes.Person.name()} )
                     ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             nodeHeaders.add(
                     new Header(
                             new Header.Entry( Person.ID, Type.ID, personsGroup, extractors.long_() ),
@@ -338,7 +338,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
             nodeDataFactories.add( DataFactories.data(
                     new LabelCamelCaseDecorator(),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             nodeHeaders.add( new Header(
                     new Header.Entry( Place.ID, Type.ID, placesGroup, extractors.long_() ),
                     new Header.Entry( Place.NAME, Type.PROPERTY, nonGroup, extractors.string() ),
@@ -353,7 +353,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.additiveLabels( new String[]{
                             Nodes.TagClass.name()} ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             nodeHeaders.add( new Header(
                     new Header.Entry( "id", Type.ID, tagClassesGroup, extractors.long_() ),
                     new Header.Entry( TagClass.NAME, Type.PROPERTY, nonGroup, extractors.string() ),
@@ -367,7 +367,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.additiveLabels( new String[]{
                             Nodes.Tag.name()} ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             nodeHeaders.add( new Header(
                     new Header.Entry( Tag.ID, Type.ID, tagsGroup, extractors.long_() ),
                     new Header.Entry( Tag.NAME, Type.PROPERTY, nonGroup, extractors.string() ),
@@ -387,7 +387,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.COMMENT_HAS_CREATOR.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Comment.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Person.id", Type.END_ID, personsGroup, extractors.long_() ) ) );
@@ -400,7 +400,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.COMMENT_IS_LOCATED_IN.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Comment.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Place.id", Type.END_ID, placesGroup, extractors.long_() ) ) );
@@ -413,7 +413,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.REPLY_OF_COMMENT.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Comment.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Comment.id", Type.END_ID, messagesGroup, extractors.long_() ) ) );
@@ -426,7 +426,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.REPLY_OF_POST.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Comment.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Post.id", Type.END_ID, messagesGroup, extractors.long_() )
@@ -440,7 +440,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.CONTAINER_OF.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
                     new Header.Entry( "Post.id", Type.END_ID, messagesGroup, extractors.long_() )
@@ -459,7 +459,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                     Rels.HAS_MEMBER.name() )
                     ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
                     new Header.Entry( "Person.id", Type.END_ID, personsGroup, extractors.long_() ),
@@ -474,7 +474,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.HAS_MODERATOR.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
                     new Header.Entry( "Person.id", Type.END_ID, personsGroup, extractors.long_() ) ) );
@@ -487,7 +487,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.FORUM_HAS_TAG.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
                     new Header.Entry( "Tag.ig", Type.END_ID, tagsGroup, extractors.long_() ) ) );
@@ -500,7 +500,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.HAS_INTEREST.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
                     new Header.Entry( "Tag.id", Type.END_ID, tagsGroup, extractors.long_() )
@@ -514,7 +514,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.PERSON_IS_LOCATED_IN.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
                     new Header.Entry( "Place.id", Type.END_ID, placesGroup, extractors.long_() ) ) );
@@ -532,7 +532,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                     Rels.KNOWS.name() )
                     ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
                     new Header.Entry( "Person.id", Type.END_ID, personsGroup, extractors.long_() ),
@@ -551,7 +551,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                     Rels.LIKES_COMMENT.name() )
                     ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
                     new Header.Entry( "Comment.id", Type.END_ID, messagesGroup, extractors.long_() ),
@@ -570,7 +570,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                                     Rels.LIKES_POST.name() )
                     ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
                     new Header.Entry( "Post.id", Type.END_ID, messagesGroup, extractors.long_() ),
@@ -584,7 +584,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.STUDY_AT.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
                     new Header.Entry( "Organisation.id", Type.END_ID, organizationsGroup, extractors.long_() ),
@@ -598,7 +598,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.WORKS_AT.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
                     new Header.Entry( "Organisation.id", Type.END_ID, organizationsGroup, extractors.long_() ),
@@ -612,7 +612,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.IS_PART_OF.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Place.id", Type.START_ID, placesGroup, extractors.long_() ),
                     new Header.Entry( "Place.id", Type.END_ID, placesGroup, extractors.long_() ) ) );
@@ -625,7 +625,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.POST_HAS_CREATOR.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Post.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Place.id", Type.END_ID, personsGroup, extractors.long_() ) ) );
@@ -638,7 +638,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.POST_HAS_TAG.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Post.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Tag.id", Type.END_ID, tagsGroup, extractors.long_() ) ) );
@@ -651,7 +651,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.COMMENT_HAS_TAG.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Comment.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Tag.id", Type.END_ID, tagsGroup, extractors.long_() ) ) );
@@ -664,7 +664,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.POST_IS_LOCATED_IN.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Post.id", Type.START_ID, messagesGroup, extractors.long_() ),
                     new Header.Entry( "Place.id", Type.END_ID, placesGroup, extractors.long_() ) ) );
@@ -677,7 +677,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.IS_SUBCLASS_OF.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "TagClass.id", Type.START_ID, tagClassesGroup, extractors.long_() ),
                     new Header.Entry( "TagClass.id", Type.END_ID, tagClassesGroup, extractors.long_() ) ) );
@@ -690,7 +690,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.HAS_TYPE.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Tag.id", Type.START_ID, tagsGroup, extractors.long_() ),
                     new Header.Entry( "TagClass.id", Type.END_ID, tagClassesGroup, extractors.long_() ) ) );
@@ -703,7 +703,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                     InputEntityDecorators.defaultRelationshipType(
                             Rels.ORGANISATION_IS_LOCATED_IN.name() ),
                     LdbcCli.CHARSET,
-                    path.toFile() ) );
+                    path ) );
             relationshipHeaders.add( new Header(
                     new Header.Entry( "Organisation.id", Type.START_ID, organizationsGroup, extractors.long_() ),
                     new Header.Entry( "Place.id", Type.END_ID, placesGroup, extractors.long_() ) ) );
@@ -711,9 +711,9 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
 
         Input input = new CsvInput(
                 nodeDataFactories,
-                new LdbcHeaderFactory( nodeHeaders.stream().toArray( Header[]::new ) ),
+                new LdbcHeaderFactory( nodeHeaders.toArray( new Header[0] ) ),
                 relationshipDataFactories,
-                new LdbcHeaderFactory( relationshipHeaders.stream().toArray( Header[]::new ) ),
+                new LdbcHeaderFactory( relationshipHeaders.toArray( new Header[0] ) ),
                 IdType.INTEGER,
                 configuration,
                 CsvInput.NO_MONITOR,

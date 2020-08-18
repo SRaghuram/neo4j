@@ -8,12 +8,12 @@ package com.neo4j.causalclustering.core.state.machines.lease;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -194,7 +194,7 @@ class ReplicatedLeaseStateMachineTest
         MemberId memberB = member( 1 );
         int candidateId;
 
-        DurableStateStorage<ReplicatedLeaseState> storage = new DurableStateStorage<>( fsa, testDir.homeDir(),
+        DurableStateStorage<ReplicatedLeaseState> storage = new DurableStateStorage<>( fsa, testDir.homePath(),
                 CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance(), INSTANCE );
         try ( Lifespan ignored = new Lifespan( storage ) )
         {
@@ -211,7 +211,7 @@ class ReplicatedLeaseStateMachineTest
         }
 
         // then
-        DurableStateStorage<ReplicatedLeaseState> storage2 = new DurableStateStorage<>( fsa, testDir.homeDir(),
+        DurableStateStorage<ReplicatedLeaseState> storage2 = new DurableStateStorage<>( fsa, testDir.homePath(),
                 CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance(), INSTANCE );
         try ( Lifespan ignored = new Lifespan( storage2 ) )
         {
@@ -230,7 +230,7 @@ class ReplicatedLeaseStateMachineTest
 
         SafeStateMarshal<ReplicatedLeaseState> marshal = new ReplicatedLeaseState.Marshal();
 
-        DurableStateStorage<ReplicatedLeaseState> storage = new DurableStateStorage<>( fsa, testDir.homeDir(),
+        DurableStateStorage<ReplicatedLeaseState> storage = new DurableStateStorage<>( fsa, testDir.homePath(),
                 CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance(), INSTANCE );
 
         try ( Lifespan ignored = new Lifespan( storage ) )

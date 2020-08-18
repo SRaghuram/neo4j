@@ -17,7 +17,7 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 import org.neo4j.configuration.Config;
@@ -196,21 +196,21 @@ class CausalClusterMetricIT
         return dependencyResolver.resolveDependency( RoleProvider.class ).currentRole() == Role.LEADER;
     }
 
-    private static File discoveryMetricsFile( ClusterMember member, String metricName )
+    private static Path discoveryMetricsFile( ClusterMember member, String metricName )
     {
         return metricsFile( member, null, metricName );
     }
 
-    private static File raftMetricsFile( ClusterMember member, String metricName )
+    private static Path raftMetricsFile( ClusterMember member, String metricName )
     {
         return metricsFile( member, member.defaultDatabase().databaseName(), metricName );
     }
 
-    private static File metricsFile( ClusterMember member, String databaseName, String metricName )
+    private static Path metricsFile( ClusterMember member, String databaseName, String metricName )
     {
         var metricsDir = member.homePath().resolve( MetricsSettings.csv_path.defaultValue().toString() );
         var metric = MetricRegistry.name( "neo4j", databaseName, "causal_clustering", metricName );
-        return metricsCsv( metricsDir.toFile(), metric );
+        return metricsCsv( metricsDir, metric );
     }
 
     private static void assertAllNodesVisible( GraphDatabaseAPI db )

@@ -357,6 +357,6 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         fs.mkdirs( baseDir.resolve( "trusted" ).toFile() );
         fs.mkdirs( baseDir.resolve( "revoked" ).toFile() );
 
-        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir.toFile() );
+        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }
 }

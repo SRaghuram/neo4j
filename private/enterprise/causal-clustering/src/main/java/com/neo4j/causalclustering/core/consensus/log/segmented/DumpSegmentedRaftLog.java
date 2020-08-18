@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.internal.helpers.Args;
@@ -44,7 +45,7 @@ class DumpSegmentedRaftLog
     {
         LogProvider logProvider = NullLogProvider.getInstance();
         final int[] logsFound = {0};
-        FileNames fileNames = new FileNames( new File( filenameOrDirectory ) );
+        FileNames fileNames = new FileNames( Path.of( filenameOrDirectory ) );
         ReaderPool readerPool = new ReaderPool( 0, logProvider, fileNames, fileSystem, Clocks.systemClock() );
         //TODO: Update to provide a proper MarshalSelector (although in this dump tool its probably just the latest?)
         RecoveryProtocol recoveryProtocol =

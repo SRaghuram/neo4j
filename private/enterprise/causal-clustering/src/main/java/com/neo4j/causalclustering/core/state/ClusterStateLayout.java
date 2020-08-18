@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -31,82 +31,82 @@ public class ClusterStateLayout
     private static final String DB_DIRECTORY_NAME = "db";
     private static final String STATE_DIRECTORY_SUFFIX = "-state";
 
-    private final File clusterStateDirectory;
+    private final Path clusterStateDirectory;
 
-    private ClusterStateLayout( File clusterStateDirectory )
+    private ClusterStateLayout( Path clusterStateDirectory )
     {
         this.clusterStateDirectory = clusterStateDirectory;
     }
 
-    public static ClusterStateLayout of( File parentDirectory )
+    public static ClusterStateLayout of( Path parentDirectory )
     {
-        return new ClusterStateLayout( new File( parentDirectory, CLUSTER_STATE_DIRECTORY_NAME ) );
+        return new ClusterStateLayout( parentDirectory.resolve( CLUSTER_STATE_DIRECTORY_NAME ) );
     }
 
-    public File getClusterStateDirectory()
+    public Path getClusterStateDirectory()
     {
         return clusterStateDirectory;
     }
 
-    public File clusterStateVersionFile()
+    public Path clusterStateVersionFile()
     {
         return globalClusterStateFile( CoreStateFiles.VERSION );
     }
 
-    public File raftIdStateFile( String databaseName )
+    public Path raftIdStateFile( String databaseName )
     {
         return databaseClusterStateFile( CoreStateFiles.RAFT_ID, databaseName );
     }
 
-    public File memberIdStateFile()
+    public Path memberIdStateFile()
     {
         return globalClusterStateFile( CoreStateFiles.CORE_MEMBER_ID );
     }
 
-    public File leaseStateDirectory( String databaseName )
+    public Path leaseStateDirectory( String databaseName )
     {
         return databaseClusterStateDirectory( CoreStateFiles.LEASE, databaseName );
     }
 
-    public File lastFlushedStateDirectory( String databaseName )
+    public Path lastFlushedStateDirectory( String databaseName )
     {
         return databaseClusterStateDirectory( CoreStateFiles.LAST_FLUSHED, databaseName );
     }
 
-    public File raftMembershipStateDirectory( String databaseName )
+    public Path raftMembershipStateDirectory( String databaseName )
     {
         return databaseClusterStateDirectory( CoreStateFiles.RAFT_MEMBERSHIP, databaseName );
     }
 
-    public File raftLogDirectory( String databaseName )
+    public Path raftLogDirectory( String databaseName )
     {
         return databaseClusterStateDirectory( CoreStateFiles.RAFT_LOG, databaseName );
     }
 
-    public File sessionTrackerDirectory( String databaseName )
+    public Path sessionTrackerDirectory( String databaseName )
     {
         return databaseClusterStateDirectory( CoreStateFiles.SESSION_TRACKER, databaseName );
     }
 
-    public File raftTermStateDirectory( String databaseName )
+    public Path raftTermStateDirectory( String databaseName )
     {
         return databaseClusterStateDirectory( CoreStateFiles.RAFT_TERM, databaseName );
     }
 
-    public File raftVoteStateDirectory( String databaseName )
+    public Path raftVoteStateDirectory( String databaseName )
     {
         return databaseClusterStateDirectory( CoreStateFiles.RAFT_VOTE, databaseName );
     }
 
-    public Set<File> listGlobalAndDatabaseDirectories( String databaseName, Predicate<CoreStateFiles<?>> stateFilesFilter )
+    public Set<Path> listGlobalAndDatabaseDirectories( String databaseName, Predicate<CoreStateFiles<?>> stateFilesFilter )
     {
-        Stream<File> globalDirectories = CoreStateFiles.values()
+        Stream<Path> globalDirectories = CoreStateFiles.values()
                 .stream()
                 .filter( type -> type.scope() == GLOBAL )
                 .filter( stateFilesFilter )
                 .map( this::globalClusterStateDirectory );
 
-        Stream<File> databaseDirectories = CoreStateFiles.values()
+        Stream<Path> databaseDirectories = CoreStateFiles.values()
                 .stream()
                 .filter( type -> type.scope() == DATABASE )
                 .filter( stateFilesFilter )
@@ -115,41 +115,41 @@ public class ClusterStateLayout
         return Stream.concat( globalDirectories, databaseDirectories ).collect( toSet() );
     }
 
-    private File globalClusterStateFile( CoreStateFiles<?> coreStateFiles )
+    private Path globalClusterStateFile( CoreStateFiles<?> coreStateFiles )
     {
         checkScope( coreStateFiles, GLOBAL );
-        File directory = globalClusterStateDirectory( coreStateFiles );
-        return new File( directory, coreStateFiles.name() );
+        Path directory = globalClusterStateDirectory( coreStateFiles );
+        return directory.resolve( coreStateFiles.name() );
     }
 
-    private File databaseClusterStateFile( CoreStateFiles<?> coreStateFiles, String databaseName )
+    private Path databaseClusterStateFile( CoreStateFiles<?> coreStateFiles, String databaseName )
     {
         checkScope( coreStateFiles, DATABASE );
-        File directory = databaseClusterStateDirectory( coreStateFiles, databaseName );
-        return new File( directory, coreStateFiles.name() );
+        Path directory = databaseClusterStateDirectory( coreStateFiles, databaseName );
+        return directory.resolve( coreStateFiles.name() );
     }
 
-    private File globalClusterStateDirectory( CoreStateFiles<?> coreStateFiles )
+    private Path globalClusterStateDirectory( CoreStateFiles<?> coreStateFiles )
     {
         checkScope( coreStateFiles, GLOBAL );
-        return new File( clusterStateDirectory, stateDirectoryName( coreStateFiles ) );
+        return clusterStateDirectory.resolve( stateDirectoryName( coreStateFiles ) );
     }
 
-    private File databaseClusterStateDirectory( CoreStateFiles<?> coreStateFiles, String databaseName )
+    private Path databaseClusterStateDirectory( CoreStateFiles<?> coreStateFiles, String databaseName )
     {
         checkScope( coreStateFiles, DATABASE );
-        File databaseDirectory = new File( dbDirectory(), databaseName );
-        return new File( databaseDirectory, stateDirectoryName( coreStateFiles ) );
+        Path databaseDirectory = dbDirectory().resolve( databaseName );
+        return databaseDirectory.resolve( stateDirectoryName( coreStateFiles ) );
     }
 
-    public File raftGroupDir( String databaseName )
+    public Path raftGroupDir( String databaseName )
     {
-        return new File( dbDirectory(), databaseName );
+        return dbDirectory().resolve( databaseName );
     }
 
-    private File dbDirectory()
+    private Path dbDirectory()
     {
-        return new File( clusterStateDirectory, DB_DIRECTORY_NAME );
+        return clusterStateDirectory.resolve( DB_DIRECTORY_NAME );
     }
 
     private static String stateDirectoryName( CoreStateFiles<?> coreStateFiles )

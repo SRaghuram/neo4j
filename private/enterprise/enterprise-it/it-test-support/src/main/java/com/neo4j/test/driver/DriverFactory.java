@@ -6,7 +6,6 @@
 package com.neo4j.test.driver;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
@@ -40,9 +39,9 @@ public class DriverFactory implements Closeable
     private Log createNewLogFile() throws IOException
     {
         var fs = testDirectory.getFileSystem();
-        var logDir = new File( testDirectory.absolutePath(), LOGS_DIR );
-        fs.mkdir( logDir );
-        var outputStream = fs.openAsOutputStream( new File( logDir, "driver-" + driverCounter.incrementAndGet() + ".log" ), false );
+        var logDir = testDirectory.homePath().resolve( LOGS_DIR );
+        fs.mkdir( logDir.toFile() );
+        var outputStream = fs.openAsOutputStream( logDir.resolve( "driver-" + driverCounter.incrementAndGet() + ".log" ).toFile(), false );
         closeableCollection.add( outputStream );
         return new Log4jLogProvider( outputStream ).getLog( getClass() );
     }

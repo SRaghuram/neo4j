@@ -10,7 +10,6 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.apache.commons.lang3.ArrayUtils;
 import org.junit.Test;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -79,7 +78,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     public void debugLoggingDisabledByDefault() throws Exception
     {
         // When
-        File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
+        Path configFile = testDirectory.filePath( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap();
         properties.putAll( getDefaultRelativeProperties( testDirectory.homePath() ) );
@@ -90,7 +89,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         try ( var bootstrapper = new UncoveredEnterpriseBootstrapper() )
         {
             NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(), "--config-dir",
-                    configFile.getParentFile().getAbsolutePath() );
+                    configFile.getParent().toAbsolutePath().toString() );
 
             // Then
             assertEventually( "Server was started", bootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
@@ -103,7 +102,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     public void debugLoggingEnabledBySetting() throws Exception
     {
         // When
-        File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
+        Path configFile = testDirectory.filePath( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap( store_internal_log_level.name(), "DEBUG");
         properties.putAll( getDefaultRelativeProperties( testDirectory.homePath() ) );
@@ -114,7 +113,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         try ( var bootstrapper = new UncoveredEnterpriseBootstrapper() )
         {
             NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(), "--config-dir",
-                    configFile.getParentFile().getAbsolutePath() );
+                    configFile.getParent().toAbsolutePath().toString() );
 
             // Then
             assertEventually( "Server was started", bootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );

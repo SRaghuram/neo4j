@@ -21,10 +21,10 @@ import org.neo4j.configuration.ssl.SslPolicyScope
 import org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId
 import org.neo4j.test.rule.TestDirectory
 import org.scalacheck.Gen
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.Matchers
 import org.scalatest.WordSpecLike
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 import scala.util.control.NonFatal
 
@@ -90,8 +90,8 @@ class SslNegotiationTest extends WordSpecLike with GeneratorDrivenPropertyChecks
   }
 
   def withClient(testDir: TestDirectory, clientSetup: Setup, serverSetup: Setup)(test: SecureClient => Unit): Unit = {
-    val sslServerResource = selfSignedKeyId(0).trustKeyId(1).install(testDir.directory("server"))
-    val sslClientResource = selfSignedKeyId(1).trustKeyId(0).install(testDir.directory("client"))
+    val sslServerResource = selfSignedKeyId(0).trustKeyId(1).install(testDir.directoryPath("server"))
+    val sslClientResource = selfSignedKeyId(1).trustKeyId(0).install(testDir.directoryPath("client"))
 
     var server: SecureServer = null
     var client: SecureClient = null

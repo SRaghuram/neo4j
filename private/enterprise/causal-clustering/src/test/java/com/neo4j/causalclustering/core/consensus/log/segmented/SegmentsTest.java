@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
@@ -40,7 +40,7 @@ import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 class SegmentsTest
 {
     private final FileSystemAbstraction fsa = mock( FileSystemAbstraction.class, RETURNS_MOCKS );
-    private final File baseDirectory = new File( "." );
+    private final Path baseDirectory = Path.of( "." );
     private final FileNames fileNames = new FileNames( baseDirectory );
     @SuppressWarnings( "unchecked" )
     private final ChannelMarshal<ReplicatedContent> contentMarshal = mock( ChannelMarshal.class );
@@ -100,7 +100,7 @@ class SegmentsTest
             // When
             segments.prune( 11 );
 
-            verify( fsa, times( segmentFiles.size() ) ).deleteFile( fileNames.getForSegment( toPrune.header().segmentNumber() ) );
+            verify( fsa, times( segmentFiles.size() ) ).deleteFile( fileNames.getForSegment( toPrune.header().segmentNumber() ).toFile() );
         }
     }
 
@@ -146,7 +146,7 @@ class SegmentsTest
             // Then
             // the truncate file is part of the deletes that happen while pruning
             verify( fsa, times( segmentFiles.size() ) ).deleteFile(
-                    fileNames.getForSegment( toBePruned.header().segmentNumber() ) );
+                    fileNames.getForSegment( toBePruned.header().segmentNumber() ).toFile() );
         }
     }
 

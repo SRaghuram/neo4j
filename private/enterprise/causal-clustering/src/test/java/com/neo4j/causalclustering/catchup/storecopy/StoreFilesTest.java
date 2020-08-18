@@ -62,8 +62,8 @@ class StoreFilesTest
         databaseLayout = DatabaseLayout.ofFlat( databaseDir );
         otherDatabaseDir = testDirectory.directoryPath( "otherdatabasedir" );
         otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir );
-        logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir.toFile(), fs ).build();
-        otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir.toFile(), fs ).build();
+        logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fs ).build();
+        otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir, fs ).build();
     }
 
     @Test
@@ -113,7 +113,7 @@ class StoreFilesTest
         StoreFiles storeFiles = newStoreFiles();
 
         Path[] txLogFiles =
-                {logFiles.getLogFileForVersion( 1 ).toPath(), logFiles.getLogFileForVersion( 2 ).toPath(), logFiles.getLogFileForVersion( 42 ).toPath()};
+                {logFiles.getLogFileForVersion( 1 ), logFiles.getLogFileForVersion( 2 ), logFiles.getLogFileForVersion( 42 )};
         for ( Path txLogFile : txLogFiles )
         {
             createFile( txLogFile );
@@ -215,7 +215,7 @@ class StoreFilesTest
         StoreFiles storeFiles = newStoreFiles();
 
         Path[] txLogFiles =
-                {logFiles.getLogFileForVersion( 99 ).toPath(), logFiles.getLogFileForVersion( 100 ).toPath(), logFiles.getLogFileForVersion( 101 ).toPath()};
+                {logFiles.getLogFileForVersion( 99 ), logFiles.getLogFileForVersion( 100 ), logFiles.getLogFileForVersion( 101 )};
         for ( Path txLogFile : txLogFiles )
         {
             createFile( txLogFile );

@@ -7,13 +7,13 @@ package com.neo4j.backup.stores;
 
 import com.neo4j.causalclustering.common.Cluster;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 
 public class NoStore implements BackupStore
 {
     @Override
-    public Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster backupCluster )
+    public Optional<DefaultDatabasesBackup> generate( Path backupDir, Cluster backupCluster )
     {
         return Optional.empty();
     }

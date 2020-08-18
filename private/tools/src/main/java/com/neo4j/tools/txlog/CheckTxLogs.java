@@ -10,9 +10,10 @@ import com.neo4j.tools.txlog.checktypes.CheckTypes;
 import org.eclipse.collections.api.map.primitive.MutableLongLongMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongLongHashMap;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -75,7 +76,7 @@ public class CheckTxLogs
 
         boolean validateCheckPoints = arguments.getBoolean( VALIDATE_CHECKPOINTS_FLAG );
         List<CheckType<?,?>> checkTypes = parseChecks( arguments );
-        File dir = parseDir( out, arguments );
+        Path dir = parseDir( out, arguments );
 
         boolean success;
         try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
@@ -84,7 +85,7 @@ public class CheckTxLogs
                     .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                     .build();
             int numberOfLogFilesFound = (int) (logFiles.getHighestLogVersion() - logFiles.getLowestLogVersion() + 1);
-            out.println( "Found " + numberOfLogFilesFound + " log files to verify in " + dir.getCanonicalPath() );
+            out.println( "Found " + numberOfLogFilesFound + " log files to verify in " + dir.toAbsolutePath().normalize() );
 
             CheckTxLogs tool = new CheckTxLogs( out, fs );
             PrintingInconsistenciesHandler handler = new PrintingInconsistenciesHandler( out );
@@ -103,7 +104,7 @@ public class CheckTxLogs
     }
 
     @SuppressWarnings( "unused" ) // used by recovery-robustness
-    public boolean checkAll( File storeDirectory ) throws IOException
+    public boolean checkAll( Path storeDirectory ) throws IOException
     {
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirectory, fs )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
@@ -122,7 +123,7 @@ public class CheckTxLogs
         final MutableLongLongMap logFileSizes = new LongLongHashMap();
         for ( long i = lowestLogVersion; i <= highestLogVersion; i++ )
         {
-            logFileSizes.put( i, fs.getFileSize( logFiles.getLogFileForVersion( i ) ) );
+            logFileSizes.put( i, fs.getFileSize( logFiles.getLogFileForVersion( i ).toFile() ) );
         }
 
         try ( LogEntryCursor logEntryCursor = openLogEntryCursor( logFiles ) )
@@ -283,14 +284,14 @@ public class CheckTxLogs
         return Stream.of( checks.split( SEPARATOR ) ).map( CheckTypes::fromName ).collect( Collectors.toList() );
     }
 
-    private static File parseDir( PrintStream printStream, Args args )
+    private static Path parseDir( PrintStream printStream, Args args )
     {
         if ( args.orphans().size() != 1 )
         {
             printUsageAndExit( printStream );
         }
-        File dir = new File( args.orphans().get( 0 ) );
-        if ( !dir.isDirectory() )
+        Path dir = Path.of( args.orphans().get( 0 ) );
+        if ( !Files.isDirectory( dir ) )
         {
             printStream.println( "Invalid directory: '" + dir + "'" );
             printUsageAndExit( printStream );

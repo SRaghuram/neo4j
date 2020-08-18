@@ -53,11 +53,11 @@ public class UnbindFromClusterCommand extends AbstractCommand
 
             try ( Closeable ignored = LockChecker.checkDbmsLock( neo4jLayout ) )
             {
-                File clusterStateDirectory = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).getClusterStateDirectory();
+                Path clusterStateDirectory = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).getClusterStateDirectory();
 
-                if ( ctx.fs().fileExists( clusterStateDirectory ) )
+                if ( ctx.fs().fileExists( clusterStateDirectory.toFile() ) )
                 {
-                    deleteClusterStateIn( clusterStateDirectory );
+                    deleteClusterStateIn( clusterStateDirectory.toFile() );
                 }
                 else
                 {

@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -92,12 +92,12 @@ public class ClusterStateStorageFactory
         return createDurableStorage( layout.raftVoteStateDirectory( databaseName ), CoreStateFiles.RAFT_VOTE, life, logProvider );
     }
 
-    private <T> SimpleStorage<T> createSimpleStorage( File file, CoreStateFiles<T> type, LogProvider logProvider )
+    private <T> SimpleStorage<T> createSimpleStorage( Path file, CoreStateFiles<T> type, LogProvider logProvider )
     {
         return new SimpleFileStorage<>( fs, file, type.marshal(), memoryTracker );
     }
 
-    private <T> StateStorage<T> createDurableStorage( File directory, CoreStateFiles<T> type, LifeSupport life, LogProvider logProvider )
+    private <T> StateStorage<T> createDurableStorage( Path directory, CoreStateFiles<T> type, LifeSupport life, LogProvider logProvider )
     {
         DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider, memoryTracker );
         life.add( storage );

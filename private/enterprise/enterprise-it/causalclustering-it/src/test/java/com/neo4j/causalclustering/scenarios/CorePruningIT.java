@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -70,7 +70,7 @@ class CorePruningIT
         }
 
         // when pruning kicks in then some files are actually deleted
-        File raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
+        Path raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
         int expectedNumberOfLogFilesAfterPruning = 2;
         assertEventually( "raft logs eventually pruned", () -> numberOfFiles( raftLogDir ),
                 equalityCondition( expectedNumberOfLogFilesAfterPruning ), 5, TimeUnit.SECONDS );
@@ -88,13 +88,13 @@ class CorePruningIT
 
         // when pruning kicks in then some files are actually deleted
         int expectedNumberOfLogFilesAfterPruning = 2;
-        File raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
+        Path raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
         assertEventually( "raft logs eventually pruned", () -> numberOfFiles( raftLogDir ),
                 equalityCondition( expectedNumberOfLogFilesAfterPruning ), 5, TimeUnit.SECONDS );
     }
 
-    private int numberOfFiles( File raftLogDir ) throws RuntimeException
+    private int numberOfFiles( Path raftLogDir ) throws RuntimeException
     {
-        return fs.listFiles( raftLogDir ).length;
+        return fs.listFiles( raftLogDir.toFile() ).length;
     }
 }

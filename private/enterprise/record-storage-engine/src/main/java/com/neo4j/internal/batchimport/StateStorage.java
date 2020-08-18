@@ -5,9 +5,10 @@
  */
 package com.neo4j.internal.batchimport;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -31,25 +32,26 @@ public class StateStorage
     static final String INIT = "init";
 
     private final FileSystemAbstraction fs;
-    private final File stateFile;
-    private final File tempFile;
+    private final Path stateFile;
+    private final Path tempFile;
     private final MemoryTracker memoryTracker;
 
-    StateStorage( FileSystemAbstraction fs, File stateFile, MemoryTracker memoryTracker )
+    StateStorage( FileSystemAbstraction fs, Path stateFile, MemoryTracker memoryTracker )
     {
         this.fs = fs;
         this.stateFile = stateFile;
-        this.tempFile = new File( stateFile.getAbsolutePath() + ".tmp" );
+        this.tempFile = stateFile.resolveSibling( stateFile.getFileName() + ".tmp" );
         this.memoryTracker = memoryTracker;
     }
 
     public Pair<String,byte[]> get() throws IOException
     {
-        if ( !stateFile.exists() )
+        if ( Files.notExists( stateFile ) )
         {
             return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
         }
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile.toFile() ),
+                new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             String name = readString( channel );
             byte[] checkPoint = new byte[channel.getInt()];
@@ -70,19 +72,19 @@ public class StateStorage
 
     public void set( String name, byte[] checkPoint ) throws IOException
     {
-        fs.mkdirs( tempFile.getParentFile() );
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( tempFile ), memoryTracker ) )
+        fs.mkdirs( tempFile.getParent().toFile() );
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( tempFile.toFile() ), memoryTracker ) )
         {
             writeString( name, channel );
             channel.putInt( checkPoint.length );
             channel.put( checkPoint, checkPoint.length );
         }
-        fs.renameFile( tempFile, stateFile, ATOMIC_MOVE );
+        fs.renameFile( tempFile.toFile(), stateFile.toFile(), ATOMIC_MOVE );
     }
 
     public void remove() throws IOException
     {
-        fs.renameFile( stateFile, tempFile, ATOMIC_MOVE );
-        fs.deleteFileOrThrow( tempFile );
+        fs.renameFile( stateFile.toFile(), tempFile.toFile(), ATOMIC_MOVE );
+        fs.deleteFileOrThrow( tempFile.toFile() );
     }
 }

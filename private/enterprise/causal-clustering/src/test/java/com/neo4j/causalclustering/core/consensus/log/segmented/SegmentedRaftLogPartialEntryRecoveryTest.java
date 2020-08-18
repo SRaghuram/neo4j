@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -49,12 +49,12 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     @Inject
     private TestDirectory testDirectory;
 
-    private File logDirectory;
+    private Path logDirectory;
     private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
-        logDirectory = testDirectory.homeDir();
+        logDirectory = testDirectory.homePath();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
@@ -98,7 +98,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         State recoveryState = recovery.run();
         String logFilename = recoveryState.segments.last().getFilename();
         recoveryState.segments.close();
-        File logFile = new File( logDirectory, logFilename );
+        Path logFile = logDirectory.resolve( logFilename );
 
         // When
         // We remove any number of bytes from the end (up to but not including the header) and try to recover
@@ -125,7 +125,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         State recoveryState = recovery.run();
         String logFilename = recoveryState.segments.last().getFilename();
         recoveryState.segments.close();
-        File logFile = new File( logDirectory, logFilename );
+        Path logFile = logDirectory.resolve( logFilename );
 
         // When
         // We remove any number of bytes from the end of the second file and try to recover
@@ -152,14 +152,14 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         State recoveryState = recovery.run();
         String logFilename = recoveryState.segments.last().getFilename();
         recoveryState.segments.close();
-        File logFile = new File( logDirectory, logFilename );
-        StoreChannel lastFile = fs.write( logFile );
+        Path logFile = logDirectory.resolve( logFilename );
+        StoreChannel lastFile = fs.write( logFile.toFile() );
         long currentSize = lastFile.size();
         lastFile.close();
 
         // When
         // We induce an incomplete entry at the end of the last file
-        lastFile = fs.write( logFile );
+        lastFile = fs.write( logFile.toFile() );
         lastFile.truncate( currentSize - 1 );
         lastFile.close();
 
@@ -191,16 +191,16 @@ class SegmentedRaftLogPartialEntryRecoveryTest
      * only one file (Segment) and the header is incomplete, that is correctly an exceptional circumstance and
      * is tested elsewhere.
      */
-    private void truncateAndRecover( File logFile, long truncateDownToSize )
+    private void truncateAndRecover( Path logFile, long truncateDownToSize )
             throws IOException, DamagedLogStorageException, DisposedException
     {
-        StoreChannel lastFile = fs.write( logFile );
+        StoreChannel lastFile = fs.write( logFile.toFile() );
         long currentSize = lastFile.size();
         lastFile.close();
         RecoveryProtocol recovery;
         while ( currentSize-- > truncateDownToSize )
         {
-            lastFile = fs.write( logFile );
+            lastFile = fs.write( logFile.toFile() );
             lastFile.truncate( currentSize );
             lastFile.close();
             recovery = createRecoveryProtocol();

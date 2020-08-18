@@ -19,9 +19,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -83,9 +85,10 @@ class ClusterStateMigrationIT
 
         // remove all version files to force migrator to recreate cluster-state directories
         // this is expected because cluster-state directory without a version file is considered to be from an old neo4j version
-        boolean filesDeleted = clusterStateVersionFiles.stream().allMatch( FileUtils::deleteFile );
-
-        assertTrue( filesDeleted );
+        for ( Path clusterStateVersionFile : clusterStateVersionFiles )
+        {
+            Files.delete( clusterStateVersionFile );
+        }
 
         cluster.start();
 
@@ -130,6 +133,6 @@ class ClusterStateMigrationIT
     private static ClusterStateLayout clusterStateLayout( ClusterMember member )
     {
         var dataDir = member.homePath().resolve(  "data" );
-        return ClusterStateLayout.of( dataDir.toFile() );
+        return ClusterStateLayout.of( dataDir );
     }
 }

@@ -32,7 +32,7 @@ class SimpleStorageTest
     void shouldWriteReadAndRemoveState() throws Exception
     {
         // given
-        var dir = testDirectory.homeDir();
+        var dir = testDirectory.homePath();
         var fs = testDirectory.getFileSystem();
         var storage = new SimpleFileStorage<>( fs, dir, new ServerId.Marshal(), INSTANCE );
 
@@ -51,7 +51,7 @@ class SimpleStorageTest
 
         // then
         assertFalse( storage.exists() );
-        assertFalse( fs.fileExists( dir ) );
+        assertFalse( fs.fileExists( dir.toFile() ) );
         assertThrows( IOException.class, storage::readState );
     }
 }

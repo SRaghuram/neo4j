@@ -13,10 +13,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,7 +49,7 @@ class SecurityAdministrationCommandLoggingIT
 {
     private DatabaseManagementService managementService;
     private GraphDatabaseFacade database;
-    private File logFilename;
+    private Path logFilename;
     private final StubLoginContext adminContext = new StubLoginContext( "fakeAdmin", AccessMode.Static.FULL );
 
     @Inject
@@ -58,8 +58,8 @@ class SecurityAdministrationCommandLoggingIT
     @BeforeEach
     void setUp()
     {
-        File logsDirectory = new File( testDirectory.homeDir(), "logs" );
-        logFilename = new File( logsDirectory, "security.log" );
+        Path logsDirectory = testDirectory.homePath().resolve( "logs" );
+        logFilename = logsDirectory.resolve( "security.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( inMemoryLog )
@@ -431,12 +431,12 @@ class SecurityAdministrationCommandLoggingIT
         List<String> logLines = new ArrayList<>();
         // this is needed as the EphemeralFSA is broken, and creates a new file when reading a non-existent file from
         // a valid directory
-        if ( !fs.fileExists( logFilename ) )
+        if ( !fs.fileExists( logFilename.toFile() ) )
         {
             throw new FileNotFoundException( "File does not exist." );
         }
 
-        try ( var reader = fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) )
+        try ( var reader = fs.openAsReader( logFilename.toFile(), StandardCharsets.UTF_8 ) )
         {
             var lineIterator = IOUtils.lineIterator( reader );
             while ( lineIterator.hasNext() )

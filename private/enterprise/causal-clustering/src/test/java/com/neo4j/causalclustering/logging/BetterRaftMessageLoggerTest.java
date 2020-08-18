@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.time.Clock;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -32,7 +33,7 @@ class BetterRaftMessageLoggerTest
 {
     private final NamedDatabaseId databaseId = DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
     private final MemberId memberId = IdFactory.randomMemberId();
-    private final File logFile = new File( "raft-messages" );
+    private final Path logFile = Path.of( "logs/raft-messages" );
     private final FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
     private final OutputStream outputStream = mock( OutputStream.class );
 
@@ -41,7 +42,7 @@ class BetterRaftMessageLoggerTest
     @BeforeEach
     void beforeEach() throws Exception
     {
-        when( fs.openAsOutputStream( logFile, true ) ).thenReturn( outputStream );
+        when( fs.openAsOutputStream( logFile.toFile(), true ) ).thenReturn( outputStream );
     }
 
     @Test
@@ -50,7 +51,7 @@ class BetterRaftMessageLoggerTest
         verify( fs, never() ).openAsOutputStream( any( File.class ), anyBoolean() );
 
         logger.start();
-        verify( fs ).openAsOutputStream( logFile, true );
+        verify( fs ).openAsOutputStream( logFile.toFile(), true );
 
         logger.stop();
         verify( outputStream ).close();

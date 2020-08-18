@@ -53,13 +53,13 @@ public class MemberIdMigratorTest
         memoryTracker = EmptyMemoryTracker.INSTANCE;
 
         var logProvider = nullLogProvider();
-        var clusterStateLayout = ClusterStateLayout.of( testDirectory.homeDir() );
+        var clusterStateLayout = ClusterStateLayout.of( testDirectory.homePath() );
         var config = Config.defaults();
 
         storageFactory = new ClusterStateStorageFactory( fs, clusterStateLayout, logProvider, config, memoryTracker );
         migrator = MemberIdMigrator.create( logProvider, fs, neo4jLayout, memoryTracker, storageFactory );
 
-        serverIdStorage = new SimpleFileStorage<>( fs, neo4jLayout.serverIdFile().toFile(), new ServerId.Marshal(), memoryTracker );
+        serverIdStorage = new SimpleFileStorage<>( fs, neo4jLayout.serverIdFile(), new ServerId.Marshal(), memoryTracker );
         memberIdStorage = storageFactory.createMemberIdStorage();
     }
 
@@ -127,7 +127,7 @@ public class MemberIdMigratorTest
     {
         // given
         var oldServerIdStorage = new SimpleFileStorage<>(
-                fs, neo4jLayout.dataDirectory().resolve( "server-id" ).toFile(), new ServerId.Marshal(), memoryTracker );
+                fs, neo4jLayout.dataDirectory().resolve( "server-id" ), new ServerId.Marshal(), memoryTracker );
         var serverId = IdFactory.randomServerId();
         oldServerIdStorage.writeState( serverId );
 

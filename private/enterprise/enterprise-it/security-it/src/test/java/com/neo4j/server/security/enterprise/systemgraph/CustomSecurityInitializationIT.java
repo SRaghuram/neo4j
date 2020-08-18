@@ -102,7 +102,7 @@ class CustomSecurityInitializationIT
     @ValueSource( strings = {"true", "false"} )
     void shouldDoCustomInitializationStandalone( String authEnabled ) throws IOException
     {
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
+        writeTestInitializationFile( getInitFile( directory.homePath() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
@@ -125,9 +125,9 @@ class CustomSecurityInitializationIT
     {
         TreeSet<String> users = new TreeSet<>();
         users.add( "neo4j" );
-        writeTestAuthFile( getAuthFile( directory.homeDir() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
-        writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j");
+        writeTestAuthFile( getAuthFile( directory.homePath() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
+        writeTestRolesFile( getRoleFile( directory.homePath() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
+        writeTestInitializationFile( getInitFile( directory.homePath() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j");
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 //.impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
@@ -150,9 +150,9 @@ class CustomSecurityInitializationIT
     {
         TreeSet<String> users = new TreeSet<>();
         users.add( "neo4j" );
-        writeTestAuthFile( getAuthFile( directory.homeDir() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
-        writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
+        writeTestAuthFile( getAuthFile( directory.homePath() ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
+        writeTestRolesFile( getRoleFile( directory.homePath() ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
+        writeTestInitializationFile( getInitFile( directory.homePath() ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
         TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
@@ -160,9 +160,9 @@ class CustomSecurityInitializationIT
         assertThrows( Exception.class, () -> dbms = builder.build() );
 
         // change the role name to be migrated to be show that migration happens now
-        writeTestRolesFile( getRoleFile( directory.homeDir() ), new RoleRecord.Builder().withName( "custom2" ).withUsers( users ).build() );
+        writeTestRolesFile( getRoleFile( directory.homePath() ), new RoleRecord.Builder().withName( "custom2" ).withUsers( users ).build() );
         // Then if we fix the init file
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole2", "GRANT ROLE testRole2 TO neo4j", "//INVALID CYPHER" );
+        writeTestInitializationFile( getInitFile( directory.homePath() ), "CREATE ROLE testRole2", "GRANT ROLE testRole2 TO neo4j", "//INVALID CYPHER" );
         dbms = builder.build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -179,7 +179,7 @@ class CustomSecurityInitializationIT
     @ValueSource( strings = {"true", "false"} )
     void shouldLogInitializationStandalone( String authEnabled ) throws IOException
     {
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
+        writeTestInitializationFile( getInitFile( directory.homePath() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
@@ -201,7 +201,7 @@ class CustomSecurityInitializationIT
     @Test
     void shouldNotDoCustomInitializationWithoutSettingStandalone() throws IOException
     {
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
+        writeTestInitializationFile( getInitFile( directory.homePath() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
@@ -225,7 +225,7 @@ class CustomSecurityInitializationIT
         dbms.database( SYSTEM_DATABASE_NAME );
         dbms.shutdown();
 
-        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
+        writeTestInitializationFile( getInitFile( directory.homePath() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                 .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) )
@@ -257,7 +257,7 @@ class CustomSecurityInitializationIT
     @ValueSource( strings = {"true", "false"} )
     void shouldFailOnComplexCustomInitializationWithSyntaxErrorStandalone( String authEnabled ) throws IOException
     {
-        writeComplexInitialization( getInitFile( directory.homeDir() ), "(name, email)", "User, Person" );
+        writeComplexInitialization( getInitFile( directory.homePath() ), "(name, email)", "User, Person" );
         TestEnterpriseDatabaseManagementServiceBuilder builder =
                 new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                         .impermanent()
@@ -271,7 +271,7 @@ class CustomSecurityInitializationIT
     @ValueSource( strings = {"true", "false"} )
     void shouldDoMoreComplexCustomInitializationStandalone( String authEnabled ) throws IOException
     {
-        writeComplexInitialization( getInitFile( directory.homeDir() ), "{name, email}", "User, Person" );
+        writeComplexInitialization( getInitFile( directory.homePath() ), "{name, email}", "User, Person" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
@@ -298,8 +298,8 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
-            org.apache.commons.io.FileUtils.forceMkdir( home );
+            Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
             writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole" );
         }
         cluster.start();
@@ -325,8 +325,8 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
-            org.apache.commons.io.FileUtils.forceMkdir( home );
+            Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
             writeTestAuthFile( getAuthFile( home ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
             writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
             writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j");
@@ -352,8 +352,8 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
-            org.apache.commons.io.FileUtils.forceMkdir( home );
+            Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
             writeTestAuthFile( getAuthFile( home ), new User.Builder( "neo4j", credentialFor( "abc123" ) ).build() );
             writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom" ).withUsers( users ).build() );
             writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole", "GRANT ROLE testRole TO neo4j", "INVALID CYPHER" );
@@ -362,7 +362,7 @@ class CustomSecurityInitializationIT
 
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
+            Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             // change the role name to be migrated to be show that migration happens now
             writeTestRolesFile( getRoleFile( home ), new RoleRecord.Builder().withName( "custom2" ).withUsers( users ).build() );
             // When fixing the broken init file, things should now work
@@ -390,8 +390,8 @@ class CustomSecurityInitializationIT
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
-            File home = member.databaseLayout().getNeo4jLayout().homeDirectory().toFile();
-            org.apache.commons.io.FileUtils.forceMkdir( home );
+            Path home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            org.apache.commons.io.FileUtils.forceMkdir( home.toFile() );
             writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole" );
         }
         cluster.start();
@@ -420,19 +420,19 @@ class CustomSecurityInitializationIT
         assertTrue( isFileNotFoundException( exception ) );
     }
 
-    private Path getInitFile( File homeDir )
+    private Path getInitFile( Path homeDir )
     {
-        return homeDir.toPath().resolve( "scripts" ).resolve( INIT_FILENAME );
+        return homeDir.resolve( "scripts" ).resolve( INIT_FILENAME );
     }
 
-    private Path getAuthFile( File homeDir )
+    private Path getAuthFile( Path homeDir )
     {
-        return homeDir.toPath().resolve( "data" ).resolve( "dbms" ).resolve( AUTH_FILENAME );
+        return homeDir.resolve( "data" ).resolve( "dbms" ).resolve( AUTH_FILENAME );
     }
 
-    private Path getRoleFile( File homeDir )
+    private Path getRoleFile( Path homeDir )
     {
-        return homeDir.toPath().resolve( "data" ).resolve( "dbms" ).resolve( ROLES_FILENAME );
+        return homeDir.resolve( "data" ).resolve( "dbms" ).resolve( ROLES_FILENAME );
     }
 
     private boolean isFileNotFoundException( Throwable e )
@@ -466,13 +466,13 @@ class CustomSecurityInitializationIT
 
     private void writeTestAuthFile( Path path, User... users )
     {
-        FileUserRepository userRepository = new FileUserRepository( directory.getFileSystem(), path.toFile(), logProvider );
+        FileUserRepository userRepository = new FileUserRepository( directory.getFileSystem(), path, logProvider );
         Arrays.stream( users ).forEach( user -> safeCreateUser( userRepository, user ) );
     }
 
     private void writeTestRolesFile( Path path, RoleRecord... roles )
     {
-        FileRoleRepository roleRepository = new FileRoleRepository( directory.getFileSystem(), path.toFile(), logProvider );
+        FileRoleRepository roleRepository = new FileRoleRepository( directory.getFileSystem(), path, logProvider );
         Arrays.stream( roles ).forEach( role -> safeCreateRole( roleRepository, role ) );
     }
 

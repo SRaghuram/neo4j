@@ -5,14 +5,15 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import java.io.File;
+import com.neo4j.causalclustering.core.state.storage.StateMarshal;
+
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
-import com.neo4j.causalclustering.core.state.storage.StateMarshal;
 import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 
@@ -22,10 +23,10 @@ public class StateRecoveryManager<STATE>
 {
     public static class RecoveryStatus<STATE>
     {
-        private final File activeFile;
+        private final Path activeFile;
         private final STATE recoveredState;
 
-        RecoveryStatus( File activeFile, STATE recoveredState )
+        RecoveryStatus( Path activeFile, STATE recoveredState )
         {
             this.activeFile = activeFile;
             this.recoveredState = recoveredState;
@@ -36,7 +37,7 @@ public class StateRecoveryManager<STATE>
             return recoveredState;
         }
 
-        public File activeFile()
+        public Path activeFile()
         {
             return activeFile;
         }
@@ -59,7 +60,7 @@ public class StateRecoveryManager<STATE>
      * safe to become the new state holder.
      * @throws IOException if any IO goes wrong.
      */
-    public RecoveryStatus<STATE> recover( File fileA, File fileB ) throws IOException
+    public RecoveryStatus<STATE> recover( Path fileA, Path fileB ) throws IOException
     {
         assert fileA != null && fileB != null;
 
@@ -89,9 +90,10 @@ public class StateRecoveryManager<STATE>
         }
     }
 
-    private STATE readLastEntryFrom( File file, MemoryTracker memoryTracker ) throws IOException
+    private STATE readLastEntryFrom( Path path, MemoryTracker memoryTracker ) throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( path.toFile() ),
+                new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             STATE result = null;
             STATE lastRead;

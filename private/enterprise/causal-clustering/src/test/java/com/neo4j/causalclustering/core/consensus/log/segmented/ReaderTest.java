@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -21,13 +21,13 @@ class ReaderTest
 {
     private final FileSystemAbstraction fsa = mock( FileSystemAbstraction.class );
     private final StoreChannel channel = mock( StoreChannel.class );
-    private final File file = mock( File.class );
+    private final Path file = mock( Path.class );
 
     @Test
     void shouldCloseChannelOnClose() throws Exception
     {
         // given
-        when( fsa.read( file ) ).thenReturn( channel );
+        when( fsa.read( file.toFile() ) ).thenReturn( channel );
         Reader reader = new Reader( fsa, file, 0 );
 
         // when

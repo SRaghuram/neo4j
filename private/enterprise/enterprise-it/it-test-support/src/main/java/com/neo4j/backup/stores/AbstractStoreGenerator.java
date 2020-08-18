@@ -8,7 +8,6 @@ package com.neo4j.backup.stores;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,11 +25,11 @@ public abstract class AbstractStoreGenerator implements BackupStore
     abstract void modify( Path backup ) throws Exception;
 
     @Override
-    public Optional<DefaultDatabasesBackup> generate( File baseBackupDir, Cluster backupCluster ) throws Exception
+    public Optional<DefaultDatabasesBackup> generate( Path baseBackupDir, Cluster backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
-        Path defaultBackupFromCore = createBackup( core, backupDir( baseBackupDir.toPath(), DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
-        Path systemBackupFromCore = createBackup( core, backupDir( baseBackupDir.toPath(), SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
+        Path defaultBackupFromCore = createBackup( core, backupDir( baseBackupDir, DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
+        Path systemBackupFromCore = createBackup( core, backupDir( baseBackupDir, SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
         DefaultDatabasesBackup backups = new DefaultDatabasesBackup( defaultBackupFromCore, systemBackupFromCore );
         modify( defaultBackupFromCore );
         return Optional.of( backups );

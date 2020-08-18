@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -38,10 +39,10 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, File storeDirectory )
+    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, Path storeDirectory )
     {
         this.fs = fs;
-        this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() );
+        this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) );
         this.defaultDatabaseName = defaultDatabaseName;
     }
 
@@ -63,21 +64,21 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getRaftLogs( List<DiagnosticsReportSource> sources )
     {
-        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
+        Path raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
         FileNames fileNames = new FileNames( raftLogDirectory );
-        SortedMap<Long,File> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
+        SortedMap<Long,Path> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
 
-        for ( File logFile : allFiles.values() )
+        for ( Path logFile : allFiles.values() )
         {
-            sources.add( DiagnosticsReportSources.newDiagnosticsFile( "raft/" + logFile.getName(), fs, logFile ) );
+            sources.add( DiagnosticsReportSources.newDiagnosticsFile( "raft/" + logFile.getFileName(), fs, logFile ) );
         }
     }
 
     private void getClusterState( List<DiagnosticsReportSource> sources )
     {
-        Set<File> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG );
+        Set<Path> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG );
 
-        for ( File directory : directories )
+        for ( Path directory : directories )
         {
             addDirectory( "ccstate", directory, sources );
         }
@@ -90,17 +91,17 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
      * @param dir current directory or file.
      * @param sources list of source that will be accumulated.
      */
-    private void addDirectory( String path, File dir, List<DiagnosticsReportSource> sources )
+    private void addDirectory( String path, Path dir, List<DiagnosticsReportSource> sources )
     {
-        String currentLevel = path + File.separator + dir.getName();
-        if ( fs.isDirectory( dir ) )
+        String currentLevel = path + File.separator + dir.getFileName();
+        if ( fs.isDirectory( dir.toFile() ) )
         {
-            File[] files = fs.listFiles( dir );
+            File[] files = fs.listFiles( dir.toFile() );
             if ( files != null )
             {
                 for ( File file : files )
                 {
-                    addDirectory( currentLevel, file, sources );
+                    addDirectory( currentLevel, file.toPath(), sources );
                 }
             }
         }

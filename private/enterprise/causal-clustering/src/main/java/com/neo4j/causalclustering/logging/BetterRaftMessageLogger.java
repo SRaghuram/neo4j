@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.logging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,14 +46,14 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     }
 
     private final MEMBER me;
-    private final File logFile;
+    private final Path logFile;
     private final FileSystemAbstraction fs;
     private final Clock clock;
     private final ReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
 
     private PrintWriter printWriter;
 
-    public BetterRaftMessageLogger( MEMBER me, File logFile, FileSystemAbstraction fs, Clock clock )
+    public BetterRaftMessageLogger( MEMBER me, Path logFile, FileSystemAbstraction fs, Clock clock )
     {
         this.me = me;
         this.logFile = logFile;
@@ -114,8 +114,8 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     @VisibleForTesting
     protected PrintWriter openPrintWriter() throws IOException
     {
-        fs.mkdirs( logFile.getParentFile() );
-        return new PrintWriter( fs.openAsOutputStream( logFile, true ) );
+        fs.mkdirs( logFile.getParent().toFile() );
+        return new PrintWriter( fs.openAsOutputStream( logFile.toFile(), true ) );
     }
 
     private void log( String forDatabase, MEMBER first, Direction direction, MEMBER second, String type, String message )

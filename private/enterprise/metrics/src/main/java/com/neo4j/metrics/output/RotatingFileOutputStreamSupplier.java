@@ -7,9 +7,9 @@ package com.neo4j.metrics.output;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -59,7 +59,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
 
     private final LongSupplier currentTimeSupplier;
     private final FileSystemAbstraction fileSystem;
-    private final File outputFile;
+    private final Path outputFile;
     private final long rotationThresholdBytes;
     private final long rotationDelay;
     private final int maxArchives;
@@ -81,7 +81,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
      * @param rotationExecutor An {@link Executor} for performing the rotation
      * @throws IOException If the output file cannot be created
      */
-    public RotatingFileOutputStreamSupplier( FileSystemAbstraction fileSystem, File outputFile,
+    public RotatingFileOutputStreamSupplier( FileSystemAbstraction fileSystem, Path outputFile,
             long rotationThresholdBytes, long rotationDelay, int maxArchives, Executor rotationExecutor )
             throws IOException
     {
@@ -100,7 +100,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
      * observe the rotation process and be notified of errors
      * @throws IOException If the output file cannot be created
      */
-    public RotatingFileOutputStreamSupplier( FileSystemAbstraction fileSystem, File outputFile,
+    public RotatingFileOutputStreamSupplier( FileSystemAbstraction fileSystem, Path outputFile,
             long rotationThresholdBytes, long rotationDelay, int maxArchives, Executor rotationExecutor,
             RotationListener rotationListener ) throws IOException
     {
@@ -109,7 +109,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
     }
 
     RotatingFileOutputStreamSupplier( LongSupplier currentTimeSupplier, FileSystemAbstraction fileSystem,
-            File outputFile, long rotationThresholdBytes, long rotationDelay, int maxArchives,
+            Path outputFile, long rotationThresholdBytes, long rotationDelay, int maxArchives,
             Executor rotationExecutor, RotationListener rotationListener ) throws IOException
     {
         this.currentTimeSupplier = currentTimeSupplier;
@@ -192,7 +192,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
         {
             // In case output file doesn't exist, call rotate so that it gets created
             if ( rotationDelayExceeded() && rotationThresholdExceeded() ||
-                    !fileSystem.fileExists( outputFile ) )
+                    !fileSystem.fileExists( outputFile.toFile() ) )
             {
                 rotate();
             }
@@ -218,8 +218,8 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
 
     private boolean rotationThresholdExceeded()
     {
-        return fileSystem.fileExists( outputFile ) && rotationThresholdBytes > 0 &&
-                fileSystem.getFileSize( outputFile ) >= rotationThresholdBytes;
+        return fileSystem.fileExists( outputFile.toFile() ) && rotationThresholdBytes > 0 &&
+                fileSystem.getFileSize( outputFile.toFile() ) >= rotationThresholdBytes;
     }
 
     private boolean rotationDelayExceeded()
@@ -258,10 +258,10 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
 
                     try
                     {
-                        if ( fileSystem.fileExists( outputFile ) )
+                        if ( fileSystem.fileExists( outputFile.toFile() ) )
                         {
                             shiftArchivedOutputFiles();
-                            fileSystem.renameFile( outputFile, archivedOutputFile( outputFile, 1 ) );
+                            fileSystem.renameFile( outputFile.toFile(), archivedOutputFile( outputFile, 1 ).toFile() );
                         }
                     }
                     catch ( Exception e )
@@ -322,51 +322,51 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
 
     private OutputStream openOutputFile() throws IOException
     {
-        return createOrOpenAsOutputStream( fileSystem, outputFile, true );
+        return createOrOpenAsOutputStream( fileSystem, outputFile.toFile(), true );
     }
 
     private void shiftArchivedOutputFiles() throws IOException
     {
         for ( int i = lastArchivedOutputFileNumber( fileSystem, outputFile ); i > 0; --i )
         {
-            File archive = archivedOutputFile( outputFile, i );
+            Path archive = archivedOutputFile( outputFile, i );
             if ( i >= maxArchives )
             {
-                fileSystem.deleteFile( archive );
+                fileSystem.deleteFile( archive.toFile() );
             }
             else
             {
-                fileSystem.renameFile( archive, archivedOutputFile( outputFile, i + 1 ) );
+                fileSystem.renameFile( archive.toFile(), archivedOutputFile( outputFile, i + 1 ).toFile() );
             }
         }
     }
 
-    private static int lastArchivedOutputFileNumber( FileSystemAbstraction fileSystem, File outputFile )
+    private static int lastArchivedOutputFileNumber( FileSystemAbstraction fileSystem, Path outputFile )
     {
         int i = 1;
-        while ( fileSystem.fileExists( archivedOutputFile( outputFile, i ) ) )
+        while ( fileSystem.fileExists( archivedOutputFile( outputFile, i ).toFile() ) )
         {
             i++;
         }
         return i - 1;
     }
 
-    private static File archivedOutputFile( File outputFile, int archiveNumber )
+    private static Path archivedOutputFile( Path outputFile, int archiveNumber )
     {
-        return new File( String.format( "%s.%d", outputFile.getPath(), archiveNumber ) );
+        return outputFile.resolveSibling( outputFile.getFileName() + "." + archiveNumber );
     }
 
     /**
      * Exposes the algorithm for collecting existing rotated log files.
      */
-    public static List<File> getAllArchives( FileSystemAbstraction fileSystem,  File outputFile )
+    public static List<Path> getAllArchives( FileSystemAbstraction fileSystem, Path outputFile )
     {
-        List<File> ret = new ArrayList<>();
+        List<Path> ret = new ArrayList<>();
         int i = 1;
         while ( true )
         {
-            File file = archivedOutputFile( outputFile, i );
-            if ( !fileSystem.fileExists( file ) )
+            Path file = archivedOutputFile( outputFile, i );
+            if ( !fileSystem.fileExists( file.toFile() ) )
             {
                 break;
             }

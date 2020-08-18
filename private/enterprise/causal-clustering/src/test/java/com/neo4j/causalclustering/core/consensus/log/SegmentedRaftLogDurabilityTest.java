@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.CoreLogPruningStr
 import com.neo4j.causalclustering.core.consensus.log.segmented.SegmentedRaftLog;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -42,8 +42,8 @@ class SegmentedRaftLogDurabilityTest
 
     private final RaftLogFactory logFactory = fileSystem ->
     {
-        File directory = testDirectory.homeDir();
-        fileSystem.mkdir( directory );
+        Path directory = testDirectory.homePath();
+        fileSystem.mkdir( directory.toFile() );
 
         long rotateAtSizeBytes = 128;
         int readerPoolSize = 8;

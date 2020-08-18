@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
@@ -133,8 +132,8 @@ class UnbindFromClusterCommandTest
         command.execute();
 
         // then
-        assertFalse( fs.fileExists( clusterStateDir ) );
-        assertFalse( fs.fileExists( serverIdStore ) );
+        assertFalse( fs.fileExists( clusterStateDir.toFile() ) );
+        assertFalse( fs.fileExists( serverIdStore.toFile() ) );
     }
 
     @Test
@@ -149,18 +148,18 @@ class UnbindFromClusterCommandTest
         verify( err ).println( "This instance was not bound. No work performed." );
     }
 
-    private File createClusterStateDir() throws IOException
+    private Path createClusterStateDir() throws IOException
     {
         var dataDir = neo4jLayout.homeDirectory().resolve( DEFAULT_DATA_DIR_NAME );
-        var clusterStateDirectory = ClusterStateLayout.of( dataDir.toFile() ).getClusterStateDirectory();
-        fs.mkdirs( clusterStateDirectory );
+        var clusterStateDirectory = ClusterStateLayout.of( dataDir ).getClusterStateDirectory();
+        fs.mkdirs( clusterStateDirectory.toFile() );
         return clusterStateDirectory;
     }
 
-    private File createServerIdStore() throws IOException
+    private Path createServerIdStore() throws IOException
     {
-        var serverIdFile = neo4jLayout.serverIdFile().toFile();
-        try ( var channel = fs.write( serverIdFile ) )
+        var serverIdFile = neo4jLayout.serverIdFile();
+        try ( var channel = fs.write( serverIdFile.toFile() ) )
         {
             channel.writeAll( ByteBuffer.wrap( new byte[]{0} ) );
         }

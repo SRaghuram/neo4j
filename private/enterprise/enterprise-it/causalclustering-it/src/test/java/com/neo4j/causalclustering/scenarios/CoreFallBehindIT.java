@@ -16,7 +16,8 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.TimeoutException;
@@ -140,10 +141,10 @@ class CoreFallBehindIT
 
     private void forceRaftLogRotationAndPruning( CoreClusterMember core ) throws Exception
     {
-        SortedMap<Long,File> sortedRaftLogs = core.getRaftLogFileNames( SYSTEM_DATABASE_NAME );
-        File lastRaftLog = sortedRaftLogs.get( sortedRaftLogs.lastKey() );
+        SortedMap<Long,Path> sortedRaftLogs = core.getRaftLogFileNames( SYSTEM_DATABASE_NAME );
+        Path lastRaftLog = sortedRaftLogs.get( sortedRaftLogs.lastKey() );
 
-        while ( lastRaftLog.exists() )
+        while ( Files.exists( lastRaftLog ) )
         {
             cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
             {

@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.helpers;
 
 import com.neo4j.configuration.OnlineBackupSettings;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -173,32 +172,32 @@ public class ClassicNeo4jDatabase
         private void fakeUnrecoveredDatabase( GraphDatabaseService db ) throws IOException
         {
             LogFiles logFiles = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( LogFiles.class );
-            File logFilesDirectory = logFiles.logFilesDirectory();
+            Path logFilesDirectory = logFiles.logFilesDirectory();
 
             /* Copy live transaction logs to temporary directory. */
             Path temporaryDirectory = baseDirectoryAbsolute.resolve( "temp" );
             fileSystem.mkdirs( temporaryDirectory.toFile() );
-            for ( File file : logFiles.logFiles() )
+            for ( Path file : logFiles.logFiles() )
             {
-                fileSystem.copyFile( file, temporaryDirectory.resolve( file.getName() ).toFile() );
+                fileSystem.copyFile( file.toFile(), temporaryDirectory.resolve( file.getFileName() ).toFile() );
             }
             StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
 
             managementService.shutdown();
 
             /* Delete proper transaction logs. */
-            for ( File file : logFiles.logFiles() )
+            for ( Path file : logFiles.logFiles() )
             {
-                fileSystem.deleteFileOrThrow( file );
+                fileSystem.deleteFileOrThrow( file.toFile() );
             }
 
             /* Restore the previously copied transaction logs. */
-            LogFiles copyLogFiles = logFilesBasedOnlyBuilder( temporaryDirectory.toFile(), fileSystem )
+            LogFiles copyLogFiles = logFilesBasedOnlyBuilder( temporaryDirectory, fileSystem )
                     .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                     .build();
-            for ( File file : copyLogFiles.logFiles() )
+            for ( Path file : copyLogFiles.logFiles() )
             {
-                fileSystem.copyToDirectory( file, logFilesDirectory );
+                fileSystem.copyToDirectory( file.toFile(), logFilesDirectory.toFile() );
             }
         }
     }

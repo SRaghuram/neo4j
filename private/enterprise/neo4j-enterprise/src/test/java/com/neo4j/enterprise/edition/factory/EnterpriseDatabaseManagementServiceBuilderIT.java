@@ -9,7 +9,6 @@ import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -48,18 +47,18 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     void configuredDatabasesRootPath()
     {
         Path homeDir = testDirectory.homePath();
-        File databasesDir = testDirectory.directory( "my_databases" );
+        Path databasesDir = testDirectory.directoryPath( "my_databases" );
 
         DatabaseManagementService managementService = createDbmsBuilder( homeDir )
-                .setConfig( databases_root_path, databasesDir.toPath() )
+                .setConfig( databases_root_path, databasesDir )
                 .build();
         try
         {
             assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( DEFAULT_DATABASE_NAME ).toFile() ) );
             assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( SYSTEM_DATABASE_NAME ).toFile() ) );
 
-            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( databasesDir, DEFAULT_DATABASE_NAME ) ) );
-            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( databasesDir, SYSTEM_DATABASE_NAME ) ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, databasesDir.resolve( DEFAULT_DATABASE_NAME ).toFile() ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, databasesDir.resolve( SYSTEM_DATABASE_NAME ).toFile() ) );
         }
         finally
         {

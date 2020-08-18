@@ -63,7 +63,7 @@ class ClusterCustomLogLocationIT
         {
             DependencyResolver dependencyResolver = coreClusterMember.defaultDatabase().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
-            assertEquals( logFiles.logFilesDirectory().getName(), coreClusterMember.defaultDatabase().databaseName() );
+            assertEquals( logFiles.logFilesDirectory().getFileName().toString(), coreClusterMember.defaultDatabase().databaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
 
             logFileInStoreDirectoryDoesNotExist( coreClusterMember.databaseLayout(), dependencyResolver );
@@ -76,7 +76,7 @@ class ClusterCustomLogLocationIT
             catchupProcessManager.getCatchupProcess().upToDateFuture().get();
             DependencyResolver dependencyResolver = readReplica.defaultDatabase().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
-            assertEquals( logFiles.logFilesDirectory().getName(), readReplica.defaultDatabase().databaseName() );
+            assertEquals( logFiles.logFilesDirectory().getFileName().toString(), readReplica.defaultDatabase().databaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
 
             logFileInStoreDirectoryDoesNotExist( readReplica.databaseLayout(), dependencyResolver );
@@ -86,7 +86,7 @@ class ClusterCustomLogLocationIT
     private static void logFileInStoreDirectoryDoesNotExist( DatabaseLayout databaseLayout, DependencyResolver dependencyResolver ) throws IOException
     {
         FileSystemAbstraction fileSystem = dependencyResolver.resolveDependency( FileSystemAbstraction.class );
-        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory().toFile(), fileSystem )
+        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem )
                 .withCommandReaderFactory( dependencyResolver.resolveDependency( StorageEngineFactory.class ).commandReaderFactory() )
                 .build();
         assertFalse( storeLogFiles.versionExists( 0 ) );

@@ -276,7 +276,7 @@ public final class CausalClusteringTestHelpers
 
         var fs = new DefaultFileSystemAbstraction();
         var databaseLayout = member.databaseLayout();
-        var txLogsDirectory = databaseLayout.getTransactionLogsDirectory().toFile();
+        var txLogsDirectory = databaseLayout.getTransactionLogsDirectory();
         var storageEngineFactory = StorageEngineFactory.selectStorageEngine();
         var logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( txLogsDirectory, fs )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
@@ -569,7 +569,7 @@ public final class CausalClusteringTestHelpers
             var logPosition = logTailInformation.lastCheckPoint.getLogPosition();
             var logFile = logFiles.getLogFileForVersion( logPosition.getLogVersion() );
             var byteOffset = logPosition.getByteOffset();
-            fs.truncate( logFile, byteOffset );
+            fs.truncate( logFile.toFile(), byteOffset );
             return true;
         }
     }

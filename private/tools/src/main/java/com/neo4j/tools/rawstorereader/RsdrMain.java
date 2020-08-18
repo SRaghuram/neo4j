@@ -277,7 +277,7 @@ public class RsdrMain
     private static IOCursor<LogEntry> getLogCursor( FileSystemAbstraction fileSystem, String fname,
             DatabaseLayout databaseLayout ) throws IOException
     {
-        return TransactionLogUtils.openLogEntryCursor( fileSystem, new File( databaseLayout.databaseDirectory().toFile(), fname ),
+        return TransactionLogUtils.openLogEntryCursor( fileSystem, databaseLayout.databaseDirectory().resolve( fname ),
                 NO_MORE_CHANNELS, ChannelNativeAccessor.EMPTY_ACCESSOR, StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
     }
 

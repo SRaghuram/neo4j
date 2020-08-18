@@ -8,6 +8,7 @@ package com.neo4j.kernel.stresstests.transaction.log;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 import org.neo4j.io.fs.FileUtils;
@@ -36,12 +37,12 @@ class TransactionAppenderStressTesting
     void shouldBehaveCorrectlyUnderStress() throws Throwable
     {
         int durationInMinutes = parseInt( fromEnv( "TX_APPENDER_STRESS_DURATION", DEFAULT_DURATION_IN_MINUTES ) );
-        File workingDirectory = new File( fromEnv( "TX_APPENDER_WORKING_DIRECTORY", DEFAULT_WORKING_DIR ) );
+        Path workingDirectory = Path.of( fromEnv( "TX_APPENDER_WORKING_DIRECTORY", DEFAULT_WORKING_DIR ) );
         int threads = parseInt( fromEnv( "TX_APPENDER_NUM_THREADS", DEFAULT_NUM_THREADS ) );
 
         Callable<Long> runner = new Builder()
                 .with( untilTimeExpired( durationInMinutes, MINUTES ) )
-                .withWorkingDirectory( DatabaseLayout.ofFlat( ensureExistsAndEmpty( workingDirectory ).toPath() ) )
+                .withWorkingDirectory( DatabaseLayout.ofFlat( ensureExistsAndEmpty( workingDirectory ) ) )
                 .withNumThreads( threads )
                 .build();
 
@@ -50,6 +51,6 @@ class TransactionAppenderStressTesting
         assertEquals( new TransactionIdChecker( workingDirectory ).parseAllTxLogs(), appendedTxs );
 
         // let's cleanup disk space when everything went well
-        FileUtils.deleteRecursively( workingDirectory );
+        FileUtils.deletePathRecursively( workingDirectory );
     }
 }

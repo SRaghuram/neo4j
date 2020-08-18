@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.CopyOption;
+import java.nio.file.Path;
 import java.util.concurrent.Future;
 
 import org.neo4j.io.fs.DelegatingFileSystemAbstraction;
@@ -46,7 +47,7 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 @ExtendWith( ThreadingExtension.class )
 class FileRoleRepositoryTest
 {
-    private File roleFile;
+    private Path roleFile;
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private RoleRepository roleRepository;
 
@@ -60,7 +61,7 @@ class FileRoleRepositoryTest
     @BeforeEach
     void setup()
     {
-        roleFile = new File( testDirectory.directory( "dbms" ), "roles" );
+        roleFile = testDirectory.directoryPath( "dbms" ).resolve( "roles" );
         roleRepository = new FileRoleRepository( fileSystem, roleFile, logProvider );
     }
 
@@ -148,7 +149,7 @@ class FileRoleRepositoryTest
                     public void renameFile( File oldLocation, File newLocation, CopyOption... copyOptions ) throws
                             IOException
                     {
-                        if ( roleFile.getName().equals( newLocation.getName() ) )
+                        if ( roleFile.getFileName().toString().equals( newLocation.getName() ) )
                         {
                             throw exception;
                         }
@@ -165,8 +166,8 @@ class FileRoleRepositoryTest
         assertSame( exception, e );
 
         // Then
-        assertFalse( crashingFileSystem.fileExists( roleFile ) );
-        assertThat( crashingFileSystem.listFiles( roleFile.getParentFile() ).length ).isEqualTo( 0 );
+        assertFalse( crashingFileSystem.fileExists( roleFile.toFile() ) );
+        assertThat( crashingFileSystem.listFiles( roleFile.getParent().toFile() ).length ).isEqualTo( 0 );
     }
 
     @Test
@@ -202,7 +203,7 @@ class FileRoleRepositoryTest
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        fileSystem.mkdirs( roleFile.getParentFile() );
+        fileSystem.mkdirs( roleFile.getParent().toFile() );
         // First line is correctly formatted, second line has an extra field
         FileRepositorySerializer.writeToFile( fileSystem, roleFile, UTF8.encode(
                 "neo4j:admin\n" +
@@ -216,7 +217,7 @@ class FileRoleRepositoryTest
         assertThat( roleRepository.numberOfRoles() ).isEqualTo( 0 );
         assertThat( logProvider ).forClass( FileRoleRepository.class ).forLevel( ERROR )
                 .containsMessageWithArguments(
-                        "Failed to read role file \"%s\" (%s)", roleFile.getAbsolutePath(),
+                        "Failed to read role file \"%s\" (%s)", roleFile.toAbsolutePath(),
                         "wrong number of line fields [line 2]" );
     }
 
@@ -224,7 +225,7 @@ class FileRoleRepositoryTest
     void shouldNotAddEmptyUserToRole() throws Throwable
     {
         // Given
-        fileSystem.mkdirs( roleFile.getParentFile() );
+        fileSystem.mkdirs( roleFile.getParent().toFile() );
         FileRepositorySerializer.writeToFile( fileSystem, roleFile, UTF8.encode( "admin:neo4j\nreader:\n" ) );
 
         // When

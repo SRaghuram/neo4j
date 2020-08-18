@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -224,7 +223,7 @@ class RestoreDatabaseCommandIT
     {
         Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homePath( "old" ) );
 
-        Path newHome = directory.homeDir( "new" ).toPath();
+        Path newHome = directory.homePath( "new" );
         Config config = Config.newBuilder()
                 .set( neo4j_home, newHome )
                 .set( transaction_logs_root_path, newHome.resolve( "customLogicalLog" ) )
@@ -246,20 +245,20 @@ class RestoreDatabaseCommandIT
         // when
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true, false ).execute();
 
-        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory().toFile(), fileSystem )
+        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
-        LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory().toFile(), fileSystem )
+        LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
-        LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory().toFile(), fileSystem )
+        LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
         assertThat( toStoreLogFiles.logFiles() ).isEmpty();
         assertThat( customLogLocationLogFiles.logFiles() ).hasSize( 1 );
-        assertThat( fromStoreLogFiles.getLogFileForVersion( 0 ).length() ).isGreaterThan( 0L );
-        assertEquals( fromStoreLogFiles.getLogFileForVersion( 0 ).length(),
-                customLogLocationLogFiles.getLogFileForVersion( 0 ).length() );
+        assertThat( Files.size( fromStoreLogFiles.getLogFileForVersion( 0 ) ) ).isGreaterThan( 0L );
+        assertEquals( Files.size( fromStoreLogFiles.getLogFileForVersion( 0 ) ),
+                Files.size( customLogLocationLogFiles.getLogFileForVersion( 0 ) ) );
     }
 
     @Test
@@ -362,7 +361,7 @@ class RestoreDatabaseCommandIT
 
     private void createRaftGroupDirectoryFor( Config config, String databaseName ) throws IOException
     {
-        File raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).raftGroupDir( databaseName );
-        fileSystem.mkdirs( raftGroupDir );
+        Path raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
+        fileSystem.mkdirs( raftGroupDir.toFile() );
     }
 }

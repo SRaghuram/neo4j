@@ -5,14 +5,15 @@
  */
 package com.neo4j.server.enterprise.functional;
 
-import com.neo4j.dbms.LocalDbmsOperator;
 import com.neo4j.configuration.MetricsSettings;
+import com.neo4j.dbms.LocalDbmsOperator;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.time.Duration;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -51,14 +52,14 @@ class DatabaseOperationCountMetricsIT
     }
 
     @Test
-    void shouldDatabaseOperationCountsMatch() throws Throwable
+    void shouldDatabaseOperationCountsMatch()
     {
         // although EnterpriseDbmsExtension gives you a database in each test method, this test does not use that
         // but this created database must be considered in the counts so beside the two built in databases there is a third, that is the reason why
         // create and start count start with 3
 
         // given
-        File metrics = directory.file( "metrics" );
+        Path metrics = directory.filePath( "metrics" );
 
         var fooTrxLog = new File( directory.homeDir(), "data/transactions/foo/neostore.transaction.db.0" );
         var fooTrxLogRenamed = new File( directory.homeDir(), "data/transactions/temp" );
@@ -97,7 +98,7 @@ class DatabaseOperationCountMetricsIT
         assertDatabaseCount( metrics, 5, 6, 2, 1, 1, 1 );
     }
 
-    private void assertDatabaseCount( File metrics, long create, long start, long stop, long drop, long failed, long recovered ) throws InterruptedException
+    private void assertDatabaseCount( Path metrics, long create, long start, long stop, long drop, long failed, long recovered )
     {
         assertMetricsEqual( metrics, "neo4j.db.operation.count.create", create );
         assertMetricsEqual( metrics, "neo4j.db.operation.count.start", start );
@@ -107,13 +108,13 @@ class DatabaseOperationCountMetricsIT
         assertMetricsEqual( metrics, "neo4j.db.operation.count.recovered", recovered );
     }
 
-    private static void assertMetricsEqual( File metricsPath, String metricsName, long count ) throws InterruptedException
+    private static void assertMetricsEqual( Path metricsPath, String metricsName, long count )
     {
-        File file = metricsCsv( metricsPath, metricsName );
+        Path file = metricsCsv( metricsPath, metricsName );
         assertEventually( () -> readValue( file ), x -> x == count, TIMEOUT, SECONDS );
     }
 
-    private static Long readValue( File file ) throws InterruptedException
+    private static Long readValue( Path file )
     {
         try
         {

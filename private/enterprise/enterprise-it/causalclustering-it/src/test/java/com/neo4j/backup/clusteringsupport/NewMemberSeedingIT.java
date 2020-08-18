@@ -75,7 +75,7 @@ class NewMemberSeedingIT
     {
         // given
         var fileCopyDetector = new FileCopyDetector();
-        var baseBackupDir = testDir.directory( "backups" );
+        var baseBackupDir = testDir.directoryPath( "backups" );
         var cluster = startCluster();
 
         // when
