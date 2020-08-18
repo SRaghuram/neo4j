@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
@@ -106,9 +105,9 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     }
 
     @Override
-    public Optional<Exception> upgradeToCurrent( GraphDatabaseService system )
+    public void upgradeToCurrent( GraphDatabaseService system ) throws Exception
     {
-        return SystemGraphComponent.executeWithFullAccess( system, tx ->
+        SystemGraphComponent.executeWithFullAccess( system, tx ->
         {
             KnownEnterpriseSecurityComponentVersion currentVersion = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
             log.info( "Upgrading component '%s' with version %d and status %s to latest version",

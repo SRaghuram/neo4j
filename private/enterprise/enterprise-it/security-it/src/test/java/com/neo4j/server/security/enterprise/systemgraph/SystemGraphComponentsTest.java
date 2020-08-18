@@ -27,7 +27,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -71,7 +70,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -159,12 +158,10 @@ class SystemGraphComponentsTest
         initializeLatestSystemAndUsers();
         initEnterprise( version, List.of( ADMIN, PUBLIC ) );
 
-        Optional<Exception> exception = systemGraphComponents.upgradeToCurrent( system );
-        exception.ifPresentOrElse(
-                e -> assertThat( "Should not be able to upgrade with PUBLIC role", e.getMessage(),
-                        containsString( "'PUBLIC' is a reserved role and must be dropped before upgrade can proceed" ) ),
-                () -> fail( "Should have gotten an exception when upgrading" )
-        );
+        Exception e = assertThrows( Exception.class, () -> systemGraphComponents.upgradeToCurrent( system ) );
+
+        assertThat( "Should not be able to upgrade with PUBLIC role", e.getMessage(),
+                        containsString( "'PUBLIC' is a reserved role and must be dropped before upgrade can proceed" ) );
 
         assertStatus( Map.of(
                 "multi-database", CURRENT,
@@ -296,7 +293,7 @@ class SystemGraphComponentsTest
         inTx( tx -> builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
     }
 
-    private void initializeLatestSystemAndUsers()
+    private void initializeLatestSystemAndUsers() throws Exception
     {
         var systemGraphComponent = new DefaultSystemGraphComponent( Config.defaults() );
         UserRepository oldUsers = new InMemoryUserRepository();

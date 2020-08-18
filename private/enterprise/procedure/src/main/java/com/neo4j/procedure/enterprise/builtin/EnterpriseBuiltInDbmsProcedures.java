@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
@@ -485,16 +484,17 @@ public class EnterpriseBuiltInDbmsProcedures
                 SystemGraphComponent.Status initialStatus = component.detect( transaction );
                 if ( initialStatus == REQUIRES_UPGRADE )
                 {
-                    Optional<Exception> error = component.upgradeToCurrent( graph );
-                    if ( error.isPresent() )
+                    try
                     {
-                        failed.add( component );
-                        results.add( new SystemGraphComponentUpgradeResultDetails( component.component(), initialStatus.name(), error.get().toString() ) );
-                    }
-                    else
-                    {
+                        component.upgradeToCurrent( graph );
                         results.add(
                                 new SystemGraphComponentUpgradeResultDetails( component.component(), component.detect( transaction ).name(), "Upgraded" ) );
+
+                    }
+                    catch ( Exception e )
+                    {
+                        failed.add( component );
+                        results.add( new SystemGraphComponentUpgradeResultDetails( component.component(), initialStatus.name(), e.toString() ) );
                     }
                 }
                 else

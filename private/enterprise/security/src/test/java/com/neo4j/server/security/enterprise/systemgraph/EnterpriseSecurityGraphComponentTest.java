@@ -157,7 +157,7 @@ class EnterpriseSecurityGraphComponentTest
         return new EnterpriseSecurityGraphComponent( NullLog.getInstance(), oldRoleRepo, adminRepo, Config.defaults() );
     }
 
-    private void initializeSystemAndUsers()
+    private void initializeSystemAndUsers() throws Exception
     {
         var systemGraphComponent = new DefaultSystemGraphComponent( Config.defaults() );
         UserRepository oldUsers = new InMemoryUserRepository();
