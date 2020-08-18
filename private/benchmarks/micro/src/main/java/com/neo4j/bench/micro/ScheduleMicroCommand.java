@@ -13,7 +13,7 @@ import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStoreException;
-import com.neo4j.bench.infra.BenchmarkingEnvironment;
+import com.neo4j.bench.infra.BenchmarkingRun;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
@@ -141,9 +141,11 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
                                                        artifactBaseWorkloadURI,
                                                        errorReportingPolicy,
                                                        workspace );
+            String testRunId = UUID.randomUUID().toString();
             JobParams jobParams = new JobParams( infraParams,
-                                                 new BenchmarkingEnvironment(
-                                                         new BenchmarkingTool<>( MicroToolRunner.class, runMicroWorkloadParams ) ) );
+                                                 new BenchmarkingRun(
+                                                         new BenchmarkingTool<>( MicroToolRunner.class, runMicroWorkloadParams ),
+                                                         testRunId ) );
 
             String jobName = getJobName( "micro",
                                          runMicroWorkloadParams.neo4jVersion().toString(),

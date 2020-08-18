@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
+import com.neo4j.bench.infra.BenchmarkingRun;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.InfraParams;
@@ -54,8 +55,8 @@ public class RunWorkerCommand implements Runnable
     private String batchJobId = "";
 
     @Option( type = OptionType.COMMAND,
-            name = RunMacroWorkloadParams.CMD_JOB_PARAMETERS,
-            title = "Job parameters file" )
+             name = RunMacroWorkloadParams.CMD_JOB_PARAMETERS,
+             title = "Job parameters file" )
     private String jobParameters = Workspace.JOB_PARAMETERS_JSON;
 
     @Override
@@ -83,15 +84,14 @@ public class RunWorkerCommand implements Runnable
             PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsCredentials().awsRegion() );
             String resultsStorePassword = awsSecretsManager.getSecret( infraParams.resultsStorePasswordSecretName() );
 
-            BenchmarkingTool benchmarkingTool = jobParams.benchmarkingEnvironment().benchmarkingTool();
+            BenchmarkingRun benchmarkingRun = jobParams.benchmarkingRun();
+            BenchmarkingTool benchmarkingTool = benchmarkingRun.benchmarkingTool();
             BenchmarkingToolRunner toolRunner = benchmarkingTool.newRunner();
-            toolRunner.runTool( benchmarkingTool.getToolParameters(),
+            toolRunner.runTool( jobParams,
                                 artifactStorage,
                                 workspacePath,
                                 artifactsWorkspace,
-                                jobParams.infraParams(),
                                 resultsStorePassword,
-                                batchJobId,
                                 artifactBaseUri );
         }
         catch ( Exception e )

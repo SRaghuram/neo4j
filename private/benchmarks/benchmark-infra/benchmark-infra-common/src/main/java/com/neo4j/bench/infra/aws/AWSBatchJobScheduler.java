@@ -226,7 +226,10 @@ public class AWSBatchJobScheduler implements JobScheduler
 
     private static JobStatus jobStatus( JobDetail jobDetail )
     {
-        return new JobStatus( new JobId( jobDetail.getJobId() ), jobDetail.getStatus(), jobDetail.getContainer().getLogStreamName() );
+        return new JobStatus( new JobId( jobDetail.getJobId() ),
+                              jobDetail.getStatus(),
+                              jobDetail.getContainer().getLogStreamName(),
+                              jobDetail.getStatusReason() );
     }
 
     private static void assertJobName( String jobName )

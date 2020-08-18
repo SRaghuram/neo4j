@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfilers;
@@ -41,7 +42,7 @@ public class JobParamsTest
     public void serializeAndDeserialize() throws IOException
     {
         // given
-        JobParams jobParams = new JobParams(
+        JobParams<RunToolMacroWorkloadParams> jobParams = new JobParams<>(
                 new InfraParams(
                         new AWSCredentials( "awsKey",
                                             "awsSecret",
@@ -52,8 +53,8 @@ public class JobParamsTest
                         URI.create( "s3://benchmarking.com/123456" ),
                         ErrorReportingPolicy.REPORT_THEN_FAIL,
                         Workspace.create( temporaryFolder.newFolder().toPath() ).build() ),
-                new BenchmarkingEnvironment(
-                        new BenchmarkingTool(
+                new BenchmarkingRun<>(
+                        new BenchmarkingTool<>(
                                 MacroToolRunner.class,
                                 new RunToolMacroWorkloadParams(
                                         new RunMacroWorkloadParams( "workloadName",
@@ -84,9 +85,10 @@ public class JobParamsTest
                                                                     123456L,
                                                                     123455L,
                                                                     "triggeredBy" ),
-                                        "storeName" ) ) ) );
+                                        "storeName" ) ),
+                        UUID.randomUUID().toString() ) );
         // when
-        JobParams actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
+        JobParams<?> actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
         // then
         assertEquals( jobParams, actual );
     }
@@ -95,7 +97,7 @@ public class JobParamsTest
     public void serializeAndDeserializeServer() throws IOException
     {
         // given
-        JobParams jobParams = new JobParams(
+        JobParams<RunToolMacroWorkloadParams> jobParams = new JobParams<>(
                 new InfraParams(
                         new AWSCredentials( "awsKey",
                                             "awsSecret",
@@ -106,40 +108,43 @@ public class JobParamsTest
                         URI.create( "s3://benchmarking.com/123456" ),
                         ErrorReportingPolicy.REPORT_THEN_FAIL,
                         Workspace.create( temporaryFolder.newFolder().toPath() ).build() ),
-                new BenchmarkingEnvironment(
-                        new BenchmarkingTool(
+                new BenchmarkingRun<>(
+                        new BenchmarkingTool<>(
                                 MacroToolRunner.class,
-                                new RunMacroWorkloadParams( "workloadName",
-                                                            emptyList(),
-                                                            Edition.ENTERPRISE,
-                                                            Paths.get( "jvm" ).toAbsolutePath(),
-                                                            defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
-                                                            1,
-                                                            1,
-                                                            Duration.ofMillis( 1 ),
-                                                            Duration.ofMillis( 2 ),
-                                                            1,
-                                                            TimeUnit.MILLISECONDS,
-                                                            Runtime.DEFAULT,
-                                                            Planner.DEFAULT,
-                                                            ExecutionMode.EXECUTE,
-                                                            JvmArgs.from( "-Xmx4g", "-Xms4g" ),
-                                                            false,
-                                                            false,
-                                                            Deployment.server( temporaryFolder.newFolder().toPath().toString() ),
-                                                            "neo4jCommit",
-                                                            new Version( "3.4.12" ),
-                                                            "neo4jBranch",
-                                                            "neo4jBranchOwner",
-                                                            "toolCommit",
-                                                            "toolOwner",
-                                                            "toolBranch",
-                                                            123456L,
-                                                            123455L,
-                                                            "triggeredBy" ) ) ) );
+                                new RunToolMacroWorkloadParams(
+                                        new RunMacroWorkloadParams( "workloadName",
+                                                                    emptyList(),
+                                                                    Edition.ENTERPRISE,
+                                                                    Paths.get( "jvm" ).toAbsolutePath(),
+                                                                    defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
+                                                                    1,
+                                                                    1,
+                                                                    Duration.ofMillis( 1 ),
+                                                                    Duration.ofMillis( 2 ),
+                                                                    1,
+                                                                    TimeUnit.MILLISECONDS,
+                                                                    Runtime.DEFAULT,
+                                                                    Planner.DEFAULT,
+                                                                    ExecutionMode.EXECUTE,
+                                                                    JvmArgs.from( "-Xmx4g", "-Xms4g" ),
+                                                                    false,
+                                                                    false,
+                                                                    Deployment.server( temporaryFolder.newFolder().toPath().toString() ),
+                                                                    "neo4jCommit",
+                                                                    new Version( "3.4.12" ),
+                                                                    "neo4jBranch",
+                                                                    "neo4jBranchOwner",
+                                                                    "toolCommit",
+                                                                    "toolOwner",
+                                                                    "toolBranch",
+                                                                    123456L,
+                                                                    123455L,
+                                                                    "triggeredBy" )
+                                        , "storeName" ) ),
+                        UUID.randomUUID().toString() ) );
         // when
 
-        JobParams actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
+        JobParams<?> actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
         // then
         assertEquals( jobParams, actual );
     }

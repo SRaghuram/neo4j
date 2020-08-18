@@ -1,12 +1,12 @@
 <ul class="graph-diagram-markup" data-internal-scale="1.55" data-external-scale="1">
-  <li class="node" data-node-id="0" data-x="-540.5434077491217" data-y="-991.2129603641177">
+  <li class="node" data-node-id="0" data-x="-28.034603181723128" data-y="-944.3629520040167">
     <span class="caption">:Project (UNIQUE)</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>owner</dt><dd>.</dd><dt>commit</dt><dd>.</dd><dt>branch</dt><dd>.</dd><dt>version</dt><dd>.</dd><dt>edition</dt><dd>(optional)</dd></dl></li>
   <li class="node" data-node-id="1" data-x="-2413.891475193943" data-y="-637.8824232497676">
     <span class="caption">:Environment (UNIQUE)</span><dl class="properties"><dt>operating_system</dt><dd>.</dd><dt>server</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="2" data-x="-1821.3401142577036" data-y="-318.21874415370706">
     <span class="caption">:Neo4jConfig</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="3" data-x="-1291.6634578436206" data-y="-637.8824232497676">
-    <span class="caption">:TestRun (UNIQUE-id)</span><dl class="properties"><dt>date</dt><dd>.</dd><dt>id</dt><dd>.</dd><dt>duration</dt><dd>.</dd><dt>archive</dt><dd>.</dd><dt>build</dt><dd>.</dd><dt>parent_build</dt><dd>.</dd><dt>triggered_by</dt><dd>.</dd><dt>batch_job_id</dt><dd>(optional)</dd></dl></li>
+    <span class="caption">:TestRun (UNIQUE-id)</span><dl class="properties"><dt>date</dt><dd>.</dd><dt>id</dt><dd>.</dd><dt>duration</dt><dd>.</dd><dt>archive</dt><dd>.</dd><dt>build</dt><dd>.</dd><dt>parent_build</dt><dd>.</dd><dt>triggered_by</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="4" data-x="212.89435804913956" data-y="1139.5219644965066">
     <span class="caption">:BenchmarkGroup (UNIQUE-name)</span><dl class="properties"><dt>name</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="5" data-x="-1291.6634578436206" data-y="1116.7651443100137">
@@ -25,6 +25,8 @@
     <span class="caption">:BenchmarkParams</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="12" data-x="-2413.891475193943" data-y="-1284.717100438939">
     <span class="caption">:BenchmarkConfig</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="13" data-x="-294.58863879788316" data-y="-1153.525989163306">
+    <span class="caption">:Job</span><dl class="properties"><dt>id</dt><dd>.</dd><dt>queued_at</dt><dd>.</dd><dt>run_at</dt><dd>.</dd><dt>done_at</dt><dd>.</dd><dt>log_stream_name</dt><dd>.</dd><dt>status_reason</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="14" data-x="-2827.4033423913015" data-y="46.48105235167004">
     <span class="caption">:PlanTree</span><dl class="properties"><dt>description_hash</dt><dd>.</dd><dt>description</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="15" data-x="-3372.9182167954514" data-y="46.48105235167004">
@@ -106,5 +108,8 @@
   </li>
   <li class="relationship" data-from="6" data-to="21">
     <span class="type">:IS_REGRESSION([0,1] ..1)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="13">
+    <span class="type">:RUN_BY ([0..1]..1)</span>
   </li>
 </ul>

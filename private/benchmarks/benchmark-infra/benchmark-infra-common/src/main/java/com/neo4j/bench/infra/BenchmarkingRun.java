@@ -15,21 +15,28 @@ import java.util.Objects;
 /**
  * Describes environment in which we run benchmark.
  */
-public class BenchmarkingEnvironment
+public class BenchmarkingRun<P>
 {
 
-    private final BenchmarkingTool benchmarkingTool;
+    private final BenchmarkingTool<P> benchmarkingTool;
+    private final String testRunId;
 
     @JsonCreator
-    public BenchmarkingEnvironment( @JsonProperty( "benchmarkingTool" ) BenchmarkingTool benchmarkingTool )
+    public BenchmarkingRun( @JsonProperty( "benchmarkingTool" ) BenchmarkingTool<P> benchmarkingTool,
+                            @JsonProperty( "testRunId" ) String testRunId )
     {
-        Objects.requireNonNull( benchmarkingTool );
-        this.benchmarkingTool = benchmarkingTool;
+        this.benchmarkingTool = Objects.requireNonNull( benchmarkingTool );
+        this.testRunId = testRunId;
     }
 
-    public BenchmarkingTool benchmarkingTool()
+    public BenchmarkingTool<P> benchmarkingTool()
     {
         return benchmarkingTool;
+    }
+
+    public String testRunId()
+    {
+        return testRunId;
     }
 
     @Override

@@ -6,6 +6,7 @@ CREATE CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS U
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.id IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.jobId IS UNIQUE
+CREATE CONSTRAINT ON ( job:Job ) ASSERT job.id IS UNIQUE
 // Exists
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.author)
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.comment)
@@ -77,6 +78,7 @@ CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.date)
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.duration)
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.id)
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.triggered_by)
+CREATE CONSTRAINT ON ( job:job ) ASSERT exists(job.id)
 // Index
 CREATE INDEX ON :Annotation(author)
 CREATE INDEX ON :Annotation(comment)

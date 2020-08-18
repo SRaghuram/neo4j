@@ -50,11 +50,18 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 
     static final String BENCHMARKING_BUCKET_NAME = "benchmarking.neo4j.com";
 
-    public static AWSS3ArtifactStorage create( String region, String awsKey, String awsSecret )
+    public static AWSS3ArtifactStorage create( AWSCredentials awsCredentials )
     {
-        AWSStaticCredentialsProvider credentialsProvider =
-                new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsKey, awsSecret ) );
-        return new AWSS3ArtifactStorage( s3ClientBuilder( credentialsProvider ).withRegion( region ).build() );
+        if ( awsCredentials.hasAwsCredentials() )
+        {
+            AWSStaticCredentialsProvider credentialsProvider =
+                    new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsCredentials.awsAccessKeyId(), awsCredentials.awsSecretAccessKey() ) );
+            return new AWSS3ArtifactStorage( s3ClientBuilder( credentialsProvider ).withRegion( awsCredentials.awsRegion() ).build() );
+        }
+        else
+        {
+            return create( awsCredentials.awsRegion() );
+        }
     }
 
     public static AWSS3ArtifactStorage create( EndpointConfiguration endpointConfiguration )
@@ -71,17 +78,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 
     public static AWSS3ArtifactStorage getAWSS3ArtifactStorage( InfraParams infraParams )
     {
-        AWSCredentials awsCredentials = infraParams.awsCredentials();
-        if ( awsCredentials.hasAwsCredentials() )
-        {
-            return create( awsCredentials.awsRegion(),
-                           awsCredentials.awsAccessKeyId(),
-                           awsCredentials.awsSecretAccessKey() );
-        }
-        else
-        {
-            return create( awsCredentials.awsRegion() );
-        }
+        return create( infraParams.awsCredentials() );
     }
 
     private static boolean hasAwsCredentials( String awsKey, String awsSecret )

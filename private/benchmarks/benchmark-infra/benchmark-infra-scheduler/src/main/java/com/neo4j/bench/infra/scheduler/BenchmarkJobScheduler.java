@@ -7,7 +7,10 @@ package com.neo4j.bench.infra.scheduler;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.StoreClient;
+import com.neo4j.bench.client.queries.submit.CreateJob;
 import com.neo4j.bench.infra.AWSCredentials;
+import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
@@ -26,129 +29,166 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 public class BenchmarkJobScheduler
 {
 
     private static final Logger LOG = LoggerFactory.getLogger( BenchmarkJobScheduler.class );
+    private static final Duration DEFAULT_JOB_STATUS_CHECK_DELAY = Duration.ofSeconds( 5 );
 
     public static BenchmarkJobScheduler create( String jobQueue, String jobDefinition, String batchStack, AWSCredentials awsCredentials )
     {
-        return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, jobQueue, jobDefinition, batchStack ), awsCredentials );
+        return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, jobQueue, jobDefinition, batchStack ),
+                                          AWSS3ArtifactStorage.create( awsCredentials ),
+                                          awsCredentials,
+                                          DEFAULT_JOB_STATUS_CHECK_DELAY );
+    }
+
+    // for testing
+    static BenchmarkJobScheduler create( JobScheduler jobScheduler,
+                                         ArtifactStorage artifactStorage,
+                                         AWSCredentials awsCredentials,
+                                         Duration jobStatusCheckDelay )
+    {
+        return new BenchmarkJobScheduler( jobScheduler, artifactStorage, awsCredentials, jobStatusCheckDelay );
     }
 
     private static List<JobStatus> jobStatuses( JobScheduler jobScheduler,
                                                 String awsRegion,
-                                                Map<JobId,String> scheduledJobIds,
+                                                Map<JobId,BatchBenchmarkJob> scheduledJobs,
                                                 Map<JobId,JobStatus> prevJobStatusMap )
     {
-        List<JobStatus> jobStatuses = jobScheduler.jobsStatuses( Lists.newArrayList( scheduledJobIds.keySet() ) );
+
+        if ( scheduledJobs.isEmpty() )
+        {
+            return Collections.emptyList();
+        }
+
+        List<JobId> jobIds = Lists.newArrayList( scheduledJobs.keySet() );
+        LOG.debug( "checking for jobs {} statuses", jobIds );
+        List<JobStatus> jobStatuses = jobScheduler.jobsStatuses( jobIds );
+        LOG.debug( "job statuses {}", jobStatuses );
+
+        //copyWith jobs
+        for ( JobStatus status : jobStatuses )
+        {
+            scheduledJobs.computeIfPresent( status.jobId(), ( key, oldValue ) -> oldValue.copyWith( status, Clock.systemDefaultZone() ) );
+        }
 
         Collection<JobStatus> prevJobStatus = prevJobStatusMap.values();
 
         // filter out job statuses which didn't change
         List<JobStatus> updatedJobsStatus = jobStatuses.stream().filter( Predicates.not( prevJobStatus::contains ) ).collect( toList() );
 
-        // update job statuses
-        prevJobStatusMap.putAll(
-                updatedJobsStatus.stream().collect( toMap( status -> status.getJobId(), Function.identity() ) )
-        );
+        // update jobs status
+        updatedJobsStatus.forEach( status -> prevJobStatusMap.put( status.jobId(), status ) );
 
         if ( !updatedJobsStatus.isEmpty() )
         {
             LOG.info( "updated jobs statuses:\n{}",
                       updatedJobsStatus.stream()
-                                       .map( status -> jobStatusPrintout( awsRegion, scheduledJobIds, status ) )
+                                       .map( status -> jobStatusPrintout( awsRegion, scheduledJobs, status ) )
                                        .collect( joining( "\t\n" ) ) );
         }
 
         return jobStatuses;
     }
 
-    private static String jobStatusPrintout( String awsRegion, Map<JobId,String> scheduledJobIds, JobStatus status )
+    private static String jobStatusPrintout( String awsRegion, Map<JobId,BatchBenchmarkJob> scheduledJobIds, JobStatus status )
     {
-        return format( "%s - %s", scheduledJobIds.get( status.getJobId() ), status.toStatusLine( awsRegion ) );
+        return format( "%s - %s", scheduledJobIds.get( status.jobId() ).jobName(), status.toStatusLine( awsRegion ) );
     }
 
     private final AWSCredentials awsCredentials;
     private final JobScheduler jobScheduler;
-    // keeps map of scheduled job ids to job name
-    private final Map<JobId,String> scheduledJobsId = new HashMap<>();
+    private final ArtifactStorage artifactStorage;
+    private final ConcurrentMap<JobId,BatchBenchmarkJob> scheduledJobs = new ConcurrentHashMap<>();
+    private final Duration jobStatusCheckDelay;
 
-    private BenchmarkJobScheduler( JobScheduler awsBatchJobScheduler, AWSCredentials awsCredentials )
+    private BenchmarkJobScheduler( JobScheduler jobScheduler, ArtifactStorage artifactStorage, AWSCredentials awsCredentials, Duration jobStatusCheckDelay )
     {
-        jobScheduler = awsBatchJobScheduler;
+        this.jobScheduler = jobScheduler;
+        this.artifactStorage = artifactStorage;
         this.awsCredentials = awsCredentials;
+        this.jobStatusCheckDelay = jobStatusCheckDelay;
     }
 
-    public void scheduleBenchmarkJob( String jobName,
-                                      JobParams jobParams,
-                                      Workspace workspace,
-                                      URI artifactWorkerUri,
-                                      File jobParameterJson )
+    public JobId scheduleBenchmarkJob( String jobName,
+                                       JobParams jobParams,
+                                       Workspace workspace,
+                                       URI artifactWorkerUri,
+                                       File jobParameterJson )
             throws ArtifactStoreException
     {
 
         InfraParams infraParams = jobParams.infraParams();
-        AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( infraParams );
 
         JsonUtil.serializeJson( jobParameterJson.toPath(), jobParams );
 
         URI artifactBaseURI = infraParams.artifactBaseUri();
         artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
-        LOG.info( "upload build artifacts into {}", artifactBaseURI );
+        LOG.info( "uploaded build artifacts into {}", artifactBaseURI );
 
         // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
         // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
-        String sanitizedJobName = StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_|^-]", "_" ), 0, 127 );
+        String sanitizedJobName = StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_-]", "_" ), 0, 127 );
 
         JobId jobId = jobScheduler.schedule( artifactWorkerUri, artifactBaseURI, sanitizedJobName );
         LOG.info( "job scheduled, with id {}", jobId.id() );
-        scheduledJobsId.put( jobId, sanitizedJobName );
+        scheduledJobs.put( jobId, BatchBenchmarkJob.newJob( jobName,
+                                                            jobParams.benchmarkingRun().testRunId(),
+                                                            new JobStatus( jobId, null, null, null ),
+                                                            Clock.systemDefaultZone() ) );
+        return jobId;
     }
 
-    public void awaitFinished()
+    public Collection<BatchBenchmarkJob> awaitFinished()
     {
-        if ( scheduledJobsId.isEmpty() )
-        {
-            throw new IllegalStateException( "no benchmark jobs were scheduled" );
-        }
 
-        // wait until they are done, or fail
         RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
-                .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
-                .withDelay( Duration.ofMinutes( 5 ) )
+                .handleResultIf( jobsStatuses -> jobsStatuses.isEmpty() || jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
+                .withDelay( jobStatusCheckDelay )
                 .withMaxAttempts( -1 );
 
-        Map<JobId,JobStatus> prevJobsStatus = new HashMap<>();
+        ConcurrentMap<JobId,JobStatus> prevJobsStatus = new ConcurrentHashMap<>();
         List<JobStatus> jobsStatuses =
                 Failsafe.with( retries )
                         .get( () -> BenchmarkJobScheduler
-                                .jobStatuses( jobScheduler, awsCredentials.awsRegion(), scheduledJobsId, prevJobsStatus ) );
+                                .jobStatuses( jobScheduler, awsCredentials.awsRegion(), scheduledJobs, prevJobsStatus ) );
+
         LOG.info( "jobs are done with following statuses\n{}",
                   jobsStatuses.stream()
-                              .map( status -> jobStatusPrintout( awsCredentials.awsRegion(), scheduledJobsId, status ) )
+                              .map( status -> jobStatusPrintout( awsCredentials.awsRegion(), scheduledJobs, status ) )
                               .collect( joining( "\n\t" ) ) );
 
         // if any of the jobs failed, fail whole run
         if ( jobsStatuses.stream().anyMatch( JobStatus::isFailed ) )
         {
-            throw new RuntimeException( "there are failed jobs: \n" +
-                                        jobsStatuses.stream()
-                                                    .filter( JobStatus::isFailed )
-                                                    .map( Object::toString )
-                                                    .collect( joining( "\n" ) ) );
+            throw new BenchmarkJobFailedException( scheduledJobs.values() );
+        }
+
+        return scheduledJobs.values();
+    }
+
+    public void reportJobsTo( StoreClient storeClient )
+    {
+        for ( BatchBenchmarkJob benchmarkJob : scheduledJobs.values() )
+        {
+            CreateJob createJob = new CreateJob( benchmarkJob.toJob(),
+                                                 benchmarkJob.testRunId() );
+            storeClient.execute( createJob );
         }
     }
 }

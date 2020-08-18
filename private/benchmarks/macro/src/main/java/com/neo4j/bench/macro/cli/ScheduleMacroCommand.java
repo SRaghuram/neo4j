@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentModes;
@@ -18,12 +19,14 @@ import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStoreException;
-import com.neo4j.bench.infra.BenchmarkingEnvironment;
+import com.neo4j.bench.infra.BenchmarkingRun;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
+import com.neo4j.bench.infra.PasswordManager;
 import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.infra.aws.AWSPasswordManager;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
 import com.neo4j.bench.macro.workload.Query;
@@ -42,6 +45,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
@@ -167,6 +172,8 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.teamcityBuild().toString() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );
 
+            CompletableFuture<Void> awaitFinished = CompletableFuture.runAsync( benchmarkJobScheduler::awaitFinished );
+
             try ( Resources resources = new Resources( Paths.get( "." ) ) )
             {
                 Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
@@ -187,12 +194,14 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                                artifactBaseQueryRunURI,
                                                                errorReportingPolicy,
                                                                workspace );
+                    String testRunId = UUID.randomUUID().toString();
                     JobParams jobParams = new JobParams( infraParams,
-                                                         new BenchmarkingEnvironment(
+                                                         new BenchmarkingRun(
                                                                  new BenchmarkingTool( MacroToolRunner.class,
                                                                                        new RunToolMacroWorkloadParams(
                                                                                                runMacroWorkloadParams.setQueryNames( queryNames ),
-                                                                                               storeName ) ) ) );
+                                                                                               storeName ) ),
+                                                                 testRunId ) );
 
                     workspace.assertArtifactsExist();
 
@@ -205,10 +214,19 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                                 artifactWorkerQueryRunURI,
                                                                 jobParameterJson );
                 }
-                benchmarkJobScheduler.awaitFinished();
+                awaitFinished.get();
+            }
+            finally
+            {
+                PasswordManager passwordManager = AWSPasswordManager.create( awsRegion );
+                String resultStorePassword = passwordManager.getSecret( resultsStorePasswordSecretName );
+                try ( StoreClient storeClient = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultStorePassword ) )
+                {
+                    benchmarkJobScheduler.reportJobsTo( storeClient );
+                }
             }
         }
-        catch ( ArtifactStoreException | IOException e )
+        catch ( ArtifactStoreException | IOException | InterruptedException | ExecutionException e )
         {
             throw new RuntimeException( "failed to schedule benchmarking job", e );
         }

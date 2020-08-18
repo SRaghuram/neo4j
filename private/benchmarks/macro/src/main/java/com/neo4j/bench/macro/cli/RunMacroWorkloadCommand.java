@@ -57,7 +57,6 @@ import java.util.Optional;
 import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.google.common.collect.Sets.newHashSet;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_BATCH_JOB_ID;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PATH;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_CONFIG;
@@ -105,12 +104,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              title = "Error handling policy" )
     private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
 
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_BATCH_JOB_ID},
-             description = "Job ID of the batch infra runner",
-             title = "Batch Job Id" )
-    private String batchJobId;
-
     @Option(
             type = OptionType.COMMAND,
             name = {"--aws-endpoint-url"},
@@ -157,15 +150,23 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     @Required
     private String s3Bucket;
 
+    public static final String CMD_TEST_RUN_ID = "--test-run-id";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_TEST_RUN_ID},
+             description = "Optional test run identifier",
+             title = "Test run identifier" )
+    private String testRunId;
+
     @Override
     protected void doRun( RunMacroWorkloadParams params )
     {
         TestRunReport testRunReport = runReport( params,
                                                  workDir,
-                                                 storeDir, profilerRecordingsOutputDir, neo4jConfigFile,
+                                                 storeDir,
+                                                 profilerRecordingsOutputDir,
+                                                 neo4jConfigFile,
                                                  errorPolicy,
-                                                 batchJobId
-        );
+                                                 testRunId );
         ResultsReporter resultsReporter = new ResultsReporter( profilerRecordingsOutputDir,
                                                                testRunReport,
                                                                s3Bucket,
@@ -185,7 +186,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                            File profilerRecordingsOutputDir,
                                            File neo4jConfigFile,
                                            ErrorReporter.ErrorPolicy errorPolicy,
-                                           String batchJobId )
+                                           String testRunId )
     {
         for ( ParameterizedProfiler profiler : params.profilers() )
         {
@@ -305,19 +306,19 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                 }
             }
             Instant finish = Instant.now();
-            String testRunId = BenchmarkUtil.generateUniqueId();
+            String currentTestRunId = testRunId;
+            if ( currentTestRunId == null )
+            {
+                currentTestRunId = BenchmarkUtil.generateUniqueId();
+            }
 
             TestRun testRun = new TestRun(
-                    testRunId,
+                    currentTestRunId,
                     Duration.between( start, finish ).toMillis(),
                     start.toEpochMilli(),
                     params.parentBuild(),
                     params.parentBuild(),
                     params.triggeredBy() );
-            if ( batchJobId != null )
-            {
-                testRun.setBatchJobId( batchJobId );
-            }
 
             BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.toolCommit(), params.toolOwner(), params.toolBranch() );
 

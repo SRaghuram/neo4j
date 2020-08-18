@@ -64,7 +64,6 @@ class ConvenientLocalExecutionIT
     private static final int WARMUP_COUNT = 1;
     private static final int MEASUREMENT_COUNT = 1;
     private static final List<ParameterizedProfiler> PROFILERS = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
-    private static final ExecutionMode EXECUTION_MODE = ExecutionMode.EXECUTE;
     private static final JvmArgs JVM_ARGS = JvmArgs.from( "-Xms4g", "-Xmx4g" );
     private static final boolean RECREATE_SCHEMA = false;
     private static final Edition EDITION = Edition.ENTERPRISE;
@@ -124,12 +123,14 @@ class ConvenientLocalExecutionIT
                 triggeredBy
         );
 
-        RunMacroWorkloadCommand.runReport( workloadParams,
-                                           RESULT_DIR.toFile(),
-                                           STORE_DIR.toFile(), profilerRecordingsDir.toFile(), neo4jConfigFile().toFile(),
-                                           ErrorReporter.ErrorPolicy.SKIP,
-                                           null
-        );
+            RunMacroWorkloadCommand.runReport( workloadParams,
+                                               RESULT_DIR.toFile(),
+                                               STORE_DIR.toFile(),
+                                               profilerRecordingsDir.toFile(),
+                                               neo4jConfigFile().toFile(),
+                                               ErrorReporter.ErrorPolicy.SKIP,
+                                               null );
+        }
     }
 
     // Required fields for running Single query

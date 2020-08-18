@@ -8,12 +8,13 @@ package com.neo4j.bench.infra.micro;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.InfraParams;
+import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.Workspace;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,13 +34,11 @@ public class MicroToolRunner implements BenchmarkingToolRunner<RunMicroWorkloadP
     private static final Logger LOG = LoggerFactory.getLogger( MicroToolRunner.class );
 
     @Override
-    public void runTool( RunMicroWorkloadParams runMicroWorkloadParams,
+    public void runTool( JobParams<RunMicroWorkloadParams> jobParams,
                          ArtifactStorage artifactStorage,
                          Path workspacePath,
                          Workspace artifactsWorkspace,
-                         InfraParams infraParams,
                          String resultsStorePassword,
-                         String batchJobId,
                          URI artifactBaseUri )
             throws IOException, InterruptedException, ArtifactStoreException
     {
@@ -59,9 +58,7 @@ public class MicroToolRunner implements BenchmarkingToolRunner<RunMicroWorkloadP
         Path workDir = workspacePath.resolve( "execute_work_dir" );
         Files.createDirectories( workDir );
 
-        Path resultsJson = workDir.resolve( "results.json" );
-
-            /*
+        /*
             At this point the workspace looks as follow:
 
                 workspace/
@@ -77,9 +74,9 @@ public class MicroToolRunner implements BenchmarkingToolRunner<RunMicroWorkloadP
                         execute_work_dir/
                             results.json                        // not yet created
              */
-
+        RunMicroWorkloadParams runMicroWorkloadParams = jobParams.benchmarkingRun().benchmarkingTool().getToolParameters();
         List<String> runReportCommands = createRunReportArgs( runMicroWorkloadParams,
-                                                              infraParams,
+                                                              jobParams.infraParams(),
                                                               neo4jConfigFile,
                                                               configFile,
                                                               workDir,

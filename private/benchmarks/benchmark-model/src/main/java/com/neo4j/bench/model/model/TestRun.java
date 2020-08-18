@@ -21,7 +21,6 @@ public class TestRun
     private static final String ARCHIVE = "archive";
     private static final String PARENT_BUILD = "parent_build";
     private static final String TRIGGERED_BY = "triggered_by";
-    private static final String BATCH_JOB_ID = "batch-job-id";
 
     private final String id;
     private final String triggeredBy;
@@ -30,7 +29,6 @@ public class TestRun
     private final long dateUtc;
     private final long build;
     private String archive;
-    private String batchJobId;
 
     /**
      * WARNING: Never call this explicitly.
@@ -102,16 +100,6 @@ public class TestRun
         this.archive = requireNonNull( archive );
     }
 
-    public String batchJobId()
-    {
-        return batchJobId;
-    }
-
-    public void setBatchJobId( String batchJobId )
-    {
-        this.batchJobId = requireNonNull( batchJobId );
-    }
-
     public Map<String,Object> toMap()
     {
         Map<String,Object> map = new HashMap<>();
@@ -122,10 +110,6 @@ public class TestRun
         if ( null != archive )
         {
             map.put( ARCHIVE, archive );
-        }
-        if ( null != batchJobId )
-        {
-            map.put( BATCH_JOB_ID, batchJobId );
         }
         map.put( PARENT_BUILD, parentBuild );
         map.put( TRIGGERED_BY, triggeredBy );
@@ -148,7 +132,6 @@ public class TestRun
                dateUtc == testRun.dateUtc &&
                build == testRun.build &&
                Objects.equals( id, testRun.id ) &&
-               Objects.equals( batchJobId, testRun.batchJobId ) &&
                parentBuild == testRun.parentBuild &&
                Objects.equals( archive, testRun.archive );
     }
@@ -156,7 +139,7 @@ public class TestRun
     @Override
     public int hashCode()
     {
-        return Objects.hash( id, durationMs, dateUtc, build, archive, parentBuild, batchJobId );
+        return Objects.hash( id, durationMs, dateUtc, build, archive, parentBuild );
     }
 
     @Override
@@ -169,7 +152,6 @@ public class TestRun
                ", build=" + build +
                ", archive='" + archive + '\'' +
                ", parentBuild='" + parentBuild + '\'' +
-               ", BatchJobId='" + batchJobId + '\'' +
                '}';
     }
 }

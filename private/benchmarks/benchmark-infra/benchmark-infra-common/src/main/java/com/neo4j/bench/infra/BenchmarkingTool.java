@@ -31,7 +31,7 @@ public class BenchmarkingTool<P>
         this.toolParameters = toolParameters;
     }
 
-    public Class<? extends BenchmarkingToolRunner<P>> toolRunnerClass()
+    public Class<? extends BenchmarkingToolRunner> toolRunnerClass()
     {
         return toolRunnerClass;
     }
@@ -42,7 +42,7 @@ public class BenchmarkingTool<P>
         return toolParameters;
     }
 
-    public BenchmarkingToolRunner<P> newRunner()
+    public BenchmarkingToolRunner newRunner()
     {
         try
         {

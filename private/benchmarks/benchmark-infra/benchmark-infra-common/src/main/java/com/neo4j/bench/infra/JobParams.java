@@ -10,18 +10,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-public class JobParams
+public class JobParams<P>
 {
 
     private final InfraParams infraParams;
-    private final BenchmarkingEnvironment benchmarkingEnvironment;
+    private final BenchmarkingRun<P> benchmarkingRun;
 
     @JsonCreator
     public JobParams( @JsonProperty( "infraParams" ) InfraParams infraParams,
-                      @JsonProperty( "benchmarkingEnvironment" ) BenchmarkingEnvironment benchmarkingEnvironment )
+                      @JsonProperty( "benchmarkingRun" ) BenchmarkingRun<P> benchmarkingRun )
     {
         this.infraParams = infraParams;
-        this.benchmarkingEnvironment = benchmarkingEnvironment;
+        this.benchmarkingRun = benchmarkingRun;
     }
 
     public InfraParams infraParams()
@@ -29,9 +29,9 @@ public class JobParams
         return infraParams;
     }
 
-    public BenchmarkingEnvironment benchmarkingEnvironment()
+    public BenchmarkingRun<P> benchmarkingRun()
     {
-        return benchmarkingEnvironment;
+        return benchmarkingRun;
     }
 
     @Override

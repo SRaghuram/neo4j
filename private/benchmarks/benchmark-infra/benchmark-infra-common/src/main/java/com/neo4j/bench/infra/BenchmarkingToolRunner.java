@@ -17,13 +17,11 @@ public interface BenchmarkingToolRunner<P>
     /**
      * Run benchmarking tool.
      */
-    void runTool( P toolParams,
+    void runTool( JobParams<P> jobParams,
                   ArtifactStorage artifactStorage,
                   Path workspacePath,
                   Workspace artifactsWorkspace,
-                  InfraParams infraParams,
                   String resultsStorePassword,
-                  String batchJobId,
                   URI artifactBaseUri )
             throws Exception;
 }

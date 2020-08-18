@@ -55,7 +55,7 @@ queries="${32}"
 all_args=("$@")
 optional_args=("${all_args[@]:32}")
 aws_endpoint_url=
-batch_job_id=
+test_run_id=
 
 while ((${#optional_args[@]})); do
   arg=${optional_args[0]}
@@ -65,8 +65,8 @@ while ((${#optional_args[@]})); do
     aws_endpoint_url=${optional_args[0]}
     optional_args=("${optional_args[@]:1}")
     ;;
-  --batch-job-id)
-    batch_job_id=${optional_args[0]}
+  --test-run-id)
+    test_run_id=${optional_args[0]}
     optional_args=("${optional_args[@]:1}")
     ;;
   --)
@@ -126,7 +126,7 @@ echo "Triggered by                                                   : ${trigger
 echo "Error policy                                                   : ${error_policy}"
 echo "Neo4j Directory                                                : ${deployment}"
 echo "Queries                                                        : ${queries}"
-echo "Batch job id                                                   : ${batch_job_id}"
+echo "Test run id                                                    : ${test_run_id}"
 
 if [ "$recreate_schema" != "true" ]; then
   recreate_schema=""
@@ -171,4 +171,4 @@ ${jvm} -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --outpu
   --aws-region "eu-north-1" \
   ${aws_endpoint_url:+--aws-endpoint-url $aws_endpoint_url} \
   ${recreate_schema:+--recreate-schema} \
-  ${batch_job_id:+--batch-job-id $batch_job_id}
+  ${test_run_id:+--test-run-id $test_run_id}

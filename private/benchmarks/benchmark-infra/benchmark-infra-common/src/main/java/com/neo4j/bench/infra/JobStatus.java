@@ -6,8 +6,10 @@
 package com.neo4j.bench.infra;
 
 import com.neo4j.bench.infra.aws.AWSBatchJobLogs;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -17,21 +19,23 @@ public class JobStatus
     private final JobId jobId;
     private final String status;
     private final String logStreamName;
+    private final String statusReason;
 
-    public JobStatus( JobId jobId, String status, String logStreamName )
+    public JobStatus( JobId jobId, String status, String logStreamName, String statusReason )
     {
         super();
         this.jobId = jobId;
         this.status = status;
         this.logStreamName = logStreamName;
+        this.statusReason = statusReason;
     }
 
-    public JobId getJobId()
+    public JobId jobId()
     {
         return jobId;
     }
 
-    public String getStatus()
+    public String status()
     {
         return status;
     }
@@ -56,46 +60,40 @@ public class JobStatus
         return Optional.ofNullable( logStreamName ).map( streamName -> AWSBatchJobLogs.getLogStreamURL( region, streamName ) );
     }
 
+    public Optional<String> statusReason()
+    {
+        return Optional.ofNullable( statusReason );
+    }
+
+    public String logStreamName()
+    {
+        return logStreamName;
+    }
+
     public String toStatusLine( String region )
     {
-        return format( "job %s is %s, find log stream at <%s>", jobId, status, logStreamURL( region ).orElse( "UNAVAILABLE" ) );
+        return format( "job %s is %s (%s), find log stream at <%s>",
+                       jobId,
+                       status,
+                       statusReason().orElse( "UNKNOWN" ),
+                       logStreamURL( region ).orElse( "UNAVAILABLE" ) );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( jobId, status, logStreamName );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 
     @Override
     public boolean equals( Object obj )
     {
-        if ( this == obj )
-        {
-            return true;
-        }
-        if ( obj == null )
-        {
-            return false;
-        }
-        if ( getClass() != obj.getClass() )
-        {
-            return false;
-        }
-        JobStatus other = (JobStatus) obj;
-        return Objects.equals( jobId, other.jobId )
-               && Objects.equals( status, other.status )
-               && Objects.equals( logStreamName, other.logStreamName );
+        return EqualsBuilder.reflectionEquals( this, obj );
     }
 
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder();
-        builder.append( "JobStatus [jobId=" ).append( jobId )
-               .append( ", status=" ).append( status )
-               .append( ", logStreamName=" ).append( logStreamName )
-               .append( "]" );
-        return builder.toString();
+        return ToStringBuilder.reflectionToString( this );
     }
 }
