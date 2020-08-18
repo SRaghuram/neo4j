@@ -448,7 +448,7 @@ class SecurityAdministrationCommandLoggingIT
                 }
             }
         }
-        assertThat( String.join( "\n\t", logLines ), logLines, hasSize( greaterThanOrEqualTo( shouldEndWithAtLeast ) ) );
+        assertThat( String.join( System.lineSeparator() + "\t", logLines ), logLines, hasSize( greaterThanOrEqualTo( shouldEndWithAtLeast ) ) );
         return logLines.subList( logLines.size() - shouldEndWithAtLeast, logLines.size() );
     }
 

@@ -72,6 +72,7 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
         // Nothing to do, this graph model does not contain privileges
     }
 
+    @Override
     public void addRoleToUser( Transaction tx, Node role, String username ) throws InvalidArgumentsException
     {
         Node user = tx.findNode( USER_LABEL, "name", username );

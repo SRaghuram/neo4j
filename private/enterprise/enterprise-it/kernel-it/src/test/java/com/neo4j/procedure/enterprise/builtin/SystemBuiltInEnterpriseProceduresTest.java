@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.function.Function;
 
 import org.neo4j.collection.RawIterator;
@@ -97,10 +98,10 @@ class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
 
     private String printElementsOfArray( AnyValue[] array )
     {
-        StringBuilder result = new StringBuilder();
+        StringJoiner result = new StringJoiner( System.lineSeparator(), System.lineSeparator(), "" );
         for ( AnyValue anyValue : array )
         {
-            result.append( anyValue.toString() ).append( "\n" );
+            result.add( anyValue.toString() );
         }
         return result.toString();
     }

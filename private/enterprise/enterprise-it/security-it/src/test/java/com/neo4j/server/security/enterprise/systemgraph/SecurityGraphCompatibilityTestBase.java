@@ -27,7 +27,6 @@ import org.neo4j.dbms.database.DefaultSystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
@@ -59,8 +58,6 @@ abstract class SecurityGraphCompatibilityTestBase
     @BeforeEach
     void setup() throws Exception
     {
-        FileUtils.deleteDirectory( directory.homePath() );
-
         TestEnterpriseDatabaseManagementServiceBuilder builder =
                 new TestDBMSBuilder( directory.homePath() ).impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, TRUE )
@@ -102,11 +99,6 @@ abstract class SecurityGraphCompatibilityTestBase
         TestDBMSBuilder( Path homeDirectory )
         {
             super( homeDirectory );
-        }
-
-        public Config getConfig()
-        {
-            return this.config.build();
         }
 
         @Override

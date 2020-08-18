@@ -92,6 +92,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         throw unsupported();
     }
 
+    @Override
     public boolean isCurrent()
     {
         return isCurrent;

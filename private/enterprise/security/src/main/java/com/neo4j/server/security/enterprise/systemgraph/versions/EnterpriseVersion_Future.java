@@ -29,6 +29,7 @@ public class EnterpriseVersion_Future extends KnownEnterpriseSecurityComponentVe
         this.getStatus();
     }
 
+    @Override
     public SystemGraphComponent.Status getStatus()
     {
         return SystemGraphComponent.Status.UNSUPPORTED_FUTURE;
