@@ -15,6 +15,7 @@ import com.neo4j.restore.RestoreDatabaseCli;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -68,6 +69,7 @@ import static org.neo4j.graphdb.Label.label;
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
+@Disabled // Disabled for reducing flakiness - this test does not test any new functionality - was developed to test the workaround
 class StoppedDatabaseRolledAwayIT
 {
     private static final String STOPPED_DATABASE = "foo";
