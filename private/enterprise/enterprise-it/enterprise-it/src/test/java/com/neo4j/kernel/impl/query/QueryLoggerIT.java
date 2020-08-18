@@ -327,7 +327,7 @@ class QueryLoggerIT
     void shouldLogCorrectPlanningTimeWhenFailsToParse() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
                        .setConfig( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled, true );
         buildDatabase();
 
