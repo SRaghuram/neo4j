@@ -62,7 +62,7 @@ if [[ ! -f "target/macro.jar" ]]; then
   exit 1
 fi
 
-id=$(uuid)
+id=$(uuidgen)
 base_artifacts_uri="s3://benchmarking.neo4j.com/artifacts/upgrader/$id"
 
 # copy script and macro jar to s3
