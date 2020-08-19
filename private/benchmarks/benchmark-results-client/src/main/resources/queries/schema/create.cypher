@@ -1,5 +1,6 @@
 // Unique
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT annotation.event_id IS UNIQUE
+CREATE CONSTRAINT ON ( regression:Regression ) ASSERT regression.event_id IS UNIQUE
 CREATE CONSTRAINT ON ( benchmarktool:BenchmarkTool ) ASSERT benchmarktool.name IS UNIQUE
 CREATE CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE
@@ -10,6 +11,12 @@ CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.author)
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.comment)
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.date)
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.event_id)
+CREATE CONSTRAINT ON ( regression:Regression ) ASSERT exists(regression.author)
+CREATE CONSTRAINT ON ( regression:Regression ) ASSERT exists(regression.comment)
+CREATE CONSTRAINT ON ( regression:Regression ) ASSERT exists(regression.date)
+CREATE CONSTRAINT ON ( regression:Regression ) ASSERT exists(regression.event_id)
+CREATE CONSTRAINT ON ( regression:Regression ) ASSERT exists(regression.status)
+CREATE CONSTRAINT ON ( regression:Regression ) ASSERT exists(regression.trello_card_url)
 CREATE CONSTRAINT ON ( benchmark:Benchmark ) ASSERT exists(benchmark.description)
 CREATE CONSTRAINT ON ( benchmark:Benchmark ) ASSERT exists(benchmark.mode)
 CREATE CONSTRAINT ON ( benchmark:Benchmark ) ASSERT exists(benchmark.name)

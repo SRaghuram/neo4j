@@ -423,9 +423,9 @@ public class SyntheticStoreGenerator
                         if ( RNG.nextDouble() > METRICS_ANNOTATION_PROBABILITY )
                         {
                             queryRetrier.execute( client,
-                                                  new AttachMetricsAnnotation( testRunReport.testRun().id(),
-                                                                               bgb.benchmark().name(),
-                                                                               bgb.benchmarkGroup().name(),
+                                                  new AttachMetricsAnnotation( testRunReport.testRun(),
+                                                                               bgb.benchmark(),
+                                                                               bgb.benchmarkGroup(),
                                                                                new Annotation( "comment", System.currentTimeMillis(), "author" ) ),
                                                   1 );
                             generationResult.incMetricsAnnotations();

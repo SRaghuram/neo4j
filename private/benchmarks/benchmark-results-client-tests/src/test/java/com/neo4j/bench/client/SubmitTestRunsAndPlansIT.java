@@ -9,6 +9,7 @@ import com.google.common.collect.Sets;
 import com.neo4j.bench.client.queries.annotation.AttachMetricsAnnotation;
 import com.neo4j.bench.client.queries.annotation.AttachTestRunAnnotation;
 import com.neo4j.bench.client.queries.annotation.DeleteAnnotation;
+import com.neo4j.bench.client.queries.regression.AttachRegression;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.SetStoreVersion;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
@@ -30,6 +31,7 @@ import com.neo4j.bench.model.model.Plan;
 import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.model.PlanTree;
 import com.neo4j.bench.model.model.Project;
+import com.neo4j.bench.model.model.Regression;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunError;
@@ -46,7 +48,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -398,10 +403,21 @@ public class SubmitTestRunsAndPlansIT
             {
                 addedAnnotations++;
                 QUERY_RETRIER.execute( client,
-                                       new AttachMetricsAnnotation( testRunReport2.testRun().id(),
-                                                                    bgb.benchmark().name(),
-                                                                    bgb.benchmarkGroup().name(),
+                                       new AttachMetricsAnnotation( testRunReport2.testRun(),
+                                                                    bgb.benchmark(),
+                                                                    bgb.benchmarkGroup(),
                                                                     new Annotation( "comment", 1, "author" ) ),
+                                       1 );
+            }
+            int addedRegressions = 0;
+            for ( BenchmarkGroupBenchmark bgb : testRunReport2.benchmarkGroupBenchmarks() )
+            {
+                addedRegressions++;
+                QUERY_RETRIER.execute( client,
+                                       new AttachRegression( testRunReport2.testRun(),
+                                                             bgb.benchmark(),
+                                                             bgb.benchmarkGroup(),
+                                                             createRegression() ),
                                        1 );
             }
 
@@ -425,6 +441,8 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Operator", 21, client );
             // Annotation specific
             assertLabelCount( "Annotation", 1 + addedAnnotations, client );
+            // Regression specific
+            assertLabelCount( "Regression", addedRegressions, client );
 
             QUERY_RETRIER.execute( client, new DeleteAnnotation( annotation1 ), 1 );
 
@@ -449,6 +467,15 @@ public class SubmitTestRunsAndPlansIT
             // Annotation specific
             assertLabelCount( "Annotation", addedAnnotations, client );
         }
+    }
+
+    private Regression createRegression() throws MalformedURLException
+    {
+        return Regression.create( "comment",
+                               "author",
+                               Regression.Status.REPORTED,
+                               new URL( "http://some-domain/trello-card" ),
+                               "4.1" );
     }
 
     @Test
@@ -497,9 +524,9 @@ public class SubmitTestRunsAndPlansIT
             {
                 addedAnnotations++;
                 QUERY_RETRIER.execute( client,
-                                       new AttachMetricsAnnotation( testRunReport1.testRun().id(),
-                                                                    bgb.benchmark().name(),
-                                                                    bgb.benchmarkGroup().name(),
+                                       new AttachMetricsAnnotation( testRunReport1.testRun(),
+                                                                    bgb.benchmark(),
+                                                                    bgb.benchmarkGroup(),
                                                                     new Annotation( "comment", 1, "author" ) ),
                                        1 );
             }
@@ -596,9 +623,9 @@ public class SubmitTestRunsAndPlansIT
             {
                 addedAnnotations++;
                 QUERY_RETRIER.execute( client,
-                                       new AttachMetricsAnnotation( testRunReport1.testRun().id(),
-                                                                    bgb.benchmark().name(),
-                                                                    bgb.benchmarkGroup().name(),
+                                       new AttachMetricsAnnotation( testRunReport1.testRun(),
+                                                                    bgb.benchmark(),
+                                                                    bgb.benchmarkGroup(),
                                                                     new Annotation( "comment", 1, "author" ) ),
                                        1 );
             }
