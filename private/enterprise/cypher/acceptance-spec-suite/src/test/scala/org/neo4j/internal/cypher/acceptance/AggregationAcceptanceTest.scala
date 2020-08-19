@@ -24,6 +24,32 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     result.toList should equal(List(Map("sortValue" -> 42, "owner" -> node)))
   }
 
+  test("should allow map projection with property selector after aggregation inside of expression") {
+    createNode(Map("prop" -> 123))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (n)
+        |WITH HEAD(COLLECT(42)) AS x, n
+        |RETURN n { .prop, res: x }
+        |""".stripMargin)
+    result.toList shouldBe List(Map("n" -> Map("prop" -> 123, "res" -> 42)))
+  }
+
+  test("should allow map projection with property selector after WITH *, aggregation()") {
+    createNode(Map("prop" -> 123))
+    createNode(Map("prop" -> 321))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (n)
+        |WITH *, max(n.prop) AS x
+        |RETURN n { .prop, max: x }
+        |""".stripMargin)
+    result.toList shouldBe List(
+      Map("n" -> Map("prop" -> 123, "max" -> 123)),
+      Map("n" -> Map("prop" -> 321, "max" -> 321))
+    )
+  }
+
   // Non-deterministic query -- needs TCK design
   test("should aggregate using as grouping key expressions using variables in scope and nothing else") {
     val userId = createLabeledNode(Map("userId" -> 11), "User")
