@@ -242,7 +242,10 @@ WARNING: dbms.memory.heap.max_size will require a unit suffix in a
       # Add the starting class
       $ShellArgs += @($StartingClass)
     }
-
+	ForEach ($arg in $Neo4jServer.AdditionalArguments)
+	{
+		$ShellArgs += $arg
+	}
     Write-Output @{ 'java' = $javaCMD; 'args' = $ShellArgs }
   }
 

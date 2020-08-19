@@ -86,6 +86,7 @@ function Get-Neo4jServer
       'ServerVersion' = '';
       'ServerType' = 'Community';
       'DatabaseMode' = '';
+      'AdditionalArguments' = @();
     }
 
     # Check if the lib dir exists

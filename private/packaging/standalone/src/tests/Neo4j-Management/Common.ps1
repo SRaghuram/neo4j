@@ -36,6 +36,7 @@ function global:New-InvalidNeo4jInstall ($ServerType = 'Enterprise',$ServerVersi
       'ServerVersion' = $ServerVersion;
       'ServerType' = $ServerType;
       'DatabaseMode' = $DatabaseMode;
+      'AdditionalArguments' = @();
     })
   return $serverObject
 }
@@ -47,7 +48,8 @@ function global:New-MockNeo4jInstall (
   $ServerVersion = '0.0',
   $DatabaseMode = '',
   $WindowsService = $global:mockServiceName,
-  $NeoConfSettings = @()
+  $NeoConfSettings = @(),
+  $AdditionalArguments = @()
 ) {
   # Creates a skeleton directory and file structure of a Neo4j Installation
   New-Item $RootDir -ItemType Directory | Out-Null
@@ -86,6 +88,7 @@ function global:New-MockNeo4jInstall (
       'ServerVersion' = $ServerVersion;
       'ServerType' = $ServerType;
       'DatabaseMode' = $DatabaseMode;
+      'AdditionalArguments' = $AdditionalArguments;
     })
   return $serverObject
 }

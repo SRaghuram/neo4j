@@ -446,7 +446,7 @@ public class StoreUpgradeIT
             NeoBootstrapper bootstrapper = new CommunityBootstrapper();
             try
             {
-                bootstrapper.start( rootDir.toAbsolutePath(), configFile, Collections.emptyMap() );
+                bootstrapper.start( rootDir.toAbsolutePath(), configFile, Collections.emptyMap(), false );
                 assertTrue( bootstrapper.isRunning() );
                 checkInstance( store, (GraphDatabaseAPI) bootstrapper.getDatabaseManagementService().database( DEFAULT_DATABASE_NAME ) );
             }
