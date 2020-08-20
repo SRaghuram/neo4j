@@ -91,7 +91,7 @@ class MultiDatabaseIdGeneratorIT
         long requestedSize = 100;
         int idsToReuse = 10;
 
-        IdRange batch = firstNodeIdGenerator.nextIdBatch( (int) requestedSize, NULL );
+        IdRange batch = firstNodeIdGenerator.nextIdBatch( (int) requestedSize, false, NULL );
         assertThat( firstNodeIdGenerator.getNumberOfIdsInUse() ).isGreaterThanOrEqualTo( requestedSize );
         for ( long idToReuse = batch.getRangeStart(); idToReuse < batch.getRangeStart() + idsToReuse; idToReuse++ )
         {
