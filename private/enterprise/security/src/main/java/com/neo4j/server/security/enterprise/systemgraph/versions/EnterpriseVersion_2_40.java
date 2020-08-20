@@ -44,7 +44,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
 
     public EnterpriseVersion_2_40( Log log )
     {
-        super( 2, "Neo4j 4.0", log );
+        super( 2, VERSION_40, log );
     }
 
     @Override
@@ -65,13 +65,6 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     public boolean runtimeSupported()
     {
         return true;
-    }
-
-    private static void setupPrivilegeNode( Node privNode, String action, Node segmentNode, Node resourceNode )
-    {
-        privNode.setProperty( "action", action );
-        privNode.createRelationshipTo( segmentNode, SCOPE );
-        privNode.createRelationshipTo( resourceNode, APPLIES_TO );
     }
 
     // INITIALIZATION
@@ -264,49 +257,55 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     // RUNTIME
 
     @Override
-    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    boolean supportsUpdateAction( PrivilegeAction action )
     {
-        if ( SpecialDatabase.DEFAULT == specialDatabase )
-        {
-            throw unsupportedAction();
-        }
-
         switch ( action )
         {
-        case CREATE_USER:
-        case DROP_USER:
-        case SHOW_USER:
-        case SET_USER_STATUS:
-        case SET_PASSWORDS:
-        case ALTER_USER:
-        case USER_MANAGEMENT:
+        // Database privileges
+        case ACCESS:
+        case START_DATABASE:
+        case STOP_DATABASE:
 
-        case CREATE_DATABASE:
-        case DROP_DATABASE:
-        case DATABASE_MANAGEMENT:
+        case CREATE_INDEX:
+        case DROP_INDEX:
+        case INDEX:
+        case CREATE_CONSTRAINT:
+        case DROP_CONSTRAINT:
+        case CONSTRAINT:
 
-        case SHOW_PRIVILEGE:
-        case ASSIGN_PRIVILEGE:
-        case REMOVE_PRIVILEGE:
-        case PRIVILEGE_MANAGEMENT:
+        case CREATE_LABEL:
+        case CREATE_RELTYPE:
+        case CREATE_PROPERTYKEY:
+        case TOKEN:
 
-        case DBMS_ACTIONS:
+        case DATABASE_ACTIONS:
 
-        case TRANSACTION_MANAGEMENT:
-        case SHOW_TRANSACTION:
-        case TERMINATE_TRANSACTION:
+        // Role management
+        case CREATE_ROLE:
+        case DROP_ROLE:
+        case ASSIGN_ROLE:
+        case REMOVE_ROLE:
+        case SHOW_ROLE:
+        case ROLE_MANAGEMENT:
 
-        case CREATE_ELEMENT:
-        case DELETE_ELEMENT:
-        case SET_LABEL:
-        case REMOVE_LABEL:
-        case SET_PROPERTY:
-        case MERGE:
+        // Graph privileges
+        case TRAVERSE:
+        case READ:
+        case MATCH:
+        case WRITE:
 
-        case GRAPH_ACTIONS:
-            throw unsupportedAction();
-
+            return true;
         default:
+            return false;
+        }
+    }
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    {
+        if ( !supportsUpdateAction( action ) || SpecialDatabase.DEFAULT == specialDatabase )
+        {
+            throw unsupportedAction();
         }
     }
 

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +58,10 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_36;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -78,10 +83,6 @@ class SystemGraphComponentsTest
     @Inject
     @SuppressWarnings( "unused" )
     private static TestDirectory directory;
-
-    private static final String VERSION_36 = "Neo4j 3.6";
-    private static final String VERSION_40 = "Neo4j 4.0";
-    private static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
 
     private static DatabaseManagementService dbms;
     private static GraphDatabaseFacade system;
@@ -136,14 +137,6 @@ class SystemGraphComponentsTest
         assertThat( "Overall status", statuses.get( "dbms-status" ), is( CURRENT ) );
     }
 
-    @Test
-    void shouldInitializeAndUpgradeWith41_Drop01_systemGraph() throws Exception
-    {
-        initializeLatestSystemAndUsers();
-        initEnterprise( VERSION_41D1 );
-        assertCanUpgradeThisVersionAndThenUpgradeIt( REQUIRES_UPGRADE );
-    }
-
     @ParameterizedTest
     @MethodSource( "versionAndStatusProvider" )
     void shouldInitializeAndUpgradeSystemGraph( String version, SystemGraphComponent.Status initialStatus ) throws Exception
@@ -154,9 +147,10 @@ class SystemGraphComponentsTest
     }
 
     @ParameterizedTest
-    @MethodSource( "versionAndStatusProvider" )
-    void shouldFailUpgradeWhen_PUBLIC_RoleExists( String version, SystemGraphComponent.Status initialStatus ) throws Exception
+    @ValueSource( strings = {VERSION_36, VERSION_40} )
+    void shouldFailUpgradeWhen_PUBLIC_RoleExists( String version ) throws Exception
     {
+        SystemGraphComponent.Status initialStatus = version.equals( VERSION_36 ) ? UNSUPPORTED_BUT_CAN_UPGRADE : REQUIRES_UPGRADE;
         initializeLatestSystemAndUsers();
         initEnterprise( version, List.of( ADMIN, PUBLIC ) );
 
@@ -193,7 +187,9 @@ class SystemGraphComponentsTest
     {
         return Stream.of(
                 Arguments.arguments( VERSION_36, UNSUPPORTED_BUT_CAN_UPGRADE ),
-                Arguments.arguments( VERSION_40, REQUIRES_UPGRADE )
+                Arguments.arguments( VERSION_40, REQUIRES_UPGRADE ),
+                Arguments.arguments( VERSION_41D1, REQUIRES_UPGRADE ),
+                Arguments.arguments( VERSION_41, CURRENT )
         );
     }
 
@@ -241,8 +237,17 @@ class SystemGraphComponentsTest
 
     private void initEnterprise( String version ) throws Exception
     {
-        // Versions older than 41 drop 01 should not have PUBLIC role
-        List<String> roles = version.equals( VERSION_41D1 ) ? PredefinedRoles.roles : List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
+        List<String> roles;
+        switch ( version )
+        {
+        case VERSION_36:
+        case VERSION_40:
+            // Versions older than 41 drop 01 should not have PUBLIC role
+            roles = List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
+            break;
+        default:
+            roles = PredefinedRoles.roles;
+        }
         initEnterprise( version, roles );
     }
 

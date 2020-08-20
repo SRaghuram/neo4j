@@ -12,6 +12,9 @@ import com.neo4j.dbms.EnterpriseSystemGraphComponent
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
+import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40
+import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41
+import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.collection.Dependencies
 import org.neo4j.configuration.Config
@@ -31,9 +34,6 @@ import org.scalatest.mockito.MockitoSugar
 trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLike {
   self: AdministrationCommandAcceptanceTestBase =>
 
-  val VERSION_40: String = "Neo4j 4.0"
-  val VERSION_41D1: String = "Neo4j 4.1.0-Drop01"
-  val VERSION_41: String = "Neo4j 4.1"
   val CURRENT_VERSION: String = VERSION_41
   val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41)
   var _configSupplier: () => Config = () => Config.defaults()
@@ -68,9 +68,9 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
   def withAllSystemGraphVersions(expectToFail: String => Option[Class[_]])(block: => Any): Unit = withVersions(allSystemGraphVersions: _*)(expectToFail)(block)
 
   def translatePrivileges(privileges: Set[Map[String, AnyRef]], version: String): Set[Map[String, AnyRef]] = version match {
-    case "Neo4j 4.0" => translatePrivilegesTo40(privileges)
-    case "Neo4j 4.1" => translatePrivilegesTo41(privileges)
-    case "Neo4j 4.1.0-Drop01" => translatePrivilegesTo41(privileges)
+    case VERSION_40 => translatePrivilegesTo40(privileges)
+    case VERSION_41D1 => translatePrivilegesTo41(privileges)
+    case VERSION_41 => translatePrivilegesTo41(privileges)
     case _ => throw new IllegalArgumentException(s"Unsupported version: $version")
   }
 

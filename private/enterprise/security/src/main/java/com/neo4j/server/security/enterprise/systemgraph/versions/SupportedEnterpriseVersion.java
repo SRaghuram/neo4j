@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.HashSet;
 import java.util.List;
@@ -185,7 +186,7 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
         }
     }
 
-    private static void setupPrivilegeNode( Node privNode, String action, Node segmentNode, Node resourceNode )
+    static void setupPrivilegeNode( Node privNode, String action, Node segmentNode, Node resourceNode )
     {
         privNode.setProperty( "action", action );
         privNode.createRelationshipTo( segmentNode, SCOPE );
@@ -272,5 +273,14 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
             // i.e. the role should not be added to the privilege map.
         }
         return rolePrivileges;
+    }
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    {
+        if ( !supportsUpdateAction( action ) )
+        {
+            throw unsupportedAction();
+        }
     }
 }

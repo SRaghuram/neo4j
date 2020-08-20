@@ -31,6 +31,11 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 
 public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSystemComponentVersion
 {
+    public static final String VERSION_36 = "Neo4j 3.6";
+    public static final String VERSION_40 = "Neo4j 4.0";
+    public static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
+    public static final String VERSION_41 = "Neo4j 4.1";
+
     static final Label DATABASE_ALL_LABEL = Label.label( "DatabaseAll" );
     static final Label DATABASE_DEFAULT_LABEL = Label.label( "DatabaseDefault" );
 
@@ -63,6 +68,11 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     boolean componentNotInVersionNode( Transaction tx )
     {
         return getVersion( tx ) == NoEnterpriseComponentVersion.VERSION;
+    }
+
+    boolean supportsUpdateAction( PrivilegeAction action )
+    {
+        return false;
     }
 
     public abstract void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException;

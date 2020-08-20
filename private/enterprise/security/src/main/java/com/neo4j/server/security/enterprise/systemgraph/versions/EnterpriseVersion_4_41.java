@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.List;
 import java.util.Set;
@@ -24,9 +23,12 @@ import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurit
  */
 public class EnterpriseVersion_4_41 extends SupportedEnterpriseVersion
 {
-    public EnterpriseVersion_4_41( Log log )
+    private final KnownEnterpriseSecurityComponentVersion previous;
+
+    public EnterpriseVersion_4_41( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( LATEST_VERSION, "Neo4j 4.1", log, true );
+        super( LATEST_VERSION, VERSION_41, log, true );
+        this.previous = previous;
     }
 
     @Override
@@ -55,9 +57,28 @@ public class EnterpriseVersion_4_41 extends SupportedEnterpriseVersion
     }
 
     @Override
-    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    boolean supportsUpdateAction( PrivilegeAction action )
     {
-        // Current version supports all current commands
+        switch ( action )
+        {
+        // More user management
+        case SET_USER_STATUS:
+        case SET_PASSWORDS:
+
+        // Fine-grained write
+        case CREATE_ELEMENT:
+        case DELETE_ELEMENT:
+        case SET_LABEL:
+        case REMOVE_LABEL:
+        case SET_PROPERTY:
+
+        case GRAPH_ACTIONS:
+
+        case MERGE:
+            return true;
+        default:
+            return previous.supportsUpdateAction( action );
+        }
     }
 
     @Override

@@ -13,10 +13,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -40,9 +44,16 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_36;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 @TestDirectoryExtension
@@ -52,10 +63,6 @@ class EnterpriseSecurityGraphComponentTest
     @Inject
     @SuppressWarnings( "unused" )
     private static TestDirectory directory;
-
-    private static final String VERSION_36 = "Neo4j 3.6";
-    private static final String VERSION_40 = "Neo4j 4.0";
-    private static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
 
     private static DatabaseManagementService dbms;
     private static GraphDatabaseService system;
@@ -111,15 +118,15 @@ class EnterpriseSecurityGraphComponentTest
         } );
     }
 
-    @Test
-    void shouldDetectStatusFor36() throws Exception
+    @ParameterizedTest
+    @MethodSource( "versionRolesAndStatus" )
+    void shouldDetectStatus( String version, List<String> roles, SystemGraphComponent.Status expectedStatus ) throws Exception
     {
         // GIVEN
         initializeSystemAndUsers();
         EnterpriseSecurityGraphComponent component = getComponent();
-        var securityComponent = component.findSecurityGraphComponentVersion( VERSION_36 );
+        var securityComponent = component.findSecurityGraphComponentVersion( version );
         inTx( component::initializeSystemGraphConstraints );
-        List<String> roles = List.of( ADMIN );
         Map<String,Set<String>> roleUsers = Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) );
         inTx( tx -> securityComponent.initializePrivileges( tx, roles, roleUsers ) );
 
@@ -127,47 +134,18 @@ class EnterpriseSecurityGraphComponentTest
         inTx( tx ->
         {
             SystemGraphComponent.Status status = component.detect( tx );
-            assertThat( status ).isEqualTo( SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE );
+            assertThat( status ).isEqualTo( expectedStatus );
         } );
     }
 
-    @Test
-    void shouldDetectStatusFor40() throws Exception
+    private static Stream<Arguments> versionRolesAndStatus()
     {
-        // GIVEN
-        initializeSystemAndUsers();
-        EnterpriseSecurityGraphComponent component = getComponent();
-        var securityComponent = component.findSecurityGraphComponentVersion( VERSION_40 );
-        inTx( component::initializeSystemGraphConstraints );
-        List<String> roles = List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
-        Map<String,Set<String>> roleUsers = Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) );
-        inTx( tx -> securityComponent.initializePrivileges( tx, roles, roleUsers ) );
-
-        // WHEN .. THEN
-        inTx( tx ->
-        {
-            SystemGraphComponent.Status status = component.detect( tx );
-            assertThat( status ).isEqualTo( SystemGraphComponent.Status.REQUIRES_UPGRADE );
-        } );
-    }
-
-    @Test
-    void shouldDetectStatusFor41_Drop1() throws Exception
-    {
-        // GIVEN
-        initializeSystemAndUsers();
-        EnterpriseSecurityGraphComponent component = getComponent();
-        var securityComponent = component.findSecurityGraphComponentVersion( VERSION_41D1 );
-        inTx( component::initializeSystemGraphConstraints );
-        Map<String,Set<String>> roleUsers = Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) );
-        inTx( tx -> securityComponent.initializePrivileges( tx, PredefinedRoles.roles, roleUsers ) );
-
-        // WHEN .. THEN
-        inTx( tx ->
-        {
-            SystemGraphComponent.Status status = component.detect( tx );
-            assertThat( status ).isEqualTo( SystemGraphComponent.Status.REQUIRES_UPGRADE );
-        } );
+        return Stream.of(
+                Arguments.of( VERSION_36, List.of( ADMIN ), UNSUPPORTED_BUT_CAN_UPGRADE ),
+                Arguments.of( VERSION_40, List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER ), REQUIRES_UPGRADE ),
+                Arguments.of( VERSION_41D1, PredefinedRoles.roles, REQUIRES_UPGRADE ),
+                Arguments.of( VERSION_41, PredefinedRoles.roles, CURRENT )
+        );
     }
 
     private EnterpriseSecurityGraphComponent getComponent()

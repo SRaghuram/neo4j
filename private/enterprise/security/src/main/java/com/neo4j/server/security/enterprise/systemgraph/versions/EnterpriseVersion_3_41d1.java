@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.List;
 import java.util.Set;
@@ -21,9 +20,12 @@ import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurit
 
 public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
 {
-    public EnterpriseVersion_3_41d1( Log log )
+    private final KnownEnterpriseSecurityComponentVersion previous;
+
+    public EnterpriseVersion_3_41d1( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( 3, "Neo4j 4.1.0-Drop01", log );
+        super( 3, VERSION_41D1, log );
+        this.previous = previous;
     }
 
     @Override
@@ -74,24 +76,37 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
     // RUNTIME
 
     @Override
-    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    boolean supportsUpdateAction( PrivilegeAction action )
     {
         switch ( action )
         {
-        case SET_USER_STATUS:
-        case SET_PASSWORDS:
+        // User management
+        case CREATE_USER:
+        case DROP_USER:
+        case SHOW_USER:
+        case ALTER_USER:
+        case USER_MANAGEMENT:
 
-        case CREATE_ELEMENT:
-        case DELETE_ELEMENT:
-        case SET_LABEL:
-        case REMOVE_LABEL:
-        case SET_PROPERTY:
-        case MERGE:
+        // Database management
+        case CREATE_DATABASE:
+        case DROP_DATABASE:
+        case DATABASE_MANAGEMENT:
 
-        case GRAPH_ACTIONS:
-            throw unsupportedAction();
+        // Privilege management
+        case SHOW_PRIVILEGE:
+        case ASSIGN_PRIVILEGE:
+        case REMOVE_PRIVILEGE:
+        case PRIVILEGE_MANAGEMENT:
+
+        case DBMS_ACTIONS:
+
+        case TRANSACTION_MANAGEMENT:
+        case SHOW_TRANSACTION:
+        case TERMINATE_TRANSACTION:
+            return true;
 
         default:
+            return previous.supportsUpdateAction( action );
         }
     }
 

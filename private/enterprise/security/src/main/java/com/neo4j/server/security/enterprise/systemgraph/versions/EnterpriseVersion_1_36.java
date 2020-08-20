@@ -40,7 +40,7 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
 
     public EnterpriseVersion_1_36( Log log, Config config )
     {
-        super( 1, "Neo4j 3.6", log );
+        super( 1, VERSION_36, log );
         this.config = config;
     }
 

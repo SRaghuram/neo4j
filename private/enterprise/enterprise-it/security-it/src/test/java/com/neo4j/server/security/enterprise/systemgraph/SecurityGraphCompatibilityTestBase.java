@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -48,11 +49,6 @@ abstract class SecurityGraphCompatibilityTestBase
     @SuppressWarnings( "unused" )
     @Inject
     private TestDirectory directory;
-
-    static final String VERSION_36 = "Neo4j 3.6";
-    static final String VERSION_40 = "Neo4j 4.0";
-    static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
-    static final String VERSION_41 = "Neo4j 4.1";
 
     protected DatabaseManagementService dbms;
     private EnterpriseSecurityGraphComponent enterpriseComponent;
@@ -148,6 +144,139 @@ abstract class SecurityGraphCompatibilityTestBase
         public void register( SystemGraphComponent component )
         {
             // Do nothing in tests
+        }
+    }
+
+    private static String[] GRANT_REVOKE = {"GRANT", "REVOKE"};
+    private static String[] GRANT_DENY_REVOKE = {"GRANT", "DENY", "REVOKE"};
+
+    static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_40 = Set.of(
+            // role management
+            new PrivilegeCommand( "CREATE ROLE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DROP ROLE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "ASSIGN ROLE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "REMOVE ROLE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "SHOW ROLE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "ROLE MANAGEMENT ON DBMS", GRANT_DENY_REVOKE ),
+
+            // database actions
+            new PrivilegeCommand( "ACCESS ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "START ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "STOP ON DATABASE *", GRANT_DENY_REVOKE ),
+
+            // index + constraints actions
+            new PrivilegeCommand( "CREATE INDEX ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DROP INDEX ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "INDEX MANAGEMENT ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "CREATE CONSTRAINT ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DROP CONSTRAINT ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "CONSTRAINT MANAGEMENT ON DATABASE *", GRANT_DENY_REVOKE ),
+
+            // name management
+            new PrivilegeCommand( "CREATE NEW LABEL ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "CREATE NEW TYPE ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "CREATE NEW PROPERTY NAME ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "NAME MANAGEMENT ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "ALL ON DATABASE *", GRANT_DENY_REVOKE )
+    );
+
+    static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_41D1 = Set.of(
+            // user management
+            new PrivilegeCommand( "CREATE USER ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DROP USER ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "SHOW USER ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "ALTER USER ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "USER MANAGEMENT ON DBMS", GRANT_DENY_REVOKE ),
+
+            // databases management
+            new PrivilegeCommand( "CREATE DATABASE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DROP DATABASE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DATABASE MANAGEMENT ON DBMS", GRANT_DENY_REVOKE ),
+
+            // privilege management
+            new PrivilegeCommand( "SHOW PRIVILEGE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "ASSIGN PRIVILEGE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "REMOVE PRIVILEGE ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "PRIVILEGE MANAGEMENT ON DBMS", GRANT_DENY_REVOKE ),
+
+            new PrivilegeCommand( "ALL ON DBMS", GRANT_DENY_REVOKE ),
+
+            //transaction management
+            new PrivilegeCommand( "TRANSACTION ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "SHOW TRANSACTIONS ON DATABASE *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "TERMINATE TRANSACTIONS ON DATABASE *", GRANT_DENY_REVOKE ),
+
+            // default database
+            new PrivilegeCommand( "ACCESS ON DEFAULT DATABASE", GRANT_DENY_REVOKE )
+
+    );
+
+    static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_41 = Set.of(
+            // user management
+            new PrivilegeCommand( "SET USER STATUS ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "SET PASSWORDS ON DBMS", GRANT_DENY_REVOKE ),
+
+            // fine-grained writes
+            new PrivilegeCommand( "CREATE ON GRAPH * NODES *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "CREATE ON GRAPH * RELATIONSHIPS *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "CREATE ON GRAPH *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DELETE ON GRAPH * NODES *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DELETE ON GRAPH * RELATIONSHIPS *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "DELETE ON GRAPH *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "SET LABEL * ON GRAPH *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "REMOVE LABEL * ON GRAPH *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "SET PROPERTY {*} ON GRAPH *", GRANT_DENY_REVOKE ),
+
+            new PrivilegeCommand( "ALL PRIVILEGES ON GRAPH *", GRANT_DENY_REVOKE ),
+
+            new PrivilegeCommand( "MERGE {*} ON GRAPH *", GRANT_REVOKE )
+    );
+
+    static Set<PrivilegeCommand> ALL_PRIVILEGES = new HashSet<>();
+
+    static
+    {
+        ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_40 );
+        ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_41D1 );
+        ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_41 );
+    }
+
+    static class PrivilegeCommand
+    {
+        private final String command;
+        private final String[] privTypes;
+
+        PrivilegeCommand( String command, String[] privTypes )
+        {
+            this.command = command;
+            this.privTypes = privTypes;
+        }
+
+        HashSet<String> asCypher()
+        {
+            HashSet<String> queries = new HashSet<>();
+            for ( String privType : privTypes )
+            {
+                switch ( privType )
+                {
+                case "GRANT":
+                case "DENY":
+                    queries.add( String.format( "%s %s TO reader", privType, command ) );
+                    break;
+                case "REVOKE":
+                    queries.add( String.format( "%s %s FROM reader", privType, command ) );
+                    break;
+                default:
+                    throw new RuntimeException( String.format( "Failure in setup of test, %s is not a valid privilege command", privType ) );
+                }
+            }
+            return queries;
+        }
+
+        @Override
+        public String toString()
+        {
+            return command;
         }
     }
 }
