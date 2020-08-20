@@ -69,6 +69,20 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Create database with dots in its name") {
+    // When
+    val plan = execute("EXPLAIN CREATE DATABASE foo.bar").executionPlanString()
+
+    // Then
+    plan should include(
+      helperPlan("EnsureValidNumberOfDatabases",
+        managementPlan("CreateDatabase", Seq(databaseArg("foo.bar")),
+          assertDbmsAdminPlan("CREATE DATABASE")
+        )
+      ).toString
+    )
+  }
+
   test("Create database with parameter") {
     // When
     val plan = execute("EXPLAIN CREATE DATABASE $db", Map("db" -> "foo")).executionPlanString()

@@ -42,6 +42,20 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       )
     }
 
+    test(s"DENY $action on database with dots") {
+      // When
+      val plan = execute(s"EXPLAIN DENY $action ON DATABASE more.dots.more.dots TO reader").executionPlanString()
+
+      // Then
+      plan should include(
+        logPlan(
+          databasePrivilegePlan("DenyDatabaseAction", action, databasePrivilegeArg("more.dots.more.dots"), "reader",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        ).toString
+      )
+    }
+
     test(s"DENY $action with parameter") {
     // When
     val plan = execute(s"EXPLAIN DENY $action ON DATABASE $$db TO $$role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
