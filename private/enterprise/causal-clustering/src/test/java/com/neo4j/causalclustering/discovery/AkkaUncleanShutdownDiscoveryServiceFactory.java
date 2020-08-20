@@ -17,10 +17,11 @@ public class AkkaUncleanShutdownDiscoveryServiceFactory extends AkkaDiscoverySer
 {
     @Override
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,
-            SslPolicyLoader sslPolicyLoader )
+                                                         SslPolicyLoader sslPolicyLoader,
+                                                         DiscoveryFirstStartupDetector firstStartupDetector )
     {
         return new ActorSystemUncleanShutdownLifecycle(
-                actorSystemFactory( sslPolicyLoader, config, logProvider ),
+                actorSystemFactory( sslPolicyLoader, firstStartupDetector, config, logProvider ),
                 resolver,
                 config,
                 logProvider );

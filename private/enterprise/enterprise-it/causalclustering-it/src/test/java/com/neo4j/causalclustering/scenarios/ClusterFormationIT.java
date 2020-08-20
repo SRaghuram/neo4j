@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.test.extension.Inject;
@@ -28,6 +29,7 @@ import static com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolv
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -222,9 +224,11 @@ class ClusterFormationIT
         cluster.removeCoreMember( getExistingCoreMember( cluster ) );
     }
 
-    private static void verifyNumberOfCoresReportedByTopology( int expected, Cluster cluster ) throws InterruptedException
+    private static void verifyNumberOfCoresReportedByTopology( int expectedSize, Cluster cluster )
     {
-        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), equalityCondition( expected ), 30, SECONDS );
+        var expected = IntStream.generate( () -> expectedSize ).limit( expectedSize ).boxed().collect( toList() );
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopologyOnAllCores( DEFAULT_DATABASE_NAME ),
+                          equalityCondition( expected ), 30, SECONDS );
     }
 
     private static int compareDiscoveryAddresses( CoreClusterMember core1, CoreClusterMember core2 )

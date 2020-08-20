@@ -5,11 +5,14 @@
  */
 package com.neo4j.causalclustering.core;
 
+import akka.cluster.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
+import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
@@ -22,6 +25,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedMap;
 import java.util.function.IntFunction;
 
@@ -34,8 +38,10 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -57,6 +63,8 @@ import static org.neo4j.configuration.helpers.SocketAddress.format;
 
 public class CoreClusterMember implements ClusterMember
 {
+    private GlobalModule globalModule;
+
     public interface CoreGraphDatabaseFactory
     {
         CoreGraphDatabase create( Config memberConfig, GraphDatabaseDependencies databaseDependencies,
@@ -80,7 +88,9 @@ public class CoreClusterMember implements ClusterMember
     private final Config memberConfig;
     private final ThreadGroup threadGroup;
     private final Monitors monitors = new Monitors();
-    private final CoreGraphDatabaseFactory dbFactory;
+    private final CoreGraphDatabaseFactory dbFactory =
+            ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
+                    new TestCoreGraphDatabase( config, dependencies, discoveryServiceFactory, this::coreEditionModuleSupplier );
     private DatabaseIdRepository databaseIdRepository;
 
     public CoreClusterMember( int serverId,
@@ -99,8 +109,7 @@ public class CoreClusterMember implements ClusterMember
                               Map<String, String> extraParams,
                               Map<String, IntFunction<String>> instanceExtraParams,
                               String listenAddress,
-                              String advertisedAddress,
-                              CoreGraphDatabaseFactory dbFactory )
+                              String advertisedAddress )
     {
         this.serverId = serverId;
 
@@ -142,6 +151,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( GraphDatabaseInternalSettings.transaction_start_timeout, Duration.ZERO );
         config.set( CausalClusteringInternalSettings.experimental_raft_protocol, true );
         config.set( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
+        config.set( CausalClusteringInternalSettings.middleware_akka_seed_node_timeout, Duration.ofSeconds( 3 ));
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();
@@ -157,9 +167,14 @@ public class CoreClusterMember implements ClusterMember
         clusterStateLayout = ClusterStateLayout.of( memberConfig.get( data_directory ) );
 
         threadGroup = new ThreadGroup( toString() );
-        this.dbFactory = dbFactory;
         this.neo4jLayout = Neo4jLayout.of( memberConfig );
         this.defaultDatabaseLayout = neo4jLayout.databaseLayout( memberConfig.get( default_database ) );
+    }
+
+    private CoreEditionModule coreEditionModuleSupplier( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
+    {
+        this.globalModule = globalModule;
+        return new CoreEditionModule( globalModule, discoveryServiceFactory );
     }
 
     @Override
@@ -349,5 +364,23 @@ public class CoreClusterMember implements ClusterMember
     {
         fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory().toFile() );
         fs.deleteFile( neo4jLayout.serverIdFile().toFile() );
+    }
+
+    public Optional<Cluster> getAkkaCluster()
+    {
+        if ( globalModule == null )
+        {
+            return Optional.empty();
+        }
+        try
+        {
+            var coreTopologyService = globalModule.getGlobalDependencies().resolveDependency( CoreTopologyService.class );
+            Cluster akkaCluster = ((AkkaCoreTopologyService) coreTopologyService).getAkkaCluster();
+            return Optional.ofNullable( akkaCluster );
+        }
+        catch ( UnsatisfiedDependencyException | NullPointerException ignored )
+        {
+            return Optional.empty();
+        }
     }
 }

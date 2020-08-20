@@ -18,6 +18,7 @@ import org.neo4j.graphdb.config.Setting;
 import static com.neo4j.configuration.CausalClusterSettingConstraints.validateMiddlewareConfig;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
+import static org.neo4j.configuration.SettingConstraints.lessThanOrEqual;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.DOUBLE;
@@ -118,6 +119,23 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
     @Description( "Timeout for Akka handshake" )
     public static final Setting<Duration> akka_handshake_timeout =
             newBuilder( "causal_clustering.middleware.akka.handshake-timeout", DURATION,  ofSeconds( 30 ) ).build();
+
+    @Internal
+    @Description( "Time that seed nodes will spend trying to find an existing cluster before forming a new cluster" )
+    public static final Setting<Duration> middleware_akka_seed_node_timeout =
+            newBuilder( "causal_clustering.middleware.akka.cluster.seed_node_timeout", DURATION, Duration.ofSeconds( 30 ) )
+                    .addConstraint( lessThanOrEqual( Duration::toMillis,
+                                                     cluster_binding_retry_timeout,
+                                                     clusterBindingTimeout -> clusterBindingTimeout / 2,
+                                                     "divided by 2" ) )
+                    .build();
+
+    @Internal
+    @Description( "Time that seed nodes will spend trying to find an existing cluster before forming a new cluster, when Neo4j is started for the first time" )
+    public static final Setting<Duration> middleware_akka_seed_node_timeout_on_first_start =
+            newBuilder( "causal_clustering.middleware.akka.cluster.seed_node_timeout_on_first_start", DURATION, Duration.ofSeconds( 3 ) )
+                    .addConstraint( lessThanOrEqual( Duration::toMillis, middleware_akka_seed_node_timeout ) )
+                    .build();
 
     /*
         Begin akka failure detector

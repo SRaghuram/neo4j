@@ -20,6 +20,7 @@ import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor.MetricsRefresh
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
@@ -47,7 +48,7 @@ object BaseAkkaIT {
     val discoveryListenPort = 0
     val config = Config.defaults(CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", discoveryListenPort ) )
 
-    new TypesafeConfigService(ArteryTransport.TCP, config).generate()
+    new TypesafeConfigService(ArteryTransport.TCP, new TestFirstStartupDetector(true), config).generate()
   }
 
   def bootstrapSetup: BootstrapSetup =

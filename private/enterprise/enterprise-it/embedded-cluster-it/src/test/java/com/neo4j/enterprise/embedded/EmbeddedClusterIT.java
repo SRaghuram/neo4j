@@ -5,6 +5,7 @@
  */
 package com.neo4j.enterprise.embedded;
 
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.api.ClusterDatabaseManagementService;
@@ -302,6 +303,7 @@ class EmbeddedClusterIT
                 .setConfig( CausalClusteringSettings.transaction_advertised_address, txAddress )
                 .setConfig( CausalClusteringSettings.raft_listen_address, raftAddress )
                 .setConfig( CausalClusteringSettings.raft_advertised_address, raftAddress )
+                .setConfig( CausalClusteringInternalSettings.middleware_akka_seed_node_timeout, Duration.ofSeconds( 3 ))
                 .setConfig( OnlineBackupSettings.online_backup_listen_address, backupAddress )
                 .setConfig( CausalClusteringSettings.leader_balancing, NO_BALANCING )
                 .build();

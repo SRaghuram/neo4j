@@ -18,6 +18,7 @@ import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.AkkaUncleanShutdownDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
 import org.junit.jupiter.api.AfterEach;
@@ -128,9 +129,10 @@ class AkkaDistributedDataLeakIT
                     .set( store_internal_log_level, Level.DEBUG )
                     .set( middleware_logging_level, Level.DEBUG )
                     .build();
+            var firstStartupDetector = new TestFirstStartupDetector( true );
 
             var logProvider = NullLogProvider.getInstance();
-            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), config, logProvider );
+            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider );
             actorSystemComponents = new ActorSystemComponents( actorSystemFactory, ProviderSelection.cluster() );
             actorSystemComponents.cluster().joinSeedNodes(
                     singletonList( new Address( AKKA_SCHEME, actorSystemComponents.cluster().system().name(), "localhost", port ) ) );

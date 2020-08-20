@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.system
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.testkit.TestKit
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import com.neo4j.configuration.CausalClusteringSettings
@@ -59,7 +60,7 @@ class LoggingActorIT extends NeoSuite {
 
     val config = Config.defaults(CausalClusteringSettings.middleware_logging_level, logLevel)
 
-    val testSystem = ActorSystem("testSystem", new TypesafeConfigService(ArteryTransport.TCP, config).generate())
+    val testSystem = ActorSystem("testSystem", new TypesafeConfigService(ArteryTransport.TCP, new TestFirstStartupDetector(true), config).generate())
     val loggingContext = "LoggingActorIT"
     val logProvider = new AssertableLogProvider(true)
     LoggingFilter.enable(logProvider)

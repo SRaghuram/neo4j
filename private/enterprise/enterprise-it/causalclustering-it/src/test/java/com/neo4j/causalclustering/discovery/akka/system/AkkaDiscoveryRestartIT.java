@@ -9,8 +9,10 @@ import akka.actor.Address;
 import akka.remote.ThisActorSystemQuarantinedEvent;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 import com.neo4j.causalclustering.discovery.akka.Restarter;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +44,7 @@ import static com.neo4j.causalclustering.discovery.akka.system.AkkaDiscoverySyst
 import static com.neo4j.causalclustering.discovery.akka.system.AkkaDiscoverySystemHelper.coreTopologyService;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
@@ -52,11 +56,13 @@ public class AkkaDiscoveryRestartIT
     private final List<TestAkkaCoreTopologyService> discoServices = new ArrayList<>();
     private final Random random = new Random();
 
+    private TestAkkaCoreTopologyServiceFactory discoServiceFactory;
+
     @BeforeAll
     void setUp() throws Exception
     {
         int stablePort = PortAuthority.allocatePort();
-        var discoServiceFactory = new TestAkkaCoreTopologyServiceFactory();
+        discoServiceFactory = new TestAkkaCoreTopologyServiceFactory();
 
         discoServices.add( (TestAkkaCoreTopologyService) coreTopologyService( stablePort, discoServiceFactory, stablePort ) );
 
@@ -87,6 +93,29 @@ public class AkkaDiscoveryRestartIT
         awaitClusterReformed();
     }
 
+    @Test
+    void shouldNotTreatRestartAsFirstStartup()
+    {
+        // given
+        discoServiceFactory.firstStartup = false;
+        var restarter = discoServices.get( random.nextInt( CLUSTER_SIZE ) );
+        Duration seedNodeTimeoutBefore =
+                restarter.actorSystemLifecycle.actorSystemComponents.actorSystem().settings().config().getDuration( "akka.cluster.seed-node-timeout" );
+
+        // when
+        restarter.notifyRestart();
+
+        // then
+        assertEventually( restarter::isIdle, idleness -> idleness, TIMEOUT, SECONDS );
+        assertEventually( restarter::isRunning, run -> run, TIMEOUT, SECONDS );
+
+        Duration seedNodeTimeoutAfter =
+                restarter.actorSystemLifecycle.actorSystemComponents.actorSystem().settings().config().getDuration( "akka.cluster.seed-node-timeout" );
+        assertThat( seedNodeTimeoutAfter ).isGreaterThan( seedNodeTimeoutBefore );
+
+        awaitClusterReformed();
+    }
+
     private void awaitClusterReformed()
     {
         discoServices.forEach( this::awaitTopology );
@@ -104,11 +133,15 @@ public class AkkaDiscoveryRestartIT
         private static final long RESTART_RETRY_DELAY_MS = 1000L;
         private static final long RESTART_RETRY_DELAY_MAX_MS = 60 * 1000L;
         private static final int RESTART_FAILURES_BEFORE_UNHEALTHY = 8;
+        private Boolean firstStartup = true;
 
         @Override
         public TestAkkaCoreTopologyService coreTopologyService( Config config, ClusteringIdentityModule identityModule, JobScheduler jobScheduler,
-                LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
-                SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Monitors monitors, Clock clock )
+                                                                LogProvider logProvider, LogProvider userLogProvider,
+                                                                RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
+                                                                SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory,
+                                                                DiscoveryFirstStartupDetector firstStartupDetector,
+                                                                Monitors monitors, Clock clock )
         {
             TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
             Restarter restarter = new Restarter( timeoutStrategy, RESTART_FAILURES_BEFORE_UNHEALTHY );
@@ -145,9 +178,9 @@ public class AkkaDiscoveryRestartIT
                     logProvider );
         }
 
-        protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader ignored, Config config, LogProvider logProvider )
+        protected ActorSystemFactory actorSystemFactory( SslPolicyLoader ignored, Config config, LogProvider logProvider )
         {
-            return new ActorSystemFactory( Optional.empty(), config, logProvider );
+            return new ActorSystemFactory( Optional.empty(), new TestFirstStartupDetector( () -> this.firstStartup ), config, logProvider );
         }
     }
 

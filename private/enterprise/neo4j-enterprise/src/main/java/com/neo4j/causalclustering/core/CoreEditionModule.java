@@ -21,7 +21,9 @@ import com.neo4j.causalclustering.core.state.DiscoveryModule;
 import com.neo4j.causalclustering.diagnostics.GlobalTopologyStateDiagnosticProvider;
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.discovery.DefaultDiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
@@ -475,9 +477,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private CoreTopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, DatabaseStateService databaseStateService )
     {
+        DiscoveryFirstStartupDetector firstStartupDetector = new DefaultDiscoveryFirstStartupDetector( clusterStateLayout );
         DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
         DiscoveryModule discoveryModule = new DiscoveryModule( identityModule, discoveryServiceFactory, discoveryMemberFactory, globalModule,
-                sslPolicyLoader );
+                                                               sslPolicyLoader, firstStartupDetector );
         return discoveryModule.topologyService();
     }
 

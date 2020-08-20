@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka;
 import akka.remote.artery.tcp.SSLEngineProvider;
 import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
@@ -41,8 +42,11 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 
     @Override
     public final AkkaCoreTopologyService coreTopologyService( Config config, ClusteringIdentityModule identityModule, JobScheduler jobScheduler,
-            LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
-            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Monitors monitors, Clock clock )
+                                                              LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
+                                                              RetryStrategy catchupAddressRetryStrategy,
+                                                              SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory,
+                                                              DiscoveryFirstStartupDetector firstStartupDetector,
+                                                              Monitors monitors, Clock clock )
     {
         CallableExecutor executor = jobScheduler.executor( Group.AKKA_HELPER );
         TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
@@ -51,7 +55,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
         return new AkkaCoreTopologyService(
                 config,
                 identityModule,
-                actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
+                actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, firstStartupDetector ),
                 logProvider,
                 userLogProvider,
                 catchupAddressRetryStrategy,
@@ -71,27 +75,28 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 config,
                 logProvider,
                 identityModule,
-                actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
+                actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, new ReadReplicaDiscoveryFirstStartupDetector() ),
                 discoveryMemberFactory,
                 clock );
     }
 
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,
-            SslPolicyLoader sslPolicyLoader )
+                                                         SslPolicyLoader sslPolicyLoader,
+                                                         DiscoveryFirstStartupDetector firstStartupDetector )
     {
         return new ActorSystemLifecycle(
-                actorSystemFactory( sslPolicyLoader, config, logProvider ),
+                actorSystemFactory( sslPolicyLoader, firstStartupDetector, config, logProvider ),
                 resolver,
                 new JoinMessageFactory( resolver ),
                 config,
                 logProvider );
     }
 
-    protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, Config config, LogProvider logProvider )
+    protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, DiscoveryFirstStartupDetector firstStartupDetector,
+                                                            Config config, LogProvider logProvider )
     {
-
         SslPolicy sslPolicy = sslPolicyLoader.hasPolicyForSource( CLUSTER ) ? sslPolicyLoader.getPolicy( CLUSTER ) : null;
         Optional<SSLEngineProvider> sslEngineProvider = Optional.ofNullable( sslPolicy ).map( AkkaDiscoverySSLEngineProvider::new );
-        return new ActorSystemFactory( sslEngineProvider, config, logProvider );
+        return new ActorSystemFactory( sslEngineProvider, firstStartupDetector, config, logProvider );
     }
 }

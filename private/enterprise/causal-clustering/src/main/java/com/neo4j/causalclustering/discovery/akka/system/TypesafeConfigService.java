@@ -9,6 +9,7 @@ import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
@@ -49,6 +50,7 @@ import java.util.Map;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.database.DatabaseId;
 
 public final class TypesafeConfigService
@@ -71,11 +73,13 @@ public final class TypesafeConfigService
         }
     }
 
+    private final DiscoveryFirstStartupDetector firstStartupDetector;
     private final Config config;
     private final ArteryTransport arteryTransport;
 
-    public TypesafeConfigService( ArteryTransport arteryTransport, Config config )
+    public TypesafeConfigService( ArteryTransport arteryTransport, DiscoveryFirstStartupDetector firstStartupDetector, Config config )
     {
+        this.firstStartupDetector = firstStartupDetector;
         this.config = config;
         this.arteryTransport = arteryTransport;
     }
@@ -100,6 +104,7 @@ public final class TypesafeConfigService
                 .withFallback( failureDetectorConfig() )
                 .withFallback( loggingConfig() )
                 .withFallback( dispatcherConfig() )
+                .withFallback( clusterConfig() )
                 .withFallback( ConfigFactory.defaultReference() )
                 .resolve();
     }
@@ -137,6 +142,19 @@ public final class TypesafeConfigService
 
         Duration handshakeTimeout = config.get( CausalClusteringInternalSettings.akka_handshake_timeout );
         configMap.put( "akka.remote.artery.advanced.handshake-timeout", handshakeTimeout.toMillis() + "ms" );
+
+        return ConfigFactory.parseMap( configMap );
+    }
+
+    private com.typesafe.config.Config clusterConfig()
+    {
+        Map<String,Object> configMap = new HashMap<>();
+
+        Setting<Duration> seedNodeTimeoutConfiguration = firstStartupDetector.isFirstStartup() ?
+                                                         CausalClusteringInternalSettings.middleware_akka_seed_node_timeout_on_first_start :
+                                                         CausalClusteringInternalSettings.middleware_akka_seed_node_timeout;
+        long clusterSeedTimeoutMillis = config.get( seedNodeTimeoutConfiguration ).toMillis();
+        configMap.put( "akka.cluster.seed-node-timeout", clusterSeedTimeoutMillis + "ms" );
 
         return ConfigFactory.parseMap( configMap );
     }

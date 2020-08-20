@@ -467,4 +467,10 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     {
         return restarter.isHealthy();
     }
+
+    @VisibleForTesting
+    public Cluster getAkkaCluster()
+    {
+        return actorSystemLifecycle.cluster();
+    }
 }

@@ -6,11 +6,13 @@
 package com.neo4j.causalclustering.scenarios;
 
 import akka.actor.Address;
+import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.Restarter;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
@@ -238,7 +240,9 @@ class AkkaCoreTopologyDowningIT
         LogProvider logProvider = NullLogProvider.getInstance();
 
         Executor executor = Executors.newCachedThreadPool();
-        ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), config, logProvider  );
+
+        DiscoveryFirstStartupDetector firstStartupDetector = new TestFirstStartupDetector( true );
+        ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider  );
         TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
 
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(

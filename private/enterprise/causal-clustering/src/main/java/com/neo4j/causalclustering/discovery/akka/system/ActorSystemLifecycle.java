@@ -59,8 +59,8 @@ public class ActorSystemLifecycle
     @VisibleForTesting
     protected ActorSystemComponents actorSystemComponents;
 
-    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, JoinMessageFactory joinMessageFactory, Config config,
-            LogProvider logProvider )
+    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, JoinMessageFactory joinMessageFactory,
+                                 Config config, LogProvider logProvider )
     {
         this.actorSystemFactory = actorSystemFactory;
         this.resolver = resolver;

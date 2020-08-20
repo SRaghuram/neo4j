@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system;
 
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -22,7 +23,7 @@ class TypesafeConfigServiceTest
     void shouldUseLogLevel( AkkaLoggingLevel akkaLevel )
     {
         var neo4jConfig = neo4jConfigWithMiddlewareLoggingLevel( akkaLevel.neo4jLevel() );
-        var akkaConfigService = new TypesafeConfigService( TCP, neo4jConfig );
+        var akkaConfigService = new TypesafeConfigService( TCP, new TestFirstStartupDetector( true ), neo4jConfig );
 
         var akkaConfig = akkaConfigService.generate();
 

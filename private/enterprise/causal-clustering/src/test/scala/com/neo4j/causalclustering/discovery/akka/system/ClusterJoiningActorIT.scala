@@ -106,6 +106,8 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val config = Config.newBuilder()
       .set(CausalClusteringSettings.initial_discovery_members, initialDiscoveryMembers.asJava)
       .set(CausalClusteringInternalSettings.cluster_binding_retry_timeout, java.time.Duration.ofSeconds(refresh.toSeconds))
+      .set(CausalClusteringInternalSettings.middleware_akka_seed_node_timeout, java.time.Duration.ofSeconds(refresh.toSeconds / 2))
+      .set(CausalClusteringInternalSettings.middleware_akka_seed_node_timeout_on_first_start, java.time.Duration.ofSeconds(refresh.toSeconds / 2))
       .build()
     val resolver = NoOpHostnameResolver.resolver(config)
 

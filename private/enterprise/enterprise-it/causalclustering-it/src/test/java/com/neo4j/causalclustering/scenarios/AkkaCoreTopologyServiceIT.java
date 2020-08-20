@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
@@ -54,10 +55,11 @@ class AkkaCoreTopologyServiceIT
         jobScheduler = createInitialisedScheduler();
         var initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
+        var firstStartupDetector = new TestFirstStartupDetector( true );
 
         service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, identityModule, jobScheduler, logProvider, logProvider,
-                initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader, TestDiscoveryMember::new,
-                new Monitors(), Clocks.systemClock() );
+                                                                         initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader,
+                                                                         TestDiscoveryMember::new, firstStartupDetector, new Monitors(), Clocks.systemClock() );
     }
 
     @AfterEach

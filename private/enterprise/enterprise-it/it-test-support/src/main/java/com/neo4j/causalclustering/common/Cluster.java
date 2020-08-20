@@ -6,8 +6,6 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreEditionModule;
-import com.neo4j.causalclustering.core.TestCoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
@@ -30,6 +28,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -495,6 +494,11 @@ public class Cluster
         return numberOfMembersReportedByCoreTopology( databaseName, CoreTopologyService::coreTopologyForDatabase );
     }
 
+    public List<Integer> numberOfCoreMembersReportedByTopologyOnAllCores( String databaseName )
+    {
+        return numberOfMembersReportedByCoreTopologyOnAllCores( databaseName, CoreTopologyService::coreTopologyForDatabase ).collect(toList());
+    }
+
     public int numberOfReadReplicaMembersReportedByTopology( String databaseName )
     {
         return numberOfMembersReportedByCoreTopology( databaseName, CoreTopologyService::readReplicaTopologyForDatabase );
@@ -502,19 +506,27 @@ public class Cluster
 
     private int numberOfMembersReportedByCoreTopology( String databaseName, BiFunction<CoreTopologyService,NamedDatabaseId,Topology<?>> topologySelector )
     {
+        return numberOfMembersReportedByCoreTopologyOnAllCores(databaseName, topologySelector)
+                .findAny()
+                .orElse( 0 );
+    }
+
+    private Stream<Integer> numberOfMembersReportedByCoreTopologyOnAllCores(
+            String databaseName,
+            BiFunction<CoreTopologyService,NamedDatabaseId,Topology<?>> topologySelector )
+    {
         return coreMembers
                 .values()
                 .stream()
-                .filter( member -> member.database( databaseName ) != null )
-                .findAny()
+                .filter( c -> c.managementService() != null && c.database( databaseName ) != null )
                 .map( coreClusterMember ->
-                {
-                    var db = coreClusterMember.database( databaseName );
-                    var coreTopologyService = db.getDependencyResolver().resolveDependency( CoreTopologyService.class );
-                    var databaseId = coreClusterMember.databaseId( databaseName );
-                    return topologySelector.apply( coreTopologyService, databaseId ).members().size();
-                } )
-                .orElse( 0 );
+                      {
+                          var db = coreClusterMember.database( databaseName );
+                          var coreTopologyService = db.getDependencyResolver().resolveDependency( CoreTopologyService.class );
+                          var databaseId = coreClusterMember.databaseId( databaseName );
+                          return topologySelector.apply( coreTopologyService, databaseId ).members().size();
+                      }
+                );
     }
 
     /**
@@ -656,9 +668,7 @@ public class Cluster
                 extraParams,
                 instanceExtraParams,
                 listenAddress,
-                advertisedAddress,
-                ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
-                        new TestCoreGraphDatabase( config, dependencies, discoveryServiceFactory, CoreEditionModule::new )
+                advertisedAddress
         );
     }
 

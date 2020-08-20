@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 
@@ -62,9 +63,11 @@ public class AkkaDiscoverySystemHelper
         var monitors = new Monitors();
         var retryStrategy = new RetryStrategy( 100, 3 );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
+        var firstStartupDetector = new TestFirstStartupDetector( true );
         DiscoveryMemberFactory discoveryMemberFactory = ( ServerId serverId ) -> new TestDiscoveryMember( serverId, asSet( NAMED_DATABASE_ID ) );
 
         return discoveryServiceFactory.coreTopologyService( config, indentityModule, createInitialisedScheduler(), logProvider,
-                logProvider, membersResolver, retryStrategy, sslPolicyLoader, discoveryMemberFactory, monitors, Clocks.systemClock() );
+                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, discoveryMemberFactory,
+                                                            firstStartupDetector, monitors, Clocks.systemClock() );
     }
 }
