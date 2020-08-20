@@ -22,6 +22,6 @@ public class DefaultDiscoveryFirstStartupDetector implements DiscoveryFirstStart
     public Boolean isFirstStartup()
     {
         // this how we figure out if core has ever formed a cluster before
-        return !clusterStateLayout.raftIdStateFile( SYSTEM_DATABASE_NAME ).exists();
+        return !clusterStateLayout.raftIdStateFile( SYSTEM_DATABASE_NAME ).toFile().exists();
     }
 }
