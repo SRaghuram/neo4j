@@ -163,7 +163,6 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
             AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
             BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( jobQueue, jobDefinition, batchStack, awsCredentials );
-            UUID uuid = UUID.randomUUID();
             URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMacroWorkloadParams.triggeredBy() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.teamcityBuild().toString() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );
@@ -177,6 +176,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                 {
 
                     List<String> queryNames = queries.stream().map( Query::name ).collect( toList() );
+                    UUID uuid = UUID.randomUUID();
                     URI artifactBaseQueryRunURI = artifactBaseWorkloadURI.resolve( URIHelper.toURIPart( uuid.toString() ) );
                     URI artifactWorkerQueryRunURI = artifactBaseQueryRunURI.resolve( "benchmark-infra-worker.jar" );
                     // then store job params as JSON
