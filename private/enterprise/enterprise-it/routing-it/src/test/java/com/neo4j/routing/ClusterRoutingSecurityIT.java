@@ -6,6 +6,7 @@
 package com.neo4j.routing;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.commandline.admin.security.SetOperatorPasswordCommand;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -19,8 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
+import picocli.CommandLine;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.file.Path;
@@ -35,6 +38,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.v41.messaging.RoutingContext;
+import org.neo4j.cli.ExecutionContext;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.driver.AccessMode;
@@ -56,6 +61,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
@@ -92,6 +98,8 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
     private static Driver readReplicaDriver;
 
+    private static Driver readReplicaUpgradeDriver;
+
     private static Driver adminDriver;
 
     private static List<Driver> adminDrivers;
@@ -108,14 +116,16 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
-                GraphDatabaseSettings.routing_enabled.name(), TRUE
+                GraphDatabaseSettings.routing_enabled.name(), TRUE,
+                GraphDatabaseInternalSettings.restrict_upgrade.name(), TRUE
         );
         var readReplicaParams = Map.of(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
-                GraphDatabaseSettings.routing_enabled.name(), TRUE
+                GraphDatabaseSettings.routing_enabled.name(), TRUE,
+                GraphDatabaseInternalSettings.restrict_upgrade.name(), TRUE
         );
 
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
@@ -132,6 +142,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
             var keyId = core.serverId();
             var homeDir = cluster.getCoreMemberById( core.serverId() ).homePath();
             installKeyToInstance( homeDir, keyId );
+            addUpgradeUser( homeDir );
         }
 
         // install the cryptographic objects for each read replica
@@ -140,6 +151,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
             var keyId = replica.serverId() + cluster.coreMembers().size();
             var homeDir = cluster.getReadReplicaById( replica.serverId() ).homePath();
             installKeyToInstance( homeDir, keyId );
+            addUpgradeUser( homeDir );
         }
 
         cluster.start();
@@ -162,6 +174,8 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
         var fooFollower = getFollower( cluster, fooLeader );
         fooFollowerDriver = coreDrivers.get( fooFollower.serverId() );
+
+        readReplicaUpgradeDriver = driver( readReplica.directURI(), GraphDatabaseInternalSettings.upgrade_username.defaultValue(), "foo" );
 
         List<String> allUris = new ArrayList<>();
         cluster.coreMembers().forEach( member -> allUris.add( member.directURI() ) );
@@ -254,6 +268,12 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         doTestPermissions( readReplicaDriver );
     }
 
+    @Test
+    void testAdminWriteProcedureThroughReadReplica()
+    {
+        runQuery( readReplicaUpgradeDriver, "CALL dbms.upgrade() YIELD status RETURN status", 1, "system" );
+    }
+
     void doTestPermissions( Driver driver )
     {
         runAdminCommand( "REVOKE ROLE admin FROM myUser" );
@@ -288,8 +308,13 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
     private void runQuery( Driver driver, String query, int expectedRecords )
     {
-        var records = run( driver, "neo4j", AccessMode.WRITE,
-                           session -> session.writeTransaction( tx -> tx.run( query ).list() ) );
+        runQuery( driver, query, expectedRecords, "neo4j" );
+    }
+
+    private void runQuery( Driver driver, String query, int expectedRecords, String database )
+    {
+        var records = run( driver, database, AccessMode.WRITE,
+                session -> session.writeTransaction( tx -> tx.run( query ).list() ) );
         assertEquals( expectedRecords, records.size() );
     }
 
@@ -325,7 +350,12 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
     static Driver driver( String uri )
     {
-        return driver( uri, AuthTokens.basic( "myUser", "hello" ) );
+        return driver( uri, "myUser", "hello" );
+    }
+
+    static Driver driver( String uri, String username, String password )
+    {
+        return driver( uri, AuthTokens.basic( username, password ) );
     }
 
     static Driver adminDriver( String uri )
@@ -358,5 +388,13 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         fs.mkdirs( baseDir.resolve( "revoked" ) );
 
         SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
+    }
+
+    private static void addUpgradeUser( Path homeDir )
+    {
+        final var ctx = new ExecutionContext( homeDir, homeDir.resolve( "conf" ), mock( PrintStream.class ), mock( PrintStream.class ), fs );
+        final var command = new SetOperatorPasswordCommand( ctx );
+        CommandLine.populateCommand( command, "foo" );
+        command.execute();
     }
 }
