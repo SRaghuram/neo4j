@@ -47,15 +47,8 @@ public class CommitStateHelper
 
         Optional<Long> latestTransactionLogIndex = getLatestTransactionLogIndex( lastCommittedTxId, databaseLayout );
 
-        //noinspection OptionalIsPresent
-        if ( latestTransactionLogIndex.isPresent() )
-        {
-            return new CommitState( lastCommittedTxId, latestTransactionLogIndex.get() );
-        }
-        else
-        {
-            return new CommitState( lastCommittedTxId );
-        }
+        return latestTransactionLogIndex.map( lastLogIdx -> new CommitState( lastCommittedTxId, lastLogIdx ) )
+                                        .orElse( new CommitState( lastCommittedTxId ) );
     }
 
     private Optional<Long> getLatestTransactionLogIndex( long startTxId, DatabaseLayout databaseLayout ) throws IOException
