@@ -177,7 +177,13 @@ abstract class SecurityGraphCompatibilityTestBase
             new PrivilegeCommand( "CREATE NEW TYPE ON DATABASE *", GRANT_DENY_REVOKE ),
             new PrivilegeCommand( "CREATE NEW PROPERTY NAME ON DATABASE *", GRANT_DENY_REVOKE ),
             new PrivilegeCommand( "NAME MANAGEMENT ON DATABASE *", GRANT_DENY_REVOKE ),
-            new PrivilegeCommand( "ALL ON DATABASE *", GRANT_DENY_REVOKE )
+            new PrivilegeCommand( "ALL ON DATABASE *", GRANT_DENY_REVOKE ),
+
+            // graph privileges
+            new PrivilegeCommand( "TRAVERSE ON GRAPH *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "READ {*} ON GRAPH *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "MATCH {*} ON GRAPH *", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "WRITE ON GRAPH *", GRANT_DENY_REVOKE )
     );
 
     static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_41D1 = Set.of(
