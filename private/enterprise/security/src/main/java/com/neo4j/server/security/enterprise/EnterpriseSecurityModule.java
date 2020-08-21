@@ -15,6 +15,7 @@ import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.InClusterAuthManager;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
+import com.neo4j.server.security.enterprise.auth.PrivilegeResolver;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
 import com.neo4j.server.security.enterprise.auth.ShiroCaffeineCache;
@@ -212,18 +213,20 @@ public class EnterpriseSecurityModule extends SecurityModule
             throw illegalConfiguration( "No valid auth provider is active." );
         }
 
+        var privilegeResolver = new PrivilegeResolver( internalRealm, config );
+
         // create inCluster auth manager
         var logAuthSuccess = config.get( SecuritySettings.security_log_successful_authentication );
         var defaultDatabase = config.get( GraphDatabaseSettings.default_database );
 
-        inClusterAuthManager = new InClusterAuthManager( internalRealm, securityLog, logAuthSuccess, defaultDatabase );
+        inClusterAuthManager = new InClusterAuthManager( privilegeResolver, securityLog, logAuthSuccess, defaultDatabase );
 
         if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
         {
             orderedActiveRealms.add( 0, new FlatfileRealm( strategy, config.get( GraphDatabaseInternalSettings.upgrade_username ),
                                                            getOperatorUserRepository( config, logProvider, fileSystem ) ) );
         }
-        return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config, cacheFactory ), securityLog, config );
+        return new MultiRealmAuthManager( privilegeResolver, orderedActiveRealms, createCacheManager( config, cacheFactory ), securityLog, config );
     }
 
     private SecurityConfig getValidatedSecurityConfig( Config config )

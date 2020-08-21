@@ -8,7 +8,6 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 
 import java.util.HashSet;
 import java.util.List;
@@ -26,16 +25,15 @@ public class InClusterAuthManager extends EnterpriseAuthManager
     public static final String SCHEME = "in-cluster-token";
     public static final String ROLES_KEY = "roles";
 
-    private final SystemGraphRealm systemGraphRealm;
-
+    private final PrivilegeResolver privilegeResolver;
     private final SecurityLog securityLog;
     private final boolean logSuccessfulLogin;
     private final String defaultDatabase;
 
-    public InClusterAuthManager( SystemGraphRealm systemGraphRealm,
+    public InClusterAuthManager( PrivilegeResolver privilegeResolver,
             SecurityLog securityLog, boolean logSuccessfulLogin, String defaultDatabase )
     {
-        this.systemGraphRealm = systemGraphRealm;
+        this.privilegeResolver = privilegeResolver;
         this.securityLog = securityLog;
         this.logSuccessfulLogin = logSuccessfulLogin;
         this.defaultDatabase = defaultDatabase;
@@ -50,7 +48,7 @@ public class InClusterAuthManager extends EnterpriseAuthManager
             String username = extractUsername( authToken );
             Set<String> roles = extractRoles( authToken );
 
-            var loginContext = new InClusterLoginContext( username, roles, defaultDatabase, () -> systemGraphRealm.getPrivilegesForRoles( roles ) );
+            var loginContext = new InClusterLoginContext( username, roles, defaultDatabase, () -> privilegeResolver.getPrivileges( roles, username ) );
 
             if ( logSuccessfulLogin )
             {

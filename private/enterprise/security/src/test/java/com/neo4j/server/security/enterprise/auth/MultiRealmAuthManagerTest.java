@@ -18,7 +18,6 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -38,7 +37,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
@@ -71,8 +69,9 @@ class MultiRealmAuthManagerTest
 
         Config config = Config.defaults();
         config.set( SecuritySettings.security_log_successful_authentication, logSuccessfulAuthentications );
+        var privResolver = new PrivilegeResolver( realm, Config.defaults() );
 
-        manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
+        manager = new MultiRealmAuthManager( privResolver, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
                 new SecurityLog( logProvider.getLog( this.getClass() ) ), config );
 
         manager.init();

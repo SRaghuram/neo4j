@@ -291,9 +291,9 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         return getAuthorizationInfo( principalCollection );
     }
 
-    public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
+    public HashSet<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
-        Set<ResourcePrivilege> privileges = new HashSet<>();
+        HashSet<ResourcePrivilege> privileges = new HashSet<>();
         // check which roles need to be looked up
         List<String> rolesToLookup = new ArrayList<>();
         for ( String role : roles )

@@ -51,7 +51,6 @@ import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
 public class MultiRealmAuthManager extends EnterpriseAuthManager
 {
-    private final SystemGraphRealm systemGraphRealm;
     private final Collection<Realm> realms;
     private final DefaultSecurityManager securityManager;
     private final CacheManager cacheManager;
@@ -61,10 +60,11 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
     private final String upgradeUsername;
     private final boolean restrictUpgrade;
 
-    public MultiRealmAuthManager( SystemGraphRealm systemGraphRealm, Collection<Realm> realms, CacheManager cacheManager,
+    private final PrivilegeResolver privilegeResolver;
+
+    public MultiRealmAuthManager( PrivilegeResolver privilegeResolver, Collection<Realm> realms, CacheManager cacheManager,
             SecurityLog securityLog, Config config )
     {
-        this.systemGraphRealm = systemGraphRealm;
         this.realms = realms;
         this.cacheManager = cacheManager;
 
@@ -75,6 +75,7 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
         this.securityLog = securityLog;
         this.logSuccessfulLogin = config.get( SecuritySettings.security_log_successful_authentication );
         this.defaultDatabase = config.get( GraphDatabaseSettings.default_database );
+        this.privilegeResolver = privilegeResolver;
         securityManager.setSubjectFactory( new ShiroSubjectFactory() );
         ((ModularRealmAuthenticator) securityManager.getAuthenticator())
                 .setAuthenticationStrategy( new ShiroAuthenticationStrategy() );
@@ -202,54 +203,41 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
     @Override
     public void init() throws Exception
     {
-        boolean initUserManager = true;
         for ( Realm realm : realms )
         {
-            if ( systemGraphRealm == realm )
+            if ( !(realm instanceof SystemGraphRealm) )
             {
-                initUserManager = false;
-            }
-            if ( realm instanceof Initializable )
-            {
-                ((Initializable) realm).init();
-            }
-            if ( realm instanceof CachingRealm )
-            {
-                ((CachingRealm) realm).setCacheManager( cacheManager );
-            }
-            if ( realm instanceof RealmLifecycle )
-            {
-                ((RealmLifecycle) realm).initialize();
+                if ( realm instanceof Initializable )
+                {
+                    ((Initializable) realm).init();
+                }
+                if ( realm instanceof CachingRealm )
+                {
+                    ((CachingRealm) realm).setCacheManager( cacheManager );
+                }
+                if ( realm instanceof RealmLifecycle )
+                {
+                    ((RealmLifecycle) realm).initialize();
+                }
             }
         }
-
-        if ( initUserManager )
-        {
-            systemGraphRealm.init();
-            systemGraphRealm.setCacheManager( cacheManager );
-            systemGraphRealm.initialize();
-        }
+        privilegeResolver.initAndSetCacheManager( cacheManager );
     }
 
     @Override
     public void start() throws Exception
     {
-        boolean startUserManager = true;
         for ( Realm realm : realms )
         {
-            if ( systemGraphRealm == realm )
+            if ( !(realm instanceof SystemGraphRealm) )
             {
-                startUserManager = false;
-            }
-            if ( realm instanceof RealmLifecycle )
-            {
-                ((RealmLifecycle) realm).start();
+                if ( realm instanceof RealmLifecycle )
+                {
+                    ((RealmLifecycle) realm).start();
+                }
             }
         }
-        if ( startUserManager )
-        {
-            systemGraphRealm.start();
-        }
+        privilegeResolver.start();
     }
 
     @Override
@@ -302,7 +290,7 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
                 }
             }
         }
-        systemGraphRealm.clearCacheForRoles();
+        privilegeResolver.clearCacheForRoles();
     }
 
     Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )
@@ -332,8 +320,8 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
         return true;
     }
 
-    Set<ResourcePrivilege> getPermissions( Set<String> roles )
+    Set<ResourcePrivilege> getPermissions( Set<String> roles, String username )
     {
-        return systemGraphRealm.getPrivilegesForRoles( roles );
+        return privilegeResolver.getPrivileges( roles, username );
     }
 }

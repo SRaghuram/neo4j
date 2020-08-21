@@ -20,8 +20,10 @@ import org.apache.shiro.subject.PrincipalCollection;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -41,7 +43,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 class LdapCachingTest
@@ -62,11 +63,12 @@ class LdapCachingTest
 
         fakeTicker = new FakeTicker();
         SystemGraphRealm systemGraphRealm = mock( SystemGraphRealm.class );
-        when( systemGraphRealm.getPrivilegesForRoles( anySet() ) ).thenReturn( Collections.singleton(
+        when( systemGraphRealm.getPrivilegesForRoles( anySet() ) ).thenReturn( new HashSet<>( Arrays.asList(
                 new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(), Segment.ALL,
-                        SpecialDatabase.ALL ) ) );
+                        SpecialDatabase.ALL ) ) ) );
 
-        authManager = new MultiRealmAuthManager( systemGraphRealm, Collections.singletonList( testRealm ),
+        var privResolver = new PrivilegeResolver( systemGraphRealm, Config.defaults() );
+        authManager = new MultiRealmAuthManager( privResolver , Collections.singletonList( testRealm ),
                                                  new ShiroCaffeineCache.Manager( fakeTicker::read, 100, cacheFactory, 10, true ),
                                                  securityLog, Config.defaults() );
         authManager.init();

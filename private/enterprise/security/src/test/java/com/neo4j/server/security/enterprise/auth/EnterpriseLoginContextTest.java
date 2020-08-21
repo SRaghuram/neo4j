@@ -15,7 +15,9 @@ import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
@@ -70,8 +72,8 @@ class EnterpriseLoginContextTest
         when( realm.doGetAuthenticationInfo( any() ) ).thenReturn( new ShiroAuthenticationInfo( "user", "SystemGraphRealm", AuthenticationResult.SUCCESS ) );
         when( realm.supports( any() ) ).thenReturn( true );
         createPrivileges();
-
-        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ),
+        var privResolver = new PrivilegeResolver( realm, Config.defaults() );
+        authManager = new MultiRealmAuthManager( privResolver, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ),
                                                  Config.defaults() );
         authManager.start();
 
@@ -95,9 +97,9 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.ADMIN ) ) );
-        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) ) ).thenReturn(
-                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
-                        constraintPrivilege, adminPrivilege ) );
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) ) ).thenReturn( new HashSet<>(
+                Arrays.asList( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
+                        constraintPrivilege, adminPrivilege ) ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -106,7 +108,7 @@ class EnterpriseLoginContextTest
         // Then
         assertTrue( securityContext.mode().allowsWrites() );
         assertTrue( securityContext.mode().allowsSchemaWrites() );
-        assertTrue( securityContext.allowExecuteAdminProcedure() );
+        assertTrue( securityContext.allowExecuteAdminProcedure( 42 ) );
     }
 
     @Test
@@ -114,9 +116,9 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.ARCHITECT ) ) );
-        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
-                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
-                        constraintPrivilege ) );
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn( new HashSet<>(
+                Arrays.asList( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
+                        constraintPrivilege ) ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -132,8 +134,9 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.PUBLISHER ) ) );
-        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.PUBLISHER ) ) ).thenReturn(
-                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege ) );
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.PUBLISHER ) ) ).thenReturn( new HashSet<>(
+                Arrays.asList( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege ) ) );
+
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -149,8 +152,8 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.READER ) ) );
-        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.READER ) ) ).thenReturn(
-                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.READER ) ) ).thenReturn( new HashSet<>(
+                Arrays.asList( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -187,9 +190,9 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.ARCHITECT ) ) );
-        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
-                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
-                        constraintPrivilege ) );
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn( new HashSet<>(
+                Arrays.asList( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
+                        constraintPrivilege ) ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
