@@ -13,6 +13,7 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeBuilder;
 import com.neo4j.server.security.enterprise.systemgraph.versions.SupportedEnterpriseVersion;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,7 @@ import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -47,7 +49,6 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
-import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -62,10 +63,14 @@ import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnt
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D3;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.Mockito.mock;
@@ -92,7 +97,7 @@ class SystemGraphComponentsTest
     @BeforeAll
     static void setup()
     {
-        dbms = new TestDatabaseManagementServiceBuilder( directory.homePath() ).impermanent().noOpSystemGraphInitializer().build();
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homePath() ).impermanent().noOpSystemGraphInitializer().build();
         system = (GraphDatabaseFacade) dbms.database( SYSTEM_DATABASE_NAME );
         systemGraphComponents = system.getDependencyResolver().resolveDependency( SystemGraphComponents.class );
 
@@ -169,6 +174,32 @@ class SystemGraphComponentsTest
         ) );
     }
 
+    @ParameterizedTest
+    @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41} )
+    void shouldGrantExecutePrivilegeToPublicOnUpgrade( String version ) throws Exception
+    {
+        initializeLatestSystemAndUsers();
+        initEnterprise( version );
+
+        // THEN
+        inTx( tx ->
+        {
+            Result result = tx.execute( "SHOW ROLE PUBLIC PRIVILEGES WHERE action = 'execute'" );
+            assertFalse( result.hasNext() );
+        } );
+
+        // WHEN
+        systemGraphComponents.upgradeToCurrent( system );
+
+        // THEN
+        inTx( tx ->
+        {
+            Result result = tx.execute( "SHOW ROLE PUBLIC PRIVILEGES WHERE action = 'execute'" );
+            assertTrue( result.hasNext() );
+            assertThat( result.next().get( "segment" ), equalTo( "PROCEDURE(*)" ) );
+        } );
+    }
+
     @Test
     void shouldNotSupportFutureVersions() throws Exception
     {
@@ -189,7 +220,8 @@ class SystemGraphComponentsTest
                 Arguments.arguments( VERSION_36, UNSUPPORTED_BUT_CAN_UPGRADE ),
                 Arguments.arguments( VERSION_40, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_41D1, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_41, CURRENT )
+                Arguments.arguments( VERSION_41, REQUIRES_UPGRADE ),
+                Arguments.arguments( VERSION_42D3, CURRENT )
         );
     }
 

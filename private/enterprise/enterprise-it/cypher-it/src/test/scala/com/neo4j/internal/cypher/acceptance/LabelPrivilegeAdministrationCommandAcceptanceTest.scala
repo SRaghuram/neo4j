@@ -279,7 +279,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }
   }
 
-  withAllSystemGraphVersions(unsupportedWhenNotLatest) {
+  withAllSystemGraphVersions(unsupportedBefore41) {
 
     test("set label allows user to create a label") {
       // GIVEN

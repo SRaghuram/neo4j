@@ -12,6 +12,7 @@ import java.util.Collections;
 
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.impl.newapi.Labels;
 
@@ -22,7 +23,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_ELEMENT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DELETE_ELEMENT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MERGE;
@@ -44,6 +47,11 @@ class StandardAccessModeTest
     private static final int PROP1 = 4;
     private static final int PROP2 = 5;
 
+    private static final int PROC1 = 1;
+    private static final int PROC2 = 2;
+    private static final int PROC3 = 3;
+    private static final int PROC4 = 4;
+
     private StandardAccessModeBuilder builder;
 
     @BeforeEach
@@ -56,6 +64,13 @@ class StandardAccessModeTest
         when( lookup.getRelTypeId( "R2" ) ).thenReturn( R2 );
         when( lookup.getPropertyKeyId( "PROP1" ) ).thenReturn( PROP1 );
         when( lookup.getPropertyKeyId( "PROP2" ) ).thenReturn( PROP2 );
+
+        when( lookup.getProcedureIds( "apoc.proc1" ) ).thenReturn( new int[]{PROC1} );
+        when( lookup.getProcedureIds( "apoc.proc2" ) ).thenReturn( new int[]{PROC2} );
+        when( lookup.getProcedureIds( "math.proc3" ) ).thenReturn( new int[]{PROC3} );
+        when( lookup.getProcedureIds( "math.proc4" ) ).thenReturn( new int[]{PROC4} );
+        when( lookup.getProcedureIds( "*" ) ).thenReturn( new int[]{PROC1, PROC2, PROC3, PROC4} );
+        when( lookup.getProcedureIds( "*math*" ) ).thenReturn( new int[]{PROC3, PROC4} );
 
         builder = new StandardAccessModeBuilder( true, false, Collections.emptySet(), lookup, DEFAULT_DATABASE_NAME, DEFAULT_DATABASE_NAME );
     }
@@ -140,6 +155,12 @@ class StandardAccessModeTest
         assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_INDEX ) ).isEqualTo( false );
         assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_CONSTRAINT ) ).isEqualTo( false );
         assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_CONSTRAINT ) ).isEqualTo( false );
+
+        // EXECUTE PROCEDURES
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
     }
 
     // TRAVERSE NODES
@@ -2211,5 +2232,156 @@ class StandardAccessModeTest
         assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( true );
         assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( true );
         assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+    }
+
+    // ALL ON DBMS
+
+    @Test
+    void grantAllOnDbms() throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, DBMS_ACTIONS, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege ).build();
+
+        assertThat( mode.allowsAccess() ).isFalse();
+
+        // TRAVERSE NODES
+        assertThat( mode.allowsTraverseAllLabels() ).isFalse();
+        assertThat( mode.allowsTraverseNode( ANY_LABEL ) ).isFalse();
+
+        assertThat( mode.allowsTraverseNode( A ) ).isFalse();
+        assertThat( mode.allowsTraverseNode( B ) ).isFalse();
+        assertThat( mode.allowsTraverseNode( A, B ) ).isFalse();
+
+        assertThat( mode.disallowsTraverseLabel( A ) ).isFalse();
+        assertThat( mode.disallowsTraverseLabel( B ) ).isFalse();
+        assertThat( mode.disallowsTraverseLabel( ANY_LABEL ) ).isFalse();
+
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isFalse();
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isFalse();
+        assertThat( mode.allowsTraverseAllNodesWithLabel( ANY_LABEL ) ).isFalse();
+
+        // TRAVERSE RELATIONSHIPS
+        assertThat( mode.allowsTraverseAllRelTypes() ).isFalse();
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isFalse();
+
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isFalse();
+        assertThat( mode.allowsTraverseRelType( R2 ) ).isFalse();
+
+        // READ {PROP} ON NODES
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isFalse();
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isFalse();
+
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isFalse();
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isFalse();
+
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isFalse();
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isFalse();
+
+        // READ {PROP} ON RELATIONSHIPS
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isFalse();
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isFalse();
+
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isFalse();
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isFalse();
+
+        // SEE PROP IN TOKEN STORE
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isFalse();
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isFalse();
+
+        // WRITE
+        assertThat( mode.allowsWrites() ).isFalse();
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isFalse();
+        assertThat( mode.allowsCreateRelationship( R1 ) ).isFalse();
+
+        // DELETE
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A ) ) ).isFalse();
+        assertThat( mode.allowsDeleteRelationship( R1 ) ).isFalse();
+
+        // SET/REMOVE LABEL
+        assertThat( mode.allowsSetLabel( A ) ).isFalse();
+        assertThat( mode.allowsRemoveLabel( A ) ).isFalse();
+
+        // SET PROPERTY
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isFalse();
+
+        // NAME MANAGEMENT
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_LABEL ) ).isFalse();
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_RELTYPE ) ).isFalse();
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_PROPERTYKEY ) ).isFalse();
+
+        // INDEX/CONSTRAINT MANAGEMENT
+        assertThat( mode.allowsSchemaWrites() ).isFalse();
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_INDEX ) ).isFalse();
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_INDEX ) ).isFalse();
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_CONSTRAINT ) ).isFalse();
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_CONSTRAINT ) ).isFalse();
+
+        // EXECUTE PROCEDURES
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
+    }
+
+    // EXECUTE PROCEDURE
+
+    @Test
+    void grantExecuteOnAllProcedures() throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), ProcedureSegment.ALL, DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
+    }
+
+    @Test
+    void grantExecuteOnNamedProcedure() throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), new ProcedureSegment( "apoc.proc2" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
+    }
+
+    @Test
+    void grantExecuteOnGlobbedProcedures() throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), new ProcedureSegment( "*math*" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
+    }
+
+    @Test
+    void denyExecuteOnNamedProcedure() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), new ProcedureSegment( "*" ), DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, EXECUTE, new Resource.DatabaseResource(), new ProcedureSegment( "apoc.proc1" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
     }
  }

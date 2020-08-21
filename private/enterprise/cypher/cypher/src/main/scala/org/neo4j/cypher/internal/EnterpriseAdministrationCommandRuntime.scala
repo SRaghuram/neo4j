@@ -44,6 +44,8 @@ import org.neo4j.cypher.internal.ast.NamedDatabaseScope
 import org.neo4j.cypher.internal.ast.NamedGraphScope
 import org.neo4j.cypher.internal.ast.NoResource
 import org.neo4j.cypher.internal.ast.PrivilegeQualifier
+import org.neo4j.cypher.internal.ast.ProcedureAllQualifier
+import org.neo4j.cypher.internal.ast.ProcedureQualifier
 import org.neo4j.cypher.internal.ast.PropertyResource
 import org.neo4j.cypher.internal.ast.RelationshipAllQualifier
 import org.neo4j.cypher.internal.ast.RelationshipQualifier
@@ -357,19 +359,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role
-    case GrantDbmsAction(source, action, roleName) => (context, parameterMapping) =>
+    case GrantDbmsAction(source, action, qualifier, roleName) => (context, parameterMapping) =>
       val dbmsAction = ActionMapper.asKernelAction(action)
-      makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
+      makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
-    case DenyDbmsAction(source, action, roleName) => (context, parameterMapping) =>
+    case DenyDbmsAction(source, action, qualifier, roleName) => (context, parameterMapping) =>
       val dbmsAction = ActionMapper.asKernelAction(action)
-      makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
+      makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
-    case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping) =>
+    case RevokeDbmsAction(source, action, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       val dbmsAction = ActionMapper.asKernelAction(action)
-      makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName, revokeType,
+      makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $dbmsAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
@@ -426,6 +428,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  WHEN 'relationship' THEN 'RELATIONSHIP('+q.label+')'
           |  WHEN 'database' THEN 'database'
           |  WHEN 'user' THEN 'USER('+q.label+')'
+          |  WHEN 'procedure' THEN 'PROCEDURE('+q.label+')'
           |  ELSE 'ELEMENT('+q.label+')'
           |END
         """.stripMargin
@@ -843,6 +846,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case UserQualifier(name) =>
       val nameFields = getNameFields("userQualifier", name)
       (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, matchOrMerge + s" (q:UserQualifier {type: 'user', label: $$`${nameFields.nameKey}`})")
+    case ProcedureQualifier(nameSpace, procedureName) =>
+      val qualifiedProcedureName = (nameSpace.parts :+ procedureName.name).mkString(".")
+      (privilegeKeys("label"), Values.utf8Value(qualifiedProcedureName), IdentityConverter, matchOrMerge + s" (q:ProcedureQualifier {type: 'procedure', label: $$`${privilegeKeys("label")}`})")
+    case ProcedureAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:ProcedureQualifierAll {type: 'procedure', label: '*'})")
   }
 
   private def escapeName(name: Either[String, AnyRef]): String = name match {

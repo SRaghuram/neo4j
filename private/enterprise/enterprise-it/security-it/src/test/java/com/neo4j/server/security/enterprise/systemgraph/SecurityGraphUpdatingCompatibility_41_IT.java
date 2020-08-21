@@ -17,6 +17,8 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SecurityGraphUpdatingCompatibility_41_IT extends SecurityGraphCompatibilityTestBase
 {
@@ -38,6 +40,30 @@ class SecurityGraphUpdatingCompatibility_41_IT extends SecurityGraphCompatibilit
             }
             tx.commit();
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource( "unsupportedPrivileges" )
+    void shouldFailOnNewCommandsOnOldGraph( PrivilegeCommand commands )
+    {
+        for ( String query : commands.asCypher() )
+        {
+            try ( Transaction tx = system.beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
+            {
+                var exception = assertThrows( UnsupportedOperationException.class, () -> tx.execute( query ), query );
+                assertThat( exception.getMessage() )
+                        .contains( "This operation is not supported while running in compatibility mode with version " + VERSION_41 );
+            }
+        }
+    }
+
+    private static Stream<Arguments> unsupportedPrivileges()
+    {
+        return ALL_PRIVILEGES.stream()
+                             .filter( p -> !PRIVILEGES_ADDED_IN_40.contains( p ) )
+                             .filter( p -> !PRIVILEGES_ADDED_IN_41D1.contains( p ) )
+                             .filter( p -> !PRIVILEGES_ADDED_IN_41.contains( p ) )
+                             .map( Arguments::of );
     }
 
     private static Stream<Arguments> supportedPrivileges()

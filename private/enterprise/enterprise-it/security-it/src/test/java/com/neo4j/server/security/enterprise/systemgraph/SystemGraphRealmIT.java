@@ -38,6 +38,7 @@ import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
@@ -64,6 +65,7 @@ import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.createUs
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
@@ -329,6 +331,8 @@ class SystemGraphRealmIT
 
         ResourcePrivilege defaultAccessPrivilege =
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.DEFAULT );
+        ResourcePrivilege executeProcedurePrivilege =
+                new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), ProcedureSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege accessPrivilege =
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege matchNodePrivilege =
@@ -352,7 +356,7 @@ class SystemGraphRealmIT
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
 
         assertThat( privilegesFor( realm, PredefinedRoles.PUBLIC ),
-                containsInAnyOrder( defaultAccessPrivilege ) );
+                containsInAnyOrder( defaultAccessPrivilege, executeProcedurePrivilege ) );
 
         assertThat( privilegesFor( realm, PredefinedRoles.EDITOR ),
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege ) );

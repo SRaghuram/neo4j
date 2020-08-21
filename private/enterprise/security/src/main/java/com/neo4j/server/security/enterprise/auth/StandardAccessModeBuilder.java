@@ -18,6 +18,7 @@ import java.util.Set;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 
 import static com.neo4j.server.security.enterprise.auth.Resource.Type.ALL_LABELS;
@@ -25,8 +26,10 @@ import static com.neo4j.server.security.enterprise.auth.Resource.Type.PROPERTY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN_PROCEDURE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
@@ -45,7 +48,6 @@ class StandardAccessModeBuilder
     private final String defaultDbName;
 
     private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyAccess = new HashMap<>();  // track any access rights
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyRead = new HashMap<>();  // track any reads for optimization purposes
     private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyWrite = new HashMap<>(); // track any writes
     private boolean token;  // TODO - still to support GRANT/DENY
     private boolean schema; // TODO - still to support GRANT/DENY
@@ -88,6 +90,9 @@ class StandardAccessModeBuilder
     private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeNodeSegmentForProperty = new HashMap<>();
     private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeRelationshipSegmentForProperty = new HashMap<>();
 
+    private Map<ResourcePrivilege.GrantOrDeny,Boolean> executeAllProcedures = new HashMap<>();
+    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeProcedures = new HashMap<>();
+
     private StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
     StandardAccessModeBuilder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, LoginContext.IdLookup resolver, String database,
@@ -121,6 +126,7 @@ class StandardAccessModeBuilder
             this.writeRelationshipProperties.put( privilegeType, IntSets.mutable.empty() );
             this.writeNodeSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
             this.writeRelationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
+            this.executeProcedures.put( privilegeType, IntSets.mutable.empty() );
         }
     }
 
@@ -128,7 +134,6 @@ class StandardAccessModeBuilder
     {
         return new StandardAccessMode(
                 isAuthenticated && anyAccess.getOrDefault( GRANT, false ) && !anyAccess.getOrDefault( DENY, false ),
-                isAuthenticated && anyRead.getOrDefault( GRANT, false ),
                 isAuthenticated && anyWrite.getOrDefault( GRANT, false ),
                 anyWrite.getOrDefault( DENY, false ),
                 isAuthenticated && token,
@@ -209,10 +214,16 @@ class StandardAccessModeBuilder
                                         writeNodeSegmentForProperty.get( DENY ),
                                         writeRelationshipSegmentForProperty.get( DENY ) ),
 
+                new ProcedurePrivileges( executeAllProcedures.getOrDefault( GRANT, false ),
+                                         executeAllProcedures.getOrDefault( DENY, false ),
+                                         executeProcedures.get( GRANT ),
+                                         executeProcedures.get( DENY ) ),
+
                 adminModeBuilder.build(),
                 database );
     }
 
+    @SuppressWarnings( "UnusedReturnValue" )
     StandardAccessModeBuilder withAccess()
     {
         anyAccess.put( GRANT, true );
@@ -233,12 +244,10 @@ class StandardAccessModeBuilder
             break;
 
         case TRAVERSE:
-            anyRead.put( privilegeType, true );
             handleAllResourceQualifier( segment, privilegeType, "traverse", traverseAllLabels, traverseLabels, traverseAllRelTypes, traverseRelTypes );
             break;
 
         case READ:
-            anyRead.put( privilegeType, true );
             handleReadPrivilege( resource, segment, privilegeType, "read" );
             break;
 
@@ -283,6 +292,10 @@ class StandardAccessModeBuilder
             }
             break;
 
+        case EXECUTE:
+            handleExecute( segment, privilegeType, executeAllProcedures, executeProcedures );
+            break;
+
         default:
             if ( TOKEN.satisfies( action ) )
             {
@@ -305,13 +318,17 @@ class StandardAccessModeBuilder
                 schema = true;
                 addPrivilegeAction( privilege );
             }
+
+            if ( action == DBMS_ACTIONS || action == ADMIN_PROCEDURE )
+            {
+                executeAllProcedures.put( privilegeType, true );
+            }
         }
         return this;
     }
 
     private void handleMatch( Resource resource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType )
     {
-        anyRead.put( privilegeType, true );
         if ( !(privilegeType.isDeny() && resource.type() == PROPERTY) )
         {
             // don't deny TRAVERSE for DENY MATCH {prop}
@@ -515,6 +532,32 @@ class StandardAccessModeBuilder
         {
             throw new IllegalStateException(
                     "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+        }
+    }
+
+    private void handleExecute( Segment qualifier, ResourcePrivilege.GrantOrDeny privilegeType,
+                                Map<ResourcePrivilege.GrantOrDeny, Boolean> allProcedures,
+                                Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> procedures )
+    {
+        if ( qualifier instanceof ProcedureSegment )
+        {
+            if ( qualifier.equals( ProcedureSegment.ALL ) )
+            {
+                allProcedures.put( privilegeType, true );
+            }
+            else
+            {
+                var procQualifier = (ProcedureSegment) qualifier;
+                for ( int procId : resolver.getProcedureIds( procQualifier.getProcedures() ) )
+                {
+                    procedures.get( privilegeType ).add( procId );
+                }
+            }
+        }
+        else
+        {
+            throw new IllegalStateException(
+                    "Unsupported segment qualifier for execute privilege: " + qualifier.getClass().getSimpleName() );
         }
     }
 

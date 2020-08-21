@@ -15,6 +15,7 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersi
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_2_40;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_3_41d1;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_4_41;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_5_42d3;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_Future;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseComponentVersion;
@@ -49,7 +50,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
             new KnownSystemComponentVersions<>( new NoEnterpriseComponentVersion() );
     private final CustomSecurityInitializer customSecurityInitializer;
     private final Log log;
-    public static final int LATEST_VERSION = 4;
+    public static final int LATEST_VERSION = 5;
     public static final String COMPONENT = "security-privileges";
 
     public EnterpriseSecurityGraphComponent( Log log, RoleRepository migrationRoleRepository, UserRepository defaultAdminRepository, Config config )
@@ -62,12 +63,14 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         EnterpriseVersion_2_40 version2 = new EnterpriseVersion_2_40( log );
         EnterpriseVersion_3_41d1 version3 = new EnterpriseVersion_3_41d1( log, version2 );
         EnterpriseVersion_4_41 version4 = new EnterpriseVersion_4_41( log, version3 );
+        EnterpriseVersion_5_42d3 version5 = new EnterpriseVersion_5_42d3( log, version4 );
 
         knownSecurityComponentVersions.add( new EnterpriseVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
         knownSecurityComponentVersions.add( new EnterpriseVersion_1_36( log, config ) );
         knownSecurityComponentVersions.add( version2 );
         knownSecurityComponentVersions.add( version3 );
         knownSecurityComponentVersions.add( version4 );
+        knownSecurityComponentVersions.add( version5 );
         knownSecurityComponentVersions.add( new EnterpriseVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
     }
 

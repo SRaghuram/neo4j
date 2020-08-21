@@ -34,6 +34,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -94,16 +95,12 @@ class UpgradeProceduresUserIT
         GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
 
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+        SecurityContext securityContext = loginContext.authorize( LoginContext.IdLookup.EMPTY, SYSTEM_DATABASE_NAME );
+        assertThat( securityContext.roles() ).isEmpty();
 
-        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
-        {
-            Result result = tx.execute( "CALL dbms.showCurrentUser()" );
-            Map<String,Object> row = result.next();
-
-            assertThat( row.get( "username" ) ).isEqualTo( UPGRADE_USERNAME );
-            assertThat( row.get( "roles" ) ).isEqualTo( Collections.emptyList() );
-            assertThat( row.get( "flags" ) ).isEqualTo( Collections.emptyList() );
-        }
+        assertThatThrownBy( () -> loginContext.authorize( LoginContext.IdLookup.EMPTY, DEFAULT_DATABASE_NAME ) )
+                .isInstanceOf( AuthorizationViolationException.class )
+                .hasMessage( "Database access is not allowed for user 'upgrade_user' with roles []." );
     }
 
     @Test

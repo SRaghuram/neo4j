@@ -111,7 +111,7 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
 
   // Enforcements tests
 
-  withAllSystemGraphVersions(unsupportedWhenNotLatest) {
+  withAllSystemGraphVersions(unsupportedBefore41) {
 
     test("should be allowed to traverse and read when granted all graph privileges") {
       // GIVEN

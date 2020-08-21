@@ -20,12 +20,14 @@ import java.util.function.Function;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
+@SuppressWarnings( "UnusedReturnValue" )
 public class PrivilegeBuilder
 {
     final ResourcePrivilege.GrantOrDeny privilegeType;
@@ -101,6 +103,13 @@ public class PrivilegeBuilder
         case "UserQualifierAll":
             this.segment = UserSegment.ALL;
             break;
+        case "ProcedureQualifier":
+            String procedureQualifier = qualifierNode.getProperty( "label" ).toString();
+            this.segment = new ProcedureSegment( procedureQualifier );
+            break;
+        case "ProcedureQualifierAll":
+            this.segment = ProcedureSegment.ALL;
+            break;
         default:
             throw new IllegalArgumentException( "Unknown privilege qualifier type: " + qualifierType.name() );
         }
@@ -132,11 +141,6 @@ public class PrivilegeBuilder
             break;
         case ALL_LABELS:
             this.resource = new Resource.AllLabelsResource();
-            break;
-        case PROCEDURE:
-            String namespace = resourceNode.getProperty( "arg1" ).toString();
-            String procedureName = resourceNode.getProperty( "arg2" ).toString();
-            this.resource = new Resource.ProcedureResource( namespace, procedureName );
             break;
         default:
             throw new IllegalArgumentException( "Unknown resourceType: " + resourceType );

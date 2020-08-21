@@ -202,6 +202,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce all dbms privileges privilege") {
     // GIVEN
+    clearPublicRole()
     setupUserWithCustomRole("foo", "bar")
 
     // WHEN
@@ -259,7 +260,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
 
     // Should not be able to execute @admin procedure
-    the[QueryExecutionException] thrownBy {
+    the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')")
     } should have message "Permission denied."
   }

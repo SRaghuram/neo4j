@@ -9,7 +9,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 import com.neo4j.configuration.EnterpriseEditionSettings
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseInternalSettings.block_create_drop_database
 import org.neo4j.configuration.GraphDatabaseInternalSettings.block_start_stop_database
@@ -952,9 +951,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      granted(access).database(DEFAULT).user("joe").role(PUBLIC).map
-    ))
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe"))
   }
 
   test("should have access on a created database") {
@@ -1010,10 +1007,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("GRANT MATCH {*} ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe") ++ Set(
       granted(access).database("foo").user("joe").role("custom").map,
-      granted(matchPrivilege).node("*").graph("foo").user("joe").role("custom").map,
-      granted(access).database(DEFAULT).user("joe").role(PUBLIC).map
+      granted(matchPrivilege).node("*").graph("foo").user("joe").role("custom").map
     ))
     executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -1038,9 +1034,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
     } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      granted(access).database(DEFAULT).user("joe").role(PUBLIC).map
-    ))
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe"))
   }
 
   test("should have access on a re-created default database") {
@@ -1055,10 +1049,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
 
     // THEN
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe") ++ Set(
       granted(access).database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       granted(matchPrivilege).node("*").graph(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      granted(access).database(DEFAULT).user("joe").role(PUBLIC).map
     ))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -1084,9 +1077,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      granted(access).database(DEFAULT).user("joe").role(PUBLIC).map
-    ))
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe"))
   }
 
   test("should fail when creating an already existing database") {

@@ -82,8 +82,14 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
     planDescription(name, Seq(details(Seq(action, databaseArg) ++ qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString))), SingleChild(source))
   }
 
-  def dbmsPrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(details(action +: rolePrivilegeArg(roleName).info.map(_.prettifiedString))), SingleChild(source))
-  def dbmsPrivilegePlan(name: String, action: String, roleName: Details, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(details(action +: roleName.info.map(_.prettifiedString))), SingleChild(source))
+  def dbmsPrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(details(action +: rolePrivilegeArg(roleName).info.map(_.prettifiedString))), SingleChild(source))
+  def dbmsPrivilegePlan(name: String, action: String, roleName: Details, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(details(action +: roleName.info.map(_.prettifiedString))), SingleChild(source))
+  def dbmsPrivilegePlan(name: String, action: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(details(action +: (qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
+  def dbmsPrivilegePlan(name: String, action: String, qualifier: Details, roleName: Details, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(details(action +: (qualifier.info.map(_.prettifiedString) ++ roleName.info.map(_.prettifiedString)))), SingleChild(source))
 
   def graphPrivilegePlan(name: String, graph: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(Details(graphPrivilegeArg(graph).info ++ qualifier.info ++ rolePrivilegeArg(roleName).info)), SingleChild(source))

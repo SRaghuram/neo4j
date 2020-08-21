@@ -26,7 +26,6 @@ import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 class StandardAccessMode implements AccessMode
 {
     private final boolean allowsAccess;
-    private final boolean allowsReads;
     private final boolean allowsWrites;
     private final boolean disallowWrites;
     private final boolean allowsTokenCreates;
@@ -80,12 +79,12 @@ class StandardAccessMode implements AccessMode
     private final PropertyPrivileges writeAllow;
     private final PropertyPrivileges writeDisallow;
 
+    private ProcedurePrivileges procedurePrivileges;
     private AdminAccessMode adminAccessMode;
     private AdminActionOnResource.DatabaseScope database;
 
     StandardAccessMode(
             boolean allowsAccess,
-            boolean allowsReads,
             boolean allowsWrites,
             boolean disallowWrites,
             boolean allowsTokenCreates,
@@ -136,12 +135,13 @@ class StandardAccessMode implements AccessMode
             PropertyPrivileges writeAllow,
             PropertyPrivileges writeDisallow,
 
+            ProcedurePrivileges procedurePrivileges,
+
             AdminAccessMode adminAccessMode,
             String database
     )
     {
         this.allowsAccess = allowsAccess;
-        this.allowsReads = allowsReads;
         this.allowsWrites = allowsWrites;
         this.disallowWrites = disallowWrites;
         this.allowsTokenCreates = allowsTokenCreates;
@@ -190,6 +190,8 @@ class StandardAccessMode implements AccessMode
         this.blacklistDeleteRelationshipWithTypes = blacklistDeleteRelationshipWithTypes;
         this.writeAllow = writeAllow;
         this.writeDisallow = writeDisallow;
+
+        this.procedurePrivileges = procedurePrivileges;
 
         this.adminAccessMode = adminAccessMode;
         this.database = new AdminActionOnResource.DatabaseScope( database );
@@ -498,7 +500,7 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
-    public boolean allowsProcedureWith( String[] roleNames )
+    public boolean shouldBoostAccessForProcedureWith( String[] roleNames )
     {
         for ( String roleName : roleNames )
         {
@@ -508,6 +510,12 @@ class StandardAccessMode implements AccessMode
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean allowsExecuteProcedure( int procedureId )
+    {
+        return procedurePrivileges.allowsExecuteProcedure( procedureId ) ;
     }
 
     @Override

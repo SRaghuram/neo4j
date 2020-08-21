@@ -5,7 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
@@ -281,7 +280,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
   // Implementation tests
 
-  withAllSystemGraphVersions(unsupportedWhenNotLatest) {
+  withAllSystemGraphVersions(unsupportedBefore41) {
 
     test("set property should allow setting a property on a node") {
       // GIVEN

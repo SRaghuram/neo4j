@@ -13,8 +13,9 @@ import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40
-import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1
+import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41
+import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D3
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.collection.Dependencies
 import org.neo4j.configuration.Config
@@ -34,8 +35,8 @@ import org.scalatest.mockito.MockitoSugar
 trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLike {
   self: AdministrationCommandAcceptanceTestBase =>
 
-  val CURRENT_VERSION: String = VERSION_41
-  val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41)
+  val CURRENT_VERSION: String = VERSION_42D3
+  val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D3)
   var _configSupplier: () => Config = () => Config.defaults()
   var _version: Option[String] = None
   var _expectToFailWith: Option[Class[_]] = None
@@ -53,7 +54,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     setVersion(None)
   }
 
-  def unsupportedWhenNotLatest(version: String): Option[Class[_]] = if (version == CURRENT_VERSION) None else Some(classOf[UnsupportedOperationException])
+  def unsupportedBefore41(version: String): Option[Class[_]] = if (version == VERSION_40 || version == VERSION_41D1) Some(classOf[UnsupportedOperationException]) else None
 
   val allSupported: String => Option[Class[_]] = _ => None
 
@@ -71,6 +72,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     case VERSION_40 => translatePrivilegesTo40(privileges)
     case VERSION_41D1 => translatePrivilegesTo41(privileges)
     case VERSION_41 => translatePrivilegesTo41(privileges)
+    case VERSION_42D3 => translatePrivilegesTo41(privileges)
     case _ => throw new IllegalArgumentException(s"Unsupported version: $version")
   }
 

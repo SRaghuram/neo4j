@@ -5,7 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.QueryExecutionException
@@ -296,18 +295,14 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     val result = execute("SHOW USERS $userParam, joe PRIVILEGES", Map("userParam" -> "neo4j"))
 
     // THEN
-    result.toSet should be(defaultUserPrivileges ++ Set(
-      granted(access).database(DEFAULT).role("PUBLIC").user("joe").map,
+    result.toSet should be(defaultUserPrivileges ++ publicPrivileges("joe") ++ Set(
       granted(access).role("custom").user("joe").map
     ))
   }
 
   test("should show privileges for specific user WHERE role = 'PUBLIC'") {
-
-    val expected = Set(granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map)
-
     // WHEN
-    execute("SHOW USER neo4j PRIVILEGES WHERE role = 'PUBLIC'").toSet should be(expected)
+    execute("SHOW USER neo4j PRIVILEGES WHERE role = 'PUBLIC'").toSet should be(publicPrivileges("neo4j"))
   }
 
   test("should show privileges for specific user YIELD role, action, access") {
@@ -382,22 +377,26 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // GIVEN
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
+    val expected = publicPrivileges("joe").toSeq
+
     // WHEN
-    executeOnSystem("joe", "soap", "SHOW USER joe PRIVILEGES", resultHandler = (row, _) => {
+    executeOnSystem("joe", "soap", "SHOW USER joe PRIVILEGES", resultHandler = (row, idx) => {
       // THEN
-      asPrivilegesResult(row) should be(granted(access).database(DEFAULT).role(PUBLIC).user("joe").map)
-    }) should be(1)
+      asPrivilegesResult(row) should be(expected(idx))
+    }) should be(2)
   }
 
   test("should show user privileges for current user as non admin without specifying the user name") {
     // GIVEN
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
+    val expected = publicPrivileges("joe").toSeq
+
     // WHEN
-    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, idx) => {
       // THEN
-      asPrivilegesResult(row) should be(granted(access).database(DEFAULT).role("PUBLIC").user("joe").map)
-    }) should be(1)
+      asPrivilegesResult(row) should be(expected(idx))
+    }) should be(2)
   }
 
   test("should give nothing when showing privileges for non-existing user") {
@@ -437,7 +436,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DROP DATABASE foo")
 
     // THEN
-    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(granted(access).role(PUBLIC).database(DEFAULT).user("bar").map))
+    execute("SHOW USER bar PRIVILEGES").toSet should be(publicPrivileges("bar"))
   }
 
   test("should not show user privileges on a dropped role") {
@@ -449,7 +448,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DROP ROLE custom")
 
     // THEN
-    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(granted(access).role(PUBLIC).database(DEFAULT).user("bar").map))
+    execute("SHOW USER bar PRIVILEGES").toSet should be(publicPrivileges("bar"))
   }
 
   // Tests for granting and denying privileges
@@ -1101,11 +1100,13 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // GIVEN
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
+    val expected = publicPrivileges("joe").toSeq
+
     // WHEN using a parameter name that used to be internal, but is not any more, it should work
-    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, idx) => {
       // THEN
-      asPrivilegesResult(row) should be(granted(access).database(DEFAULT).role("PUBLIC").user("joe").map)
-    }, params = Map[String, Object]("currentUser" -> "neo4j").asJava) should be(1)
+      asPrivilegesResult(row) should be(expected(idx))
+    }, params = Map[String, Object]("currentUser" -> "neo4j").asJava) should be(2)
 
     // WHEN using a parameter name that is the new internal name, an error should occur
     the[QueryExecutionException] thrownBy {

@@ -337,6 +337,18 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("Default graph is not supported in this Cypher version.")
   }
 
+  test("EXECUTE PROCEDURE should not work with CYPHER 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 GRANT EXECUTE PROCEDURE * ON DBMS TO custom")
+    }
+    exception.getMessage should include("EXECUTE PROCEDURE is not supported in this Cypher version.")
+  }
+
   test("create index with OR REPLACE and/or IF NOT EXISTS syntax should not work with CYPHER 3.5-4.1") {
     // CREATE OR REPLACE INDEX name FOR ...
     // WHEN

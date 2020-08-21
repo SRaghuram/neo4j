@@ -40,9 +40,12 @@ import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.graphdb.spatial.Point;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
 import org.neo4j.logging.Log;
+import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
@@ -87,6 +90,7 @@ public abstract class ProcedureInteractionTestBase<S>
     static final Matcher<Object> ONE_AS_LONG = equalTo( 1L );
     static final Matcher<Object> TWO_AS_INT = equalTo( 2 );
     static final Matcher<Object> TWO_AS_LONG = equalTo( 2L );
+    static final String SCHEMA_OPS_NOT_ALLOWED = "Schema operations are not allowed";
     private static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
     String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
     private static final String BOLT_PWD_ERR_MSG =
@@ -96,7 +100,6 @@ public abstract class ProcedureInteractionTestBase<S>
     String CREATE_LABEL_OPS_NOT_ALLOWED = "Creating new node label is not allowed";
     String CREATE_RELTYPE_OPS_NOT_ALLOWED = "Creating new relationship type is not allowed";
     String CREATE_PROPERTYKEY_OPS_NOT_ALLOWED = "Creating new property name is not allowed";
-    String SCHEMA_OPS_NOT_ALLOWED = "Schema operations are not allowed";
 
     protected boolean IS_EMBEDDED = true;
 
@@ -794,6 +797,9 @@ public abstract class ProcedureInteractionTestBase<S>
         @Context
         public TerminationGuard guard;
 
+        @Context
+        public SecurityContext securityContext;
+
         @Procedure( name = "test.loop" )
         public void loop( @Name( "supportId" ) long supportId )
         {
@@ -849,6 +855,14 @@ public abstract class ProcedureInteractionTestBase<S>
             return Stream.of( new CountResult( nNodes ) );
         }
 
+        @Admin
+        @SystemProcedure
+        @Procedure( name = "test.adminReadProcedure", mode = Mode.READ )
+        public Stream<AuthProceduresBase.StringResult> staticAdminReadProcedure()
+        {
+            return Stream.of( new AuthProceduresBase.StringResult( "static" ) );
+        }
+
         @Procedure( name = "test.staticReadProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> staticReadProcedure()
         {
@@ -865,6 +879,10 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.staticSchemaProcedure", mode = Mode.SCHEMA )
         public Stream<AuthProceduresBase.StringResult> staticSchemaProcedure()
         {
+            if ( !securityContext.mode().allowsSchemaWrites() )
+            {
+                throw new AuthorizationViolationException( SCHEMA_OPS_NOT_ALLOWED );
+            }
             return Stream.of( new AuthProceduresBase.StringResult( "static" ) );
         }
 

@@ -105,7 +105,7 @@ import static org.neo4j.test.matchers.CommonMatchers.matchesOneToOneInAnyOrder;
 
 public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
 {
-    private final String ROLE = "role1";
+    private final String PROCEDURE_BOOST_ROLE = "role1";
     private final String SUBJECT = "role1Subject";
     private final String PASSWORD = "abc";
 
@@ -2203,7 +2203,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldNotAllowNonWriterToWriteAfterCallingAllowedWriteProc() throws Exception
     {
         assertDDLCommandSuccess( adminSubject, "CREATE USER notAllowedToWrite SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
-        createRoleWithAccess( ROLE, "notAllowedToWrite" );
+        createRoleWithAccess( PROCEDURE_BOOST_ROLE, "notAllowedToWrite" );
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s to notAllowedToWrite", READER ) );
         // should be able to invoke allowed procedure
         assertSuccess( neo.login( "notAllowedToWrite", "abc" ), "CALL test.allowedWriteProcedure()",
@@ -2306,6 +2306,13 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
+    @ParameterizedTest
+    @ValueSource( strings = {DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME} )
+    void shouldAllowAdminRunAdminProcedures( String database )
+    {
+        assertSuccess( adminSubject, database, "CALL test.adminReadProcedure", r -> assertKeyIs( r, "value", "static" ) );
+    }
+
     @Test
     void shouldHandleFunctionWithAllowed() throws Throwable
     {
@@ -2319,7 +2326,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldHandleNestedFunctionsWithAllowed() throws Throwable
     {
        setupTestSubject();
-       assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO %s", ROLE, SUBJECT ) );
+       assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO %s", PROCEDURE_BOOST_ROLE, SUBJECT ) );
        assertSuccess( neo.login( SUBJECT, PASSWORD ),
                 "RETURN test.nestedAllowedFunction('test.allowedFunction1()') AS value",
                 r -> assertKeyIs( r, "value", "foo" ) );
@@ -2472,6 +2479,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     ==================================================================================
      */
 
+    @SuppressWarnings( "SameParameterValue" )
     private int getLabelId( String labelName )
     {
         try ( InternalTransaction tx = neo.getLocalGraph().beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
@@ -2527,7 +2535,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private void setupTestSubject()
     {
         assertDDLCommandSuccess( adminSubject, String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", SUBJECT, PASSWORD  ));
-        createRoleWithAccess( ROLE, SUBJECT );
+        createRoleWithAccess( PROCEDURE_BOOST_ROLE, SUBJECT );
     }
 
     private void assertQueryIsRunning( String query )

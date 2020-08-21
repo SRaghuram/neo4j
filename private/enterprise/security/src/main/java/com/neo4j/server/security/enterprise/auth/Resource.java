@@ -10,6 +10,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
@@ -19,11 +20,6 @@ public interface Resource
     void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException;
 
     default String getArg1()
-    {
-        return "";
-    }
-
-    default String getArg2()
     {
         return "";
     }
@@ -71,7 +67,7 @@ public interface Resource
         @Override
         public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(ADMIN.satisfies( action ) || DATABASE_ACTIONS.satisfies( action )) )
+            if ( !(ADMIN.satisfies( action ) || DATABASE_ACTIONS.satisfies( action ) || EXECUTE.satisfies( action )) )
             {
                 throw new InvalidArgumentsException( String.format( "Database resource cannot be combined with action '%s'", action.toString() ) );
             }
@@ -302,75 +298,6 @@ public interface Resource
         }
     }
 
-    class ProcedureResource implements Resource
-    {
-        private final String nameSpace;
-        private final String procedure;
-
-        public ProcedureResource( String nameSpace, String procedure )
-        {
-            this.nameSpace = nameSpace;
-            this.procedure = procedure;
-        }
-
-        @Override
-        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
-        {
-            if ( !action.equals( PrivilegeAction.EXECUTE ) )
-            {
-                throw new InvalidArgumentsException( String.format( "Procedure resource cannot be combined with action '%s'", action.toString() ) );
-            }
-        }
-
-        @Override
-        public String getArg1()
-        {
-            return nameSpace == null ? "" : nameSpace;
-        }
-
-        @Override
-        public String getArg2()
-        {
-            return procedure == null ? "" : procedure;
-        }
-
-        @Override
-        public Type type()
-        {
-            return Type.PROCEDURE;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "library " + nameSpace + " procedure " + procedure;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            int hash = nameSpace == null ? 0 : nameSpace.hashCode();
-            return hash + 31 * (procedure == null ? 0 : procedure.hashCode());
-        }
-
-        @Override
-        public boolean equals( Object obj )
-        {
-            if ( obj == this )
-            {
-                return true;
-            }
-
-            if ( obj instanceof ProcedureResource )
-            {
-                ProcedureResource other = (ProcedureResource) obj;
-                boolean equals = other.nameSpace == null && this.nameSpace == null || other.nameSpace != null && other.nameSpace.equals( this.nameSpace );
-                return equals && (other.procedure == null && this.procedure == null || other.procedure != null && other.procedure.equals( this.procedure ));
-            }
-            return false;
-        }
-    }
-
     enum Type
     {
         ALL_PROPERTIES,
@@ -378,8 +305,7 @@ public interface Resource
         ALL_LABELS,
         LABEL,
         GRAPH,
-        DATABASE,
-        PROCEDURE;
+        DATABASE;
 
         @Override
         public String toString()

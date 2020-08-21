@@ -77,6 +77,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
     granted(access).database(DEFAULT).role(PredefinedRoles.PUBLIC).map,
+    granted(executeProcedure).role(PredefinedRoles.PUBLIC).map,
 
     granted(access).role("reader").map,
     granted(matchPrivilege).role("reader").node("*").map,
@@ -126,8 +127,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     }
   }
 
-  lazy val defaultUserPrivileges: Set[Map[String, AnyRef]] = Set(
-    granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map,
+  lazy val defaultUserPrivileges: Set[Map[String, AnyRef]] = publicPrivileges("neo4j") ++ Set(
     granted(access).role("admin").user("neo4j").map,
     granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
     granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
@@ -210,6 +210,11 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def publicRole(users: String*): Set[Map[String, Any]] =
     users.map(u => role(PredefinedRoles.PUBLIC).member(u).map).toSet
 
+  def publicPrivileges(user: String): Set[Map[String, AnyRef]] = Set(
+    granted(executeProcedure).user(user).role(PUBLIC).map,
+    granted(access).database(DEFAULT).user(user).role(PUBLIC).map
+  )
+
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
     def action(action: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("action" -> action))
 
@@ -218,6 +223,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     def node(label: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"NODE($label)"))
 
     def relationship(relType: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"RELATIONSHIP($relType)"))
+
+    def procedure(procedure: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"PROCEDURE($procedure)"))
 
     /**
      * Currently database() and graph() are equivalent.
@@ -247,6 +254,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   type privilegeFunction = Map[String, String] => PrivilegeMapBuilder
 
   def adminAction(action: String): Map[String, String] = baseMap + ("resource" -> "database", "action" -> action)
+
+  val executeProcedure: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute", "segment" -> "PROCEDURE(*)")
 
   val startDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "start_database")
   val stopDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "stop_database")
@@ -313,6 +322,11 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "ALL DBMS PRIVILEGES" -> adminAction("dbms_actions")
   )
   val dbmsCommands: Iterable[String] = dbmsPrivileges.keys
+
+  val executePrivileges: Map[String, Map[String, String]] = Map(
+    "EXECUTE PROCEDURE" -> executeProcedure
+  )
+  val executeCommands: Iterable[String] = executePrivileges.keys
 
   // Collection of all database privileges
 
@@ -509,6 +523,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def clearPublicRole(): Unit = {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
+    execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
   }
 
   def createRoleWithOnlyAdminPrivilege(name: String = "adminOnly"): Unit = {

@@ -10,6 +10,7 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -20,14 +21,18 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.ProcedureSegment;
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 
 public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
 {
@@ -193,7 +198,8 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
         setVersionProperty( tx, latest.version );
         upgradeWriteFromAllPropertiesToGraphResource( tx );
         upgradeFromSchemaPrivilegeToIndexAndContraintPrivileges( tx );
-        createPublicRoleFromUpgrade( tx );
+        Node publicRole = createPublicRoleFromUpgrade( tx );
+        grantExecutePrivilegeTo( tx, publicRole );
     }
 
     private void upgradeWriteFromAllPropertiesToGraphResource( Transaction tx )
@@ -313,6 +319,13 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     public Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
         return super.currentGetPrivilegeForRoles( tx, roleNames, privilegeCache );
+    }
+
+    @Override
+    Set<ResourcePrivilege> getTemporaryPrivileges() throws InvalidArgumentsException
+    {
+        return Collections
+                .singleton( new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), ProcedureSegment.ALL, SpecialDatabase.ALL ) );
     }
 
     @Override

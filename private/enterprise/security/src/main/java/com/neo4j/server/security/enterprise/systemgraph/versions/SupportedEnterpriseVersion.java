@@ -10,6 +10,7 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +35,8 @@ import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityComponentVersion
 {
+    static Label SEGMENT_LABEL = Label.label( "Segment" );
+
     private Node matchNodePriv;
     private Node matchRelPriv;
     private Node writeNodePriv;
@@ -44,6 +47,9 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
     private Node indexPriv;
     private Node constraintPriv;
     private Node adminPriv;
+
+    Node allDb;
+    Node dbResource;
 
     SupportedEnterpriseVersion( int version, String description, Log log )
     {
@@ -72,7 +78,7 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
         }
 
         // Create a DatabaseAll node
-        Node allDb = tx.createNode( DATABASE_ALL_LABEL );
+        allDb = tx.createNode( DATABASE_ALL_LABEL );
         allDb.setProperty( "name", "*" );
 
         // Create a DatabaseDefault node
@@ -93,21 +99,19 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
         dbQualifier.setProperty( "label", "" );
 
         // Create initial segments nodes and connect them with DatabaseAll and qualifiers
-        Label segmentLabel = Label.label( "Segment" );
-
-        Node labelSegment = tx.createNode( segmentLabel );
+        Node labelSegment = tx.createNode( SEGMENT_LABEL );
         labelSegment.createRelationshipTo( labelQualifier, QUALIFIED );
         labelSegment.createRelationshipTo( allDb, FOR );
 
-        Node relSegment = tx.createNode( segmentLabel );
+        Node relSegment = tx.createNode( SEGMENT_LABEL );
         relSegment.createRelationshipTo( relQualifier, QUALIFIED );
         relSegment.createRelationshipTo( allDb, FOR );
 
-        Node dbSegment = tx.createNode( segmentLabel );
+        Node dbSegment = tx.createNode( SEGMENT_LABEL );
         dbSegment.createRelationshipTo( dbQualifier, QUALIFIED );
         dbSegment.createRelationshipTo( allDb, FOR );
 
-        Node defaultDbSegment = tx.createNode( segmentLabel );
+        Node defaultDbSegment = tx.createNode( SEGMENT_LABEL );
         defaultDbSegment.createRelationshipTo( dbQualifier, QUALIFIED );
         defaultDbSegment.createRelationshipTo( defaultDb, FOR );
 
@@ -124,7 +128,7 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
         allPropResource.setProperty( "arg1", "" );
         allPropResource.setProperty( "arg2", "" );
 
-        Node dbResource = tx.createNode( resourceLabel );
+        dbResource = tx.createNode( resourceLabel );
         dbResource.setProperty( "type", Resource.Type.DATABASE.toString() );
         dbResource.setProperty( "arg1", "" );
         dbResource.setProperty( "arg2", "" );
@@ -195,14 +199,27 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
 
     protected Set<ResourcePrivilege> currentGetPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
-        Set<ResourcePrivilege> privileges = new HashSet<>();
-        for ( String roleName : roleNames )
+        try
         {
-            Set<ResourcePrivilege> rolePrivileges = currentGetPrivilegeForRole( tx, roleName );
-            privilegeCache.put( roleName, rolePrivileges );
-            privileges.addAll( rolePrivileges );
+            Set<ResourcePrivilege> privileges = new HashSet<>();
+            for ( String roleName : roleNames )
+            {
+                Set<ResourcePrivilege> rolePrivileges = currentGetPrivilegeForRole( tx, roleName );
+                rolePrivileges.addAll( getTemporaryPrivileges() );
+                privilegeCache.put( roleName, rolePrivileges );
+                privileges.addAll( rolePrivileges );
+            }
+            return privileges;
         }
-        return privileges;
+        catch ( InvalidArgumentsException e )
+        {
+            throw new IllegalStateException( "Failed to authorize", e );
+        }
+    }
+
+    Set<ResourcePrivilege> getTemporaryPrivileges() throws InvalidArgumentsException
+    {
+        return Collections.emptySet();
     }
 
     private Set<ResourcePrivilege> currentGetPrivilegeForRole( Transaction tx, String roleName )
@@ -273,6 +290,26 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
             // i.e. the role should not be added to the privilege map.
         }
         return rolePrivileges;
+    }
+
+    void grantExecutePrivilegeTo( Transaction tx, Node roleNode )
+    {
+        // Create new privilege for execute procedures
+        Node procQualifier = tx.createNode( Label.label( "ProcedureQualifierAll" ) );
+        procQualifier.setProperty( "type", "procedure" );
+        procQualifier.setProperty( "label", "*" );
+
+        Node allDb = tx.findNode( DATABASE_ALL_LABEL, "name", "*" );
+
+        Node dbResource = tx.findNode( Label.label( "Resource" ), "type", Resource.Type.DATABASE.toString() );
+
+        Node procSegment = tx.createNode( SEGMENT_LABEL );
+        procSegment.createRelationshipTo( procQualifier, QUALIFIED );
+        procSegment.createRelationshipTo( allDb, FOR );
+
+        Node procedurePriv = tx.createNode( PRIVILEGE_LABEL );
+        setupPrivilegeNode( procedurePriv, PrivilegeAction.EXECUTE.toString(), procSegment, dbResource );
+        roleNode.createRelationshipTo( procedurePriv, GRANTED );
     }
 
     @Override

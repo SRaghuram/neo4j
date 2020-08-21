@@ -85,4 +85,82 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       )
     }
   }
+
+  executeCommands.foreach { action =>
+    test(s"GRANT $action") {
+      // When
+      val plan = execute(s"EXPLAIN GRANT $action * ON DBMS TO reader, $$role", Map("role" -> "editor")).executionPlanString()
+
+      // Then
+      plan should include(
+        logPlan(
+          dbmsPrivilegePlan("GrantDbmsAction", action, Details(asPrettyString.raw("*")), Details(asPrettyString.raw("ROLE $role")),
+            dbmsPrivilegePlan("GrantDbmsAction", action, Details(asPrettyString.raw("*")), "reader",
+              assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+            )
+          )
+        ).toString
+      )
+    }
+
+    test(s"DENY $action") {
+      // When
+      val plan = execute(s"EXPLAIN DENY $action math.sin, math.cos ON DBMS TO reader").executionPlanString()
+
+      // Then
+      plan should include(
+        logPlan(
+          dbmsPrivilegePlan("DenyDbmsAction", action, Details(asPrettyString.raw("math.cos")), "reader",
+            dbmsPrivilegePlan("DenyDbmsAction", action, Details(asPrettyString.raw("math.sin")), "reader",
+              assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+            )
+          )
+        ).toString
+      )
+    }
+
+    test(s"REVOKE $action") {
+      // When
+      val plan = execute(s"EXPLAIN REVOKE $action * ON DBMS FROM reader").executionPlanString()
+
+      // Then
+      plan should include(
+        logPlan(
+          dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", action, Details(asPrettyString.raw("*")), "reader",
+            dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", action, Details(asPrettyString.raw("*")), "reader",
+              assertDbmsAdminPlan("REMOVE PRIVILEGE")
+            )
+          )
+        ).toString
+      )
+    }
+
+    test(s"REVOKE GRANT $action") {
+      // When
+      val plan = execute(s"EXPLAIN REVOKE GRANT $action apoc.math.sin ON DBMS FROM reader").executionPlanString()
+
+      // Then
+      plan should include(
+        logPlan(
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", action, Details(asPrettyString.raw("apoc.math.sin")), "reader",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        ).toString
+      )
+    }
+
+    test(s"REVOKE DENY $action") {
+      // When
+      val plan = execute(s"EXPLAIN REVOKE DENY $action * ON DBMS FROM reader").executionPlanString()
+
+      // Then
+      plan should include(
+        logPlan(
+          dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", action, Details(asPrettyString.raw("*")), "reader",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        ).toString
+      )
+    }
+  }
 }

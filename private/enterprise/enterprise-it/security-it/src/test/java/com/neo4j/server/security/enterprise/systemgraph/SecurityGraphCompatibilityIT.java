@@ -34,6 +34,7 @@ import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnt
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D3;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,7 +43,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {
-    private static String[] SUPPORTED_VERSIONS = {VERSION_40, VERSION_41D1, VERSION_41};
+    private static String[] SUPPORTED_VERSIONS = {VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D3};
 
     @ParameterizedTest
     @MethodSource( "supportedVersions" )
@@ -141,6 +142,20 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
                     result.stream().filter( row -> row.get( "action" ).equals( schemaAction ) ).map( row -> (String) row.get( "role" ) ).collect(
                             Collectors.toList() );
             MatcherAssert.assertThat( "Expect admin to have schema-edit capabilities", schemaRoles, hasItem( "admin" ) );
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource( "supportedVersions" )
+    void shouldHaveExecutePrivilegeByDefault( String version ) throws Exception
+    {
+        initEnterprise( version );
+        LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
+        loginContext.subject().setPasswordChangeNoLongerRequired();
+        try ( Transaction tx = system.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "CALL db.labels()" );
+            assertThat( result.hasNext() ).isFalse();
         }
     }
 

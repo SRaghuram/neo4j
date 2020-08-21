@@ -35,6 +35,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     public static final String VERSION_40 = "Neo4j 4.0";
     public static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
     public static final String VERSION_41 = "Neo4j 4.1";
+    public static final String VERSION_42D3 = "Neo4j 4.2.0-Drop03";
 
     static final Label DATABASE_ALL_LABEL = Label.label( "DatabaseAll" );
     static final Label DATABASE_DEFAULT_LABEL = Label.label( "DatabaseDefault" );
@@ -162,11 +163,11 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         return node;
     }
 
-    void createPublicRoleFromUpgrade( Transaction tx )
+    Node createPublicRoleFromUpgrade( Transaction tx )
     {
         try
         {
-            newRole( tx, PUBLIC );
+            return newRole( tx, PUBLIC );
         }
         catch ( ConstraintViolationException e )
         {

@@ -349,7 +349,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
   // Enforcement for create
 
-  withAllSystemGraphVersions(unsupportedWhenNotLatest) {
+  withAllSystemGraphVersions(unsupportedBefore41) {
 
     test("granting create node allows creation of nodes") {
       setupUserWithCustomRole()
