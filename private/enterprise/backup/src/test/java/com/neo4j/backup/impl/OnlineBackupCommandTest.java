@@ -72,7 +72,8 @@ class OnlineBackupCommandTest
                         "      --backup-dir=<path>   Directory to place backup in.%n" +
                         "      --from=<host:port>    Host and port of Neo4j.%n" +
                         "                              Default: localhost:6362%n" +
-                        "      --database=<database> Name of the remote database to backup.%n" +
+                        "      --database=<database> Name of the remote database to backup. Can contain%n" +
+                        "                              * and ? for globbing.%n" +
                         "                              Default: neo4j%n" +
                         "      --fallback-to-full    If an incremental backup fails backup will move the%n" +
                         "                              old backup to <name>.err.<N> and fallback to a%n" +

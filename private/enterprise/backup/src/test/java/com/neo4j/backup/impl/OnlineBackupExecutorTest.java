@@ -21,11 +21,10 @@ class OnlineBackupExecutorTest
     {
         OnlineBackupExecutor executor = OnlineBackupExecutor.buildDefault();
 
-        OnlineBackupContext context = OnlineBackupContext.builder()
-                .withBackupDirectory( Paths.get( "nonExistingReportDirectory" ) )
-                .build();
+        var context = OnlineBackupContext.builder()
+                .withBackupDirectory( Paths.get( "nonExistingReportDirectory" ) );
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executor.executeBackup( context ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executor.executeBackups( context ) );
 
         assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "nonExistingReportDirectory' does not exist." ) ) );
     }
@@ -35,11 +34,10 @@ class OnlineBackupExecutorTest
     {
         OnlineBackupExecutor executor = OnlineBackupExecutor.buildDefault();
 
-        OnlineBackupContext context = OnlineBackupContext.builder()
-                .withBackupDirectory( Paths.get( "nonExistingBackupDirectory" ) )
-                .build();
+        var context = OnlineBackupContext.builder()
+                .withBackupDirectory( Paths.get( "nonExistingBackupDirectory" ) );
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executor.executeBackup( context ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executor.executeBackups( context ) );
 
         assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "nonExistingBackupDirectory' does not exist." ) ) );
     }

@@ -152,10 +152,9 @@ class BackupSchemaIT
     {
         Path backupsDir = testDirectory.directory( "backups" ).toPath();
 
-        OnlineBackupContext context = OnlineBackupContext.builder()
-                .withAddress( "localhost", getConnectorAddress( db, BACKUP_SERVER_NAME ).getPort() )
-                .withBackupDirectory( backupsDir )
-                .build();
+        var context = OnlineBackupContext.builder()
+                                         .withAddress( "localhost", getConnectorAddress( db, BACKUP_SERVER_NAME ).getPort() )
+                                         .withBackupDirectory( backupsDir );
 
         LogProvider logProvider = new Log4jLogProvider( System.out );
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
@@ -164,7 +163,7 @@ class BackupSchemaIT
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
 
-        executor.executeBackup( context );
+        executor.executeBackups( context );
 
         return backupsDir;
     }

@@ -129,9 +129,9 @@ class BackupRetriesIT
         ChannelBreakingStoreCopyClientMonitor channelBreakingMonitor = buildChannelBreakingStoreCopyMonitor( channels );
 
         OnlineBackupExecutor executor = buildBackupExecutor( channels, channelBreakingMonitor );
-        OnlineBackupContext context = buildBackupContext();
+        var contextBuilder = backupContextBuilder();
 
-        executor.executeBackup( context );
+        executor.executeBackups( contextBuilder );
 
         // backup produced a correct store
         assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( DB_NAME ) ) ) );
@@ -256,17 +256,17 @@ class BackupRetriesIT
                                    .build();
     }
 
-    private OnlineBackupContext buildBackupContext()
+    private OnlineBackupContext.Builder backupContextBuilder()
     {
         Config config = Config.defaults();
         config.set( catch_up_client_inactivity_timeout, Duration.ofSeconds( 30 ) );
 
         return OnlineBackupContext.builder()
-                .withAddress( backupAddress( db ) )
-                .withDatabaseName( DB_NAME )
-                .withBackupDirectory( backupsDir )
-                .withConfig( config )
-                .build();
+                                  .withAddress( backupAddress( db ) )
+                                  .withDatabaseNamePattern( DB_NAME )
+                                  .withBackupDirectory( backupsDir )
+                                  .withConfig( config );
+
     }
 
     private static SocketAddress backupAddress( GraphDatabaseAPI db )

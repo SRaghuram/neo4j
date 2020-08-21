@@ -12,6 +12,7 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -433,14 +434,14 @@ class BackupStrategyWrapperTest
     private OnlineBackupContext newBackupContext( boolean fallbackToFull )
     {
         return OnlineBackupContext.builder()
-                .withAddress( address )
-                .withConfig( config )
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withBackupDirectory( desiredBackupLayout.databaseDirectory() )
-                .withFallbackToFullBackup( fallbackToFull )
-                .withConsistencyCheck( true )
-                .withReportsDirectory( reportDir )
-                .build();
+                                  .withAddress( address )
+                                  .withConfig( config )
+                                  .withDatabaseNamePattern( DEFAULT_DATABASE_NAME )
+                                  .withBackupDirectory( desiredBackupLayout.databaseDirectory() )
+                                  .withFallbackToFullBackup( fallbackToFull )
+                                  .withConsistencyCheck( true )
+                                  .withReportsDirectory( reportDir )
+                                  .build( Set.of( DEFAULT_DATABASE_NAME ) ).get( 0 );
     }
 
     private class TestBackupStrategyWrapper extends BackupStrategyWrapper

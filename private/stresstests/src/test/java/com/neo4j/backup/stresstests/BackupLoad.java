@@ -96,14 +96,13 @@ class BackupLoad extends Workload
     private static void executeBackup( String host, int port, Path targetDir, OutputStream outputStream )
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        OnlineBackupContext context = OnlineBackupContext.builder()
-                .withAddress( host, port )
-                .withBackupDirectory( targetDir )
-                .withReportsDirectory( targetDir )
-                .withFallbackToFullBackup( true )
-                .withConsistencyCheck( true )
-                .withConsistencyCheckPropertyOwners( true )
-                .build();
+        var contextBuilder = OnlineBackupContext.builder()
+                                                .withAddress( host, port )
+                                                .withBackupDirectory( targetDir )
+                                                .withReportsDirectory( targetDir )
+                                                .withFallbackToFullBackup( true )
+                                                .withConsistencyCheck( true )
+                                                .withConsistencyCheckPropertyOwners( true );
 
         LogProvider logProvider = new Log4jLogProvider( outputStream );
 
@@ -114,7 +113,7 @@ class BackupLoad extends Workload
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
 
-        executor.executeBackup( context );
+        executor.executeBackups( contextBuilder );
     }
 
     private static void flushToStandardOutput( ByteArrayOutputStream outputStream )

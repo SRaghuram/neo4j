@@ -14,14 +14,13 @@ import java.nio.file.Path;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
-import org.neo4j.cli.Converters.DatabaseNameConverter;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.Util;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingValueParsers;
-import org.neo4j.configuration.helpers.NormalizedDatabaseName;
+import org.neo4j.configuration.helpers.DatabaseNamePattern;
 import org.neo4j.consistency.ConsistencyCheckOptions;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.Level;
@@ -33,6 +32,7 @@ import static com.neo4j.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
 import static java.lang.Boolean.FALSE;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
+import static org.neo4j.cli.Converters.DatabaseNamePatternConverter;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
@@ -63,9 +63,10 @@ public class OnlineBackupCommand extends AbstractCommand
             description = "Host and port of Neo4j." )
     private String from;
 
-    @Option( names = "--database", defaultValue = DEFAULT_DATABASE_NAME, description = "Name of the remote database to backup.",
-            converter = DatabaseNameConverter.class )
-    private NormalizedDatabaseName database;
+    @Option( names = "--database", defaultValue = DEFAULT_DATABASE_NAME,
+            description = "Name of the remote database to backup. Can contain * and ? for globbing.",
+            converter = DatabaseNamePatternConverter.class )
+    private DatabaseNamePattern database;
 
     @Option( names = "--fallback-to-full", paramLabel = "<true/false>", defaultValue = "true", showDefaultValue = ALWAYS,
             description = "If an incremental backup fails backup will move the old backup to <name>.err.<N> and fallback to a full." )
@@ -96,11 +97,11 @@ public class OnlineBackupCommand extends AbstractCommand
         final var address = SettingValueParsers.SOCKET_ADDRESS.parse( from );
         final var configFile = ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME );
         final var config = buildConfig( configFile, additionalConfig, backupDir );
-        final var onlineBackupContext = OnlineBackupContext.builder()
+        final var contextBuilder = OnlineBackupContext.builder()
                 .withBackupDirectory( requireExisting( backupDir ) )
                 .withReportsDirectory( consistencyCheckOptions.getReportDir() )
                 .withAddress( address )
-                .withDatabaseName( database.name() )
+                .withDatabaseNamePattern( database )
                 .withConfig( config )
                 .withFallbackToFullBackup( fallbackToFull )
                 .withConsistencyCheck( checkConsistency )
@@ -109,8 +110,7 @@ public class OnlineBackupCommand extends AbstractCommand
                 .withConsistencyCheckIndexStructure( consistencyCheckOptions.isCheckIndexStructure() )
                 .withConsistencyCheckPropertyOwners( consistencyCheckOptions.isCheckPropertyOwners() )
                 .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
-                .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckOptions.isCheckRelationshipTypeScanStore() )
-                .build();
+                .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckOptions.isCheckRelationshipTypeScanStore() );
 
         final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );
         final var internalLogProvider = verbose ? userLogProvider : NullLogProvider.getInstance();
@@ -124,7 +124,7 @@ public class OnlineBackupCommand extends AbstractCommand
 
         try
         {
-            backupExecutor.executeBackup( onlineBackupContext );
+            backupExecutor.executeBackups( contextBuilder );
         }
         catch ( ConsistencyCheckExecutionException e )
         {

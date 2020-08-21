@@ -45,6 +45,7 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.DatabaseNamePattern;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
@@ -110,6 +111,7 @@ import org.neo4j.test.scheduler.DaemonThreadFactory;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
 import static com.neo4j.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.util.Collections.singletonList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
@@ -783,12 +785,11 @@ class BackupIT
         createInitialDataSet( db );
         corruptStore( db );
 
-        OnlineBackupContext context = defaultBackupContextBuilder( backupAddress( db ) )
-                .withConsistencyCheck( false ) // no consistency check after backup
-                .build();
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( db ) )
+                .withConsistencyCheck( false ); // no consistency check after backup
 
         // backup does not fail
-        assertDoesNotThrow( () -> executeBackup( context ) );
+        assertDoesNotThrow( () -> executeBackup( contextBuilder ) );
 
         // no consistency check report files
         String[] reportFiles = findBackupInconsistenciesReports();
@@ -908,12 +909,50 @@ class BackupIT
         var db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
-        var context = defaultBackupContextBuilder( backupAddress( db ) )
-                .withDatabaseName( unknownDbName )
-                .build();
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( db ) )
+                .withDatabaseNamePattern( unknownDbName );
 
-        var error = assertThrows( BackupExecutionException.class, () -> executeBackup( context ) );
+        var error = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
         assertThat( error.getMessage() ).contains( "Database '" + unknownDbName + "' does not exist" );
+    }
+
+    @TestWithRecordFormats
+    void shouldBackupMultipleDatabasesIfPatternMatch( String recordFormatName ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
+        //given
+        var defaultDBRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
+        var defaultDB = startDb( serverHomeDir );
+        var natureDB = "nature";
+        var natureDBExpectedRepresentation = createDatabase( natureDB );
+
+        //when
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
+                .withDatabaseNamePattern( new DatabaseNamePattern( "n*" ) );
+
+        executeBackup( contextBuilder );
+
+        //then
+        assertEquals( defaultDBRepresentation, getBackupDbRepresentation() );
+
+        var natureDBRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( natureDB ) ), getConfig() );
+        assertEquals( natureDBExpectedRepresentation, natureDBRepresentation );
+
+        managementService.shutdown();
+    }
+
+    @TestWithRecordFormats
+    void shouldntBackupAnyDatabaseIfPatternNotMatch( String recordFormatName ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
+        DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir );
+
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( db ) )
+                .withDatabaseNamePattern( new DatabaseNamePattern( "t*" ) );
+
+        executeBackup( contextBuilder );
+
+        assertNotEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
+        managementService.shutdown();
     }
 
     private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
@@ -1138,6 +1177,7 @@ class BackupIT
 
         settings.putIfAbsent( databases_root_path, path.toAbsolutePath() );
         settings.putIfAbsent( online_backup_enabled, true );
+        settings.putIfAbsent( experimental_catchup_protocol, true );
         builder.setConfig( settings );
 
         managementService = builder.build();
@@ -1148,12 +1188,26 @@ class BackupIT
 
     private DbRepresentation getBackupDbRepresentation()
     {
-        Config config = Config.newBuilder()
-                .set( online_backup_enabled, false )
-                .set( transaction_logs_root_path, backupsDir.toAbsolutePath() )
-                .set( databases_root_path, backupsDir.toAbsolutePath() )
-                .build();
+        Config config = getConfig();
         return DbRepresentation.of( backupDatabaseLayout, config );
+    }
+
+    private Config getConfig()
+    {
+        return Config.newBuilder()
+                     .set( online_backup_enabled, false )
+                     .set( transaction_logs_root_path, backupsDir.toAbsolutePath() )
+                     .set( databases_root_path, backupsDir.toAbsolutePath() )
+                     .build();
+    }
+
+    private DbRepresentation createDatabase( String databaseName )
+    {
+        managementService.createDatabase( databaseName );
+        GraphDatabaseService dbService = managementService.database( databaseName );
+        final DbRepresentation representation = DbRepresentation.of( dbService );
+        databases.add( dbService );
+        return representation;
     }
 
     private void executeBackup( GraphDatabaseService db ) throws BackupExecutionException, ConsistencyCheckExecutionException
@@ -1179,19 +1233,19 @@ class BackupIT
     private void executeBackup( SocketAddress address, Monitors monitors, boolean fallbackToFull )
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        OnlineBackupContext context = defaultBackupContextBuilder( address )
-                .withFallbackToFullBackup( fallbackToFull )
-                .build();
+        final var contextBuilder = defaultBackupContextBuilder( address )
+                .withFallbackToFullBackup( fallbackToFull );
 
-        executeBackup( context, monitors );
+        executeBackup( contextBuilder, monitors );
     }
 
-    private static void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private static void executeBackup( OnlineBackupContext.Builder contextBuilder ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        executeBackup( context, new Monitors() );
+        executeBackup( contextBuilder, new Monitors() );
     }
 
-    private static void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private static void executeBackup( OnlineBackupContext.Builder contextBuilder, Monitors monitors )
+            throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         LogProvider logProvider = new Log4jLogProvider( System.out );
 
@@ -1202,7 +1256,7 @@ class BackupIT
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
 
-        executor.executeBackup( context );
+        executor.executeBackups( contextBuilder );
     }
 
     private OnlineBackupContext.Builder defaultBackupContextBuilder( SocketAddress address )
@@ -1210,10 +1264,11 @@ class BackupIT
         Path dir = backupsDir;
 
         return OnlineBackupContext.builder()
-                .withAddress( address )
-                .withBackupDirectory( dir )
-                .withReportsDirectory( dir )
-                .withConsistencyCheckRelationshipTypeScanStore( enable_relationship_type_scan_store.defaultValue() );
+                                  .withAddress( address )
+                                  .withBackupDirectory( dir )
+                                  .withReportsDirectory( dir )
+                                  .withConfig( Config.defaults( experimental_catchup_protocol, true ) )
+                                  .withConsistencyCheckRelationshipTypeScanStore( enable_relationship_type_scan_store.defaultValue() );
     }
 
     private static DbRepresentation addLotsOfData( GraphDatabaseService db )

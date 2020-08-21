@@ -76,24 +76,23 @@ public class BackupSupportingClassesFactory
      *
      * @return grouping of instances used for performing backups
      */
-    BackupSupportingClasses createSupportingClasses( OnlineBackupContext context )
+    BackupSupportingClasses createSupportingClasses( Config config )
     {
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler(clock);
         PageCacheTracer pageCacheTracer = PageCacheTracer.NULL;
         MemoryTracker memoryTracker = EmptyMemoryTracker.INSTANCE;
-        PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler, pageCacheTracer );
+        PageCache pageCache = createPageCache( fileSystemAbstraction, config, jobScheduler, pageCacheTracer );
         return new BackupSupportingClasses(
-                backupDelegatorFromConfig( pageCache, context, jobScheduler, pageCacheTracer, memoryTracker ),
+                backupDelegatorFromConfig( pageCache, config, jobScheduler, pageCacheTracer, memoryTracker ),
                 pageCache,
                 pageCacheTracer,
                 Arrays.asList( pageCache, jobScheduler ) );
     }
 
-    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler,
+    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, Config config, JobScheduler jobScheduler,
             PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
-        Config config = onlineBackupContext.getConfig();
-        CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext, jobScheduler );
+        CatchupClientFactory catchUpClient = catchUpClient( config, jobScheduler );
 
         Function<NamedDatabaseId,TxPullClient> txPullClient = databaseId -> new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
@@ -118,9 +117,8 @@ public class BackupSupportingClassesFactory
         return new NettyPipelineBuilderFactory( sslPolicy );
     }
 
-    private CatchupClientFactory catchUpClient( OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler )
+    private CatchupClientFactory catchUpClient( Config config, JobScheduler jobScheduler )
     {
-        Config config = onlineBackupContext.getConfig();
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
         ApplicationSupportedProtocols supportedCatchupProtocols = supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration();
         SslPolicy sslPolicy = loadSslPolicy( config );
@@ -133,7 +131,7 @@ public class BackupSupportingClassesFactory
                 .pipelineBuilder( pipelineBuilderFactory )
                 .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( jobScheduler )
-                .config( onlineBackupContext.getConfig() )
+                .config( config )
                 .bootstrapConfig( BootstrapConfiguration.clientConfig( config ) )
                 .commandReader( storageEngineFactory.commandReaderFactory() )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )

@@ -56,6 +56,10 @@ public class ServerMessageTypeHandler extends ChannelInboundHandlerAdapter
             {
                 protocol.expect( CatchupServerProtocol.State.GET_STORE_FILE );
             }
+            else if ( requestMessageType.equals( RequestMessageType.ALL_DATABASE_IDS_REQUEST ) )
+            {
+                protocol.expect( CatchupServerProtocol.State.GET_ALL_DATABASE_IDS );
+            }
             else
             {
                 log.warn( "No handler found for message type %s", requestMessageType );

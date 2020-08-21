@@ -177,18 +177,18 @@ public final class OnlineBackup
                                                                   .withProgressMonitorFactory( ProgressMonitorFactory.textual( outputStream ) )
                                                                   .build();
 
-        OnlineBackupContext context = OnlineBackupContext.builder()
-                .withAddress( hostnameOrIp, port )
-                .withConfig( config )
-                .withConsistencyCheck( consistencyCheck )
-                .withFallbackToFullBackup( fallbackToFullBackup )
-                .withBackupDirectory( targetDirectory )
-                .withReportsDirectory( targetDirectory )
-                .withDatabaseName( databaseName )
-                .withConsistencyCheckRelationshipTypeScanStore( config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) )
-                .build();
+        final var context = OnlineBackupContext.builder()
+                                               .withAddress( hostnameOrIp, port )
+                                               .withConfig( config )
+                                               .withConsistencyCheck( consistencyCheck )
+                                               .withFallbackToFullBackup( fallbackToFullBackup )
+                                               .withBackupDirectory( targetDirectory )
+                                               .withReportsDirectory( targetDirectory )
+                                               .withDatabaseNamePattern( databaseName )
+                                               .withConsistencyCheckRelationshipTypeScanStore(
+                                                       config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) );
 
-        backupExecutor.executeBackup( context );
+        backupExecutor.executeBackups( context );
     }
 
     private static int requireValidPort( int port )

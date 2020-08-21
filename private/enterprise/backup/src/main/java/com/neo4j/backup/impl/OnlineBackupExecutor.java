@@ -10,12 +10,19 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.com.storecopy.FileMoveProvider;
 
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DatabaseNamePattern;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -57,11 +64,21 @@ public final class OnlineBackupExecutor
         return new Builder();
     }
 
-    public void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    public void executeBackups( OnlineBackupContext.Builder contextBuilder ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
+        final var allDatabaseNames =
+                getAllDatabaseNames( contextBuilder.getConfig(), contextBuilder.getDatabaseNamePattern(), contextBuilder.getAddress() );
+        for ( OnlineBackupContext context : contextBuilder.build( allDatabaseNames ) )
+        {
+            executeBackup( context );
+        }
+    }
+
+    private void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         verify( context );
 
-        try ( BackupSupportingClasses supportingClasses = backupSupportingClassesFactory.createSupportingClasses( context ) )
+        try ( BackupSupportingClasses supportingClasses = backupSupportingClassesFactory.createSupportingClasses( context.getConfig() ) )
         {
             StoreCopyClientMonitor backupStoreCopyMonitor = new BackupOutputMonitor( userLogProvider, clock );
             monitors.addMonitorListener( backupStoreCopyMonitor );
@@ -78,6 +95,28 @@ public final class OnlineBackupExecutor
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
                                                                                    progressMonitorFactory, wrapper );
             coordinator.performBackup( context );
+        }
+    }
+
+    private Set<String> getAllDatabaseNames( Config config, DatabaseNamePattern databaseName, SocketAddress address )
+    {
+        if ( !databaseName.containsPattern() )
+        {
+            return Set.of( databaseName.getDatabaseName() );
+        }
+        else
+        {
+            try ( BackupSupportingClasses supportingClasses = backupSupportingClassesFactory.createSupportingClasses( config ) )
+            {
+                final var delegator = supportingClasses.getBackupDelegator();
+                try ( Lifespan ignore = new Lifespan( delegator ) )
+                {
+                    return delegator.getAllDatabaseIds( address )
+                                    .stream()
+                                    .map( NamedDatabaseId::name )
+                                    .collect( Collectors.toSet() );
+                }
+            }
         }
     }
 

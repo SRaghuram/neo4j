@@ -8,14 +8,17 @@ package com.neo4j.backup.impl;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
+import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
+import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -105,6 +108,32 @@ class BackupDelegator extends LifecycleAdapter
         catch ( Exception e )
         {
             throw new DatabaseIdDownloadFailedException( e );
+        }
+    }
+
+    public Set<NamedDatabaseId> getAllDatabaseIds( SocketAddress fromAddress )
+    {
+        final CatchupResponseAdaptor<GetAllDatabaseIdsResponse> responseHandler = new CatchupResponseAdaptor<GetAllDatabaseIdsResponse>()
+        {
+            @Override
+            public void onGetAllDatabaseIdsResponse( CompletableFuture<GetAllDatabaseIdsResponse> signal, GetAllDatabaseIdsResponse response )
+            {
+                signal.complete( response );
+            }
+        };
+        try
+        {
+            return catchUpClient.getClient( fromAddress, logProvider.getLog( getClass() ) )
+                                .v3( VersionedCatchupClients.CatchupClientV3::getAllDatabaseIds )
+                                .v4( VersionedCatchupClients.CatchupClientV4::getAllDatabaseIds )
+                                .withResponseHandler( responseHandler )
+                                .request()
+                                .databaseIds();
+        }
+        catch ( Exception ex )
+        {
+            logProvider.getLog( getClass() ).error( "Error in execution get all database ids", ex );
+            return Set.of();
         }
     }
 }

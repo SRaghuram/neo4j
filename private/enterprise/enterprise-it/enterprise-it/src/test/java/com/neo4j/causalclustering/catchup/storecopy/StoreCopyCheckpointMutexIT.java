@@ -84,7 +84,8 @@ class StoreCopyCheckpointMutexIT
      * checkpointing into the {@link StoreChannel#read(ByteBuffer)} that is used to read the files we want to copy.
      * In this way we make the test deterministic.
      * <p>
-     * Without the bug-fix, this test fails during recovery that happens as part of {@link OnlineBackupExecutor#executeBackup(OnlineBackupContext)},
+     * Without the bug-fix,
+     * this test fails during recovery that happens as part of {@link OnlineBackupExecutor#executeBackups(OnlineBackupContext.Builder)},
      * because labelscanstore gbptree can not be traversed correctly. More specifically a {@link TreeInconsistencyException} will be thrown.
      * <p>
      * Note: Native indexes also need to be copied under the mutex, that is why this test also has an index.
@@ -147,13 +148,12 @@ class StoreCopyCheckpointMutexIT
     {
         var backupDir = directory.directoryPath( "backups" );
 
-        var backupContext = OnlineBackupContext.builder()
-                .withAddress( address.getHostname(), address.getPort() )
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withConsistencyCheck( true )
-                .withBackupDirectory( backupDir )
-                .withReportsDirectory( backupDir )
-                .build();
+        final var context = OnlineBackupContext.builder()
+                                               .withAddress( address.getHostname(), address.getPort() )
+                                               .withDatabaseNamePattern( DEFAULT_DATABASE_NAME )
+                                               .withConsistencyCheck( true )
+                                               .withBackupDirectory( backupDir )
+                                               .withReportsDirectory( backupDir );
 
         var logProvider = (LogProvider) new Log4jLogProvider( System.out );
 
@@ -163,7 +163,7 @@ class StoreCopyCheckpointMutexIT
                                                  .withClock( Clocks.nanoClock() )
                                                  .build();
 
-        backupExecutor.executeBackup( backupContext );
+        backupExecutor.executeBackups( context );
     }
 
     private static void createSomeData( GraphDatabaseAPI db )

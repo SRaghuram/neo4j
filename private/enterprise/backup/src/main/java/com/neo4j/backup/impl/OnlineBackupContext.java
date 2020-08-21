@@ -9,9 +9,14 @@ import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.DatabaseNamePattern;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.memory.EmptyMemoryTracker;
@@ -20,8 +25,8 @@ import org.neo4j.memory.MemoryTracker;
 public class OnlineBackupContext
 {
     private final SocketAddress address;
-    private final String databaseName;
-    private final Path databaseBackupDir;
+    private final DatabaseNamePattern databaseNamePattern;
+    private final Path backupDirectoryWithDBName;
     private final Path reportDir;
     private final boolean fallbackToFullBackup;
     private final boolean consistencyCheck;
@@ -29,12 +34,13 @@ public class OnlineBackupContext
     private final Config config;
     private final MemoryTracker memoryTracker;
 
-    private OnlineBackupContext( SocketAddress address, String databaseName, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
-            boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config, MemoryTracker memoryTracker )
+    private OnlineBackupContext( SocketAddress address, DatabaseNamePattern databaseNamePattern, Path backupDirectoryWithDBName,
+                                 Path reportDir, boolean fallbackToFullBackup, boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config,
+                                 MemoryTracker memoryTracker )
     {
         this.address = address;
-        this.databaseName = databaseName;
-        this.databaseBackupDir = databaseBackupDir;
+        this.databaseNamePattern = databaseNamePattern;
+        this.backupDirectoryWithDBName = backupDirectoryWithDBName;
         this.reportDir = reportDir;
         this.fallbackToFullBackup = fallbackToFullBackup;
         this.consistencyCheck = consistencyCheck;
@@ -55,12 +61,12 @@ public class OnlineBackupContext
 
     public String getDatabaseName()
     {
-        return databaseName;
+        return databaseNamePattern.getDatabaseName();
     }
 
     public Path getDatabaseBackupDir()
     {
-        return databaseBackupDir;
+        return backupDirectoryWithDBName;
     }
 
     public boolean fallbackToFullBackupEnabled()
@@ -96,7 +102,7 @@ public class OnlineBackupContext
     public static final class Builder
     {
         private SocketAddress address;
-        private String databaseName;
+        private DatabaseNamePattern databaseNamePattern;
         private Path backupDirectory;
         private Path reportsDirectory;
         private boolean fallbackToFullBackup = true;
@@ -124,9 +130,15 @@ public class OnlineBackupContext
             return this;
         }
 
-        public Builder withDatabaseName( String databaseName )
+        public Builder withDatabaseNamePattern( String databaseName )
         {
-            this.databaseName = databaseName;
+            this.databaseNamePattern = new DatabaseNamePattern( databaseName );
+            return this;
+        }
+
+        public Builder withDatabaseNamePattern( DatabaseNamePattern databaseNamePattern )
+        {
+            this.databaseNamePattern = databaseNamePattern;
             return this;
         }
 
@@ -196,16 +208,54 @@ public class OnlineBackupContext
             return this;
         }
 
-        public OnlineBackupContext build()
+        public Config getConfig()
         {
-            if ( config == null )
-            {
-                config = Config.defaults();
-            }
-            if ( databaseName == null )
-            {
-                databaseName = config.get( GraphDatabaseSettings.default_database );
-            }
+            return Optional.ofNullable( config ).orElse( Config.defaults() );
+        }
+
+        public DatabaseNamePattern getDatabaseNamePattern()
+        {
+            return Optional.ofNullable( databaseNamePattern )
+                    .orElse( new DatabaseNamePattern( getConfig().get( GraphDatabaseSettings.default_database ) ) );
+        }
+
+        public SocketAddress getAddress()
+        {
+            return address;
+        }
+
+        private Builder copy()
+        {
+            return new Builder()
+                    .withAddress( address )
+                    .withDatabaseNamePattern( databaseNamePattern )
+                    .withBackupDirectory( backupDirectory )
+                    .withReportsDirectory( reportsDirectory )
+                    .withFallbackToFullBackup( fallbackToFullBackup )
+                    .withConfig( config )
+                    .withConsistencyCheck( consistencyCheck )
+                    .withConsistencyCheckGraph( consistencyCheckGraph )
+                    .withConsistencyCheckIndexes( consistencyCheckIndexes )
+                    .withConsistencyCheckIndexStructure( consistencyCheckIndexStructure )
+                    .withConsistencyCheckLabelScanStore( consistencyCheckLabelScanStore )
+                    .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckRelationshipTypeScanStore )
+                    .withConsistencyCheckPropertyOwners( consistencyCheckPropertyOwners );
+        }
+
+        public List<OnlineBackupContext> build( Set<String> databaseNames )
+        {
+            return databaseNames.stream()
+                                .filter( databaseName -> getDatabaseNamePattern().matches( databaseName ) )
+                                .map( databaseName -> copy().withDatabaseNamePattern( databaseName ).build() )
+                                .collect( Collectors.toList() );
+        }
+
+        private OnlineBackupContext build()
+        {
+            config = getConfig();
+
+            databaseNamePattern = getDatabaseNamePattern();
+
             if ( backupDirectory == null )
             {
                 backupDirectory = Paths.get( "." );
@@ -215,13 +265,18 @@ public class OnlineBackupContext
                 reportsDirectory = Paths.get( "." );
             }
 
+            if ( databaseNamePattern.containsPattern() )
+            {
+                throw new IllegalArgumentException( "Database name shouldn't contain wildcard" );
+            }
+
             SocketAddress socketAddress = buildAddress();
-            Path databaseBackupDirectory = backupDirectory.resolve( databaseName );
+            Path databaseBackupDirectory = backupDirectory.resolve( databaseNamePattern.getDatabaseName() );
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
             var memoryTracker = EmptyMemoryTracker.INSTANCE;
 
-            return new OnlineBackupContext( socketAddress, databaseName, databaseBackupDirectory, reportsDirectory,
-                    fallbackToFullBackup, consistencyCheck, consistencyFlags, config, memoryTracker );
+            return new OnlineBackupContext( socketAddress, databaseNamePattern, databaseBackupDirectory, reportsDirectory,
+                                            fallbackToFullBackup, consistencyCheck, consistencyFlags, config, memoryTracker );
         }
 
         private SocketAddress buildAddress()
@@ -237,7 +292,7 @@ public class OnlineBackupContext
         private ConsistencyFlags buildConsistencyFlags()
         {
             return new ConsistencyFlags( consistencyCheckGraph, consistencyCheckIndexes, consistencyCheckIndexStructure, consistencyCheckLabelScanStore,
-                    consistencyCheckRelationshipTypeScanStore, consistencyCheckPropertyOwners );
+                                         consistencyCheckRelationshipTypeScanStore, consistencyCheckPropertyOwners );
         }
     }
 }

@@ -76,14 +76,13 @@ class BackupHelper
 
         try
         {
-            OnlineBackupContext context = OnlineBackupContext.builder()
-                    .withDatabaseName( DB_NAME )
-                    .withAddress( address.getHostname(), address.getPort() )
-                    .withBackupDirectory( backupDir )
-                    .withReportsDirectory( backupDir )
-                    .build();
+            var contextBuilder = OnlineBackupContext.builder()
+                                                    .withDatabaseNamePattern( DB_NAME )
+                                                    .withAddress( address.getHostname(), address.getPort() )
+                                                    .withBackupDirectory( backupDir )
+                                                    .withReportsDirectory( backupDir );
 
-            OnlineBackupExecutor.buildDefault().executeBackup( context );
+            OnlineBackupExecutor.buildDefault().executeBackups( contextBuilder );
             log.info( String.format( "Created backup %s from %s", backupDir, member ) );
 
             successfulBackups.incrementAndGet();

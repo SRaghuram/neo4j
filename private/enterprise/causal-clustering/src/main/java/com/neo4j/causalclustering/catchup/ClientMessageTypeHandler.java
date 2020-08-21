@@ -64,6 +64,8 @@ public class ClientMessageTypeHandler extends ChannelInboundHandlerAdapter
             case DATABASE_ID_RESPONSE:
                 protocol.expect( CatchupClientProtocol.State.DATABASE_ID );
                 break;
+            case ALL_DATABASE_IDS_RESPONSE:
+                protocol.expect( CatchupClientProtocol.State.GET_ALL_DATABASE_IDS );
             default:
                 log.warn( "No handler found for message type %s (%d)", responseMessageType.name(), byteValue );
             }

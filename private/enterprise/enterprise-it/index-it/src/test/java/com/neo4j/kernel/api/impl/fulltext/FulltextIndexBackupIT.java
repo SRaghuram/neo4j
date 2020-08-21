@@ -229,16 +229,15 @@ class FulltextIndexBackupIT
 
         Path backupDir = dir.directoryPath( BACKUP_DIR_NAME );
 
-        OnlineBackupContext context = OnlineBackupContext.builder()
+        var contextBuilder = OnlineBackupContext.builder()
                 .withAddress( backupAddress.getHost(), backupAddress.getPort() )
-                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseNamePattern( DEFAULT_DATABASE_NAME )
                 .withBackupDirectory( backupDir )
                 .withReportsDirectory( backupDir )
                 .withConsistencyCheck( true )
-                .withConsistencyCheckPropertyOwners( true )
-                .build();
+                .withConsistencyCheckPropertyOwners( true );
 
-        OnlineBackupExecutor.buildDefault().executeBackup( context );
+        OnlineBackupExecutor.buildDefault().executeBackups( contextBuilder );
 
         return backupDir;
     }
