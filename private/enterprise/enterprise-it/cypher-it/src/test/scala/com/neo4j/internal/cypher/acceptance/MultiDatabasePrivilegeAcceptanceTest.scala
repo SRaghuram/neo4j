@@ -950,13 +950,13 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CALL db.createProperty('prop')")
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)")
-    } should have message s"Schema operation 'create_index' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
+    } should have message s"Schema operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // constraint management
     execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT exists(n.prop)")
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint")
-    } should have message s"Schema operation 'drop_constraint' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
+    } should have message s"Schema operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // write
     the[AuthorizationViolationException] thrownBy {
