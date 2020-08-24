@@ -6,10 +6,10 @@
 package com.neo4j.metrics;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.Callable;
@@ -184,7 +184,7 @@ public final class MetricsTestHelper
                     return currentValue;
                 }
             }
-            catch ( FileNotFoundException e )
+            catch ( NoSuchFileException e )
             {
                 // File not there a.t.m. just keep retrying
             }
