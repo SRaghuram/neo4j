@@ -8,9 +8,16 @@ package com.neo4j.fabric.localdb;
 import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DefaultSystemGraphComponent;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 
+/***
+ * This is an enterprise component for databases.
+ * It is building on {@link DefaultSystemGraphComponent}, with the only differences being that:
+ * 1. The old default database is not stopped when a new default database is chosen.
+ * 2. An extra post initialization step for fabric is performed for single instance enterprise edition.
+ */
 public class FabricSystemGraphComponent extends EnterpriseSystemGraphComponent
 {
     private final FabricDatabaseManager fabricDatabaseManager;

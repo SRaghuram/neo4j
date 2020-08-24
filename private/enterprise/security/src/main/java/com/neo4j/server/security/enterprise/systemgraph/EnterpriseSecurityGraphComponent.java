@@ -38,11 +38,20 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersions;
+import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.ROLE_LABEL;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.USER_LABEL;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
+/***
+ * This component contains roles and privileges and is an enterprise-only component.
+ * Each role is represented by a node with label :Role that is connected to zero or more users from the {@link UserSecurityGraphComponent}.
+ * A privilege is represented of a relationship of type :GRANTED or :DENIED from a role node to a node with label (:Privilege),
+ * which in turn is connected as below (where the database node is part of the @link{DefaultSystemGraphComponent}).
+ *
+ * (:Privilege)-[:SCOPE]->(s:Segment)-[:APPLIES_TO]->(:Resource), (s)-[:FOR]->(database), (s)-[:Qualified]->(qualifier)
+ */
 public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphComponent
 {
     public static final int LATEST_VERSION = 4;
